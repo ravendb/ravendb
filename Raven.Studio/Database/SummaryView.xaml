@@ -5,49 +5,42 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+			 xmlns:converters="clr-namespace:Raven.Studio.Converters"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
 	<UserControl.Resources>
 
-		<Style x:Key="CollectionStyle"
-			   TargetType="TextBlock">
-			<Setter Property="FontFamily"
-					Value="Segoe UI" />
-			<Setter Property="FontSize"
-					Value="21.333" />
-		</Style>
+		<converters:MagnitudeToListConverter x:Key="magnitudeToList"
+											 Maximum="{Binding LargestCollectionCount}" />
 
-		<DataTemplate x:Key="CollectionItemStyle">
-			<Grid Width="100"
-				  Margin="0,0,8,0"
-				  VerticalAlignment="Bottom">
+		<DataTemplate x:Key="CollectionTemplate">
+			<Grid Margin="0 0 0 6">
 				<Grid.RowDefinitions>
 					<RowDefinition Height="*" />
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
-				<StackPanel d:LayoutOverrides="Width, Height"
-							Grid.Row="1">
+				<StackPanel Grid.Row="0"
+							Orientation="Horizontal">
 					<TextBlock Text="{Binding Name}"
-							   TextTrimming="WordEllipsis"
-							   HorizontalAlignment="Center"
+							   VerticalAlignment="Bottom"
 							   FontSize="16"
 							   FontFamily="Segoe UI" />
 					<TextBlock Text="{Binding Count}"
-							   HorizontalAlignment="Center"
-							   FontSize="10.667"
+							   VerticalAlignment="Bottom"
+							   FontSize="13.333"
 							   Opacity="0.5"
 							   FontFamily="Segoe UI"
-							   Margin="0,-6,0,0" />
+							   Margin="6 0 0 0" />
 				</StackPanel>
-				<ItemsControl VerticalAlignment="Bottom"
+				<ItemsControl Grid.Row="1"
 							  ItemsSource="{Binding Converter={StaticResource magnitudeToList}}">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
 							<Grid Height="30"
 								  Width="24"
-								  Margin="0,0,0,2">
+								  Margin="0 0 2 2">
 								<Path Data="M7.125277,0.5 L21.5,0.5 L21.5,21.5 L0.5,21.5 L0.5,6.5257869 z"
 									  Fill="{Binding}"
 									  Stretch="Fill"
@@ -63,13 +56,14 @@
 							</Grid>
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<StackPanel Orientation="Horizontal" />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
 				</ItemsControl>
 			</Grid>
 		</DataTemplate>
-
-		<ItemsPanelTemplate x:Key="CollectionsLayoutTemplate">
-			<StackPanel Orientation="Horizontal" />
-		</ItemsPanelTemplate>
 
 	</UserControl.Resources>
 
@@ -100,56 +94,27 @@
 					<RowDefinition Height="2*" />
 					<RowDefinition />
 				</Grid.RowDefinitions>
+
 				<StackPanel Orientation="Vertical"
 							VerticalAlignment="Top">
-					<TextBlock TextWrapping="Wrap"
-							   Text="NORTHWIND"
-							   d:LayoutOverrides="Width"
-							   Foreground="#7F000000" />
-					<TextBlock TextWrapping="Wrap"
-							   Text="Summary"
+					<TextBlock Text="{Binding DatabaseName}"
+							   ToolTipService.ToolTip="{Binding DatabaseName}"
+							   Style="{StaticResource PanelTitle}" />
+					<TextBlock Text="Summary"
 							   FontSize="18.667"
 							   FontWeight="Bold" />
 					<TextBlock Text="Collections"
 							   FontSize="18.667" />
-					<TextBlock TextWrapping="Wrap"
-							   Text="Indexes"
+					<TextBlock Text="Indexes"
 							   FontSize="18.667" />
-					<TextBlock TextWrapping="Wrap"
-							   FontSize="18.667"
+					<TextBlock FontSize="18.667"
 							   Text="Search" />
-					<TextBlock TextWrapping="Wrap"
-							   FontSize="18.667"
+					<TextBlock FontSize="18.667"
 							   Text="Admin" />
 				</StackPanel>
-				<StackPanel Orientation="Vertical"
-							VerticalAlignment="Top"
-							Grid.Row="1">
-					<TextBlock TextWrapping="Wrap"
-							   Text="STATISTICS"
-							   d:LayoutOverrides="Width"
-							   Foreground="#7F000000" />
-					<StackPanel Orientation="Vertical"
-								Margin="8,0,0,0">
 
-						<TextBlock Text="1,231 documents"
-								   d:LayoutOverrides="Width"
-								   FontSize="16" />
-						<TextBlock Text="31 indexes"
-								   d:LayoutOverrides="Width"
-								   FontSize="16" />
-						<TextBlock Text="2 stale"
-								   d:LayoutOverrides="Width"
-								   FontSize="16"
-								   Foreground="#FF993333" />
-						<TextBlock Text="4 triggers"
-								   d:LayoutOverrides="Width"
-								   FontSize="16" />
-						<TextBlock Text="2 tasks"
-								   d:LayoutOverrides="Width"
-								   FontSize="16" />
-					</StackPanel>
-				</StackPanel>
+				<ContentControl x:Name="Server_Statistics"
+								Grid.Row="1" />
 			</Grid>
 		</Border>
 
@@ -158,7 +123,7 @@
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
-				<RowDefinition Height="0.611*" />
+				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
 
 			<StackPanel x:Name="header"
@@ -172,11 +137,8 @@
 			<StackPanel HorizontalAlignment="Left"
 						Grid.Row="1"
 						Margin="0,12,0,0">
-				<TextBlock TextWrapping="Wrap"
-						   Text="Recent Documents"
-						   Style="{StaticResource CollectionStyle}"
-						   FontSize="24"
-						   Margin="0,0,0,8" />
+				<TextBlock Text="Recent Documents"
+						   Style="{StaticResource SectionHeader}" />
 
 				<ItemsControl x:Name="RecentDocuments">
 					<ItemsControl.ItemsPanel>
@@ -196,14 +158,11 @@
 			<StackPanel HorizontalAlignment="Left"
 						Grid.Row="2"
 						Margin="0,12,0,0">
-				<TextBlock TextWrapping="Wrap"
-						   Text="Collections"
-						   Style="{StaticResource CollectionStyle}"
-						   FontSize="24"
-						   Margin="0,0,0,8" />
+				<TextBlock Text="Collections"
+						   Style="{StaticResource SectionHeader}" />
+
 				<ItemsControl x:Name="Collections"
-							  ItemTemplate="{StaticResource CollectionItemStyle}"
-							  ItemsPanel="{StaticResource CollectionsLayoutTemplate}"
+							  ItemTemplate="{StaticResource CollectionTemplate}"
 							  HorizontalAlignment="Left" />
 
 			</StackPanel>
