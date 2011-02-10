@@ -64,7 +64,7 @@ namespace Raven.Database.Json
 		/// </returns>
 		public override bool CanConvert(Type objectType)
 		{
-			return objectType == typeof (DynamicJsonObject);
+			return objectType == typeof (DynamicJsonObject) || objectType == typeof (object);
 		}
 	}
 }

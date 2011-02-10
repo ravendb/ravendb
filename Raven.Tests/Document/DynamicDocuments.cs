@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Microsoft.CSharp.RuntimeBinder;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Database.Extensions;
@@ -67,7 +68,7 @@ namespace Raven.Tests.Document
                     dynamic personLoad = session.Load<object>(idPerson);
 					Assert.Equal("Ellen", personLoad.FirstName);
 					Assert.Equal("Adams", personLoad.LastName);
-                    Assert.IsType<DynamicNullObject>(personLoad.Age);
+                    Assert.Throws<RuntimeBinderException>(() => personLoad.Age);
 
                 }
             }
