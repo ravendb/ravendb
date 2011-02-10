@@ -127,6 +127,7 @@
     <Compile Include="Bugs\CanProjectIdFromDocumentInQueries.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
+    <Compile Include="Bugs\CustomDynamicObject.cs" />
     <Compile Include="Bugs\CustomEntityName.cs" />
     <Compile Include="Bugs\DateRanges.cs" />
     <Compile Include="Bugs\DecimalPrecision.cs" />
@@ -134,6 +135,7 @@
     <Compile Include="Bugs\DocumentUrl.cs" />
     <Compile Include="Bugs\DTC\UsingDtcForCreate.cs" />
     <Compile Include="Bugs\DTC\UsingDTCForUpdates.cs" />
+    <Compile Include="Bugs\DTC\UsingRemoteDTC.cs" />
     <Compile Include="Bugs\Embedded\CanUseForUrlOnly.cs" />
     <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Local.cs" />
     <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Remote.cs" />
@@ -171,6 +173,7 @@
     <Compile Include="Bugs\Indexing\TransactionIndexByMrn.cs" />
     <Compile Include="Bugs\Indexing\WillGroupValuesUsingComplexValues.cs" />
     <Compile Include="Bugs\Indexing\WiseShrek.cs" />
+    <Compile Include="Bugs\Indexing\WithStartWith.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
     <Compile Include="Bugs\InMemoryOnly.cs" />
