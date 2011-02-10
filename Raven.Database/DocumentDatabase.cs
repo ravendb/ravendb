@@ -338,30 +338,32 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
-			TransactionalStorage.Batch(actions =>
+			lock (this)
 			{
-				if (key.EndsWith("/"))
+				TransactionalStorage.Batch(actions =>
 				{
-					key += actions.General.GetNextIdentityValue(key);
-				}
-				if (transactionInformation == null)
-				{
-					AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
-					PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
+					if (key.EndsWith("/"))
+					{
+						key += actions.General.GetNextIdentityValue(key);
+					}
+					if (transactionInformation == null)
+					{
+						AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
+						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
 
-					newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
-					// We detect this by using the etags
-					// AddIndexingTask(actions, metadata, () => new IndexDocumentsTask { Keys = new[] { key } });
-					PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, transactionInformation));
-				}
-				else
-				{
-					newEtag = actions.Transactions.AddDocumentInTransaction(key, etag,
-													 document, metadata, transactionInformation);
-				}
-				workContext.ShouldNotifyAboutWork();
-			});
-
+						newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
+						// We detect this by using the etags
+						// AddIndexingTask(actions, metadata, () => new IndexDocumentsTask { Keys = new[] { key } });
+						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, transactionInformation));
+					}
+					else
+					{
+						newEtag = actions.Transactions.AddDocumentInTransaction(key, etag,
+						                                                        document, metadata, transactionInformation);
+					}
+					workContext.ShouldNotifyAboutWork();
+				});
+			}
 			TransactionalStorage
 				.ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag)));
 
@@ -897,23 +899,36 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
 		{
 			var results = new List<BatchResult>();
 
-			log.DebugFormat("Executing batched commands in a single transaction");
-			TransactionalStorage.Batch(actions =>
+			var commandDatas = commands.ToArray();
+			var shouldLock = commandDatas.Any(x=>x is PutCommandData);
+
+			if(shouldLock)
+				Monitor.Enter(this);
+			try
 			{
-				foreach (var command in commands)
+				log.DebugFormat("Executing batched commands in a single transaction");
+				TransactionalStorage.Batch(actions =>
 				{
-					command.Execute(this);
-					results.Add(new BatchResult
+					foreach (var command in commandDatas)
 					{
-						Method = command.Method,
-						Key = command.Key,
-						Etag = command.Etag,
-						Metadata = command.Metadata
-					});
-				}
-				workContext.ShouldNotifyAboutWork();
-			});
-			log.DebugFormat("Successfully executed {0} commands", results.Count);
+						command.Execute(this);
+						results.Add(new BatchResult
+						{
+							Method = command.Method,
+							Key = command.Key,
+							Etag = command.Etag,
+							Metadata = command.Metadata
+						});
+					}
+					workContext.ShouldNotifyAboutWork();
+				});
+				log.DebugFormat("Successfully executed {0} commands", results.Count);
+			}
+			finally
+			{
+				if(shouldLock)
+					Monitor.Exit(this);
+			}
 			return results.ToArray();
 		}
 

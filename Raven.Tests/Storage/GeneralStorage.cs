@@ -9,6 +9,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Data;
 using Raven.Database.Tasks;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;
@@ -227,7 +228,7 @@ namespace Raven.Tests.Storage
             });
         }
 
-		[Fact(Skip = "No sure how to fix this yet")]
+		[Fact]
 		public void GetDocumentAfterAnEtagWhileAddingDocsFromMultipleThreadsEnumeratesAllDocs()
 		{
 			var numberOfDocsAdded = 0;
@@ -238,14 +239,18 @@ namespace Raven.Tests.Storage
 				{
                     var thread = new Thread(() =>
                     {
-                        db.TransactionalStorage.Batch(actions =>
-                        {
-                            for (var k = 0; k < 100; k++)
+                    	var cmds = new List<ICommandData>();
+                         for (var k = 0; k < 100; k++)
+                         {
+							var newId = Interlocked.Increment(ref numberOfDocsAdded);
+                            cmds.Add(new PutCommandData
                             {
-                                var newId = Interlocked.Increment(ref numberOfDocsAdded);
-                                actions.Documents.AddDocument(newId.ToString(), null, new JObject(), new JObject());
-                            }
-                        });
+                            	Document = new JObject(),
+								Metadata = new JObject(),
+								Key = newId.ToString()
+                            });
+                        };
+                    	db.Batch(cmds);
                     });
 					threads.Add(thread);
 					thread.Start();
