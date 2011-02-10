@@ -69,10 +69,7 @@
 
 	</UserControl.Resources>
 
-
-
-	<Grid Grid.Column="1"
-		  Margin="12,0,0,0">
+	<Grid Margin="12,0,0,0">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />
@@ -131,6 +128,5 @@
 
 		</StackPanel>
 	</Grid>
-
 
 </UserControl>

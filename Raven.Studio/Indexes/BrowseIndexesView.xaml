@@ -8,9 +8,24 @@
 			 xmlns:b="clr-namespace:Raven.Studio.Behaviors"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 xmlns:dtk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
 			 mc:Ignorable="d">
 
-	<tk:BusyIndicator IsBusy="{Binding IsBusy}">
+	<Grid Margin="12,0,0,0">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+
+		<StackPanel x:Name="header"
+					Orientation="Vertical"
+					VerticalAlignment="Top"
+					d:IsLocked="True">
+			<TextBlock Text="Indexes"
+					   Style="{StaticResource Header}" />
+		</StackPanel>
+
 		<Grid>
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
@@ -46,10 +61,19 @@
 					<c:Pager Grid.Row="0"
 							 cm:Bind.Model="{Binding Indexes}" />
 
-					<ListBox Grid.Row="1"
-							 ItemsSource="{Binding Indexes}"
-							 SelectedItem="{Binding ActiveIndex, Mode=TwoWay}"
-							 DisplayMemberPath="Name"/>
+					<dtk:DataGrid Grid.Row="1"
+								  AutoGenerateColumns="False"
+								  ItemsSource="{Binding Indexes}"
+								  SelectedItem="{Binding ActiveIndex, Mode=TwoWay}">
+						<dtk:DataGrid.Columns>
+							<dtk:DataGridTextColumn Binding="{Binding Name}"
+													Width="*"
+													Header="Name" />
+							<dtk:DataGridTextColumn Binding="{Binding Name}"
+													Width="Auto"
+													Header="Type" />
+						</dtk:DataGrid.Columns>
+					</dtk:DataGrid>
 
 					<c:Pager Grid.Row="2"
 							 cm:Bind.Model="{Binding Indexes}" />
@@ -62,5 +86,6 @@
 
 			</Grid>
 		</Grid>
-	</tk:BusyIndicator>
+
+	</Grid>
 </UserControl>

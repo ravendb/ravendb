@@ -2,6 +2,7 @@
 {
 	using System;
 	using System.Collections.Generic;
+	using System.ComponentModel.Composition;
 	using System.Threading.Tasks;
 	using System.Windows;
 	using System.Windows.Markup;
@@ -10,12 +11,14 @@
 	using Framework;
 	using Plugin;
 
+	[Export]
 	public class DocumentTemplateProvider
 	{
 		readonly IServer server;
 		readonly TemplateColorProvider colorProvider;
 		readonly Dictionary<string,DataTemplate> templates = new Dictionary<string, DataTemplate>();
 
+		[ImportingConstructor]
 		public DocumentTemplateProvider(IServer server, TemplateColorProvider colorProvider)
 		{
 			this.server = server;
