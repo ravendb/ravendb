@@ -39,10 +39,9 @@ namespace Raven.Client
 #if !NET_3_5
 		/// <summary>
 		/// Gets the query result
-		/// Execute the query the first time that this is called.
 		/// </summary>
 		/// <value>The query result.</value>
-		Task<QueryResult> QueryResultAsync { get; }
+		Task<IList<T>> ToListAsync();
 #endif
 	}
 }

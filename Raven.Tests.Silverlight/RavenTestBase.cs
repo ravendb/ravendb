@@ -1,4 +1,8 @@
-﻿namespace Raven.Tests.Silverlight
+﻿using System.Diagnostics;
+using System.Linq;
+using Microsoft.Silverlight.Testing;
+
+namespace Raven.Tests.Silverlight
 {
 	using System;
 	using UnitTestProvider;
@@ -10,7 +14,13 @@
 
 		protected static string GenerateNewDatabaseName()
 		{
-			return Guid.NewGuid().ToString();
+			var stackTrace = new StackTrace();
+			var stackFrame =
+				stackTrace.GetFrames().First(x => 
+					x.GetMethod().Name == "MoveNext" && 
+					x.GetMethod().DeclaringType.FullName.Contains("+<"));
+			var generateNewDatabaseName = stackFrame.GetMethod().DeclaringType.FullName.Replace("+<",".");
+			return generateNewDatabaseName.Substring(0, generateNewDatabaseName.IndexOf(">"));
 		}
 	}
 }

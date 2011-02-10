@@ -21,5 +21,6 @@ namespace Raven.Database.Storage
 		JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation);
 		bool DeleteDocument(string key, Guid? etag, out JObject metadata);
 		Guid AddDocument(string key, Guid? etag, JObject data, JObject metadata);
+		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix);
 	}
 }

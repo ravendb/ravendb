@@ -41,6 +41,16 @@ namespace Raven.Client.Client.Async
 		Task<JsonDocument[]> MultiGetAsync(string[] keys);
 
 		/// <summary>
+		/// Begins an async get operation for documents
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize);
+
+		/// <summary>
 		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>
@@ -69,12 +79,25 @@ namespace Raven.Client.Client.Async
 		Task<string[]> GetIndexNamesAsync(int start, int pageSize);
 
 		/// <summary>
+		/// Gets the indexes from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize);
+
+		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		/// <param name="overwrite">Should overwrite index</param>
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
+
+		/// <summary>
+		/// Deletes the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		Task DeleteIndexAsync(string name);
 
 		/// <summary>
 		/// Puts the document with the specified key in the database
@@ -96,6 +119,46 @@ namespace Raven.Client.Client.Async
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		IAsyncDatabaseCommands With(ICredentials credentialsForSession);
+
+		/// <summary>
+		/// Retrieve the statistics for the database asynchronously
+		/// </summary>
+		Task<DatabaseStatistics> GetStatisticsAsync();
+
+		/// <summary>
+		/// Gets the list of databases from the server asyncronously
+		/// </summary>
+		Task<string[]> GetDatabaseNamesAsync();
+
+		/// <summary>
+		/// Gets the list of collections from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		Task<Collection[]> GetCollectionsAsync(int start, int pageSize);
+
+		/// <summary>
+		/// Puts the attachment with the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="data">The data.</param>
+		/// <param name="metadata">The metadata.</param>
+		Task PutAttachmentAsync(string key, Guid? etag, byte[] data, JObject metadata);
+
+		/// <summary>
+		/// Gets the attachment by the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		Task<Attachment> GetAttachmentAsync(string key);
+
+		/// <summary>
+		/// Deletes the attachment with the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		Task DeleteAttachmentAsync(string key, Guid? etag);
 	}
 }
 #endif

@@ -121,7 +121,7 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return new RavenQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch).Execute(expression);
+			return GetQueryProviderProcessor().Execute(expression);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
@@ -194,6 +194,18 @@ namespace Raven.Client.Linq
 			customizeQuery += action;
 		}
 
+		/// <summary>
+		/// Convert the expression to a Lucene query
+		/// </summary>
+		public IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression)
+		{
+			var processor = GetQueryProviderProcessor();
+			return (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
+		}
 
+		RavenQueryProviderProcessor<T> GetQueryProviderProcessor()
+		{
+			return new RavenQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch);
+		}
 	}
 }

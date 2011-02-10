@@ -41,7 +41,7 @@ namespace Raven.Client.Linq
 		/// <param name="queryGenerator">The document query generator.</param>
 		/// <param name="customizeQuery">The customize query.</param>
 		/// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
-		/// <param name="indexName">The index name to query</param>
+		/// <param name="indexName">The name of the index the query is executed against.</param>
 		/// <param name="fieldsToFetch">The fields to fetch in this query</param>
 		public RavenQueryProviderProcessor(
 			IDocumentQueryGenerator queryGenerator,
@@ -56,15 +56,6 @@ namespace Raven.Client.Linq
 			this.indexName = indexName;
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.customizeQuery = customizeQuery;
-		}
-
-		/// <summary>
-		/// Gets the lucene query.
-		/// </summary>
-		/// <value>The lucene query.</value>
-		public IDocumentQuery<T> LuceneQuery
-		{
-			get { return luceneQuery; }
 		}
 
 		/// <summary>
@@ -783,13 +774,18 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
-		/// Processes the expression.
+		/// Gets the lucene query.
 		/// </summary>
-		/// <param name="expression">The expression.</param>
-		public void ProcessExpression(Expression expression)
+		/// <value>The lucene query.</value>
+		public IDocumentQuery<T> GetLuceneQueryFor(Expression expression)
 		{
 			luceneQuery = queryGenerator.Query<T>(indexName);
 			VisitExpression(expression);
+
+			if (customizeQuery != null)
+				customizeQuery((IDocumentQueryCustomization)luceneQuery);
+
+			return luceneQuery;
 		}
 		
 		/// <summary>
@@ -800,10 +796,8 @@ namespace Raven.Client.Linq
 		public object Execute(Expression expression)
 		{
 			chainedWhere = false;
-			ProcessExpression(expression);
 
-			if (customizeQuery != null)
-				customizeQuery((IDocumentQueryCustomization)luceneQuery);
+			luceneQuery = GetLuceneQueryFor(expression);
 
 			if(newExpressionType == typeof(T))
 				return ExecuteQuery<T>();

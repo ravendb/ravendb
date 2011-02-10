@@ -181,6 +181,22 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 						 Indexes = { { "Tag", FieldIndexing.NotAnalyzed } },
 						 Stores = { { "Tag", FieldStorage.No } }
 					 });
+
+			PutIndex("Raven/DocumentCollections",
+					 new IndexDefinition
+					 {
+						 Map =
+						 @"from doc in docs
+let Name = doc[""@metadata""][""Raven-Entity-Name""]
+where Name != null
+select new { Name , Count = 1}
+",
+						 Reduce = @"from result in results
+group result by result.Name into g
+select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
+						 //Indexes = { { "Name", FieldIndexing.NotAnalyzed } },
+						 //Stores = { { "Name", FieldStorage.No } }
+					});
 		}
 
 		public DatabaseStatistics Statistics
@@ -758,6 +774,27 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				.ExecuteImmediatelyOrRegisterForSyncronization(
 					() => AttachmentDeleteTriggers.Apply(trigger => trigger.AfterCommit(name)));
 
+		}
+
+		public JArray GetDocumentsWithIdStartingWith(string idPrefix)
+		{
+			var list = new JArray();
+			TransactionalStorage.Batch(actions =>
+			{
+				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix);
+				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
+				foreach (var doc in documents)
+				{
+					DocumentRetriever.EnsureIdInMetadata(doc);
+					var document = documentRetriever
+						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+					if (document == null)
+						continue;
+
+					list.Add(document.ToJson());
+				}
+			});
+			return list;
 		}
 
 		public JArray GetDocuments(int start, int pageSize, Guid? etag)

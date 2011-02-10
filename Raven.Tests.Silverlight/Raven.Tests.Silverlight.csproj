@@ -95,25 +95,30 @@
     <Reference Include="System.Net" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Windows.Browser" />
-    <Reference Include="XunitLight.Silverlight">
-      <HintPath>..\SharedLibs\Silverlight\XunitLight.Silverlight.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Raven.Tests\Document\Company.cs">
-      <Link>Company.cs</Link>
+      <Link>Entities\Company.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Tests\Document\Contact.cs">
-      <Link>Contact.cs</Link>
+      <Link>Entities\Contact.cs</Link>
     </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="AsyncDatabaseCommandsTests.cs" />
     <Compile Include="AsyncLinqQueryTests.cs" />
     <Compile Include="AsyncLuceneQueryTests.cs" />
+    <Compile Include="Collections.cs" />
+    <Compile Include="Entities\Customer.cs" />
+    <Compile Include="Entities\DenormalizedReference.cs" />
+    <Compile Include="Entities\Order.cs" />
+    <Compile Include="Generate.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AsyncDocumentStoreServerTests.cs" />
     <Compile Include="RavenTestBase.cs" />
+    <Compile Include="Entities\TheCompanyName.cs" />
+    <Compile Include="Statistics.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -133,9 +138,7 @@
   <ItemGroup>
     <None Include="Properties\OutOfBrowserSettings.xml" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Document\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <Import Condition="$(SilverlightVersion)=='v3.0'" Project="$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SilverlightToolkit\Tools\v3.0)Microsoft.Silverlight.Toolkit.Build.targets" />
   <Import Condition="$(SilverlightVersion)=='v4.0'" Project="$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SilverlightToolkit\Tools\v4.0)Microsoft.Silverlight.Toolkit.Build.targets" />

@@ -486,6 +486,41 @@ If you really want to do in memory filtering on the data returned from the query
             throw new NotSupportedException();
         }
 
+
+		/// <summary>
+		///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
+		///   that is nearly always a mistake.
+		/// </summary>
+		[Obsolete(
+			@"
+You cannot issue an in memory filter - such as Count(x=>x.Name == ""Ayende"") - on IDocumentQuery. 
+This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
+Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.LuceneQuery<T>() is intended for lower level API access.
+If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Count(x=>x.Name == ""Ayende"")
+"
+			, true)]
+		public int Count(Func<T, bool> predicate)
+		{
+			throw new NotSupportedException();
+		}
+
+		/// <summary>
+		///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
+		///   that is nearly always a mistake.
+		/// </summary>
+		[Obsolete(
+			@"
+You cannot issue an in memory filter - such as Count() - on IDocumentQuery. 
+This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
+Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.LuceneQuery<T>() is intended for lower level API access.
+If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Count()
+"
+			, true)]
+		public int Count()
+		{
+			throw new NotSupportedException();
+		}
+
         /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
         /// </summary>
@@ -1294,5 +1329,26 @@ If you really want to do in memory filtering on the data returned from the query
         {
             return lastEquality;
         }
+#if !NET_3_5
+		/// <summary>
+		/// Returns a list of results for a query asynchronously. 
+		/// </summary>
+		public Task<IList<T>> ToListAsync()
+		{
+			return QueryResultAsync
+				.ContinueWith(r =>
+				{
+					var result = r.Result;
+
+					foreach (var include in result.Includes)
+					{
+						var metadata = include.Value<JObject>("@metadata");
+						theSession.TrackEntity<object>(metadata.Value<string>("@id"), include, metadata);
+					}
+
+					return (IList<T>)result.Results.Select(Deserialize).ToList();
+				});
+		}
+		#endif
     }
 }

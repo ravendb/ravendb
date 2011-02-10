@@ -1,6 +1,0 @@
-﻿<navigation:Page x:Class="Raven.Management.Client.Silverlight.Tests.InBrowser" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation" d:DesignWidth="640" d:DesignHeight="480" Title="InBrowser Page" xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
-	<Grid x:Name="LayoutRoot">
-		<Button Content="Install" Height="50" HorizontalAlignment="Left" Margin="249,202,0,0" Name="BtnInstall" VerticalAlignment="Top" Width="134" FontSize="26" FontWeight="Bold" Click="BtnInstall_Click" Visibility="Collapsed" />
-		<sdk:Label Margin="249,202,257,228" Name="label1" Content="Run OOB" FontSize="26" FontWeight="Bold" Visibility="Collapsed" />
-	</Grid>
-</navigation:Page>

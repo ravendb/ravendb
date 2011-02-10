@@ -77,6 +77,16 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
+		/// Gets the indexes from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -120,6 +130,15 @@ namespace Raven.Client.Client.Async
 														return obj.index;
 													})).Unwrap();
 				}).Unwrap();
+		}
+
+		/// <summary>
+		/// Deletes the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task DeleteIndexAsync(string name)
+		{
+			throw new NotImplementedException();
 		}
 
 		/// <summary>
@@ -299,6 +318,17 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
+		/// Begins an async get operation for documents
+		/// </summary>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
 		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>
@@ -439,6 +469,65 @@ namespace Raven.Client.Client.Async
 		{
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentException("Key cannot be null or empty", argName);
+		}
+
+		/// <summary>
+		/// Begins retrieving the statistics for the database
+		/// </summary>
+		/// <returns></returns>
+		public Task<DatabaseStatistics> GetStatisticsAsync()
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Gets the list of databases from the server asyncronously
+		/// </summary>
+		public Task<string[]> GetDatabaseNamesAsync()
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Gets the list of collections from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public Task<Collection[]> GetCollectionsAsync(int start, int pageSize)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Puts the attachment with the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="data">The data.</param>
+		/// <param name="metadata">The metadata.</param>
+		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, JObject metadata)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Gets the attachment by the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		public Task<Attachment> GetAttachmentAsync(string key)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Deletes the attachment with the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		public Task DeleteAttachmentAsync(string key, Guid? etag)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

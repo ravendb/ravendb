@@ -107,11 +107,20 @@ namespace Raven.Client.Linq
 			ravenQueryProvider.Customize(customizeQuery);
 			return ravenQueryProvider;
 		}
-
+		
 		/// <summary>
 		/// Set the fields to fetch
 		/// </summary>
 		public HashSet<string> FieldsToFetch { get; private set; }
+
+		/// <summary>
+		/// Convert the expression to a Lucene query
+		/// </summary>
+		public IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression)
+		{
+			var processor = GetQueryProviderProcessor();
+			return (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
+		}
 
 		/// <summary>
 		/// Executes the query represented by a specified expression tree.
@@ -122,7 +131,12 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch).Execute(expression);
+			return GetQueryProviderProcessor().Execute(expression);
+		}
+
+		DynamicQueryProviderProcessor<T> GetQueryProviderProcessor()
+		{
+			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
