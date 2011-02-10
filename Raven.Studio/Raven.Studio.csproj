@@ -210,6 +210,7 @@
     <Compile Include="Indexes\CreateNewIndexPlugin.cs" />
     <Compile Include="Messages\IndexChangeMessage.cs" />
     <Compile Include="Indexes\EditIndexViewModel.cs" />
+    <Compile Include="Messages\ShowCurrentDatabase.cs" />
     <Compile Include="Plugins\Linq\LinqEditor.cs" />
     <Compile Include="Plugins\Linq\LinqEditorView.xaml.cs">
       <DependentUpon>LinqEditorView.xaml</DependentUpon>

@@ -1,19 +1,19 @@
 namespace Raven.Studio.Database
 {
+	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Framework;
 	using Messages;
 	using Plugin;
 
+	[Export]
 	public class SelectDatabaseViewModel : Screen, IRavenScreen
 	{
 		readonly IEventAggregator events;
-		readonly TemplateColorProvider colorProvider;
 
-		public SelectDatabaseViewModel(IServer server, IEventAggregator events, TemplateColorProvider colorProvider)
+		[ImportingConstructor]
+		public SelectDatabaseViewModel(IServer server, IEventAggregator events)
 		{
 			this.events = events;
-			this.colorProvider = colorProvider;
 			DisplayName = "Home";
 			Server = server;
 		}
@@ -27,8 +27,7 @@ namespace Raven.Studio.Database
 
 		public void OpenDatabase()
 		{
-			var vm = IoC.Get<SummaryViewModel>();
-			events.Publish(new OpenNewScreen(vm));
+			events.Publish(new ShowCurrentDatabase());
 		}
 	}
 }

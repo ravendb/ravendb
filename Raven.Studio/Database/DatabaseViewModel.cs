@@ -4,27 +4,24 @@ namespace Raven.Studio.Database
 	using System.ComponentModel.Composition;
 	using System.Linq;
 	using Caliburn.Micro;
-	using Framework;
 	using Messages;
 	using Plugin;
 
 	[Export(typeof(DatabaseViewModel))]
 	public class DatabaseViewModel : Conductor<IRavenScreen>.Collection.OneActive, IHandle<ReplaceActiveScreen>
 	{
-		readonly IEventAggregator events;
-
 		[ImportingConstructor]
-		public DatabaseViewModel(IServer server, TemplateColorProvider colorProvider, IEventAggregator events)
+		public DatabaseViewModel(IServer server, IEventAggregator events)
 		{
-			this.events = events;
 			DisplayName = server.Name;
+
 			events.Subscribe(this);
 
 			server.Connect(new Uri("http://localhost:8080"));
 
 			Server = server;
 			Menu = new MenuScreenViewModel(server);
-			Home = new SelectDatabaseViewModel(server, events, colorProvider);
+			//Home = new SelectDatabaseViewModel(server);
 			GoHome();
 		}
 

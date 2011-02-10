@@ -6,16 +6,23 @@
 	using Caliburn.Micro;
 	using Database;
 	using Messages;
+	using Plugin;
 
 	[Export(typeof (IShell))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class ShellViewModel : Conductor<DatabaseViewModel>, IShell, IHandle<OpenNewScreen>
+	public class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IShell, IHandle<ShowCurrentDatabase>
 	{
+		readonly SummaryViewModel summary;
+
 		[ImportingConstructor]
-		public ShellViewModel(DatabaseViewModel databaseViewModel, IEventAggregator events)
+		public ShellViewModel(IServer server, SelectDatabaseViewModel start, SummaryViewModel summary, IEventAggregator events)
 		{
-			ActivateItem(databaseViewModel);
+			this.summary = summary;
+			server.Connect(new Uri("http://localhost:8080"));
+			ActivateItem(start);
 			events.Subscribe(this);
+
+			Items.Add(summary);
 		}
 
 		public Window Window
@@ -23,9 +30,9 @@
 			get { return Application.Current.MainWindow; }
 		}
 
-		public void Handle(OpenNewScreen message)
+		public void Handle(ShowCurrentDatabase message)
 		{
-			ActiveItem.ActivateItem(message.NewScreen);
+			ActivateItem(summary);
 		}
 
 		public void CloseWindow()
