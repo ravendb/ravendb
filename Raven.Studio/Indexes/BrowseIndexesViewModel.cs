@@ -7,6 +7,7 @@
 	using Plugin;
 	using Raven.Database.Indexing;
 
+	[Export]
 	public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>, IRavenScreen,
 	                                      IHandle<IndexChangeMessage>
 	{
@@ -15,16 +16,18 @@
 		string filter;
 		bool isBusy;
 
+		[ImportingConstructor]
 		public BrowseIndexesViewModel(IServer server)
 		{
-			DisplayName = "Browse Indexes";
+			DisplayName = "Indexes";
 
 			this.server = server;
+		}
 
+		protected override void OnActivate()
+		{
 			var session = server.OpenSession();
 			Indexes = new BindablePagedQuery<IndexDefinition>(session.Advanced.AsyncDatabaseCommands.GetIndexesAsync);
-
-			CompositionInitializer.SatisfyImports(this);
 		}
 
 		public bool IsBusy

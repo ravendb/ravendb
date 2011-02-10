@@ -1,5 +1,6 @@
 namespace Raven.Studio.Documents
 {
+	using System;
 	using System.ComponentModel.Composition;
 	using Plugin;
 	using Plugins;
@@ -19,7 +20,11 @@ namespace Raven.Studio.Documents
 
 		public override IRavenScreen RelatedScreen
 		{
-			get { return new BrowseDocumentsViewModel(Server); }
+			get
+			{
+				throw new NotImplementedException();
+				//return new BrowseDocumentsViewModel(Server);
+			}
 		}
 
 		public override object MenuView

@@ -6,12 +6,14 @@
 	using System.Linq;
 	using Abstractions.Data;
 	using Caliburn.Micro;
+	using Documents;
 	using Framework;
+	using Indexes;
 	using Messages;
 	using Plugin;
 
 	[Export]
-	public class SummaryViewModel : Screen, IRavenScreen, IHandle<DocumentDeleted>
+	public class SummaryViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
 		readonly DocumentTemplateProvider templateProvider;
@@ -23,7 +25,7 @@
 			this.templateProvider = new DocumentTemplateProvider(server, colorProvider);
 			events.Subscribe(this);
 
-			DisplayName = "Database";
+			DisplayName = "Summary";
 		}
 
 		public string DatabaseName

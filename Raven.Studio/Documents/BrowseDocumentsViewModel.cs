@@ -14,32 +14,26 @@ namespace Raven.Studio.Documents
 	using Plugin;
 	using Raven.Database;
 
+	[Export]
 	public class BrowseDocumentsViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
 	{
 		bool isBusy;
 		bool isDocumentPreviewed;
 		string lastSearchDocumentId;
 		readonly IServer server;
+		readonly IWindowManager windowManager;
+		readonly IEventAggregator events;
 
-		public BrowseDocumentsViewModel(IServer server)
+		[ImportingConstructor]
+		public BrowseDocumentsViewModel(IServer server, IWindowManager windowManager, IEventAggregator events)
 		{
-			DisplayName = "Browse Documents";
+			DisplayName = "Documents";
 			this.server = server;
-
-			CompositionInitializer.SatisfyImports(this);
-
-			var session = server.OpenSession();
-			Documents = new BindablePagedQuery<JsonDocument>(session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync);
-			Documents.PageSize = 25;
+			this.windowManager = windowManager;
+			this.events = events;
 		}
 
 		public BindablePagedQuery<JsonDocument> Documents { get; private set; }
-
-		[Import]
-		public IEventAggregator EventAggregator { get; set; }
-
-		[Import]
-		public IWindowManager WindowManager { get; set; }
 
 		public bool IsBusy
 		{
@@ -100,7 +94,7 @@ namespace Raven.Studio.Documents
 			}
 			else if (loadResponse.StatusCode == HttpStatusCode.NotFound)
 			{
-				WindowManager.ShowDialog(new InformationDialogViewModel("Document not found",
+				windowManager.ShowDialog(new InformationDialogViewModel("Document not found",
 				                                                        string.Format(
 				                                                        	"Document with key {0} doesn't exist in database.",
 				                                                        	lastSearchDocumentId)));
@@ -109,7 +103,7 @@ namespace Raven.Studio.Documents
 
 		void NavigateTo(JsonDocument document)
 		{
-			EventAggregator.Publish(
+			events.Publish(
 				new ReplaceActiveScreen(new DocumentViewModel(document, server)));
 		}
 
@@ -127,9 +121,14 @@ namespace Raven.Studio.Documents
 			IsBusy = true;
 
 			using(var session = server.OpenSession())
-			session.Advanced.AsyncDatabaseCommands
-				.GetStatisticsAsync()
-				.ContinueOnSuccess(x => RefreshDocuments(x.Result.CountOfDocuments));
+			{
+				Documents = new BindablePagedQuery<JsonDocument>(session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync);
+				Documents.PageSize = 25;
+
+				session.Advanced.AsyncDatabaseCommands
+					.GetStatisticsAsync()
+					.ContinueOnSuccess(x => RefreshDocuments(x.Result.CountOfDocuments));
+			}
 		}
 
 		public void RefreshDocuments(long total)

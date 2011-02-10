@@ -21,7 +21,7 @@
 			var old = screen.ActiveItem;
 			events.Publish(new NavigationEvent(old.DisplayName, () =>
 			                                                    	{
-			                                                    		if (setContext == null) setContext();
+			                                                    		if (setContext != null) setContext();
 			                                                    		screen.ActivateItem(old);
 			                                                    	}));
 			screen.ActivateItem(newScreen);

@@ -15,11 +15,11 @@
 		IHandle<ShowCurrentDatabase>
 	{
 		readonly NavigationViewModel navigation;
-		readonly SummaryViewModel summary;
+		readonly DatabaseViewModel databaseScreen;
 		readonly IEventAggregator events;
 
 		[ImportingConstructor]
-		public ShellViewModel(IServer server, NavigationViewModel navigation, SelectDatabaseViewModel start, SummaryViewModel summary, IEventAggregator events)
+		public ShellViewModel(IServer server, NavigationViewModel navigation, SelectDatabaseViewModel start, DatabaseViewModel databaseScreen, IEventAggregator events)
 		{
 			this.navigation = navigation;
 			navigation.SetGoHome( ()=>
@@ -27,14 +27,14 @@
 										this.TrackNavigationTo(start, events);
 			                      		navigation.Breadcrumbs.Clear();
 			                      	});
-			this.summary = summary;
+			this.databaseScreen = databaseScreen;
 			this.events = events;
 
 			server.Connect(new Uri("http://localhost:8080"));
 			ActivateItem(start);
 			events.Subscribe(this);
 
-			Items.Add(summary);
+			Items.Add(databaseScreen);
 		}
 
 		public NavigationViewModel Navigation
@@ -50,10 +50,10 @@
 		public void Handle(ShowCurrentDatabase message)
 		{
 			//TODO: record the previous database so that the back button is more intuitive
-			this.TrackNavigationTo(summary, events);
+			this.TrackNavigationTo(databaseScreen, events);
 
 			navigation.Breadcrumbs.Clear();
-			navigation.Breadcrumbs.Add(summary);
+			navigation.Breadcrumbs.Add(databaseScreen);
 		}
 
 		public void CloseWindow()

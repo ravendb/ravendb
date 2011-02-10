@@ -69,117 +69,68 @@
 
 	</UserControl.Resources>
 
-	<Grid>
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="200" />
-			<ColumnDefinition Width="*" />
-		</Grid.ColumnDefinitions>
 
-		<Border BorderThickness="0 0 1 0"
-				Margin="0 8"
-				Padding="12 0 8 0">
-			<Border.BorderBrush>
-				<LinearGradientBrush EndPoint="0.5,1"
-									 StartPoint="0.5,0">
-					<GradientStop Color="#00123C65" />
-					<GradientStop Color="#BF123C65"
-								  Offset="0.25" />
-					<GradientStop Color="#00123C65"
-								  Offset="1" />
-					<GradientStop Color="#BF123C65"
-								  Offset="0.75" />
-				</LinearGradientBrush>
-			</Border.BorderBrush>
-			<Grid x:Name="explorer"
-				  Margin="1 8 -1 -8">
-				<Grid.RowDefinitions>
-					<RowDefinition Height="2*" />
-					<RowDefinition />
-				</Grid.RowDefinitions>
 
-				<StackPanel Orientation="Vertical"
-							VerticalAlignment="Top">
-					<TextBlock Text="{Binding DatabaseName}"
-							   ToolTipService.ToolTip="{Binding DatabaseName}"
-							   Style="{StaticResource PanelTitle}" />
-					<TextBlock Text="Summary"
-							   FontSize="18.667"
-							   FontWeight="Bold" />
-					<TextBlock Text="Collections"
-							   FontSize="18.667" />
-					<TextBlock Text="Indexes"
-							   FontSize="18.667" />
-					<TextBlock FontSize="18.667"
-							   Text="Search" />
-					<TextBlock FontSize="18.667"
-							   Text="Admin" />
-				</StackPanel>
+	<Grid Grid.Column="1"
+		  Margin="12,0,0,0">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
 
-				<ContentControl x:Name="Server_Statistics"
-								Grid.Row="1" />
-			</Grid>
-		</Border>
+		<StackPanel x:Name="header"
+					Orientation="Vertical"
+					VerticalAlignment="Top"
+					d:IsLocked="True">
+			<TextBlock x:Name="DatabaseName"
+					   Style="{StaticResource Header}" />
+		</StackPanel>
 
-		<Grid Grid.Column="1"
-			  Margin="12,0,0,0">
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="*" />
-			</Grid.RowDefinitions>
+		<StackPanel HorizontalAlignment="Left"
+					Grid.Row="1"
+					Margin="0,12,0,0">
+			<TextBlock Text="Recent Documents"
+					   Style="{StaticResource SectionHeader}" />
 
-			<StackPanel x:Name="header"
-						Orientation="Vertical"
-						VerticalAlignment="Top"
-						d:IsLocked="True">
-				<TextBlock x:Name="DatabaseName"
-						   Style="{StaticResource Header}" />
-			</StackPanel>
+			<ItemsControl x:Name="RecentDocuments">
+				<ItemsControl.ItemsPanel>
+					<ItemsPanelTemplate>
+						<tk:WrapPanel />
+					</ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Grid cm:Action.TargetWithoutContext="PreviewDocument"
+							  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
+							  Background="Transparent">
+							<ti:ContextMenuService.ContextMenu>
+								<ti:ContextMenu>
+									<ti:MenuItem Header="Delete Document"
+												 cm:Action.TargetWithoutContext="DeleteDocument"
+												 cm:Message.Attach="Click=Execute($dataContext)" />
+								</ti:ContextMenu>
+							</ti:ContextMenuService.ContextMenu>
+							<ContentControl Content="{Binding}"
+											ContentTemplate="{Binding DataTemplate}" />
+						</Grid>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
 
-			<StackPanel HorizontalAlignment="Left"
-						Grid.Row="1"
-						Margin="0,12,0,0">
-				<TextBlock Text="Recent Documents"
-						   Style="{StaticResource SectionHeader}" />
+		</StackPanel>
+		<StackPanel HorizontalAlignment="Left"
+					Grid.Row="2"
+					Margin="0,12,0,0">
+			<TextBlock Text="Collections"
+					   Style="{StaticResource SectionHeader}" />
 
-				<ItemsControl x:Name="RecentDocuments">
-					<ItemsControl.ItemsPanel>
-						<ItemsPanelTemplate>
-							<tk:WrapPanel />
-						</ItemsPanelTemplate>
-					</ItemsControl.ItemsPanel>
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<Grid cm:Action.TargetWithoutContext="PreviewDocument"
-								  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
-								  Background="Transparent">
-								<ti:ContextMenuService.ContextMenu>
-									<ti:ContextMenu>
-										<ti:MenuItem Header="Delete Document"
-													 cm:Action.TargetWithoutContext="DeleteDocument"
-													 cm:Message.Attach="Click=Execute($dataContext)" />
-									</ti:ContextMenu>
-								</ti:ContextMenuService.ContextMenu>
-								<ContentControl Content="{Binding}"
-												ContentTemplate="{Binding DataTemplate}" />
-							</Grid>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
+			<ItemsControl x:Name="Collections"
+						  ItemTemplate="{StaticResource CollectionTemplate}"
+						  HorizontalAlignment="Left" />
 
-			</StackPanel>
-			<StackPanel HorizontalAlignment="Left"
-						Grid.Row="2"
-						Margin="0,12,0,0">
-				<TextBlock Text="Collections"
-						   Style="{StaticResource SectionHeader}" />
-
-				<ItemsControl x:Name="Collections"
-							  ItemTemplate="{StaticResource CollectionTemplate}"
-							  HorizontalAlignment="Left" />
-
-			</StackPanel>
-		</Grid>
-
+		</StackPanel>
 	</Grid>
+
+
 </UserControl>
