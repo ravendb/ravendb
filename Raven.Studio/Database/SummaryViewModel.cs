@@ -13,7 +13,6 @@
 	[Export]
 	public class SummaryViewModel : Screen, IRavenScreen, IHandle<DocumentDeleted>
 	{
-		readonly TemplateColorProvider colorProvider;
 		readonly IServer server;
 		readonly DocumentTemplateProvider templateProvider;
 
@@ -21,9 +20,10 @@
 		public SummaryViewModel(IServer server, TemplateColorProvider colorProvider, IEventAggregator events)
 		{
 			this.server = server;
-			this.colorProvider = colorProvider;
 			this.templateProvider = new DocumentTemplateProvider(server, colorProvider);
 			events.Subscribe(this);
+
+			DisplayName = "Database";
 		}
 
 		public string DatabaseName

@@ -20,6 +20,7 @@
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="30" />
+						<RowDefinition Height="Auto" />
 						<RowDefinition Height="*" />
 						<RowDefinition Height="20" />
 					</Grid.RowDefinitions>
@@ -64,11 +65,17 @@
 						</Grid>
 					</Border>
 
-					<ContentControl x:Name="ActiveItem"
+					<ContentControl x:Name="Navigation"
 									Grid.Row="1" />
 
+					<tk:TransitioningContentControl x:Name="ActiveItem"
+													Grid.Row="2"
+													Transition="LeftTransition"
+													VerticalContentAlignment="Stretch"
+													HorizontalContentAlignment="Stretch" />
+
 					<Border x:Name="footer"
-							Grid.Row="2"
+							Grid.Row="3"
 							Background="{StaticResource InverseDarkGradient}">
 						<tk:DockPanel>
 							<StackPanel HorizontalAlignment="Right"
