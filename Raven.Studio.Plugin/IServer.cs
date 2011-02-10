@@ -14,5 +14,6 @@ namespace Raven.Studio.Plugin
 		string CurrentDatabase {get;}
 		void Connect(Uri serverAddress);
 		DatabaseStatistics Statistics {get;}
+		event EventHandler CurrentDatabaseChanged;
 	}
 }

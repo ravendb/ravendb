@@ -65,6 +65,7 @@ namespace Raven.Studio.Database
 				NotifyOfPropertyChange( ()=> CurrentDatabase);
 				NotifyOfPropertyChange(() => HasCurrentDatabase);
 				RefreshStatistics(true);
+				RaiseCurrentDatabaseChanged();
 			}
 		}
 
@@ -108,6 +109,12 @@ namespace Raven.Studio.Database
 				statistics = value;
 				NotifyOfPropertyChange(() => Statistics);
 			}
+		}
+
+		public event EventHandler CurrentDatabaseChanged = delegate { };
+		void RaiseCurrentDatabaseChanged()
+		{
+			CurrentDatabaseChanged(this,EventArgs.Empty);
 		}
 
 		void RefreshStatistics(bool clear)
