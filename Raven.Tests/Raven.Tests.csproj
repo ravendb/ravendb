@@ -135,6 +135,7 @@
     <Compile Include="Bugs\DocumentUrl.cs" />
     <Compile Include="Bugs\DTC\UsingDtcForCreate.cs" />
     <Compile Include="Bugs\DTC\UsingDTCForUpdates.cs" />
+    <Compile Include="Bugs\DTC\UsingRemoteDTC.cs" />
     <Compile Include="Bugs\Embedded\CanUseForUrlOnly.cs" />
     <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Local.cs" />
     <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Remote.cs" />
