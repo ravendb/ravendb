@@ -103,6 +103,7 @@
                            Style="{StaticResource Header}" />
 
                 <StackPanel x:Name="sort_by"
+                            Visibility="{Binding HasCollections, Converter={StaticResource booleanToVisibility}}"
                             Orientation="Horizontal">
                     <TextBlock TextWrapping="Wrap"
                                Text="A-Z"
@@ -236,6 +237,7 @@
         </Grid>
 
         <Grid x:Name="documents"
+              Visibility="{Binding HasCollections, Converter={StaticResource booleanToVisibility}}"
               Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />

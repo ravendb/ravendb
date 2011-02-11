@@ -53,6 +53,11 @@
 			}
 		}
 
+        public bool HasCollections
+	    {
+            get { return Collections != null && Collections.Any(); }
+	    }
+
 		void GetDocumentsForActiveCollection()
 		{
 			if(ActiveCollection == null)
@@ -102,6 +107,7 @@
 					                   		NotifyOfPropertyChange(() => Collections);
 
 					                   		ActiveCollection = Collections.FirstOrDefault();
+                                            NotifyOfPropertyChange(()=>HasCollections);
 					                   	});
 			}
 		}
