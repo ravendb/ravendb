@@ -11,7 +11,6 @@
 			 d:DesignWidth="400">
 
 	<UserControl.Resources>
-		<converters:TypeToBrushConverter x:Key="typeToBrush" />
 		<converters:MagnitudeToListConverter x:Key="magnitudeToList"
 											 Maximum="{Binding LargestCollectionCount}" />
 
@@ -77,7 +76,7 @@
 
 	<Grid>
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition />
+			<ColumnDefinition Width="Auto" />
 			<ColumnDefinition />
 		</Grid.ColumnDefinitions>
 
@@ -250,7 +249,14 @@
 					   FontWeight="Bold" />
 
 			<ItemsControl x:Name="ActiveCollectionDocuments"
-						  Grid.Row="1" />
+						  Grid.Row="1">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<ContentControl cm:View.Model="{Binding}"
+										cm:View.Context="Thumb" />
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
 
 			<c:Pager Grid.Row="2"
 					 cm:Bind.Model="{Binding ActiveCollectionDocuments}" />

@@ -101,6 +101,9 @@
 						<Grid cm:Action.TargetWithoutContext="PreviewDocument"
 							  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
 							  Background="Transparent">
+							<ToolTipService.ToolTip>
+								<ContentControl cm:View.Model="{Binding}" cm:View.Context="Tooltip" />
+							</ToolTipService.ToolTip>
 							<ti:ContextMenuService.ContextMenu>
 								<ti:ContextMenu>
 									<ti:MenuItem Header="Delete Document"

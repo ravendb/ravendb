@@ -32,10 +32,6 @@
 				      Margin=""0,0,6,6""
 				      Width=""100""
 				      Height=""50"">
-				<ToolTipService.ToolTip>
-					<ContentControl cm:View.Model=""{Binding}"" cm:View.Context=""Tooltip"" />
-				</ToolTipService.ToolTip>
-
 				<Rectangle Fill=""#FFF4F4F5"" />
 				<Rectangle Fill=""" + fill + @"""
 						   HorizontalAlignment=""Left""

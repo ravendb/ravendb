@@ -55,5 +55,6 @@
 	<converters:EnumToIntConverter x:Key="enumToInt" />
 	<converters:EnumToEnumerableConverter x:Key="enumToEnumerable" />
 	<converters:HowLongSinceConverter x:Key="howLongSince" />
+	<converters:TypeToBrushConverter x:Key="typeToBrush" />
 
 </ResourceDictionary>

@@ -1,13 +1,18 @@
 ﻿namespace Raven.Studio.Collections
 {
+	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using System.Linq;
+	using System.Threading.Tasks;
 	using Abstractions.Data;
 	using Caliburn.Micro;
 	using Database;
 	using Framework;
 	using Plugin;
+	using Raven.Database;
+	using Raven.Database.Data;
+	using Raven.Client.Client;
 
 	[Export]
 	public class CollectionsViewModel : Screen
@@ -24,7 +29,7 @@
 		}
 
 		public IEnumerable<Collection> Collections { get; private set; }
-		public IEnumerable<DocumentViewModel> ActiveCollectionDocuments { get; private set; }
+		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments { get; private set; }
 
 		public Collection ActiveCollection
 		{
@@ -49,17 +54,35 @@
 
 		void GetDocumentsForActiveCollection()
 		{
+			if(ActiveCollection == null)
+			{
+				ActiveCollectionDocuments = null;
+			}
+			else
+			{
+				ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
+				ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;
+				ActiveCollectionDocuments.LoadPage();
+			}
+			
+			NotifyOfPropertyChange(()=>ActiveCollectionDocuments);
+		}
+
+		Task<DocumentViewModel[]> GetDocumentsForActiveCollectionQuery(int start, int pageSize)
+		{
 			using (var session = server.OpenSession())
 			{
-				session.Advanced.AsyncDatabaseCommands
-					.GetDocumentsAsync(0, 12)
-					.ContinueOnSuccess(x =>
-					                   	{
-					                   		var templateProvider = IoC.Get<DocumentTemplateProvider>();
-					                   		ActiveCollectionDocuments = new BindableCollection<DocumentViewModel>(
-					                   			x.Result.Select(doc => new DocumentViewModel(doc, templateProvider)));
-					                   		NotifyOfPropertyChange(() => ActiveCollectionDocuments);
-					                   	});
+				var query =  new IndexQuery {Start = start, PageSize = pageSize, Query = "Tag:"+ ActiveCollection.Name};
+				return session.Advanced.AsyncDatabaseCommands
+					.QueryAsync("Raven/DocumentsByEntityName", query, new string[] { })
+					.ContinueWith(x =>
+						{
+							if(x.IsFaulted) throw new NotImplementedException("TODO");
+							var templateProvider = IoC.Get<DocumentTemplateProvider>();
+							return x.Result.Results
+								.Select(doc => new DocumentViewModel(doc.ToJsonDocument(), templateProvider))
+								.ToArray();
+						});
 			}
 		}
 

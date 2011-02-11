@@ -56,8 +56,10 @@
 		{
 			get
 			{
+				var collectionType = CollectionType + "/";
 				var id = Id
-					.Replace(CollectionType + "/",string.Empty)
+					.Replace(collectionType, string.Empty)
+					.Replace(collectionType.ToLower(), string.Empty)
 					.Replace("Raven/",string.Empty);
 
 				Guid guid;
