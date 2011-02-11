@@ -171,7 +171,7 @@ namespace Raven.Studio.Documents
 			var vm = IoC.Get<DocumentViewModel>();
 			var documentScreen = (BrowseDocumentsViewModel) Parent;
 			documentScreen.ActivateItem(vm.CloneUsing(jsonDocument));
-			documentScreen.IsDocumentPreviewed = true;
+            //documentScreen.IsDocumentPreviewed = true;
 		}
 
 		string parseExceptionMessage;

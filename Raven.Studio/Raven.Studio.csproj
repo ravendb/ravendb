@@ -232,9 +232,6 @@
     <Compile Include="Statistics\StatisticsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
     <Compile Include="Database\DatabaseViewModel.cs" />
-    <Compile Include="Documents\BrowseDocumentsView.xaml.cs">
-      <DependentUpon>BrowseDocumentsView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Documents\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>

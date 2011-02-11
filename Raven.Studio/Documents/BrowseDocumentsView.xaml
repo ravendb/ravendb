@@ -28,10 +28,9 @@
                         VerticalAlignment="Bottom"
                         Margin="0,0,0,10">
                 <TextBox MinWidth="350"
-                         KeyDown="DocumentIdKeyDown"
                          x:Name="documentId">
                     <i:Interaction.Behaviors>
-                        <local:Watermark Text="search by document id"
+                        <local:Watermark Text="Search by Document Id"
                                          Foreground="LightGray" />
                     </i:Interaction.Behaviors>
                 </TextBox>
@@ -68,10 +67,12 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
+                <!-- the visibility binding didn't work until I used Bind.Model; not sure why... -->
                 <TextBlock Grid.Row="1"
+                           cm:Bind.Model="{Binding Documents}"
                            Style="{StaticResource Instruction}"
                            Text="The database contains no documents."
-                           Visibility="{Binding Documents, Converter={StaticResource visibleWhenEmpty}}" />
+                           Visibility="{Binding HasNoResults, Converter={StaticResource booleanToVisibility}}" />
 
                 <c:Pager Grid.Row="2"
                          cm:Bind.Model="{Binding Documents}" />

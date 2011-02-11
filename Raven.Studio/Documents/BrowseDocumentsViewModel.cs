@@ -21,8 +21,6 @@ namespace Raven.Studio.Documents
 		IHandle<DocumentDeleted>
 	{
 		bool isBusy;
-		bool isDocumentPreviewed;
-		string lastSearchDocumentId;
 		readonly IServer server;
 		readonly IWindowManager windowManager;
 		readonly IEventAggregator events;
@@ -49,16 +47,6 @@ namespace Raven.Studio.Documents
 			}
 		}
 
-		public bool IsDocumentPreviewed
-		{
-			get { return isDocumentPreviewed && ActiveItem != null; }
-			set
-			{
-				isDocumentPreviewed = value;
-				NotifyOfPropertyChange(() => IsDocumentPreviewed);
-			}
-		}
-
 		public SectionType Section
 		{
 			get { return SectionType.Documents; }
@@ -73,49 +61,6 @@ namespace Raven.Studio.Documents
 
 			Items.AddRange(result);
 			IsBusy = false;
-		}
-
-		public void ClosePreview()
-		{
-			IsDocumentPreviewed = false;
-		}
-
-		public void ShowDocument(string documentId)
-		{
-			lastSearchDocumentId = documentId;
-
-			if (!documentId.Equals("Document ID") && !documentId.Equals(string.Empty))
-			{
-				IsBusy = true;
-				throw new NotImplementedException();
-				//Database.Session.Load<JsonDocument>(documentId, GetDocument);
-			}
-		}
-
-		public void GetDocument(LoadResponse<JsonDocument> loadResponse)
-		{
-			//IsBusy = false;
-			//if (loadResponse.IsSuccess)
-			//{
-			//    NavigateTo(loadResponse.Data);
-			//}
-			//else if (loadResponse.StatusCode == HttpStatusCode.NotFound)
-			//{
-			//    windowManager.ShowDialog(new InformationDialogViewModel("Document not found",
-			//                                                            string.Format(
-			//                                                                "Document with key {0} doesn't exist in database.",
-			//                                                                lastSearchDocumentId)));
-			//}
-		}
-
-
-		public void CreateDocument()
-		{
-			//NavigateTo(new JsonDocument
-			//                            {
-			//                                DataAsJson = new JObject(),
-			//                                Metadata = new JObject()
-			//                            });
 		}
 
 		protected override void OnActivate()
@@ -140,6 +85,8 @@ namespace Raven.Studio.Documents
 			Documents.GetTotalResults = () => total;
 			Documents.LoadPage();
 			IsBusy = false;
+
+            NotifyOfPropertyChange( () => Documents);
 		}
 
 		public void Handle(DocumentDeleted message)
@@ -149,13 +96,5 @@ namespace Raven.Studio.Documents
 			if(deleted !=null)
 				Documents.Remove(deleted);
 		}
-	}
-
-	public class LoadResponse<T>
-	{
-		public HttpStatusCode StatusCode;
-		public bool IsSuccess { get; set; }
-
-		public JsonDocument Data { get; set; }
 	}
 }
