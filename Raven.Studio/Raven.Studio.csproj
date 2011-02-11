@@ -220,11 +220,7 @@
     <Compile Include="Messages\IndexChangeMessage.cs" />
     <Compile Include="Indexes\EditIndexViewModel.cs" />
     <Compile Include="Messages\ShowCurrentDatabase.cs" />
-    <Compile Include="Plugins\Linq\LinqEditor.cs" />
-    <Compile Include="Plugins\Linq\LinqEditorView.xaml.cs">
-      <DependentUpon>LinqEditorView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Plugins\Linq\LinqEditorViewModel.cs" />
+    <Compile Include="Features\Linq\LinqEditorViewModel.cs" />
     <Compile Include="Plugins\PluginBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shell\NavigationViewModel.cs" />
@@ -317,7 +313,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Plugins\Linq\LinqEditorView.xaml">
+    <Page Include="Features\Linq\LinqEditorView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

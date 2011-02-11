@@ -5,11 +5,11 @@ namespace Raven.Studio.Database
 	using Caliburn.Micro;
 	using Collections;
 	using Documents;
+	using Features.Linq;
 	using Framework;
 	using Indexes;
 	using Messages;
 	using Plugin;
-	using Plugins.Linq;
 
 	[Export(typeof (DatabaseViewModel))]
 	public class DatabaseViewModel : Conductor<IScreen>.Collection.OneActive,

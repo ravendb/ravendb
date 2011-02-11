@@ -1,15 +1,15 @@
-namespace Raven.Studio.Plugins.Linq
+namespace Raven.Studio.Features.Linq
 {
-	using System;
+	using System.Linq;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Database;
-	using Documents;
 	using Plugin;
+	using Raven.Client.Client;
 
 	[Export]
-	public class LinqEditorViewModel : Screen, IRavenScreen
+	public class LinqEditorViewModel : Screen
 	{
 		readonly IServer server;
 		string query;
@@ -42,23 +42,21 @@ namespace Raven.Studio.Plugins.Linq
 			}
 		}
 
-		public SectionType Section
-		{
-			get { return SectionType.Linq; }
-		}
-
 		public void Execute()
 		{
-			throw new NotImplementedException();
-			//if (!string.IsNullOrWhiteSpace(Query))
-			//{
-			//    Database.IndexSession.LinearQuery(Query, 0, 25,
-			//                                      o =>
-			//                                          {
-			//                                              Results =
-			//                                                  o.Data.Select(x => new DocumentViewModel(new Document(x), Database, this)).ToArray();
-			//                                          });
-			//}
+			if (!string.IsNullOrWhiteSpace(Query))
+			{
+				server.OpenSession().Advanced.AsyncDatabaseCommands
+					.LinearQueryAsync(Query,0,25)
+					.ContinueWith(x=>
+						{	
+							var doc = IoC.Get<DocumentViewModel>();
+							Results = x.Result.Results
+								.Select(jobj => jobj.ToJsonDocument())
+								.Select(doc.CloneUsing)
+								.ToArray();
+						});
+			}
 		}
 	}
 }
