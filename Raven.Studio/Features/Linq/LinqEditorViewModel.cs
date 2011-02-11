@@ -1,34 +1,38 @@
 namespace Raven.Studio.Features.Linq
 {
-	using System.Linq;
-	using System.Collections.Generic;
+	using System;
 	using System.ComponentModel.Composition;
+	using System.Linq;
+	using System.Threading.Tasks;
 	using Caliburn.Micro;
+	using Client.Client;
 	using Database;
+	using Framework;
 	using Plugin;
-	using Raven.Client.Client;
 
 	[Export]
 	public class LinqEditorViewModel : Screen
 	{
 		readonly IServer server;
 		string query;
-		IList<DocumentViewModel> results;
+		BindablePagedQuery<DocumentViewModel> queryResults;
 
 		[ImportingConstructor]
 		public LinqEditorViewModel(IServer server)
 		{
 			DisplayName = "Linq";
 			this.server = server;
+
+			Query = "from doc in docs " + Environment.NewLine + "select doc";
 		}
 
-		public IList<DocumentViewModel> Results
+		public BindablePagedQuery<DocumentViewModel> QueryResults
 		{
-			get { return results; }
+			get { return queryResults; }
 			set
 			{
-				results = value;
-				NotifyOfPropertyChange(() => Results);
+				queryResults = value;
+				NotifyOfPropertyChange(() => QueryResults);
 			}
 		}
 
@@ -44,19 +48,25 @@ namespace Raven.Studio.Features.Linq
 
 		public void Execute()
 		{
-			if (!string.IsNullOrWhiteSpace(Query))
-			{
-				server.OpenSession().Advanced.AsyncDatabaseCommands
-					.LinearQueryAsync(Query,0,25)
-					.ContinueWith(x=>
-						{	
-							var doc = IoC.Get<DocumentViewModel>();
-							Results = x.Result.Results
-								.Select(jobj => jobj.ToJsonDocument())
-								.Select(doc.CloneUsing)
-								.ToArray();
-						});
-			}
+			if (string.IsNullOrWhiteSpace(Query)) return;
+			
+			QueryResults = new BindablePagedQuery<DocumentViewModel>(BuildQuery);
+			QueryResults.LoadPage();
+		}
+
+		Task<DocumentViewModel[]> BuildQuery(int start, int pageSize)
+		{
+			var vm = IoC.Get<DocumentViewModel>();
+			return server.OpenSession().Advanced.AsyncDatabaseCommands
+				.LinearQueryAsync(Query, start, pageSize)
+				.ContinueWith(x =>
+				              	{
+									QueryResults.GetTotalResults = () => x.Result.TotalResults;
+				              		return x.Result.Results
+				              			.Select(jobj => jobj.ToJsonDocument())
+				              			.Select(vm.CloneUsing)
+				              			.ToArray();
+				              	});
 		}
 	}
 }

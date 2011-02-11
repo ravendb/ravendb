@@ -59,6 +59,8 @@
 					NotifyOfPropertyChange(() => DataTemplate);
 				});
 			
+			DisplayName = DisplayId;
+
 			return this;
 		}
 
