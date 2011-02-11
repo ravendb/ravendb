@@ -46,7 +46,6 @@
 
 				<ListBox Grid.Row="1"
 						 ItemsSource="{Binding Documents}">
-
 					<ListBox.ItemTemplate>
 						<DataTemplate>
 							<StackPanel cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ShowDocument()]">

@@ -3,6 +3,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
@@ -14,7 +15,7 @@
 				   HorizontalAlignment="Center"
 				   Visibility="{Binding Path=HasNoResults, Mode=OneWay, Converter={StaticResource booleanToVisibility}}" />
 
-		<Grid x:Name="HasResults">
+		<Grid Visibility="{Binding HasResults, Converter={StaticResource booleanToVisibility}}">
 			<Grid.Resources>
 				<Style TargetType="Button">
 					<Setter Property="Template">
@@ -38,20 +39,20 @@
 				<ColumnDefinition />
 			</Grid.ColumnDefinitions>
 
-			<TextBlock x:Name="Status"
-					   VerticalAlignment="Center"/>
+			<TextBlock Text="{Binding Status}"
+					   VerticalAlignment="Center" />
 
 			<StackPanel Orientation="Horizontal"
 						Grid.Column="1"
 						VerticalAlignment="Center"
 						HorizontalAlignment="Right">
-				<Button x:Name="MoveFirst"
+				<Button cm:Message.Attach="MoveFirst"
 						Content="|&lt;-" />
-				<Button x:Name="MovePrevious"
+				<Button cm:Message.Attach="MovePrevious"
 						Content="&lt;&lt;" />
-				<Button x:Name="MoveNext"
+				<Button cm:Message.Attach="MoveNext"
 						Content="&gt;&gt;" />
-				<Button x:Name="MoveLast"
+				<Button cm:Message.Attach="MoveLast"
 						Content="-&gt;|" />
 			</StackPanel>
 		</Grid>

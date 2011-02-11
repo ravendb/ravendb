@@ -248,7 +248,7 @@
 					   Margin="12,6,0,6"
 					   FontWeight="Bold" />
 
-			<ItemsControl x:Name="ActiveCollectionDocuments"
+			<ItemsControl ItemsSource="{Binding ActiveCollectionDocuments}"
 						  Grid.Row="1">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
@@ -259,7 +259,7 @@
 			</ItemsControl>
 
 			<c:Pager Grid.Row="2"
-					 cm:Bind.Model="{Binding ActiveCollectionDocuments}" />
+					 cm:Action.Target="{Binding ActiveCollectionDocuments}" />
 		</Grid>
 
 
