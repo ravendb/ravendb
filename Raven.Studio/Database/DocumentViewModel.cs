@@ -121,7 +121,13 @@
 				return id;
 			}
 		}
-		public string JsonData { get; private set; }
+
+		string jsonData;
+		public string JsonData
+		{
+			get { return jsonData; }
+			set { jsonData = value; NotifyOfPropertyChange( ()=> JsonData); }
+		}
 
 		public string JsonMetadata { get; private set; }
 

@@ -21,15 +21,12 @@
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
 				<RowDefinition />
 			</Grid.RowDefinitions>
 
-			<StackPanel Orientation="Vertical"
-						VerticalAlignment="Top">
-				<TextBlock x:Name="Id"
-						   FontSize="32"
-						   Foreground="#FF899EB2" />
-			</StackPanel>
+			<TextBlock x:Name="DisplayId"
+					   Style="{StaticResource Header}" />
 
 			<Grid Grid.Row="1">
 				<StackPanel Orientation="Horizontal">
@@ -62,25 +59,21 @@
 				</StackPanel>
 			</Grid>
 
-			<Border Grid.Row="2"
+			<TextBox x:Name="Id"
+					 Grid.Row="2" />
+
+			<Border Grid.Row="3"
 					Padding="8"
 					BorderThickness="1"
 					CornerRadius="2"
 					BorderBrush="#0A000000"
 					Margin="0"
 					d:IsLocked="True">
-				<Border.Resources>
-					<SolidColorBrush x:Key="delimiter"
-									 Color="#4C000000" />
-					<SolidColorBrush x:Key="value"
-									 Color="#FF139900" />
-				</Border.Resources>
 
-				<r:JsonEditor x:Name="dataEditor"
-								FontFamily="Monaco"
-								FontSize="16"
-								IsTextDataBindingEnabled="True"
-								Text="{Binding JsonData, Mode=TwoWay}" />
+				<r:JsonEditor FontFamily="Monaco"
+							  FontSize="16"
+							  IsTextDataBindingEnabled="True"
+							  Text="{Binding JsonData, Mode=TwoWay}" />
 			</Border>
 
 		</Grid>
