@@ -42,7 +42,7 @@
 
 		<HyperlinkButton x:Name="GoHome"
 						 Style="{StaticResource LinkStyle}"
-						 Content="home" />
+						 Content="HOME" />
 
 		<ItemsControl x:Name="Breadcrumbs">
 			<ItemsControl.ItemTemplate>

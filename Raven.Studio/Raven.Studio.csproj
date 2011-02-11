@@ -123,6 +123,7 @@
     <Compile Include="Commands\EditDocument.cs" />
     <Compile Include="Commands\SaveDocument.cs" />
     <Compile Include="Controls\JsonEditor.cs" />
+    <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
     <Compile Include="Messages\OpenDocumentForEdit.cs" />
     <Compile Include="Commands\PreviewDocument.cs" />

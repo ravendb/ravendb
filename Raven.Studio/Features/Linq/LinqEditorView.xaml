@@ -1,56 +1,59 @@
 ﻿<UserControl x:Class="Raven.Studio.Features.Linq.LinqEditorView"
-			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-			 xmlns:cm="http://www.caliburnproject.org"
-			 xmlns:a="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor"
-			 xmlns:SyntaxHighlighting="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting"
-			 xmlns:c="clr-namespace:Raven.Studio.Controls"
-			 mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
-	<Grid>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="1*" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="2*" />
-			<RowDefinition Height="Auto" />
-		</Grid.RowDefinitions>
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+             xmlns:cm="http://www.caliburnproject.org"
+             xmlns:a="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor"
+             xmlns:SyntaxHighlighting="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting"
+             xmlns:c="clr-namespace:Raven.Studio.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="300"
+             d:DesignWidth="400">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="1*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="2*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-		<tk:DockPanel>
-			<Button Content="execute"
-					tk:DockPanel.Dock="Right"
-					cm:Message.Attach="Execute" />
-			<TextBlock Text="query" />
-		</tk:DockPanel>
+        <tk:DockPanel>
+            <TextBlock Text="Query"
+                       tk:DockPanel.Dock="Left"
+                       Style="{StaticResource Header}" />
+            <Button Content="Execute"
+                    HorizontalAlignment="Right"
+                    tk:DockPanel.Dock="Right"
+                    cm:Message.Attach="Execute" />
+        </tk:DockPanel>
 
-		<a:SyntaxEditor x:Name="queryEditor"
-						Grid.Row="1"
-						FontSize="16"
-						IsTextDataBindingEnabled="True"
-						Text="{Binding Query, Mode=TwoWay}" />
+        <a:SyntaxEditor x:Name="queryEditor"
+                        Grid.Row="1"
+                        FontSize="16"
+                        IsTextDataBindingEnabled="True"
+                        Text="{Binding Query, Mode=TwoWay}" />
 
-		<TextBlock Text="results"
-				   Grid.Row="2" />
+        <TextBlock Text="results"
+                   Grid.Row="2" />
 
-		<ListBox x:Name="QueryResults"
-				 Grid.Row="3"
-				 HorizontalContentAlignment="Stretch">
-			<ListBox.ItemTemplate>
-				<DataTemplate>
-					<Grid cm:Action.TargetWithoutContext="EditDocument"
-						  cm:Message.Attach="[Event MouseLeftButtonDown] = [Execute($dataContext)]">
-						<ContentControl cm:View.Model="{Binding}"
-										cm:View.Context="Thumb" />
-					</Grid>
-				</DataTemplate>
-			</ListBox.ItemTemplate>
-		</ListBox>
+        <ListBox x:Name="QueryResults"
+                 Grid.Row="3"
+                 HorizontalContentAlignment="Stretch">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid cm:Action.TargetWithoutContext="EditDocument"
+                          cm:Message.Attach="[Event MouseLeftButtonDown] = [Execute($dataContext)]">
+                        <ContentControl cm:View.Model="{Binding}"
+                                        cm:View.Context="Thumb" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
 
-		<c:Pager Grid.Row="4"
-				 DataContext="{Binding QueryResults}" />
-	</Grid>
+        <c:Pager Grid.Row="4"
+                 DataContext="{Binding QueryResults}" />
+    </Grid>
 </UserControl>

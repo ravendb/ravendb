@@ -56,7 +56,8 @@
 		</ItemsControl>
 
 		<ContentControl x:Name="ActiveItem"
-						Grid.Column="1" />
+                        Margin="12 0 0 0"
+                        Grid.Column="1" />
 
 	</Grid>
 </UserControl>

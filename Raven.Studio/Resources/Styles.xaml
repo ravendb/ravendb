@@ -136,21 +136,19 @@
 		<Setter Property="FontFamily"
 				Value="{StaticResource HeaderFontFamily}" />
 		<Setter Property="FontSize"
-				Value="{StaticResource NavigationFontSize}" />
+				Value="12" />
 		<Setter Property="TextOptions.TextHintingMode"
 				Value="Fixed" />
 		<Setter Property="Cursor"
 				Value="Hand" />
 		<Setter Property="MinHeight"
 				Value="28" />
-		<Setter Property="MinWidth"
-				Value="78" />
 		<Setter Property="VerticalContentAlignment"
 				Value="Center" />
 		<Setter Property="HorizontalContentAlignment"
 				Value="Center" />
 		<Setter Property="Padding"
-				Value="8,4,18,4" />
+				Value="8,4,0,4" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="HyperlinkButton">
