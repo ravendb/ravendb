@@ -59,6 +59,12 @@ namespace Raven.Client.Client.Async
 		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes);
 
 		/// <summary>
+		/// Begins the async query.
+		/// </summary>
+		/// <param name="query">A string representation of a Linq query</param>
+		Task<QueryResult> LinearQueryAsync(string query, int start, int pageSize);
+
+		/// <summary>
 		/// Begins the async batch operation
 		/// </summary>
 		/// <param name="commandDatas">The command data.</param>

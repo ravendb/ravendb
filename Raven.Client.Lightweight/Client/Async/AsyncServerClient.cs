@@ -375,6 +375,15 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
+		/// Begins the async query.
+		/// </summary>
+		/// <param name="query">A string representation of a Linq query</param>
+		public Task<QueryResult> LinearQueryAsync(string query, int start, int pageSize)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
 		/// Returns a list of suggestions based on the specified suggestion query.
 		/// </summary>
 		/// <param name="index">The index to query for suggestions</param>
