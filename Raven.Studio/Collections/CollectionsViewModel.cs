@@ -80,9 +80,10 @@
 						{
 							if(x.IsFaulted) throw new NotImplementedException("TODO");
 
+							//TODO: this smells bad to me...
 							var vm = IoC.Get<DocumentViewModel>();
 							return x.Result.Results
-								.Select(doc => vm.Initialize(doc.ToJsonDocument()))
+								.Select(doc => vm.CloneUsing(doc.ToJsonDocument()))
 								.ToArray();
 						});
 			}

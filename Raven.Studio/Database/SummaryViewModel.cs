@@ -72,9 +72,10 @@
 					.GetDocumentsAsync(0, 12)
 					.ContinueOnSuccess(x =>
 										{
+											//TODO: I don't like this...
 											var vm = IoC.Get<DocumentViewModel>();
 											RecentDocuments = new BindableCollection<DocumentViewModel>(
-												x.Result.Select(vm.Initialize));
+												x.Result.Select(vm.CloneUsing));
 											NotifyOfPropertyChange(() => RecentDocuments);
 										});
 			}

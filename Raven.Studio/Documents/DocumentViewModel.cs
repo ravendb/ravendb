@@ -170,7 +170,7 @@ namespace Raven.Studio.Documents
 		{
 			var vm = IoC.Get<DocumentViewModel>();
 			var documentScreen = (BrowseDocumentsViewModel) Parent;
-			documentScreen.ActivateItem(vm.Initialize(jsonDocument));
+			documentScreen.ActivateItem(vm.CloneUsing(jsonDocument));
 			documentScreen.IsDocumentPreviewed = true;
 		}
 

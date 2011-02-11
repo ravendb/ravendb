@@ -13,11 +13,13 @@
 	using Shell;
 
 	[Export]
+	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class DocumentViewModel : Screen,
 		IHandle<DocumentDeleted>
 	{
 		readonly DocumentTemplateProvider templateProvider;
 		readonly NavigationViewModel navigation;
+		readonly IEventAggregator events;
 		public const int SummaryLength = 150;
 
 		IDictionary<string, JToken> data;
@@ -28,6 +30,7 @@
 		{
 			this.templateProvider = templateProvider;
 			this.navigation = navigation;
+			this.events = events;
 			data = new Dictionary<string, JToken>();
 			metadata = new Dictionary<string, JToken>();
 
@@ -57,6 +60,13 @@
 				});
 			
 			return this;
+		}
+
+		//NOTE: quick hack to get me focused on more important things
+		public DocumentViewModel CloneUsing(JsonDocument document)
+		{
+			var doc = new DocumentViewModel(templateProvider,navigation,events);
+			return doc.Initialize(document);
 		}
 
 		string DetermineCollectionType()

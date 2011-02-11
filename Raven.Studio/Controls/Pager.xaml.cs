@@ -6,6 +6,9 @@
 	using System.Windows.Controls;
 	using Framework;
 
+	//TODO: this needs some serious work. The page is to analyze the size of the page's container
+	// and if the size of the individual elements can be predicated to dynamically adjust the request page size.
+	// tabling the work until more important features are complete
 	public partial class Pager : UserControl
 	{
 		//public static readonly DependencyProperty ItemSizeProperty = DependencyProperty.Register(
@@ -34,12 +37,12 @@
 
 		static void DataContextChangedEx(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
-			var change = e.NewValue as IBindablePagedQuery;
-			if (change != null)
-			{
-				change.HeightOfPage = ((FrameworkElement)d.GetValue(PageContainerProperty)).ActualHeight;
-				change.ItemSize = 81;
-			}
+			//var change = e.NewValue as IBindablePagedQuery;
+			//if (change != null)
+			//{
+			//    change.HeightOfPage = ((FrameworkElement)d.GetValue(PageContainerProperty)).ActualHeight;
+			//    change.ItemSize = 81;
+			//}
 		}
 
 		public Pager()

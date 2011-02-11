@@ -68,7 +68,7 @@ namespace Raven.Studio.Documents
 		{
 			var vm = IoC.Get<DocumentViewModel>();
 			var result = response
-				.Select(vm.Initialize)
+				.Select(vm.CloneUsing)
 				.ToList();
 
 			Items.AddRange(result);
@@ -126,7 +126,7 @@ namespace Raven.Studio.Documents
 			{
 				var vm = IoC.Get<DocumentViewModel>();
 				Documents = new BindablePagedQuery<JsonDocument,DocumentViewModel>(
-					session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync, vm.Initialize);
+					session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync, vm.CloneUsing);
 				Documents.PageSize = 25;
 
 				session.Advanced.AsyncDatabaseCommands
