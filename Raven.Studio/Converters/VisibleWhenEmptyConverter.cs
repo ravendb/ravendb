@@ -1,6 +1,7 @@
 ﻿namespace Raven.Studio.Converters
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Globalization;
     using System.Linq;
@@ -13,8 +14,8 @@
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            var items = value as IEnumerable<object>;
-            return (items == null) ||!items.Any() 
+            var items = value as IList;
+            return (items == null) || items.Count == 0 
                 ? Visibility.Visible 
                 : Visibility.Collapsed;
         }

@@ -41,6 +41,9 @@
                     if(server.Databases.Count()==1)
                     {
                         ActivateItem(databaseScreen);
+                    } else
+                    {
+                        ActivateItem(start);
                     }
                                                                
 			    });
