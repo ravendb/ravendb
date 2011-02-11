@@ -2,21 +2,24 @@ namespace Raven.Studio.Plugins.Linq
 {
 	using System;
 	using System.Collections.Generic;
+	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Documents;
 	using Plugin;
 
+	[Export]
 	public class LinqEditorViewModel : Screen, IRavenScreen
 	{
+		readonly IServer server;
 		string query;
 		IList<DocumentViewModel> results;
 
+		[ImportingConstructor]
 		public LinqEditorViewModel(IServer server)
 		{
-			Server = server;
+			DisplayName = "Linq";
+			this.server = server;
 		}
-
-		public IServer Server { get; private set; }
 
 		public IList<DocumentViewModel> Results
 		{

@@ -7,6 +7,7 @@ namespace Raven.Studio.Database
 	using Framework;
 	using Indexes;
 	using Plugin;
+	using Plugins.Linq;
 
 	[Export(typeof (DatabaseViewModel))]
 	public class DatabaseViewModel : Conductor<IScreen>.Collection.OneActive
@@ -25,6 +26,7 @@ namespace Raven.Studio.Database
 			Items.Add(IoC.Get<CollectionsViewModel>());
 			Items.Add(IoC.Get<BrowseIndexesViewModel>());
 			Items.Add(IoC.Get<BrowseDocumentsViewModel>());
+			Items.Add(IoC.Get<LinqEditorViewModel>());
 
 			ActivateItem(Items[0]);
 		}
