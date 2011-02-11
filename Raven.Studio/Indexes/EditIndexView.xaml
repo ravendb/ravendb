@@ -13,7 +13,7 @@
 			 d:DesignWidth="400">
 
 	<UserControl.Resources>
-		<Style TargetType="c:SyntaxEditor">
+		<Style TargetType="c:LinqEditor">
 			<Setter Property="Margin"
 					Value="0,0,0,10" />
 			<Setter Property="MinHeight"
@@ -50,19 +50,19 @@
 
 			<c:Label Content="MAP"
 					 Grid.Row="1" />
-			<c:SyntaxEditor Grid.Column="1"
+			<c:LinqEditor Grid.Column="1"
 							Grid.Row="1"
 							Text="{Binding Map, Mode=TwoWay}" />
 
 			<c:Label Content="REDUCE"
 					 Grid.Row="2" />
-			<c:SyntaxEditor Grid.Row="2"
+			<c:LinqEditor Grid.Row="2"
 							Grid.Column="1"
 							Text="{Binding Reduce, Mode=TwoWay}" />
 
 			<c:Label Content="TRANSFORM"
 					 Grid.Row="3" />
-			<c:SyntaxEditor Grid.Row="3"
+			<c:LinqEditor Grid.Row="3"
 							Grid.Column="1"
 							Text="{Binding TransformResults, Mode=TwoWay}" />
 

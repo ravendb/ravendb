@@ -3,7 +3,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:a="clr-namespace:Raven.Studio.Controls"
+			 xmlns:r="clr-namespace:Raven.Studio.Controls"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
@@ -37,8 +37,10 @@
 							CornerRadius="2"
 							Background="#19000000"
 							Padding="4,2">
-						<TextBlock Text="Save"
-								   FontSize="9.333" />
+						<HyperlinkButton Content="Save"
+										 cm:Action.TargetWithoutContext="SaveDocument"
+										 cm:Message.Attach="Click=Execute($dataContext)"
+										 FontSize="9.333" />
 					</Border>
 					<Border Margin="0,2,2,2"
 							CornerRadius="2"
@@ -74,7 +76,7 @@
 									 Color="#FF139900" />
 				</Border.Resources>
 
-				<a:SyntaxEditor x:Name="dataEditor"
+				<r:JsonEditor x:Name="dataEditor"
 								FontFamily="Monaco"
 								FontSize="16"
 								IsTextDataBindingEnabled="True"

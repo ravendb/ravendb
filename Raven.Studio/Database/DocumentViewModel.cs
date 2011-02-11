@@ -21,6 +21,7 @@
 		readonly NavigationViewModel navigation;
 		readonly IEventAggregator events;
 		public const int SummaryLength = 150;
+		JsonDocument jsonDocument;
 
 		IDictionary<string, JToken> data;
 		IDictionary<string, JToken> metadata;
@@ -40,6 +41,7 @@
 
 		public DocumentViewModel Initialize(JsonDocument document)
 		{
+			jsonDocument = document;
 			JsonData = PrepareRawJsonString(document.DataAsJson);
 			//JsonMetadata = PrepareRawJsonString(document.Metadata);
 
@@ -62,6 +64,25 @@
 			DisplayName = DisplayId;
 
 			return this;
+		}
+		
+		public void PrepareForSave()
+		{
+			//if (!ValidateJson(JsonData))
+			//{
+			//    WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document)", parseExceptionMessage));
+			//    return;
+			//}
+
+			//if (!ValidateJson(JsonMetadata))
+			//{
+			//    WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document Metadata)", parseExceptionMessage));
+			//    return;
+			//}
+
+			jsonDocument.DataAsJson = JObject.Parse(JsonData);
+			//jsonDocument.Metadata = JObject.Parse(JsonMetadata);
+			jsonDocument.Key = Id;
 		}
 
 		//NOTE: quick hack to get me focused on more important things
@@ -125,6 +146,11 @@
 			get { return metadata; }
 		}
 
+		public JsonDocument JsonDocument
+		{
+			get { return jsonDocument; }
+		}
+
 		static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
 		{
 			IDictionary<string, JToken> result = new Dictionary<string, JToken>();
@@ -152,6 +178,7 @@
 
 		public void Handle(DocumentDeleted message)
 		{
+			//TODO: I suspect this isn't a good idea...
 			if(message.DocumentId == Id)
 			{
 				navigation.GoBack();

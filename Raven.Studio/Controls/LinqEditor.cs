@@ -3,16 +3,16 @@
 	using ActiproSoftware.Text;
 	using ActiproSoftware.Windows.ProductSamples.SyntaxEditorSamples.Common;
 
-	public class SyntaxEditor : ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor
+	public class LinqEditor : ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor
 	{
 		static readonly ISyntaxLanguage DefaultLanguage;
 
-		static SyntaxEditor()
+		static LinqEditor()
 		{
 			DefaultLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("CSharp.langdef");
 		}
 
-		public SyntaxEditor()
+		public LinqEditor()
 		{
 			Document.Language = DefaultLanguage;
 		}

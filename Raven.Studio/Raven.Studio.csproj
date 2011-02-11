@@ -121,6 +121,9 @@
     <Compile Include="Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
     <Compile Include="Commands\EditDocument.cs" />
+    <Compile Include="Commands\SaveDocument.cs" />
+    <Compile Include="Controls\JsonEditor.cs" />
+    <Compile Include="Messages\DocumentUpdated.cs" />
     <Compile Include="Messages\OpenDocumentForEdit.cs" />
     <Compile Include="Commands\PreviewDocument.cs" />
     <Compile Include="Controls\DatabaseConnection.xaml.cs">
@@ -139,7 +142,7 @@
     <Compile Include="Controls\Pager.xaml.cs">
       <DependentUpon>Pager.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\SyntaxEditor.cs" />
+    <Compile Include="Controls\LinqEditor.cs" />
     <Compile Include="Controls\SyntaxEditor\Javascript\JavascriptOutliningSource.cs" />
     <Compile Include="Controls\SyntaxEditor\Javascript\JavascriptSyntaxLanguage.cs" />
     <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\CodeColorizer.cs" />
