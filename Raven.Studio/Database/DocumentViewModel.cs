@@ -2,25 +2,41 @@
 {
 	using System;
 	using System.Collections.Generic;
+	using System.ComponentModel.Composition;
 	using System.Text;
 	using System.Windows;
 	using Caliburn.Micro;
 	using Framework;
+	using Messages;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;
+	using Shell;
 
-	public class DocumentViewModel : PropertyChangedBase
+	[Export]
+	public class DocumentViewModel : Screen,
+		IHandle<DocumentDeleted>
 	{
+		readonly DocumentTemplateProvider templateProvider;
+		readonly NavigationViewModel navigation;
 		public const int SummaryLength = 150;
 
-		readonly IDictionary<string, JToken> data;
-		readonly IDictionary<string, JToken> metadata;
+		IDictionary<string, JToken> data;
+		IDictionary<string, JToken> metadata;
 
-		public DocumentViewModel(JsonDocument document, DocumentTemplateProvider templateProvider)
+		[ImportingConstructor]
+		public DocumentViewModel(DocumentTemplateProvider templateProvider, NavigationViewModel navigation, IEventAggregator events)
 		{
+			this.templateProvider = templateProvider;
+			this.navigation = navigation;
 			data = new Dictionary<string, JToken>();
 			metadata = new Dictionary<string, JToken>();
 
+			events.Subscribe(this);
+
+		}
+
+		public DocumentViewModel Initialize(JsonDocument document)
+		{
 			JsonData = PrepareRawJsonString(document.DataAsJson);
 			//JsonMetadata = PrepareRawJsonString(document.Metadata);
 
@@ -34,11 +50,13 @@
 
 			templateProvider
 				.GetTemplateFor(CollectionType ?? "default")
-				.ContinueOnSuccess(x=>
-				                   	{
-				                   		DataTemplate = x.Result;
-				                   		NotifyOfPropertyChange(() => DataTemplate);
-				                   	});
+				.ContinueOnSuccess(x =>
+				{
+					DataTemplate = x.Result;
+					NotifyOfPropertyChange(() => DataTemplate);
+				});
+			
+			return this;
 		}
 
 		string DetermineCollectionType()
@@ -94,7 +112,7 @@
 		{
 			get { return metadata; }
 		}
-		
+
 		static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
 		{
 			IDictionary<string, JToken> result = new Dictionary<string, JToken>();
@@ -120,5 +138,12 @@
 			return result.ToString();
 		}
 
+		public void Handle(DocumentDeleted message)
+		{
+			if(message.DocumentId == Id)
+			{
+				navigation.GoBack();
+			}
+		}
 	}
 }

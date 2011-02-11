@@ -11,6 +11,7 @@
 	using Indexes;
 	using Messages;
 	using Plugin;
+	using Shell;
 
 	[Export]
 	public class SummaryViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<DocumentDeleted>
@@ -71,8 +72,9 @@
 					.GetDocumentsAsync(0, 12)
 					.ContinueOnSuccess(x =>
 										{
+											var vm = IoC.Get<DocumentViewModel>();
 											RecentDocuments = new BindableCollection<DocumentViewModel>(
-												x.Result.Select(doc => new DocumentViewModel(doc, templateProvider)));
+												x.Result.Select(vm.Initialize));
 											NotifyOfPropertyChange(() => RecentDocuments);
 										});
 			}

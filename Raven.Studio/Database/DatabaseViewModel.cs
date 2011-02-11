@@ -1,16 +1,19 @@
 namespace Raven.Studio.Database
 {
+	using System;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Collections;
 	using Documents;
 	using Framework;
 	using Indexes;
+	using Messages;
 	using Plugin;
 	using Plugins.Linq;
 
 	[Export(typeof (DatabaseViewModel))]
-	public class DatabaseViewModel : Conductor<IScreen>.Collection.OneActive
+	public class DatabaseViewModel : Conductor<IScreen>.Collection.OneActive,
+		IHandle<OpenDocumentForEdit>
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
@@ -29,6 +32,8 @@ namespace Raven.Studio.Database
 			Items.Add(IoC.Get<LinqEditorViewModel>());
 
 			ActivateItem(Items[0]);
+
+			events.Subscribe(this);
 		}
 
 		public IServer Server
@@ -39,6 +44,11 @@ namespace Raven.Studio.Database
 		public void Show(IScreen screen)
 		{
 			this.TrackNavigationTo(screen, events);
+		}
+
+		public void Handle(OpenDocumentForEdit message)
+		{
+			this.TrackNavigationTo(message.Document, events);
 		}
 	}
 }

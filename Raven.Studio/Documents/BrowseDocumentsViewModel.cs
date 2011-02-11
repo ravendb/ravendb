@@ -7,15 +7,18 @@ namespace Raven.Studio.Documents
 	using System.Net;
 	using Caliburn.Micro;
 	using Client;
+	using Database;
 	using Dialogs;
 	using Framework;
 	using Messages;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
 	using Raven.Database;
+	using Shell;
 
 	[Export]
-	public class BrowseDocumentsViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
+	public class BrowseDocumentsViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen,
+		IHandle<DocumentDeleted>
 	{
 		bool isBusy;
 		bool isDocumentPreviewed;
@@ -31,9 +34,10 @@ namespace Raven.Studio.Documents
 			this.server = server;
 			this.windowManager = windowManager;
 			this.events = events;
+			events.Subscribe(this);
 		}
 
-		public BindablePagedQuery<JsonDocument> Documents { get; private set; }
+		public BindablePagedQuery<JsonDocument, DocumentViewModel> Documents { get; private set; }
 
 		public bool IsBusy
 		{
@@ -62,8 +66,11 @@ namespace Raven.Studio.Documents
 
 		public void GetAll(IList<JsonDocument> response)
 		{
-			List<DocumentViewModel> result =
-				response.Select(jsonDocument => new DocumentViewModel(jsonDocument, server)).ToList();
+			var vm = IoC.Get<DocumentViewModel>();
+			var result = response
+				.Select(vm.Initialize)
+				.ToList();
+
 			Items.AddRange(result);
 			IsBusy = false;
 		}
@@ -87,33 +94,28 @@ namespace Raven.Studio.Documents
 
 		public void GetDocument(LoadResponse<JsonDocument> loadResponse)
 		{
-			IsBusy = false;
-			if (loadResponse.IsSuccess)
-			{
-				NavigateTo(loadResponse.Data);
-			}
-			else if (loadResponse.StatusCode == HttpStatusCode.NotFound)
-			{
-				windowManager.ShowDialog(new InformationDialogViewModel("Document not found",
-				                                                        string.Format(
-				                                                        	"Document with key {0} doesn't exist in database.",
-				                                                        	lastSearchDocumentId)));
-			}
+			//IsBusy = false;
+			//if (loadResponse.IsSuccess)
+			//{
+			//    NavigateTo(loadResponse.Data);
+			//}
+			//else if (loadResponse.StatusCode == HttpStatusCode.NotFound)
+			//{
+			//    windowManager.ShowDialog(new InformationDialogViewModel("Document not found",
+			//                                                            string.Format(
+			//                                                                "Document with key {0} doesn't exist in database.",
+			//                                                                lastSearchDocumentId)));
+			//}
 		}
 
-		void NavigateTo(JsonDocument document)
-		{
-			events.Publish(
-				new ReplaceActiveScreen(new DocumentViewModel(document, server)));
-		}
 
 		public void CreateDocument()
 		{
-			NavigateTo(new JsonDocument
-			                        	{
-			                        		DataAsJson = new JObject(),
-			                        		Metadata = new JObject()
-			                        	});
+			//NavigateTo(new JsonDocument
+			//                            {
+			//                                DataAsJson = new JObject(),
+			//                                Metadata = new JObject()
+			//                            });
 		}
 
 		protected override void OnActivate()
@@ -122,7 +124,9 @@ namespace Raven.Studio.Documents
 
 			using(var session = server.OpenSession())
 			{
-				Documents = new BindablePagedQuery<JsonDocument>(session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync);
+				var vm = IoC.Get<DocumentViewModel>();
+				Documents = new BindablePagedQuery<JsonDocument,DocumentViewModel>(
+					session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync, vm.Initialize);
 				Documents.PageSize = 25;
 
 				session.Advanced.AsyncDatabaseCommands
@@ -136,6 +140,14 @@ namespace Raven.Studio.Documents
 			Documents.GetTotalResults = () => total;
 			Documents.LoadPage();
 			IsBusy = false;
+		}
+
+		public void Handle(DocumentDeleted message)
+		{
+			var deleted = Documents.Where(x=>x.Id == message.DocumentId).FirstOrDefault();
+
+			if(deleted !=null)
+				Documents.Remove(deleted);
 		}
 	}
 

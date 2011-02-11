@@ -120,6 +120,8 @@
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
+    <Compile Include="Commands\EditDocument.cs" />
+    <Compile Include="Messages\OpenDocumentForEdit.cs" />
     <Compile Include="Commands\PreviewDocument.cs" />
     <Compile Include="Controls\DatabaseConnection.xaml.cs">
       <DependentUpon>DatabaseConnection.xaml</DependentUpon>
@@ -280,6 +282,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\Pager.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Database\DocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

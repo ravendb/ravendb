@@ -1,6 +1,8 @@
 ﻿namespace Raven.Studio.Documents
 {
+	using System;
 	using System.ComponentModel.Composition;
+	using Database;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
 	using Plugins;
@@ -18,11 +20,12 @@
 		{
 			get
 			{
-				return new DocumentViewModel(new JsonDocument
-				                                          	{
-				                                          		DataAsJson = new JObject(),
-				                                          		Metadata = new JObject()
-				                                          	}, Server);
+				throw new NotImplementedException("This class is likely going away");
+				//return new DocumentViewModel(new JsonDocument
+				//                                            {
+				//                                                DataAsJson = new JObject(),
+				//                                                Metadata = new JObject()
+				//                                            }, Server);
 			}
 		}
 

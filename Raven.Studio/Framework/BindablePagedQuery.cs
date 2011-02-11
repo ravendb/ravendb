@@ -5,6 +5,12 @@
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
 
+	public interface IBindablePagedQuery
+	{
+		double? ItemSize { get; set; }
+		double HeightOfPage { get; set; }
+	}
+
 	public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
 	{
 		public BindablePagedQuery(Func<int, int, Task<T[]>> query) : base(query, t => t)
@@ -12,7 +18,7 @@
 		}
 	}
 
-	public class BindablePagedQuery<TResult, TViewModel> : BindableCollection<TViewModel>
+	public class BindablePagedQuery<TResult, TViewModel> : BindableCollection<TViewModel>, IBindablePagedQuery
 	{
 		readonly Func<int, int, Task<TResult[]>> query;
 		readonly Func<TResult, TViewModel> transform;

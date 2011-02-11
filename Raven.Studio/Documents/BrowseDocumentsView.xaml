@@ -8,8 +8,7 @@
 			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
 			 xmlns:cm="http://www.caliburnproject.org"
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
-			 xmlns:sh="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting"
-			 mc:Ignorable="d">
+			 xmlns:sh="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting" xmlns:f="clr-namespace:Raven.Studio.Framework" mc:Ignorable="d">
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -48,11 +47,12 @@
 						 ItemsSource="{Binding Documents}">
 					<ListBox.ItemTemplate>
 						<DataTemplate>
-							<StackPanel cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ShowDocument()]">
-								<TextBlock Text="{Binding Key}"
+							<StackPanel cm:Action.TargetWithoutContext="EditDocument"
+										cm:Message.Attach="[Event MouseLeftButtonDown] = [Execute($dataContext)]">
+								<TextBlock Text="{Binding Id}"
 										   FontWeight="Bold" />
 								<sh:SyntaxHighlightingTextBlock SourceLanguage="Json"
-																SourceCode="{Binding DataAsJson}" />
+																SourceCode="{Binding JsonData}" />
 							</StackPanel>
 						</DataTemplate>
 					</ListBox.ItemTemplate>

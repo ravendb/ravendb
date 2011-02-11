@@ -4,6 +4,7 @@ namespace Raven.Studio.Plugins.Linq
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
+	using Database;
 	using Documents;
 	using Plugin;
 

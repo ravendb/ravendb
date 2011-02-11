@@ -7,6 +7,7 @@ namespace Raven.Studio.Documents
 	using System.Windows.Markup;
 	using Caliburn.Micro;
 	using Controls;
+	using Database;
 	using Dialogs;
 	using Framework;
 	using Messages;
@@ -14,8 +15,9 @@ namespace Raven.Studio.Documents
 	using Newtonsoft.Json.Linq;
 	using Plugin;
 	using Raven.Database;
+	using Shell;
 
-	public class DocumentViewModel : Screen, IRavenScreen
+	public class DocumentViewModel1 : Screen, IRavenScreen
 	{
 		public const int SummaryLength = 150;
 
@@ -37,7 +39,7 @@ namespace Raven.Studio.Documents
 		string jsonData;
 		string jsonMetadata;
 
-		public DocumentViewModel(JsonDocument document, IServer server)
+		public DocumentViewModel1(JsonDocument document, IServer server)
 		{
 			DisplayName = "Edit Document";
 
@@ -166,8 +168,9 @@ namespace Raven.Studio.Documents
 
 		public void Preview()
 		{
+			var vm = IoC.Get<DocumentViewModel>();
 			var documentScreen = (BrowseDocumentsViewModel) Parent;
-			documentScreen.ActivateItem(this);
+			documentScreen.ActivateItem(vm.Initialize(jsonDocument));
 			documentScreen.IsDocumentPreviewed = true;
 		}
 

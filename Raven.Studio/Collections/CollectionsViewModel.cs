@@ -13,6 +13,7 @@
 	using Raven.Database;
 	using Raven.Database.Data;
 	using Raven.Client.Client;
+	using Shell;
 
 	[Export]
 	public class CollectionsViewModel : Screen
@@ -78,9 +79,10 @@
 					.ContinueWith(x =>
 						{
 							if(x.IsFaulted) throw new NotImplementedException("TODO");
-							var templateProvider = IoC.Get<DocumentTemplateProvider>();
+
+							var vm = IoC.Get<DocumentViewModel>();
 							return x.Result.Results
-								.Select(doc => new DocumentViewModel(doc.ToJsonDocument(), templateProvider))
+								.Select(doc => vm.Initialize(doc.ToJsonDocument()))
 								.ToArray();
 						});
 			}
