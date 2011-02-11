@@ -12,7 +12,7 @@ namespace Raven.Studio.Plugin
 		IAsyncDocumentSession OpenSession();
 		IEnumerable<string> Databases {get;}
 		string CurrentDatabase {get;}
-		void Connect(Uri serverAddress);
+        void Connect(Uri serverAddress, Action callback);
 		DatabaseStatistics Statistics {get;}
 		event EventHandler CurrentDatabaseChanged;
 	}

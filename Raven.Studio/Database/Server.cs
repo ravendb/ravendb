@@ -11,8 +11,9 @@ namespace Raven.Studio.Database
 	using Messages;
 	using Plugin;
 	using Raven.Database.Data;
+	using Action = System.Action;
 
-	[Export(typeof(IServer))]
+    [Export(typeof(IServer))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class Server : PropertyChangedBase, IServer, IHandle<RefreshStatistics>
 	{
@@ -32,7 +33,7 @@ namespace Raven.Studio.Database
 			events.Subscribe(this);
 		}
 
-		public void Connect(Uri serverAddress)
+		public void Connect(Uri serverAddress, Action callback)
 		{
 			Address = serverAddress.OriginalString;
 			Name = serverAddress.OriginalString;
@@ -52,6 +53,8 @@ namespace Raven.Studio.Database
 
 					IsInitialized = true;
 					//Execute.OnUIThread(() => timer.Start());
+
+                    if (callback != null) callback();
 				});
 		}
 

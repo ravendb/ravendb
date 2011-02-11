@@ -2,6 +2,7 @@
 {
 	using System;
 	using System.ComponentModel.Composition;
+	using System.Linq;
 	using System.Windows;
 	using Caliburn.Micro;
 	using Database;
@@ -29,12 +30,21 @@
 			                      	});
 			this.databaseScreen = databaseScreen;
 			this.events = events;
+            events.Subscribe(this);
 
-			server.Connect(new Uri("http://localhost:8080"));
-			ActivateItem(start);
-			events.Subscribe(this);
+			server.Connect(new Uri("http://localhost:8080"), 
+                () =>
+			    {
+                    Items.Add(start);
+                    Items.Add(databaseScreen); 
 
-			Items.Add(databaseScreen);
+                    if(server.Databases.Count()==1)
+                    {
+                        ActivateItem(databaseScreen);
+                    }
+                                                               
+			    });
+			
 		}
 
 		public NavigationViewModel Navigation

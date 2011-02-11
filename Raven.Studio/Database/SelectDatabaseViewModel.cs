@@ -6,7 +6,7 @@ namespace Raven.Studio.Database
 	using Plugin;
 
 	[Export]
-	public class SelectDatabaseViewModel : Screen, IRavenScreen
+	public class SelectDatabaseViewModel : Screen
 	{
 		readonly IEventAggregator events;
 
@@ -19,11 +19,6 @@ namespace Raven.Studio.Database
 		}
 
 		public IServer Server { get; private set; }
-
-		public SectionType Section
-		{
-			get { return SectionType.None; }
-		}
 
 		public void OpenDatabase()
 		{
