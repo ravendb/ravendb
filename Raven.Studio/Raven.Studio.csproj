@@ -122,9 +122,11 @@
     <Compile Include="Commands\DeleteDocument.cs" />
     <Compile Include="Commands\EditDocument.cs" />
     <Compile Include="Commands\SaveDocument.cs" />
+    <Compile Include="Commands\SearchForDocumentById.cs" />
     <Compile Include="Controls\JsonEditor.cs" />
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
+    <Compile Include="Messages\Notification.cs" />
     <Compile Include="Messages\OpenDocumentForEdit.cs" />
     <Compile Include="Commands\PreviewDocument.cs" />
     <Compile Include="Controls\DatabaseConnection.xaml.cs">

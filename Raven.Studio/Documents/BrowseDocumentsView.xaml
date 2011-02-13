@@ -35,7 +35,8 @@
                     </i:Interaction.Behaviors>
                 </TextBox>
                 <HyperlinkButton Style="{StaticResource SearchButtonStyle}"
-                                 cm:Message.Attach="ShowDocument(documentId)" />
+                                 cm:Action.TargetWithoutContext="SearchForDocumentById"
+                                 cm:Message.Attach="Execute(documentId)" />
             </StackPanel>
         </tk:DockPanel>
 
