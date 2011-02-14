@@ -360,7 +360,7 @@ task UploadUnstable -depends Unstable, DoRelease, Upload {
 task CreateNugetPackage {
   $accessPath = "$base_dir\..\Nuget-Access-Key.txt"
   
-  if ( Test-Path $accessPath -eq $false )
+  if ( (Test-Path $accessPath) -eq $false )
   {
     return;
   }
@@ -400,5 +400,5 @@ task CreateNugetPackage {
   
   & "$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
   
-  & "$tools_dir\nuget.exe" "-source http://packages.nuget.org/v1/ RavenDB.1.0.nupkg $accessKey"
+  & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ RavenDB.1.0.nupkg $accessKey
 }
