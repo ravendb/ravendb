@@ -885,7 +885,7 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
 				{
 					var jsonDoc = doc.ToJson();
 					new JsonPatcher(jsonDoc).Apply(patchDoc);
-					Put(doc.Key, doc.Etag, jsonDoc, doc.Metadata, transactionInformation);
+					Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<JObject>("@metadata"), transactionInformation);
 					result = PatchResult.Patched;
 				}
 
