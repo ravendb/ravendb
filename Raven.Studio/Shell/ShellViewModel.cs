@@ -16,13 +16,15 @@
 		IHandle<ShowCurrentDatabase>
 	{
 		readonly NavigationViewModel navigation;
+		readonly NotificationsViewModel notifications;
 		readonly DatabaseViewModel databaseScreen;
 		readonly IEventAggregator events;
 
 		[ImportingConstructor]
-		public ShellViewModel(IServer server, NavigationViewModel navigation, SelectDatabaseViewModel start, DatabaseViewModel databaseScreen, IEventAggregator events)
+		public ShellViewModel(IServer server, NavigationViewModel navigation, NotificationsViewModel notifications, SelectDatabaseViewModel start, DatabaseViewModel databaseScreen, IEventAggregator events)
 		{
 			this.navigation = navigation;
+			this.notifications = notifications;
 			navigation.SetGoHome( ()=>
 			                      	{
 										this.TrackNavigationTo(start, events);
@@ -48,6 +50,11 @@
                                                                
 			    });
 			
+		}
+
+		public NotificationsViewModel Notifications
+		{
+			get { return notifications; }
 		}
 
 		public NavigationViewModel Navigation

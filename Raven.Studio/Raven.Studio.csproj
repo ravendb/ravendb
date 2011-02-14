@@ -230,6 +230,7 @@
     <Compile Include="Plugins\PluginBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shell\NavigationViewModel.cs" />
+    <Compile Include="Shell\NotificationsViewModel.cs" />
     <Compile Include="Statistics\StatisticsPlugin.cs" />
     <Compile Include="Statistics\StatisticsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
@@ -361,6 +362,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Shell\NavigationView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Shell\NotificationsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
