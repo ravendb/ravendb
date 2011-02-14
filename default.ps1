@@ -413,5 +413,5 @@ task CreateNugetPackage {
   
   & "$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
   
-  & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ RavenDB.1.0.nupkg $accessKey
+  & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB.$version.$env:buildlabel.nupkg" $accessKey
 }
