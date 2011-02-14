@@ -3,7 +3,7 @@
 	using System;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Database;
+	using Features.Database;
 	using Framework;
 	using Messages;
 	using Plugin;

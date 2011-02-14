@@ -1,6 +1,6 @@
 ﻿namespace Raven.Studio.Messages
 {
-	using Database;
+	using Features.Database;
 
 	public class DocumentDeleted
 	{

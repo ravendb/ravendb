@@ -118,7 +118,7 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
-    <Compile Include="Collections\CollectionsViewModel.cs" />
+    <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
     <Compile Include="Commands\EditDocument.cs" />
     <Compile Include="Commands\EditDocumentById.cs" />
@@ -198,58 +198,43 @@
     <Compile Include="Converters\MagnitudeToListConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Converters\TypeToBrushConverter.cs" />
-    <Compile Include="Database\DocumentTemplateProvider.cs" />
-    <Compile Include="Database\DocumentViewModel.cs" />
+    <Compile Include="Features\Database\DocumentTemplateProvider.cs" />
+    <Compile Include="Features\Database\DocumentViewModel.cs" />
     <Compile Include="Framework\ConventionalCatalog.cs" />
     <Compile Include="Framework\DateTimeExtensions.cs" />
     <Compile Include="Framework\DictionaryExtensions.cs" />
-    <Compile Include="Database\SummaryViewModel.cs" />
+    <Compile Include="Features\Database\SummaryViewModel.cs" />
     <Compile Include="Dialogs\InformationDialogViewModel.cs" />
     <Compile Include="Framework\BindablePagedQuery.cs" />
     <Compile Include="Framework\DoubleClickEvent.cs" />
     <Compile Include="Framework\ScreenExtensions.cs" />
     <Compile Include="Framework\TaskExtensions.cs" />
     <Compile Include="Framework\TemplateColorProvider.cs" />
-    <Compile Include="Messages\ChangeActiveScreen.cs" />
     <Compile Include="Messages\DocumentDeleted.cs" />
     <Compile Include="Messages\NavigationEvent.cs" />
     <Compile Include="Commands\OpenErrorsScreen.cs" />
-    <Compile Include="Messages\OpenNewScreen.cs" />
     <Compile Include="Messages\RefreshStatistics.cs" />
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
-    <Compile Include="Database\Server.cs" />
-    <Compile Include="Indexes\FieldProperties.cs" />
-    <Compile Include="Documents\BrowseDocumentsPlugin.cs" />
-    <Compile Include="Documents\CreateNewDocumentPlugin.cs" />
-    <Compile Include="Documents\BrowseDocumentsViewModel.cs" />
-    <Compile Include="Documents\DocumentViewModel.cs" />
-    <Compile Include="Indexes\BrowseIndexesPlugin.cs" />
-    <Compile Include="Indexes\BrowseIndexesViewModel.cs" />
-    <Compile Include="Indexes\CreateNewIndexPlugin.cs" />
+    <Compile Include="Features\Database\Server.cs" />
+    <Compile Include="Features\Indexes\FieldProperties.cs" />
+    <Compile Include="Features\Documents\BrowseDocumentsViewModel.cs" />
+    <Compile Include="Features\Documents\DocumentViewModel.cs" />
+    <Compile Include="Features\Indexes\BrowseIndexesViewModel.cs" />
     <Compile Include="Messages\IndexChangeMessage.cs" />
-    <Compile Include="Indexes\EditIndexViewModel.cs" />
+    <Compile Include="Features\Indexes\EditIndexViewModel.cs" />
     <Compile Include="Messages\ShowCurrentDatabase.cs" />
     <Compile Include="Features\Linq\LinqEditorViewModel.cs" />
     <Compile Include="Messages\WorkStarted.cs" />
-    <Compile Include="Plugins\PluginBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Shell\BusyStatusView.xaml.cs">
-      <DependentUpon>BusyStatusView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Shell\BusyStatusViewModel.cs" />
     <Compile Include="Shell\NavigationViewModel.cs" />
     <Compile Include="Shell\NotificationsViewModel.cs" />
-    <Compile Include="Statistics\StatisticsPlugin.cs" />
-    <Compile Include="Statistics\StatisticsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
-    <Compile Include="Database\DatabaseViewModel.cs" />
-    <Compile Include="Documents\DocumentView.xaml.cs">
+    <Compile Include="Features\Database\DatabaseViewModel.cs" />
+    <Compile Include="Features\Documents\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Database\SelectDatabaseViewModel.cs" />
-    <Compile Include="Database\MenuScreenViewModel.cs">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -281,7 +266,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
-    <Page Include="Collections\CollectionsView.xaml">
+    <Page Include="Features\Collections\CollectionsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -293,23 +278,23 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Database\DocumentView.xaml">
+    <Page Include="Features\Database\DocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Database\Document\Preview.xaml">
+    <Page Include="Features\Database\Document\Preview.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Database\Document\Thumb.xaml">
+    <Page Include="Features\Database\Document\Thumb.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Database\Document\Tooltip.xaml">
+    <Page Include="Features\Database\Document\Tooltip.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Database\SummaryView.xaml">
+    <Page Include="Features\Database\SummaryView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -325,7 +310,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Indexes\EditIndexView.xaml">
+    <Page Include="Features\Indexes\EditIndexView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -341,23 +326,15 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Documents\BrowseMenuIcon.xaml">
+    <Page Include="Features\Documents\BrowseDocumentsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Documents\BrowseDocumentsView.xaml">
+    <Page Include="Features\Documents\DocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Documents\DocumentView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Indexes\BrowseIndexesMenuIcon.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Indexes\BrowseIndexesView.xaml">
+    <Page Include="Features\Indexes\BrowseIndexesView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -385,14 +362,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Statistics\GlobalStatisticsMenuIcon.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Statistics\GlobalStatisticsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Resources\ControlTemplates\DocumentsContainer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -417,15 +386,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Database\DatabaseView.xaml">
+    <Page Include="Features\Database\DatabaseView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Database\SelectDatabaseView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Database\MenuScreenView.xaml">
+    <Page Include="Features\Database\SelectDatabaseView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

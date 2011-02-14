@@ -2,8 +2,7 @@
 {
     using System.ComponentModel.Composition;
     using Caliburn.Micro;
-    using Database;
-    using Framework;
+    using Features.Database;
     using Messages;
     using Plugin;
 
@@ -33,7 +32,7 @@
                         }
                         else
                         {
-                            var doc = IoC.Get<Database.DocumentViewModel>();
+                            var doc = IoC.Get<DocumentViewModel>();
                             doc.Initialize(get.Result);
                             events.Publish(new OpenDocumentForEdit(doc));
                         }

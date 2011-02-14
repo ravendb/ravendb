@@ -2,7 +2,7 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Database;
+	using Features.Database;
 	using Messages;
 
 	public class EditDocument
