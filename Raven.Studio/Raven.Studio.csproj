@@ -125,6 +125,7 @@
     <Compile Include="Commands\SearchForDocumentById.cs" />
     <Compile Include="Controls\JsonEditor.cs" />
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
+    <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
     <Compile Include="Messages\Notification.cs" />
     <Compile Include="Messages\OpenDocumentForEdit.cs" />
@@ -211,6 +212,7 @@
     <Compile Include="Messages\ChangeActiveScreen.cs" />
     <Compile Include="Messages\DocumentDeleted.cs" />
     <Compile Include="Messages\NavigationEvent.cs" />
+    <Compile Include="Commands\OpenErrorsScreen.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
     <Compile Include="Messages\RefreshStatistics.cs" />
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
@@ -310,6 +312,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Data\JsonDocumentView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Statistics\ErrorsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -12,6 +12,7 @@ namespace Raven.Studio.Database
 	using Plugin;
 
 	[Export(typeof (DatabaseViewModel))]
+	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class DatabaseViewModel : Conductor<IScreen>.Collection.OneActive,
 		IHandle<OpenDocumentForEdit>
 	{

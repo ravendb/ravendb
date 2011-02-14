@@ -4,6 +4,7 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
@@ -45,7 +46,9 @@
 			<c:Label Content="stale" />
 
 			<TextBlock x:Name="Errors_Length" />
-			<c:Label Content="errors" />
+			<c:Label Content="errors"
+					 cm:Action.TargetWithoutContext="OpenErrorsScreen"
+					 cm:Message.Attach="[Event MouseLeftButtonDown] = Execute" />
 
 			<TextBlock x:Name="Triggers_Length" />
 			<c:Label Content="triggers" />
