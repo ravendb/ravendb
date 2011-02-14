@@ -396,7 +396,20 @@ task CreateNugetPackage {
   
   cp $build_dir\RavenSmuggler.??? $build_dir\NuPack\Tools
   
-  cp $base_dir\RavenDB.nuspec $build_dir\NuPack
+  $nupack = [xml](get-content $base_dir\RavenDB.nuspec)
+	
+  $nupack.package.metadata.version = "$version.$env:buildlabel"
+
+  $writerSettings = new-object System.Xml.XmlWriterSettings
+  $writerSettings.OmitXmlDeclaration = $true
+  $writerSettings.NewLineOnAttributes = $true
+  $writerSettings.Indent = $true
+	
+  $writer = [System.Xml.XmlWriter]::Create("$build_dir\Nupack\RavenDB.nuspec", $writerSettings)
+	
+  $nupack.WriteTo($writer)
+  $writer.Flush()
+  $writer.Close()
   
   & "$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
   
