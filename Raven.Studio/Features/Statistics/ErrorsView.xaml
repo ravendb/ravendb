@@ -13,6 +13,25 @@
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
+	<UserControl.Resources>
+		<Style x:Key="Error"
+			   TargetType="TextBlock">
+			<Setter Property="Foreground"
+					Value="DarkRed" />
+			<Setter Property="FontSize"
+					Value="16" />
+		</Style>
+
+		<Style x:Key="HowLongSince"
+			   TargetType="TextBlock">
+			<Setter Property="Foreground"
+					Value="{StaticResource AccentTextBrush}" />
+			<Setter Property="FontStyle"
+					Value="Italic" />
+		</Style>
+
+	</UserControl.Resources>
+
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -39,13 +58,25 @@
 						  ItemsSource="{Binding Server.Statistics.Errors}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
-						<StackPanel Margin="0 0 0 8">
-							<TextBlock Text="{Binding Error}" />
-							<TextBlock Text="{Binding Index}"
-									   FontWeight="Bold" />
-							<TextBlock Text="{Binding Document}" />
-							<TextBlock Text="{Binding Timestamp}" />
-						</StackPanel>
+						<tk:DockPanel>
+							<StackPanel Margin="0 0 0 8">
+								<TextBlock Text="{Binding Error}"
+										   Style="{StaticResource Error}" />
+
+								<StackPanel Orientation="Horizontal">
+									<TextBlock Text="Occurred while indexing document " />
+									<HyperlinkButton Content="{Binding Document}"
+													 cm:Action.TargetWithoutContext="EditDocumentById"
+													 cm:Message.Attach="Execute($this.Content)" />
+									<TextBlock Text=" with " />
+									<TextBlock Text="{Binding Index}"
+											   FontWeight="Bold" />
+								</StackPanel>
+
+								<TextBlock Text="{Binding Timestamp, Converter={StaticResource howLongSince}}"
+										   Style="{StaticResource HowLongSince}" />
+							</StackPanel>
+						</tk:DockPanel>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>

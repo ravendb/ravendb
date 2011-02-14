@@ -10,6 +10,9 @@
 		<ResourceDictionary Source="Fonts.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
+	<SolidColorBrush x:Key="AccentTextBrush"
+					 Color="#FF899EB2" />
+
 	<Style x:Key="SectionHeader"
 		   TargetType="TextBlock">
 		<Setter Property="FontFamily"
@@ -74,7 +77,7 @@
 		<Setter Property="FontSize"
 				Value="32" />
 		<Setter Property="Foreground"
-				Value="#FF899EB2" />
+				Value="{StaticResource AccentTextBrush}" />
 		<Setter Property="TextTrimming"
 				Value="WordEllipsis" />
 	</Style>
@@ -84,7 +87,7 @@
 		<Setter Property="FontSize"
 				Value="20" />
 		<Setter Property="Foreground"
-				Value="#FF899EB2" />
+				Value="{StaticResource AccentTextBrush}" />
 		<Setter Property="FontStyle"
 				Value="Italic" />
 		<Setter Property="TextWrapping"

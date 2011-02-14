@@ -10,47 +10,58 @@
 	using Messages;
 	using Plugin;
 
-	[Export(typeof (IShell))]
+	[Export(typeof(IShell))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IShell, 
+	public class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IShell,
 		IHandle<ShowCurrentDatabase>
 	{
 		readonly NavigationViewModel navigation;
 		readonly NotificationsViewModel notifications;
+		readonly BusyStatusViewModel busyStatus;
 		readonly DatabaseViewModel databaseScreen;
 		readonly IEventAggregator events;
 
 		[ImportingConstructor]
-		public ShellViewModel(IServer server, NavigationViewModel navigation, NotificationsViewModel notifications, SelectDatabaseViewModel start, DatabaseViewModel databaseScreen, IEventAggregator events)
+		public ShellViewModel(
+			IServer server, NavigationViewModel navigation,
+			NotificationsViewModel notifications,
+			BusyStatusViewModel busyStatus,
+			SelectDatabaseViewModel start,
+			DatabaseViewModel databaseScreen,
+			IEventAggregator events)
 		{
 			this.navigation = navigation;
 			this.notifications = notifications;
-			navigation.SetGoHome( ()=>
-			                      	{
+			this.busyStatus = busyStatus;
+			navigation.SetGoHome(() =>
+									{
 										this.TrackNavigationTo(start, events);
-			                      		navigation.Breadcrumbs.Clear();
-			                      	});
+										navigation.Breadcrumbs.Clear();
+									});
 			this.databaseScreen = databaseScreen;
 			this.events = events;
-            events.Subscribe(this);
+			events.Subscribe(this);
 
-			server.Connect(new Uri("http://localhost:8080"), 
-                () =>
-			    {
-                    Items.Add(start);
-                    Items.Add(databaseScreen); 
+			server.Connect(new Uri("http://localhost:8080"),
+				() =>
+				{
+					Items.Add(start);
+					Items.Add(databaseScreen);
 
-                    if(server.Databases.Count()==1)
-                    {
-                        ActivateItem(databaseScreen);
-                    } else
-                    {
-                        ActivateItem(start);
-                    }
-                                                               
-			    });
-			
+					if (server.Databases.Count() == 1)
+					{
+						ActivateItem(databaseScreen);
+					}
+					else
+					{
+						ActivateItem(start);
+					}
+
+				});
+
 		}
+
+		public BusyStatusViewModel BusyStatus {get {return busyStatus;}}
 
 		public NotificationsViewModel Notifications
 		{

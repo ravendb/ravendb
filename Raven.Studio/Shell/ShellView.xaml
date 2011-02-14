@@ -38,8 +38,8 @@
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
 
-							<StackPanel Orientation="Horizontal"
-										Grid.Column="0">
+							<StackPanel Grid.Column="0"
+										Orientation="Horizontal">
 								<Image Source="../Resources/Images/logo.png"
 									   Grid.Column="0" />
 								<TextBlock Text="raven db management studio"
@@ -51,8 +51,8 @@
 										   Margin="5, 0, 0, 0" />
 							</StackPanel>
 
-							<StackPanel Orientation="Horizontal"
-										Grid.Column="2"
+							<StackPanel Grid.Column="2"
+										Orientation="Horizontal"
 										Margin="0,0,10,0"
 										VerticalAlignment="Top">
 								<Button x:Name="MinimizeWindow"
@@ -67,6 +67,10 @@
 					</Border>
 
 					<ContentControl x:Name="Navigation"
+									Grid.Row="1" />
+
+					<ContentControl x:Name="BusyStatus"
+									HorizontalAlignment="Right"
 									Grid.Row="1" />
 
 					<ContentControl x:Name="Notifications"

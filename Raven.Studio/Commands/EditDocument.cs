@@ -19,5 +19,6 @@
 		{
 			events.Publish(new OpenDocumentForEdit(document));
 		}
+
 	}
 }

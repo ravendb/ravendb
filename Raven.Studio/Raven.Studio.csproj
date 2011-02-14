@@ -121,6 +121,7 @@
     <Compile Include="Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
     <Compile Include="Commands\EditDocument.cs" />
+    <Compile Include="Commands\EditDocumentById.cs" />
     <Compile Include="Commands\SaveDocument.cs" />
     <Compile Include="Commands\SearchForDocumentById.cs" />
     <Compile Include="Controls\JsonEditor.cs" />
@@ -229,8 +230,13 @@
     <Compile Include="Indexes\EditIndexViewModel.cs" />
     <Compile Include="Messages\ShowCurrentDatabase.cs" />
     <Compile Include="Features\Linq\LinqEditorViewModel.cs" />
+    <Compile Include="Messages\WorkStarted.cs" />
     <Compile Include="Plugins\PluginBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Shell\BusyStatusView.xaml.cs">
+      <DependentUpon>BusyStatusView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Shell\BusyStatusViewModel.cs" />
     <Compile Include="Shell\NavigationViewModel.cs" />
     <Compile Include="Shell\NotificationsViewModel.cs" />
     <Compile Include="Statistics\StatisticsPlugin.cs" />
@@ -366,6 +372,10 @@
     <Page Include="Resources\Styles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Shell\BusyStatusView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Shell\NavigationView.xaml">
       <SubType>Designer</SubType>
