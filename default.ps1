@@ -358,6 +358,16 @@ task UploadUnstable -depends Unstable, DoRelease, Upload {
 }	
 
 task CreateNugetPackage {
+  $accessPath = "$base_dir\..\Nuget-Access-Key.txt"
+  
+  if ( Test-Path $accessPath -eq $false )
+  {
+    return;
+  }
+  
+  $accessKey = Get-Content $accessPath
+  $accessKey = $accessKey.Trim()
+  
   del $base_dir\*.nupkg
 	remove-item $build_dir\NuPack -force -recurse -erroraction silentlycontinue
 	mkdir $build_dir\NuPack
@@ -389,4 +399,6 @@ task CreateNugetPackage {
   cp $base_dir\RavenDB.nuspec $build_dir\NuPack
   
   & "$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
+  
+  & "$tools_dir\nuget.exe" "-source http://packages.nuget.org/v1/ RavenDB.1.0.nupkg $accessKey"
 }
