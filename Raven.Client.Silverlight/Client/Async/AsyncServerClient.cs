@@ -384,6 +384,27 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
+		/// Gets the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task<IndexDefinition> GetIndexAsync(string name)
+		{
+			return url.IndexDefinition(name)
+			.NoCache()
+			.ToJsonRequest(this,credentials,convention).ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var serializer = convention.CreateSerializer();
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = (JToken)serializer.Deserialize(reader);
+						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+						return JsonConvert.DeserializeObject<IndexDefinition>(json["Index"].ToString());
+					}
+				});
+		}
+
+		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -507,6 +528,15 @@ namespace Raven.Client.Client.Async
 							.ToArray();
 					}
 				});
+		}
+
+		/// <summary>
+		/// Resets the specified index asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task ResetIndexAsync(string name)
+		{
+			throw new NotImplementedException();
 		}
 
 		private void AddOperationHeaders(HttpWebRequest webRequest)

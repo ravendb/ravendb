@@ -87,6 +87,24 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
+		/// Resets the specified index asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task ResetIndexAsync(string name)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Gets the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task<IndexDefinition> GetIndexAsync(string name)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
 		/// <param name="name">The name.</param>

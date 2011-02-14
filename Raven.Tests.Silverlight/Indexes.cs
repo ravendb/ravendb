@@ -96,5 +96,19 @@
 			//NOTE: this is failing because Silverlight is caching the response from the first verification
 			Assert.IsFalse(verify_delete.Result.Contains("Test"));
 		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_get_a_single_index_by_name()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexAsync("Raven/DocumentsByEntityName");
+			yield return task;
+
+			Assert.AreEqual("Raven/DocumentsByEntityName", task.Result.Name);
+		}
 	}
 }
