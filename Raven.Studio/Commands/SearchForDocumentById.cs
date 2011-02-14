@@ -20,6 +20,8 @@
 
         public void Execute(string key)
         {
+			events.Publish(new WorkStarted());
+
             using (var session = server.OpenSession())
             {
                 session.Advanced.AsyncDatabaseCommands
@@ -34,7 +36,8 @@
                         {
                             var doc = IoC.Get<DocumentViewModel>();
                             doc.Initialize(get.Result);
-                            events.Publish(new OpenDocumentForEdit(doc));
+                            events.Publish(new DatabaseScreenRequested(() => doc));
+							events.Publish(new WorkCompleted());
                         }
                     });
 

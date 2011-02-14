@@ -17,8 +17,7 @@
 
 		public void Execute(DocumentViewModel document)
 		{
-			events.Publish(new OpenDocumentForEdit(document));
+			events.Publish(new DatabaseScreenRequested(()=>document));
 		}
-
 	}
 }

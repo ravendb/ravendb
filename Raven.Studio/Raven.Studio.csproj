@@ -118,6 +118,7 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
+    <Compile Include="Commands\EditIndex.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
     <Compile Include="Commands\EditDocument.cs" />
@@ -127,6 +128,7 @@
     <Compile Include="Controls\JsonEditor.cs" />
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
+    <Compile Include="Messages\DatabaseScreenRequested.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
     <Compile Include="Messages\Notification.cs" />
     <Compile Include="Messages\OpenDocumentForEdit.cs" />

@@ -1,5 +1,6 @@
 namespace Raven.Studio.Features.Database
 {
+	using System;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Collections;
@@ -13,7 +14,7 @@ namespace Raven.Studio.Features.Database
 	[Export(typeof (DatabaseViewModel))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class DatabaseViewModel : Conductor<IScreen>.Collection.OneActive,
-	                                 IHandle<OpenDocumentForEdit>
+		IHandle<DatabaseScreenRequested>
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
@@ -41,14 +42,14 @@ namespace Raven.Studio.Features.Database
 			get { return server; }
 		}
 
-		public void Handle(OpenDocumentForEdit message)
-		{
-			this.TrackNavigationTo(message.Document, events);
-		}
-
 		public void Show(IScreen screen)
 		{
 			this.TrackNavigationTo(screen, events);
+		}
+
+		public void Handle(DatabaseScreenRequested message)
+		{
+			Show( message.GetScreen() );
 		}
 	}
 }

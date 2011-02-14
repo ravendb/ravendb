@@ -29,7 +29,7 @@
 				               	{
 				               		var doc = IoC.Get<DocumentViewModel>();
 									doc.Initialize(get.Result);
-									events.Publish(new OpenDocumentForEdit(doc));
+									events.Publish(new DatabaseScreenRequested(() => doc));
 									events.Publish(new WorkCompleted());
 				               	});
 		}

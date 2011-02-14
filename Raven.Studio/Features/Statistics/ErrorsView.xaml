@@ -22,7 +22,7 @@
 					Value="16" />
 		</Style>
 
-		<Style x:Key="HowLongSince"
+		<Style x:Key="howLongSinceStyle"
 			   TargetType="TextBlock">
 			<Setter Property="Foreground"
 					Value="{StaticResource AccentTextBrush}" />
@@ -69,12 +69,14 @@
 													 cm:Action.TargetWithoutContext="EditDocumentById"
 													 cm:Message.Attach="Execute($this.Content)" />
 									<TextBlock Text=" with " />
-									<TextBlock Text="{Binding Index}"
-											   FontWeight="Bold" />
+									<HyperlinkButton Content="{Binding Index}"
+													 cm:Action.TargetWithoutContext="EditIndex"
+													 cm:Message.Attach="Execute($this.Content)" />
+									
 								</StackPanel>
 
 								<TextBlock Text="{Binding Timestamp, Converter={StaticResource howLongSince}}"
-										   Style="{StaticResource HowLongSince}" />
+										   Style="{StaticResource howLongSinceStyle}" />
 							</StackPanel>
 						</tk:DockPanel>
 					</DataTemplate>
