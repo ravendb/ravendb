@@ -130,8 +130,7 @@
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
     <Compile Include="Messages\DatabaseScreenRequested.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
-    <Compile Include="Messages\Notification.cs" />
-    <Compile Include="Messages\OpenDocumentForEdit.cs" />
+    <Compile Include="Messages\NotificationRaised.cs" />
     <Compile Include="Commands\PreviewDocument.cs" />
     <Compile Include="Controls\DatabaseConnection.xaml.cs">
       <DependentUpon>DatabaseConnection.xaml</DependentUpon>
@@ -213,19 +212,19 @@
     <Compile Include="Framework\TaskExtensions.cs" />
     <Compile Include="Framework\TemplateColorProvider.cs" />
     <Compile Include="Messages\DocumentDeleted.cs" />
-    <Compile Include="Messages\NavigationEvent.cs" />
+    <Compile Include="Messages\NavigationOccurred.cs" />
     <Compile Include="Commands\OpenErrorsScreen.cs" />
-    <Compile Include="Messages\RefreshStatistics.cs" />
-    <Compile Include="Messages\ReplaceActiveScreen.cs" />
+    <Compile Include="Messages\StatisticsUpdateRequested.cs" />
     <Compile Include="Features\Database\Server.cs" />
     <Compile Include="Features\Indexes\FieldProperties.cs" />
     <Compile Include="Features\Documents\BrowseDocumentsViewModel.cs" />
     <Compile Include="Features\Documents\DocumentViewModel.cs" />
     <Compile Include="Features\Indexes\BrowseIndexesViewModel.cs" />
-    <Compile Include="Messages\IndexChangeMessage.cs" />
+    <Compile Include="Messages\IndexUpdated.cs" />
     <Compile Include="Features\Indexes\EditIndexViewModel.cs" />
-    <Compile Include="Messages\ShowCurrentDatabase.cs" />
+    <Compile Include="Messages\DisplayCurrentDatabaseRequested.cs" />
     <Compile Include="Features\Linq\LinqEditorViewModel.cs" />
+    <Compile Include="Messages\WorkCompleted.cs" />
     <Compile Include="Messages\WorkStarted.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shell\BusyStatusViewModel.cs" />

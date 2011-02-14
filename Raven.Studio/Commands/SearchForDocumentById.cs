@@ -30,7 +30,7 @@
                     {
                         if (get.Result == null)
                         {
-                            events.Publish(new Notification("Could not locate a document with id " + key ));
+                            events.Publish(new NotificationRaised("Could not locate a document with id " + key ));
                         }
                         else
                         {

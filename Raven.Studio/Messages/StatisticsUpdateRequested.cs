@@ -1,6 +1,6 @@
 ﻿namespace Raven.Studio.Messages
 {
-	public class RefreshStatistics
+	public class StatisticsUpdateRequested
 	{
 	}
 }

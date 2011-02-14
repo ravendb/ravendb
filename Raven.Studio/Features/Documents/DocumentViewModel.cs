@@ -217,10 +217,10 @@ namespace Raven.Studio.Features.Documents
 				});
 		}
 
-		public void ShowDocument()
-		{
-			EventAggregator.Publish(new ReplaceActiveScreen(this));
-		}
+		//public void ShowDocument()
+		//{
+		//    EventAggregator.Publish(new ReplaceActiveScreen(this));
+		//}
 
 		static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, JToken>> data, bool withFilter)
 		{

@@ -26,7 +26,7 @@
 					.DeleteDocumentAsync(document.Id);
 			}
 
-			events.Publish(new RefreshStatistics());
+			events.Publish(new StatisticsUpdateRequested());
 			events.Publish(new DocumentDeleted(document));
 		}
 	}

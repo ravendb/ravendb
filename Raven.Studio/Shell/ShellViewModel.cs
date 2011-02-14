@@ -14,7 +14,7 @@
 	[Export(typeof(IShell))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IShell,
-		IHandle<ShowCurrentDatabase>
+		IHandle<DisplayCurrentDatabaseRequested>
 	{
 		readonly NavigationViewModel navigation;
 		readonly NotificationsViewModel notifications;
@@ -79,7 +79,7 @@
 			get { return Application.Current.MainWindow; }
 		}
 
-		public void Handle(ShowCurrentDatabase message)
+		public void Handle(DisplayCurrentDatabaseRequested message)
 		{
 			//TODO: record the previous database so that the back button is more intuitive
 			this.TrackNavigationTo(databaseScreen, events);

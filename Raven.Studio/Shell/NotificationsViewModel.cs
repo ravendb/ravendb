@@ -10,7 +10,7 @@
 	[Export]
 	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class NotificationsViewModel : PropertyChangedBase,
-	                                      IHandle<Notification>
+	                                      IHandle<NotificationRaised>
 	{
 		readonly DispatcherTimer notificationTimer;
 
@@ -21,17 +21,17 @@
 			notificationTimer = new DispatcherTimer {Interval = new TimeSpan(0, 0, 0, 5)};
 			notificationTimer.Tick += UpdateNotifications;
 			notificationTimer.Start();
-			Notifications = new BindableCollection<Notification>();
+			Notifications = new BindableCollection<NotificationRaised>();
 		}
 
-		public Notification MostRecent
+		public NotificationRaised MostRecent
 		{
 			get { return Notifications.Any() ? Notifications[0] : null; }
 		}
 
-		public BindableCollection<Notification> Notifications { get; private set; }
+		public BindableCollection<NotificationRaised> Notifications { get; private set; }
 
-		public void Handle(Notification message)
+		public void Handle(NotificationRaised message)
 		{
 			Notifications.Insert(0, message);
 			NotifyOfPropertyChange( ()=> MostRecent);

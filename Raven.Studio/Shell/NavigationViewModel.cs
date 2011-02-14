@@ -8,7 +8,7 @@
 
 	[Export]
 	public class NavigationViewModel : Screen,
-		IHandle<NavigationEvent>
+		IHandle<NavigationOccurred>
 	{
 		readonly IEventAggregator events;
 
@@ -41,9 +41,9 @@
 			history.Pop().Reverse();
 		}
 
-		readonly Stack<NavigationEvent> history = new Stack<NavigationEvent>();
+		readonly Stack<NavigationOccurred> history = new Stack<NavigationOccurred>();
 
-		public void Handle(NavigationEvent message)
+		public void Handle(NavigationOccurred message)
 		{
 			history.Push(message);
 		}

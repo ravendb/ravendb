@@ -22,7 +22,7 @@ namespace Raven.Studio.Features.Database
 
 		public void OpenDatabase()
 		{
-			events.Publish(new ShowCurrentDatabase());
+			events.Publish(new DisplayCurrentDatabaseRequested());
 		}
 	}
 }

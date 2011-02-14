@@ -19,7 +19,7 @@
 		                                     Action setContext)
 		{
 			var old = screen.ActiveItem;
-			events.Publish(new NavigationEvent(old.DisplayName, () =>
+			events.Publish(new NavigationOccurred(old.DisplayName, () =>
 			                                                    	{
 			                                                    		if (setContext != null) setContext();
 			                                                    		screen.ActivateItem(old);

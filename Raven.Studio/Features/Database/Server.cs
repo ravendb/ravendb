@@ -15,7 +15,7 @@ namespace Raven.Studio.Features.Database
 
     [Export(typeof(IServer))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class Server : PropertyChangedBase, IServer, IHandle<RefreshStatistics>
+	public class Server : PropertyChangedBase, IServer, IHandle<StatisticsUpdateRequested>
 	{
 		const string DefaultDatabaseName = "Default Database";
 		DocumentStore store;
@@ -149,7 +149,7 @@ namespace Raven.Studio.Features.Database
 			}
 		}
 
-		public void Handle(RefreshStatistics message)
+		public void Handle(StatisticsUpdateRequested message)
 		{
 			RefreshStatistics(false);
 		}

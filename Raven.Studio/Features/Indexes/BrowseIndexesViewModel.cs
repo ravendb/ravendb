@@ -9,7 +9,7 @@
 
 	[Export]
 	public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>, IRavenScreen,
-	                                      IHandle<IndexChangeMessage>
+	                                      IHandle<IndexUpdated>
 	{
 		readonly IServer server;
 		IndexDefinition activeIndex;
@@ -68,7 +68,7 @@
 			}
 		}
 
-		public void Handle(IndexChangeMessage message)
+		public void Handle(IndexUpdated message)
 		{
 			//IndexViewModel index = message.Index;
 

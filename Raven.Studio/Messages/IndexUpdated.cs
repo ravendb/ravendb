@@ -2,7 +2,7 @@
 {
 	using Features.Indexes;
 
-	public class IndexChangeMessage
+	public class IndexUpdated
 	{
 		public EditIndexViewModel Index { get; set; }
 

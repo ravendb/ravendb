@@ -1,6 +1,6 @@
 ﻿namespace Raven.Studio.Messages
 {
-	public class ShowCurrentDatabase
+	public class WorkCompleted
 	{
 	}
 }

@@ -1,11 +1,11 @@
 ﻿namespace Raven.Studio.Messages
 {
-	public class NavigationEvent
+	public class NavigationOccurred
 	{
 		readonly string name;
 		readonly System.Action undo;
 
-		public NavigationEvent(string name, System.Action undo)
+		public NavigationOccurred(string name, System.Action undo)
 		{
 			this.name = name;
 			this.undo = undo;

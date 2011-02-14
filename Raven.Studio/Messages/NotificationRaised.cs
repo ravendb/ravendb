@@ -2,9 +2,9 @@
 {
 	using System;
 
-	public class Notification
+	public class NotificationRaised
 	{
-		public Notification(string message, NotificationLevel level= NotificationLevel.Warning)
+		public NotificationRaised(string message, NotificationLevel level= NotificationLevel.Warning)
 		{
 			Message = message;
 			Level = level;
