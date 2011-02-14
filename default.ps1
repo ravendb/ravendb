@@ -315,6 +315,7 @@ task DoRelease -depends Compile, `
 	CopyDocFiles, `
 	CopySamples, `
 	ZipOutput, `
+	CreateNugetPackage, `
 	ResetBuildArtifcats {	
 	Write-Host "Done building RavenDB"
 }
@@ -355,3 +356,37 @@ task UploadOpenSource -depends OpenSource, DoRelease, Upload {
 task UploadUnstable -depends Unstable, DoRelease, Upload {
 		
 }	
+
+task CreateNugetPackage {
+  del $base_dir\*.nupkg
+	remove-item $build_dir\NuPack -force -recurse -erroraction silentlycontinue
+	mkdir $build_dir\NuPack
+	mkdir $build_dir\NuPack\content
+	mkdir $build_dir\NuPack\lib
+	mkdir $build_dir\NuPack\lib\3.5
+	mkdir $build_dir\NuPack\lib\4.0
+	mkdir $build_dir\NuPack\tools
+	mkdir $build_dir\NuPack\server
+	
+	foreach($client_dll in $client_dlls_3_5) {
+    cp "$build_dir\$client_dll" $build_dir\NuPack\lib\3.5
+  }
+
+	foreach($client_dll in $client_dlls) {
+    cp "$build_dir\$client_dll" $build_dir\NuPack\lib\4.0
+  }	
+  
+ foreach($server_file in $server_files) {
+    cp "$build_dir\$server_file" $build_dir\NuPack\server
+  }
+	
+  cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\server\Raven.Server.exe.config
+  
+  cp $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack\content\Web.config.transform
+  
+  cp $build_dir\RavenSmuggler.??? $build_dir\NuPack\Tools
+  
+  cp $base_dir\RavenDB.nuspec $build_dir\NuPack
+  
+  & "$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
+}
