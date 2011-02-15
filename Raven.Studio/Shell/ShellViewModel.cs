@@ -24,7 +24,9 @@
 
 		[ImportingConstructor]
 		public ShellViewModel(
-			IServer server, NavigationViewModel navigation,
+			IServer server, 
+			ServerUriProvider uriProvider,
+			NavigationViewModel navigation,
 			NotificationsViewModel notifications,
 			BusyStatusViewModel busyStatus,
 			SelectDatabaseViewModel start,
@@ -43,7 +45,7 @@
 			this.events = events;
 			events.Subscribe(this);
 
-			server.Connect(new Uri("http://localhost:8080"),
+			server.Connect(new Uri(uriProvider.GetServerUri()),
 				() =>
 				{
 					Items.Add(start);
