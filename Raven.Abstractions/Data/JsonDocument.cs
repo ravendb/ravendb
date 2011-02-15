@@ -17,6 +17,13 @@ namespace Raven.Database
 	public class JsonDocument : IJsonDocumentMetadata
 	{
 		/// <summary>
+		/// Create a new instance of JsonDocument
+		/// </summary>
+		public JsonDocument()
+		{
+			DataAsJson=new JObject();	
+		}
+		/// <summary>
 		/// 	Gets or sets the document data as json.
 		/// </summary>
 		/// <value>The data as json.</value>

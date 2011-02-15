@@ -11,7 +11,7 @@ namespace Raven.Database.Plugins.Builtins
 {
     public class FilterRavenInternalDocumentsReadTrigger : AbstractReadTrigger
     {
-        public override ReadVetoResult AllowRead(string key, Func<JObject> documentAccessorAccessor, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+        public override ReadVetoResult AllowRead(string key, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
         {
             if(key == null)
                 return ReadVetoResult.Allowed;
