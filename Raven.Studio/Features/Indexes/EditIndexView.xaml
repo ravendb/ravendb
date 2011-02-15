@@ -12,16 +12,6 @@
 			 d:DesignWidth="400">
 
 	<UserControl.Resources>
-		<Style TargetType="c:LinqEditor">
-			<Setter Property="Margin"
-					Value="0,0,0,10" />
-			<Setter Property="MinHeight"
-					Value="60" />
-			<Setter Property="IsTextDataBindingEnabled"
-					Value="True" />
-			<Setter Property="VerticalAlignment"
-					Value="Stretch" />
-		</Style>
 		<Style TargetType="TextBox">
 			<Setter Property="Margin"
 					Value="0,0,0,10" />
@@ -91,7 +81,7 @@
 				</StackPanel>
 			</StackPanel>
 
-			<data:DataGrid x:Name="fieldsGrid"
+			<!--<data:DataGrid x:Name="fieldsGrid"
 						   Grid.Column="1"
 						   Grid.Row="4"
 						   ItemsSource="{Binding Fields}"
@@ -132,7 +122,7 @@
 											 Width="150"
 											 Binding="{Binding Analyzer, Mode=TwoWay}" />
 				</data:DataGrid.Columns>
-			</data:DataGrid>
+			</data:DataGrid>-->
 
 			<StackPanel Grid.Column="2"
 						Grid.Row="5"

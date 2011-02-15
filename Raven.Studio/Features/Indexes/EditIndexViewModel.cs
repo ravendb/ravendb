@@ -8,7 +8,7 @@ namespace Raven.Studio.Features.Indexes
 	using Plugin;
 	using Raven.Database.Indexing;
 
-	public class EditIndexViewModel : Screen, IRavenScreen
+	public class EditIndexViewModel : Screen
 	{
 		readonly IndexDefinition index;
 		readonly IServer server;
@@ -26,11 +26,6 @@ namespace Raven.Studio.Features.Indexes
 
 			Name = index.Name;
 			LoadFields();
-		}
-
-		public SectionType Section
-		{
-			get { return SectionType.Indexes; }
 		}
 
 		public bool IsBusy

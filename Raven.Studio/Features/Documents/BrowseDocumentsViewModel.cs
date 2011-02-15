@@ -11,7 +11,7 @@ namespace Raven.Studio.Features.Documents
 	using Raven.Database;
 
 	[Export]
-	public class BrowseDocumentsViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen,
+	public class BrowseDocumentsViewModel : Conductor<DocumentViewModel>.Collection.OneActive,
 	                                        IHandle<DocumentDeleted>
 	{
 		readonly IEventAggregator events;
@@ -47,11 +47,6 @@ namespace Raven.Studio.Features.Documents
 
 			if (deleted != null)
 				Documents.Remove(deleted);
-		}
-
-		public SectionType Section
-		{
-			get { return SectionType.Documents; }
 		}
 
 		public void GetAll(IList<JsonDocument> response)

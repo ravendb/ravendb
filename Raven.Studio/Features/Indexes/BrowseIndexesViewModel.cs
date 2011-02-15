@@ -8,7 +8,7 @@
 	using Raven.Database.Indexing;
 
 	[Export]
-	public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>, IRavenScreen,
+	public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>,
 	                                      IHandle<IndexUpdated>
 	{
 		readonly IServer server;
@@ -85,11 +85,6 @@
 			//        Items.Add(index);
 			//    }
 			//}
-		}
-
-		public SectionType Section
-		{
-			get { return SectionType.Indexes; }
 		}
 
 		protected override void OnInitialize()
