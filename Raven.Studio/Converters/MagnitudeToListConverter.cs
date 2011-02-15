@@ -43,6 +43,7 @@
 
 			var top = (int) (percent*MaximumNumberOfItems);
 			top = Math.Min(top,count);
+			top = Math.Max(top,1);
 
 			return Enumerable.Range(1, top).Select(x => brush);
 		}
