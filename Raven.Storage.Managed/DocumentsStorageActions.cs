@@ -164,7 +164,7 @@ namespace Raven.Storage.Managed
         	}
 
         	var buffer = getData();
-        	var memoryStream = new MemoryStream(buffer, 0, buffer.Length);
+        	var memoryStream = new MemoryStream(buffer, 0, buffer.Length, true , true);
 
         	metadata = memoryStream.ToJObject();
 
@@ -173,10 +173,10 @@ namespace Raven.Storage.Managed
 
     	private JObject ReadDocument(MemoryStream stream, JsonDocumentMetadata metadata)
     	{
-    		byte[] buffer = stream.GetBuffer();
     		if (documentCodecs.Count() > 0)
     		{
-    			var metadataCopy = new JObject(metadata.Metadata);
+				byte[] buffer = stream.GetBuffer();
+				var metadataCopy = new JObject(metadata.Metadata);
 				var dataBuffer = new byte[stream.Length - stream.Position];
 				Buffer.BlockCopy(buffer, (int)stream.Position, dataBuffer, 0,
     			                 dataBuffer.Length);
@@ -186,7 +186,7 @@ namespace Raven.Storage.Managed
 
 			var result = stream.ToJObject();
 
-			storage.SetCachedDocument(metadata.Key, metadata.Etag, Tuple.Create(new JObject(metadata), new JObject(result)));
+			storage.SetCachedDocument(metadata.Key, metadata.Etag, Tuple.Create(new JObject(metadata.Metadata), new JObject(result)));
 
     		return result;
     	}
