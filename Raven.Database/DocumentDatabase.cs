@@ -322,7 +322,7 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
 
 			DocumentRetriever.EnsureIdInMetadata(document);
 			return new DocumentRetriever(null, ReadTriggers)
-				.ExecuteReadTriggers(document, transactionInformation,ReadOperation.Load);
+				.ProcessReadVetoes(document, transactionInformation,ReadOperation.Load);
 		}
 
 		public JsonDocumentMetadata GetDocumentMetadata(string key, TransactionInformation transactionInformation)
@@ -335,7 +335,7 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
 
 			DocumentRetriever.EnsureIdInMetadata(document);
 			return new DocumentRetriever(null, ReadTriggers)
-				.ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
+				.ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
 		}
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
@@ -789,18 +789,19 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
 
 		}
 
-		public JArray GetDocumentsWithIdStartingWith(string idPrefix)
+		public JArray GetDocumentsWithIdStartingWith(string idPrefix, int start, int pageSize)
 		{
 			var list = new JArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix);
+				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start)
+					.Take(pageSize);
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents)
 				{
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever
-						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+						.ProcessReadVetoes(doc, null, ReadOperation.Load);
 					if (document == null)
 						continue;
 
@@ -825,7 +826,7 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
 				{
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever
-						.ExecuteReadTriggers(doc, null,
+						.ProcessReadVetoes(doc, null,
 						// here we want to have the Load semantic, not Query, because we need this to be
 						// as close as possible to the full database contents
 						ReadOperation.Load);

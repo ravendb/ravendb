@@ -46,7 +46,7 @@ namespace Raven.Tests.Storage
 			db.Put("Raven/Databases/Db", null, new JObject { { "a", "b" } }, new JObject(), null);
 			db.Put("Raven/Database", null, new JObject { { "a", "b" } }, new JObject(), null);
 
-			var dbs = db.GetDocumentsWithIdStartingWith("Raven/Databases/");
+			var dbs = db.GetDocumentsWithIdStartingWith("Raven/Databases/", 10, 10);
 
 			Assert.Equal(4, dbs.Count);
 		}

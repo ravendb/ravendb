@@ -20,7 +20,7 @@
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					context.WriteJson(Database.GetDocumentsWithIdStartingWith("Raven/Databases/"));
+					context.WriteJson(Database.GetDocumentsWithIdStartingWith("Raven/Databases/", context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize)));
 					break;
 			}
 		}

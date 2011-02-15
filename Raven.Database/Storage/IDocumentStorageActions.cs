@@ -24,6 +24,6 @@ namespace Raven.Database.Storage
 
 		bool DeleteDocument(string key, Guid? etag, out JObject metadata);
 		Guid AddDocument(string key, Guid? etag, JObject data, JObject metadata);
-		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix);
+		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start);
 	}
 }

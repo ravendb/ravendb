@@ -77,9 +77,10 @@ namespace Raven.Storage.Managed
                 .Select(result => DocumentByKey(result.Value<string>("key"), null));
         }
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start)
 		{
 			return storage.Documents["ByKey"].SkipAfter(new JObject {{"key", idPrefix}})
+				.Skip(start)
 				.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix))
 				.Select(result => DocumentByKey(result.Value<string>("key"), null));
 		}
