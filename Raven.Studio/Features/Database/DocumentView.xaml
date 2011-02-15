@@ -44,8 +44,9 @@
 							CornerRadius="2"
 							Background="#19000000"
 							Padding="4,2">
-						<TextBlock Text="Refresh"
-								   FontSize="9.333" />
+						<HyperlinkButton Content="Prettify"
+										 cm:Message.Attach="Prettify"
+										 FontSize="9.333" />
 					</Border>
 					<Border Margin="0,2,2,2"
 							CornerRadius="2"
