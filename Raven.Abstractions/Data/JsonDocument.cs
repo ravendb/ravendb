@@ -14,7 +14,7 @@ namespace Raven.Database
 	/// * Etag
 	/// * Metadata
 	/// </summary>
-	public class JsonDocument
+	public class JsonDocument : IJsonDocumentMetadata
 	{
 		/// <summary>
 		/// 	Gets or sets the document data as json.

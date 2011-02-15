@@ -32,24 +32,7 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
-					var doc = Database.Get(docId,GetRequestTransaction(context));
-					if (doc == null)
-					{
-						context.SetStatusToNotFound();
-						return;
-					}
-					if(doc.NonAuthoritiveInformation)
-					{
-						context.SetStatusToNonAuthoritiveInformation();
-					}
-					if (context.MatchEtag(doc.Etag))
-					{
-						context.SetStatusToNotModified();
-						return;
-					}
-					doc.Metadata["Last-Modified"] = doc.LastModified.ToString("r");
-					context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
+					Get(context, docId);
 					break;
 				case "DELETE":
 					Database.Delete(docId, context.GetEtag(), GetRequestTransaction(context));
@@ -76,6 +59,37 @@ namespace Raven.Database.Server.Responders
 					}
 					break;
 			}
+		}
+
+		private void Get(IHttpContext context, string docId)
+		{
+			var accept = context.Request.Headers["Accept"];
+			if(accept != null && accept.Contains("application/bson"))
+			{
+				context.Response.AddHeader("Content-Type", "application/bson");
+			}
+			else
+			{
+				context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
+			}
+			
+			var doc = Database.Get(docId,GetRequestTransaction(context));
+			if (doc == null)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
+			if(doc.NonAuthoritiveInformation)
+			{
+				context.SetStatusToNonAuthoritiveInformation();
+			}
+			if (context.MatchEtag(doc.Etag))
+			{
+				context.SetStatusToNotModified();
+				return;
+			}
+			doc.Metadata["Last-Modified"] = doc.LastModified.ToString("r");
+			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
 		}
 
 		private void Put(IHttpContext context, string docId)

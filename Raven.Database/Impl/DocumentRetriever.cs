@@ -123,7 +123,7 @@ namespace Raven.Database.Impl
 			return doc;
 		}
 
-	    public static void EnsureIdInMetadata(JsonDocument doc)
+	    public static void EnsureIdInMetadata(IJsonDocumentMetadata doc)
 	    {
 			if (doc == null)
 				return;

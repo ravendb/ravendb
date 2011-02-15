@@ -29,6 +29,25 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
+			return DocumentByKeyInternal(key, transactionInformation, (metadata, createDocument) => new JsonDocument
+			{
+				DataAsJson = createDocument(metadata.Key, metadata.Etag, metadata.Metadata),
+				Etag = metadata.Etag,
+				Key = metadata.Key,
+				LastModified = metadata.LastModified,
+				Metadata = metadata.Metadata,
+				NonAuthoritiveInformation = metadata.NonAuthoritiveInformation,
+			});
+		}
+
+		public JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation)
+		{
+			return DocumentByKeyInternal(key, transactionInformation, (metadata, func) => metadata);
+		}
+
+		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<JsonDocumentMetadata, Func<string, Guid, JObject, JObject>, T> createResult)
+			where T : class
+		{
 			JObject data;
 			JObject metadata;
 			if (transactionInformation != null)
@@ -47,34 +66,18 @@ namespace Raven.Storage.Esent.StorageActions
 						}
 						var etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
 
-						var cachedDocument = cacher.GetCachedDocument(key, etag);
-						if(cachedDocument != null)
-						{
-							metadata = cachedDocument.Item1;
-							data = cachedDocument.Item2;
-						}
-						else
-						{
-							var dataBuffer = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
+						metadata = ReadDocumentMetadataInTransaction(key, etag);
 
-							metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject();
-
-							data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
-
-							cacher.SetCachedDocument(key, etag, Tuple.Create(new JObject(metadata), new JObject(data)));
-						}
-						
 
 						logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
-						return new JsonDocument
+						return createResult(new JsonDocumentMetadata()
 						{
-							DataAsJson = data,
 							NonAuthoritiveInformation = false,// we are the transaction, therefor we are Authoritive
 							Etag = etag,
 							LastModified = Api.RetrieveColumnAsDateTime(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"]).Value,
 							Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
 							Metadata = metadata
-						};
+						},ReadDocumentDataInTransaction);
 					}
 				}
 			}
@@ -87,31 +90,65 @@ namespace Raven.Storage.Esent.StorageActions
 				return null;
 			}
 			var existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
-			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
-			if(	existingCachedDocument != null)
-			{
-				metadata = existingCachedDocument.Item1;
-				data = existingCachedDocument.Item2;
-			}
-			else
-			{
-				var dataBuffer  = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
-				metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-
-				data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
-
-				cacher.SetCachedDocument(key, existingEtag, Tuple.Create(new JObject(metadata), new JObject(data)));
-			}
 			logger.DebugFormat("Document with key '{0}' was found", key);
-			return new JsonDocument
+			return createResult(new JsonDocumentMetadata()
 			{
-				DataAsJson = data,
 				Etag = existingEtag,
 				NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
 				LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
 				Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
-				Metadata = metadata
-			};
+				Metadata = ReadDocumentMetadata(key, existingEtag)
+			}, ReadDocumentData);
+		}
+
+		private JObject ReadDocumentMetadataInTransaction(string key, Guid etag)
+		{
+			var cachedDocument = cacher.GetCachedDocument(key, etag);
+			if(cachedDocument != null)
+			{
+				return cachedDocument.Item1;
+			}
+
+			return Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject();
+
+		}
+
+		private JObject ReadDocumentDataInTransaction(string key, Guid etag, JObject metadata)
+		{
+			var cachedDocument = cacher.GetCachedDocument(key, etag);
+			if (cachedDocument != null)
+			{
+				return cachedDocument.Item2;
+			}
+			
+			var dataBuffer = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
+			var data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
+			cacher.SetCachedDocument(key, etag, Tuple.Create(new JObject(metadata), new JObject(data)));
+			return data;
+		}
+
+		private JObject ReadDocumentMetadata(string key, Guid existingEtag)
+		{
+			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+			if (existingCachedDocument != null)
+				return existingCachedDocument.Item1;
+
+			return Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+		}
+
+		private JObject ReadDocumentData(string key, Guid existingEtag, JObject metadata)
+		{
+			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+			if (existingCachedDocument != null)
+				return existingCachedDocument.Item2;
+
+			var dataBuffer  = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
+
+			var data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
+
+			cacher.SetCachedDocument(key, existingEtag, Tuple.Create(new JObject(metadata), new JObject(data)));
+
+			return data;
 		}
 
 		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start)

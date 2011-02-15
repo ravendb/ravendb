@@ -59,8 +59,10 @@
     <Compile Include="Data\DatabaseDocument.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
     <Compile Include="Commands\ICommandData.cs" />
+    <Compile Include="Data\IJsonDocumentMetadata.cs" />
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\JsonDocument.cs" />
+    <Compile Include="Data\JsonDocumentMetadata.cs" />
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="Data\PatchCommandType.cs" />
     <Compile Include="Data\PatchRequest.cs" />

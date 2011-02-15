@@ -325,7 +325,18 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
 				.ExecuteReadTriggers(document, transactionInformation,ReadOperation.Load);
 		}
 
+		public JsonDocumentMetadata GetDocumentMetadata(string key, TransactionInformation transactionInformation)
+		{
+			JsonDocumentMetadata document = null;
+			TransactionalStorage.Batch(actions =>
+			{
+				document = actions.Documents.DocumentMetadataByKey(key, transactionInformation);
+			});
 
+			DocumentRetriever.EnsureIdInMetadata(document);
+			return new DocumentRetriever(null, ReadTriggers)
+				.ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
+		}
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
