@@ -121,6 +121,7 @@
     <Compile Include="Commands\SearchForDocumentById.cs" />
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
+    <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Messages\DatabaseScreenRequested.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
     <Compile Include="Messages\NotificationRaised.cs" />
