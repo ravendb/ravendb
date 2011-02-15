@@ -10,9 +10,6 @@
 		<ResourceDictionary Source="Fonts.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
-	<SolidColorBrush x:Key="AccentTextBrush"
-					 Color="#FF899EB2" />
-
 	<Style x:Key="SectionHeader"
 		   TargetType="TextBlock">
 		<Setter Property="FontFamily"
@@ -66,10 +63,6 @@
 
 	<Style TargetType="c:Label"
 		   BasedOn="{StaticResource LabelBaseStyle}">
-	</Style>
-
-	<Style TargetType="ListBox">
-
 	</Style>
 
 	<Style x:Key="Header"

@@ -11,6 +11,7 @@ namespace Raven.Studio.Features.Documents
 	using Raven.Database;
 
 	[Export]
+	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class BrowseDocumentsViewModel : Conductor<DocumentViewModel>.Collection.OneActive,
 	                                        IHandle<DocumentDeleted>
 	{
@@ -43,6 +44,8 @@ namespace Raven.Studio.Features.Documents
 
 		public void Handle(DocumentDeleted message)
 		{
+			if (Documents == null) return;
+
 			var deleted = Documents.Where(x => x.Id == message.DocumentId).FirstOrDefault();
 
 			if (deleted != null)

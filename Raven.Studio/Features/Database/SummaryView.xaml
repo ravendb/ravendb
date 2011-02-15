@@ -1,144 +1,158 @@
-﻿<UserControl x:Class="Raven.Studio.Features.Database.SummaryView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-             xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-             xmlns:converters="clr-namespace:Raven.Studio.Converters"
-             xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
-             xmlns:f="clr-namespace:Raven.Studio.Framework"
-             mc:Ignorable="d"
-             d:DesignHeight="300"
-             d:DesignWidth="400">
+﻿<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+			 xmlns:converters="clr-namespace:Raven.Studio.Converters"
+			 xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
+			 xmlns:f="clr-namespace:Raven.Studio.Framework"
+			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+			 x:Class="Raven.Studio.Features.Database.SummaryView"
+			 mc:Ignorable="d"
+			 d:DesignHeight="480"
+			 d:DesignWidth="640">
 
-    <UserControl.Resources>
+	<UserControl.Resources>
 
-        <converters:MagnitudeToListConverter x:Key="magnitudeToList"
-                                             Maximum="{Binding LargestCollectionCount}" />
+		<converters:MagnitudeToListConverter x:Key="magnitudeToList"
+											 Maximum="{Binding LargestCollectionCount}" />
 
-        <DataTemplate x:Key="CollectionTemplate">
-            <Grid Margin="0 0 0 6">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <StackPanel Grid.Row="0"
-                            Orientation="Horizontal">
-                    <TextBlock Text="{Binding Name}"
-                               VerticalAlignment="Bottom"
-                               FontSize="16"
-                               FontFamily="Segoe UI" />
-                    <TextBlock Text="{Binding Count}"
-                               VerticalAlignment="Bottom"
-                               FontSize="13.333"
-                               Opacity="0.5"
-                               FontFamily="Segoe UI"
-                               Margin="6 0 0 0" />
-                </StackPanel>
-                <ItemsControl Grid.Row="1"
-                              ItemsSource="{Binding Converter={StaticResource magnitudeToList}}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Height="30"
-                                  Width="24"
-                                  Margin="0 0 2 2">
-                                <Path Data="M7.125277,0.5 L21.5,0.5 L21.5,21.5 L0.5,21.5 L0.5,6.5257869 z"
-                                      Fill="{Binding}"
-                                      Stretch="Fill"
-                                      UseLayoutRounding="False" />
-                                <Path Data="M7.7738328,0.17864585 L0.80815935,8.17453 L7.7738328,8.0215378 z"
-                                      Stretch="Fill"
-                                      UseLayoutRounding="False"
-                                      Fill="#4C000000"
-                                      HorizontalAlignment="Left"
-                                      Width="7.5"
-                                      Height="8.666"
-                                      VerticalAlignment="Top" />
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-            </Grid>
-        </DataTemplate>
+		<DataTemplate x:Key="CollectionTemplate">
+			<Grid Margin="0 0 0 6">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="*" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+				<StackPanel Grid.Row="0"
+							Orientation="Horizontal">
+					<TextBlock Text="{Binding Name}"
+							   VerticalAlignment="Bottom"
+							   FontSize="16"
+							   FontFamily="Segoe UI" />
+					<TextBlock Text="{Binding Count}"
+							   VerticalAlignment="Bottom"
+							   FontSize="13.333"
+							   Opacity="0.5"
+							   FontFamily="Segoe UI"
+							   Margin="6 0 0 0" />
+				</StackPanel>
+				<ItemsControl Grid.Row="1"
+							  ItemsSource="{Binding Converter={StaticResource magnitudeToList}}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Grid Height="30"
+								  Width="24"
+								  Margin="0 0 2 2">
+								<Path Data="M7.125277,0.5 L21.5,0.5 L21.5,21.5 L0.5,21.5 L0.5,6.5257869 z"
+									  Fill="{Binding}"
+									  Stretch="Fill"
+									  UseLayoutRounding="False" />
+								<Path Data="M7.7738328,0.17864585 L0.80815935,8.17453 L7.7738328,8.0215378 z"
+									  Stretch="Fill"
+									  UseLayoutRounding="False"
+									  Fill="#4C000000"
+									  HorizontalAlignment="Left"
+									  Width="7.5"
+									  Height="8.666"
+									  VerticalAlignment="Top" />
+							</Grid>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<StackPanel Orientation="Horizontal" />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+				</ItemsControl>
+			</Grid>
+		</DataTemplate>
 
-    </UserControl.Resources>
+	</UserControl.Resources>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+	<Grid Background="{StaticResource DefaultScreenBackground}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
 
-        <StackPanel x:Name="header"
-                    Orientation="Vertical"
-                    VerticalAlignment="Top"
-                    d:IsLocked="True">
-            <TextBlock x:Name="DatabaseName"
-                       Style="{StaticResource Header}" />
-        </StackPanel>
+		<StackPanel x:Name="header"
+					Orientation="Vertical"
+					VerticalAlignment="Top"
+					d:IsLocked="True">
+			<TextBlock x:Name="DatabaseName"
+					   Style="{StaticResource Header}" />
+		</StackPanel>
 
-        <StackPanel HorizontalAlignment="Left"
-                    Grid.Row="1"
-                    Margin="0,12,0,0">
-            <TextBlock Text="Recent Documents"
-                       Style="{StaticResource SectionHeader}" />
+		<StackPanel HorizontalAlignment="Left"
+					Grid.Row="1"
+					Margin="0,12,0,0">
+			<TextBlock Text="Recent Documents"
+					   Style="{StaticResource SectionHeader}" />
 
-            <ItemsControl x:Name="RecentDocuments">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <tk:WrapPanel />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid cm:Action.TargetWithoutContext="PreviewDocument"
-                              f:DoubleClickEvent.AttachAction="Execute($dataContext)"
-                              Background="Transparent">
-                            <ToolTipService.ToolTip>
-                                <ContentControl cm:View.Model="{Binding}"
-                                                cm:View.Context="Tooltip" />
-                            </ToolTipService.ToolTip>
-                            <ti:ContextMenuService.ContextMenu>
-                                <ti:ContextMenu>
-                                    <ti:MenuItem Header="Delete Document"
-                                                 cm:Action.TargetWithoutContext="DeleteDocument"
-                                                 cm:Message.Attach="Click=Execute($dataContext)" />
-                                </ti:ContextMenu>
-                            </ti:ContextMenuService.ContextMenu>
-                            <ContentControl Content="{Binding}"
-                                            ContentTemplate="{Binding DataTemplate}" />
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock Text="The database contains no documents."
-                       Style="{StaticResource Instruction}"
-                       Visibility="{Binding RecentDocuments, Converter={StaticResource visibleWhenEmpty}}" />
+			<ItemsControl x:Name="RecentDocuments">
+				<ItemsControl.ItemsPanel>
+					<ItemsPanelTemplate>
+						<tk:WrapPanel>
+							<i:Interaction.Behaviors>
+								<ei:FluidMoveBehavior AppliesTo="Children"
+													  Duration="0:0:0.5">
+									<ei:FluidMoveBehavior.EaseY>
+										<CircleEase EasingMode="EaseInOut"/>
+									</ei:FluidMoveBehavior.EaseY>
+									<ei:FluidMoveBehavior.EaseX>
+										<CubicEase EasingMode="EaseInOut"/>
+									</ei:FluidMoveBehavior.EaseX>
+								</ei:FluidMoveBehavior>
+							</i:Interaction.Behaviors>
+						</tk:WrapPanel>
+					</ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Grid cm:Action.TargetWithoutContext="PreviewDocument"
+							  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
+							  Background="Transparent">
+							<ToolTipService.ToolTip>
+								<ContentControl cm:View.Model="{Binding}"
+												cm:View.Context="Tooltip" />
+							</ToolTipService.ToolTip>
+							<ti:ContextMenuService.ContextMenu>
+								<ti:ContextMenu>
+									<ti:MenuItem Header="Delete Document"
+												 cm:Action.TargetWithoutContext="DeleteDocument"
+												 cm:Message.Attach="Click=Execute($dataContext)" />
+								</ti:ContextMenu>
+							</ti:ContextMenuService.ContextMenu>
+							<ContentControl Content="{Binding}"
+											ContentTemplate="{Binding DataTemplate}" />
+						</Grid>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+			<TextBlock Text="The database contains no documents."
+					   Style="{StaticResource Instruction}"
+					   Visibility="{Binding RecentDocuments, Converter={StaticResource visibleWhenEmpty}}" />
 
-        </StackPanel>
+		</StackPanel>
 
-        <StackPanel HorizontalAlignment="Left"
-                    Grid.Row="2"
-                    Margin="0,12,0,0">
-            <TextBlock Text="Collections"
-                       Style="{StaticResource SectionHeader}" />
+		<StackPanel HorizontalAlignment="Left"
+					Grid.Row="2"
+					Margin="0,12,0,0">
+			<TextBlock Text="Collections"
+					   Style="{StaticResource SectionHeader}" />
 
-            <ItemsControl x:Name="Collections"
-                          ItemTemplate="{StaticResource CollectionTemplate}"
-                          HorizontalAlignment="Left" />
+			<ItemsControl x:Name="Collections"
+						  ItemTemplate="{StaticResource CollectionTemplate}"
+						  HorizontalAlignment="Left" />
 
-            <TextBlock Text="The database contains no collections."
-                       Style="{StaticResource Instruction}"
-                       Visibility="{Binding Collections, Converter={StaticResource visibleWhenEmpty}}" />
+			<TextBlock Text="The database contains no collections."
+					   Style="{StaticResource Instruction}"
+					   Visibility="{Binding Collections, Converter={StaticResource visibleWhenEmpty}}" />
 
-        </StackPanel>
-    </Grid>
+		</StackPanel>
+	</Grid>
 
 </UserControl>

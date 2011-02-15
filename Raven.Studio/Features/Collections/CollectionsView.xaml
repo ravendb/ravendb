@@ -142,14 +142,14 @@
 			</StackPanel>
 		</Grid>
 
-		<Grid x:Name="documents"
-			  Visibility="{Binding HasCollections, Converter={StaticResource booleanToVisibility}}"
-			  Grid.Column="1">
+		<Grid Grid.Column="1"
+			  Visibility="{Binding HasCollections, Converter={StaticResource booleanToVisibility}}">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="0.951*" />
 				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
+
 			<Border Background="WhiteSmoke"
 					Grid.RowSpan="3"
 					CornerRadius="5,0,0,0" />

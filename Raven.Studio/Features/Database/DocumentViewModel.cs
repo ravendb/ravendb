@@ -110,7 +110,7 @@
 			//TODO: I suspect this isn't a good idea...
 			if (message.DocumentId == Id)
 			{
-				navigation.GoBack();
+				//navigation.GoBack();
 			}
 		}
 
