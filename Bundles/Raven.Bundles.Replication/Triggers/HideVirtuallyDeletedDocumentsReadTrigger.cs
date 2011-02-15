@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
@@ -12,7 +13,7 @@ namespace Raven.Bundles.Replication.Triggers
 {
     public class HideVirtuallyDeletedDocumentsReadTrigger : AbstractReadTrigger
     {
-        public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation,
+        public override ReadVetoResult AllowRead(string key, Func<JObject> documentAccessor, JObject metadata, ReadOperation operation,
                                                  TransactionInformation transactionInformation)
         {
             if (ReplicationContext.IsInReplicationContext)

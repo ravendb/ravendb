@@ -15,7 +15,7 @@ namespace Raven.Bundles.Expiration
     {
         public const string RavenExpirationDate = "Raven-Expiration-Date"; 
 
-        public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation,
+        public override ReadVetoResult AllowRead(string key, Func<JObject> documentAccessor, JObject metadata, ReadOperation operation,
                                                  TransactionInformation transactionInformation)
         {
             if(metadata == null)

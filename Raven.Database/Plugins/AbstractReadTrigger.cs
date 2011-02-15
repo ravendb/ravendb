@@ -22,7 +22,7 @@ namespace Raven.Database.Plugins
     	///  The document and metadata instances SHOULD NOT be modified.
     	///  </remarks>
     	/// <param name="key">The key of the read document - can be null if reading a projection</param>
-    	/// <param name="document">The document being read</param>
+    	/// <param name="documentAccessorAccessor">The document being read - accessing the document itself can be an expensive operation (if the document is big) and should be avoided if possible</param>
     	/// <param name="metadata">The document metadata</param>
     	/// <param name="operation">Whatever the operation is a load or a query</param>
     	/// <param name="transactionInformation">The transaction information, if any</param>
@@ -35,7 +35,7 @@ namespace Raven.Database.Plugins
     	///    asking for a particular document, or skip including the result entirely 
     	///    in the query results.
     	///  </returns>
-		public virtual ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+		public virtual ReadVetoResult AllowRead(string key, Func<JObject> documentAccessorAccessor, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
         {
             return ReadVetoResult.Allowed;
         }
@@ -45,8 +45,13 @@ namespace Raven.Database.Plugins
         ///  before the user can see them. 
         ///  </summary><remarks>
         ///  The modified values are transient, and are NOT saved to the database.
-        ///  </remarks><param name="key">The key of the read document - can be null if reading a projection</param><param name="document">The document being read</param><param name="metadata">The document metadata</param><param name="operation">Whatever the operation is a load or a query</param><param name="transactionInformation">The transaction information, if any</param>
-        public virtual void OnRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+        ///  </remarks>
+        /// <param name="key">The key of the read document - can be null if reading a projection</param>
+		/// <param name="document">The document being read - accessing the document itself can be an expensive operation (if the document is big) and should be avoided if possible</param>
+        /// <param name="metadata">The document metadata</param>
+        /// <param name="operation">Whatever the operation is a load or a query</param>
+        /// <param name="transactionInformation">The transaction information, if any</param>
+		public virtual void OnRead(string key, Func<JObject> document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
         {
         }
 

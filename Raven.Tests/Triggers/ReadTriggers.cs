@@ -245,11 +245,12 @@ namespace Raven.Tests.Triggers
 
 		public class HiddenDocumentsTrigger : AbstractReadTrigger
 		{
-			public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+			public override ReadVetoResult AllowRead(string key, Func<JObject> documentAccessor, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				if (operation == ReadOperation.Index)
-					return ReadVetoResult.Allowed; 
-				var name = document["hidden"];
+					return ReadVetoResult.Allowed;
+				var doc = documentAccessor();
+				var name = doc["hidden"];
 				if (name != null && name.Value<bool>())
 				{
 					return ReadVetoResult.Ignore;
@@ -260,11 +261,12 @@ namespace Raven.Tests.Triggers
 
 		public class VetoReadsOnCapitalNamesTrigger : AbstractReadTrigger
 		{
-            public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+            public override ReadVetoResult AllowRead(string key, Func<JObject> documentAccessor, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				if (operation == ReadOperation.Index)
 					return ReadVetoResult.Allowed;
-				var name = document["name"];
+            	var doc = documentAccessor();
+            	var name = doc["name"];
 				if (name != null && name.Value<string>().Any(char.IsUpper))
 				{
 					return ReadVetoResult.Deny("Upper case characters in the 'name' property means the document is a secret!");
@@ -275,8 +277,9 @@ namespace Raven.Tests.Triggers
 
 		public class UpperCaseNamesTrigger : AbstractReadTrigger
 		{
-            public override void OnRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
-			{
+            public override void OnRead(string key, Func<JObject> documentAccessor, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+            {
+            	var document = documentAccessor();
 				var name = document.Property("name");
 				if (name != null)
 				{

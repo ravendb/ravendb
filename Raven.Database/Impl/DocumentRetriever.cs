@@ -162,7 +162,7 @@ namespace Raven.Database.Impl
 
 			foreach (var readTrigger in triggers)
 			{
-				readTrigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation, transactionInformation);
+				readTrigger.OnRead(resultingDocument.Key, () => resultingDocument.DataAsJson, resultingDocument.Metadata, operation, transactionInformation);
 			}
 			return resultingDocument;
 		}
@@ -173,7 +173,7 @@ namespace Raven.Database.Impl
 				return document;
 			foreach (var readTrigger in triggers)
 			{
-				var readVetoResult = readTrigger.AllowRead(document.Key, document.DataAsJson ?? document.Projection, document.Metadata, operation, transactionInformation);
+				var readVetoResult = readTrigger.AllowRead(document.Key, () => document.DataAsJson ?? document.Projection, document.Metadata, operation, transactionInformation);
 				switch (readVetoResult.Veto)
 				{
 					case ReadVetoResult.ReadAllow.Allow:
