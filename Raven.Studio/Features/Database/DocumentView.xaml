@@ -5,6 +5,7 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:r="clr-namespace:Raven.Studio.Controls"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
@@ -70,10 +71,10 @@
 					Margin="0"
 					d:IsLocked="True">
 
-				<r:JsonEditor FontFamily="Monaco"
-							  FontSize="16"
-							  IsTextDataBindingEnabled="True"
-							  Text="{Binding JsonData, Mode=TwoWay}" />
+				<sh:SyntaxHighlightingTextBox SourceCode="{Binding JsonData, Mode=TwoWay}"
+											  SourceLanguage="Json"
+											  FontSize="16" />
+
 			</Border>
 
 		</Grid>

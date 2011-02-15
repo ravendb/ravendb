@@ -7,8 +7,7 @@
 			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
 			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:data="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
-			 xmlns:c="clr-namespace:Raven.Studio.Controls"
-			 mc:Ignorable="d"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls" xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting" mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
@@ -50,21 +49,23 @@
 
 			<c:Label Content="MAP"
 					 Grid.Row="1" />
-			<c:LinqEditor Grid.Column="1"
-							Grid.Row="1"
-							Text="{Binding Map, Mode=TwoWay}" />
+			<sh:SyntaxHighlightingTextBox Grid.Row="1"
+										  Grid.Column="1"
+										  SourceCode="{Binding Map, Mode=TwoWay}"
+										  SourceLanguage="CSharp"
+										  FontSize="16" />
+
 
 			<c:Label Content="REDUCE"
 					 Grid.Row="2" />
-			<c:LinqEditor Grid.Row="2"
-							Grid.Column="1"
-							Text="{Binding Reduce, Mode=TwoWay}" />
+			<sh:SyntaxHighlightingTextBox Grid.Row="2"
+										  Grid.Column="1"
+										  SourceCode="{Binding Reduce, Mode=TwoWay}"
+										  SourceLanguage="CSharp"
+										  FontSize="16" />
 
 			<c:Label Content="TRANSFORM"
 					 Grid.Row="3" />
-			<c:LinqEditor Grid.Row="3"
-							Grid.Column="1"
-							Text="{Binding TransformResults, Mode=TwoWay}" />
 
 			<StackPanel Grid.Row="4">
 				<c:Label Content="CUSTOMIZE" />

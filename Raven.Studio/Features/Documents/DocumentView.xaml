@@ -3,7 +3,6 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:a="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor"
 			 xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
 			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:cal="http://www.caliburnproject.org"
@@ -33,9 +32,9 @@
 					   Margin="5"
 					   tk:DockPanel.Dock="Top" />
 
-			<a:SyntaxEditor x:Name="dataEditor"
+			<!--<a:SyntaxEditor x:Name="dataEditor"
 							IsTextDataBindingEnabled="True"
-							Text="{Binding JsonData, Mode=TwoWay}" />
+							Text="{Binding JsonData, Mode=TwoWay}" />-->
 		</tk:DockPanel>
 
 		<controls:GridSplitter Grid.Row="1"
@@ -49,10 +48,10 @@
 						   HorizontalAlignment="Left" />
 			</tk:DockPanel>
 
-			<a:SyntaxEditor x:Name="metadataEditor"
+			<!--<a:SyntaxEditor x:Name="metadataEditor"
 							Grid.Row="5"
 							IsTextDataBindingEnabled="True"
-							Text="{Binding JsonMetadata, Mode=TwoWay}" />
+							Text="{Binding JsonMetadata, Mode=TwoWay}" />-->
 		</tk:DockPanel>
 
 	</Grid>

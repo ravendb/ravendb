@@ -60,15 +60,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=10.2.105.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
-      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Shared.Silverlight.dll</HintPath>
-    </Reference>
-    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=10.2.105.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
-      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
-    </Reference>
-    <Reference Include="ActiproSoftware.Text.Silverlight, Version=10.2.105.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
-      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Text.Silverlight.dll</HintPath>
-    </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
@@ -81,6 +72,9 @@
     <Reference Include="mscorlib" />
     <Reference Include="Newtonsoft.Json.Silverlight">
       <HintPath>..\SharedLibs\Newtonsoft.Json.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Studio.Controls.SyntaxHighlighting">
+      <HintPath>..\SharedLibs\Silverlight\Raven.Studio.Controls.SyntaxHighlighting.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.ComponentModel.Composition.Initialization, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
@@ -125,7 +119,6 @@
     <Compile Include="Commands\EditDocumentById.cs" />
     <Compile Include="Commands\SaveDocument.cs" />
     <Compile Include="Commands\SearchForDocumentById.cs" />
-    <Compile Include="Controls\JsonEditor.cs" />
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
     <Compile Include="Messages\DatabaseScreenRequested.cs" />
@@ -148,47 +141,6 @@
     <Compile Include="Controls\Pager.xaml.cs">
       <DependentUpon>Pager.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\LinqEditor.cs" />
-    <Compile Include="Controls\SyntaxEditor\Javascript\JavascriptOutliningSource.cs" />
-    <Compile Include="Controls\SyntaxEditor\Javascript\JavascriptSyntaxLanguage.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\CodeColorizer.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ExtensionMethods.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\Guard.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ILanguageRepository.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\LanguageId.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\LanguageRepository.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ScopeName.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\CompiledLanguage.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\ILanguageCompiler.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\LanguageCompiler.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Cpp.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\CSharp.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\JavaScript.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Json.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\VbDotNet.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Xml.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatters.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\TextInsertion.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\XamlFormatter.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\XamlInlineFormatter.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\ICodeColorizer.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\IFormatter.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\ILanguage.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\IStyleSheet.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\LanguageRule.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Languages.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\ILanguageParser.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\LanguageParser.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\Scope.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SourceLanguageType.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Style.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\StyleDictionary.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\StyleSheets.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Styling\StyleSheets\DefaultStyleSheet.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SyntaxHighlightingTextBlock.cs" />
-    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SyntaxHighlightingTextBox.cs" />
-    <Compile Include="Controls\SyntaxEditor\MultiLineCommentNodeDefinition.cs" />
-    <Compile Include="Controls\SyntaxEditor\SyntaxEditorHelper.cs" />
     <Compile Include="Converters\BooleanToOppositeBooleanConverter.cs" />
     <Compile Include="Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
@@ -401,8 +353,6 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\JScript.langdef" />
-    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\CSharp.langdef" />
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>

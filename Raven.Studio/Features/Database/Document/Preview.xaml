@@ -5,8 +5,8 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-			 xmlns:sh="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting"
 			 xmlns:f="clr-namespace:Raven.Studio.Framework"
+			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
