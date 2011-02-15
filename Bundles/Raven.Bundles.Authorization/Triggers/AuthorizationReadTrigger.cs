@@ -22,7 +22,7 @@ namespace Raven.Bundles.Authorization.Triggers
 			AuthorizationDecisions = new AuthorizationDecisions(Database);	
 		}
 
-		public override ReadVetoResult AllowRead(string key, Func<JObject> documentAcessor, JObject metadata, ReadOperation readOperation,
+		public override ReadVetoResult AllowRead(string key,  JObject metadata, ReadOperation readOperation,
 		                                         TransactionInformation transactionInformation)
 		{
 			if (AuthorizationContext.IsInAuthorizationContext)

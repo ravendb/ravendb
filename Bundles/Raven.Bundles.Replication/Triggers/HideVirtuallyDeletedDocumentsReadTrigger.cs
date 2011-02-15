@@ -13,7 +13,7 @@ namespace Raven.Bundles.Replication.Triggers
 {
     public class HideVirtuallyDeletedDocumentsReadTrigger : AbstractReadTrigger
     {
-        public override ReadVetoResult AllowRead(string key, Func<JObject> documentAccessor, JObject metadata, ReadOperation operation,
+        public override ReadVetoResult AllowRead(string key, JObject metadata, ReadOperation operation,
                                                  TransactionInformation transactionInformation)
         {
             if (ReplicationContext.IsInReplicationContext)

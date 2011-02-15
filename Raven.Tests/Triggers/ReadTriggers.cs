@@ -48,7 +48,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_Get()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abC'}"), new JObject(), null);
+			db.Put("abc", null, new JObject(), JObject.Parse("{'name': 'abC'}"), null);
 
 			var jsonDocument = db.Get("abc", null);
 
@@ -59,7 +59,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_GetDocuments()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abC'}"), new JObject(), null);
+			db.Put("abc", null, new JObject(), JObject.Parse("{'name': 'abC'}"), null);
 
 			var jsonDocument = db.GetDocuments(0,25,null).First();
 
@@ -70,7 +70,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_Query()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abC'}"), new JObject(), null);
+			db.Put("abc", null, JObject.Parse("{'name': 'abC'}"), JObject.Parse("{'name': 'abC'}"), null);
 
 			QueryResult queryResult;
 			do
@@ -129,8 +129,8 @@ namespace Raven.Tests.Triggers
         {
             for (int i = 0; i < 15; i++)
             {
-                db.Put(i.ToString(), null, new JObject( new JProperty("name", "ayende"),
-                                               new JProperty("hidden", i%2 == 0)), new JObject(), null);
+                db.Put(i.ToString(), null, new JObject( new JProperty("name", "ayende")),
+					new JObject(new JProperty("hidden", i % 2 == 0)), null);
             }
 
             QueryResult queryResult;
@@ -152,8 +152,8 @@ namespace Raven.Tests.Triggers
             for (int i = 0; i < 15; i++)
             {
                 db.Put(i.ToString(), null, new JObject(
-                    new JProperty("name", "ayende")                           ,
-                    new JProperty("hidden", i % 2 == 0)), new JObject(), null);
+                    new JProperty("name", "ayende")),
+					new JObject(new JProperty("hidden", i % 2 == 0)), null);
             }
 
             QueryResult queryResult;
@@ -178,8 +178,8 @@ namespace Raven.Tests.Triggers
             for (int i = 0; i < 15; i++)
             {
                 db.Put(i.ToString(), null, new JObject(
-                                               new JProperty("name", "ayende"),
-                                               new JProperty("hidden", i % 2 == 0)), new JObject(), null);
+											   new JProperty("name", "ayende")), new JObject(
+											   new JProperty("hidden", i % 2 == 0)), null);
             }
 
             QueryResult queryResult;
@@ -203,44 +203,6 @@ namespace Raven.Tests.Triggers
             Assert.Equal(9, array[1]);
             Assert.Equal(11, array[2]);
         }
-
-
-		[Fact]
-		public void CanModifyDocumentUsingTrigger()
-		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
-
-			var jsonDocument = db.Get("abc", null);
-
-			Assert.Equal("ABC", jsonDocument.DataAsJson.Value<string>("name"));
-		}
-
-		[Fact]
-		public void CanModifyDocumentUsingTrigger_GetDocuments()
-		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
-
-
-            Assert.Equal("ABC", db.GetDocuments(0, 10, null).First().Value<string>("name"));
-		}
-
-		[Fact]
-		public void CanModifyDocumentUsingTrigger_Query()
-		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
-
-			QueryResult queryResult;
-			do
-			{
-				queryResult = db.Query("ByName", new IndexQuery
-				{
-					Query = "name:abC",
-					PageSize = 10
-				});
-			} while (queryResult.IsStale);
-
-			Assert.Equal("ABC", queryResult.Results[0].Value<string>("name"));
-		}
 
 		public class HiddenDocumentsTrigger : AbstractReadTrigger
 		{
