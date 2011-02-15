@@ -57,15 +57,16 @@
 		{
 			var tcs = new TaskCompletionSource<DataTemplate>();
 
-			if (!string.IsNullOrEmpty(key))
+			if (templates.ContainsKey(key))
+			{
+				tcs.TrySetResult(templates[key]);
+			}
+			else if (!string.IsNullOrEmpty(key))
 			{
 				var fill = colorProvider.ColorFrom(key);
 				var defaultTemplate = Create(GetDefaultTemplateXaml(fill));
+				templates[key] = defaultTemplate;
 				tcs.TrySetResult(defaultTemplate);
-			}
-			else if (templates.ContainsKey(key))
-			{
-				tcs.TrySetResult(templates[key]);
 			}
 			else
 			{
