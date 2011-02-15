@@ -45,7 +45,10 @@ namespace Raven.Database.Impl
 
 		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, string[] fieldsToFetch, AggregationOperation aggregationOperation)
 		{
-			return RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, aggregationOperation);
+			return
+				ProcessReadVetoes(
+					RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, aggregationOperation),
+					null, ReadOperation.Query);
 		}
 
 		private JsonDocument RetrieveDocumentInternal(
