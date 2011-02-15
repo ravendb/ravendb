@@ -417,5 +417,5 @@ task CreateNugetPackage {
   
   $prevVersion = ($env:buildlabel - 1)
   
-  & "$tools_dir\nuget.exe" delete -source http://packages.nuget.org/v1/ RavenDB $version.$prevVersion $accessKey
+  & "$tools_dir\nuget.exe" delete RavenDB "$version.$prevVersion" $accessKey -source http://packages.nuget.org/v1/ -NoPrompt
 }
