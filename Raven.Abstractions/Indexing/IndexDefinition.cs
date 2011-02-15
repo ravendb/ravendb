@@ -164,5 +164,18 @@ namespace Raven.Database.Indexing
 				return result;
 			}
 		}
+
+		public string Type
+		{
+			get
+			{
+				if (Name.StartsWith("Raven")) return "Builtin";
+				if (Name.StartsWith("Temp")) return "Temp";
+				if (Name.StartsWith("Auto")) return "Auto";
+				if (IsCompiled) return "Compiled";
+				if (IsMapReduce) return "MapReduce";
+				return "Map";
+			}
+		}
 	}
 }
