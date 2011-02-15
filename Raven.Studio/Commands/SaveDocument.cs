@@ -5,6 +5,8 @@
 	using Features.Database;
 	using Framework;
 	using Messages;
+	using Newtonsoft.Json;
+	using Newtonsoft.Json.Linq;
 	using Plugin;
 
 	public class SaveDocument
@@ -23,10 +25,26 @@
 		{
 			document.PrepareForSave();
 
+			if(!ValidateJson(document.JsonData) || !ValidateJson(document.JsonMetadata)) return;
+
 			server.OpenSession().Advanced.AsyncDatabaseCommands
 				.PutAsync(document.Id, null, document.JsonDocument.DataAsJson,null)
 				.ContinueOnSuccess(put => events.Publish(new DocumentUpdated(document)));
 			
+		}
+
+		bool ValidateJson(string json)
+		{
+			try
+			{
+				JObject.Parse(json);
+				return true;
+			}
+			catch (JsonReaderException exception)
+			{
+				events.Publish(new NotificationRaised(exception.Message, NotificationLevel.Error));
+				return false;
+			}
 		}
 	}
 }
