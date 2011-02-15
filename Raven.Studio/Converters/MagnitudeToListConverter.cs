@@ -34,7 +34,7 @@
 				return new[] {new SolidColorBrush(Colors.Blue), new SolidColorBrush(Colors.Green)};
 			}
 			var count = System.Convert.ToInt32(item.Count);
-			var percent = (count * 1.0 / Maximum * 1.0);
+			var percent = (count ==0) ? 0 : (count * 1.0 / Maximum * 1.0);
 			percent = Math.Max(0,percent);
 			percent = Math.Min(1,percent);
 
@@ -43,7 +43,7 @@
 
 			var top = (int) (percent*MaximumNumberOfItems);
 			top = Math.Min(top,count);
-			if (percent != 0) top = Math.Max(top, 1);
+			if (count != 0) top = Math.Max(top, 1);
 
 			return Enumerable.Range(1, top).Select(x => brush);
 		}
