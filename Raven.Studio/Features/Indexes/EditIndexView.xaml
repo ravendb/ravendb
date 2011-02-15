@@ -45,7 +45,6 @@
 										  SourceLanguage="CSharp"
 										  FontSize="16" />
 
-
 			<c:Label Content="REDUCE"
 					 Grid.Row="2" />
 			<sh:SyntaxHighlightingTextBox Grid.Row="2"

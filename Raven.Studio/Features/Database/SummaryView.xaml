@@ -121,6 +121,9 @@
 							</ToolTipService.ToolTip>
 							<ti:ContextMenuService.ContextMenu>
 								<ti:ContextMenu>
+									<ti:MenuItem Header="Edit Document"
+												 cm:Action.TargetWithoutContext="EditDocument"
+												 cm:Message.Attach="Click=Execute($dataContext)" />
 									<ti:MenuItem Header="Delete Document"
 												 cm:Action.TargetWithoutContext="DeleteDocument"
 												 cm:Message.Attach="Click=Execute($dataContext)" />
