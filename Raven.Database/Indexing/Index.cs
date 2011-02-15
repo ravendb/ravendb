@@ -65,10 +65,7 @@ namespace Raven.Database.Indexing
 			// writing to the index
 			this.directory.ClearLock("write.lock");
 
-			searcher = new CurrentIndexSearcher
-			{
-				Searcher = new IndexSearcher(directory, true)
-			};
+            searcher = new CurrentIndexSearcher(new IndexSearcher(directory, true));
 		}
 
 		public void Flush()
@@ -425,17 +422,11 @@ namespace Raven.Database.Indexing
 				searcher.MarkForDispoal();
 				if (indexWriter == null)
 				{
-					searcher = new CurrentIndexSearcher
-					           	{
-					           		Searcher = new IndexSearcher(directory, true)
-					           	};
+				    searcher = new CurrentIndexSearcher(new IndexSearcher(directory, true));
 				}
 				else
 				{
-					searcher = new CurrentIndexSearcher
-					{
-						Searcher = new IndexSearcher(indexWriter.GetReader())
-					};
+				    searcher = new CurrentIndexSearcher(new IndexSearcher(indexWriter.GetReader()));
 				}
 				Thread.MemoryBarrier(); // force other threads to see this write
 			}
@@ -450,13 +441,17 @@ namespace Raven.Database.Indexing
 		{
 			private bool shouldDisposeWhenThereAreNoUsages;
 			private int useCount;
-			public IndexSearcher Searcher { private get; set; }
+		    private readonly IndexSearcher searcher;
 
+		    public CurrentIndexSearcher(IndexSearcher searcher)
+		    {
+		        this.searcher = searcher;
+		    }
 
-			public IDisposable Use(out IndexSearcher indexSearcher)
+		    public IDisposable Use(out IndexSearcher indexSearcher)
 			{
 				Interlocked.Increment(ref useCount);
-				indexSearcher = Searcher;
+                indexSearcher = searcher;
 				return new CleanUp(this);
 			}
 
@@ -483,8 +478,8 @@ namespace Raven.Database.Indexing
 					var uses = Interlocked.Decrement(ref parent.useCount);
 					if (parent.shouldDisposeWhenThereAreNoUsages && uses == 0)
 					{
-						var indexReader = parent.Searcher.GetIndexReader();
-						parent.Searcher.Close();
+                        var indexReader = parent.searcher.GetIndexReader();
+                        parent.searcher.Close();
 						indexReader.Close();
 					}
 				}
