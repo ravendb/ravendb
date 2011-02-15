@@ -124,6 +124,7 @@
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
+    <Compile Include="Framework\ServerUriProvider.cs" />
     <Compile Include="Messages\DatabaseScreenRequested.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
     <Compile Include="Messages\NotificationRaised.cs" />
@@ -183,6 +184,7 @@
     <Compile Include="Messages\WorkStarted.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shell\BusyStatusViewModel.cs" />
+    <Compile Include="Shell\ErrorViewModel.cs" />
     <Compile Include="Shell\NavigationViewModel.cs" />
     <Compile Include="Shell\NotificationsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
@@ -307,6 +309,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Shell\BusyStatusView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Shell\ErrorView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
