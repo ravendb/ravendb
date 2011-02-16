@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Security.Permissions;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Database.Indexing
 {
+	[DebuggerDisplay("Id={Id}")]
+	[PermissionSet(SecurityAction.InheritanceDemand, Unrestricted = true)]
+	[HostProtection(SecurityAction.LinkDemand, Synchronization = true, ExternalThreading = true)]
 	public class TaskSchedulerWithCustomPriority : TaskScheduler, IDisposable
 	{
 		private readonly int maxThreads;

@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using System.Linq;
+using Raven.Http;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 
@@ -32,24 +33,7 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
-					var doc = Database.Get(docId,GetRequestTransaction(context));
-					if (doc == null)
-					{
-						context.SetStatusToNotFound();
-						return;
-					}
-					if(doc.NonAuthoritiveInformation)
-					{
-						context.SetStatusToNonAuthoritiveInformation();
-					}
-					if (context.MatchEtag(doc.Etag))
-					{
-						context.SetStatusToNotModified();
-						return;
-					}
-					doc.Metadata["Last-Modified"] = doc.LastModified.ToString("r");
-					context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
+					Get(context, docId);
 					break;
 				case "DELETE":
 					Database.Delete(docId, context.GetEtag(), GetRequestTransaction(context));
@@ -76,6 +60,55 @@ namespace Raven.Database.Server.Responders
 					}
 					break;
 			}
+		}
+
+		private void Get(IHttpContext context, string docId)
+		{
+			context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
+			if (string.IsNullOrEmpty(context.Request.Headers["If-None-Match"]))
+			{
+				GetDocumentDirectly(context, docId);
+				return;
+			}
+
+			Database.TransactionalStorage.Batch(
+				_ => // we are running this here to ensure transactional safety for the two operations
+				{
+					var transactionInformation = GetRequestTransaction(context);
+					var documentMetadata = Database.GetDocumentMetadata(docId, transactionInformation);
+					if (documentMetadata == null)
+					{
+						context.SetStatusToNotFound();
+						return;
+					}
+					if (context.MatchEtag(documentMetadata.Etag))
+					{
+						context.SetStatusToNotModified();
+						return;
+					}
+					if (documentMetadata.NonAuthoritiveInformation)
+					{
+						context.SetStatusToNonAuthoritiveInformation();
+					}
+					
+					GetDocumentDirectly(context, docId);
+				});
+		}
+
+		private void GetDocumentDirectly(IHttpContext context, string docId)
+		{
+			var doc = Database.Get(docId, GetRequestTransaction(context));
+			if (doc == null)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
+			if (doc.NonAuthoritiveInformation)
+			{
+				context.SetStatusToNonAuthoritiveInformation();
+			}
+			doc.Metadata["Last-Modified"] = doc.LastModified.ToString("r");
+			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
 		}
 
 		private void Put(IHttpContext context, string docId)

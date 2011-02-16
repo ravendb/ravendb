@@ -77,9 +77,10 @@ namespace Raven.Storage.Managed
                 .Select(result => DocumentByKey(result.Value<string>("key"), null));
         }
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start)
 		{
 			return storage.Documents["ByKey"].SkipAfter(new JObject {{"key", idPrefix}})
+				.Skip(start)
 				.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix))
 				.Select(result => DocumentByKey(result.Value<string>("key"), null));
 		}
@@ -91,81 +92,110 @@ namespace Raven.Storage.Managed
 
         public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
         {
-            JObject metadata = null;
-            JObject dataAsJson = null;
-            
-            var resultInTx = storage.DocumentsModifiedByTransactions.Read(new JObject { { "key", key } });
-            if (transactionInformation != null && resultInTx != null)
-            {
-               if(new Guid(resultInTx.Key.Value<byte[]>("txId")) == transactionInformation.Id)
-                {
-                    if (resultInTx.Key.Value<bool>("deleted"))
-                        return null;
-
-					var txEtag = new Guid(resultInTx.Key.Value<byte[]>("etag"));
-					if (resultInTx.Position != -1)
-					{
-						ReadMetadataAndData(key, txEtag, resultInTx.Data, out metadata, out dataAsJson);
-					}
-                	return new JsonDocument
-                    {
-                        Key = key,
-                        Etag = txEtag,
-                        Metadata = metadata,
-                        DataAsJson = dataAsJson,
-                        LastModified = resultInTx.Key.Value<DateTime>("modified"),
-                    };
-                }
-            }
-
-            var readResult = storage.Documents.Read(new JObject{{"key", key}});
-            if (readResult == null)
-                return null;
-
-			var etag = new Guid(readResult.Key.Value<byte[]>("etag"));
-			ReadMetadataAndData(key, etag, readResult.Data, out metadata, out dataAsJson);
-        	return new JsonDocument
-            {
-                Key = key,
-                Etag = etag,
-                Metadata = metadata,
-                DataAsJson = dataAsJson,
-                LastModified = readResult.Key.Value<DateTime>("modified"),
-                NonAuthoritiveInformation = resultInTx != null
-            };
+        	return DocumentByKeyInternal(key, transactionInformation, (stream, metadata) => new JsonDocument
+        	{
+        		Metadata = metadata.Metadata,
+        		Etag = metadata.Etag,
+        		Key = metadata.Key,
+        		LastModified = metadata.LastModified,
+        		NonAuthoritiveInformation = metadata.NonAuthoritiveInformation,
+				DataAsJson = ReadDocument(stream, metadata)
+        	});
         }
 
-        private void ReadMetadataAndData(string key, Guid etag, Func<byte[]> getData, out JObject metadata, out JObject dataAsJson)
+		public JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation)
+		{
+			return DocumentByKeyInternal(key, transactionInformation, (stream, metadata) => metadata);
+		}
+
+
+    	private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<Tuple<MemoryStream, JObject>, JsonDocumentMetadata, T> createResult)
+			where T : class
+    	{
+    		JObject metadata = null;
+            
+    		var resultInTx = storage.DocumentsModifiedByTransactions.Read(new JObject { { "key", key } });
+    		if (transactionInformation != null && resultInTx != null)
+    		{
+    			if(new Guid(resultInTx.Key.Value<byte[]>("txId")) == transactionInformation.Id)
+    			{
+    				if (resultInTx.Key.Value<bool>("deleted"))
+    					return null;
+
+    				var txEtag = new Guid(resultInTx.Key.Value<byte[]>("etag"));
+    				Tuple<MemoryStream, JObject> resultTx= null;
+					if (resultInTx.Position != -1)
+					{
+						resultTx = ReadMetadata(key, txEtag, resultInTx.Data, out metadata);
+					}
+					return createResult(resultTx, new JsonDocumentMetadata
+    				{
+    					Key = key,
+    					Etag = txEtag,
+    					Metadata = metadata,
+    					LastModified = resultInTx.Key.Value<DateTime>("modified"),
+    				});
+    			}
+    		}
+
+    		var readResult = storage.Documents.Read(new JObject{{"key", key}});
+    		if (readResult == null)
+    			return null;
+
+    		var etag = new Guid(readResult.Key.Value<byte[]>("etag"));
+    		var result = ReadMetadata(key, etag, readResult.Data, out metadata);
+			return createResult(result, new JsonDocumentMetadata
+    		{
+    			Key = key,
+    			Etag = etag,
+    			Metadata = metadata,
+    			LastModified = readResult.Key.Value<DateTime>("modified"),
+    			NonAuthoritiveInformation = resultInTx != null
+    		});
+    	}
+
+		private Tuple<MemoryStream, JObject> ReadMetadata(string key, Guid etag, Func<byte[]> getData, out JObject metadata)
         {
         	var cachedDocument = storage.GetCachedDocument(key, etag);
         	if (cachedDocument != null)
         	{
         		metadata = cachedDocument.Item1;
-        		dataAsJson = cachedDocument.Item2;
-        		return;
+        		return Tuple.Create<MemoryStream, JObject>(null, cachedDocument.Item2);
         	}
 
         	var buffer = getData();
-        	var memoryStream = new MemoryStream(buffer, 0, buffer.Length);
+        	var memoryStream = new MemoryStream(buffer, 0, buffer.Length, true , true);
 
         	metadata = memoryStream.ToJObject();
-        	if (documentCodecs.Count() > 0)
-        	{
-				var metadataCopy = new JObject(metadata);
-				var dataBuffer = new byte[memoryStream.Length - memoryStream.Position];
-				Buffer.BlockCopy(buffer, (int)memoryStream.Position, dataBuffer, 0,
-								 dataBuffer.Length);
-				documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadataCopy, bytes));
-				//copy back
-        		Buffer.BlockCopy(dataBuffer, 0, buffer, (int)memoryStream.Position, dataBuffer.Length);
-        	}
 
-    	    dataAsJson = memoryStream.ToJObject();
-
-			storage.SetCachedDocument(key, etag, Tuple.Create(new JObject(metadata), new JObject(dataAsJson)));
+			return Tuple.Create<MemoryStream, JObject>(memoryStream, null);
         }
 
-        public bool DeleteDocument(string key, Guid? etag, out JObject metadata)
+    	private JObject ReadDocument(Tuple<MemoryStream,JObject> stream, JsonDocumentMetadata metadata)
+    	{
+			if (stream.Item2 != null)
+				return stream.Item2;
+
+			var memoryStream = stream.Item1;
+			if (documentCodecs.Count() > 0)
+    		{
+    			byte[] buffer = memoryStream.GetBuffer();
+				var metadataCopy = new JObject(metadata.Metadata);
+				var dataBuffer = new byte[memoryStream.Length - memoryStream.Position];
+				Buffer.BlockCopy(buffer, (int)memoryStream.Position, dataBuffer, 0,
+    			                 dataBuffer.Length);
+    			documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(metadata.Key, metadataCopy, bytes));
+				memoryStream = new MemoryStream(dataBuffer);
+    		}
+
+			var result = memoryStream.ToJObject();
+
+			storage.SetCachedDocument(metadata.Key, metadata.Etag, Tuple.Create(new JObject(metadata.Metadata), new JObject(result)));
+
+    		return result;
+    	}
+
+    	public bool DeleteDocument(string key, Guid? etag, out JObject metadata)
         {
             AssertValidEtag(key, etag, "DELETE", null);
 

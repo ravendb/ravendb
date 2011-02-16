@@ -45,8 +45,10 @@ namespace Raven.Database.Impl
 
 		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, string[] fieldsToFetch, AggregationOperation aggregationOperation)
 		{
-			var doc = RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, aggregationOperation);
-			return ExecuteReadTriggers(doc, null, ReadOperation.Query);
+			return
+				ProcessReadVetoes(
+					RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, aggregationOperation),
+					null, ReadOperation.Query);
 		}
 
 		private JsonDocument RetrieveDocumentInternal(
@@ -123,7 +125,7 @@ namespace Raven.Database.Impl
 			return doc;
 		}
 
-	    public static void EnsureIdInMetadata(JsonDocument doc)
+	    public static void EnsureIdInMetadata(IJsonDocumentMetadata doc)
 	    {
 			if (doc == null)
 				return;
@@ -146,42 +148,24 @@ namespace Raven.Database.Impl
 			return doc != null;
 		}
 
-		public JsonDocument ExecuteReadTriggers(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
+		public T ProcessReadVetoes<T>(T document, TransactionInformation transactionInformation, ReadOperation operation)
+			where T : class, IJsonDocumentMetadata, new()
 		{
-			if(disableReadTriggers.Value)
+			if (disableReadTriggers.Value)
 				return document;
 
-			return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, transactionInformation, operation),
-											 transactionInformation, operation);
-		}
-
-		private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument, TransactionInformation transactionInformation, ReadOperation operation)
-		{
-			if (resultingDocument == null)
-				return null;
-
-			foreach (var readTrigger in triggers)
-			{
-				readTrigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation, transactionInformation);
-			}
-			return resultingDocument;
-		}
-
-		public JsonDocument ProcessReadVetoes(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
-		{
 			if (document == null)
 				return document;
 			foreach (var readTrigger in triggers)
 			{
-				var readVetoResult = readTrigger.AllowRead(document.Key, document.DataAsJson ?? document.Projection, document.Metadata, operation, transactionInformation);
+				var readVetoResult = readTrigger.AllowRead(document.Key, document.Metadata, operation, transactionInformation);
 				switch (readVetoResult.Veto)
 				{
 					case ReadVetoResult.ReadAllow.Allow:
 						break;
 					case ReadVetoResult.ReadAllow.Deny:
-						return new JsonDocument
+						return new T
 						{
-							DataAsJson = new JObject(),
 							Metadata = new JObject(
 								new JProperty("Raven-Read-Veto", new JObject(new JProperty("Reason", readVetoResult.Reason),
 																			 new JProperty("Trigger", readTrigger.ToString())
