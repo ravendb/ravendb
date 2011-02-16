@@ -409,4 +409,7 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
+  <PropertyGroup>
+    <PostBuildEvent>copy /y "$(TargetDir)$(TargetName).xap" "$(SolutionDir)\Raven.Database\Server\WebUI\Raven.Studio.xap"</PostBuildEvent>
+  </PropertyGroup>
 </Project>
