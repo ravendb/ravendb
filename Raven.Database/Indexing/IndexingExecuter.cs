@@ -59,7 +59,7 @@ namespace Raven.Database.Indexing
 
 		private void FlushIndexes()
 		{
-			if (lastFlushedWorkCounter == workCounter)
+			if (lastFlushedWorkCounter == workCounter || context.DoWork == false)
 				return;
 			lastFlushedWorkCounter = workCounter;
 			context.IndexStorage.FlushAllIndexes();
