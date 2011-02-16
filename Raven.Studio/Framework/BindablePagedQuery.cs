@@ -4,6 +4,7 @@
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
+	using Action = System.Action;
 
 	public interface IBindablePagedQuery
 	{
@@ -20,7 +21,7 @@
 
 	public class BindablePagedQuery<TResult, TViewModel> : BindableCollection<TViewModel>, IBindablePagedQuery
 	{
-		readonly Func<int, int, Task<TResult[]>> query;
+		Func<int, int, Task<TResult[]>> query;
 		readonly Func<TResult, TViewModel> transform;
 		int currentPage;
 		bool isLoading;
@@ -99,11 +100,21 @@
 			}
 		}
 
+		public Func<int, int, Task<TResult[]>> Query
+		{
+			set { query = value; }
+		}
+
 		public void LoadPage(int page = 0)
+		{
+			LoadPage(null, page);
+		}
+
+		public void LoadPage(Action afterLoaded, int page = 0)
 		{
 			IsLoading = true;
 
-			query(page*PageSize, PageSize)
+			query(page * PageSize, PageSize)
 				.ContinueWith(x =>
 				              	{
 				              		IsNotifying = false;
@@ -118,6 +129,8 @@
 				              		Refresh();
 
 				              		IsLoading = false;
+
+									if(afterLoaded != null) afterLoaded();
 				              	});
 		}
 
