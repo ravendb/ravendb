@@ -1038,8 +1038,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <returns></returns>
         public void WaitForNonStaleResultsAsOf(DateTime cutOff)
         {
-            theWaitForNonStaleResults = true;
-            cutoff = cutOff.ToUniversalTime();
+            WaitForNonStaleResultsAsOf(cutOff, TimeSpan.FromSeconds(15));
         }
 
         /// <summary>
@@ -1060,8 +1059,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public void WaitForNonStaleResults()
         {
-            theWaitForNonStaleResults = true;
-            timeout = TimeSpan.FromSeconds(15);
+            WaitForNonStaleResults(TimeSpan.FromSeconds(15));
         }
 
         #endregion
