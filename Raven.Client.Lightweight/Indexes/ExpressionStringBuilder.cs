@@ -237,41 +237,59 @@ namespace Raven.Client.Indexes
 
 				this.Out(member.DeclaringType.Name + "." + name);
 			}
+		    CloseOutputTypeIfNeeded(member);
 		}
+
+        private void CloseOutputTypeIfNeeded(MemberInfo member)
+        {
+            var memberType = GetMemberType(member);
+            if (memberType == typeof(decimal) || 
+                memberType == typeof(double) ||
+                memberType == typeof(long) ||
+                memberType == typeof(float) ||
+                memberType == typeof(decimal?) ||
+                memberType == typeof(double?) ||
+                memberType == typeof(long?) ||
+                memberType == typeof(float?))
+            {
+                this.Out(")");
+            }
+        }
 
 		private void OutputTypeIfNeeded(MemberInfo member)
 		{
-			if(GetMemberType(member) == typeof(decimal))
+		    var memberType = GetMemberType(member);
+		    if(memberType == typeof(decimal))
 			{
-				this.Out("(decimal)");
+				this.Out("((decimal)");
 			}
-			if (GetMemberType(member) == typeof(double))
+			if (memberType == typeof(double))
 			{
-				this.Out("(double)");
+				this.Out("((double)");
 			}
-			if (GetMemberType(member) == typeof(long))
+			if (memberType == typeof(long))
 			{
-				this.Out("(long)");
+				this.Out("((long)");
 			}
-			if (GetMemberType(member) == typeof(float))
+			if (memberType == typeof(float))
 			{
-				this.Out("(float)");
+				this.Out("((float)");
 			}
-			if (GetMemberType(member) == typeof(decimal?))
+			if (memberType == typeof(decimal?))
 			{
-				this.Out("(decimal?)");
+				this.Out("((decimal?)");
 			}
-			if (GetMemberType(member) == typeof(double?))
+			if (memberType == typeof(double?))
 			{
-				this.Out("(double?)");
+				this.Out("((double?)");
 			}
-			if (GetMemberType(member) == typeof(long?))
+			if (memberType == typeof(long?))
 			{
-				this.Out("(long?)");
+				this.Out("((long?)");
 			}
-			if (GetMemberType(member) == typeof(float?))
+			if (memberType == typeof(float?))
 			{
-				this.Out("(float?)");
+				this.Out("((float?)");
 			}
 		}
 

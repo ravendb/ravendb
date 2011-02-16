@@ -83,13 +83,17 @@ namespace Raven.Client.Document
 			return conventions.FindTypeTagName(entity.GetType()).ToLower() + "/";
 		}
 
+        private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
+
 		/// <summary>
 		/// Get the default tag name for the specified type.
 		/// </summary>
-		/// <param name="t">The t.</param>
-		/// <returns></returns>
 		public static string DefaultTypeTagName(Type t)
 		{
+		    string result;
+            if (cachedDefaultTypeTagNames.TryGetValue(t, out result))
+                return result;
+
 			if (t.Name.Contains("<>"))
 				return null;
 			if(t.IsGenericType)
@@ -105,9 +109,17 @@ namespace Raven.Client.Document
 					sb.Append("Of")
 						.Append(DefaultTypeTagName(argument));
 				}
-				return sb.ToString();
+			    result = sb.ToString();
 			}
-			return Inflector.Pluralize(t.Name);
+			else
+			{
+			    result = Inflector.Pluralize(t.Name);
+			}
+            cachedDefaultTypeTagNames = new Dictionary<Type, string>(cachedDefaultTypeTagNames)
+			    {
+			        {t, result}
+			    };
+		    return result;
 		}
 
 		/// <summary>
