@@ -53,6 +53,8 @@ namespace Raven.Studio.Features.Database
 
 					IsInitialized = true;
 					//Execute.OnUIThread(() => timer.Start());
+					
+					Connected(this, EventArgs.Empty);
 
                     if (callback != null) callback();
 				});
@@ -115,6 +117,8 @@ namespace Raven.Studio.Features.Database
 		}
 
 		public event EventHandler CurrentDatabaseChanged = delegate { };
+		public event EventHandler Connected = delegate { };
+
 		void RaiseCurrentDatabaseChanged()
 		{
 			CurrentDatabaseChanged(this,EventArgs.Empty);
