@@ -78,6 +78,9 @@
     <Compile Include="..\Raven.Abstractions\Data\JsonDocumentMetadata.cs">
       <Link>Data\JsonDocumentMetadata.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeOffsetConverter.cs">
+      <Link>Json\JsonDateTimeOffsetConverter.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonToJsonConverter.cs">
       <Link>Json\JsonToJsonConverter.cs</Link>
     </Compile>

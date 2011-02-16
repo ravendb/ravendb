@@ -196,6 +196,7 @@ namespace Raven.Client.Document
 				Converters =
 					{
 						new JsonEnumConverter(),
+                        new JsonDateTimeOffsetConverter(),
 						new JsonLuceneDateTimeConverter(),
                         new JsonValueTypeConverter<int>(int.TryParse),
                         new JsonValueTypeConverter<long>(long.TryParse),
