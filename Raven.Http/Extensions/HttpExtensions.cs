@@ -80,34 +80,56 @@ namespace Raven.Http.Extensions
 
 		public static void WriteJson(this IHttpContext context, object obj)
 		{
-			context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
-			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
-			new JsonSerializer
+			WriteJson(context, JToken.FromObject(obj, new JsonSerializer
 			{
 				Converters = {new JsonToJsonConverter(), new JsonEnumConverter()},
-			}.Serialize(new JsonTextWriter(streamWriter)
-			{
-				Formatting = Formatting.None
-			}, obj);
-			streamWriter.Flush();
+			}));
 		}
 
 		public static void WriteJson(this IHttpContext context, JToken obj)
 		{
-			context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
 			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
+			var jsonp = context.Request.QueryString["jsonp"];
+			if (string.IsNullOrEmpty(jsonp) == false)
+			{
+				context.Response.AddHeader("Content-Type", "application/javascript; charset=utf-8");
+				streamWriter.Write(jsonp);
+				streamWriter.Write("(");
+			}
+			else
+			{
+				context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
+				
+			}
+
 			var jsonTextWriter = new JsonTextWriter(streamWriter)
 			{
 				Formatting = Formatting.None
 			};
 			obj.WriteTo(jsonTextWriter, new JsonEnumConverter());
 			jsonTextWriter.Flush();
+			if (string.IsNullOrEmpty(jsonp) == false)
+			{
+				streamWriter.Write(");");
+			}
+
 			streamWriter.Flush();
 		}
 
 		public static void WriteData(this IHttpContext context, JObject data, JObject headers, Guid etag)
 		{
-			WriteData(context, Encoding.UTF8.GetBytes(data.ToString(Formatting.None)), headers, etag);
+			var str = data.ToString(Formatting.None);
+			var jsonp = context.Request.QueryString["jsonp"];
+			if (string.IsNullOrEmpty(jsonp) == false)
+			{
+				str = jsonp + "(" + str + ");";
+				context.Response.AddHeader("Content-Type", "application/javascript; charset=utf-8");
+			}
+			else
+			{
+				context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
+			}
+			WriteData(context, Encoding.UTF8.GetBytes(str), headers, etag);
 		}
 
 		public static void WriteData(this IHttpContext context, byte[] data, JObject headers, Guid etag)
