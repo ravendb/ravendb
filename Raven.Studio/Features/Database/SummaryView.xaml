@@ -100,10 +100,10 @@
 								<ei:FluidMoveBehavior AppliesTo="Children"
 													  Duration="0:0:0.5">
 									<ei:FluidMoveBehavior.EaseY>
-										<CircleEase EasingMode="EaseInOut"/>
+										<CircleEase EasingMode="EaseInOut" />
 									</ei:FluidMoveBehavior.EaseY>
 									<ei:FluidMoveBehavior.EaseX>
-										<CubicEase EasingMode="EaseInOut"/>
+										<CubicEase EasingMode="EaseInOut" />
 									</ei:FluidMoveBehavior.EaseX>
 								</ei:FluidMoveBehavior>
 							</i:Interaction.Behaviors>
@@ -129,8 +129,18 @@
 												 cm:Message.Attach="Click=Execute($dataContext)" />
 								</ti:ContextMenu>
 							</ti:ContextMenuService.ContextMenu>
-							<ContentControl Content="{Binding}"
-											ContentTemplate="{Binding DataTemplate}" />
+
+							<!-- replace with template for collection -->
+							<Border Width="120"
+									Height="40"
+									Margin="4"
+									Background="LightGray">
+								<TextBlock Text="{Binding Id}"
+										   TextTrimming="WordEllipsis" />
+							</Border>
+
+							<!--<ContentControl Content="{Binding}"
+											ContentTemplate="{Binding DataTemplate}" />-->
 						</Grid>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>

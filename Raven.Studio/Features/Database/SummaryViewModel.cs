@@ -14,13 +14,11 @@
 	public class SummaryViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
-		readonly DocumentTemplateProvider templateProvider;
 
 		[ImportingConstructor]
-		public SummaryViewModel(IServer server, TemplateColorProvider colorProvider, IEventAggregator events)
+		public SummaryViewModel(IServer server, IEventAggregator events)
 		{
 			this.server = server;
-			this.templateProvider = new DocumentTemplateProvider(server, colorProvider);
 			events.Subscribe(this);
 
 			DisplayName = "Summary";
@@ -36,7 +34,7 @@
 			get { return server; }
 		}
 
-		public BindableCollection<EditDocumentViewModel> RecentDocuments { get; private set; }
+		public BindableCollection<DocumentViewModel> RecentDocuments { get; private set; }
 
 		public IEnumerable<Collection> Collections { get; private set; }
 
@@ -85,10 +83,8 @@
 					.GetDocumentsAsync(0, 12)
 					.ContinueOnSuccess(x =>
 					                   	{
-					                   		//TODO: I don't like this...
-					                   		var vm = IoC.Get<EditDocumentViewModel>();
-					                   		RecentDocuments = new BindableCollection<EditDocumentViewModel>(
-					                   			x.Result.Select(vm.CloneUsing));
+					                   		RecentDocuments = new BindableCollection<DocumentViewModel>(
+					                   			x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
 					                   		NotifyOfPropertyChange(() => RecentDocuments);
 					                   	});
 			}
