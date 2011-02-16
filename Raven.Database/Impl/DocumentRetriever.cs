@@ -151,6 +151,9 @@ namespace Raven.Database.Impl
 		public T ProcessReadVetoes<T>(T document, TransactionInformation transactionInformation, ReadOperation operation)
 			where T : class, IJsonDocumentMetadata, new()
 		{
+			if (disableReadTriggers.Value)
+				return document;
+
 			if (document == null)
 				return document;
 			foreach (var readTrigger in triggers)
