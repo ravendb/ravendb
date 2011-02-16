@@ -115,10 +115,9 @@ namespace Raven.Client.Document
 			{
 			    result = Inflector.Pluralize(t.Name);
 			}
-            cachedDefaultTypeTagNames = new Dictionary<Type, string>(cachedDefaultTypeTagNames)
-			    {
-			        {t, result}
-			    };
+		    var temp = new Dictionary<Type, string>(cachedDefaultTypeTagNames);
+		    temp[t] = result;
+		    cachedDefaultTypeTagNames = temp;
 		    return result;
 		}
 
