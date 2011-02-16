@@ -62,8 +62,8 @@
 			<c:Pager tk:DockPanel.Dock="Top"
 					 cm:Bind.Model="{Binding Documents}" />
 
-			<c:Pager tk:DockPanel.Dock="Bottom"
-					 cm:Bind.Model="{Binding Documents}" />
+			<!--<c:Pager tk:DockPanel.Dock="Bottom"
+					 cm:Bind.Model="{Binding Documents}" />-->
 
 			<Grid>
 				<ListBox ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -112,11 +112,9 @@
 					</ListBox.ItemTemplate>
 				</ListBox>
 
-				<!-- the visibility binding didn't work until I used Bind.Model; not sure why... -->
-				<TextBlock cm:Bind.Model="{Binding Documents}"
-						   Style="{StaticResource Instruction}"
+				<TextBlock Style="{StaticResource Instruction}"
 						   Text="The database contains no documents."
-						   Visibility="{Binding HasNoResults, Converter={StaticResource booleanToVisibility}}"
+						   Visibility="{Binding HasDocuments, Converter={StaticResource booleanToOppositeVisibility}}"
 						   d:IsHidden="True"
 						   d:IsLocked="True" />
 			</Grid>

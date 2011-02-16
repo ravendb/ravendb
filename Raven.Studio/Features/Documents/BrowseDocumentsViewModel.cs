@@ -12,19 +12,31 @@ namespace Raven.Studio.Features.Documents
 
 	[Export]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class BrowseDocumentsViewModel : Conductor<DocumentViewModel>.Collection.OneActive,
-	                                        IHandle<DocumentDeleted>
+	public class BrowseDocumentsViewModel : RavenScreen,
+		IHandle<DocumentDeleted>
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
 
 		[ImportingConstructor]
 		public BrowseDocumentsViewModel(IServer server, IEventAggregator events)
+			: base(events)
 		{
 			DisplayName = "Documents";
 			this.server = server;
 			this.events = events;
 			events.Subscribe(this);
+
+			var vm = IoC.Get<DocumentViewModel>();
+
+			server.Connected += delegate
+			{
+				using (var session = server.OpenSession())
+					Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
+						session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync, vm.CloneUsing);
+				Documents.PageSize = 25;
+			};
+
 		}
 
 		public BindablePagedQuery<JsonDocument, DocumentViewModel> Documents { get; private set; }
@@ -42,27 +54,20 @@ namespace Raven.Studio.Features.Documents
 		public void CreateNewDocument()
 		{
 			var doc = IoC.Get<DocumentViewModel>();
-			events.Publish(new DatabaseScreenRequested(() => doc));	
+			events.Publish(new DatabaseScreenRequested(() => doc));
 		}
 
-		public void GetAll(IList<JsonDocument> response)
-		{
-			var vm = IoC.Get<DocumentViewModel>();
-			var result = response
-				.Select(vm.CloneUsing)
-				.ToList();
-
-			Items.AddRange(result);
-		}
+		public bool HasDocuments { get { return Documents.Any(); } }
 
 		protected override void OnActivate()
 		{
+			if(Documents == null) return;
+
+			WorkStarted();
+
 			using (var session = server.OpenSession())
 			{
-				var vm = IoC.Get<DocumentViewModel>();
-				Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
-					session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync, vm.CloneUsing);
-				Documents.PageSize = 25;
+				Documents.Query = session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync;
 
 				session.Advanced.AsyncDatabaseCommands
 					.GetStatisticsAsync()
@@ -73,9 +78,11 @@ namespace Raven.Studio.Features.Documents
 		public void RefreshDocuments(long total)
 		{
 			Documents.GetTotalResults = () => total;
-			Documents.LoadPage();
-
-			NotifyOfPropertyChange(() => Documents);
+			Documents.LoadPage(() =>
+								{
+									NotifyOfPropertyChange(() => HasDocuments);
+									WorkCompleted();
+								});
 		}
 	}
 }
