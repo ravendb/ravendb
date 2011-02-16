@@ -49,6 +49,33 @@
 		}
 
 		[Asynchronous]
+		public IEnumerable<Task> Should_not_cache_the_list_of_databases()
+		{
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+
+			var first = GenerateNewDatabaseName();
+			yield return documentStore.AsyncDatabaseCommands
+				.EnsureDatabaseExistsAsync(first);
+
+			var task = documentStore.AsyncDatabaseCommands
+				.GetDatabaseNamesAsync();
+			yield return task;
+
+			Assert.IsTrue(task.Result.Contains(first));
+
+			var second = GenerateNewDatabaseName();
+			yield return documentStore.AsyncDatabaseCommands
+				.EnsureDatabaseExistsAsync(second);
+
+			var verify = documentStore.AsyncDatabaseCommands
+				.GetDatabaseNamesAsync();
+			yield return verify;
+
+			Assert.IsTrue(verify.Result.Contains(second));
+		}
+
+		[Asynchronous]
 		public IEnumerable<Task> Can_get_delete_a_dcoument_by_id()
 		{
 			var dbname = GenerateNewDatabaseName();

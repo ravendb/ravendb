@@ -667,6 +667,7 @@ namespace Raven.Client.Client.Async
 		public Task<string[]> GetDatabaseNamesAsync()
 		{
 			return url.Databases()
+				.NoCache()
 				.ToJsonRequest(this, credentials, convention)
 				.ReadResponseStringAsync()
 				.ContinueWith(task =>
