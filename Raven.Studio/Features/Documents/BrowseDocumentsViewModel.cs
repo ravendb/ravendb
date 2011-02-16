@@ -27,19 +27,19 @@ namespace Raven.Studio.Features.Documents
 			this.events = events;
 			events.Subscribe(this);
 
-			var vm = IoC.Get<DocumentViewModel>();
+			var vm = IoC.Get<Database.DocumentViewModel>();
 
 			server.Connected += delegate
 			{
 				using (var session = server.OpenSession())
-					Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
+					Documents = new BindablePagedQuery<JsonDocument, Database.DocumentViewModel>(
 						session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync, vm.CloneUsing);
 				Documents.PageSize = 25;
 			};
 
 		}
 
-		public BindablePagedQuery<JsonDocument, DocumentViewModel> Documents { get; private set; }
+		public BindablePagedQuery<JsonDocument, Database.DocumentViewModel> Documents { get; private set; }
 
 		public void Handle(DocumentDeleted message)
 		{
@@ -53,7 +53,7 @@ namespace Raven.Studio.Features.Documents
 
 		public void CreateNewDocument()
 		{
-			var doc = IoC.Get<DocumentViewModel>();
+			var doc = IoC.Get<Database.DocumentViewModel>();
 			events.Publish(new DatabaseScreenRequested(() => doc));
 		}
 

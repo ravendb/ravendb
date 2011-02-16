@@ -162,17 +162,16 @@
 
 			<ItemsControl x:Name="ActiveCollectionDocuments"
 						  Grid.Row="1">
-				<ItemsControl.ItemTemplate>
+				<!--<ItemsControl.ItemTemplate>
 					<DataTemplate>
 						<ContentControl cm:View.Model="{Binding}"
 										cm:View.Context="Thumb" />
 					</DataTemplate>
-				</ItemsControl.ItemTemplate>
+				</ItemsControl.ItemTemplate>-->
 			</ItemsControl>
 
 			<c:Pager Grid.Row="2"
 					 ItemSize="81"
-					 cm:Action.TargetWithoutContext="{Binding ActiveCollectionDocuments}"
 					 ItemsSource="{Binding ActiveCollectionDocuments}"
 					 PageContainer="{Binding ElementName=ActiveCollectionDocuments}" />
 		</Grid>

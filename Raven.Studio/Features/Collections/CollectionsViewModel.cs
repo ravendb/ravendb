@@ -3,19 +3,22 @@
 	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
+	using System.Diagnostics;
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Abstractions.Data;
 	using Caliburn.Micro;
 	using Client.Client;
-	using Database;
+	using Documents;
 	using Framework;
+	using Newtonsoft.Json.Linq;
 	using Plugin;
 	using Raven.Database.Data;
 
 	[Export]
 	public class CollectionsViewModel : RavenScreen
 	{
+		readonly Collection raven = new Collection {Name = "Raven", Count = 0};
 		readonly IServer server;
 		Collection activeCollection;
 
@@ -39,6 +42,8 @@
 			get { return activeCollection; }
 			set
 			{
+				if (activeCollection == value) return;
+
 				activeCollection = value;
 				NotifyOfPropertyChange(() => ActiveCollection);
 				GetDocumentsForActiveCollection();
@@ -50,8 +55,8 @@
 			get
 			{
 				return (Collections == null || !Collections.Any())
-						? 0
-						: Collections.Max(x => x.Count);
+				       	? 0
+				       	: Collections.Max(x => x.Count);
 			}
 		}
 
@@ -60,17 +65,19 @@
 			get { return Collections != null && Collections.Any(); }
 		}
 
+		public Collection OrphansCollection { get; set; }
+
+		public Collection RavenCollection
+		{
+			get { return raven; }
+		}
+
 		void GetDocumentsForActiveCollection()
 		{
-			if (ActiveCollection == null)
-			{
-				ActiveCollectionDocuments = null;
-			}
-			else
-			{
-				ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;
-				ActiveCollectionDocuments.LoadPage();
-			}
+			if (ActiveCollection == null) return;
+			
+			ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;
+			ActiveCollectionDocuments.LoadPage();
 		}
 
 		Task<DocumentViewModel[]> GetDocumentsForActiveCollectionQuery(int start, int pageSize)
@@ -79,65 +86,51 @@
 
 			using (var session = server.OpenSession())
 			{
-				var query = new IndexQuery { Start = start, PageSize = pageSize, Query = "Tag:" + ActiveCollection.Name };
+				var query = new IndexQuery {Start = start, PageSize = pageSize, Query = "Tag:" + ActiveCollection.Name};
 				return session.Advanced.AsyncDatabaseCommands
-					.QueryAsync("Raven/DocumentsByEntityName", query, new string[] { })
+					.QueryAsync("Raven/DocumentsByEntityName", query, new string[] {})
 					.ContinueWith(x =>
-									{
-										if (x.IsFaulted) throw new NotImplementedException("TODO");
+					              	{
+					              		if (x.IsFaulted) throw new NotImplementedException("TODO");
 
-										WorkCompleted();
+					              		WorkCompleted();
 
-										//TODO: this smells bad to me...
-										var vm = IoC.Get<DocumentViewModel>();
 										return x.Result.Results
-											.Select(doc => vm.CloneUsing(doc.ToJsonDocument()))
+											.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
 											.ToArray();
-									});
+					              	});
 			}
-		}
-
-		readonly Collection raven = new Collection { Name = "Raven", Count = 0 };
-
-		public Collection OrphansCollection
-		{
-			get;
-			set;
-		}
-
-		public Collection RavenCollection
-		{
-			get { return raven; }
 		}
 
 		protected override void OnActivate()
 		{
 			WorkStarted();
 
+			var currentActiveCollection = ActiveCollection;
 			using (var session = server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 25)
 					.ContinueOnSuccess(x =>
-										{
-											Collections = x.Result;
-											NotifyOfPropertyChange(() => LargestCollectionCount);
-											NotifyOfPropertyChange(() => Collections);
+					                   	{
+					                   		Collections = x.Result;
+					                   		NotifyOfPropertyChange(() => LargestCollectionCount);
+					                   		NotifyOfPropertyChange(() => Collections);
 
-											ActiveCollection = Collections.FirstOrDefault();
-											NotifyOfPropertyChange(() => HasCollections);
+											ActiveCollection = currentActiveCollection ?? Collections.FirstOrDefault();
+					                   		NotifyOfPropertyChange(() => HasCollections);
 
-											WorkCompleted();
-										});
+					                   		WorkCompleted();
+					                   	});
 
 				session.Advanced.AsyncDatabaseCommands
-					.QueryAsync("Raven/OrphanDocuments", new IndexQuery { PageSize = 0, Start = 0 }, null)
+					.QueryAsync("Raven/OrphanDocuments", new IndexQuery {PageSize = 0, Start = 0}, null)
 					.ContinueOnSuccess(x =>
-										{
-											var c = new Collection{Count = x.Result.TotalResults,Name = "Orphans"};
-											OrphansCollection = c;
-											NotifyOfPropertyChange(() => OrphansCollection);
-										});
+					                   	{
+					                   		var c = new Collection {Count = x.Result.TotalResults, Name = "Orphans"};
+					                   		OrphansCollection = c;
+					                   		NotifyOfPropertyChange(() => OrphansCollection);
+					                   	});
 			}
 		}
 	}

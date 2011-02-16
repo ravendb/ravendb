@@ -122,6 +122,7 @@
     <Compile Include="Commands\SaveDocument.cs" />
     <Compile Include="Commands\SearchForDocumentById.cs" />
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
+    <Compile Include="Features\Documents\DocumentViewModel.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
@@ -259,6 +260,10 @@
     <Page Include="Data\JsonDocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\DocumentView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Statistics\ErrorsView.xaml">
       <SubType>Designer</SubType>
