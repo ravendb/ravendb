@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.IO;
 using System.Web;
 using Newtonsoft.Json.Linq;
@@ -21,7 +22,7 @@ namespace Raven.Bundles.Authorization.Triggers
 			AuthorizationDecisions = new AuthorizationDecisions(Database);	
 		}
 
-		public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation readOperation,
+		public override ReadVetoResult AllowRead(string key,  JObject metadata, ReadOperation readOperation,
 		                                         TransactionInformation transactionInformation)
 		{
 			if (AuthorizationContext.IsInAuthorizationContext)

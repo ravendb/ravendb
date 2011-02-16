@@ -270,10 +270,10 @@ namespace Raven.Database.Data
 					From = x.Item1,
 					To = replaceInvalidCharacterForFields.Replace(x.Item2, ""),
 					QueryFrom = x.Item2
-				}).ToArray();
+				}).OrderByDescending(x=>x.QueryFrom.Length).ToArray();
 				if (GroupByItems != null && DynamicAggregation)
 				{
-					Items = Items.Concat(GroupByItems).ToArray();
+                    Items = Items.Concat(GroupByItems).OrderByDescending(x => x.QueryFrom.Length).ToArray();
 					var groupBys = GroupByItems.Select(x=>x.To).ToArray();
 					query.FieldsToFetch = query.FieldsToFetch == null ?
 						groupBys :

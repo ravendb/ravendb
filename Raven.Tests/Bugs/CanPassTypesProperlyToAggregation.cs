@@ -27,10 +27,27 @@ namespace Raven.Tests.Bugs
 
 			var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode(query, new DocumentConvention(), "docs", false);
 
-			Assert.Equal(@"docs
-	.GroupBy(y => y.Denomination)
-	.Select(g => new {Denomination = g.Key, Cost = g.Sum(z => (double)z.Cost)})", code);
-		} 
+			Assert.Equal("docs\r\n\t.GroupBy(y => y.Denomination)\r\n\t.Select(g => new {Denomination = g.Key, Cost = g.Sum(z => ((double)z.Cost))})", code);
+		}
+
+        [Fact]
+        public void WillProperlyCompileWhenUsingToString()
+        {
+            Expression<Func<IEnumerable<Coin>, IEnumerable<object>>> query = x => from y in x
+                                                                                  group y by y.Denomination
+                                                                                      into g
+                                                                                      select
+                                                                                        new
+                                                                                        {
+                                                                                            Denomination = g.Key,
+                                                                                            Cost = g.First().Cost.ToString()
+                                                                                        };
+
+
+            var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode(query, new DocumentConvention(), "docs", false);
+
+            Assert.Equal("docs\r\n\t.GroupBy(y => y.Denomination)\r\n\t.Select(g => new {Denomination = g.Key, Cost = ((double)g.First().Cost).ToString()})", code);
+        } 
 	}
 
 	public class Coin

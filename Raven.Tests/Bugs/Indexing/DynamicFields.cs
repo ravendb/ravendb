@@ -55,6 +55,19 @@ namespace Raven.Tests.Bugs.Indexing
 			}
 		}
 
+		public class Product_ByNumericAttributeUsingField : AbstractIndexCreationTask<Product>
+		{
+			public Product_ByNumericAttributeUsingField()
+			{
+				Map = products =>
+					from p in products
+					select new
+					{
+						_ = Project(p.Attributes, attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.NO, Field.Index.NOT_ANALYZED))
+					};
+			}
+		}
+
 		public class Product_ByIntAttribute : AbstractIndexCreationTask<Product>
 		{
 			public Product_ByIntAttribute()
@@ -125,6 +138,38 @@ namespace Raven.Tests.Bugs.Indexing
 				{
 					var products = session.Advanced.LuceneQuery<Product, Product_ByNumericAttribute>()
 						.WhereGreaterThan("Color", 20d)
+						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
+						.ToList();
+
+					Assert.NotEmpty(products);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanCreateCompletelyDynamicNumericFieldsUsingField()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new Product_ByNumericAttributeUsingField().Execute(((IDocumentStore)store).DatabaseCommands, ((IDocumentStore)store).Conventions);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Product
+					{
+						Attributes = new List<Attribute>
+                        {
+                            new Attribute{Name = "Color", Value = "Red", NumericValue = 30}
+                        }
+					});
+
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var products = session.Advanced.LuceneQuery<Product, Product_ByNumericAttributeUsingField>()
+						.WhereEquals("Color", 30d)
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
 						.ToList();
 

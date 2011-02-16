@@ -22,7 +22,6 @@ namespace Raven.Database.Plugins
     	///  The document and metadata instances SHOULD NOT be modified.
     	///  </remarks>
     	/// <param name="key">The key of the read document - can be null if reading a projection</param>
-    	/// <param name="document">The document being read</param>
     	/// <param name="metadata">The document metadata</param>
     	/// <param name="operation">Whatever the operation is a load or a query</param>
     	/// <param name="transactionInformation">The transaction information, if any</param>
@@ -35,20 +34,11 @@ namespace Raven.Database.Plugins
     	///    asking for a particular document, or skip including the result entirely 
     	///    in the query results.
     	///  </returns>
-		public virtual ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+		public virtual ReadVetoResult AllowRead(string key,JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
         {
             return ReadVetoResult.Allowed;
         }
 
-        /// <summary>
-        ///  Allow the trigger the option of modifying the document and metadata instances
-        ///  before the user can see them. 
-        ///  </summary><remarks>
-        ///  The modified values are transient, and are NOT saved to the database.
-        ///  </remarks><param name="key">The key of the read document - can be null if reading a projection</param><param name="document">The document being read</param><param name="metadata">The document metadata</param><param name="operation">Whatever the operation is a load or a query</param><param name="transactionInformation">The transaction information, if any</param>
-        public virtual void OnRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
-        {
-        }
 
         public void Initialize(DocumentDatabase database)
         {

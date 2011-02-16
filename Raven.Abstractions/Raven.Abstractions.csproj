@@ -59,8 +59,10 @@
     <Compile Include="Data\DatabaseDocument.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
     <Compile Include="Commands\ICommandData.cs" />
+    <Compile Include="Data\IJsonDocumentMetadata.cs" />
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\JsonDocument.cs" />
+    <Compile Include="Data\JsonDocumentMetadata.cs" />
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="Data\PatchCommandType.cs" />
     <Compile Include="Data\PatchRequest.cs" />
@@ -78,6 +80,7 @@
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />
+    <Compile Include="Json\JsonDateTimeOffsetConverter.cs" />
     <Compile Include="Json\JsonMultiDimensionalArrayConverter.cs" />
     <Compile Include="Json\JsonToJsonConverter.cs" />
     <Compile Include="Extensions\MetadataExtensions.cs" />

@@ -72,6 +72,15 @@
     <Compile Include="..\Raven.Abstractions\Data\Collection.cs">
       <Link>Data\Collection.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\IJsonDocumentMetadata.cs">
+      <Link>Data\IJsonDocumentMetadata.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\JsonDocumentMetadata.cs">
+      <Link>Data\JsonDocumentMetadata.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeOffsetConverter.cs">
+      <Link>Json\JsonDateTimeOffsetConverter.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonToJsonConverter.cs">
       <Link>Json\JsonToJsonConverter.cs</Link>
     </Compile>
@@ -101,7 +110,7 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\LinqExtensions_Obsolete.cs">
       <Link>Linq\LinqExtensions_Obsolete.cs</Link>
-	</Compile>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs">
       <Link>Indexes\IndexDefinitionHelper.cs</Link>
     </Compile>
