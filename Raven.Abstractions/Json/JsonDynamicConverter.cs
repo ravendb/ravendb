@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Linq;
+using System.Linq;
 
 namespace Raven.Database.Json
 {
@@ -52,7 +53,14 @@ namespace Raven.Database.Json
 		/// <returns>The object value.</returns>
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
-			return new DynamicJsonObject((JObject)JToken.ReadFrom(reader));
+		    var token = JToken.ReadFrom(reader);
+		    var val = token as JValue;
+		    if(val != null)
+		        return val.Value;
+		    var array = token as JArray;
+            if (array != null)
+                return new DynamicJsonObject.DynamicList(array.Select(DynamicJsonObject.TransformToValue).ToArray());
+		    return new DynamicJsonObject((JObject)token);
 		}
 
 		/// <summary>

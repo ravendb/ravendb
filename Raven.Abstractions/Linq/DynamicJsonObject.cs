@@ -126,7 +126,7 @@ namespace Raven.Database.Linq
 			return true;
 		}
 
-		private static object TransformToValue(JToken jToken)
+	    public static object TransformToValue(JToken jToken)
 		{
 			switch (jToken.Type)
 			{
