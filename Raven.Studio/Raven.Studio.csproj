@@ -174,7 +174,6 @@
     <Compile Include="Features\Database\Server.cs" />
     <Compile Include="Features\Indexes\FieldProperties.cs" />
     <Compile Include="Features\Documents\BrowseDocumentsViewModel.cs" />
-    <Compile Include="Features\Documents\DocumentViewModel.cs" />
     <Compile Include="Features\Indexes\BrowseIndexesViewModel.cs" />
     <Compile Include="Messages\IndexUpdated.cs" />
     <Compile Include="Features\Indexes\EditIndexViewModel.cs" />
@@ -189,9 +188,6 @@
     <Compile Include="Shell\NotificationsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
     <Compile Include="Features\Database\DatabaseViewModel.cs" />
-    <Compile Include="Features\Documents\DocumentView.xaml.cs">
-      <DependentUpon>DocumentView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
   </ItemGroup>
@@ -285,10 +281,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\BrowseDocumentsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Documents\DocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

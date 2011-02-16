@@ -2,11 +2,11 @@
 {
 	using Features.Database;
 
-	public class DocumentUpdated
+	public class DocumentUpdated : NotificationRaised
 	{
 		readonly DocumentViewModel document;
 
-		public DocumentUpdated(DocumentViewModel document)
+		public DocumentUpdated(DocumentViewModel document) : base( "Document Saved", NotificationLevel.Info)
 		{
 			this.document = document;
 		}

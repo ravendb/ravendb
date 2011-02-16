@@ -29,12 +29,18 @@
 
 			server.OpenSession().Advanced.AsyncDatabaseCommands
 				.PutAsync(document.Id, null, document.JsonDocument.DataAsJson,null)
-				.ContinueOnSuccess(put => events.Publish(new DocumentUpdated(document)));
+				.ContinueOnSuccess(put =>
+				                   	{
+										document.Id = put.Result.Key;
+				                   		events.Publish(new DocumentUpdated(document));
+				                   	});
 			
 		}
 
 		bool ValidateJson(string json)
 		{
+			if(json == null) return true;
+
 			try
 			{
 				JObject.Parse(json);

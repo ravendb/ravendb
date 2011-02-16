@@ -17,30 +17,17 @@ namespace Raven.Studio.Features.Documents
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
-		readonly IWindowManager windowManager;
-		bool isBusy;
 
 		[ImportingConstructor]
-		public BrowseDocumentsViewModel(IServer server, IWindowManager windowManager, IEventAggregator events)
+		public BrowseDocumentsViewModel(IServer server, IEventAggregator events)
 		{
 			DisplayName = "Documents";
 			this.server = server;
-			this.windowManager = windowManager;
 			this.events = events;
 			events.Subscribe(this);
 		}
 
 		public BindablePagedQuery<JsonDocument, DocumentViewModel> Documents { get; private set; }
-
-		public bool IsBusy
-		{
-			get { return isBusy; }
-			set
-			{
-				isBusy = value;
-				NotifyOfPropertyChange(() => IsBusy);
-			}
-		}
 
 		public void Handle(DocumentDeleted message)
 		{
@@ -52,6 +39,12 @@ namespace Raven.Studio.Features.Documents
 				Documents.Remove(deleted);
 		}
 
+		public void CreateNewDocument()
+		{
+			var doc = IoC.Get<DocumentViewModel>();
+			events.Publish(new DatabaseScreenRequested(() => doc));	
+		}
+
 		public void GetAll(IList<JsonDocument> response)
 		{
 			var vm = IoC.Get<DocumentViewModel>();
@@ -60,13 +53,10 @@ namespace Raven.Studio.Features.Documents
 				.ToList();
 
 			Items.AddRange(result);
-			IsBusy = false;
 		}
 
 		protected override void OnActivate()
 		{
-			IsBusy = true;
-
 			using (var session = server.OpenSession())
 			{
 				var vm = IoC.Get<DocumentViewModel>();
@@ -84,7 +74,6 @@ namespace Raven.Studio.Features.Documents
 		{
 			Documents.GetTotalResults = () => total;
 			Documents.LoadPage();
-			IsBusy = false;
 
 			NotifyOfPropertyChange(() => Documents);
 		}

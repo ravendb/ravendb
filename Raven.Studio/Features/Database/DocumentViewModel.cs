@@ -7,7 +7,6 @@
 	using System.Windows;
 	using Caliburn.Micro;
 	using Framework;
-	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;
@@ -15,8 +14,7 @@
 
 	[Export]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
-	public class DocumentViewModel : Screen,
-	                                 IHandle<DocumentDeleted>
+	public class DocumentViewModel : Screen
 	{
 		public const int SummaryLength = 150;
 
@@ -24,6 +22,7 @@
 		readonly IEventAggregator events;
 		readonly NavigationViewModel navigation;
 		readonly DocumentTemplateProvider templateProvider;
+		string id;
 		string jsonData;
 		JsonDocument jsonDocument;
 		IDictionary<string, JToken> metadata;
@@ -35,8 +34,15 @@
 			this.templateProvider = templateProvider;
 			this.navigation = navigation;
 			this.events = events;
+
 			data = new Dictionary<string, JToken>();
 			metadata = new Dictionary<string, JToken>();
+
+			Id = "";
+			jsonDocument = new JsonDocument();
+			JsonData = @"{
+	""PropertyName"": """"
+}";
 
 			events.Subscribe(this);
 		}
@@ -46,24 +52,35 @@
 		public string CollectionType { get; private set; }
 		public DateTime LastModified { get; private set; }
 
-		public string Id { get; private set; }
+		public string Id
+		{
+			get { return id; }
+			set
+			{
+				id = value ?? string.Empty;
+				NotifyOfPropertyChange(() => Id);
+				NotifyOfPropertyChange(() => DisplayId);
+			}
+		}
 
 		public string DisplayId
 		{
 			get
 			{
+				if( string.IsNullOrEmpty(id)) return "Auto Generate Id";
+
 				var collectionType = CollectionType + "/";
-				var id = Id
+				var display = Id
 					.Replace(collectionType, string.Empty)
 					.Replace(collectionType.ToLower(), string.Empty)
 					.Replace("Raven/", string.Empty);
 
 				Guid guid;
-				if (Guid.TryParse(id, out guid))
+				if (Guid.TryParse(display, out guid))
 				{
-					id = id.Substring(0, 8);
+					display = display.Substring(0, 8);
 				}
-				return id;
+				return display;
 			}
 		}
 
@@ -103,15 +120,6 @@
 		public JsonDocument JsonDocument
 		{
 			get { return jsonDocument; }
-		}
-
-		public void Handle(DocumentDeleted message)
-		{
-			//TODO: I suspect this isn't a good idea...
-			if (message.DocumentId == Id)
-			{
-				//navigation.GoBack();
-			}
 		}
 
 		public DocumentViewModel Initialize(JsonDocument document)

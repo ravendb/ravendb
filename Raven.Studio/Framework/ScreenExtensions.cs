@@ -6,14 +6,14 @@
 
 	public static class ScreenExtensions
 	{
-		public static void TrackNavigationTo(this Conductor<IScreen>.Collection.OneActive screen,
+		public static void TrackNavigationTo(this Conductor<IScreen> screen,
 		                                     IScreen newScreen,
 		                                     IEventAggregator events)
 		{
 			TrackNavigationTo(screen, newScreen, events, null);
 		}
 
-		public static void TrackNavigationTo(this Conductor<IScreen>.Collection.OneActive screen,
+		public static void TrackNavigationTo(this Conductor<IScreen> screen,
 		                                     IScreen newScreen,
 		                                     IEventAggregator events,
 		                                     Action setContext)

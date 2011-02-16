@@ -5,7 +5,6 @@
 	using System.Linq;
 	using System.Windows;
 	using Caliburn.Micro;
-	using Database;
 	using Features.Database;
 	using Framework;
 	using Messages;
@@ -13,7 +12,7 @@
 
 	[Export(typeof(IShell))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IShell,
+	public class ShellViewModel : Conductor<IScreen>, IShell,
 		IHandle<DisplayCurrentDatabaseRequested>
 	{
 		readonly NavigationViewModel navigation;
@@ -44,13 +43,11 @@
 			this.databaseScreen = databaseScreen;
 			this.events = events;
 			events.Subscribe(this);
+			events.Publish(new WorkStarted());
 
 			server.Connect(new Uri(uriProvider.GetServerUri()),
 				() =>
 				{
-					Items.Add(start);
-					Items.Add(databaseScreen);
-
 					if (server.Databases.Count() == 1)
 					{
 						ActivateItem(databaseScreen);
@@ -60,6 +57,7 @@
 						ActivateItem(start);
 					}
 
+					events.Publish(new WorkCompleted());
 				});
 
 		}

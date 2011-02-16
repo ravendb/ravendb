@@ -2,11 +2,12 @@
 {
 	using Features.Database;
 
-	public class DocumentDeleted
+	public class DocumentDeleted : NotificationRaised
 	{
 		readonly DocumentViewModel document;
 
 		public DocumentDeleted(DocumentViewModel document)
+			: base("Document Deleted", NotificationLevel.Info)
 		{
 			this.document = document;
 		}

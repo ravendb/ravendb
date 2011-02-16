@@ -45,75 +45,82 @@
 			</StackPanel>
 		</tk:DockPanel>
 
-		<Grid Grid.Row="1">
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="*" />
-				<RowDefinition Height="Auto" />
-			</Grid.RowDefinitions>
+		<tk:DockPanel Grid.Row="1">
 
-			<c:Pager Grid.Row="0"
+			<StackPanel tk:DockPanel.Dock="Top"
+						Orientation="Horizontal">
+				<Border Margin="0,2,2,2"
+						CornerRadius="2"
+						Background="#19000000"
+						Padding="4,2">
+					<HyperlinkButton Content="New Document"
+									 cm:Message.Attach="CreateNewDocument"
+									 FontSize="9.333" />
+				</Border>
+			</StackPanel>
+
+			<c:Pager tk:DockPanel.Dock="Top"
 					 cm:Bind.Model="{Binding Documents}" />
 
-			<ListBox Grid.Row="1"
-					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-					 BorderThickness="0"
-					 ItemsSource="{Binding Documents}">
-				<ListBox.ItemsPanel>
-					<ItemsPanelTemplate>
-						<tk:WrapPanel>
-							<i:Interaction.Behaviors>
-								<ei:FluidMoveBehavior AppliesTo="Children"
-													  Duration="0:0:0.5">
-									<ei:FluidMoveBehavior.EaseY>
-										<CircleEase EasingMode="EaseInOut" />
-									</ei:FluidMoveBehavior.EaseY>
-									<ei:FluidMoveBehavior.EaseX>
-										<CubicEase EasingMode="EaseInOut" />
-									</ei:FluidMoveBehavior.EaseX>
-								</ei:FluidMoveBehavior>
-							</i:Interaction.Behaviors>
-						</tk:WrapPanel>
-					</ItemsPanelTemplate>
-				</ListBox.ItemsPanel>
-				<ListBox.ItemTemplate>
-					<DataTemplate>
-						<Grid cm:Action.TargetWithoutContext="EditDocument"
-							  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
-							  Background="Transparent">
-							<ToolTipService.ToolTip>
-								<ContentControl cm:View.Model="{Binding}"
-												cm:View.Context="Tooltip" />
-							</ToolTipService.ToolTip>
-							<tk:ContextMenuService.ContextMenu>
-								<tk:ContextMenu>
-									<tk:MenuItem Header="Edit Document"
-												 cm:Action.TargetWithoutContext="EditDocument"
-												 cm:Message.Attach="Click=Execute($dataContext)" />
-									<tk:MenuItem Header="Delete Document"
-												 cm:Action.TargetWithoutContext="DeleteDocument"
-												 cm:Message.Attach="Click=Execute($dataContext)" />
-								</tk:ContextMenu>
-							</tk:ContextMenuService.ContextMenu>
-							<ContentControl Content="{Binding}"
-											ContentTemplate="{Binding DataTemplate}" />
-						</Grid>
-					</DataTemplate>
-				</ListBox.ItemTemplate>
-			</ListBox>
-
-			<!-- the visibility binding didn't work until I used Bind.Model; not sure why... -->
-			<TextBlock Grid.Row="1"
-					   cm:Bind.Model="{Binding Documents}"
-					   Style="{StaticResource Instruction}"
-					   Text="The database contains no documents."
-					   Visibility="{Binding HasNoResults, Converter={StaticResource booleanToVisibility}}"
-					   d:IsHidden="True"
-					   d:IsLocked="True" />
-
-			<c:Pager Grid.Row="2"
+			<c:Pager tk:DockPanel.Dock="Bottom"
 					 cm:Bind.Model="{Binding Documents}" />
-		</Grid>
+
+			<Grid>
+				<ListBox ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+						 BorderThickness="0"
+						 ItemsSource="{Binding Documents}">
+					<ListBox.ItemsPanel>
+						<ItemsPanelTemplate>
+							<tk:WrapPanel>
+								<i:Interaction.Behaviors>
+									<ei:FluidMoveBehavior AppliesTo="Children"
+														  Duration="0:0:0.5">
+										<ei:FluidMoveBehavior.EaseY>
+											<CircleEase EasingMode="EaseInOut" />
+										</ei:FluidMoveBehavior.EaseY>
+										<ei:FluidMoveBehavior.EaseX>
+											<CubicEase EasingMode="EaseInOut" />
+										</ei:FluidMoveBehavior.EaseX>
+									</ei:FluidMoveBehavior>
+								</i:Interaction.Behaviors>
+							</tk:WrapPanel>
+						</ItemsPanelTemplate>
+					</ListBox.ItemsPanel>
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<Grid cm:Action.TargetWithoutContext="EditDocument"
+								  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
+								  Background="Transparent">
+								<ToolTipService.ToolTip>
+									<ContentControl cm:View.Model="{Binding}"
+													cm:View.Context="Tooltip" />
+								</ToolTipService.ToolTip>
+								<tk:ContextMenuService.ContextMenu>
+									<tk:ContextMenu>
+										<tk:MenuItem Header="Edit Document"
+													 cm:Action.TargetWithoutContext="EditDocument"
+													 cm:Message.Attach="Click=Execute($dataContext)" />
+										<tk:MenuItem Header="Delete Document"
+													 cm:Action.TargetWithoutContext="DeleteDocument"
+													 cm:Message.Attach="Click=Execute($dataContext)" />
+									</tk:ContextMenu>
+								</tk:ContextMenuService.ContextMenu>
+								<ContentControl Content="{Binding}"
+												ContentTemplate="{Binding DataTemplate}" />
+							</Grid>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+
+				<!-- the visibility binding didn't work until I used Bind.Model; not sure why... -->
+				<TextBlock cm:Bind.Model="{Binding Documents}"
+						   Style="{StaticResource Instruction}"
+						   Text="The database contains no documents."
+						   Visibility="{Binding HasNoResults, Converter={StaticResource booleanToVisibility}}"
+						   d:IsHidden="True"
+						   d:IsLocked="True" />
+			</Grid>
+		</tk:DockPanel>
 
 	</Grid>
 

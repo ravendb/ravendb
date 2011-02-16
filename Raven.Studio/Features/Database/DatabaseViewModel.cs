@@ -13,8 +13,9 @@ namespace Raven.Studio.Features.Database
 
 	[Export(typeof (DatabaseViewModel))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class DatabaseViewModel : Conductor<IScreen>.Collection.OneActive,
-		IHandle<DatabaseScreenRequested>
+	public class DatabaseViewModel : Conductor<IScreen>,
+		IHandle<DatabaseScreenRequested>,
+		IHandle<DocumentDeleted>
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
@@ -26,16 +27,22 @@ namespace Raven.Studio.Features.Database
 			this.events = events;
 			DisplayName = "DATABASE";
 
-			Items.Add(IoC.Get<SummaryViewModel>());
-			Items.Add(IoC.Get<CollectionsViewModel>());
-			Items.Add(IoC.Get<BrowseIndexesViewModel>());
-			Items.Add(IoC.Get<BrowseDocumentsViewModel>());
-			Items.Add(IoC.Get<LinqEditorViewModel>());
+			//TODO: I don't want to grab these from the container
+			Items = new BindableCollection<IScreen>
+			        	{
+			        		IoC.Get<SummaryViewModel>(),
+			        		IoC.Get<CollectionsViewModel>(),
+			        		IoC.Get<BrowseIndexesViewModel>(),
+			        		IoC.Get<BrowseDocumentsViewModel>(),
+			        		IoC.Get<LinqEditorViewModel>()
+			        	};
 
 			ActivateItem(Items[0]);
 
 			events.Subscribe(this);
 		}
+
+		public IObservableCollection<IScreen> Items {get; private set;}
 
 		public IServer Server
 		{
@@ -50,6 +57,18 @@ namespace Raven.Studio.Features.Database
 		public void Handle(DatabaseScreenRequested message)
 		{
 			Show( message.GetScreen() );
+		}
+
+		public void Handle(DocumentDeleted message)
+		{
+			var doc = ActiveItem as DocumentViewModel;
+			if(doc != null && doc.Id == message.DocumentId)
+			{
+				//TODO: this is an arbitrary choice, we should actually go back using the history
+				ActiveItem = Items[3];
+				doc.TryClose();
+
+			}
 		}
 	}
 }
