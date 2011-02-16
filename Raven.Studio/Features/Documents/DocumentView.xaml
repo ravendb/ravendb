@@ -3,12 +3,31 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:f="clr-namespace:Raven.Studio.Framework"
+			 xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
 	<Grid Margin="12,0,12,6"
-		  Height="75">
+		  Height="75"
+		  Tag="{Binding Id}"
+		  cm:Action.TargetWithoutContext="EditDocumentById"
+		  f:DoubleClickEvent.AttachAction="Execute($this.Tag)"
+		  Background="Transparent">
+		<ti:ContextMenuService.ContextMenu>
+			<ti:ContextMenu>
+				<ti:MenuItem Header="Edit Document"
+							 Tag="{Binding Id}"
+							 cm:Action.TargetWithoutContext="EditDocumentById"
+							 cm:Message.Attach="Click=Execute($this.Tag)" />
+				<ti:MenuItem Header="Delete Document"
+							 Tag="{Binding Id}"
+							 cm:Action.TargetWithoutContext="DeleteDocument"
+							 cm:Message.Attach="Click=Execute($this.Tag)" />
+			</ti:ContextMenu>
+		</ti:ContextMenuService.ContextMenu>
 
 		<Rectangle Fill="White" />
 

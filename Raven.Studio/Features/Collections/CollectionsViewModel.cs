@@ -3,7 +3,6 @@
 	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
-	using System.Diagnostics;
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Abstractions.Data;
@@ -11,12 +10,13 @@
 	using Client.Client;
 	using Documents;
 	using Framework;
-	using Newtonsoft.Json.Linq;
+	using Messages;
 	using Plugin;
 	using Raven.Database.Data;
 
 	[Export]
-	public class CollectionsViewModel : RavenScreen
+	public class CollectionsViewModel : RavenScreen,
+		IHandle<DocumentDeleted>
 	{
 		readonly Collection raven = new Collection {Name = "Raven", Count = 0};
 		readonly IServer server;
@@ -27,6 +27,8 @@
 			: base(events)
 		{
 			DisplayName = "Collections";
+
+			events.Subscribe(this);
 
 			this.server = server;
 			SystemCollections = new BindableCollection<Collection>();
@@ -132,6 +134,14 @@
 					                   		NotifyOfPropertyChange(() => OrphansCollection);
 					                   	});
 			}
+		}
+
+		public void Handle(DocumentDeleted message)
+		{
+			ActiveCollectionDocuments
+				.Where(x => x.Id == message.DocumentId)
+				.ToList()
+				.Apply(x => ActiveCollectionDocuments.Remove(x));
 		}
 	}
 }

@@ -2,7 +2,6 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Features.Database;
 	using Messages;
 	using Plugin;
 
@@ -18,16 +17,16 @@
 			this.events = events;
 		}
 
-		public void Execute(DocumentViewModel document)
+		public void Execute(string documentId)
 		{
 			using (var session = server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
-					.DeleteDocumentAsync(document.Id);
+					.DeleteDocumentAsync(documentId);
 			}
 
 			events.Publish(new StatisticsUpdateRequested());
-			events.Publish(new DocumentDeleted(document));
+			events.Publish(new DocumentDeleted(documentId));
 		}
 	}
 }
