@@ -156,8 +156,8 @@
     <Compile Include="Converters\MagnitudeToListConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Converters\TypeToBrushConverter.cs" />
-    <Compile Include="Features\Database\DocumentTemplateProvider.cs" />
-    <Compile Include="Features\Database\DocumentViewModel.cs" />
+    <Compile Include="Features\Documents\DocumentTemplateProvider.cs" />
+    <Compile Include="Features\Documents\EditDocumentViewModel.cs" />
     <Compile Include="Framework\ConventionalCatalog.cs" />
     <Compile Include="Framework\DateTimeExtensions.cs" />
     <Compile Include="Framework\DictionaryExtensions.cs" />
@@ -233,7 +233,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Database\DocumentView.xaml">
+    <Page Include="Features\Documents\EditDocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -262,6 +262,18 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\DocumentView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Documents\Document\Preview.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Documents\Document\Thumb.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Documents\Document\Tooltip.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

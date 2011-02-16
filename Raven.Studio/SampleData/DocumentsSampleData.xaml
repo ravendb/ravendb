@@ -1,12 +1,12 @@
-<Raven_Studio_Features_Database:DocumentViewModel xmlns:Raven_Studio_Features_Database="clr-namespace:Raven.Studio.Features.Database" xmlns="http://schemas.microsoft.com/client/2007" xmlns:Raven_Database="clr-namespace:Raven.Database;assembly=Raven.Client.Silverlight" xmlns:System="clr-namespace:System;assembly=mscorlib" CollectionType="Maecenas nunc" ClrType="Cras duis" DisplayName="Dictumst phasellus amet eleifend" DisplayId="Vestibulum aenean curabitur class" IsNotifying="False" Id="Aliquam integer" IsInitialized="True" IsActive="False" JsonMetadata="Praesent accumsan nullam aliquet bibendum" JsonData="Quisque vivamus adipiscing mauris nam" LastModified="02/15/2011 14:39:57" Summary="Parturient blandit vestibulum">
-	<Raven_Studio_Features_Database:DocumentViewModel.DataTemplate>
+<Documents:EditDocumentViewModel xmlns:Raven_Studio_Features_Database="clr-namespace:Raven.Studio.Features.Database" xmlns="http://schemas.microsoft.com/client/2007" xmlns:Raven_Database="clr-namespace:Raven.Database;assembly=Raven.Client.Silverlight" xmlns:System="clr-namespace:System;assembly=mscorlib" xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" CollectionType="Maecenas nunc" ClrType="Cras duis" DisplayName="Dictumst phasellus amet eleifend" DisplayId="Vestibulum aenean curabitur class" IsNotifying="False" Id="Aliquam integer" IsInitialized="True" IsActive="False" JsonMetadata="Praesent accumsan nullam aliquet bibendum" JsonData="Quisque vivamus adipiscing mauris nam" LastModified="02/15/2011 14:39:57" Summary="Parturient blandit vestibulum">
+	<Documents:EditDocumentViewModel.DataTemplate>
 		<DataTemplate/>
-	</Raven_Studio_Features_Database:DocumentViewModel.DataTemplate>
-	<Raven_Studio_Features_Database:DocumentViewModel.JsonDocument>
+	</Documents:EditDocumentViewModel.DataTemplate>
+	<Documents:EditDocumentViewModel.JsonDocument>
 		<Raven_Database:JsonDocument Key="Curae aliquam donec" LastModified="02/15/2011 14:39:57" NonAuthoritiveInformation="True">
 			<Raven_Database:JsonDocument.Etag>
 				<System:Guid/>
 			</Raven_Database:JsonDocument.Etag>
 		</Raven_Database:JsonDocument>
-	</Raven_Studio_Features_Database:DocumentViewModel.JsonDocument>
-</Raven_Studio_Features_Database:DocumentViewModel>
+	</Documents:EditDocumentViewModel.JsonDocument>
+</Documents:EditDocumentViewModel>

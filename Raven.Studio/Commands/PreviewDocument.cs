@@ -3,6 +3,7 @@
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Features.Database;
+	using Features.Documents;
 
 	public class PreviewDocument
 	{
@@ -14,7 +15,7 @@
 			this.windows = windows;
 		}
 
-		public void Execute(DocumentViewModel document)
+		public void Execute(EditDocumentViewModel document)
 		{
 			windows.ShowDialog(document, "Preview");
 		}

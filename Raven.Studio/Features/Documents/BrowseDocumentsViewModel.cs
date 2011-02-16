@@ -1,10 +1,8 @@
 namespace Raven.Studio.Features.Documents
 {
-	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using System.Linq;
 	using Caliburn.Micro;
-	using Database;
 	using Framework;
 	using Messages;
 	using Plugin;
@@ -27,19 +25,20 @@ namespace Raven.Studio.Features.Documents
 			this.events = events;
 			events.Subscribe(this);
 
-			var vm = IoC.Get<Database.DocumentViewModel>();
 
 			server.Connected += delegate
 			{
 				using (var session = server.OpenSession())
-					Documents = new BindablePagedQuery<JsonDocument, Database.DocumentViewModel>(
-						session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync, vm.CloneUsing);
+					Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
+						session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync, 
+						jdoc => new DocumentViewModel(jdoc));
+
 				Documents.PageSize = 25;
 			};
 
 		}
 
-		public BindablePagedQuery<JsonDocument, Database.DocumentViewModel> Documents { get; private set; }
+		public BindablePagedQuery<JsonDocument, DocumentViewModel> Documents { get; private set; }
 
 		public void Handle(DocumentDeleted message)
 		{
@@ -53,7 +52,7 @@ namespace Raven.Studio.Features.Documents
 
 		public void CreateNewDocument()
 		{
-			var doc = IoC.Get<Database.DocumentViewModel>();
+			var doc = IoC.Get<EditDocumentViewModel>();
 			events.Publish(new DatabaseScreenRequested(() => doc));
 		}
 

@@ -60,11 +60,12 @@
 			</StackPanel>
 
 			<c:Pager tk:DockPanel.Dock="Top"
-					 cm:Bind.Model="{Binding Documents}"
-					 PageContainer="{Binding ElementName=DocumentPageContainer}"
-					 ItemsSource="{Binding Documents}" />
+					 ItemsSource="{Binding Documents}"
+					 PageContainer="{Binding ElementName=DocumentPageContainer}" 
+					 ItemSize="81"/>
 
 			<!--<c:Pager tk:DockPanel.Dock="Bottom"
+					 PageContainer="{Binding ElementName=DocumentPageContainer}"
 					 cm:Bind.Model="{Binding Documents}" />-->
 
 			<Grid>
@@ -74,7 +75,7 @@
 						 ItemsSource="{Binding Documents}">
 					<ListBox.ItemsPanel>
 						<ItemsPanelTemplate>
-							<tk:WrapPanel>
+							<StackPanel>
 								<i:Interaction.Behaviors>
 									<ei:FluidMoveBehavior AppliesTo="Children"
 														  Duration="0:0:0.5">
@@ -86,13 +87,14 @@
 										</ei:FluidMoveBehavior.EaseX>
 									</ei:FluidMoveBehavior>
 								</i:Interaction.Behaviors>
-							</tk:WrapPanel>
+							</StackPanel>
 						</ItemsPanelTemplate>
 					</ListBox.ItemsPanel>
 					<ListBox.ItemTemplate>
 						<DataTemplate>
-							<Grid cm:Action.TargetWithoutContext="EditDocument"
-								  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
+							<Grid Tag="{Binding Id}"
+								  cm:Action.TargetWithoutContext="EditDocumentById"
+								  f:DoubleClickEvent.AttachAction="Execute($this.Tag)"
 								  Background="Transparent">
 								<ToolTipService.ToolTip>
 									<ContentControl cm:View.Model="{Binding}"
@@ -101,15 +103,20 @@
 								<tk:ContextMenuService.ContextMenu>
 									<tk:ContextMenu>
 										<tk:MenuItem Header="Edit Document"
-													 cm:Action.TargetWithoutContext="EditDocument"
-													 cm:Message.Attach="Click=Execute($dataContext)" />
+													 Tag="{Binding Id}"
+													 cm:Action.TargetWithoutContext="EditDocumentById"
+													 cm:Message.Attach="Click=Execute($this.Tag)" />
 										<tk:MenuItem Header="Delete Document"
+													 Tag="{Binding Id}"
 													 cm:Action.TargetWithoutContext="DeleteDocument"
-													 cm:Message.Attach="Click=Execute($dataContext)" />
+													 cm:Message.Attach="Click=Execute($this.Tag)" />
 									</tk:ContextMenu>
 								</tk:ContextMenuService.ContextMenu>
-								<ContentControl Content="{Binding}"
-												ContentTemplate="{Binding DataTemplate}" />
+
+								<ContentControl cm:View.Model="{Binding}"
+												cm:View.Context="Thumb" />
+								<!--<ContentControl Content="{Binding}"
+												ContentTemplate="{Binding DataTemplate}" />-->
 							</Grid>
 						</DataTemplate>
 					</ListBox.ItemTemplate>

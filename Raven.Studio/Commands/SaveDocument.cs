@@ -3,6 +3,7 @@
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Features.Database;
+	using Features.Documents;
 	using Framework;
 	using Messages;
 	using Newtonsoft.Json;
@@ -21,7 +22,7 @@
 			this.server = server;
 		}
 
-		public void Execute(DocumentViewModel document)
+		public void Execute(EditDocumentViewModel document)
 		{
 			document.PrepareForSave();
 

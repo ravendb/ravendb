@@ -7,6 +7,7 @@ namespace Raven.Studio.Features.Linq
 	using Caliburn.Micro;
 	using Client.Client;
 	using Database;
+	using Documents;
 	using Framework;
 	using Plugin;
 
@@ -15,7 +16,7 @@ namespace Raven.Studio.Features.Linq
 	{
 		readonly IServer server;
 		string query;
-		BindablePagedQuery<DocumentViewModel> queryResults;
+		BindablePagedQuery<EditDocumentViewModel> queryResults;
 
 		[ImportingConstructor]
 		public LinqEditorViewModel(IServer server)
@@ -26,7 +27,7 @@ namespace Raven.Studio.Features.Linq
 			Query = "from doc in docs " + Environment.NewLine + "select doc";
 		}
 
-		public BindablePagedQuery<DocumentViewModel> QueryResults
+		public BindablePagedQuery<EditDocumentViewModel> QueryResults
 		{
 			get { return queryResults; }
 			set
@@ -50,13 +51,13 @@ namespace Raven.Studio.Features.Linq
 		{
 			if (string.IsNullOrWhiteSpace(Query)) return;
 			
-			QueryResults = new BindablePagedQuery<DocumentViewModel>(BuildQuery);
+			QueryResults = new BindablePagedQuery<EditDocumentViewModel>(BuildQuery);
 			QueryResults.LoadPage();
 		}
 
-		Task<DocumentViewModel[]> BuildQuery(int start, int pageSize)
+		Task<EditDocumentViewModel[]> BuildQuery(int start, int pageSize)
 		{
-			var vm = IoC.Get<DocumentViewModel>();
+			var vm = IoC.Get<EditDocumentViewModel>();
 			return server.OpenSession().Advanced.AsyncDatabaseCommands
 				.LinearQueryAsync(Query, start, pageSize)
 				.ContinueWith(x =>

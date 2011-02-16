@@ -3,6 +3,7 @@
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Features.Database;
+	using Features.Documents;
 	using Messages;
 
 	public class EditDocument
@@ -15,7 +16,7 @@
 			this.events = events;
 		}
 
-		public void Execute(DocumentViewModel document)
+		public void Execute(EditDocumentViewModel document)
 		{
 			events.Publish(new DatabaseScreenRequested(()=>document));
 		}

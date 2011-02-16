@@ -5,6 +5,7 @@
 	using System.Linq;
 	using Abstractions.Data;
 	using Caliburn.Micro;
+	using Documents;
 	using Framework;
 	using Messages;
 	using Plugin;
@@ -35,7 +36,7 @@
 			get { return server; }
 		}
 
-		public BindableCollection<DocumentViewModel> RecentDocuments { get; private set; }
+		public BindableCollection<EditDocumentViewModel> RecentDocuments { get; private set; }
 
 		public IEnumerable<Collection> Collections { get; private set; }
 
@@ -85,8 +86,8 @@
 					.ContinueOnSuccess(x =>
 					                   	{
 					                   		//TODO: I don't like this...
-					                   		var vm = IoC.Get<DocumentViewModel>();
-					                   		RecentDocuments = new BindableCollection<DocumentViewModel>(
+					                   		var vm = IoC.Get<EditDocumentViewModel>();
+					                   		RecentDocuments = new BindableCollection<EditDocumentViewModel>(
 					                   			x.Result.Select(vm.CloneUsing));
 					                   		NotifyOfPropertyChange(() => RecentDocuments);
 					                   	});

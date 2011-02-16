@@ -1,4 +1,4 @@
-﻿namespace Raven.Studio.Features.Database
+﻿namespace Raven.Studio.Features.Documents
 {
 	using System;
 	using System.Collections.Generic;
@@ -6,15 +6,16 @@
 	using System.Text;
 	using System.Windows;
 	using Caliburn.Micro;
-	using Framework;
+	using Database;
+	using Raven.Studio.Framework;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;
-	using Shell;
+	using Raven.Studio.Shell;
 
 	[Export]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
-	public class DocumentViewModel : Screen
+	public class EditDocumentViewModel : Screen
 	{
 		public const int SummaryLength = 150;
 
@@ -28,7 +29,7 @@
 		IDictionary<string, JToken> metadata;
 
 		[ImportingConstructor]
-		public DocumentViewModel(DocumentTemplateProvider templateProvider, NavigationViewModel navigation,
+		public EditDocumentViewModel(DocumentTemplateProvider templateProvider, NavigationViewModel navigation,
 		                         IEventAggregator events)
 		{
 			this.templateProvider = templateProvider;
@@ -122,7 +123,7 @@
 			get { return jsonDocument; }
 		}
 
-		public DocumentViewModel Initialize(JsonDocument document)
+		public EditDocumentViewModel Initialize(JsonDocument document)
 		{
 			jsonDocument = document;
 			JsonData = PrepareRawJsonString(document.DataAsJson);
@@ -176,9 +177,9 @@
 		}
 
 		//NOTE: quick hack to get me focused on more important things
-		public DocumentViewModel CloneUsing(JsonDocument document)
+		public EditDocumentViewModel CloneUsing(JsonDocument document)
 		{
-			var doc = new DocumentViewModel(templateProvider, navigation, events);
+			var doc = new EditDocumentViewModel(templateProvider, navigation, events);
 			return doc.Initialize(document);
 		}
 

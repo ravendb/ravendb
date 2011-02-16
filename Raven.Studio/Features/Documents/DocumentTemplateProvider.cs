@@ -1,4 +1,4 @@
-﻿namespace Raven.Studio.Features.Database
+﻿namespace Raven.Studio.Features.Documents
 {
 	using System;
 	using System.Collections.Generic;

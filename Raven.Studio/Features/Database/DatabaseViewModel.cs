@@ -61,7 +61,7 @@ namespace Raven.Studio.Features.Database
 
 		public void Handle(DocumentDeleted message)
 		{
-			var doc = ActiveItem as DocumentViewModel;
+			var doc = ActiveItem as EditDocumentViewModel;
 			if(doc != null && doc.Id == message.DocumentId)
 			{
 				//TODO: this is an arbitrary choice, we should actually go back using the history
