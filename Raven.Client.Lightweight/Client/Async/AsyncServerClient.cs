@@ -87,6 +87,24 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
+		/// Resets the specified index asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task ResetIndexAsync(string name)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Gets the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task<IndexDefinition> GetIndexAsync(string name)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -137,6 +155,15 @@ namespace Raven.Client.Client.Async
 		/// </summary>
 		/// <param name="name">The name.</param>
 		public Task DeleteIndexAsync(string name)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Deletes the document for the specified id asyncronously
+		/// </summary>
+		/// <param name="id">The id.</param>
+		public Task DeleteDocumentAsync(string id)
 		{
 			throw new NotImplementedException();
 		}
@@ -363,6 +390,15 @@ namespace Raven.Client.Client.Async
 					};
 				});
 
+		}
+
+		/// <summary>
+		/// Begins the async query.
+		/// </summary>
+		/// <param name="query">A string representation of a Linq query</param>
+		public Task<QueryResult> LinearQueryAsync(string query, int start, int pageSize)
+		{
+			throw new NotImplementedException();
 		}
 
 		/// <summary>

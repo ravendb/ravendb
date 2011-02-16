@@ -77,6 +77,7 @@
     <Compile Include="Responders\Favicon.cs" />
     <Compile Include="Responders\RavenRoot.cs" />
     <Compile Include="Responders\RavenUI.cs" />
+    <Compile Include="Responders\StudioUI.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="RavenDB.snk" />

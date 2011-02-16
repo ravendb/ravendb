@@ -279,5 +279,32 @@
 				Assert.AreEqual(2, query.Result.Count);
 			}
 		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_send_a_linq_query_as_a_string()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				session.Store(entity);
+				yield return session.SaveChangesAsync();
+			}
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				var linq = @"from doc in docs where doc.Name == ""Async Company #1"" select doc";
+				
+				var query = session.Advanced.AsyncDatabaseCommands
+					.LinearQueryAsync(linq,0,25);
+				yield return query;
+
+				Assert.AreEqual(1, query.Result.Results.Count);
+			}
+		}
 	}
 }

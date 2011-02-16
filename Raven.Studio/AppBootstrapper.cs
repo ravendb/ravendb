@@ -10,6 +10,7 @@
 	using System.Windows;
 	using System.Windows.Controls;
 	using Caliburn.Micro;
+	using Framework;
 	using Shell;
 
 	public class AppBootstrapper : Bootstrapper<IShell>
@@ -24,16 +25,30 @@
 				AssemblySource.Instance.Select(assembly => new AssemblyCatalog(assembly))
 					.Cast<ComposablePartCatalog>());
 
+			RegisterTypesByConvention(catalog);
+			
 			container = CompositionHost.Initialize(catalog);
 
 			var batch = new CompositionBatch();
-
 			batch.AddExportedValue<IWindowManager>(new WindowManager());
 			batch.AddExportedValue<IEventAggregator>(new EventAggregator());
 			batch.AddExportedValue(container);
 			batch.AddExportedValue(catalog);
 
 			container.Compose(batch);
+		}
+
+		static void RegisterTypesByConvention(AggregateCatalog master)
+		{
+			var catalog = new ConventionalCatalog();
+			
+			var commands = from command in Assembly.GetExecutingAssembly().GetExportedTypes()
+							where command.Namespace.StartsWith("Raven.Studio.Commands")
+							select command;
+
+			commands.Apply(catalog.RegisterWithTypeNameAsKey);
+
+			master.Catalogs.Add(catalog);
 		}
 
 		protected override object GetInstance(Type serviceType, string key)

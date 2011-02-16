@@ -20,6 +20,8 @@
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="30" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
 						<RowDefinition Height="*" />
 						<RowDefinition Height="20" />
 					</Grid.RowDefinitions>
@@ -36,8 +38,8 @@
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
 
-							<StackPanel Orientation="Horizontal"
-										Grid.Column="0">
+							<StackPanel Grid.Column="0"
+										Orientation="Horizontal">
 								<Image Source="../Resources/Images/logo.png"
 									   Grid.Column="0" />
 								<TextBlock Text="raven db management studio"
@@ -49,8 +51,8 @@
 										   Margin="5, 0, 0, 0" />
 							</StackPanel>
 
-							<StackPanel Orientation="Horizontal"
-										Grid.Column="2"
+							<StackPanel Grid.Column="2"
+										Orientation="Horizontal"
 										Margin="0,0,10,0"
 										VerticalAlignment="Top">
 								<Button x:Name="MinimizeWindow"
@@ -64,11 +66,24 @@
 						</Grid>
 					</Border>
 
-					<ContentControl x:Name="ActiveItem"
+					<ContentControl x:Name="Navigation"
 									Grid.Row="1" />
 
+					<ContentControl x:Name="BusyStatus"
+									HorizontalAlignment="Right"
+									Grid.Row="1" />
+
+					<ContentControl x:Name="Notifications"
+									Grid.Row="2" />
+
+					<tk:TransitioningContentControl x:Name="ActiveItem"
+													Grid.Row="3"
+													Transition="LeftTransition"
+													VerticalContentAlignment="Stretch"
+													HorizontalContentAlignment="Stretch" />
+
 					<Border x:Name="footer"
-							Grid.Row="2"
+							Grid.Row="4"
 							Background="{StaticResource InverseDarkGradient}">
 						<tk:DockPanel>
 							<StackPanel HorizontalAlignment="Right"

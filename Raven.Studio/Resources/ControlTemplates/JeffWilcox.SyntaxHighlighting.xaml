@@ -6,9 +6,9 @@
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					xmlns:local="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting">
+					xmlns:local="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting">
 
-	<Style TargetType="local:SyntaxHighlightingTextBox">
+	<!--<Style TargetType="local:SyntaxHighlightingTextBox">
 		<Setter Property="SelectionBackground"
 				Value="Black" />
 		<Setter Property="SelectionForeground"
@@ -41,9 +41,9 @@
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
-	</Style>
+	</Style>-->
 
-	<Style TargetType="local:SyntaxHighlightingTextBlock">
+	<!--<Style TargetType="local:SyntaxHighlightingTextBlock">
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="local:SyntaxHighlightingTextBlock">
@@ -52,5 +52,5 @@
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
-	</Style>
+	</Style>-->
 </ResourceDictionary>

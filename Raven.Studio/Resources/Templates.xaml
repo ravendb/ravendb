@@ -1,7 +1,6 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-					xmlns:SyntaxHighlighting="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting"
 					xmlns:cal="http://www.caliburnproject.org">
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Styles.xaml" />
@@ -11,7 +10,6 @@
 		<ResourceDictionary Source="ControlTemplates/DocumentsContainer.xaml" />
 		<ResourceDictionary Source="ControlTemplates/DocumentThumbnail.xaml" />
 		<ResourceDictionary Source="ControlTemplates/EmptyButton.xaml" />
-		<ResourceDictionary Source="ControlTemplates/JeffWilcox.SyntaxHighlighting.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style x:Key="BackButton"

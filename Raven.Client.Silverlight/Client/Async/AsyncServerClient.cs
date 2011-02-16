@@ -226,7 +226,9 @@ namespace Raven.Client.Client.Async
 		/// </remarks>
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
 		{
-			return url.Docs(start,pageSize).ToJsonRequest(this, credentials, convention)
+			return url.Docs(start,pageSize)
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
 				.ReadResponseStringAsync()
 				.ContinueWith(task => JArray.Parse(task.Result)
 				                      	.Cast<JObject>()
@@ -269,6 +271,62 @@ namespace Raven.Client.Client.Async
 						Includes = json["Includes"].Children().Cast<JObject>().ToList(), 
 					};
 				});
+		}
+
+		/// <summary>
+		/// Begins the async query.
+		/// </summary>
+		/// <param name="query">A string representation of a Linq query</param>
+		public Task<QueryResult> LinearQueryAsync(string linq, int start, int pageSize)
+		{
+			var query = @"{
+					Query: '"+ linq + @"',
+                    Start: " + start + @",
+                    PageSize: " + pageSize + @"
+					}";
+
+			var metadata = new JObject();
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/linearQuery", "POST", metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request
+				.WriteAsync(Encoding.UTF8.GetBytes(query))
+				.ContinueWith(write =>
+					{
+						if (write.Exception != null)
+							throw new InvalidOperationException("Unable to write to server");
+
+						return request.ReadResponseStringAsync();
+					})
+				.ContinueWith(task=>{
+					JToken json;
+					using (var reader = new JsonTextReader(new StringReader(task.Result.Result)))
+						json = (JToken)convention.CreateSerializer().Deserialize(reader);
+
+					//TODO: the json includes LastScanResults and Errors, but it doesn't include the commented out properties below.
+					// Should this change?
+					return new QueryResult
+					{
+						//IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+						//IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
+						//IndexEtag = new Guid(request.ResponseHeaders["ETag"].First()),
+						Results = json["Results"].Children().Cast<JObject>().ToList(),
+						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+						//SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+						//Includes = json["Includes"].Children().Cast<JObject>().ToList(), 
+					};
+				});
+		}
+
+		/// <summary>
+		/// Deletes the document for the specified id asyncronously
+		/// </summary>
+		/// <param name="id">The id.</param>
+		public Task DeleteDocumentAsync(string id)
+		{
+			return url.Docs(id)
+				.ToRequest(OperationsHeaders, credentials, "DELETE")
+				.GetResponseAsync();
 		}
 
 		/// <summary>
@@ -323,6 +381,27 @@ namespace Raven.Client.Client.Async
 			var httpWebResponse = e.Response as HttpWebResponse;
 			return (httpWebResponse == null ||
 				httpWebResponse.StatusCode != HttpStatusCode.Conflict);
+		}
+
+		/// <summary>
+		/// Gets the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task<IndexDefinition> GetIndexAsync(string name)
+		{
+			return url.IndexDefinition(name)
+			.NoCache()
+			.ToJsonRequest(this,credentials,convention).ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var serializer = convention.CreateSerializer();
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = (JToken)serializer.Deserialize(reader);
+						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+						return JsonConvert.DeserializeObject<IndexDefinition>(json["Index"].ToString());
+					}
+				});
 		}
 
 		/// <summary>
@@ -449,6 +528,15 @@ namespace Raven.Client.Client.Async
 							.ToArray();
 					}
 				});
+		}
+
+		/// <summary>
+		/// Resets the specified index asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task ResetIndexAsync(string name)
+		{
+			throw new NotImplementedException();
 		}
 
 		private void AddOperationHeaders(HttpWebRequest webRequest)
