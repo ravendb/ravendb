@@ -171,9 +171,9 @@
 			</ItemsControl>
 
 			<c:Pager Grid.Row="2"
-					 Watcher="{Binding ActiveCollectionDocuments}"
-					 DataContext="{Binding ActiveCollectionDocuments}"
-					 cm:Action.Target="{Binding ActiveCollectionDocuments}"
+					 ItemSize="81"
+					 cm:Action.TargetWithoutContext="{Binding ActiveCollectionDocuments}"
+					 ItemsSource="{Binding ActiveCollectionDocuments}"
 					 PageContainer="{Binding ElementName=ActiveCollectionDocuments}" />
 		</Grid>
 

@@ -39,7 +39,7 @@
 			get
 			{
 				return (ItemSize.HasValue)
-				       	? (int) Math.Floor(HeightOfPage/ItemSize.Value)
+				       	? (int)Math.Max(1, Math.Floor(HeightOfPage/ItemSize.Value))
 				       	: pageSize;
 			}
 			set { pageSize = value; }

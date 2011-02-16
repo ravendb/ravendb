@@ -27,6 +27,7 @@
 
 			this.server = server;
 			SystemCollections = new BindableCollection<Collection>();
+			ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
 		}
 
 		public IEnumerable<Collection> Collections { get; private set; }
@@ -67,12 +68,9 @@
 			}
 			else
 			{
-				ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
 				ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;
 				ActiveCollectionDocuments.LoadPage();
 			}
-
-			NotifyOfPropertyChange(() => ActiveCollectionDocuments);
 		}
 
 		Task<DocumentViewModel[]> GetDocumentsForActiveCollectionQuery(int start, int pageSize)

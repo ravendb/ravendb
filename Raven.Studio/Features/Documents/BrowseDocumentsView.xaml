@@ -60,13 +60,16 @@
 			</StackPanel>
 
 			<c:Pager tk:DockPanel.Dock="Top"
-					 cm:Bind.Model="{Binding Documents}" />
+					 cm:Bind.Model="{Binding Documents}"
+					 PageContainer="{Binding ElementName=DocumentPageContainer}"
+					 ItemsSource="{Binding Documents}" />
 
 			<!--<c:Pager tk:DockPanel.Dock="Bottom"
 					 cm:Bind.Model="{Binding Documents}" />-->
 
 			<Grid>
-				<ListBox ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+				<ListBox x:Name="DocumentPageContainer"
+						 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 						 BorderThickness="0"
 						 ItemsSource="{Binding Documents}">
 					<ListBox.ItemsPanel>
