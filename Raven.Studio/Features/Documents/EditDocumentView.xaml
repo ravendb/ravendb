@@ -28,7 +28,7 @@
 				<RowDefinition />
 			</Grid.RowDefinitions>
 
-			<TextBlock x:Name="DisplayId"
+			<TextBlock x:Name="Id"
 					   Style="{StaticResource Header}" />
 
 			<Grid Grid.Row="1">
@@ -74,9 +74,13 @@
 					Margin="0"
 					d:IsLocked="True">
 
-				<sh:SyntaxHighlightingTextBox SourceCode="{Binding JsonData, Mode=TwoWay}"
+				<!--<sh:SyntaxHighlightingTextBox SourceCode="{Binding JsonData, Mode=TwoWay}"
 											  SourceLanguage="Json"
-											  FontSize="16" />
+											  FontSize="16" />-->
+
+				<TextBox Text="{Binding JsonData, Mode=TwoWay}"
+						 FontFamily="Monaco"
+						 FontSize="16" />
 
 			</Border>
 
