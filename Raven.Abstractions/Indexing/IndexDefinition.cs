@@ -169,9 +169,10 @@ namespace Raven.Database.Indexing
 		{
 			get
 			{
-				if (Name.StartsWith("Raven")) return "Builtin";
-				if (Name.StartsWith("Temp")) return "Temp";
-				if (Name.StartsWith("Auto")) return "Auto";
+				var name = Name ?? string.Empty;
+				if (name.StartsWith("Raven")) return "Builtin";
+				if (name.StartsWith("Temp")) return "Temp";
+				if (name.StartsWith("Auto")) return "Auto";
 				if (IsCompiled) return "Compiled";
 				if (IsMapReduce) return "MapReduce";
 				return "Map";
