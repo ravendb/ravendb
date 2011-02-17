@@ -25,7 +25,7 @@ namespace Raven.Database.Server.Responders
 <access-policy>
  <cross-domain-access>
    <policy>
-     <allow-from http-methods='*'>
+     <allow-from http-methods='*' http-request-headers='*'>
        <domain uri='*' />
      </allow-from>
      <grant-to>
