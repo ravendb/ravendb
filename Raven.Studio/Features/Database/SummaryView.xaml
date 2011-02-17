@@ -3,13 +3,7 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
 			 xmlns:converters="clr-namespace:Raven.Studio.Converters"
-			 xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
-			 xmlns:f="clr-namespace:Raven.Studio.Framework"
-			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-			 xmlns:docs="clr-namespace:Raven.Studio.Features.Documents"
 			 x:Class="Raven.Studio.Features.Database.SummaryView"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
@@ -93,49 +87,11 @@
 			<TextBlock Text="Recent Documents"
 					   Style="{StaticResource SectionHeader}" />
 
-			<ItemsControl x:Name="RecentDocuments">
-				<ItemsControl.ItemsPanel>
-					<ItemsPanelTemplate>
-						<tk:WrapPanel>
-							<i:Interaction.Behaviors>
-								<ei:FluidMoveBehavior AppliesTo="Children"
-													  Duration="0:0:0.5">
-									<ei:FluidMoveBehavior.EaseY>
-										<CircleEase EasingMode="EaseInOut" />
-									</ei:FluidMoveBehavior.EaseY>
-									<ei:FluidMoveBehavior.EaseX>
-										<CubicEase EasingMode="EaseInOut" />
-									</ei:FluidMoveBehavior.EaseX>
-								</ei:FluidMoveBehavior>
-							</i:Interaction.Behaviors>
-						</tk:WrapPanel>
-					</ItemsPanelTemplate>
-				</ItemsControl.ItemsPanel>
+			<ItemsControl x:Name="RecentDocuments"
+						  ItemsPanel="{StaticResource FluidWrapPanel}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
-						<Grid cm:Action.TargetWithoutContext="PreviewDocument"
-							  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
-							  Background="Transparent">
-							<ToolTipService.ToolTip>
-								<ContentControl cm:View.Model="{Binding}"
-												cm:View.Context="Tooltip" />
-							</ToolTipService.ToolTip>
-							<ti:ContextMenuService.ContextMenu>
-								<ti:ContextMenu>
-									<ti:MenuItem Header="Edit Document"
-												 DataContext="{Binding Id}"
-												 cm:Action.TargetWithoutContext="EditDocumentById"
-												 cm:Message.Attach="Click=Execute($dataContext)" />
-									<ti:MenuItem Header="Delete Document"
-												 DataContext="{Binding Id}"
-												 cm:Action.TargetWithoutContext="DeleteDocument"
-												 cm:Message.Attach="Click=Execute($dataContext)" />
-								</ti:ContextMenu>
-							</ti:ContextMenuService.ContextMenu>
-
-							<docs:DocumentTemplateSelector Content="{Binding}" />
-
-						</Grid>
+						<ContentControl cm:View.Model="{Binding}" />
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>

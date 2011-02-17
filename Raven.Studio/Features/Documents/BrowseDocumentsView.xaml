@@ -71,49 +71,11 @@
 				<ListBox x:Name="DocumentPageContainer"
 						 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 						 BorderThickness="0"
+						 ItemsPanel="{StaticResource FluidWrapPanel}"
 						 ItemsSource="{Binding Documents}">
-					<ListBox.ItemsPanel>
-						<ItemsPanelTemplate>
-							<StackPanel>
-								<i:Interaction.Behaviors>
-									<ei:FluidMoveBehavior AppliesTo="Children"
-														  Duration="0:0:0.5">
-										<ei:FluidMoveBehavior.EaseY>
-											<CircleEase EasingMode="EaseInOut" />
-										</ei:FluidMoveBehavior.EaseY>
-										<ei:FluidMoveBehavior.EaseX>
-											<CubicEase EasingMode="EaseInOut" />
-										</ei:FluidMoveBehavior.EaseX>
-									</ei:FluidMoveBehavior>
-								</i:Interaction.Behaviors>
-							</StackPanel>
-						</ItemsPanelTemplate>
-					</ListBox.ItemsPanel>
 					<ListBox.ItemTemplate>
 						<DataTemplate>
-							<Grid Tag="{Binding Id}"
-								  cm:Action.TargetWithoutContext="EditDocumentById"
-								  f:DoubleClickEvent.AttachAction="Execute($this.Tag)"
-								  Background="Transparent">
-								<ToolTipService.ToolTip>
-									<ContentControl cm:View.Model="{Binding}"
-													cm:View.Context="Tooltip" />
-								</ToolTipService.ToolTip>
-								<tk:ContextMenuService.ContextMenu>
-									<tk:ContextMenu>
-										<tk:MenuItem Header="Edit Document"
-													 Tag="{Binding Id}"
-													 cm:Action.TargetWithoutContext="EditDocumentById"
-													 cm:Message.Attach="Click=Execute($this.Tag)" />
-										<tk:MenuItem Header="Delete Document"
-													 Tag="{Binding Id}"
-													 cm:Action.TargetWithoutContext="DeleteDocument"
-													 cm:Message.Attach="Click=Execute($this.Tag)" />
-									</tk:ContextMenu>
-								</tk:ContextMenuService.ContextMenu>
-
-								<docs:DocumentTemplateSelector Content="{Binding}" />
-							</Grid>
+							<ContentControl cm:View.Model="{Binding}" />
 						</DataTemplate>
 					</ListBox.ItemTemplate>
 				</ListBox>

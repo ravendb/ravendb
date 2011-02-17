@@ -163,25 +163,9 @@
 					   FontWeight="Bold" />
 
 			<ItemsControl x:Name="ActiveCollectionDocuments"
-						  Grid.Row="1">
-				<ItemsControl.ItemsPanel>
-					<ItemsPanelTemplate>
-						<StackPanel>
-							<i:Interaction.Behaviors>
-								<ei:FluidMoveBehavior AppliesTo="Children"
-													  Duration="0:0:0.5">
-									<ei:FluidMoveBehavior.EaseY>
-										<CircleEase EasingMode="EaseInOut" />
-									</ei:FluidMoveBehavior.EaseY>
-									<ei:FluidMoveBehavior.EaseX>
-										<CubicEase EasingMode="EaseInOut" />
-									</ei:FluidMoveBehavior.EaseX>
-								</ei:FluidMoveBehavior>
-							</i:Interaction.Behaviors>
-						</StackPanel>
-					</ItemsPanelTemplate>
-				</ItemsControl.ItemsPanel>
-			</ItemsControl>
+						  ItemsPanel="{StaticResource FluidWrapPanel}"
+						  Margin="12 0 0 6"
+						  Grid.Row="1" />
 
 			<c:Pager Grid.Row="2"
 					 ItemSize="81"
