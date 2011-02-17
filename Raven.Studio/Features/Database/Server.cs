@@ -66,6 +66,8 @@ namespace Raven.Studio.Features.Database
 			get { return currentDatabase; }
 			set
 			{
+				if(currentDatabase == value) return;
+
 				currentDatabase = value; 
 				NotifyOfPropertyChange( ()=> CurrentDatabase);
 				NotifyOfPropertyChange(() => HasCurrentDatabase);

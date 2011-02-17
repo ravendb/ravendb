@@ -10,10 +10,10 @@ namespace Raven.Studio.Plugin
 		string Address { get; }
 		string Name { get; }
 		IAsyncDocumentSession OpenSession();
-		IEnumerable<string> Databases {get;}
-		string CurrentDatabase {get;}
-        void Connect(Uri serverAddress, Action callback);
-		DatabaseStatistics Statistics {get;}
+		IEnumerable<string> Databases { get; }
+		string CurrentDatabase { get; set; }
+		void Connect(Uri serverAddress, Action callback);
+		DatabaseStatistics Statistics { get; }
 		event EventHandler CurrentDatabaseChanged;
 		event EventHandler Connected;
 	}

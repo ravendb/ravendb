@@ -11,7 +11,7 @@
 	using Plugin;
 
 	[Export]
-	public class SummaryViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<DocumentDeleted>
+	public class SummaryViewModel : Screen, IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
 
@@ -22,6 +22,8 @@
 			events.Subscribe(this);
 
 			DisplayName = "Summary";
+
+			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange(string.Empty); };
 		}
 
 		public string DatabaseName
@@ -43,14 +45,9 @@
 			get
 			{
 				return (Collections == null || !Collections.Any())
-				       	? 0
-				       	: Collections.Max(x => x.Count);
+						? 0
+						: Collections.Max(x => x.Count);
 			}
-		}
-
-		public SectionType Section
-		{
-			get { return SectionType.Documents; }
 		}
 
 		public void Handle(DocumentDeleted message)
@@ -73,20 +70,20 @@
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 25)
 					.ContinueOnSuccess(x =>
-					                   	{
-					                   		Collections = x.Result;
-					                   		NotifyOfPropertyChange(() => LargestCollectionCount);
-					                   		NotifyOfPropertyChange(() => Collections);
-					                   	});
+										{
+											Collections = x.Result;
+											NotifyOfPropertyChange(() => LargestCollectionCount);
+											NotifyOfPropertyChange(() => Collections);
+										});
 
 				session.Advanced.AsyncDatabaseCommands
 					.GetDocumentsAsync(0, 12)
 					.ContinueOnSuccess(x =>
-					                   	{
-					                   		RecentDocuments = new BindableCollection<DocumentViewModel>(
-					                   			x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
-					                   		NotifyOfPropertyChange(() => RecentDocuments);
-					                   	});
+										{
+											RecentDocuments = new BindableCollection<DocumentViewModel>(
+												x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
+											NotifyOfPropertyChange(() => RecentDocuments);
+										});
 			}
 		}
 	}

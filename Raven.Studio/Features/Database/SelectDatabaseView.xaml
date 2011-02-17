@@ -4,8 +4,7 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-			 mc:Ignorable="d"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro" xmlns:f="clr-namespace:Raven.Studio.Framework" mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
@@ -20,7 +19,20 @@
 					   Text="DATABASES"
 					   Style="{StaticResource PanelTitle}" />
 			<ListBox ItemsSource="{Binding Server.Databases}"
-					 SelectedItem="{Binding Server.CurrentDatabase, Mode=TwoWay}" />
+					 SelectedItem="{Binding Server.CurrentDatabase, Mode=TwoWay}">
+				<ListBox.ItemTemplate>
+					<DataTemplate>
+						<TextBlock Text="{Binding}"
+								   f:DoubleClickEvent.AttachAction="SelectDatabase($dataContext)" />
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+				<ListBox.ItemContainerStyle>
+					<Style TargetType="ListBoxItem">
+						<Setter Property="HorizontalContentAlignment"
+								Value="Stretch" />
+					</Style>
+				</ListBox.ItemContainerStyle>
+			</ListBox>
 		</tk:DockPanel>
 
 		<Grid Grid.Column="1"
