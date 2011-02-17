@@ -182,7 +182,7 @@
     <Compile Include="Messages\IndexUpdated.cs" />
     <Compile Include="Features\Indexes\EditIndexViewModel.cs" />
     <Compile Include="Messages\DisplayCurrentDatabaseRequested.cs" />
-    <Compile Include="Features\Linq\LinqEditorViewModel.cs" />
+    <Compile Include="Features\Query\LinqEditorViewModel.cs" />
     <Compile Include="Messages\WorkCompleted.cs" />
     <Compile Include="Messages\WorkStarted.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -295,7 +295,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Linq\LinqEditorView.xaml">
+    <Page Include="Features\Query\LinqEditorView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

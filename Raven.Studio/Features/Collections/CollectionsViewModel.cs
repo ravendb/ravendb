@@ -8,19 +8,22 @@
 	using Abstractions.Data;
 	using Caliburn.Micro;
 	using Client.Client;
+	using Database;
 	using Documents;
 	using Framework;
 	using Messages;
 	using Plugin;
 	using Raven.Database.Data;
 
-	[Export]
-	public class CollectionsViewModel : RavenScreen,
+	[Export(typeof(IDatabaseScreenMenuItem))]
+	public class CollectionsViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{
-		readonly Collection raven = new Collection {Name = "Raven", Count = 0};
+		readonly Collection raven = new Collection { Name = "Raven", Count = 0 };
 		readonly IServer server;
 		Collection activeCollection;
+
+		public int Index { get { return 20; } }
 
 		[ImportingConstructor]
 		public CollectionsViewModel(IServer server, IEventAggregator events)
@@ -57,8 +60,8 @@
 			get
 			{
 				return (Collections == null || !Collections.Any())
-				       	? 0
-				       	: Collections.Max(x => x.Count);
+						? 0
+						: Collections.Max(x => x.Count);
 			}
 		}
 
@@ -77,7 +80,7 @@
 		void GetDocumentsForActiveCollection()
 		{
 			if (ActiveCollection == null) return;
-			
+
 			ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;
 			ActiveCollectionDocuments.LoadPage();
 		}
@@ -88,19 +91,19 @@
 
 			using (var session = server.OpenSession())
 			{
-				var query = new IndexQuery {Start = start, PageSize = pageSize, Query = "Tag:" + ActiveCollection.Name};
+				var query = new IndexQuery { Start = start, PageSize = pageSize, Query = "Tag:" + ActiveCollection.Name };
 				return session.Advanced.AsyncDatabaseCommands
-					.QueryAsync("Raven/DocumentsByEntityName", query, new string[] {})
+					.QueryAsync("Raven/DocumentsByEntityName", query, new string[] { })
 					.ContinueWith(x =>
-					              	{
-					              		if (x.IsFaulted) throw new NotImplementedException("TODO");
+									{
+										if (x.IsFaulted) throw new NotImplementedException("TODO");
 
-					              		WorkCompleted();
+										WorkCompleted();
 
 										return x.Result.Results
 											.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
 											.ToArray();
-					              	});
+									});
 			}
 		}
 
@@ -114,16 +117,16 @@
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 25)
 					.ContinueOnSuccess(x =>
-					                   	{
-					                   		Collections = x.Result;
-					                   		NotifyOfPropertyChange(() => LargestCollectionCount);
-					                   		NotifyOfPropertyChange(() => Collections);
+										{
+											Collections = x.Result;
+											NotifyOfPropertyChange(() => LargestCollectionCount);
+											NotifyOfPropertyChange(() => Collections);
 
 											ActiveCollection = currentActiveCollection ?? Collections.FirstOrDefault();
-					                   		NotifyOfPropertyChange(() => HasCollections);
+											NotifyOfPropertyChange(() => HasCollections);
 
-					                   		WorkCompleted();
-					                   	});
+											WorkCompleted();
+										});
 
 				//session.Advanced.AsyncDatabaseCommands
 				//    .QueryAsync("Raven/OrphanDocuments", new IndexQuery {PageSize = 0, Start = 0}, null)

@@ -1,21 +1,24 @@
-namespace Raven.Studio.Features.Linq
+namespace Raven.Studio.Features.Query
 {
 	using System;
 	using System.ComponentModel.Composition;
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
-	using Client.Client;
-	using Documents;
-	using Framework;
-	using Plugin;
+	using Database;
+	using Raven.Client.Client;
+	using Raven.Studio.Features.Documents;
+	using Raven.Studio.Framework;
+	using Raven.Studio.Plugin;
 
-	[Export]
-	public class LinqEditorViewModel : Screen
+	[Export(typeof(IDatabaseScreenMenuItem))]
+	public class LinqEditorViewModel : Screen, IDatabaseScreenMenuItem
 	{
 		readonly IServer server;
 		string query;
 		BindablePagedQuery<DocumentViewModel> queryResults;
+
+		public int Index { get { return 50; } }
 
 		[ImportingConstructor]
 		public LinqEditorViewModel(IServer server)

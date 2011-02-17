@@ -10,10 +10,13 @@
 	using Messages;
 	using Plugin;
 
-	[Export]
-	public class SummaryViewModel : Screen, IHandle<DocumentDeleted>
+	[Export(typeof(IDatabaseScreenMenuItem))]
+	public class SummaryViewModel : Screen, IDatabaseScreenMenuItem,
+		IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
+
+		public int Index { get { return 10; } }
 
 		[ImportingConstructor]
 		public SummaryViewModel(IServer server, IEventAggregator events)
