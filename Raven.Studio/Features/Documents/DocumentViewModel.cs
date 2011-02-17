@@ -1,6 +1,7 @@
 ﻿namespace Raven.Studio.Features.Documents
 {
 	using System;
+	using Controls;
 	using Framework;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;
@@ -8,7 +9,7 @@
 	/// <summary>
 	/// This view model is for displaying documents in bulk. There is no change notification and no behaviours related to editing
 	/// </summary>
-	public class DocumentViewModel
+	public class DocumentViewModel : ISupportDocumentTemplate
 	{
 		const int SummaryLength = 150;
 		readonly JsonDocument inner;
@@ -57,6 +58,11 @@
 		string DetermineCollectionType()
 		{
 			return Metadata.IfPresent<string>("Raven-Entity-Name") ?? (Id.StartsWith("Raven/") ? "System" : null) ?? "document";
+		}
+
+		string ISupportDocumentTemplate.TemplateKey
+		{
+			get { return CollectionType; }
 		}
 	}
 }

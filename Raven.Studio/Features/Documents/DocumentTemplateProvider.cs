@@ -11,8 +11,9 @@
 	using Framework;
 	using Plugin;
 
-	[Export]
-	public class DocumentTemplateProvider
+	[Export(typeof(IDocumentTemplateProvider))]
+	[PartCreationPolicy(CreationPolicy.Shared)]
+	public class DocumentTemplateProvider : IDocumentTemplateProvider
 	{
 		readonly TemplateColorProvider colorProvider;
 		readonly IServer server;
@@ -44,7 +45,7 @@
 						<TextBlock Text=""{Binding CollectionType}""
 								   TextTrimming=""WordEllipsis""
 								   HorizontalAlignment=""Left"" />
-						<TextBlock Text=""{Binding DisplayId}""
+						<TextBlock Text=""{Binding Id}""
 								   FontSize=""13.333""
 								   TextTrimming=""WordEllipsis""
 								   HorizontalAlignment=""Left"" />
@@ -94,6 +95,11 @@
 			return tcs.Task;
 		}
 
+		public DataTemplate RetrieveFromCache(string key)
+		{
+			return templates.ContainsKey(key) ? (templates[key]) : null;
+		}
+
 		public static DataTemplate Create(string innerXaml)
 		{
 			DataTemplate template = null;
@@ -108,5 +114,11 @@
 				);
 			return template;
 		}
+	}
+
+	public interface IDocumentTemplateProvider
+	{
+		Task<DataTemplate> GetTemplateFor(string key);
+		DataTemplate RetrieveFromCache(string key);
 	}
 }

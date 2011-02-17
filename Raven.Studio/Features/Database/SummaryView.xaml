@@ -9,6 +9,7 @@
 			 xmlns:f="clr-namespace:Raven.Studio.Framework"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+			 xmlns:docs="clr-namespace:Raven.Studio.Features.Documents"
 			 x:Class="Raven.Studio.Features.Database.SummaryView"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
@@ -122,25 +123,18 @@
 							<ti:ContextMenuService.ContextMenu>
 								<ti:ContextMenu>
 									<ti:MenuItem Header="Edit Document"
-												 cm:Action.TargetWithoutContext="EditDocument"
+												 DataContext="{Binding Id}"
+												 cm:Action.TargetWithoutContext="EditDocumentById"
 												 cm:Message.Attach="Click=Execute($dataContext)" />
 									<ti:MenuItem Header="Delete Document"
+												 DataContext="{Binding Id}"
 												 cm:Action.TargetWithoutContext="DeleteDocument"
 												 cm:Message.Attach="Click=Execute($dataContext)" />
 								</ti:ContextMenu>
 							</ti:ContextMenuService.ContextMenu>
 
-							<!-- replace with template for collection -->
-							<Border Width="120"
-									Height="40"
-									Margin="4"
-									Background="LightGray">
-								<TextBlock Text="{Binding Id}"
-										   TextTrimming="WordEllipsis" />
-							</Border>
+							<docs:DocumentTemplateSelector Content="{Binding}" />
 
-							<!--<ContentControl Content="{Binding}"
-											ContentTemplate="{Binding DataTemplate}" />-->
 						</Grid>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>

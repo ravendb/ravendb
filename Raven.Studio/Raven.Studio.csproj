@@ -115,6 +115,7 @@
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
     <Compile Include="Commands\EditDocument.cs" />
@@ -123,6 +124,7 @@
     <Compile Include="Commands\SearchForDocumentById.cs" />
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
     <Compile Include="Features\Documents\DocumentViewModel.cs" />
+    <Compile Include="Features\Documents\ISupportDocumentTemplate.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />

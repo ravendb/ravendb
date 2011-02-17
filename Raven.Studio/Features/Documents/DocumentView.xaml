@@ -6,6 +6,7 @@
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 xmlns:f="clr-namespace:Raven.Studio.Framework"
 			 xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
+			 xmlns:docs="clr-namespace:Raven.Studio.Features.Documents"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
@@ -29,29 +30,7 @@
 			</ti:ContextMenu>
 		</ti:ContextMenuService.ContextMenu>
 
-		<Rectangle Fill="White" />
-
-		<Rectangle HorizontalAlignment="Left"
-				   Width="10"
-				   Fill="{Binding CollectionType, Converter={StaticResource typeToBrush}}" />
-
-		<Grid Margin="14,0,0,0">
-			<StackPanel Orientation="Vertical">
-				<TextBlock Text="{Binding Id}"
-						   TextTrimming="WordEllipsis"
-						   HorizontalAlignment="Left"
-						   FontFamily="Monaco"
-						   FontStyle="Italic"
-						   Margin="0,4,0,8"
-						   Opacity="0.3" />
-				<TextBlock Text="{Binding Summary}"
-						   FontSize="13.333"
-						   HorizontalAlignment="Left"
-						   TextTrimming="WordEllipsis"
-						   FontFamily="Monaco"
-						   Margin="12,0,0,0" />
-			</StackPanel>
-		</Grid>
+		<docs:DocumentTemplateSelector Content="{Binding}" />
 
 	</Grid>
 
