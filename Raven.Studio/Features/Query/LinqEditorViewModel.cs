@@ -5,20 +5,17 @@ namespace Raven.Studio.Features.Query
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
-	using Database;
-	using Raven.Client.Client;
-	using Raven.Studio.Features.Documents;
-	using Raven.Studio.Framework;
-	using Raven.Studio.Plugin;
+	using Client.Client;
+	using Documents;
+	using Framework;
+	using Plugin;
 
-	[Export(typeof(IDatabaseScreenMenuItem))]
-	public class LinqEditorViewModel : Screen, IDatabaseScreenMenuItem
+	[Export]
+	public class LinqEditorViewModel : Screen
 	{
 		readonly IServer server;
 		string query;
 		BindablePagedQuery<DocumentViewModel> queryResults;
-
-		public int Index { get { return 50; } }
 
 		[ImportingConstructor]
 		public LinqEditorViewModel(IServer server)
@@ -52,7 +49,7 @@ namespace Raven.Studio.Features.Query
 		public void Execute()
 		{
 			if (string.IsNullOrWhiteSpace(Query)) return;
-			
+
 			QueryResults = new BindablePagedQuery<DocumentViewModel>(BuildQuery);
 			QueryResults.LoadPage();
 		}
@@ -63,7 +60,7 @@ namespace Raven.Studio.Features.Query
 				.LinearQueryAsync(Query, start, pageSize)
 				.ContinueWith(x =>
 				              	{
-									QueryResults.GetTotalResults = () => x.Result.TotalResults;
+				              		QueryResults.GetTotalResults = () => x.Result.TotalResults;
 				              		return x.Result.Results
 				              			.Select(jobj => new DocumentViewModel(jobj.ToJsonDocument()))
 				              			.ToArray();
