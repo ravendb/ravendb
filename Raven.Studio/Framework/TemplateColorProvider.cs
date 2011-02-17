@@ -25,8 +25,8 @@
 		{
 			if (!colors.ContainsKey(key))
 			{
-				var s = 0.41;
-				var v = 0.88;
+				var s = 1.0;
+				var v = 0.66;
 				var h = BaseHueFor(key);
 
 				colors[key] = ColorFromHSV(h, s, v);
