@@ -13,6 +13,11 @@
 			return url + "/indexes/" + index;
 		}
 
+		public static string IndexDefinition(this string url, string index)
+		{
+			return url + "/indexes/" + index + "?definition=yes";
+		}
+
 		public static string IndexNames(this string url, int start, int pageSize)
 		{
 			return url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize;

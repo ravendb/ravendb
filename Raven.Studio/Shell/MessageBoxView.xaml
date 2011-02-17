@@ -1,0 +1,29 @@
+﻿<UserControl x:Class="Raven.Studio.Shell.MessageBoxView"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 MaxWidth="375">
+	<StackPanel Margin="8">
+		<TextBlock x:Name="Message"
+				   TextWrapping="Wrap" />
+		<StackPanel Orientation="Horizontal"
+					HorizontalAlignment="Right"
+					Margin="0 8 0 0">
+			<Button x:Name="Ok"
+					Margin="4 0 0 0"
+					Visibility="{Binding OkVisible, Converter={StaticResource booleanToVisibility}}"
+					Content="Ok" />
+			<Button x:Name="Yes"
+					Margin="4 0 0 0"
+					Visibility="{Binding YesVisible, Converter={StaticResource booleanToVisibility}}"
+					Content="Yes" />
+			<Button x:Name="No"
+					Margin="4 0 0 0"
+					Visibility="{Binding NoVisible, Converter={StaticResource booleanToVisibility}}"
+					Content="No" />
+			<Button x:Name="Cancel"
+					Margin="4 0 0 0"
+					Visibility="{Binding CancelVisible, Converter={StaticResource booleanToVisibility}}"
+					Content="Cancel" />
+		</StackPanel>
+	</StackPanel>
+</UserControl>

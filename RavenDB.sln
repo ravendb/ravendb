@@ -2,6 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
+	ProjectSection(ProjectDependencies) = postProject
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC} = {AB130CB7-E4D4-4496-BEE6-0538963475FC}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Scenarios", "Raven.Scenarios\Raven.Scenarios.csproj", "{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}"
 EndProject
