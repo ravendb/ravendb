@@ -6,7 +6,6 @@ namespace Raven.Studio.Features.Linq
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
 	using Client.Client;
-	using Database;
 	using Documents;
 	using Framework;
 	using Plugin;
@@ -16,18 +15,18 @@ namespace Raven.Studio.Features.Linq
 	{
 		readonly IServer server;
 		string query;
-		BindablePagedQuery<EditDocumentViewModel> queryResults;
+		BindablePagedQuery<DocumentViewModel> queryResults;
 
 		[ImportingConstructor]
 		public LinqEditorViewModel(IServer server)
 		{
-			DisplayName = "Linq";
+			DisplayName = "Query";
 			this.server = server;
 
 			Query = "from doc in docs " + Environment.NewLine + "select doc";
 		}
 
-		public BindablePagedQuery<EditDocumentViewModel> QueryResults
+		public BindablePagedQuery<DocumentViewModel> QueryResults
 		{
 			get { return queryResults; }
 			set
@@ -51,21 +50,19 @@ namespace Raven.Studio.Features.Linq
 		{
 			if (string.IsNullOrWhiteSpace(Query)) return;
 			
-			QueryResults = new BindablePagedQuery<EditDocumentViewModel>(BuildQuery);
+			QueryResults = new BindablePagedQuery<DocumentViewModel>(BuildQuery);
 			QueryResults.LoadPage();
 		}
 
-		Task<EditDocumentViewModel[]> BuildQuery(int start, int pageSize)
+		Task<DocumentViewModel[]> BuildQuery(int start, int pageSize)
 		{
-			var vm = IoC.Get<EditDocumentViewModel>();
 			return server.OpenSession().Advanced.AsyncDatabaseCommands
 				.LinearQueryAsync(Query, start, pageSize)
 				.ContinueWith(x =>
 				              	{
 									QueryResults.GetTotalResults = () => x.Result.TotalResults;
 				              		return x.Result.Results
-				              			.Select(jobj => jobj.ToJsonDocument())
-				              			.Select(vm.CloneUsing)
+				              			.Select(jobj => new DocumentViewModel(jobj.ToJsonDocument()))
 				              			.ToArray();
 				              	});
 		}

@@ -40,16 +40,7 @@
 
 		<ListBox x:Name="QueryResults"
 				 Grid.Row="3"
-				 HorizontalContentAlignment="Stretch">
-			<ListBox.ItemTemplate>
-				<DataTemplate>
-					<Grid cm:Action.TargetWithoutContext="EditDocument"
-						  cm:Message.Attach="[Event MouseLeftButtonDown] = [Execute($dataContext)]">
-						<docs:DocumentTemplateSelector Content="{Binding}" />
-					</Grid>
-				</DataTemplate>
-			</ListBox.ItemTemplate>
-		</ListBox>
+				 HorizontalContentAlignment="Stretch" />
 
 		<c:Pager Grid.Row="4"
 				 DataContext="{Binding QueryResults}" />
