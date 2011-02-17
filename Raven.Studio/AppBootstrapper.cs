@@ -32,6 +32,7 @@
 			var batch = new CompositionBatch();
 			batch.AddExportedValue<IWindowManager>(new WindowManager());
 			batch.AddExportedValue<IEventAggregator>(new EventAggregator());
+			batch.AddExportedValue<ShowMessageBox>(ShowMessageBox);
 			batch.AddExportedValue(container);
 			batch.AddExportedValue(catalog);
 
@@ -112,6 +113,21 @@
 					return ViewLocator.GetOrCreateViewType(viewType);
 			}
 			return original(modelType, viewLocation, context);
+		}
+
+		void ShowMessageBox(string message, string title, MessageBoxOptions options = MessageBoxOptions.Ok,
+							Action<IMessageBox> callback = null)
+		{
+			var box = container.GetExportedValue<IMessageBox>();
+
+			box.DisplayName = title;
+			box.Message = message;
+			box.Options = options;
+
+			if (callback != null)
+				box.Deactivated += (s, e) => callback(box);
+
+			container.GetExportedValue<IWindowManager>().ShowDialog(box);
 		}
 	}
 }
