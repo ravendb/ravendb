@@ -81,8 +81,8 @@ namespace Raven.Database
 			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
 			{
 				backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
-					Math.Min(3, Environment.ProcessorCount),
 					// we need a minimum of three task threads - one for indexing dispatch, one for tasks, one for indexing ops
+					Math.Max(3, configuration.MaxNumberOfParallelIndexTasks + 2),
 					configuration.BackgroundTasksPriority);
 			}
 			else
