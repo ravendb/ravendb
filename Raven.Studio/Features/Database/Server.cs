@@ -52,7 +52,7 @@ namespace Raven.Studio.Features.Database
 					CurrentDatabase = databases[0];
 
 					IsInitialized = true;
-					//Execute.OnUIThread(() => timer.Start());
+					Execute.OnUIThread(() => timer.Start());
 					
 					Connected(this, EventArgs.Empty);
 
