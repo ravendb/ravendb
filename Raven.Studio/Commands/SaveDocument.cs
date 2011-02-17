@@ -24,12 +24,14 @@
 
 		public void Execute(EditDocumentViewModel document)
 		{
-			document.PrepareForSave();
-
 			if(!ValidateJson(document.JsonData) || !ValidateJson(document.JsonMetadata)) return;
 
+			document.PrepareForSave();
+
+			var jdoc = document.JsonDocument;
+
 			server.OpenSession().Advanced.AsyncDatabaseCommands
-				.PutAsync(document.Id, null, document.JsonDocument.DataAsJson,null)
+				.PutAsync(document.Id, jdoc.Etag, jdoc.DataAsJson, jdoc.Metadata)
 				.ContinueOnSuccess(put =>
 				                   	{
 										document.Id = put.Result.Key;

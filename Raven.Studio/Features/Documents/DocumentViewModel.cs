@@ -1,7 +1,6 @@
 ﻿namespace Raven.Studio.Features.Documents
 {
 	using System;
-	using Controls;
 	using Framework;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;
@@ -57,12 +56,19 @@
 
 		string DetermineCollectionType()
 		{
-			return Metadata.IfPresent<string>("Raven-Entity-Name") ?? (Id.StartsWith("Raven/") ? "System" : null) ?? "document";
+			return DetermineCollectionType(Metadata);
 		}
 
 		string ISupportDocumentTemplate.TemplateKey
 		{
 			get { return CollectionType; }
+		}
+
+		public static string DetermineCollectionType(JObject metadata)
+		{
+			var id = metadata.IfPresent<string>("@id") ?? string.Empty;
+			var entity = metadata.IfPresent<string>("Raven-Entity-Name");
+			return entity ?? (id.StartsWith("Raven/") ? "System" : "document");
 		}
 	}
 }

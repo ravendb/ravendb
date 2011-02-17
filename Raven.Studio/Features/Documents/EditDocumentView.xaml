@@ -6,8 +6,7 @@
 			 xmlns:r="clr-namespace:Raven.Studio.Controls"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
-			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
-			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
+			 xmlns:c="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
@@ -77,10 +76,20 @@
 				<!--<sh:SyntaxHighlightingTextBox SourceCode="{Binding JsonData, Mode=TwoWay}"
 											  SourceLanguage="Json"
 											  FontSize="16" />-->
-
-				<TextBox Text="{Binding JsonData, Mode=TwoWay}"
-						 FontFamily="Monaco"
-						 FontSize="16" />
+				<c:TabControl>
+					<c:TabItem Header="Data">
+						<TextBox Text="{Binding JsonData, Mode=TwoWay}"
+								 AcceptsReturn="True"
+								 FontFamily="Monaco"
+								 FontSize="16" />
+					</c:TabItem>
+					<c:TabItem Header="Metadata">
+						<TextBox Text="{Binding JsonMetadata, Mode=TwoWay}"
+								 AcceptsReturn="True"
+								 FontFamily="Monaco"
+								 FontSize="16" />
+					</c:TabItem>
+				</c:TabControl>
 
 			</Border>
 

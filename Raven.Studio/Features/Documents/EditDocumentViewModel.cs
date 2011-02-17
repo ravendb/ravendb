@@ -4,51 +4,36 @@
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using System.Text;
-	using System.Windows;
 	using Caliburn.Micro;
-	using Database;
-	using Raven.Studio.Framework;
+	using Framework;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;
-	using Raven.Studio.Shell;
 
-	[Export]
+	[Export(typeof (EditDocumentViewModel))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class EditDocumentViewModel : Screen
 	{
-		public const int SummaryLength = 150;
-
-		readonly IDictionary<string, JToken> data;
 		readonly IEventAggregator events;
-		readonly NavigationViewModel navigation;
-		readonly DocumentTemplateProvider templateProvider;
+		JsonDocument document;
 		string id;
 		string jsonData;
-		JsonDocument jsonDocument;
+		string jsonMetadata;
 		IDictionary<string, JToken> metadata;
 
 		[ImportingConstructor]
-		public EditDocumentViewModel(DocumentTemplateProvider templateProvider, NavigationViewModel navigation,
-		                         IEventAggregator events)
+		public EditDocumentViewModel(IEventAggregator events)
 		{
-			this.templateProvider = templateProvider;
-			this.navigation = navigation;
 			this.events = events;
 
-			data = new Dictionary<string, JToken>();
 			metadata = new Dictionary<string, JToken>();
 
 			Id = "";
-			jsonDocument = new JsonDocument();
-			JsonData = @"{
-	""PropertyName"": """"
-}";
-
+			document = new JsonDocument();
+			JsonData = InitialJsonData();
 			events.Subscribe(this);
 		}
 
-		public DataTemplate DataTemplate { get; private set; }
 		public string ClrType { get; private set; }
 		public string CollectionType { get; private set; }
 		public DateTime LastModified { get; private set; }
@@ -60,28 +45,6 @@
 			{
 				id = value ?? string.Empty;
 				NotifyOfPropertyChange(() => Id);
-				NotifyOfPropertyChange(() => DisplayId);
-			}
-		}
-
-		public string DisplayId
-		{
-			get
-			{
-				if( string.IsNullOrEmpty(id)) return "Auto Generate Id";
-
-				var collectionType = CollectionType + "/";
-				var display = Id
-					.Replace(collectionType, string.Empty)
-					.Replace(collectionType.ToLower(), string.Empty)
-					.Replace("Raven/", string.Empty);
-
-				Guid guid;
-				if (Guid.TryParse(display, out guid))
-				{
-					display = display.Substring(0, 8);
-				}
-				return display;
 			}
 		}
 
@@ -95,22 +58,14 @@
 			}
 		}
 
-		public string JsonMetadata { get; private set; }
-
-		public string Summary
+		public string JsonMetadata
 		{
-			get
+			get { return jsonMetadata; }
+			set
 			{
-				return (JsonData.Length > SummaryLength
-				        	? JsonData.Substring(0, SummaryLength) + "..."
-				        	: JsonData)
-					.Replace("\r", "").Replace("\n", " ");
+				jsonMetadata = value;
+				NotifyOfPropertyChange(() => JsonMetadata);
 			}
-		}
-
-		public IDictionary<string, JToken> Data
-		{
-			get { return data; }
 		}
 
 		public IDictionary<string, JToken> Metadata
@@ -120,53 +75,33 @@
 
 		public JsonDocument JsonDocument
 		{
-			get { return jsonDocument; }
+			get { return document; }
 		}
 
-		public EditDocumentViewModel Initialize(JsonDocument document)
+		public void Initialize(JsonDocument doc)
 		{
-			jsonDocument = document;
-			JsonData = PrepareRawJsonString(document.DataAsJson);
-			//JsonMetadata = PrepareRawJsonString(document.Metadata);
+			document = doc;
 
 			Id = document.Key;
-			//data = ParseJsonToDictionary(document.DataAsJson);
+			JsonData = PrepareRawJsonString(document.DataAsJson);
+			JsonMetadata = PrepareRawJsonString(document.Metadata);
+
 			metadata = ParseJsonToDictionary(document.Metadata);
 
 			LastModified = metadata.IfPresent<DateTime>("Last-Modified");
-			CollectionType = DetermineCollectionType();
+			CollectionType = DocumentViewModel.DetermineCollectionType(document.Metadata);
 			ClrType = metadata.IfPresent<string>("Raven-Clr-Type");
-
-			templateProvider
-				.GetTemplateFor(CollectionType ?? "default")
-				.ContinueOnSuccess(x =>
-				                   	{
-				                   		DataTemplate = x.Result;
-				                   		NotifyOfPropertyChange(() => DataTemplate);
-				                   	});
-
-			DisplayName = DisplayId;
-
-			return this;
 		}
 
 		public void PrepareForSave()
 		{
-			//if (!ValidateJson(JsonData))
-			//{
-			//    WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document)", parseExceptionMessage));
-			//    return;
-			//}
+			document.DataAsJson = JObject.Parse(JsonData);
+			document.Metadata = JObject.Parse(JsonMetadata);
+			document.Key = Id;
 
-			//if (!ValidateJson(JsonMetadata))
-			//{
-			//    WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document Metadata)", parseExceptionMessage));
-			//    return;
-			//}
-
-			jsonDocument.DataAsJson = JObject.Parse(JsonData);
-			//jsonDocument.Metadata = JObject.Parse(JsonMetadata);
-			jsonDocument.Key = Id;
+			LastModified = DateTime.Now;
+			metadata = ParseJsonToDictionary(document.Metadata);
+			NotifyOfPropertyChange( () => Metadata );
 		}
 
 		public void Prettify()
@@ -174,18 +109,6 @@
 			//NOTE: is there a better way to reformat the json? This seems heavy.
 			var obj = JsonConvert.DeserializeObject(JsonData);
 			JsonData = JsonConvert.SerializeObject(obj, Formatting.Indented);
-		}
-
-		//NOTE: quick hack to get me focused on more important things
-		public EditDocumentViewModel CloneUsing(JsonDocument document)
-		{
-			var doc = new EditDocumentViewModel(templateProvider, navigation, events);
-			return doc.Initialize(document);
-		}
-
-		string DetermineCollectionType()
-		{
-			return metadata.IfPresent<string>("Raven-Entity-Name") ?? (Id.StartsWith("Raven/") ? "System" : null) ?? "document";
 		}
 
 		static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
@@ -211,6 +134,13 @@
 			result.Append("}");
 
 			return result.ToString();
+		}
+
+		static string InitialJsonData()
+		{
+			return @"{
+	""PropertyName"": """"
+}";
 		}
 	}
 }

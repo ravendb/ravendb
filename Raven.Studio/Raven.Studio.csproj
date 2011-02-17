@@ -164,7 +164,6 @@
     <Compile Include="Framework\DateTimeExtensions.cs" />
     <Compile Include="Framework\DictionaryExtensions.cs" />
     <Compile Include="Features\Database\SummaryViewModel.cs" />
-    <Compile Include="Dialogs\InformationDialogViewModel.cs" />
     <Compile Include="Framework\BindablePagedQuery.cs" />
     <Compile Include="Framework\DoubleClickEvent.cs" />
     <Compile Include="Framework\ScreenExtensions.cs" />
@@ -301,10 +300,6 @@
     <Page Include="Controls\ErrorWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Dialogs\InformationDialogView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\BrowseDocumentsView.xaml">
       <SubType>Designer</SubType>
