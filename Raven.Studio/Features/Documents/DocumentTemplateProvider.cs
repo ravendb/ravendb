@@ -31,9 +31,9 @@
 			return
 				@"
                 <Grid xmlns:cm=""clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro""
-				      Margin=""0,0,6,6""
-				      Width=""100""
-				      Height=""50"">
+				      Margin=""0""
+				      Width=""120""
+				      Height=""60"">
 				<Rectangle Fill=""#FFF4F4F5"" />
 				<Rectangle Fill=""" +
 				fill +
@@ -45,7 +45,7 @@
 						<TextBlock Text=""{Binding CollectionType}""
 								   TextTrimming=""WordEllipsis""
 								   HorizontalAlignment=""Left"" />
-						<TextBlock Text=""{Binding Id}""
+						<TextBlock Text=""{Binding DisplayId}""
 								   FontSize=""13.333""
 								   TextTrimming=""WordEllipsis""
 								   HorizontalAlignment=""Left"" />

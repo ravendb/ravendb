@@ -27,6 +27,27 @@
 		public string CollectionType { get; private set; }
 		public DateTime LastModified { get; private set; }
 
+		public string DisplayId
+		{
+			get
+			{
+				if (string.IsNullOrEmpty(Id)) return "{?}";
+
+				var collectionType = CollectionType + "/";
+				var display = Id
+					.Replace(collectionType, string.Empty)
+					.Replace(collectionType.ToLower(), string.Empty)
+					.Replace("Raven/", string.Empty);
+
+				Guid guid;
+				if (Guid.TryParse(display, out guid))
+				{
+					display = display.Substring(0, 8);
+				}
+				return display;
+			}
+		}
+
 		public JObject Contents
 		{
 			get { return inner.DataAsJson; }
