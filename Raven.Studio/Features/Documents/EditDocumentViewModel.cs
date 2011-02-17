@@ -95,13 +95,18 @@
 
 		public void PrepareForSave()
 		{
-			document.DataAsJson = JObject.Parse(JsonData);
-			document.Metadata = JObject.Parse(JsonMetadata);
+			document.DataAsJson = ToJObject(JsonData);
+			document.Metadata = ToJObject(JsonMetadata);
 			document.Key = Id;
 
 			LastModified = DateTime.Now;
 			metadata = ParseJsonToDictionary(document.Metadata);
 			NotifyOfPropertyChange( () => Metadata );
+		}
+
+		static JObject ToJObject(string json)
+		{
+			return string.IsNullOrEmpty(json) ? new JObject() : JObject.Parse(json);
 		}
 
 		public void Prettify()
