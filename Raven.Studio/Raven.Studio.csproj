@@ -115,6 +115,7 @@
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />

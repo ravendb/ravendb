@@ -63,9 +63,4 @@ namespace Raven.Studio.Features.Database
 			}
 		}
 	}
-
-	public interface IDatabaseScreenMenuItem : IScreen
-	{
-		int Index {get;}
-	}
 }

@@ -6,25 +6,26 @@
 
 	public static class ScreenExtensions
 	{
-		public static void TrackNavigationTo(this Conductor<IScreen> screen,
-		                                     IScreen newScreen,
-		                                     IEventAggregator events)
+
+		public static void TrackNavigationTo<T>(this T conductor,
+											 IScreen newScreen,
+											 IEventAggregator events) where T:IHaveActiveItem,IConductor
 		{
-			TrackNavigationTo(screen, newScreen, events, null);
+			TrackNavigationTo(conductor, newScreen, events, null);
 		}
 
-		public static void TrackNavigationTo(this Conductor<IScreen> screen,
-		                                     IScreen newScreen,
-		                                     IEventAggregator events,
-		                                     Action setContext)
+		public static void TrackNavigationTo<T>(this T conductor,
+											 IScreen newScreen,
+											 IEventAggregator events,
+											 Action setContext) where T:IHaveActiveItem,IConductor
 		{
-			var old = screen.ActiveItem;
+			var old = conductor.ActiveItem as IScreen;
 			events.Publish(new NavigationOccurred(old.DisplayName, () =>
-			                                                    	{
-			                                                    		if (setContext != null) setContext();
-			                                                    		screen.ActivateItem(old);
-			                                                    	}));
-			screen.ActivateItem(newScreen);
+			{
+				if (setContext != null) setContext();
+				conductor.ActivateItem(old);
+			}));
+			conductor.ActivateItem(newScreen);
 		}
 	}
 }
