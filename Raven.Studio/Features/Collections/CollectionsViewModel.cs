@@ -125,14 +125,14 @@
 					                   		WorkCompleted();
 					                   	});
 
-				session.Advanced.AsyncDatabaseCommands
-					.QueryAsync("Raven/OrphanDocuments", new IndexQuery {PageSize = 0, Start = 0}, null)
-					.ContinueOnSuccess(x =>
-					                   	{
-					                   		var c = new Collection {Count = x.Result.TotalResults, Name = "Orphans"};
-					                   		OrphansCollection = c;
-					                   		NotifyOfPropertyChange(() => OrphansCollection);
-					                   	});
+				//session.Advanced.AsyncDatabaseCommands
+				//    .QueryAsync("Raven/OrphanDocuments", new IndexQuery {PageSize = 0, Start = 0}, null)
+				//    .ContinueOnSuccess(x =>
+				//                        {
+				//                            var c = new Collection {Count = x.Result.TotalResults, Name = "Orphans"};
+				//                            OrphansCollection = c;
+				//                            NotifyOfPropertyChange(() => OrphansCollection);
+				//                        });
 			}
 		}
 
