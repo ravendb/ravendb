@@ -27,7 +27,12 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize), context.GetEtagFromQueryString()));
+					var startsWith = context.Request.QueryString["startsWith"];
+					if(string.IsNullOrEmpty(startsWith))
+						context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize), context.GetEtagFromQueryString()));
+					else
+						context.WriteJson(Database.GetDocumentsWithIdStartingWith(startsWith, context.GetStart(),
+						                                                          context.GetPageSize(Database.Configuration.MaxPageSize)));
 					break;
 				case "POST":
 					var json = context.ReadJson();
