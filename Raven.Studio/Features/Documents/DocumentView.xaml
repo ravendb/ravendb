@@ -15,6 +15,10 @@
 		  cm:Action.TargetWithoutContext="EditDocument"
 		  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
 		  Background="Transparent">
+		<ToolTipService.ToolTip>
+			<ContentControl cm:View.Model="{Binding}"
+							cm:View.Context="Tooltip" />
+		</ToolTipService.ToolTip>
 		<ti:ContextMenuService.ContextMenu>
 			<ti:ContextMenu>
 				<ti:MenuItem Header="Edit Document"

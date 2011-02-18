@@ -54,6 +54,26 @@
 			</Grid>";
 		}
 
+		static string GetDynamicTemplateXaml()
+		{
+			return
+				@"
+                <Grid xmlns:cm=""clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro""
+				      Margin=""0""
+				      Width=""120""
+				      Height=""60"">
+				<Rectangle Fill=""#FFF4F4F5"" />
+		
+				<Grid Margin=""2,0,0,0"">
+					<StackPanel Orientation=""Vertical"">
+						<TextBlock Text=""{Binding Summary}""
+								   TextWrapping=""Wrap""
+								   HorizontalAlignment=""Left"" />
+					</StackPanel>
+				</Grid>
+			</Grid>";
+		}
+
 		public Task<DataTemplate> GetTemplateFor(string key)
 		{
 			var tcs = new TaskCompletionSource<DataTemplate>();
@@ -64,8 +84,11 @@
 			}
 			else if (!string.IsNullOrEmpty(key))
 			{
-				var fill = colorProvider.ColorFrom(key);
-				var defaultTemplate = Create(GetDefaultTemplateXaml(fill));
+				var templateXaml = (key == "dynamic")
+					? GetDynamicTemplateXaml()
+					: GetDefaultTemplateXaml(colorProvider.ColorFrom(key));
+
+				var defaultTemplate = Create(templateXaml);
 				templates[key] = defaultTemplate;
 				tcs.TrySetResult(defaultTemplate);
 			}

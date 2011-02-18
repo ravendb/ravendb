@@ -31,7 +31,7 @@
 		{
 			get
 			{
-				if (string.IsNullOrEmpty(Id)) return "{?}";
+				if (string.IsNullOrEmpty(Id)) return string.Empty;
 
 				var collectionType = CollectionType + "/";
 				var display = Id
@@ -75,9 +75,9 @@
 			get { return JsonDocument.Metadata; }
 		}
 
-		string DetermineCollectionType()
+		public JsonDocument JsonDocument
 		{
-			return DetermineCollectionType(Metadata);
+			get { return inner; }
 		}
 
 		string ISupportDocumentTemplate.TemplateKey
@@ -85,14 +85,16 @@
 			get { return CollectionType; }
 		}
 
-		public JsonDocument JsonDocument
+		string DetermineCollectionType()
 		{
-			get { return inner; }
+			return DetermineCollectionType(Metadata);
 		}
 
 		public static string DetermineCollectionType(JObject metadata)
 		{
 			var id = metadata.IfPresent<string>("@id") ?? string.Empty;
+			if(string.IsNullOrEmpty(id)) return "dynamic"; // for each, an index that returns an aggregated result
+
 			var entity = metadata.IfPresent<string>("Raven-Entity-Name");
 			return entity ?? (id.StartsWith("Raven/") ? "System" : "document");
 		}
