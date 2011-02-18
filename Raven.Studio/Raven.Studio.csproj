@@ -126,7 +126,6 @@
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
     <Compile Include="Features\Documents\DocumentViewModel.cs" />
     <Compile Include="Features\Documents\ISupportDocumentTemplate.cs" />
-    <Compile Include="Features\Indexes\IndexRepository.cs" />
     <Compile Include="Features\Query\QueryViewModel.cs" />
     <Compile Include="Features\StartUp\DefaultDatabaseInitializer.cs" />
     <Compile Include="Features\StartUp\IDatabaseInitializer.cs" />

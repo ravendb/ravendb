@@ -16,6 +16,7 @@
 	using Raven.Database.Data;
 
 	[Export(typeof(IDatabaseScreenMenuItem))]
+	[Export(typeof(CollectionsViewModel))]
 	public class CollectionsViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{

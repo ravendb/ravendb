@@ -5,6 +5,7 @@
 	using System.Linq;
 	using Abstractions.Data;
 	using Caliburn.Micro;
+	using Collections;
 	using Documents;
 	using Framework;
 	using Messages;
@@ -15,6 +16,7 @@
 		IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
+		readonly IEventAggregator events;
 
 		public int Index { get { return 10; } }
 
@@ -22,6 +24,7 @@
 		public SummaryViewModel(IServer server, IEventAggregator events)
 		{
 			this.server = server;
+			this.events = events;
 			events.Subscribe(this);
 
 			DisplayName = "Summary";
@@ -64,6 +67,16 @@
 			//Collections
 			//    .Where(x => x.Name == message.Document.CollectionType)
 			//    .Apply(x => x.Count--);
+		}
+
+		public void NavigateToCollection(Collection collection)
+		{
+			events.Publish( new DatabaseScreenRequested( ()=>
+			{
+			    var vm = IoC.Get<CollectionsViewModel>();
+				vm.ActiveCollection = collection;
+				return vm;
+			}));
 		}
 
 		protected override void OnActivate()

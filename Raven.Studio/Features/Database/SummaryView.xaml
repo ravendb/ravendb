@@ -4,6 +4,7 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 xmlns:converters="clr-namespace:Raven.Studio.Converters"
+			 xmlns:f="clr-namespace:Raven.Studio.Framework"
 			 x:Class="Raven.Studio.Features.Database.SummaryView"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
@@ -15,7 +16,9 @@
 											 Maximum="{Binding LargestCollectionCount}" />
 
 		<DataTemplate x:Key="CollectionTemplate">
-			<Grid Margin="0 0 0 6">
+			<Grid Margin="0 0 0 6"
+				  f:DoubleClickEvent.AttachAction="NavigateToCollection($dataContext)"
+				  Background="Transparent">
 				<Grid.RowDefinitions>
 					<RowDefinition Height="*" />
 					<RowDefinition Height="Auto" />
