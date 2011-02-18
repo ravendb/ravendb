@@ -113,6 +113,7 @@
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
@@ -132,6 +133,7 @@
     <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
+    <Compile Include="Messages\CollectionTemplateUpdated.cs" />
     <Compile Include="Messages\DatabaseScreenRequested.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
     <Compile Include="Messages\NotificationRaised.cs" />
@@ -242,6 +244,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\Pager.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Collections\EditCollectionTemplateView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

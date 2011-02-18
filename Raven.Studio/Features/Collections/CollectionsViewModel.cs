@@ -71,8 +71,6 @@
 			get { return Collections != null && Collections.Any(); }
 		}
 
-		public Collection OrphansCollection { get; set; }
-
 		public Collection RavenCollection
 		{
 			get { return raven; }
@@ -138,6 +136,13 @@
 				//                            NotifyOfPropertyChange(() => OrphansCollection);
 				//                        });
 			}
+		}
+
+		public void EditTemplate()
+		{
+			var vm = IoC.Get<EditCollectionTemplateViewModel>();
+			vm.Collection = ActiveCollection;
+			Events.Publish(new DatabaseScreenRequested(() => vm));
 		}
 
 		public void Handle(DocumentDeleted message)
