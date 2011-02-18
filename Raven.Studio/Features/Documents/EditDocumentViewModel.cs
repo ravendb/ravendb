@@ -40,7 +40,7 @@
 
 		public string Id
 		{
-			get { return id; }
+			get { return IsProjection ? "Projection" : id; }
 			set
 			{
 				id = value ?? string.Empty;

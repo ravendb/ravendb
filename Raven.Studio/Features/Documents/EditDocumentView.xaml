@@ -30,7 +30,8 @@
 			<TextBlock x:Name="Id"
 					   Style="{StaticResource Header}" />
 
-			<Grid Grid.Row="1">
+			<Grid Grid.Row="1"
+				  Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}">
 				<StackPanel Orientation="Horizontal">
 					<Border Margin="0,2,2,2"
 							CornerRadius="2"
@@ -63,6 +64,7 @@
 			</Grid>
 
 			<TextBox Text="{Binding Id, Mode=TwoWay}"
+					 Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}"
 					 Grid.Row="2" />
 
 			<Border Grid.Row="3"
@@ -83,7 +85,8 @@
 								 FontFamily="Monaco"
 								 FontSize="16" />
 					</c:TabItem>
-					<c:TabItem Header="Metadata">
+					<c:TabItem Header="Metadata"
+							   Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}">
 						<TextBox Text="{Binding JsonMetadata, Mode=TwoWay}"
 								 AcceptsReturn="True"
 								 FontFamily="Monaco"
@@ -96,6 +99,7 @@
 		</Grid>
 
 		<Grid x:Name="details"
+			  Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}"
 			  Grid.Column="2"
 			  Margin="0,42,0,0">
 			<Grid.RowDefinitions>
