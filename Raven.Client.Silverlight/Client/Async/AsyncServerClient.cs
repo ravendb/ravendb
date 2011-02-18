@@ -794,7 +794,15 @@ namespace Raven.Client.Client.Async
 		/// <param name="etag">The etag.</param>
 		public Task DeleteAttachmentAsync(string key, Guid? etag)
 		{
-			throw new NotImplementedException();
+			var metadata = new JObject();
+
+			if (etag != null)
+				metadata["ETag"] = new JValue(etag.Value.ToString());
+
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url.Static(key), "DELETE", metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseStringAsync();
 		}
 	}
 }
