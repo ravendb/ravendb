@@ -171,7 +171,6 @@
 				</StackPanel>
 
 				<c:Pager tk:DockPanel.Dock="Top"
-						 ItemSize="81"
 						 ItemsSource="{Binding ActiveCollectionDocuments}"
 						 PageContainer="{Binding ElementName=ActiveCollectionDocuments}" />
 

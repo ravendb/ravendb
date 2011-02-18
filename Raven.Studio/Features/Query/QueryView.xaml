@@ -61,7 +61,6 @@
 
 				<r:Pager tk:DockPanel.Dock="Bottom"
 						 PageContainer="{Binding ElementName=QueryResultsContainer}"
-						 ItemSize="61"
 						 ItemsSource="{Binding QueryResults}" />
 
 				<ItemsControl x:Name="QueryResultsContainer"

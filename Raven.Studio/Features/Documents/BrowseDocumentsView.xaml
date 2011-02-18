@@ -59,25 +59,24 @@
 
 			<c:Pager tk:DockPanel.Dock="Top"
 					 ItemsSource="{Binding Documents}"
-					 PageContainer="{Binding ElementName=DocumentPageContainer}" 
-					 ItemSize="81"/>
+					 PageContainer="{Binding ElementName=DocumentPageContainer}" />
 
 			<!--<c:Pager tk:DockPanel.Dock="Bottom"
 					 PageContainer="{Binding ElementName=DocumentPageContainer}"
 					 cm:Bind.Model="{Binding Documents}" />-->
 
 			<Grid>
-				<ListBox x:Name="DocumentPageContainer"
+				<ItemsControl x:Name="DocumentPageContainer"
 						 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 						 BorderThickness="0"
 						 ItemsPanel="{StaticResource FluidWrapPanel}"
 						 ItemsSource="{Binding Documents}">
-					<ListBox.ItemTemplate>
+					<ItemsControl.ItemTemplate>
 						<DataTemplate>
 							<ContentControl cm:View.Model="{Binding}" />
 						</DataTemplate>
-					</ListBox.ItemTemplate>
-				</ListBox>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
 
 				<TextBlock Style="{StaticResource Instruction}"
 						   Text="The database contains no documents."
