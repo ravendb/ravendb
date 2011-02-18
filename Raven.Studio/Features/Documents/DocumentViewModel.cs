@@ -1,6 +1,7 @@
 ﻿namespace Raven.Studio.Features.Documents
 {
 	using System;
+	using Collections;
 	using Framework;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;
@@ -93,10 +94,15 @@
 		public static string DetermineCollectionType(JObject metadata)
 		{
 			var id = metadata.IfPresent<string>("@id") ?? string.Empty;
-			if(string.IsNullOrEmpty(id)) return "projection"; // meaning that the document is a projection and not a 'real' document
+
+			if (string.IsNullOrEmpty(id)) 
+				return BuiltinCollectionName.Projection; // meaning that the document is a projection and not a 'real' document
 
 			var entity = metadata.IfPresent<string>("Raven-Entity-Name");
-			return entity ?? (id.StartsWith("Raven/") ? "System" : "document");
+			return entity ?? 
+				(id.StartsWith("Raven/") 
+					? BuiltinCollectionName.System 
+					: BuiltinCollectionName.Document);
 		}
 	}
 }

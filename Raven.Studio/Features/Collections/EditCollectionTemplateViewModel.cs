@@ -49,6 +49,8 @@
 
 		public void Save()
 		{
+			//TODO: validate xaml before saving
+
 			using (var session = server.OpenSession())
 			{
 				var encoding = new UTF8Encoding();
