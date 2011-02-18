@@ -78,7 +78,7 @@
 			get { return document; }
 		}
 
-		public bool NotRealDocument { get; private set; }
+		public bool IsProjection { get; private set; }
 
 		public void Initialize(JsonDocument doc)
 		{
@@ -87,9 +87,9 @@
 			Id = document.Key;
 			JsonData = PrepareRawJsonString(document.DataAsJson);
 
-			NotRealDocument = string.IsNullOrEmpty(Id) && (document.Metadata == null);
+			IsProjection = string.IsNullOrEmpty(Id) && (document.Metadata == null);
 
-			if (NotRealDocument) return;
+			if (IsProjection) return;
 
 			JsonMetadata = PrepareRawJsonString(document.Metadata);
 

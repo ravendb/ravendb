@@ -54,7 +54,7 @@
 			</Grid>";
 		}
 
-		static string GetDynamicTemplateXaml()
+		static string GetProjectionTemplateXaml()
 		{
 			return
 				@"
@@ -84,8 +84,8 @@
 			}
 			else if (!string.IsNullOrEmpty(key))
 			{
-				var templateXaml = (key == "dynamic")
-					? GetDynamicTemplateXaml()
+				var templateXaml = (key == "projection")
+					? GetProjectionTemplateXaml()
 					: GetDefaultTemplateXaml(colorProvider.ColorFrom(key));
 
 				var defaultTemplate = Create(templateXaml);

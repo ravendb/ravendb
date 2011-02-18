@@ -93,7 +93,7 @@
 		public static string DetermineCollectionType(JObject metadata)
 		{
 			var id = metadata.IfPresent<string>("@id") ?? string.Empty;
-			if(string.IsNullOrEmpty(id)) return "dynamic"; // for each, an index that returns an aggregated result
+			if(string.IsNullOrEmpty(id)) return "projection"; // meaning that the document is a projection and not a 'real' document
 
 			var entity = metadata.IfPresent<string>("Raven-Entity-Name");
 			return entity ?? (id.StartsWith("Raven/") ? "System" : "document");
