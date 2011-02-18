@@ -5,8 +5,20 @@
 	using System.Linq;
 	using System.Reflection;
 
+	public static class Enumeration
+	{
+		public static IEnumerable<T> All<T>() where T : class, IComparable
+		{
+			return
+				from field in typeof (T).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+				let val = field.GetValue(null) as T
+				where val != null
+				select val;
+		}
+	}
+
 	//TODO: the syntax here could be nicer
-	public abstract class Enumeration<T> : IComparable where T:IComparable
+	public abstract class Enumeration<T> : IComparable where T : IComparable
 	{
 		readonly string displayName;
 		readonly T value;
@@ -41,15 +53,6 @@
 			return DisplayName;
 		}
 
-		public static IEnumerable<TK> All<TK>() where TK : Enumeration<T>
-		{
-			return
-				from field in typeof (TK).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-				let val = field.GetValue(null) as TK
-				where val != null
-				select val;
-		}
-
 		public override bool Equals(object obj)
 		{
 			var otherValue = obj as Enumeration<T>;
@@ -82,13 +85,13 @@
 		public static bool ContainsValue<TK>(T value)
 			where TK : Enumeration<T>
 		{
-			return All<TK>().Any(x => x.Value.Equals(value));
+			return Enumeration.All<TK>().Any(x => x.Value.Equals(value));
 		}
 
 		static TK Parse<TK>(Func<TK, bool> predicate, TK defaultValue)
 			where TK : Enumeration<T>
 		{
-			return All<TK>().FirstOrDefault(predicate) ?? defaultValue;
+			return Enumeration.All<TK>().FirstOrDefault(predicate) ?? defaultValue;
 		}
 
 		public static implicit operator T(Enumeration<T> enumeration)

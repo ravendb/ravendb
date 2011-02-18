@@ -8,6 +8,7 @@
 	using Client;
 	using Collections;
 	using Documents;
+	using Framework;
 	using Raven.Database.Indexing;
 
 	[Export(typeof (IDatabaseInitializer))]
@@ -39,7 +40,7 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }"
 
 			var preloading  = collections.Result
 				.Select(x=>x.Name)
-				.Union(BuiltinCollectionName.All<BuiltinCollectionName>().Select(x => x.Value))
+				.Union(Enumeration.All<BuiltinCollectionName>().Select(x => x.Value))
 				.Select(templateProvider.GetTemplateFor);
 
 			foreach (var task in preloading)
