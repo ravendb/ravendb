@@ -91,7 +91,30 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public Task<string> ReadResponseStringAsync()
 		{
-			return webRequest.GetResponseAsync().ContinueWith(t => ReadStringInternal(() => t.Result));
+			return webRequest
+				.GetResponseAsync()
+				.ContinueWith(t => ReadStringInternal(() => t.Result));
+		}
+
+		public Task<byte[]> ReadResponseBytesAsync()
+		{
+			return webRequest
+				.GetResponseAsync()
+				.ContinueWith(t => ReadResponse(() => t.Result,ConvertStreamToBytes));
+		}
+
+		static byte[] ConvertStreamToBytes(Stream input)
+		{
+			var buffer = new byte[16 * 1024];
+			using (var ms = new MemoryStream())
+			{
+				int read;
+				while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+				{
+					ms.Write(buffer, 0, read);
+				}
+				return ms.ToArray();
+			}
 		}
 
 		/// <summary>
@@ -133,6 +156,37 @@ namespace Raven.Client.Client
 				var reader = new StreamReader(responseStream);
 				var text = reader.ReadToEnd();
 				return text;
+			}
+		}
+
+		private T ReadResponse<T>(Func<WebResponse> getResponse, Func<Stream,T> handleResponse)
+		{
+			WebResponse response;
+			try
+			{
+				response = getResponse();
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+					throw;
+
+				using (var sr = new StreamReader(e.Response.GetResponseStream()))
+				{
+					throw new InvalidOperationException(sr.ReadToEnd(), e);
+				}
+			}
+
+			ResponseHeaders = response.Headers.AllKeys
+					.ToDictionary(key => key, key => (IList<string>)new List<string> { response.Headers[key] });
+			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
+
+			using (var responseStream = response.GetResponseStream())
+			{
+				return handleResponse(responseStream);
 			}
 		}
 

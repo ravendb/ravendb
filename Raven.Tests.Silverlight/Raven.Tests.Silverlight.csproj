@@ -109,6 +109,7 @@
     <Compile Include="AsyncDatabaseCommandsTests.cs" />
     <Compile Include="AsyncLinqQueryTests.cs" />
     <Compile Include="AsyncLuceneQueryTests.cs" />
+    <Compile Include="Attachments.cs" />
     <Compile Include="Collections.cs" />
     <Compile Include="Entities\Customer.cs" />
     <Compile Include="Entities\DenormalizedReference.cs" />

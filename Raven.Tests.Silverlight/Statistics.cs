@@ -1,15 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
-
-namespace Raven.Tests.Silverlight
+﻿namespace Raven.Tests.Silverlight
 {
 	using System.Collections.Generic;
 	using System.Threading.Tasks;
@@ -19,12 +8,12 @@ namespace Raven.Tests.Silverlight
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-	public class Statistics:RavenTestBase
+	public class Statistics : RavenTestBase
 	{
 		[Asynchronous]
 		public IEnumerable<Task> Can_retrieve_statistics_for_the_default_database()
 		{
-			var store = new DocumentStore { Url = Url + Port };
+			var store = new DocumentStore {Url = Url + Port};
 			store.Initialize();
 
 			var getStats = store.AsyncDatabaseCommands.GetStatisticsAsync();
@@ -38,7 +27,7 @@ namespace Raven.Tests.Silverlight
 		public IEnumerable<Task> Can_retrieve_statistics_for_a_database()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var store = new DocumentStore { Url = Url + Port };
+			var store = new DocumentStore {Url = Url + Port};
 			store.Initialize();
 			yield return store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
@@ -54,7 +43,7 @@ namespace Raven.Tests.Silverlight
 		public IEnumerable<Task> Statistics_should_not_be_cached()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var store = new DocumentStore { Url = Url + Port };
+			var store = new DocumentStore {Url = Url + Port};
 			store.Initialize();
 			yield return store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
@@ -65,7 +54,7 @@ namespace Raven.Tests.Silverlight
 
 			using (var session = store.OpenAsyncSession(dbname))
 			{
-				session.Store(new Company{Name = "Change the Stats, Inc."});
+				session.Store(new Company {Name = "Change the Stats, Inc."});
 				yield return session.SaveChangesAsync();
 			}
 

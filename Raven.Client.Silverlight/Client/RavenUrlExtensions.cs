@@ -29,6 +29,11 @@
 			return url + "/stats";
 		}
 
+		public static string Static(this string url, string key)
+		{
+			return url + "/static/" + HttpUtility.HtmlEncode(key);
+		}
+
 		public static string Databases(this string url)
 		{
 			return url + "/databases/";
