@@ -12,16 +12,14 @@
 			 d:DesignWidth="400">
 
 	<Grid Margin="0 0 6 6"
-		  Tag="{Binding Id}"
-		  cm:Action.TargetWithoutContext="EditDocumentById"
-		  f:DoubleClickEvent.AttachAction="Execute($this.Tag)"
+		  cm:Action.TargetWithoutContext="EditDocument"
+		  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
 		  Background="Transparent">
 		<ti:ContextMenuService.ContextMenu>
 			<ti:ContextMenu>
 				<ti:MenuItem Header="Edit Document"
-							 Tag="{Binding Id}"
-							 cm:Action.TargetWithoutContext="EditDocumentById"
-							 cm:Message.Attach="Click=Execute($this.Tag)" />
+							 cm:Action.TargetWithoutContext="EditDocument"
+							 cm:Message.Attach="Click=Execute($dataContext)" />
 				<ti:MenuItem Header="Delete Document"
 							 Tag="{Binding Id}"
 							 cm:Action.TargetWithoutContext="DeleteDocument"

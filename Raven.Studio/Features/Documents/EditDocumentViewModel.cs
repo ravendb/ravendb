@@ -10,7 +10,7 @@
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;
 
-	[Export(typeof (EditDocumentViewModel))]
+	[Export(typeof(EditDocumentViewModel))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class EditDocumentViewModel : Screen
 	{
@@ -78,12 +78,19 @@
 			get { return document; }
 		}
 
+		public bool NotRealDocument { get; private set; }
+
 		public void Initialize(JsonDocument doc)
 		{
 			document = doc;
 
 			Id = document.Key;
 			JsonData = PrepareRawJsonString(document.DataAsJson);
+
+			NotRealDocument = string.IsNullOrEmpty(Id) && (document.Metadata == null);
+
+			if (NotRealDocument) return;
+
 			JsonMetadata = PrepareRawJsonString(document.Metadata);
 
 			metadata = ParseJsonToDictionary(document.Metadata);
@@ -101,7 +108,7 @@
 
 			LastModified = DateTime.Now;
 			metadata = ParseJsonToDictionary(document.Metadata);
-			NotifyOfPropertyChange( () => Metadata );
+			NotifyOfPropertyChange(() => Metadata);
 		}
 
 		static JObject ToJObject(string json)

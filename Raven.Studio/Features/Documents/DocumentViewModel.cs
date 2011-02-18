@@ -50,14 +50,14 @@
 
 		public JObject Contents
 		{
-			get { return inner.DataAsJson; }
+			get { return JsonDocument.DataAsJson; }
 		}
 
 		public string Summary
 		{
 			get
 			{
-				var json = inner.DataAsJson.ToString();
+				var json = JsonDocument.DataAsJson.ToString();
 				json = (json.Length > SummaryLength)
 				       	? json.Substring(0, SummaryLength) + "..."
 				       	: json;
@@ -72,7 +72,7 @@
 
 		public JObject Metadata
 		{
-			get { return inner.Metadata; }
+			get { return JsonDocument.Metadata; }
 		}
 
 		string DetermineCollectionType()
@@ -83,6 +83,11 @@
 		string ISupportDocumentTemplate.TemplateKey
 		{
 			get { return CollectionType; }
+		}
+
+		public JsonDocument JsonDocument
+		{
+			get { return inner; }
 		}
 
 		public static string DetermineCollectionType(JObject metadata)

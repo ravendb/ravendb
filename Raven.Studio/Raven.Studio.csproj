@@ -107,9 +107,6 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Raven.Client.Lightweight\Client\SerializationHelper.cs">
-      <Link>Framework\SerializationHelper.cs</Link>
-    </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
@@ -133,6 +130,7 @@
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
     <Compile Include="Framework\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
+    <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
     <Compile Include="Messages\DatabaseScreenRequested.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
