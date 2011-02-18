@@ -29,7 +29,7 @@ namespace Raven.Client.Client
 		/// <summary>
 		/// Occurs when a json request is created
 		/// </summary>
-		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
+		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
 
 		/// <summary>
 		/// Creates the HTTP json request.
@@ -71,7 +71,7 @@ namespace Raven.Client.Client
 		/// <value>The response headers.</value>
 		public IDictionary<string, IList<string>> ResponseHeaders { get; set; }
 
-	
+
 
 		private HttpJsonRequest(string url, string method, JObject metadata)
 		{
@@ -79,7 +79,7 @@ namespace Raven.Client.Client
 
 			WriteMetadata(metadata);
 			webRequest.Method = method;
-			if(method != "GET")
+			if (method != "GET")
 				webRequest.ContentType = "application/json; charset=utf-8";
 		}
 
@@ -100,7 +100,7 @@ namespace Raven.Client.Client
 		{
 			return webRequest
 				.GetResponseAsync()
-				.ContinueWith(t => ReadResponse(() => t.Result,ConvertStreamToBytes));
+				.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes));
 		}
 
 		static byte[] ConvertStreamToBytes(Stream input)
@@ -126,40 +126,20 @@ namespace Raven.Client.Client
 		{
 			return ReadStringInternal(() => webRequest.EndGetResponse(result));
 		}
-		
+
 		private string ReadStringInternal(Func<WebResponse> getResponse)
 		{
-			WebResponse response;
-			try
-			{
-				response = getResponse();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null || 
-					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-					throw;
-
-				using (var sr = new StreamReader(e.Response.GetResponseStream()))
+			return ReadResponse(getResponse, responseStream =>
 				{
-					throw new InvalidOperationException(sr.ReadToEnd(), e);
+					var reader = new StreamReader(responseStream);
+					var text = reader.ReadToEnd();
+					return text;
 				}
-			}
-			
-			ResponseHeaders = response.Headers.AllKeys.ToDictionary(key => key, key => (IList<string>)new List<string> { response.Headers[key] });
-			ResponseStatusCode = ((HttpWebResponse) response).StatusCode;
+			);
 
-			using (var responseStream = response.GetResponseStream())
-			{
-				var reader = new StreamReader(responseStream);
-				var text = reader.ReadToEnd();
-				return text;
-			}
 		}
 
-		private T ReadResponse<T>(Func<WebResponse> getResponse, Func<Stream,T> handleResponse)
+		private T ReadResponse<T>(Func<WebResponse> getResponse, Func<Stream, T> handleResponse)
 		{
 			WebResponse response;
 			try
@@ -246,7 +226,7 @@ namespace Raven.Client.Client
 																		   var dataStream = t.Result;
 																		   using (dataStream)
 																		   {
-                                                                               dataStream.Write(byteArray, 0, byteArray.Length);
+																			   dataStream.Write(byteArray, 0, byteArray.Length);
 																			   dataStream.Close();
 																		   }
 																	   });
