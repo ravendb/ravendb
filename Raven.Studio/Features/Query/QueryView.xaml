@@ -6,6 +6,7 @@
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
 			 xmlns:r="clr-namespace:Raven.Studio.Controls"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:input="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
@@ -13,27 +14,50 @@
 	<tk:DockPanel x:Name="LayoutRoot"
 				  Background="{StaticResource DefaultScreenBackground}">
 
-		<tk:DockPanel tk:DockPanel.Dock="Left">
-			<TextBox tk:DockPanel.Dock="Top" />
+		<TextBlock Text="Query By Index"
+				   tk:DockPanel.Dock="Top"
+				   Style="{StaticResource Header}" />
+
+		<tk:DockPanel tk:DockPanel.Dock="Left"
+					  Margin="0 0 8 0">
+			<TextBlock tk:DockPanel.Dock="Top"
+					   Style="{StaticResource PanelTitle}"
+					   Text="Indexes" />
+			<input:AutoCompleteBox tk:DockPanel.Dock="Top"
+								   Margin="0 0 0 8"
+								   IsTextCompletionEnabled="True"
+								   ItemsSource="{Binding Indexes}"
+								   SelectedItem="{Binding CurrentIndex,Mode=TwoWay}" />
 			<ListBox ItemsSource="{Binding Indexes}"
-					 SelectedItem="{Binding CurrentIndex,Mode=TwoWay}"
-					 DisplayMemberPath="Name" />
+					 SelectedItem="{Binding CurrentIndex,Mode=TwoWay}" />
 		</tk:DockPanel>
 
 		<Grid>
 			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
 				<RowDefinition Height="*" />
 				<RowDefinition Height="3*" />
 			</Grid.RowDefinitions>
 
-			<tk:DockPanel>
+			<TextBlock tk:DockPanel.Dock="Top"
+					   Style="{StaticResource PanelTitle}"
+					   Text="Query" />
+
+			<tk:DockPanel Grid.Row="1">
 				<Button x:Name="Execute"
 						tk:DockPanel.Dock="Right"
+						VerticalAlignment="Top"
+						Margin="8 0 0 0"
 						Content="GO" />
 				<TextBox x:Name="QueryTerms" />
 			</tk:DockPanel>
 
-			<tk:DockPanel Grid.Row="1">
+			<tk:DockPanel Grid.Row="2"
+						  Margin="0 8 0 0">
+
+				<TextBlock tk:DockPanel.Dock="Top"
+						   Margin="0 0 0 8"
+						   Text="{Binding QueryResultsStatus}" />
 
 				<r:Pager tk:DockPanel.Dock="Bottom"
 						 PageContainer="{Binding ElementName=QueryResultsContainer}"
