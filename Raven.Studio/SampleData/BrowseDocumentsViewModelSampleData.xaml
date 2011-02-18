@@ -1,14 +1,71 @@
-<Raven_Studio_Features_Documents:BrowseDocumentsViewModel xmlns:Raven_Studio_Features_Documents="clr-namespace:Raven.Studio.Features.Documents" DisplayName="Arcu sit maecenas purus" HasDocuments="True" IsNotifying="True" Index="12" IsInitialized="False" IsBusy="False" IsActive="True">
+<Raven_Studio_Features_Documents:BrowseDocumentsViewModel xmlns:Raven_Studio_Features_Documents="clr-namespace:Raven.Studio.Features.Documents"
+														  DisplayName="Arcu sit maecenas purus"
+														  HasDocuments="True"
+														  IsNotifying="True"
+														  Index="12"
+														  IsInitialized="False"
+														  IsBusy="False"
+														  IsActive="True">
 	<Raven_Studio_Features_Documents:BrowseDocumentsViewModel.Documents>
-		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Maecenas cras praesent" ClrType="Nam aenean" DisplayId="Sed duis mauris aliquam dis" Id="Integer class curabitur" LastModified="02/17/2011 21:40:39" Summary="Est vestibulum"/>
-		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Vestibulum bibendum quisque vestibulum" ClrType="Accumsan curae adipiscing parturient" DisplayId="Dictumst nullam eleifend adipiscing parturient" Id="Facilisi vivamus nunc faucibus" LastModified="02/17/2011 21:40:39" Summary="Vestibulum donec aptent phasellus amet"/>
-		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Auctor habitant congue" ClrType="Vestibulum consequat ante adipiscing convallis" DisplayId="Hac etiam" Id="Inceptos parturient aliquam interdum" LastModified="02/17/2011 21:40:39" Summary="Aliquet leo dignissim mus"/>
-		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Vestibulum non fusce elementum per" ClrType="Blandit cursus nec lobortis" DisplayId="Facilisis vestibulum" Id="Dictum lectus" LastModified="02/17/2011 21:40:39" Summary="Commodo arcu conubia"/>
-		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Adipiscing sem morbi eget nulla" ClrType="Lorem diam fermentum sed" DisplayId="Libero proin parturient" Id="Sit vestibulum cubilia dapibus" LastModified="02/17/2011 21:40:39" Summary="Elit enim vestibulum augue"/>
-		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Adipiscing fames habitasse euismod nascetur" ClrType="Erat dolor fringilla vel egestas" DisplayId="Hendrerit nam pharetra" Id="Sed felis ligula" LastModified="02/17/2011 21:40:39" Summary="Ipsum placerat eros litora nibh"/>
-		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Malesuada nisi lacus lorem nisl" ClrType="Himenaeos justo feugiat imperdiet luctus" DisplayId="Magna gravida penatibus massa dis" Id="Metus pulvinar iaculis" LastModified="02/17/2011 21:40:39" Summary="Est porttitor"/>
-		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Nunc odio" ClrType="Magnis sagittis senectus lacinia" DisplayId="Parturient sociosqu hac morbi" Id="Laoreet leo" LastModified="02/17/2011 21:40:39" Summary="Mattis orci"/>
-		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Pede quam natoque" ClrType="Mauris vestibulum neque netus mus" DisplayId="Quis mollis posuere montes vestibulum" Id="Tincidunt urna cras suscipit nec" LastModified="02/17/2011 21:40:39" Summary="Non torquent ultrices per vehicula"/>
-		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Nostra nunc sed volutpat" ClrType="Adipiscing potenti duis parturient" DisplayId="Nulla amet pretium" Id="Vestibulum ante sem porta ornare" LastModified="02/17/2011 21:40:39" Summary="Vestibulum rhoncus adipiscing platea"/>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Maecenas cras praesent"
+														   ClrType="Nam aenean"
+														   DisplayId="Sed duis mauris aliquam dis"
+														   Id="Integer class curabitur"
+														   LastModified="02/17/2011 21:40:39"
+														   Summary="Est vestibulum" />
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Vestibulum bibendum quisque vestibulum"
+														   ClrType="Accumsan curae adipiscing parturient"
+														   DisplayId="Dictumst nullam eleifend adipiscing parturient"
+														   Id="Facilisi vivamus nunc faucibus"
+														   LastModified="02/17/2011 21:40:39"
+														   Summary="Vestibulum donec aptent phasellus amet" />
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Auctor habitant congue"
+														   ClrType="Vestibulum consequat ante adipiscing convallis"
+														   DisplayId="Hac etiam"
+														   Id="Inceptos parturient aliquam interdum"
+														   LastModified="02/17/2011 21:40:39"
+														   Summary="Aliquet leo dignissim mus" />
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Vestibulum non fusce elementum per"
+														   ClrType="Blandit cursus nec lobortis"
+														   DisplayId="Facilisis vestibulum"
+														   Id="Dictum lectus"
+														   LastModified="02/17/2011 21:40:39"
+														   Summary="Commodo arcu conubia" />
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Adipiscing sem morbi eget nulla"
+														   ClrType="Lorem diam fermentum sed"
+														   DisplayId="Libero proin parturient"
+														   Id="Sit vestibulum cubilia dapibus"
+														   LastModified="02/17/2011 21:40:39"
+														   Summary="Elit enim vestibulum augue" />
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Adipiscing fames habitasse euismod nascetur"
+														   ClrType="Erat dolor fringilla vel egestas"
+														   DisplayId="Hendrerit nam pharetra"
+														   Id="Sed felis ligula"
+														   LastModified="02/17/2011 21:40:39"
+														   Summary="Ipsum placerat eros litora nibh" />
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Malesuada nisi lacus lorem nisl"
+														   ClrType="Himenaeos justo feugiat imperdiet luctus"
+														   DisplayId="Magna gravida penatibus massa dis"
+														   Id="Metus pulvinar iaculis"
+														   LastModified="02/17/2011 21:40:39"
+														   Summary="Est porttitor" />
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Nunc odio"
+														   ClrType="Magnis sagittis senectus lacinia"
+														   DisplayId="Parturient sociosqu hac morbi"
+														   Id="Laoreet leo"
+														   LastModified="02/17/2011 21:40:39"
+														   Summary="Mattis orci" />
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Pede quam natoque"
+														   ClrType="Mauris vestibulum neque netus mus"
+														   DisplayId="Quis mollis posuere montes vestibulum"
+														   Id="Tincidunt urna cras suscipit nec"
+														   LastModified="02/17/2011 21:40:39"
+														   Summary="Non torquent ultrices per vehicula" />
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Nostra nunc sed volutpat"
+														   ClrType="Adipiscing potenti duis parturient"
+														   DisplayId="Nulla amet pretium"
+														   Id="Vestibulum ante sem porta ornare"
+														   LastModified="02/17/2011 21:40:39"
+														   Summary="Vestibulum rhoncus adipiscing platea" />
 	</Raven_Studio_Features_Documents:BrowseDocumentsViewModel.Documents>
 </Raven_Studio_Features_Documents:BrowseDocumentsViewModel>
