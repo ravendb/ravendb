@@ -15,6 +15,8 @@ namespace Raven.Tests.Silverlight
 	public class Collections : RavenTestBase
 	{
 		[Asynchronous]
+		[Ignore]
+		//NOTE: This expects a certain index to be present that is currently only created when Studio accesses a database 
 		public IEnumerable<Task> Can_get_collections_async()
 		{
 			var dbname = GenerateNewDatabaseName();
