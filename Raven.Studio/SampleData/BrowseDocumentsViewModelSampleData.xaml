@@ -1,124 +1,14 @@
-﻿<Raven_Studio_Features_Documents:BrowseDocumentsViewModel xmlns:Raven_Studio_Features_Documents="clr-namespace:Raven.Studio.Features.Documents" xmlns:Raven_Studio_Features_Database="clr-namespace:Raven.Studio.Features.Database" xmlns="http://schemas.microsoft.com/client/2007" xmlns:Raven_Database="clr-namespace:Raven.Database;assembly=Raven.Client.Silverlight" xmlns:System="clr-namespace:System;assembly=mscorlib" IsBusy="False">
+<Raven_Studio_Features_Documents:BrowseDocumentsViewModel xmlns:Raven_Studio_Features_Documents="clr-namespace:Raven.Studio.Features.Documents" DisplayName="Arcu sit maecenas purus" HasDocuments="True" IsNotifying="True" Index="12" IsInitialized="False" IsBusy="False" IsActive="True">
 	<Raven_Studio_Features_Documents:BrowseDocumentsViewModel.Documents>
-		<Raven_Studio_Features_Database:EditDocumentViewModel CollectionType="Vestibulum integer quisque aenean curabitur" ClrType="Aliquam cras" DisplayName="Blandit facilisi" DisplayId="Class vivamus aliquam maecenas" IsNotifying="False" Id="Praesent accumsan aliquet" IsInitialized="True" IsActive="False" JsonMetadata="Curae amet" JsonData="Mauris duis nunc adipiscing" LastModified="02/15/2011 14:42:26" Summary="Dictumst vestibulum phasellus eleifend">
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-				<DataTemplate/>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-				<Raven_Database:JsonDocument Key="Parturient bibendum" LastModified="02/15/2011 14:42:26" NonAuthoritiveInformation="True">
-					<Raven_Database:JsonDocument.Etag>
-						<System:Guid/>
-					</Raven_Database:JsonDocument.Etag>
-				</Raven_Database:JsonDocument>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-		</Raven_Studio_Features_Database:EditDocumentViewModel>
-		<Raven_Studio_Features_Database:EditDocumentViewModel CollectionType="Ante parturient" ClrType="Commodo vestibulum consequat adipiscing" DisplayName="Fusce dapibus" DisplayId="Vestibulum nullam conubia" IsNotifying="False" Id="Donec vestibulum faucibus cubilia" IsInitialized="True" IsActive="False" JsonMetadata="Inceptos interdum parturient" JsonData="Arcu habitant diam adipiscing convallis" LastModified="02/15/2011 14:42:26" Summary="Congue etiam">
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-				<DataTemplate/>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-				<Raven_Database:JsonDocument Key="Dignissim eget aptent auctor" LastModified="02/15/2011 14:42:26" NonAuthoritiveInformation="True">
-					<Raven_Database:JsonDocument.Etag>
-						<System:Guid/>
-					</Raven_Database:JsonDocument.Etag>
-				</Raven_Database:JsonDocument>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-		</Raven_Studio_Features_Database:EditDocumentViewModel>
-		<Raven_Studio_Features_Database:EditDocumentViewModel CollectionType="Fermentum egestas fringilla nascetur cursus" ClrType="Nam lobortis elementum facilisis sed" DisplayName="Lacinia placerat adipiscing" DisplayId="Habitasse euismod dis feugiat" IsNotifying="False" Id="Hendrerit vestibulum lorem" IsInitialized="True" IsActive="False" JsonMetadata="Himenaeos dictum enim erat eros" JsonData="Elit est gravida" LastModified="02/15/2011 14:42:26" Summary="Leo mus pharetra">
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-				<DataTemplate/>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-				<Raven_Database:JsonDocument Key="Iaculis vestibulum hac" LastModified="02/15/2011 14:42:26" NonAuthoritiveInformation="True">
-					<Raven_Database:JsonDocument.Etag>
-						<System:Guid/>
-					</Raven_Database:JsonDocument.Etag>
-				</Raven_Database:JsonDocument>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-		</Raven_Studio_Features_Database:EditDocumentViewModel>
-		<Raven_Studio_Features_Database:EditDocumentViewModel CollectionType="Lectus libero nec morbi" ClrType="Laoreet natoque nibh imperdiet" DisplayName="Nisl sem" DisplayId="Nisi nulla non pulvinar proin" IsNotifying="False" Id="Malesuada parturient sagittis senectus augue" IsInitialized="True" IsActive="False" JsonMetadata="Posuere litora suscipit" JsonData="Dolor penatibus vestibulum per" LastModified="02/15/2011 14:42:26" Summary="Torquent tincidunt fames tristique">
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-				<DataTemplate/>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-				<Raven_Database:JsonDocument Key="Sociosqu sed ligula porttitor" LastModified="02/15/2011 14:42:26" NonAuthoritiveInformation="True">
-					<Raven_Database:JsonDocument.Etag>
-						<System:Guid/>
-					</Raven_Database:JsonDocument.Etag>
-				</Raven_Database:JsonDocument>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-		</Raven_Studio_Features_Database:EditDocumentViewModel>
-		<Raven_Studio_Features_Database:EditDocumentViewModel CollectionType="Luctus ultrices potenti magnis odio" ClrType="Nunc ultricies" DisplayName="Accumsan curabitur pede phasellus bibendum" DisplayId="Vehicula venenatis vulputate volutpat vestibulum" IsNotifying="False" Id="Mattis felis ipsum mauris" IsInitialized="True" IsActive="False" JsonMetadata="Vestibulum sit justo maecenas vestibulum" JsonData="Mollis orci" LastModified="02/15/2011 14:42:26" Summary="Praesent pretium rhoncus sodales">
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-				<DataTemplate/>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-				<Raven_Database:JsonDocument Key="Adipiscing parturient montes" LastModified="02/15/2011 14:42:26" NonAuthoritiveInformation="True">
-					<Raven_Database:JsonDocument.Etag>
-						<System:Guid/>
-					</Raven_Database:JsonDocument.Etag>
-				</Raven_Database:JsonDocument>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-		</Raven_Studio_Features_Database:EditDocumentViewModel>
-		<Raven_Studio_Features_Database:EditDocumentViewModel CollectionType="Nostra facilisi" ClrType="Adipiscing quam dictumst eleifend" DisplayName="Cras vestibulum" DisplayId="Lacus consequat" IsNotifying="False" Id="Quis faucibus" IsInitialized="True" IsActive="False" JsonMetadata="Vestibulum massa viverra" JsonData="Parturient vel urna" LastModified="02/15/2011 14:42:26" Summary="Metus habitant">
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-				<DataTemplate/>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-				<Raven_Database:JsonDocument Key="Ornare lorem magna nam" LastModified="02/15/2011 14:42:26" NonAuthoritiveInformation="True">
-					<Raven_Database:JsonDocument.Etag>
-						<System:Guid/>
-					</Raven_Database:JsonDocument.Etag>
-				</Raven_Database:JsonDocument>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-		</Raven_Studio_Features_Database:EditDocumentViewModel>
-		<Raven_Studio_Features_Database:EditDocumentViewModel CollectionType="Morbi sed adipiscing interdum lobortis" ClrType="Aliquam inceptos integer duis" DisplayName="Primis elit adipiscing pharetra hac" DisplayId="Quisque platea nunc convallis" IsNotifying="False" Id="Vivamus aliquam amet" IsInitialized="True" IsActive="False" JsonMetadata="Elementum blandit ante arcu diam" JsonData="Dis est parturient" LastModified="02/15/2011 14:42:26" Summary="Nascetur vestibulum vestibulum eget">
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-				<DataTemplate/>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-				<Raven_Database:JsonDocument Key="Aliquet dignissim" LastModified="02/15/2011 14:42:26" NonAuthoritiveInformation="True">
-					<Raven_Database:JsonDocument.Etag>
-						<System:Guid/>
-					</Raven_Database:JsonDocument.Etag>
-				</Raven_Database:JsonDocument>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-		</Raven_Studio_Features_Database:EditDocumentViewModel>
-		<Raven_Studio_Features_Database:EditDocumentViewModel CollectionType="Commodo eros facilisis nibh" ClrType="Placerat enim erat" DisplayName="Vestibulum habitasse taciti" DisplayId="Rutrum conubia parturient leo" IsNotifying="False" Id="Cubilia dapibus sapien mus" IsInitialized="True" IsActive="False" JsonMetadata="Fringilla nec sociis non" JsonData="Semper nisi fermentum" LastModified="02/15/2011 14:42:26" Summary="Per neque">
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-				<DataTemplate/>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-				<Raven_Database:JsonDocument Key="Egestas nisl" LastModified="02/15/2011 14:42:26" NonAuthoritiveInformation="True">
-					<Raven_Database:JsonDocument.Etag>
-						<System:Guid/>
-					</Raven_Database:JsonDocument.Etag>
-				</Raven_Database:JsonDocument>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-		</Raven_Studio_Features_Database:EditDocumentViewModel>
-		<Raven_Studio_Features_Database:EditDocumentViewModel CollectionType="Sed tellus hendrerit" ClrType="Nunc netus nulla" DisplayName="Lacinia senectus" DisplayId="Sem vestibulum tempor pulvinar" IsNotifying="False" Id="Himenaeos euismod" IsInitialized="True" IsActive="False" JsonMetadata="Imperdiet sagittis quam porta" JsonData="Tempus sit odio" LastModified="02/15/2011 14:42:26" Summary="Tortor iaculis purus">
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-				<DataTemplate/>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-				<Raven_Database:JsonDocument Key="Orci feugiat pede gravida" LastModified="02/15/2011 14:42:26" NonAuthoritiveInformation="True">
-					<Raven_Database:JsonDocument.Etag>
-						<System:Guid/>
-					</Raven_Database:JsonDocument.Etag>
-				</Raven_Database:JsonDocument>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-		</Raven_Studio_Features_Database:EditDocumentViewModel>
-		<Raven_Studio_Features_Database:EditDocumentViewModel CollectionType="Penatibus risus adipiscing" ClrType="Vel laoreet malesuada" DisplayName="Hac vestibulum tristique pretium leo" DisplayId="Velit sociosqu porttitor" IsNotifying="False" Id="Turpis nam natoque" IsInitialized="True" IsActive="False" JsonMetadata="Dis urna parturient varius" JsonData="Sed posuere suscipit quis" LastModified="02/15/2011 14:42:26" Summary="Cras aenean est tincidunt">
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-				<DataTemplate/>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.DataTemplate>
-			<Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-				<Raven_Database:JsonDocument Key="Torquent potenti vitae" LastModified="02/15/2011 14:42:26" NonAuthoritiveInformation="True">
-					<Raven_Database:JsonDocument.Etag>
-						<System:Guid/>
-					</Raven_Database:JsonDocument.Etag>
-				</Raven_Database:JsonDocument>
-			</Raven_Studio_Features_Documents:EditDocumentViewModel.JsonDocument>
-		</Raven_Studio_Features_Database:EditDocumentViewModel>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Maecenas cras praesent" ClrType="Nam aenean" DisplayId="Sed duis mauris aliquam dis" Id="Integer class curabitur" LastModified="02/17/2011 21:40:39" Summary="Est vestibulum"/>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Vestibulum bibendum quisque vestibulum" ClrType="Accumsan curae adipiscing parturient" DisplayId="Dictumst nullam eleifend adipiscing parturient" Id="Facilisi vivamus nunc faucibus" LastModified="02/17/2011 21:40:39" Summary="Vestibulum donec aptent phasellus amet"/>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Auctor habitant congue" ClrType="Vestibulum consequat ante adipiscing convallis" DisplayId="Hac etiam" Id="Inceptos parturient aliquam interdum" LastModified="02/17/2011 21:40:39" Summary="Aliquet leo dignissim mus"/>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Vestibulum non fusce elementum per" ClrType="Blandit cursus nec lobortis" DisplayId="Facilisis vestibulum" Id="Dictum lectus" LastModified="02/17/2011 21:40:39" Summary="Commodo arcu conubia"/>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Adipiscing sem morbi eget nulla" ClrType="Lorem diam fermentum sed" DisplayId="Libero proin parturient" Id="Sit vestibulum cubilia dapibus" LastModified="02/17/2011 21:40:39" Summary="Elit enim vestibulum augue"/>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Adipiscing fames habitasse euismod nascetur" ClrType="Erat dolor fringilla vel egestas" DisplayId="Hendrerit nam pharetra" Id="Sed felis ligula" LastModified="02/17/2011 21:40:39" Summary="Ipsum placerat eros litora nibh"/>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Malesuada nisi lacus lorem nisl" ClrType="Himenaeos justo feugiat imperdiet luctus" DisplayId="Magna gravida penatibus massa dis" Id="Metus pulvinar iaculis" LastModified="02/17/2011 21:40:39" Summary="Est porttitor"/>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Nunc odio" ClrType="Magnis sagittis senectus lacinia" DisplayId="Parturient sociosqu hac morbi" Id="Laoreet leo" LastModified="02/17/2011 21:40:39" Summary="Mattis orci"/>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Pede quam natoque" ClrType="Mauris vestibulum neque netus mus" DisplayId="Quis mollis posuere montes vestibulum" Id="Tincidunt urna cras suscipit nec" LastModified="02/17/2011 21:40:39" Summary="Non torquent ultrices per vehicula"/>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Nostra nunc sed volutpat" ClrType="Adipiscing potenti duis parturient" DisplayId="Nulla amet pretium" Id="Vestibulum ante sem porta ornare" LastModified="02/17/2011 21:40:39" Summary="Vestibulum rhoncus adipiscing platea"/>
 	</Raven_Studio_Features_Documents:BrowseDocumentsViewModel.Documents>
 </Raven_Studio_Features_Documents:BrowseDocumentsViewModel>

@@ -8,10 +8,10 @@
 			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
 			 xmlns:c="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
 			 mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
+			 d:DesignHeight="480"
+			 d:DesignWidth="640">
 
-	<Grid>
+	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="1.5*" />
 			<ColumnDefinition Width="16" />

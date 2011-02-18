@@ -8,8 +8,8 @@
 			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:data="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
 			 xmlns:c="clr-namespace:Raven.Studio.Controls" xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting" mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
+			 d:DesignHeight="480"
+			 d:DesignWidth="640">
 
 	<UserControl.Resources>
 		<Style TargetType="TextBox">
@@ -19,7 +19,7 @@
 	</UserControl.Resources>
 
 	<tk:BusyIndicator IsBusy="{Binding IsBusy}">
-		<Grid>
+		<Grid Background="{StaticResource DefaultScreenBackground}">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto" />
 				<ColumnDefinition Width="*" />

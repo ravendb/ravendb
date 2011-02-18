@@ -12,8 +12,7 @@
 			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions" xmlns:docs="clr-namespace:Raven.Studio.Features.Documents" x:Class="Raven.Studio.Features.Documents.BrowseDocumentsView"
 			 mc:Ignorable="d"
 			 d:DesignWidth="640"
-			 d:DesignHeight="480"
-			 d:DataContext="{d:DesignData /SampleData/BrowseDocumentsViewModelSampleData.xaml}">
+			 d:DesignHeight="480" d:DataContext="{d:DesignData /SampleData/BrowseDocumentsViewModelSampleData.xaml}">
 
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>

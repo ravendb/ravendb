@@ -7,11 +7,11 @@
 			 xmlns:r="clr-namespace:Raven.Studio.Controls"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
+			 d:DesignHeight="480"
+			 d:DesignWidth="640">
 
 	<tk:DockPanel x:Name="LayoutRoot"
-				  Background="White">
+				  Background="{StaticResource DefaultScreenBackground}">
 
 		<tk:DockPanel tk:DockPanel.Dock="Left">
 			<TextBox tk:DockPanel.Dock="Top" />

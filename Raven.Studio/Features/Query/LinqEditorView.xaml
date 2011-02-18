@@ -9,9 +9,9 @@
 			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
 			 xmlns:docs="clr-namespace:Raven.Studio.Features.Documents"
 			 mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
-	<Grid>
+			 d:DesignHeight="480"
+			 d:DesignWidth="640">
+	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="1*" />
