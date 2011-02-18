@@ -29,6 +29,11 @@
 				box => { if (box.WasSelected(MessageBoxOptions.Ok)) ExecuteDeletion(documentId); });
 		}
 
+		public bool CanExecute(string documentId)
+		{
+			return !string.IsNullOrEmpty(documentId);
+		}
+
 		void ExecuteDeletion(string documentId)
 		{
 			using (var session = server.OpenSession())
