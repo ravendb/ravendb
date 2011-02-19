@@ -33,6 +33,8 @@ namespace Raven.Tests.Bugs.Queries
 
                     bool testQuery;
 
+                    Assert.False(string.Equals("Matt", "matt"));
+
                     // Equals w/o InvariantCultureIgnoreCase
                     testQuery = session.Query<User>()
                             .Customize(x => x.WaitForNonStaleResults())
@@ -56,6 +58,8 @@ namespace Raven.Tests.Bugs.Queries
                     session.SaveChanges();
 
                     bool testQuery;
+
+                    Assert.True(string.Equals("Matt", "Matt"));
 
                     // Equals w/o InvariantCultureIgnoreCase
                     testQuery = session.Query<User>()
@@ -82,6 +86,8 @@ namespace Raven.Tests.Bugs.Queries
 
                     bool testQuery;
 
+                    Assert.True(string.Equals("Matt", "matt", StringComparison.InvariantCultureIgnoreCase));
+
                     // Equals with InvariantCultureIgnoreCase
                     testQuery = session.Query<User>()
                             .Customize(x => x.WaitForNonStaleResults())
@@ -106,6 +112,8 @@ namespace Raven.Tests.Bugs.Queries
                     session.SaveChanges();
 
                     bool testQuery;
+
+                    Assert.True(string.Equals("Matt", "Matt", StringComparison.InvariantCultureIgnoreCase));
 
                     // Equals with InvariantCultureIgnoreCase
                     testQuery = session.Query<User>()
