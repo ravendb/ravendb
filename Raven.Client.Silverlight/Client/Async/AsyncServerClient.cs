@@ -120,10 +120,13 @@ namespace Raven.Client.Client.Async
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 
-			var metadata = new JObject();
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/docs/" + key, "GET", metadata, credentials, convention);
+			key = key.Replace("\\",@"/"); //NOTE: the present of \ causes the SL networking stack to barf, even though the Uri seemingly makes this translation itself
 
-			return request.ReadResponseStringAsync()
+			var request = url.Docs(key)
+				.ToJsonRequest(this, credentials, convention);
+
+			return request
+				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					try
@@ -738,7 +741,7 @@ namespace Raven.Client.Client.Async
 				{
 					if (write.Exception != null)
 						throw new InvalidOperationException("Unable to write to server");
-					
+
 					return request.ReadResponseStringAsync();
 				}).Unwrap();
 		}
@@ -753,7 +756,7 @@ namespace Raven.Client.Client.Async
 			EnsureIsNotNullOrEmpty(key, "key");
 
 			var request = url.Static(key)
-				.ToJsonRequest(this,credentials,convention);
+				.ToJsonRequest(this, credentials, convention);
 
 			return request
 				.ReadResponseBytesAsync()
@@ -762,11 +765,11 @@ namespace Raven.Client.Client.Async
 					try
 					{
 						return new Attachment
-						        {
-						            Data = task.Result, 
+								{
+									Data = task.Result,
 									Etag = new Guid(request.ResponseHeaders["ETag"].First()),
 									Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
-						        };
+								};
 					}
 					catch (AggregateException e)
 					{

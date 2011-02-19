@@ -41,7 +41,7 @@
 
 		public static string Docs(this string url, string key)
 		{
-			return url + "/docs/" + key;
+			return url + "/docs/" + HttpUtility.HtmlEncode(key);
 		}
 
 		public static string Docs(this string url, int start, int pageSize)
