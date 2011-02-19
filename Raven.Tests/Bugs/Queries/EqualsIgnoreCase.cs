@@ -33,6 +33,7 @@ namespace Raven.Tests.Bugs.Queries
 
                     bool testQuery;
 
+                    Assert.Equal(1, session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count());
                     Assert.False(string.Equals("Matt", "matt"));
 
                     // Equals w/o InvariantCultureIgnoreCase
@@ -59,6 +60,7 @@ namespace Raven.Tests.Bugs.Queries
 
                     bool testQuery;
 
+                    Assert.Equal(1, session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count());
                     Assert.True(string.Equals("Matt", "Matt"));
 
                     // Equals w/o InvariantCultureIgnoreCase
@@ -86,6 +88,7 @@ namespace Raven.Tests.Bugs.Queries
 
                     bool testQuery;
 
+                    Assert.Equal(1, session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count());
                     Assert.True(string.Equals("Matt", "matt", StringComparison.InvariantCultureIgnoreCase));
 
                     // Equals with InvariantCultureIgnoreCase
@@ -113,6 +116,7 @@ namespace Raven.Tests.Bugs.Queries
 
                     bool testQuery;
 
+                    Assert.Equal(1, session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count());
                     Assert.True(string.Equals("Matt", "Matt", StringComparison.InvariantCultureIgnoreCase));
 
                     // Equals with InvariantCultureIgnoreCase
@@ -140,6 +144,7 @@ namespace Raven.Tests.Bugs.Queries
 
                     bool testQuery;
 
+                    Assert.Equal(1, session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count());
                     Assert.True(string.Equals("Matt", "Matt", StringComparison.InvariantCultureIgnoreCase));
 
                     // Equals with InvariantCultureIgnoreCase
@@ -167,6 +172,7 @@ namespace Raven.Tests.Bugs.Queries
 
                     bool testQuery;
 
+                    Assert.Equal(1, session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count());
                     Assert.True(string.Equals("Matt", "Matt", StringComparison.InvariantCultureIgnoreCase));
 
                     // Equals with InvariantCultureIgnoreCase
