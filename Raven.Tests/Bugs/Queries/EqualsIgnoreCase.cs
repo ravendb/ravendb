@@ -100,7 +100,7 @@ namespace Raven.Tests.Bugs.Queries
         }
 
         [Fact]
-        public void QueryWithEqualsInvariantCultureIgnoreCase_StringWithSameCasing_ReturnsTrue()
+        public void QueryWithEqualsInvariantCultureIgnoreCaseUsingAny_StringWithSameCasing_ReturnsTrue()
         {
             using (var db = NewDocumentStore())
             {
@@ -125,6 +125,60 @@ namespace Raven.Tests.Bugs.Queries
                 }
             }
         }
-       
+
+        [Fact]
+        public void QueryWithEqualsInvariantCultureIgnoreCaseUsingCount_StringWithSameCasing_ReturnsTrue()
+        {
+            using (var db = NewDocumentStore())
+            {
+                db.Initialize();
+
+                using (var session = db.OpenSession())
+                {
+                    session.Store(new User() { Name = "Matt" });
+                    session.SaveChanges();
+
+                    bool testQuery;
+
+                    Assert.True(string.Equals("Matt", "Matt", StringComparison.InvariantCultureIgnoreCase));
+
+                    // Equals with InvariantCultureIgnoreCase
+                    testQuery = session.Query<User>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Count(x => x.Name.Equals("Matt", StringComparison.InvariantCultureIgnoreCase))==1;
+
+                    Assert.True(testQuery);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void QueryWithEqualsInvariantCultureIgnoreCaseUsingWhere_StringWithSameCasing_ReturnsTrue()
+        {
+            using (var db = NewDocumentStore())
+            {
+                db.Initialize();
+
+                using (var session = db.OpenSession())
+                {
+                    session.Store(new User() { Name = "Matt" });
+                    session.SaveChanges();
+
+                    bool testQuery;
+
+                    Assert.True(string.Equals("Matt", "Matt", StringComparison.InvariantCultureIgnoreCase));
+
+                    // Equals with InvariantCultureIgnoreCase
+                    testQuery = session.Query<User>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Where(x => x.Name.Equals("Matt", StringComparison.InvariantCultureIgnoreCase))
+                            .ToArray().Count()== 1;
+
+                    Assert.True(testQuery);
+
+                }
+            }
+        }
     }
 }
