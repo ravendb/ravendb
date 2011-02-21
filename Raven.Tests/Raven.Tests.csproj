@@ -149,6 +149,7 @@
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
     <Compile Include="Bugs\FailDelete.cs" />
     <Compile Include="Bugs\FailStore.cs" />
+    <Compile Include="Bugs\GetDocumentUrlOnTrasient.cs" />
     <Compile Include="Bugs\HierarchicalData.cs" />
     <Compile Include="Bugs\HierarchyFromClient.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />

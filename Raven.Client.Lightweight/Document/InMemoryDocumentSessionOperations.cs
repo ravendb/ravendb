@@ -530,7 +530,10 @@ more responsive application.
 			return id;
 		}
 
-		private bool TryGetIdFromInstance(object entity, out string id)
+		/// <summary>
+		/// Attempts to get the document key from an instance 
+		/// </summary>
+		protected bool TryGetIdFromInstance(object entity, out string id)
 		{
 			var identityProperty = GetIdentityProperty(entity.GetType());
 			if (identityProperty != null)
