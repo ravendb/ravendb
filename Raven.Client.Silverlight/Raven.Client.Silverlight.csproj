@@ -111,6 +111,9 @@
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
       <Link>IDocumentQueryListener.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenCollections.cs">
+      <Link>Indexes\RavenCollections.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenDocumentsByEntityName.cs">
       <Link>Indexes\RavenDocumentsByEntityName.cs</Link>
     </Compile>

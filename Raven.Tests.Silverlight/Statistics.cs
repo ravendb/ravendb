@@ -28,11 +28,11 @@ namespace Raven.Tests.Silverlight
 			var store = new DocumentStore { Url = Url + Port };
 			store.Initialize();
 
-			var getStats = store.AsyncDatabaseCommands.GetStatisticsAsync();
+			var getStats = store.AsyncDatabaseCommands
+				.GetStatisticsAsync();
 			yield return getStats;
 
 			Assert.IsNotNull(getStats.Result);
-			Assert.AreNotEqual(0, getStats.Result.Indexes.Length);
 		}
 
 		[Asynchronous]

@@ -132,6 +132,7 @@
     <Compile Include="Indexes\IndexCreation.cs" />
     <Compile Include="Indexes\IndexDefinition.cs" />
     <Compile Include="Indexes\IndexDefinitionHelper.cs" />
+    <Compile Include="Indexes\RavenCollections.cs" />
     <Compile Include="Indexes\RavenDocumentsByEntityName.cs" />
     <Compile Include="Indexes\SpatialIndex.cs" />
     <Compile Include="ISyncAdvancedSessionOperation.cs" />

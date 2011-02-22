@@ -116,10 +116,17 @@
 			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-			var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexAsync("Raven/DocumentsByEntityName");
+			yield return documentStore.AsyncDatabaseCommands
+				.ForDatabase(dbname)
+				.PutIndexAsync("Test", new IndexDefinition
+				{
+					Map = "from doc in docs.Companies select new { doc.Name }"
+				}, true);
+
+			var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexAsync("Test");
 			yield return task;
 
-			Assert.AreEqual("Raven/DocumentsByEntityName", task.Result.Name);
+			Assert.AreEqual("Test", task.Result.Name);
 		}
 	}
 }
