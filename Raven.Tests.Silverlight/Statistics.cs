@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Raven.Database.Indexing;
 
 namespace Raven.Tests.Silverlight
 {
@@ -42,12 +43,17 @@ namespace Raven.Tests.Silverlight
 			store.Initialize();
 			yield return store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
+			yield return store.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("test", new IndexDefinition
+			{
+				Map = "from doc in docs select new { doc.Name}"
+			}, true);
+
 			var getStats = store.AsyncDatabaseCommands.ForDatabase(dbname).GetStatisticsAsync();
 			yield return getStats;
 
 			var stats = getStats.Result;
 			Assert.AreEqual(0, stats.CountOfDocuments);
-			Assert.AreEqual(2, stats.CountOfIndexes); // we expect two indexes in a brand new db (for now)
+			Assert.IsTrue(stats.CountOfIndexes > 0);
 		}
 
 		[Asynchronous]

@@ -18,11 +18,16 @@
 			var documentStore = new DocumentStore {Url = Url + Port};
 			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-
+			yield return
+				documentStore.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("test", new IndexDefinition
+				{
+					Map = "from doc in docs select new { doc.Name}"
+				}, true);
 			var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexNamesAsync(0, 25);
 			yield return task;
 
-			Assert.AreEqual("Raven/DocumentsByEntityName", task.Result[0]);
+			Assert.IsTrue(task.Result.Any(x => x == "test"));
+	
 		}
 
 		[Asynchronous]
@@ -33,10 +38,16 @@
 			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
+			yield return
+				documentStore.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("test", new IndexDefinition
+				{
+					Map = "from doc in docs select new { doc.Name}"
+				}, true);
+
 			var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexesAsync(0, 25);
 			yield return task;
 
-			Assert.AreEqual("Raven/DocumentsByEntityName", task.Result[0].Name);
+			Assert.IsTrue(task.Result.Any(x => x.Name == "test"));
 		}
 
 		[Asynchronous]
