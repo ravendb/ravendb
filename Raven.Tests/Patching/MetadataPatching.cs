@@ -16,7 +16,7 @@ namespace Raven.Tests.Patching
 				store.DocumentDatabase.Put("foos/1", null, JObject.Parse("{'Something':'something'}"),
 					JObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 				WaitForIndexing(store);
-				store.DatabaseCommands.UpdateByIndex("Raven/DocumentByEntityName",
+				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName",
 					new IndexQuery(), new[]
 					{
 						new PatchRequest
