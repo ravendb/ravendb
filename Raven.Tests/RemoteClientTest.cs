@@ -34,7 +34,7 @@ namespace Raven.Tests
 			using (var documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8080"
-			})
+			}.Initialize())
 			{
 				new RavenDocumentsByEntityName().Execute(documentStore);
 			}
@@ -43,16 +43,33 @@ namespace Raven.Tests
         }
 
 		protected RavenDbServer GetNewServer(int port, string path)
-        {
-            return new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All });
-        }
+		{
+			var ravenDbServer = new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All });
 
-        protected RavenDbServer GetNewServerWithoutAnonymousAccess(int port, string path)
-        {
-            return new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.None });
-        }
+			using (var documentStore = new DocumentStore
+			{
+				Url = "http://localhost:" + port
+			}.Initialize())
+			{
+				new RavenDocumentsByEntityName().Execute(documentStore);
+			}
+			return ravenDbServer;
+		}
 
-        protected string GetPath(string subFolderName)
+		protected RavenDbServer GetNewServerWithoutAnonymousAccess(int port, string path)
+		{
+			RavenDbServer newServerWithoutAnonymousAccess = new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.None });
+			using (var documentStore = new DocumentStore
+			{
+				Url = "http://localhost:" + port
+			}.Initialize())
+			{
+				new RavenDocumentsByEntityName().Execute(documentStore);
+			}
+			return newServerWithoutAnonymousAccess;
+		}
+
+		protected string GetPath(string subFolderName)
         {
             string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
             return Path.Combine(retPath, subFolderName).Substring(6); //remove leading file://

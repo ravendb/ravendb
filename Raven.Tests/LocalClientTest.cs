@@ -44,7 +44,6 @@ namespace Raven.Tests
                     RunInMemory = inMemory,
                 }
             };
-
 			
 			if (documentStore.Configuration.RunInMemory == false)
                 IOExtensions.DeleteDirectory(path);

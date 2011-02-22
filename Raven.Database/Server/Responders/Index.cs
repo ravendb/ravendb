@@ -68,8 +68,6 @@ namespace Raven.Database.Server.Responders
 
 		private void Put(IHttpContext context, string index)
 		{
-			if (BuiltinIndex(index, context))
-				return;
 			var data = context.ReadJsonObject<IndexDefinition>();
 			if (data.Map == null)
 			{
@@ -79,20 +77,6 @@ namespace Raven.Database.Server.Responders
 			}
 			context.SetStatusToCreated("/indexes/" + index);
 			context.WriteJson(new { Index = Database.PutIndex(index, data) });
-		}
-
-		private static bool BuiltinIndex(string index, IHttpContext context)
-		{
-			if (!index.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
-				return false;
-
-			context.SetStatusToForbidden();
-			context.WriteJson(new
-			{
-				Url = context.Request.RawUrl,
-				Error = "Builtin indexes cannot be modified, attempt to modifiy index '" + index + "' was rejected"
-			});
-			return true;
 		}
 
 		private void OnGet(IHttpContext context, string index)

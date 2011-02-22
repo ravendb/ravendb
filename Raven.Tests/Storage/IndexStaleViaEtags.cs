@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
 using Xunit;
@@ -17,9 +18,13 @@ namespace Raven.Tests.Storage
 
 		public IndexStaleViaEtags()
 		{
-			db =
-				new DocumentDatabase(new RavenConfiguration
-				{DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
+			db = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = "raven.db.test.esent", 
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+			});
+
+			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
 		public override void Dispose()
