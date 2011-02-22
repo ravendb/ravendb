@@ -24,6 +24,7 @@ namespace Raven.Client.Client
 		private DateTime lastReplicationUpdate = DateTime.MinValue;
 		private readonly object replicationLock = new object();
 		private List<string> replicationDestinations = new List<string>();
+		private static readonly List<string> Empty = new List<string>();
 
 		/// <summary>
 		/// Gets the replication destinations.
@@ -31,7 +32,13 @@ namespace Raven.Client.Client
 		/// <value>The replication destinations.</value>
 		public List<string> ReplicationDestinations
 		{
-			get { return replicationDestinations; }
+			get
+			{
+				if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+					return Empty;
+
+				return replicationDestinations;
+			}
 		}
 
 		///<summary>

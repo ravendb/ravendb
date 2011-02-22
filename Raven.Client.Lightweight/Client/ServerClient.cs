@@ -59,6 +59,13 @@ namespace Raven.Client.Client
 			replicationInformer.UpdateReplicationInformationIfNeeded(this);
 		}
 
+		/// <summary>
+		/// Allow access to the replication informer used to determine how we replicate requests
+		/// </summary>
+		public ReplicationInformer ReplicationInformer
+		{
+			get { return replicationInformer; }
+		}
 
 		#region IDatabaseCommands Members
 
