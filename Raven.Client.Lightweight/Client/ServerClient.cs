@@ -81,15 +81,15 @@ namespace Raven.Client.Client
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 
-			return ExecuteWithReplication(u => DirectGet(u, key));
+			return ExecuteWithReplication("GET", u => DirectGet(u, key));
 		}
 
-		private T ExecuteWithReplication<T>(Func<string, T> operation)
+		private T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
 			T result;
 			var threadSafeCopy = replicationInformer.ReplicationDestinations;
-			if (replicationInformer.ShouldExecuteUsing(url, currentRequest))
+			if (replicationInformer.ShouldExecuteUsing(url, currentRequest, method, true))
 			{
 				if (TryOperation(operation, url, true, out result))
 					return result;
@@ -101,7 +101,7 @@ namespace Raven.Client.Client
 			for (int i = 0; i < threadSafeCopy.Count; i++)
 			{
 				var replicationDestination = threadSafeCopy[i];
-				if (replicationInformer.ShouldExecuteUsing(replicationDestination, currentRequest) == false)
+				if (replicationInformer.ShouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)
 					continue;
 				if (TryOperation(operation, replicationDestination, true, out result))
 					return result;
@@ -221,7 +221,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <returns></returns>
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
-			return ExecuteWithReplication(u => DirectPut(metadata, key, etag, document, u));
+			return ExecuteWithReplication("PUT", u => DirectPut(metadata, key, etag, document, u));
 		}
 
 		private PutResult DirectPut(JObject metadata, string key, Guid? etag, JObject document, string operationUrl)
@@ -270,7 +270,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		public void Delete(string key, Guid? etag)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
-			ExecuteWithReplication<object>(u =>
+			ExecuteWithReplication<object>("DELETE", u =>
 			{
 				DirectDelete(key, etag, u);
 				return null;
@@ -422,7 +422,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <returns></returns>
 		public string[] GetIndexNames(int start, int pageSize)
 		{
-			return ExecuteWithReplication(u => DirectGetIndexNames(start, pageSize, u));
+			return ExecuteWithReplication("GET",u => DirectGetIndexNames(start, pageSize, u));
 		}
 
 		/// <summary>
@@ -431,7 +431,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <param name="name">The name.</param>
 		public void ResetIndex(string name)
 		{
-			ExecuteWithReplication(u => DirectResetIndex(name, u));
+			ExecuteWithReplication("RESET", u => DirectResetIndex(name, u));
 		}
 
 		private object DirectResetIndex(string name, string operationUrl)
@@ -458,7 +458,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		public IndexDefinition GetIndex(string name)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
-			return ExecuteWithReplication(u => DirectGetIndex(name, u));
+			return ExecuteWithReplication("GET", u => DirectGetIndex(name, u));
 		}
 
 		private IndexDefinition DirectGetIndex(string indexName, string operationUrl)
@@ -605,7 +605,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		public QueryResult Query(string index, IndexQuery query, string[] includes)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
-			return ExecuteWithReplication(u => DirectQuery(index, query, u, includes));
+			return ExecuteWithReplication("GET", u => DirectQuery(index, query, u, includes));
 		}
 
 		private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes)
@@ -664,7 +664,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <returns></returns>
 		public MultiLoadResult Get(string[] ids, string[] includes)
 		{
-			return ExecuteWithReplication(u => DirectGet(ids, u, includes));
+			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes));
 		}
 
 		/// <summary>
@@ -712,7 +712,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <returns></returns>
 		public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 		{
-			return ExecuteWithReplication(u => DirectBatch(commandDatas, u));
+			return ExecuteWithReplication("POST", u => DirectBatch(commandDatas, u));
 		}
 
 		private BatchResult[] DirectBatch(IEnumerable<ICommandData> commandDatas, string operationUrl)
@@ -746,7 +746,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <param name="txId">The tx id.</param>
 		public void Commit(Guid txId)
 		{
-			ExecuteWithReplication<object>(u =>
+			ExecuteWithReplication<object>("POST", u =>
 			{
 				DirectCommit(txId, u);
 				return null;
@@ -766,7 +766,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <param name="txId">The tx id.</param>
 		public void Rollback(Guid txId)
 		{
-			ExecuteWithReplication<object>(u =>
+			ExecuteWithReplication<object>("POST", u =>
 			{
 				DirectRollback(txId, u);
 				return null;
@@ -780,7 +780,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <returns></returns>
 		public byte[] PromoteTransaction(Guid fromTxId)
 		{
-			return ExecuteWithReplication(u => DirectPromoteTransaction(fromTxId, u));
+			return ExecuteWithReplication("PUT", u => DirectPromoteTransaction(fromTxId, u));
 		}
 
 		/// <summary>
@@ -791,7 +791,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <param name="recoveryInformation">The recovery information.</param>
 		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
 		{
-			ExecuteWithReplication<object>(u =>
+			ExecuteWithReplication<object>("PUT",u =>
 			{
 				var webRequest = (HttpWebRequest)WebRequest.Create(u + "/static/transactions/recoveryInformation/" + txId);
 				AddOperationHeaders(webRequest);
@@ -907,7 +907,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			ExecuteWithReplication<object>(operationUrl =>
+			ExecuteWithReplication<object>("DELETE", operationUrl =>
 			{
 				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "DELETE", credentials, convention);
@@ -937,7 +937,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 
-			ExecuteWithReplication<object>(operationUrl =>
+			ExecuteWithReplication<object>("PATCH", operationUrl =>
 			{
 				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "PATCH", credentials, convention);

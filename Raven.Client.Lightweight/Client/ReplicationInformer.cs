@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Bundles.Replication.Data;
+using Raven.Client.Document;
 using Raven.Database.Json;
 
 namespace Raven.Client.Client
@@ -18,6 +19,7 @@ namespace Raven.Client.Client
 	/// </summary>
 	public class ReplicationInformer
 	{
+		private readonly DocumentConvention conventions;
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		private DateTime lastReplicationUpdate = DateTime.MinValue;
 		private readonly object replicationLock = new object();
@@ -30,6 +32,14 @@ namespace Raven.Client.Client
 		public List<string> ReplicationDestinations
 		{
 			get { return replicationDestinations; }
+		}
+
+		///<summary>
+		/// Create a new instance of this class
+		///</summary>
+		public ReplicationInformer(DocumentConvention conventions)
+		{
+			this.conventions = conventions;
 		}
 
 #if !NET_3_5
@@ -57,11 +67,11 @@ namespace Raven.Client.Client
 		/// <summary>
 		/// Should execute the operation using the specified operation URL
 		/// </summary>
-		/// <param name="operationUrl">The operation URL.</param>
-		/// <param name="currentRequest">The current request.</param>
-		/// <returns></returns>
-		public bool ShouldExecuteUsing(string operationUrl, int currentRequest)
+		public bool ShouldExecuteUsing(string operationUrl, int currentRequest, string method, bool primary)
 		{
+			if (primary == false)
+				AssertValidOperation(method);
+
 			IntHolder value = GetHolder(operationUrl);
 			if (value.Value > 1000)
 			{
@@ -76,6 +86,24 @@ namespace Raven.Client.Client
 				return currentRequest % 10 == 0;
 			}
 			return true;
+		}
+
+		private void AssertValidOperation(string method)
+		{
+			switch (conventions.FailoverBehavior)
+			{
+				case FailoverBehavior.AllowReadsFromSecondaries:
+					if (method == "GET")
+						return;
+					break;
+				case FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries:
+					return;
+				case FailoverBehavior.FailImmediately:
+					break;
+			}
+			throw new InvalidOperationException("Could not replicate " + method +
+			                                    " operation to secondary node, failover behavior is: " +
+			                                    conventions.FailoverBehavior);
 		}
 
 		private IntHolder GetHolder(string operationUrl)

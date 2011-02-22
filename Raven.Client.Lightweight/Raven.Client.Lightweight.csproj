@@ -92,6 +92,7 @@
     <Compile Include="Document\DocumentQuery.cs" />
     <Compile Include="Document\DocumentSession.cs" />
     <Compile Include="Document\DocumentStore.cs" />
+    <Compile Include="Document\FailoverBehavior.cs" />
     <Compile Include="Document\HiLoKeyGenerator.cs" />
     <Compile Include="Document\ILoaderWithInclude.cs" />
     <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
