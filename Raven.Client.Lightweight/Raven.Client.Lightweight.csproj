@@ -132,6 +132,7 @@
     <Compile Include="Indexes\IndexCreation.cs" />
     <Compile Include="Indexes\IndexDefinition.cs" />
     <Compile Include="Indexes\IndexDefinitionHelper.cs" />
+    <Compile Include="Indexes\RavenDocumentsByEntityName.cs" />
     <Compile Include="Indexes\SpatialIndex.cs" />
     <Compile Include="ISyncAdvancedSessionOperation.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
@@ -152,7 +153,6 @@
     <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RavenExtensions.cs" />
     <Compile Include="Shard\ShardedDocumentSession.cs" />
     <Compile Include="Shard\ShardedDocumentStore.cs" />
     <Compile Include="Shard\Shards.cs" />

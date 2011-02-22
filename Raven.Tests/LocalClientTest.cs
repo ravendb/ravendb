@@ -7,6 +7,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using Raven.Client.Client;
+using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Storage.Managed;
@@ -48,6 +49,8 @@ namespace Raven.Tests
 			if (documentStore.Configuration.RunInMemory == false)
                 IOExtensions.DeleteDirectory(path);
             documentStore.Initialize();
+
+			new RavenDocumentsByEntityName().Execute(documentStore);
 
 			if (allocatedMemory != null && inMemory)
 			{

@@ -21,8 +21,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
     {
         protected RavenDbServer GetNewServer(int port)
         {
-            return
-                new RavenDbServer(new RavenConfiguration
+            return new RavenDbServer(new RavenConfiguration
                 {
                     Port = port,
                     RunInMemory = true,
