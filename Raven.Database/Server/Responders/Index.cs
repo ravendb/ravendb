@@ -100,36 +100,50 @@ namespace Raven.Database.Server.Responders
 			var definition = context.Request.QueryString["definition"];
 			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
 			{
-				var indexDefinition = Database.GetIndexDefinition(index);
-				if(indexDefinition == null)
-				{
-					context.SetStatusToNotFound();
-					return;
-				}
-				context.WriteJson(new {Index = indexDefinition});
+				GetIndexDefinition(context, index);
 			}
 			else
 			{
-				var queryResult = ExecuteQuery(context, index);
-
-				if (queryResult == null)
-					return;
-
-				var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
-				var loadedIds = new HashSet<string>(
-					queryResult.Results
-						.Where(x => x["@metadata"] != null)
-						.Select(x => x["@metadata"].Value<string>("@id"))
-						.Where(x => x != null)
-					);
-				var command = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
-				foreach (var result in queryResult.Results)
-				{
-					command.Execute(result);
-				}
-				context.Response.AddHeader("ETag", queryResult.IndexEtag.ToString());
-				context.WriteJson(queryResult);
+				GetIndexQueryRessult(context, index);
 			}
+		}
+
+		private void GetIndexQueryRessult(IHttpContext context, string index)
+		{
+			var queryResult = ExecuteQuery(context, index);
+
+			if (queryResult == null)
+				return;
+
+			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
+			var loadedIds = new HashSet<string>(
+				queryResult.Results
+					.Where(x => x["@metadata"] != null)
+					.Select(x => x["@metadata"].Value<string>("@id"))
+					.Where(x => x != null)
+				);
+			var command = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+			foreach (var result in queryResult.Results)
+			{
+				command.Execute(result);
+			}
+			context.Response.AddHeader("ETag", queryResult.IndexEtag.ToString());
+			context.WriteJson(queryResult);
+		}
+
+		private void GetIndexDefinition(IHttpContext context, string index)
+		{
+			var indexDefinition = Database.GetIndexDefinition(index);
+			if(indexDefinition == null)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
+			context.WriteJson(new
+			{
+				Index = indexDefinition,
+				Fields = Database.GetIndexFields(index)
+			});
 		}
 
 		private QueryResult ExecuteQuery(IHttpContext context, string index)

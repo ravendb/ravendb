@@ -1062,5 +1062,13 @@ select new { Tag = ""Orphan""}
 				return productVersion;
 			}
 		}
+
+		public string[] GetIndexFields(string index)
+		{
+			var abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
+			if(abstractViewGenerator == null)
+				return new string[0];
+			return abstractViewGenerator.Fields;
+		}
 	}
 }
