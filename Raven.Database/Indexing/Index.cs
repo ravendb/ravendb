@@ -70,11 +70,14 @@ namespace Raven.Database.Indexing
 
 		public void Flush()
 		{
-			if (disposed)
-				return;
-			if(indexWriter!=null)
+			lock (writeLock)
 			{
-				indexWriter.Commit();
+				if (disposed)
+					return;
+				if (indexWriter != null)
+				{
+					indexWriter.Commit();
+				}
 			}
 		}
 
