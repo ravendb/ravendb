@@ -66,7 +66,8 @@ select new
     {
         q.Title, 
         UpVotes = q.Votes.Count(((Func<dynamic,bool>)(x=>x.Up))), 
-        DownVotes = q.Votes.Count(((Func<dynamic,bool>)(x=>!x.Up)))
+        DownVotes = q.Votes.Count(((Func<dynamic,bool>)(x=>!x.Up))),
+		Date = new System.DateTime(2000,1,1)
     }
 ",
                     Stores =
@@ -103,7 +104,8 @@ CREATE TABLE [dbo].[QuestionSummaries]
 	[Id] [nvarchar](50) NOT NULL,
 	[UpVotes] [int] NOT NULL,
 	[DownVotes] [int] NOT NULL,
-	[Title] [nvarchar](255) NOT NULL
+	[Title] [nvarchar](255) NOT NULL,
+	[Date] [datetime] NOT NULL
 )
 ";
                     dbCommand.ExecuteNonQuery();
@@ -135,6 +137,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
                             {"Title", "Title"},
                             {"UpVotes", "UpVotes"},
                             {"DownVotes", "DownVotes"},
+							{"Date", "Date"}
                         },
                     ConnectionStringName = GetAppropriateConnectionStringName(),
                     PrimaryKeyColumnName = "Id",
@@ -310,6 +313,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
                         Assert.Equal("How to replicate to SQL Server!?", reader["Title"]);
                         Assert.Equal(2, reader["UpVotes"]);
                         Assert.Equal(2, reader["DownVotes"]);
+						Assert.Equal(new DateTime(2000,1,1), reader["Date"]);
                     }
                 }
             }
