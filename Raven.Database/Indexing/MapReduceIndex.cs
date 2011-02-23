@@ -56,7 +56,7 @@ namespace Raven.Database.Indexing
 				}
 				return doc;
 			});
-			foreach (var doc in RobustEnumeration(documentsWrapped, viewGenerator.MapDefinition, actions, context))
+			foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
 			{
 				count++;
 
@@ -220,7 +220,7 @@ namespace Raven.Database.Indexing
 						trigger => trigger.OnIndexEntryDeleted(name, entryKey));
 				}
 				PropertyDescriptorCollection properties = null;
-				foreach (var doc in RobustEnumeration(mappedResults, viewGenerator.ReduceDefinition, actions, context))
+				foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
 					var fields = GetFields(doc, ref properties).ToList();
