@@ -238,6 +238,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
                             {"Title", "Title"},
                             {"UpVotes", "UpVotes"},
                             {"DownVotes", "DownVotes"},
+							{"Date", "Date"},
                         },
                     ConnectionStringName = GetAppropriateConnectionStringName(),
                     PrimaryKeyColumnName = "Id",
