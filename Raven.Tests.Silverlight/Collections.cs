@@ -1,4 +1,6 @@
-﻿using Raven.Abstractions.Data;
+﻿using System.ComponentModel.Composition.Hosting;
+using Raven.Abstractions.Data;
+using Raven.Client.Indexes;
 
 namespace Raven.Tests.Silverlight
 {
@@ -20,7 +22,13 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			var store = new DocumentStore {Url = Url + Port};
 			store.Initialize();
+
+
 			yield return store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			yield return
+				IndexCreation.CreateIndexesAsync(new CompositionContainer(new TypeCatalog(typeof (RavenCollections))),
+				                                 store.AsyncDatabaseCommands.ForDatabase(dbname), store.Conventions);
 
 			using (var session = store.OpenAsyncSession(dbname))
 			{

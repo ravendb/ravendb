@@ -34,5 +34,10 @@ namespace Raven.Client.Client
 		{
 			return JObjectsToJsonDocuments(responses);
 		}
+
+		public static JsonDocument ToJsonDocument(this JObject response)
+		{
+			return JObjectsToJsonDocuments(new[] { response }).First();
+		}
 	}
 }

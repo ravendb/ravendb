@@ -8,6 +8,7 @@ using System.IO;
 using System.Reflection;
 using Raven.Client.Client;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Xunit;

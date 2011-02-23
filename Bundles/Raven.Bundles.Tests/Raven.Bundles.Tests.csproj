@@ -70,6 +70,7 @@
     <Compile Include="Replication\FailureHandling.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
     <Compile Include="Replication\SimpleReplication.cs" />
+    <Compile Include="Replication\WritesDuringFailover.cs" />
     <Compile Include="Versioning\Versioning.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

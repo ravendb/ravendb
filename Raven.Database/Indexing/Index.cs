@@ -70,11 +70,14 @@ namespace Raven.Database.Indexing
 
 		public void Flush()
 		{
-			if (disposed)
-				return;
-			if(indexWriter!=null)
+			lock (writeLock)
 			{
-				indexWriter.Commit();
+				if (disposed)
+					return;
+				if (indexWriter != null)
+				{
+					indexWriter.Commit();
+				}
 			}
 		}
 
@@ -381,7 +384,7 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-		protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func, IStorageActionsAccessor actions, WorkContext context)
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IndexingFunc func, IStorageActionsAccessor actions, WorkContext context)
 		{
 			return new RobustEnumerator
 			{
@@ -395,7 +398,42 @@ namespace Raven.Database.Indexing
 						);
 					logIndexing.WarnFormat(exception, "Failed to execute indexing function on {0} on {1}", name,
 										   TryGetDocKey(o));
-					actions.Indexing.IncrementIndexingFailure();
+					try
+					{
+						actions.Indexing.IncrementIndexingFailure();
+					}
+					catch (Exception e)
+					{
+						// we don't care about error here, because it is an error on error problem
+						logIndexing.WarnFormat(e, "Could not increment indexing failure rate for {0}", name);
+					}
+				}
+			}.RobustEnumeration(input, func);
+		}
+
+		protected IEnumerable<object> RobustEnumerationReduce(IEnumerable<object> input, IndexingFunc func, IStorageActionsAccessor actions, WorkContext context)
+		{
+			return new RobustEnumerator
+			{
+				BeforeMoveNext = actions.Indexing.IncrementReduceIndexingAttempt,
+				CancelMoveNext = actions.Indexing.DecrementReduceIndexingAttempt,
+				OnError = (exception, o) =>
+				{
+					context.AddError(name,
+									 TryGetDocKey(o),
+									 exception.Message
+						);
+					logIndexing.WarnFormat(exception, "Failed to execute indexing function on {0} on {1}", name,
+										   TryGetDocKey(o));
+					try
+					{
+						actions.Indexing.IncrementReduceIndexingFailure();
+					}
+					catch (Exception e)
+					{
+						// we don't care about error here, because it is an error on error problem
+						logIndexing.WarnFormat(e, "Could not increment indexing failure rate for {0}", name);
+					}
 				}
 			}.RobustEnumeration(input, func);
 		}

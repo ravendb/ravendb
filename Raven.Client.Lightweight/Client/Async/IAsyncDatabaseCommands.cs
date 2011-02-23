@@ -59,6 +59,12 @@ namespace Raven.Client.Client.Async
 		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes);
 
 		/// <summary>
+		/// Begins the async query.
+		/// </summary>
+		/// <param name="query">A string representation of a Linq query</param>
+		Task<QueryResult> LinearQueryAsync(string query, int start, int pageSize);
+
+		/// <summary>
 		/// Begins the async batch operation
 		/// </summary>
 		/// <param name="commandDatas">The command data.</param>
@@ -86,6 +92,18 @@ namespace Raven.Client.Client.Async
 		Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize);
 
 		/// <summary>
+		/// Resets the specified index asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		Task ResetIndexAsync(string name);
+
+		/// <summary>
+		/// Gets the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		Task<IndexDefinition> GetIndexAsync(string name);
+
+		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -98,6 +116,12 @@ namespace Raven.Client.Client.Async
 		/// </summary>
 		/// <param name="name">The name.</param>
 		Task DeleteIndexAsync(string name);
+
+		/// <summary>
+		/// Deletes the document for the specified id asyncronously
+		/// </summary>
+		/// <param name="id">The id.</param>
+		Task DeleteDocumentAsync(string id);
 
 		/// <summary>
 		/// Puts the document with the specified key in the database

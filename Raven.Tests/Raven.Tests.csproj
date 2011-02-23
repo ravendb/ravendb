@@ -149,6 +149,7 @@
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
     <Compile Include="Bugs\FailDelete.cs" />
     <Compile Include="Bugs\FailStore.cs" />
+    <Compile Include="Bugs\GetDocumentUrlOnTrasient.cs" />
     <Compile Include="Bugs\HierarchicalData.cs" />
     <Compile Include="Bugs\HierarchyFromClient.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
@@ -245,6 +246,7 @@
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\ReportQueryCount.cs" />
     <Compile Include="Bugs\ReuseQuery.cs" />
+    <Compile Include="Bugs\SelectManyIssue.cs" />
     <Compile Include="Bugs\SelectManyOnNull.cs" />
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SerializingEntities.cs" />

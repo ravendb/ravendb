@@ -39,6 +39,32 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"], 1);
 		}
 
+		public void DecrementIndexingAttempt()
+		{
+			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"], -1);
+		}
+
+		public void DecrementReduceIndexingAttempt()
+		{
+			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_attempts"], -1);
+		}
+
+		public void IncrementReduceIndexingAttempt()
+		{
+			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_attempts"], 1);
+		}
+
+		public void IncrementReduceSuccessIndexing()
+		{
+			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_successes"], 1);
+		}
+
+		public void IncrementReduceIndexingFailure()
+		{
+			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_errors"], 1);
+		}
+
+
 		public IEnumerable<IndexStats> GetIndexesStats()
 		{
 			Api.MoveBeforeFirst(session, IndexesStats);
@@ -53,6 +79,13 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
 					IndexingErrors =
 						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
+					ReduceIndexingAttempts = 
+						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_attempts"]).Value,
+					ReduceIndexingSuccesses =
+						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_successes"]).Value,
+					ReduceIndexingErrors =
+						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_errors"]).Value,
+					
 					LastIndexedEtag = 
 						Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting(),
 					LastIndexedTimestamp= 
@@ -81,11 +114,6 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.JetDelete(session, IndexesStats);
 		}
 
-		public void DecrementIndexingAttempt()
-		{
-			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"], -1);
-		}
-
 		public IndexFailureInformation GetFailureRate(string index)
 		{
 			SetCurrentIndexStatsTo(index);
@@ -94,7 +122,10 @@ namespace Raven.Storage.Esent.StorageActions
 				Name = index,
 				Attempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
 				Errors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
-				Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value
+				Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
+				ReduceAttempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_attempts"]).Value,
+				ReduceErrors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_errors"]).Value,
+				ReduceSuccesses = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_successes"]).Value
 			};
 		}
 

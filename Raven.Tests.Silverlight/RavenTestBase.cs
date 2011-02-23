@@ -19,8 +19,12 @@ namespace Raven.Tests.Silverlight
 				stackTrace.GetFrames().First(x => 
 					x.GetMethod().Name == "MoveNext" && 
 					x.GetMethod().DeclaringType.FullName.Contains("+<"));
+			
 			var generateNewDatabaseName = stackFrame.GetMethod().DeclaringType.FullName.Replace("+<",".");
-			return generateNewDatabaseName.Substring(0, generateNewDatabaseName.IndexOf(">"));
+
+			return generateNewDatabaseName
+				.Substring(0, generateNewDatabaseName.IndexOf(">"))
+				.Replace("Raven.Tests.Silverlight.",string.Empty) + DateTime.Now.Ticks;
 		}
 	}
 }

@@ -2,19 +2,76 @@
 {
 	using System;
 	using System.ComponentModel.Composition;
+	using System.Linq;
 	using System.Windows;
 	using Caliburn.Micro;
-	using Database;
+	using Features.Database;
+	using Framework;
 	using Messages;
+	using Plugin;
 
-	[Export(typeof (IShell))]
-	public class ShellViewModel : Conductor<DatabaseViewModel>.Collection.OneActive, IShell, IHandle<OpenNewScreen>
+	[Export(typeof(IShell))]
+	[PartCreationPolicy(CreationPolicy.Shared)]
+	public class ShellViewModel : Conductor<IScreen>, IShell,
+		IHandle<DisplayCurrentDatabaseRequested>
 	{
+		readonly NavigationViewModel navigation;
+		readonly NotificationsViewModel notifications;
+		readonly BusyStatusViewModel busyStatus;
+		readonly DatabaseViewModel databaseScreen;
+		readonly IEventAggregator events;
+
 		[ImportingConstructor]
-		public ShellViewModel(IEventAggregator events)
+		public ShellViewModel(
+			IServer server, 
+			ServerUriProvider uriProvider,
+			NavigationViewModel navigation,
+			NotificationsViewModel notifications,
+			BusyStatusViewModel busyStatus,
+			SelectDatabaseViewModel start,
+			DatabaseViewModel databaseScreen,
+			IEventAggregator events)
 		{
-			ActivateItem(new DatabaseViewModel(new Server("http://localhost:8080", "Local"), events));
+			this.navigation = navigation;
+			this.notifications = notifications;
+			this.busyStatus = busyStatus;
+			navigation.SetGoHome(() =>
+									{
+										this.TrackNavigationTo(start, events);
+										navigation.Breadcrumbs.Clear();
+									});
+			this.databaseScreen = databaseScreen;
+			this.events = events;
 			events.Subscribe(this);
+			events.Publish(new WorkStarted());
+
+			server.Connect(new Uri(uriProvider.GetServerUri()),
+				() =>
+				{
+					if (server.Databases.Count() == 1)
+					{
+						ActivateItem(databaseScreen);
+					}
+					else
+					{
+						ActivateItem(start);
+					}
+
+					events.Publish(new WorkCompleted());
+				});
+
+		}
+
+		public BusyStatusViewModel BusyStatus {get {return busyStatus;}}
+
+		public NotificationsViewModel Notifications
+		{
+			get { return notifications; }
+		}
+
+		public NavigationViewModel Navigation
+		{
+			get { return navigation; }
 		}
 
 		public Window Window
@@ -22,9 +79,13 @@
 			get { return Application.Current.MainWindow; }
 		}
 
-		public void Handle(OpenNewScreen message)
+		public void Handle(DisplayCurrentDatabaseRequested message)
 		{
-			ActiveItem.ActivateItem(message.NewScreen);
+			//TODO: record the previous database so that the back button is more intuitive
+			this.TrackNavigationTo(databaseScreen, events);
+
+			navigation.Breadcrumbs.Clear();
+			navigation.Breadcrumbs.Add(databaseScreen);
 		}
 
 		public void CloseWindow()

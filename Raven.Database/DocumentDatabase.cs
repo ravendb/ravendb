@@ -104,10 +104,9 @@ namespace Raven.Database
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
 			configuration.Container.SatisfyImportsOnce(TransactionalStorage);
 
-			bool newDb;
 			try
 			{
-				newDb = TransactionalStorage.Initialize(this);
+				TransactionalStorage.Initialize(this);
 			}
 			catch (Exception)
 			{
@@ -141,10 +140,6 @@ namespace Raven.Database
 				Dispose();
 				throw;
 			}
-			if (!newDb)
-				return;
-
-			OnNewlyCreatedDatabase();
 		}
 
 		private void InitializeTriggers()
@@ -166,37 +161,6 @@ namespace Raven.Database
 			{
 				task.Execute(this);
 			}
-		}
-
-		private void OnNewlyCreatedDatabase()
-		{
-			PutIndex("Raven/DocumentsByEntityName",
-					 new IndexDefinition
-					 {
-						 Map =
-						 @"from doc in docs 
-where doc[""@metadata""][""Raven-Entity-Name""] != null 
-select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
-",
-						 Indexes = { { "Tag", FieldIndexing.NotAnalyzed } },
-						 Stores = { { "Tag", FieldStorage.No } }
-					 });
-
-			PutIndex("Raven/DocumentCollections",
-					 new IndexDefinition
-					 {
-						 Map =
-						 @"from doc in docs
-let Name = doc[""@metadata""][""Raven-Entity-Name""]
-where Name != null
-select new { Name , Count = 1}
-",
-						 Reduce = @"from result in results
-group result by result.Name into g
-select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
-						 //Indexes = { { "Name", FieldIndexing.NotAnalyzed } },
-						 //Stores = { { "Name", FieldStorage.No } }
-					});
 		}
 
 		public DatabaseStatistics Statistics
@@ -1051,6 +1015,14 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
 					productVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).ProductVersion.ToString();
 				return productVersion;
 			}
+		}
+
+		public string[] GetIndexFields(string index)
+		{
+			var abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
+			if(abstractViewGenerator == null)
+				return new string[0];
+			return abstractViewGenerator.Fields;
 		}
 	}
 }

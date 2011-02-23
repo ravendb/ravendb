@@ -3,7 +3,7 @@
 					xmlns:controls="clr-namespace:Raven.Studio.Controls"
 					xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
 					xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-					xmlns:jw="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting">
+					xmlns:jw="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting">
 
 	<Style TargetType="ContentControl"
 		   x:Key="DraggableContent">
