@@ -22,6 +22,7 @@
 
     public class Answer
     {
+        public string Id { get; set; }
         public string UserId { get; set; }
         public string QuestionId { get; set; }
         public string Content { get; set; }
@@ -31,6 +32,23 @@
     {
         public string QuestionId { get; set; }
         public string AnswerId { get; set; }
+        public int Delta { get; set; }
+    }
+
+
+    public class AnswerEntity
+    {
+        public string Id { get; set; }
+        public string UserId { get; set; }
+        public Question Question { get; set; }
+        public string Content { get; set; }
+    }
+
+    public class AnswerVoteEntity
+    {
+        public string Id { get; set; }
+        public string QuestionId { get; set; }
+        public AnswerEntity Answer { get; set; }
         public int Delta { get; set; }
     }
 }
