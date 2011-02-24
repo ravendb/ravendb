@@ -42,10 +42,11 @@ namespace Raven.Bundles.Tests.Authorization
 
 				var readVetoException = Assert.Throws<ReadVetoException>(() => s.Load<Company>(company.Id));
 
-				Assert.Equal(readVetoException.Message, @"Document could not be read because of a read veto.
+				Assert.Equal(@"Document could not be read because of a read veto.
 The read was vetoed by: Raven.Bundles.Authorization.Triggers.AuthorizationReadTrigger
-Veto reason: Could not find any permissions for operation: Company/Bid on companies/1
-");
+Veto reason: Could not find any permissions for operation: Company/Bid on companies/1 for user Authorization/Users/Ayende.
+No one may perform operation Company/Bid on companies/1
+", readVetoException.Message);
 			}
 		}
 
