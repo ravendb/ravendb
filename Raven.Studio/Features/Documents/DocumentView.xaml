@@ -11,18 +11,19 @@
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
-	<Grid Margin="12,0,12,6"
-		  Height="75"
-		  Tag="{Binding Id}"
-		  cm:Action.TargetWithoutContext="EditDocumentById"
-		  f:DoubleClickEvent.AttachAction="Execute($this.Tag)"
+	<Grid Margin="0 0 6 6"
+		  cm:Action.TargetWithoutContext="EditDocument"
+		  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
 		  Background="Transparent">
+		<ToolTipService.ToolTip>
+			<ContentControl cm:View.Model="{Binding}"
+							cm:View.Context="Tooltip" />
+		</ToolTipService.ToolTip>
 		<ti:ContextMenuService.ContextMenu>
 			<ti:ContextMenu>
 				<ti:MenuItem Header="Edit Document"
-							 Tag="{Binding Id}"
-							 cm:Action.TargetWithoutContext="EditDocumentById"
-							 cm:Message.Attach="Click=Execute($this.Tag)" />
+							 cm:Action.TargetWithoutContext="EditDocument"
+							 cm:Message.Attach="Click=Execute($dataContext)" />
 				<ti:MenuItem Header="Delete Document"
 							 Tag="{Binding Id}"
 							 cm:Action.TargetWithoutContext="DeleteDocument"

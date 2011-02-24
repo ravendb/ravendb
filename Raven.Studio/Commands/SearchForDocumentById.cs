@@ -4,6 +4,7 @@
     using Caliburn.Micro;
     using Features.Database;
     using Features.Documents;
+    using Framework;
     using Messages;
     using Plugin;
 
@@ -27,7 +28,7 @@
             {
                 session.Advanced.AsyncDatabaseCommands
                     .GetAsync(key)
-                    .ContinueWith(get =>
+                    .ContinueOnSuccess(get =>
                     {
                         if (get.Result == null)
                         {

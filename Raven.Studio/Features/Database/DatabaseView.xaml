@@ -6,13 +6,13 @@
 			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:cm="http://www.caliburnproject.org"
 			 mc:Ignorable="d"
-			 d:DesignWidth="400"
-			 d:DesignHeight="400"
+			 d:DesignWidth="640"
+			 d:DesignHeight="480"
 			 Margin="5">
 
-	<Grid>
+	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="200" />
+			<ColumnDefinition Width="180" />
 			<ColumnDefinition Width="*" />
 		</Grid.ColumnDefinitions>
 

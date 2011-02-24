@@ -10,7 +10,7 @@
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;
 
-	[Export(typeof (EditDocumentViewModel))]
+	[Export(typeof(EditDocumentViewModel))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class EditDocumentViewModel : Screen
 	{
@@ -40,7 +40,7 @@
 
 		public string Id
 		{
-			get { return id; }
+			get { return IsProjection ? "Projection" : id; }
 			set
 			{
 				id = value ?? string.Empty;
@@ -78,12 +78,19 @@
 			get { return document; }
 		}
 
+		public bool IsProjection { get; private set; }
+
 		public void Initialize(JsonDocument doc)
 		{
 			document = doc;
 
 			Id = document.Key;
 			JsonData = PrepareRawJsonString(document.DataAsJson);
+
+			IsProjection = string.IsNullOrEmpty(Id) && (document.Metadata == null);
+
+			if (IsProjection) return;
+
 			JsonMetadata = PrepareRawJsonString(document.Metadata);
 
 			metadata = ParseJsonToDictionary(document.Metadata);
@@ -95,13 +102,18 @@
 
 		public void PrepareForSave()
 		{
-			document.DataAsJson = JObject.Parse(JsonData);
-			document.Metadata = JObject.Parse(JsonMetadata);
+			document.DataAsJson = ToJObject(JsonData);
+			document.Metadata = ToJObject(JsonMetadata);
 			document.Key = Id;
 
 			LastModified = DateTime.Now;
 			metadata = ParseJsonToDictionary(document.Metadata);
-			NotifyOfPropertyChange( () => Metadata );
+			NotifyOfPropertyChange(() => Metadata);
+		}
+
+		static JObject ToJObject(string json)
+		{
+			return string.IsNullOrEmpty(json) ? new JObject() : JObject.Parse(json);
 		}
 
 		public void Prettify()

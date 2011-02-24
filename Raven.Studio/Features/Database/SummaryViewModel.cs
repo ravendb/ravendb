@@ -5,23 +5,31 @@
 	using System.Linq;
 	using Abstractions.Data;
 	using Caliburn.Micro;
+	using Collections;
 	using Documents;
 	using Framework;
 	using Messages;
 	using Plugin;
 
-	[Export]
-	public class SummaryViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<DocumentDeleted>
+	[Export(typeof(IDatabaseScreenMenuItem))]
+	public class SummaryViewModel : Screen, IDatabaseScreenMenuItem,
+		IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
+		readonly IEventAggregator events;
+
+		public int Index { get { return 10; } }
 
 		[ImportingConstructor]
 		public SummaryViewModel(IServer server, IEventAggregator events)
 		{
 			this.server = server;
+			this.events = events;
 			events.Subscribe(this);
 
 			DisplayName = "Summary";
+
+			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange(string.Empty); };
 		}
 
 		public string DatabaseName
@@ -43,14 +51,9 @@
 			get
 			{
 				return (Collections == null || !Collections.Any())
-				       	? 0
-				       	: Collections.Max(x => x.Count);
+						? 0
+						: Collections.Max(x => x.Count);
 			}
-		}
-
-		public SectionType Section
-		{
-			get { return SectionType.Documents; }
 		}
 
 		public void Handle(DocumentDeleted message)
@@ -66,6 +69,16 @@
 			//    .Apply(x => x.Count--);
 		}
 
+		public void NavigateToCollection(Collection collection)
+		{
+			events.Publish( new DatabaseScreenRequested( ()=>
+			{
+			    var vm = IoC.Get<CollectionsViewModel>();
+				vm.ActiveCollection = collection;
+				return vm;
+			}));
+		}
+
 		protected override void OnActivate()
 		{
 			using (var session = server.OpenSession())
@@ -73,20 +86,20 @@
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 25)
 					.ContinueOnSuccess(x =>
-					                   	{
-					                   		Collections = x.Result;
-					                   		NotifyOfPropertyChange(() => LargestCollectionCount);
-					                   		NotifyOfPropertyChange(() => Collections);
-					                   	});
+										{
+											Collections = x.Result;
+											NotifyOfPropertyChange(() => LargestCollectionCount);
+											NotifyOfPropertyChange(() => Collections);
+										});
 
 				session.Advanced.AsyncDatabaseCommands
 					.GetDocumentsAsync(0, 12)
 					.ContinueOnSuccess(x =>
-					                   	{
-					                   		RecentDocuments = new BindableCollection<DocumentViewModel>(
-					                   			x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
-					                   		NotifyOfPropertyChange(() => RecentDocuments);
-					                   	});
+										{
+											RecentDocuments = new BindableCollection<DocumentViewModel>(
+												x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
+											NotifyOfPropertyChange(() => RecentDocuments);
+										});
 			}
 		}
 	}
