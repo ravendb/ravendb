@@ -44,7 +44,13 @@ namespace Raven.Tests
 
 		protected RavenDbServer GetNewServer(int port, string path)
 		{
-			var ravenDbServer = new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All });
+			var ravenDbServer = new RavenDbServer(new RavenConfiguration
+			{
+				Port = port, 
+				DataDirectory = path, 
+				RunInMemory = true,
+				AnonymousUserAccessMode = AnonymousUserAccessMode.All
+			});
 
 			using (var documentStore = new DocumentStore
 			{

@@ -23,7 +23,10 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var users = session.Query<User>().Take(20000).ToArray();
+					var users = session.Query<User>()
+						.Customize(x=>x.WaitForNonStaleResults())
+						.Take(20000)
+						.ToArray();
 					Assert.Equal(15000, users.Length);
 				}
 			}
