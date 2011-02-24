@@ -112,7 +112,10 @@ namespace Raven.Client.Document
         /// Should we wait for non stale results
         /// </summary>
         protected bool theWaitForNonStaleResults;
-        private readonly HashSet<string> includes = new HashSet<string>();
+		/// <summary>
+		/// The paths to include when loading the query
+		/// </summary>
+    	protected HashSet<string> includes = new HashSet<string>();
         /// <summary>
         /// What aggregated operation to execute
         /// </summary>
@@ -124,14 +127,6 @@ namespace Raven.Client.Document
 #if !NET_3_5
         private Task<QueryResult> queryResultTask;
 #endif
-
-        /// <summary>
-        ///   Gets the current includes on this query
-        /// </summary>
-        public IEnumerable<String> Includes
-        {
-            get { return includes; }
-        }
 
         /// <summary>
         ///   Get the name of the index being queried
