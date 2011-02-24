@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Runtime.Caching;
+using System.Text;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database;
@@ -36,7 +36,7 @@ namespace Raven.Bundles.Authorization
 			if (authAsJson == null)
 			{
 				if (logger != null)
-					logger("Document " + documentId + " is not secured");
+					logger("Document " + documentId + " is not secured and can be accessed by everyone.");
 				return true;
 			}
 			var documentAuthorization = authAsJson.JsonDeserialization<DocumentAuthorization>();
@@ -87,11 +87,57 @@ namespace Raven.Bundles.Authorization
 			if (decidingPermission == null)
 			{
 				if (logger != null)
-					logger("Could not find any permissions for operation: " + operation + " on " + documentId);
+				{
+					ExplainWhyUserCantAccessTheDocument(logger, documentId, userId, user, documentAuthorization, operation);
+				}
 				return false;
 			}
 
 			return decidingPermission.Allow;
+		}
+
+		private static void ExplainWhyUserCantAccessTheDocument(Action<string> logger, string documentId, string userId, AuthorizationUser user, DocumentAuthorization documentAuthorization, string operation)
+		{
+			var sb = new StringBuilder("Could not find any permissions for operation: ")
+				.Append(operation)
+				.Append(" on ")
+				.Append(documentId)
+				.Append(" for user ")
+				.Append(userId)
+				.Append(".");
+
+			if(user.Roles.Count > 0)
+			{
+				sb.Append(" or the user's roles: [")
+					.Append(string.Join(", ", user.Roles))
+					.Append("]");
+			}
+			sb.AppendLine();
+
+			if(documentAuthorization.Permissions.Count(x=>x.Operation==operation) == 0)
+			{
+				sb.Append("No one may perform operation ")
+					.Append(operation)
+					.Append(" on ")
+					.Append(documentId);
+			}
+			else
+			{
+				sb.Append("Only the following may perform operation ")
+					.Append(operation)
+					.Append(" on ")
+					.Append(documentId)
+					.AppendLine(":");
+
+				foreach (var documentPermission in documentAuthorization.Permissions)
+				{
+					sb.Append("\t")
+						.Append(documentPermission.Explain)
+						.AppendLine();
+				}
+			}
+
+			logger(sb.ToString());
 		}
 
 		private static bool DocumentPermisionMatchesUser(DocumentPermission permission, AuthorizationUser user, string userId)
@@ -136,6 +182,7 @@ namespace Raven.Bundles.Authorization
 		{
 			return tag2.StartsWith(tag1);
 		}
+
 		private T GetDocumentAsEntity<T>(string documentId) where T : class
 		{
 			var document = database.Get(documentId, null);

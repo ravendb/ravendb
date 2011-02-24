@@ -57,6 +57,8 @@
     <Compile Include="Authorization\Bugs\Kwal.cs" />
     <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
     <Compile Include="Authorization\Bugs\WhenUsingMultiTenancy.cs" />
+    <Compile Include="Authorization\Bugs\WithChangingOfUser.cs" />
+    <Compile Include="Authorization\CanAskAuthQuestions.cs" />
     <Compile Include="Authorization\CanHandleAuthQuestions.cs" />
     <Compile Include="Authorization\Deleting.cs" />
     <Compile Include="Authorization\Reading.cs" />
