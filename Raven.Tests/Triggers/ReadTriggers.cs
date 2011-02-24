@@ -32,7 +32,6 @@ namespace Raven.Tests.Triggers
 					typeof(HiddenDocumentsTrigger),
 					typeof(UpperCaseNamesTrigger)))
 			});
-			db.SpinBackgroundWorkers();
 			db.PutIndex("ByName",
 						new IndexDefinition
 						{
@@ -49,7 +48,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_Get()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abC'}"), new JObject(), null);
+			db.Put("abc", null, new JObject(), JObject.Parse("{'name': 'abC'}"), null);
 
 			var jsonDocument = db.Get("abc", null);
 
@@ -60,7 +59,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_GetDocuments()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abC'}"), new JObject(), null);
+			db.Put("abc", null, new JObject(), JObject.Parse("{'name': 'abC'}"), null);
 
 			var jsonDocument = db.GetDocuments(0, 25, null).First();
 
@@ -71,7 +70,8 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_Query()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abC'}"), new JObject(), null);
+			db.Put("abc", null, JObject.Parse("{'name': 'abC'}"), JObject.Parse("{'name': 'abC'}"), null);
+			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
 			do
@@ -90,7 +90,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanCompleteHideDocumentUsingTrigger()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc', 'hidden': true}"), new JObject(), null);
+			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), JObject.Parse("{'hidden': true}"), null);
 
 			var jsonDocument = db.Get("abc", null);
 
@@ -100,7 +100,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanCompleteHideDocumentUsingTrigger_GetDocuments()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc', 'hidden': true}"), new JObject(), null);
+			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), JObject.Parse("{'hidden': true}"), null);
 
 
 			Assert.Empty(db.GetDocuments(0, 25, null));
@@ -109,7 +109,8 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanCompleteHideDocumentUsingTrigger_Query()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc', 'hidden': true}"), new JObject(), null);
+			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), JObject.Parse("{'hidden': true}"), null);
+			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
 			do
@@ -130,9 +131,9 @@ namespace Raven.Tests.Triggers
 		{
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put(i.ToString(), null, new JObject(new JProperty("name", "ayende"),
-											   new JProperty("hidden", i % 2 == 0)), new JObject(), null);
+				db.Put(i.ToString(), null, new JObject(new JProperty("name", "ayende")), new JObject(new JProperty("hidden", i % 2 == 0)), null);
 			}
+			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
 			do
@@ -153,10 +154,10 @@ namespace Raven.Tests.Triggers
 			for (int i = 0; i < 15; i++)
 			{
 				db.Put(i.ToString(), null, new JObject(
-					new JProperty("name", "ayende"),
-					new JProperty("hidden", i % 2 == 0)), new JObject(), null);
+					new JProperty("name", "ayende")), new JObject(new JProperty("hidden", i % 2 == 0)), null);
 			}
 
+			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
 			{
@@ -179,10 +180,10 @@ namespace Raven.Tests.Triggers
 			for (int i = 0; i < 15; i++)
 			{
 				db.Put(i.ToString(), null, new JObject(
-											   new JProperty("name", "ayende"),
-											   new JProperty("hidden", i % 2 == 0)), new JObject(), null);
+											   new JProperty("name", "ayende")), new JObject(new JProperty("hidden", i % 2 == 0)), null);
 			}
 
+			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
 			{
@@ -230,6 +231,7 @@ namespace Raven.Tests.Triggers
 		{
 			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
 
+			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
 			{
