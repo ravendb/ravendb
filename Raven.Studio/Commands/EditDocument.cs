@@ -2,7 +2,6 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Features.Database;
 	using Features.Documents;
 	using Messages;
 
@@ -16,9 +15,12 @@
 			this.events = events;
 		}
 
-		public void Execute(EditDocumentViewModel document)
+		public void Execute(DocumentViewModel document)
 		{
-			events.Publish(new DatabaseScreenRequested(()=>document));
+			var editScreen = IoC.Get<EditDocumentViewModel>();
+			editScreen.Initialize(document.JsonDocument);
+
+			events.Publish(new DatabaseScreenRequested(() => editScreen));
 		}
 	}
 }

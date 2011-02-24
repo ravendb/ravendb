@@ -8,15 +8,21 @@
 
 	public partial class Pager : UserControl
 	{
-		public static readonly DependencyProperty ItemSizeProperty = DependencyProperty.Register(
-			"ItemSize",
+		public static readonly DependencyProperty ItemHeightProperty = DependencyProperty.Register(
+			"ItemHeight",
 			typeof (double),
 			typeof (Pager),
-			new PropertyMetadata(0.0));
+			new PropertyMetadata(66.0));
+
+		public static readonly DependencyProperty ItemWidthProperty = DependencyProperty.Register(
+			"ItemWidth",
+			typeof (double),
+			typeof (Pager),
+			new PropertyMetadata(126.0));
 
 		public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(
 			"ItemsSource",
-			typeof(IBindablePagedQuery),
+			typeof (IBindablePagedQuery),
 			typeof (Pager),
 			new PropertyMetadata(null, ItemsSourceChanged));
 
@@ -32,15 +38,27 @@
 		}
 
 		/// <summary>
-		/// The size of the elements that will be contained in page. Specifically, the element's height.
+		/// The height of the elements that will be contained in page
 		/// </summary>
 		/// <remarks>
 		/// If the size is unknown, we can't dynamically determine how big to make the request
 		/// </remarks>
-		public double ItemSize
+		public double ItemHeight
 		{
-			get { return (double) GetValue(ItemSizeProperty); }
-			set { SetValue(ItemSizeProperty, value); }
+			get { return (double)GetValue(ItemHeightProperty); }
+			set { SetValue(ItemHeightProperty, value); }
+		}
+
+		/// <summary>
+		/// The width of the elements that will be contained in page
+		/// </summary>
+		/// <remarks>
+		/// If the size is unknown, we can't dynamically determine how big to make the request
+		/// </remarks>
+		public double ItemWidth
+		{
+			get { return (double)GetValue(ItemWidthProperty); }
+			set { SetValue(ItemWidthProperty, value); }
 		}
 
 		/// <summary>
@@ -57,7 +75,7 @@
 		/// </summary>
 		public IBindablePagedQuery ItemsSource
 		{
-			get { return (IBindablePagedQuery)GetValue(ItemsSourceProperty); }
+			get { return (IBindablePagedQuery) GetValue(ItemsSourceProperty); }
 			set { SetValue(ItemsSourceProperty, value); }
 		}
 
@@ -74,8 +92,13 @@
 
 			if (source == null || container == null) return;
 
-			source.ItemSize = Convert.ToDouble(d.GetValue(ItemSizeProperty));
-			source.HeightOfPage = container.ActualHeight;
+			var itemH = Convert.ToDouble(d.GetValue(ItemHeightProperty));
+			var itemW = Convert.ToDouble(d.GetValue(ItemWidthProperty));
+			source.ItemElementSize = new Size(itemW,itemH);
+
+			source.PageElementSize = new Size(container.ActualWidth, container.ActualHeight);
+
+			source.AdjustResultsForPageSize();
 		}
 
 		static void PageContainerChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

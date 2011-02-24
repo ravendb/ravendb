@@ -196,7 +196,7 @@ namespace Raven.Database.Indexing
 				context.IndexStorage.Index(index, viewGenerator,
 					jsonDocs
 					.Select(doc => documentRetriever
-						.ProcessReadVetoes(doc, null, ReadOperation.Index))
+						.ExecuteReadTriggers(doc, null, ReadOperation.Index))
 					.Where(doc => doc != null)
 					.Select(x => JsonToExpando.Convert(x.ToJson())), context, actions, dateTime);
 			}

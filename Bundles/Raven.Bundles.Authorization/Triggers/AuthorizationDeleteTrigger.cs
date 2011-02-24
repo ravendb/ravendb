@@ -22,15 +22,6 @@ namespace Raven.Bundles.Authorization.Triggers
 			AuthorizationDecisions = new AuthorizationDecisions(Database);
 		}
 
-        /// <summary>
-        /// Reset the cache for the newly put document if it is a raven authorization document
-        /// </summary>
-        public override void AfterDelete(string key, TransactionInformation transactionInformation)
-        {
-            if (key.StartsWith("Authorization", StringComparison.InvariantCultureIgnoreCase))
-                AuthorizationDecisions.RemoveDocumentFromCache(key);
-        }
-
 		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{
 			if (AuthorizationContext.IsInAuthorizationContext)

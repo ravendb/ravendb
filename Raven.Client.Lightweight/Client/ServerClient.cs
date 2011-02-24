@@ -91,6 +91,28 @@ namespace Raven.Client.Client
 			return ExecuteWithReplication("GET", u => DirectGet(u, key));
 		}
 
+		/// <summary>
+		/// Execute a GET request against the provided url
+		/// and return the result as a string
+		/// </summary>
+		/// <param name="requestUrl">The relative url to the server</param>
+		/// <remarks>
+		/// This method respects the replication semantics against the database.
+		/// </remarks>
+		public string ExecuteGetRequest(string requestUrl)
+		{
+			EnsureIsNotNullOrEmpty(requestUrl, "url");
+			return ExecuteWithReplication("GET", serverUrl =>
+			{
+				var metadata = new JObject();
+				AddTransactionInformation(metadata);
+				var request = HttpJsonRequest.CreateHttpJsonRequest(this, serverUrl + requestUrl, "GET", metadata, credentials, convention);
+				request.AddOperationHeaders(OperationsHeaders);
+
+				return request.ReadResponseString();
+			});
+		}
+
 		private T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);

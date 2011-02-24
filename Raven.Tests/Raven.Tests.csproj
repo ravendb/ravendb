@@ -131,6 +131,8 @@
     <Compile Include="Bugs\CustomDynamicObject.cs" />
     <Compile Include="Bugs\CustomEntityName.cs" />
     <Compile Include="Bugs\DateRanges.cs" />
+    <Compile Include="Bugs\DateTimeInLocalTime.cs" />
+    <Compile Include="Bugs\DateTimeInLocalTimeRemote.cs" />
     <Compile Include="Bugs\DecimalPrecision.cs" />
     <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
     <Compile Include="Bugs\DocumentUrl.cs" />
@@ -202,6 +204,7 @@
     <Compile Include="Bugs\Metadata\LastModifiedLocal.cs" />
     <Compile Include="Bugs\Metadata\LastModifiedRemote.cs" />
     <Compile Include="Bugs\Metadata\MetadataPropertyInEntity.cs" />
+    <Compile Include="Bugs\MoreDtcIssues.cs" />
     <Compile Include="Bugs\MultiEntityIndex.cs" />
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
     <Compile Include="Bugs\MultiTenancy\Basic.cs" />
@@ -268,6 +271,8 @@
     <Compile Include="Bugs\UsingLongAsId.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\UsingSwedishCollation.cs" />
+    <Compile Include="Bugs\VeryBigResultSet.cs" />
+    <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\Vlko\Relations.cs" />
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />

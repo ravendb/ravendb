@@ -286,7 +286,7 @@ namespace Raven.Database
 
 			DocumentRetriever.EnsureIdInMetadata(document);
 			return new DocumentRetriever(null, ReadTriggers)
-				.ProcessReadVetoes(document, transactionInformation,ReadOperation.Load);
+				.ExecuteReadTriggers(document, transactionInformation,ReadOperation.Load);
 		}
 
 		public JsonDocumentMetadata GetDocumentMetadata(string key, TransactionInformation transactionInformation)
@@ -765,7 +765,7 @@ namespace Raven.Database
 				{
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever
-						.ProcessReadVetoes(doc, null, ReadOperation.Load);
+						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
 					if (document == null)
 						continue;
 
@@ -790,10 +790,7 @@ namespace Raven.Database
 				{
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever
-						.ProcessReadVetoes(doc, null,
-						// here we want to have the Load semantic, not Query, because we need this to be
-						// as close as possible to the full database contents
-						ReadOperation.Load);
+						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
 					if (document == null)
 						continue;
 

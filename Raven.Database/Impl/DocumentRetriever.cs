@@ -45,10 +45,31 @@ namespace Raven.Database.Impl
 
 		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, string[] fieldsToFetch, AggregationOperation aggregationOperation)
 		{
-			return
-				ProcessReadVetoes(
-					RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, aggregationOperation),
-					null, ReadOperation.Query);
+			return ExecuteReadTriggers(ProcessReadVetoes(
+				RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, aggregationOperation),
+				null, ReadOperation.Query), null, ReadOperation.Query);
+		}
+
+
+		public JsonDocument ExecuteReadTriggers(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
+		{
+			if (disableReadTriggers.Value)
+				return document;
+
+			return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, transactionInformation, operation),
+											 transactionInformation, operation);
+		}
+
+		private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument, TransactionInformation transactionInformation, ReadOperation operation)
+		{
+			if (resultingDocument == null)
+				return null;
+
+			foreach (var readTrigger in triggers)
+			{
+				readTrigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation, transactionInformation);
+			}
+			return resultingDocument;
 		}
 
 		private JsonDocument RetrieveDocumentInternal(
@@ -187,7 +208,7 @@ namespace Raven.Database.Impl
 			var document = GetDocumentWithCaching(id);
 			if(document == null)
 				return new DynamicNullObject();
-			return new DynamicJsonObject(document.DataAsJson);
+			return new DynamicJsonObject(document.ToJson());
 		}
 
 		public dynamic Load(object maybeId)

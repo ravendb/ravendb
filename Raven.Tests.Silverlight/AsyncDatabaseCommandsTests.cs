@@ -17,21 +17,45 @@
 			var dbname = GenerateNewDatabaseName();
 			var store = new DocumentStore { Url = Url + Port };
 			store.Initialize();
-			var cmd =store.AsyncDatabaseCommands;
+			var cmd = store.AsyncDatabaseCommands;
 			yield return cmd.EnsureDatabaseExistsAsync(dbname);
 
 			using (var session = store.OpenAsyncSession(dbname))
 			{
-				session.Store( new Company{ Name = "Hai"});
-				session.Store( new Company { Name = "I can haz cheezburgr?" });
-				session.Store( new Company { Name = "lol" });
-				yield return session.SaveChangesAsync(); 
+				session.Store(new Company { Name = "Hai" });
+				session.Store(new Company { Name = "I can haz cheezburgr?" });
+				session.Store(new Company { Name = "lol" });
+				yield return session.SaveChangesAsync();
 			}
 
-			var task = cmd.ForDatabase(dbname).GetDocumentsAsync(0,25);
+			var task = cmd.ForDatabase(dbname).GetDocumentsAsync(0, 25);
 			yield return task;
 
 			Assert.AreEqual(3, task.Result.Length);
+		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_get_documents_whose_id_starts_with_a_prefix()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var store = new DocumentStore { Url = Url + Port };
+			store.Initialize();
+			var cmd = store.AsyncDatabaseCommands;
+			yield return cmd.EnsureDatabaseExistsAsync(dbname);
+
+			using (var session = store.OpenAsyncSession(dbname))
+			{
+				session.Store(new Company { Name = "Something with the desired prefix" });
+				session.Store(new Contact { Surname = "Something without the desired prefix" });
+				yield return session.SaveChangesAsync();
+			}
+
+			var task = cmd
+				.ForDatabase(dbname)
+				.GetDocumentsStartingWithAsync("Companies", 0, 25);
+			yield return task;
+
+			Assert.AreEqual(1, task.Result.Length);
 		}
 
 		[Asynchronous]
@@ -124,7 +148,7 @@
 
 			Assert.AreEqual(3, task.Result.Length);
 
-			using(var session = store.OpenAsyncSession(dbname))
+			using (var session = store.OpenAsyncSession(dbname))
 			{
 				yield return session.Advanced.AsyncDatabaseCommands
 					.DeleteDocumentAsync(task.Result[0].Key);

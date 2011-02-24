@@ -3,18 +3,21 @@ namespace Raven.Studio.Features.Documents
 	using System.ComponentModel.Composition;
 	using System.Linq;
 	using Caliburn.Micro;
+	using Database;
 	using Framework;
 	using Messages;
 	using Plugin;
 	using Raven.Database;
 
-	[Export]
+	[Export(typeof(IDatabaseScreenMenuItem))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class BrowseDocumentsViewModel : RavenScreen,
+	public class BrowseDocumentsViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
+
+		public int Index { get { return 40; } }
 
 		[ImportingConstructor]
 		public BrowseDocumentsViewModel(IServer server, IEventAggregator events)

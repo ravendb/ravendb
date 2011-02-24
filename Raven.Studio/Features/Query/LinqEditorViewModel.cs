@@ -1,4 +1,4 @@
-namespace Raven.Studio.Features.Linq
+namespace Raven.Studio.Features.Query
 {
 	using System;
 	using System.ComponentModel.Composition;
@@ -49,7 +49,7 @@ namespace Raven.Studio.Features.Linq
 		public void Execute()
 		{
 			if (string.IsNullOrWhiteSpace(Query)) return;
-			
+
 			QueryResults = new BindablePagedQuery<DocumentViewModel>(BuildQuery);
 			QueryResults.LoadPage();
 		}
@@ -60,7 +60,7 @@ namespace Raven.Studio.Features.Linq
 				.LinearQueryAsync(Query, start, pageSize)
 				.ContinueWith(x =>
 				              	{
-									QueryResults.GetTotalResults = () => x.Result.TotalResults;
+				              		QueryResults.GetTotalResults = () => x.Result.TotalResults;
 				              		return x.Result.Results
 				              			.Select(jobj => new DocumentViewModel(jobj.ToJsonDocument()))
 				              			.ToArray();

@@ -4,14 +4,10 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
-			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-			 xmlns:c="clr-namespace:Raven.Studio.Controls"
-			 xmlns:sh="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting"
 			 mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
+			 d:DesignHeight="480"
+			 d:DesignWidth="640">
 
 	<UserControl.Resources>
 		<Style x:Key="Error"
@@ -32,7 +28,7 @@
 
 	</UserControl.Resources>
 
-	<Grid>
+	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
@@ -58,25 +54,25 @@
 						  ItemsSource="{Binding Server.Statistics.Errors}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
-						<tk:DockPanel>
+						<tk:DockPanel d:DesignWidth="595" d:DesignHeight="121" d:DataContext="{d:DesignData /SampleData/ServerErrorSampleData.xaml}">
 							<StackPanel Margin="0 0 0 8">
 								<TextBlock Text="{Binding Error}"
-										   Style="{StaticResource Error}" />
+									Style="{StaticResource Error}" />
 
-								<StackPanel Orientation="Horizontal">
+								<tk:WrapPanel Orientation="Horizontal">
 									<TextBlock Text="Occurred while indexing document " />
 									<HyperlinkButton Content="{Binding Document}"
-													 cm:Action.TargetWithoutContext="EditDocumentById"
-													 cm:Message.Attach="Execute($this.Content)" />
+										cm:Action.TargetWithoutContext="EditDocumentById"
+										cm:Message.Attach="Execute($this.Content)" />
 									<TextBlock Text=" with " />
 									<HyperlinkButton Content="{Binding Index}"
-													 cm:Action.TargetWithoutContext="EditIndex"
-													 cm:Message.Attach="Execute($this.Content)" />
+										cm:Action.TargetWithoutContext="EditIndex"
+										cm:Message.Attach="Execute($this.Content)" />
 									
-								</StackPanel>
+								</tk:WrapPanel>
 
 								<TextBlock Text="{Binding Timestamp, Converter={StaticResource howLongSince}}"
-										   Style="{StaticResource howLongSinceStyle}" />
+									Style="{StaticResource howLongSinceStyle}" />
 							</StackPanel>
 						</tk:DockPanel>
 					</DataTemplate>

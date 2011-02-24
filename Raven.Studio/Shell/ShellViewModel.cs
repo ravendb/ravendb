@@ -12,7 +12,7 @@
 
 	[Export(typeof(IShell))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class ShellViewModel : Conductor<IScreen>, IShell,
+	public class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IShell,
 		IHandle<DisplayCurrentDatabaseRequested>
 	{
 		readonly NavigationViewModel navigation;
@@ -44,6 +44,9 @@
 			this.events = events;
 			events.Subscribe(this);
 			events.Publish(new WorkStarted());
+
+			Items.Add(start);
+			Items.Add(databaseScreen);
 
 			server.Connect(new Uri(uriProvider.GetServerUri()),
 				() =>

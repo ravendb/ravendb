@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Text;
 using Raven.Abstractions.Data;
@@ -72,7 +73,8 @@ namespace Raven.Client.Document
                 sortByHints = sortByHints,
                 orderByFields = orderByFields,
                 groupByFields = groupByFields,
-                aggregationOp = aggregationOp
+                aggregationOp = aggregationOp,
+				includes = new HashSet<string>(includes)
             };
         }
 

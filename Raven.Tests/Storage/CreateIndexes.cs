@@ -74,6 +74,23 @@ namespace Raven.Tests.Storage
 		}
 
 		[Fact]
+		public void Index_names_should_be_sorted_alphabetically()
+		{
+			const string unimportantIndexMap = @"from doc in docs select new { doc };";
+			db.PutIndex("zebra", new IndexDefinition { Map = unimportantIndexMap });
+			db.PutIndex("alligator", new IndexDefinition { Map = unimportantIndexMap });
+			db.PutIndex("monkey", new IndexDefinition { Map = unimportantIndexMap });
+
+			var indexNames = db.IndexDefinitionStorage.IndexNames
+				.Where(x => x.StartsWith("Raven") == false)
+				.ToArray();
+
+			Assert.Equal("alligator", indexNames[0]);
+			Assert.Equal("monkey", indexNames[1]);
+			Assert.Equal("zebra", indexNames[2]);
+		}
+
+		[Fact]
 		public void Can_list_index_definition()
 		{
 			const string definition =

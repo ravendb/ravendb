@@ -4,6 +4,7 @@
 	using System.Collections.Generic;
 	using System.Net;
 	using System.Net.Browser;
+	using System.Windows.Browser;
 	using Raven.Client.Client;
 
 	public static class RavenUrlExtensions
@@ -28,6 +29,11 @@
 			return url + "/stats";
 		}
 
+		public static string Static(this string url, string key)
+		{
+			return url + "/static/" + HttpUtility.HtmlEncode(key);
+		}
+
 		public static string Databases(this string url)
 		{
 			return url + "/databases/";
@@ -35,12 +41,17 @@
 
 		public static string Docs(this string url, string key)
 		{
-			return url + "/docs/" + key;
+			return url + "/docs/" + HttpUtility.HtmlEncode(key);
 		}
 
 		public static string Docs(this string url, int start, int pageSize)
 		{
 			return url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+		}
+
+		public static string DocsStartingWith(this string url, string prefix, int start, int pageSize)
+		{
+			return Docs(url,start,pageSize) + "&startsWith=" + HttpUtility.HtmlEncode(prefix);
 		}
 
 		public static string Queries(this string url)

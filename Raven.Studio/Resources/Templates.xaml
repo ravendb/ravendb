@@ -1,7 +1,9 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-					xmlns:cal="http://www.caliburnproject.org">
+					xmlns:cal="http://www.caliburnproject.org"
+					xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+					xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Layout;assembly=Microsoft.Expression.Interactions">
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Styles.xaml" />
 		<ResourceDictionary Source="ControlTemplates/Gears.xaml" />
@@ -302,5 +304,22 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<ItemsPanelTemplate x:Key="FluidWrapPanel">
+		<toolkit:WrapPanel>
+			<i:Interaction.Behaviors>
+				<ei:FluidMoveBehavior AppliesTo="Children"
+									  Duration="0:0:0.5">
+					<ei:FluidMoveBehavior.EaseY>
+						<CircleEase EasingMode="EaseInOut" />
+					</ei:FluidMoveBehavior.EaseY>
+					<ei:FluidMoveBehavior.EaseX>
+						<CubicEase EasingMode="EaseInOut" />
+					</ei:FluidMoveBehavior.EaseX>
+				</ei:FluidMoveBehavior>
+			</i:Interaction.Behaviors>
+		</toolkit:WrapPanel>
+	</ItemsPanelTemplate>
+
 
 </ResourceDictionary>

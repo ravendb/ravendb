@@ -1,0 +1,5 @@
+﻿<Raven_Database_Data:ServerError xmlns:Raven_Database_Data="clr-namespace:Raven.Database.Data;assembly=Raven.Client.Silverlight"
+								 Document="Customers/48405d7a-af26-4ee0-b0f7-820a80c42e7b"
+								 Error="You did a bad, bad thing."
+								 Index="Raven/DocumentsByEntityName"
+								 Timestamp="02/17/2011 21:33:21" />

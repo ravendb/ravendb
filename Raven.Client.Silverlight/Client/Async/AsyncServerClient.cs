@@ -47,7 +47,7 @@ namespace Raven.Client.Client.Async
 		/// <param name="credentials">The credentials.</param>
 		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials)
 		{
-		    this.url = url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url;
+			this.url = url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url;
 			this.convention = convention;
 			this.credentials = credentials;
 		}
@@ -120,10 +120,13 @@ namespace Raven.Client.Client.Async
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 
-			var metadata = new JObject();
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/docs/" + key, "GET", metadata, credentials, convention);
+			key = key.Replace("\\",@"/"); //NOTE: the present of \ causes the SL networking stack to barf, even though the Uri seemingly makes this translation itself
 
-			return request.ReadResponseStringAsync()
+			var request = url.Docs(key)
+				.ToJsonRequest(this, credentials, convention);
+
+			return request
+				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					try
@@ -176,7 +179,7 @@ namespace Raven.Client.Client.Async
 				var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 				throw new ConflictException("Conflict detected on " + key +
-				                            ", conflict must be resolved before the document will be accessible")
+											", conflict must be resolved before the document will be accessible")
 				{
 					ConflictedVersionIds = conflictIds
 				};
@@ -226,13 +229,34 @@ namespace Raven.Client.Client.Async
 		/// </remarks>
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
 		{
-			return url.Docs(start,pageSize)
+			return url.Docs(start, pageSize)
 				.NoCache()
 				.ToJsonRequest(this, credentials, convention)
 				.ReadResponseStringAsync()
 				.ContinueWith(task => JArray.Parse(task.Result)
-				                      	.Cast<JObject>()
-				                      	.ToJsonDocuments()
+										.Cast<JObject>()
+										.ToJsonDocuments()
+										.ToArray());
+		}
+
+		/// <summary>
+		/// Begins an async get operation for documents whose id starts with the specified prefix
+		/// </summary>
+		/// <param name="prefix">Prefix that the ids begin with.</param>
+		/// <param name="start">Paging start.</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		public Task<JsonDocument[]> GetDocumentsStartingWithAsync(string prefix, int start, int pageSize)
+		{
+			return url.DocsStartingWith(prefix, start, pageSize)
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
+				.ContinueWith(task => JArray.Parse(task.Result)
+										.Cast<JObject>()
+										.ToJsonDocuments()
 										.ToArray());
 		}
 
@@ -268,7 +292,7 @@ namespace Raven.Client.Client.Async
 						Results = json["Results"].Children().Cast<JObject>().ToList(),
 						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 						SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-						Includes = json["Includes"].Children().Cast<JObject>().ToList(), 
+						Includes = json["Includes"].Children().Cast<JObject>().ToList(),
 					};
 				});
 		}
@@ -280,7 +304,7 @@ namespace Raven.Client.Client.Async
 		public Task<QueryResult> LinearQueryAsync(string linq, int start, int pageSize)
 		{
 			var query = @"{
-					Query: '"+ linq + @"',
+					Query: '" + linq + @"',
                     Start: " + start + @",
                     PageSize: " + pageSize + @"
 					}";
@@ -298,7 +322,8 @@ namespace Raven.Client.Client.Async
 
 						return request.ReadResponseStringAsync();
 					})
-				.ContinueWith(task=>{
+				.ContinueWith(task =>
+				{
 					JToken json;
 					using (var reader = new JsonTextReader(new StringReader(task.Result.Result)))
 						json = (JToken)convention.CreateSerializer().Deserialize(reader);
@@ -359,10 +384,10 @@ namespace Raven.Client.Client.Async
 							{
 								return JsonConvert.DeserializeObject<PutResult>(task1.Result, new JsonEnumConverter());
 							}
-							catch(AggregateException e)
+							catch (AggregateException e)
 							{
 								var webexception = e.ExtractSingleInnerException() as WebException;
-								if(ShouldThrowForPutAsync(webexception)) throw;
+								if (ShouldThrowForPutAsync(webexception)) throw;
 								throw ThrowConcurrencyException(webexception);
 							}
 							catch (WebException e)
@@ -377,7 +402,7 @@ namespace Raven.Client.Client.Async
 
 		static bool ShouldThrowForPutAsync(WebException e)
 		{
-			if(e == null) return true;
+			if (e == null) return true;
 			var httpWebResponse = e.Response as HttpWebResponse;
 			return (httpWebResponse == null ||
 				httpWebResponse.StatusCode != HttpStatusCode.Conflict);
@@ -391,7 +416,7 @@ namespace Raven.Client.Client.Async
 		{
 			return url.IndexDefinition(name)
 			.NoCache()
-			.ToJsonRequest(this,credentials,convention).ReadResponseStringAsync()
+			.ToJsonRequest(this, credentials, convention).ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					var serializer = convention.CreateSerializer();
@@ -461,7 +486,7 @@ namespace Raven.Client.Client.Async
 		/// </summary>
 		public class IndexContainer
 		{
-			public string Index {get;set;}
+			public string Index { get; set; }
 		}
 
 		/// <summary>
@@ -477,7 +502,7 @@ namespace Raven.Client.Client.Async
 
 		private static bool ShouldThrowForPutIndexAsync(WebException e)
 		{
-			if(e == null) return true;
+			if (e == null) return true;
 			var response = e.Response as HttpWebResponse;
 			return (response == null || response.StatusCode != HttpStatusCode.NotFound);
 		}
@@ -686,9 +711,9 @@ namespace Raven.Client.Client.Async
 
 		public Task<Collection[]> GetCollectionsAsync(int start, int pageSize)
 		{
-			var query =  new IndexQuery {Start = start,PageSize = pageSize, SortedFields = new[]{new SortedField("Name"), }};
+			var query = new IndexQuery { Start = start, PageSize = pageSize, SortedFields = new[] { new SortedField("Name"), } };
 
-			return QueryAsync("Raven/DocumentCollections", query, new string[]{})
+			return QueryAsync("Studio/DocumentCollections", query, new string[] { })
 					.ContinueWith(task => task.Result.Results.Select(x => x.Deserialize<Collection>(convention)).ToArray());
 		}
 
@@ -701,7 +726,24 @@ namespace Raven.Client.Client.Async
 		/// <param name="metadata">The metadata.</param>
 		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, JObject metadata)
 		{
-			throw new NotImplementedException();
+			if (metadata == null)
+				metadata = new JObject();
+
+			if (etag != null)
+				metadata["ETag"] = new JValue(etag.Value.ToString());
+
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url.Static(key), "PUT", metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request
+				.WriteAsync(data)
+				.ContinueWith(write =>
+				{
+					if (write.Exception != null)
+						throw new InvalidOperationException("Unable to write to server");
+
+					return request.ReadResponseStringAsync();
+				}).Unwrap();
 		}
 
 		/// <summary>
@@ -711,7 +753,41 @@ namespace Raven.Client.Client.Async
 		/// <returns></returns>
 		public Task<Attachment> GetAttachmentAsync(string key)
 		{
-			throw new NotImplementedException();
+			EnsureIsNotNullOrEmpty(key, "key");
+
+			var request = url.Static(key)
+				.ToJsonRequest(this, credentials, convention);
+
+			return request
+				.ReadResponseBytesAsync()
+				.ContinueWith(task =>
+				{
+					try
+					{
+						return new Attachment
+								{
+									Data = task.Result,
+									Etag = new Guid(request.ResponseHeaders["ETag"].First()),
+									Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
+								};
+					}
+					catch (AggregateException e)
+					{
+						var webException = e.ExtractSingleInnerException() as WebException;
+						if (webException != null)
+						{
+							if (HandleWebExceptionForGetAsync(key, webException))
+								return null;
+						}
+						throw;
+					}
+					catch (WebException e)
+					{
+						if (HandleWebExceptionForGetAsync(key, e))
+							return null;
+						throw;
+					}
+				});
 		}
 
 		/// <summary>
@@ -721,7 +797,15 @@ namespace Raven.Client.Client.Async
 		/// <param name="etag">The etag.</param>
 		public Task DeleteAttachmentAsync(string key, Guid? etag)
 		{
-			throw new NotImplementedException();
+			var metadata = new JObject();
+
+			if (etag != null)
+				metadata["ETag"] = new JValue(etag.Value.ToString());
+
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url.Static(key), "DELETE", metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseStringAsync();
 		}
 	}
 }

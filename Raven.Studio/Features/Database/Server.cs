@@ -3,6 +3,7 @@ namespace Raven.Studio.Features.Database
 	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
+	using System.Threading.Tasks;
 	using System.Windows.Threading;
 	using Caliburn.Micro;
 	using Client;
@@ -11,23 +12,27 @@ namespace Raven.Studio.Features.Database
 	using Messages;
 	using Plugin;
 	using Raven.Database.Data;
+	using StartUp;
 	using Action = System.Action;
 
-    [Export(typeof(IServer))]
+	[Export(typeof(IServer))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class Server : PropertyChangedBase, IServer, IHandle<StatisticsUpdateRequested>
 	{
+		readonly IDatabaseInitializer[] databaseInitializers;
 		const string DefaultDatabaseName = "Default Database";
 		DocumentStore store;
 		bool isInitialized;
 		readonly DispatcherTimer timer;
 		readonly Dictionary<string, DatabaseStatistics> snapshots = new Dictionary<string, DatabaseStatistics>();
-		readonly TimeSpan updateFrequency = new TimeSpan(0,0,0,5,0);
-		
+		readonly TimeSpan updateFrequency = new TimeSpan(0, 0, 0, 5, 0);
+		readonly List<string> startupChecks = new List<string>();
+
 		[ImportingConstructor]
-		public Server(IEventAggregator events)
+		public Server(IEventAggregator events, [ImportMany]IDatabaseInitializer[] databaseInitializers)
 		{
-			//TODO: Do we really need a timer? Only if we want to see update from other users working on the same database
+			this.databaseInitializers = databaseInitializers;
+
 			timer = new DispatcherTimer { Interval = updateFrequency };
 			timer.Tick += delegate { RetrieveStatisticsForCurrentDatabase(); };
 			events.Subscribe(this);
@@ -52,11 +57,11 @@ namespace Raven.Studio.Features.Database
 					CurrentDatabase = databases[0];
 
 					IsInitialized = true;
-					//Execute.OnUIThread(() => timer.Start());
-					
+					Execute.OnUIThread(() => timer.Start());
+
 					Connected(this, EventArgs.Empty);
 
-                    if (callback != null) callback();
+					if (callback != null) callback();
 				});
 		}
 
@@ -66,9 +71,12 @@ namespace Raven.Studio.Features.Database
 			get { return currentDatabase; }
 			set
 			{
-				currentDatabase = value; 
-				NotifyOfPropertyChange( ()=> CurrentDatabase);
+				if (currentDatabase == value) return;
+
+				currentDatabase = value;
+				NotifyOfPropertyChange(() => CurrentDatabase);
 				NotifyOfPropertyChange(() => HasCurrentDatabase);
+				InitializeCurrentDatabase();
 				RefreshStatistics(true);
 				RaiseCurrentDatabaseChanged();
 			}
@@ -78,7 +86,7 @@ namespace Raven.Studio.Features.Database
 		public IEnumerable<string> Databases
 		{
 			get { return databases; }
-			private set { databases = value; NotifyOfPropertyChange( ()=> Databases); }
+			private set { databases = value; NotifyOfPropertyChange(() => Databases); }
 		}
 
 		public bool IsInitialized
@@ -95,14 +103,14 @@ namespace Raven.Studio.Features.Database
 
 		public IAsyncDocumentSession OpenSession()
 		{
-			return (CurrentDatabase == DefaultDatabaseName) 
+			return (CurrentDatabase == DefaultDatabaseName)
 				? store.OpenAsyncSession()
 				: store.OpenAsyncSession(CurrentDatabase);
 		}
 
 		public bool HasCurrentDatabase
 		{
-			get {return !string.IsNullOrEmpty(CurrentDatabase); }
+			get { return !string.IsNullOrEmpty(CurrentDatabase); }
 		}
 
 		DatabaseStatistics statistics;
@@ -121,18 +129,27 @@ namespace Raven.Studio.Features.Database
 
 		void RaiseCurrentDatabaseChanged()
 		{
-			CurrentDatabaseChanged(this,EventArgs.Empty);
+			CurrentDatabaseChanged(this, EventArgs.Empty);
+		}
+
+		void InitializeCurrentDatabase()
+		{
+			if (startupChecks.Contains(CurrentDatabase)) return;
+			startupChecks.Add(CurrentDatabase);
+
+			using (var session = OpenSession())
+				databaseInitializers.Apply(x => ExecuteTasks(x.Initialize(session)));
 		}
 
 		void RefreshStatistics(bool clear)
 		{
-			if(clear) Statistics = null;
+			if (clear) Statistics = null;
 
-			if(snapshots.ContainsKey(CurrentDatabase))
+			if (snapshots.ContainsKey(CurrentDatabase))
 			{
 				var snapshot = snapshots[CurrentDatabase];
 				Statistics = snapshot;
-			} 
+			}
 
 			RetrieveStatisticsForCurrentDatabase();
 		}
@@ -156,6 +173,23 @@ namespace Raven.Studio.Features.Database
 		public void Handle(StatisticsUpdateRequested message)
 		{
 			RefreshStatistics(false);
+		}
+
+		public void ExecuteTasks(IEnumerable<Task> tasks)
+		{
+			var enumerator = tasks.GetEnumerator();
+			ExecuteNextTask(enumerator);
+		}
+
+		private static void ExecuteNextTask(IEnumerator<Task> enumerator)
+		{
+			bool moveNextSucceeded = enumerator.MoveNext();
+
+			if (!moveNextSucceeded) return;
+
+			enumerator
+				.Current
+				.ContinueWith(x => ExecuteNextTask(enumerator));
 		}
 	}
 }

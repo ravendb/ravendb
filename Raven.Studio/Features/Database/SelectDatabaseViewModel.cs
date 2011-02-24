@@ -24,5 +24,11 @@ namespace Raven.Studio.Features.Database
 		{
 			events.Publish(new DisplayCurrentDatabaseRequested());
 		}
+
+		public void SelectDatabase(string database)
+		{
+			Server.CurrentDatabase = database;
+			OpenDatabase();
+		}
 	}
 }

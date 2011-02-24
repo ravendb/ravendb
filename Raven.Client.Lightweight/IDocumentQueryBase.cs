@@ -22,6 +22,7 @@ namespace Raven.Client
         /// <param name = "path">The path.</param>
         TSelf Include(string path);
 
+
         /// <summary>
         ///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
         ///   that is nearly always a mistake.

@@ -42,7 +42,7 @@
 
 		bool ValidateJson(string json)
 		{
-			if(json == null) return true;
+			if(string.IsNullOrEmpty(json)) return true;
 
 			try
 			{
