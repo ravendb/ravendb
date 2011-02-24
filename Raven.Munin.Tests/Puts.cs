@@ -21,7 +21,6 @@ namespace Raven.Munin.Tests
         public void CanAddAndGetDataSameTx()
         {
             
-
             Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
             var data = Table.Read(JToken.FromObject("123"));
