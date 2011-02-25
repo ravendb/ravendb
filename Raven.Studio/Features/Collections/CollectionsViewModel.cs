@@ -9,15 +9,22 @@
 	using Caliburn.Micro;
 	using Client.Client;
 	using Database;
+	using Documents;
 	using Framework;
+	using Messages;
 	using Plugin;
 	using Raven.Database.Data;
 
-	[Export]
-	public class CollectionsViewModel : RavenScreen
+	[Export(typeof(IDatabaseScreenMenuItem))]
+	[Export(typeof(CollectionsViewModel))]
+	public class CollectionsViewModel : RavenScreen, IDatabaseScreenMenuItem,
+		IHandle<DocumentDeleted>
 	{
+		readonly Collection raven = new Collection { Name = "Raven", Count = 0 };
 		readonly IServer server;
 		Collection activeCollection;
+
+		public int Index { get { return 20; } }
 
 		[ImportingConstructor]
 		public CollectionsViewModel(IServer server, IEventAggregator events)
@@ -25,8 +32,11 @@
 		{
 			DisplayName = "Collections";
 
+			events.Subscribe(this);
+
 			this.server = server;
 			SystemCollections = new BindableCollection<Collection>();
+			ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
 		}
 
 		public IEnumerable<Collection> Collections { get; private set; }
@@ -38,6 +48,8 @@
 			get { return activeCollection; }
 			set
 			{
+				if (activeCollection == value) return;
+
 				activeCollection = value;
 				NotifyOfPropertyChange(() => ActiveCollection);
 				GetDocumentsForActiveCollection();
@@ -59,20 +71,17 @@
 			get { return Collections != null && Collections.Any(); }
 		}
 
+		public Collection RavenCollection
+		{
+			get { return raven; }
+		}
+
 		void GetDocumentsForActiveCollection()
 		{
-			if (ActiveCollection == null)
-			{
-				ActiveCollectionDocuments = null;
-			}
-			else
-			{
-				ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
-				ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;
-				ActiveCollectionDocuments.LoadPage();
-			}
+			if (ActiveCollection == null) return;
 
-			NotifyOfPropertyChange(() => ActiveCollectionDocuments);
+			ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;
+			ActiveCollectionDocuments.LoadPage();
 		}
 
 		Task<DocumentViewModel[]> GetDocumentsForActiveCollectionQuery(int start, int pageSize)
@@ -90,32 +99,18 @@
 
 										WorkCompleted();
 
-										//TODO: this smells bad to me...
-										var vm = IoC.Get<DocumentViewModel>();
 										return x.Result.Results
-											.Select(doc => vm.CloneUsing(doc.ToJsonDocument()))
+											.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
 											.ToArray();
 									});
 			}
-		}
-
-		readonly Collection raven = new Collection { Name = "Raven", Count = 0 };
-
-		public Collection OrphansCollection
-		{
-			get;
-			set;
-		}
-
-		public Collection RavenCollection
-		{
-			get { return raven; }
 		}
 
 		protected override void OnActivate()
 		{
 			WorkStarted();
 
+			var currentActiveCollection = ActiveCollection;
 			using (var session = server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
@@ -126,21 +121,36 @@
 											NotifyOfPropertyChange(() => LargestCollectionCount);
 											NotifyOfPropertyChange(() => Collections);
 
-											ActiveCollection = Collections.FirstOrDefault();
+											ActiveCollection = currentActiveCollection ?? Collections.FirstOrDefault();
 											NotifyOfPropertyChange(() => HasCollections);
 
 											WorkCompleted();
 										});
 
-				session.Advanced.AsyncDatabaseCommands
-					.QueryAsync("Raven/OrphanDocuments", new IndexQuery { PageSize = 0, Start = 0 }, null)
-					.ContinueOnSuccess(x =>
-										{
-											var c = new Collection{Count = x.Result.TotalResults,Name = "Orphans"};
-											OrphansCollection = c;
-											NotifyOfPropertyChange(() => OrphansCollection);
-										});
+				//session.Advanced.AsyncDatabaseCommands
+				//    .GetDocumentsStartingWithAsync("Raven",0,1)
+				//    .ContinueOnSuccess(x =>
+				//                        {
+				//                            var c = new Collection { Count = x.Result.TotalResults, Name = "Orphans" };
+				//                            OrphansCollection = c;
+				//                            NotifyOfPropertyChange(() => OrphansCollection);
+				//                        });
 			}
+		}
+
+		public void EditTemplate()
+		{
+			var vm = IoC.Get<EditCollectionTemplateViewModel>();
+			vm.Collection = ActiveCollection;
+			Events.Publish(new DatabaseScreenRequested(() => vm));
+		}
+
+		public void Handle(DocumentDeleted message)
+		{
+			ActiveCollectionDocuments
+				.Where(x => x.Id == message.DocumentId)
+				.ToList()
+				.Apply(x => ActiveCollectionDocuments.Remove(x));
 		}
 	}
 }

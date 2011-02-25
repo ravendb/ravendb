@@ -302,7 +302,11 @@ namespace Raven.Client.Document
 			string baseUrl = documentStore.Url.EndsWith("/") ? documentStore.Url + "docs/" : documentStore.Url + "/docs/";
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
 			{
-				return baseUrl + GetOrGenerateDocumentKey(entity);
+				string id;
+				TryGetIdFromInstance(entity, out id);
+				if(string.IsNullOrEmpty(id))
+					throw new InvalidOperationException("Could not figure out identifier for transient instance");
+				return baseUrl + id;
 			}
 
 			return baseUrl + value.Key;

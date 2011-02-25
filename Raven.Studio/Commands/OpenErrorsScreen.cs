@@ -2,7 +2,6 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Database;
 	using Features.Database;
 	using Features.Statistics;
 

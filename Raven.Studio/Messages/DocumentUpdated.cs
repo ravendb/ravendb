@@ -1,12 +1,13 @@
 ﻿namespace Raven.Studio.Messages
 {
 	using Features.Database;
+	using Features.Documents;
 
 	public class DocumentUpdated : NotificationRaised
 	{
-		readonly DocumentViewModel document;
+		readonly EditDocumentViewModel document;
 
-		public DocumentUpdated(DocumentViewModel document) : base( "Document Saved", NotificationLevel.Info)
+		public DocumentUpdated(EditDocumentViewModel document) : base( "Document Saved", NotificationLevel.Info)
 		{
 			this.document = document;
 		}
@@ -16,7 +17,7 @@
 			get { return document.Id; }
 		}
 
-		public DocumentViewModel Document
+		public EditDocumentViewModel Document
 		{
 			get { return document; }
 		}

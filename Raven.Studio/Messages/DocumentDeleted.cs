@@ -1,25 +1,18 @@
 ﻿namespace Raven.Studio.Messages
 {
-	using Features.Database;
-
 	public class DocumentDeleted : NotificationRaised
 	{
-		readonly DocumentViewModel document;
+		readonly string documentId;
 
-		public DocumentDeleted(DocumentViewModel document)
+		public DocumentDeleted(string documentId)
 			: base("Document Deleted", NotificationLevel.Info)
 		{
-			this.document = document;
+			this.documentId = documentId;
 		}
 
 		public string DocumentId
 		{
-			get { return document.Id; }
-		}
-
-		public DocumentViewModel Document
-		{
-			get { return document; }
+			get { return documentId; }
 		}
 	}
 }

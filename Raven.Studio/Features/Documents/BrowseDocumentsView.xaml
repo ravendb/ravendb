@@ -9,12 +9,10 @@
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
 			 xmlns:f="clr-namespace:Raven.Studio.Framework"
 			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
-			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-			 x:Class="Raven.Studio.Features.Documents.BrowseDocumentsView"
+			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions" xmlns:docs="clr-namespace:Raven.Studio.Features.Documents" x:Class="Raven.Studio.Features.Documents.BrowseDocumentsView"
 			 mc:Ignorable="d"
 			 d:DesignWidth="640"
-			 d:DesignHeight="480"
-			 d:DataContext="{d:DesignData /SampleData/BrowseDocumentsViewModelSampleData.xaml}">
+			 d:DesignHeight="480" d:DataContext="{d:DesignData /SampleData/BrowseDocumentsViewModelSampleData.xaml}">
 
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>
@@ -60,63 +58,29 @@
 			</StackPanel>
 
 			<c:Pager tk:DockPanel.Dock="Top"
-					 cm:Bind.Model="{Binding Documents}" />
+					 ItemsSource="{Binding Documents}"
+					 PageContainer="{Binding ElementName=DocumentPageContainer}" />
 
-			<c:Pager tk:DockPanel.Dock="Bottom"
-					 cm:Bind.Model="{Binding Documents}" />
+			<!--<c:Pager tk:DockPanel.Dock="Bottom"
+					 PageContainer="{Binding ElementName=DocumentPageContainer}"
+					 cm:Bind.Model="{Binding Documents}" />-->
 
 			<Grid>
-				<ListBox ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+				<ItemsControl x:Name="DocumentPageContainer"
+						 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 						 BorderThickness="0"
+						 ItemsPanel="{StaticResource FluidWrapPanel}"
 						 ItemsSource="{Binding Documents}">
-					<ListBox.ItemsPanel>
-						<ItemsPanelTemplate>
-							<tk:WrapPanel>
-								<i:Interaction.Behaviors>
-									<ei:FluidMoveBehavior AppliesTo="Children"
-														  Duration="0:0:0.5">
-										<ei:FluidMoveBehavior.EaseY>
-											<CircleEase EasingMode="EaseInOut" />
-										</ei:FluidMoveBehavior.EaseY>
-										<ei:FluidMoveBehavior.EaseX>
-											<CubicEase EasingMode="EaseInOut" />
-										</ei:FluidMoveBehavior.EaseX>
-									</ei:FluidMoveBehavior>
-								</i:Interaction.Behaviors>
-							</tk:WrapPanel>
-						</ItemsPanelTemplate>
-					</ListBox.ItemsPanel>
-					<ListBox.ItemTemplate>
+					<ItemsControl.ItemTemplate>
 						<DataTemplate>
-							<Grid cm:Action.TargetWithoutContext="EditDocument"
-								  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
-								  Background="Transparent">
-								<ToolTipService.ToolTip>
-									<ContentControl cm:View.Model="{Binding}"
-													cm:View.Context="Tooltip" />
-								</ToolTipService.ToolTip>
-								<tk:ContextMenuService.ContextMenu>
-									<tk:ContextMenu>
-										<tk:MenuItem Header="Edit Document"
-													 cm:Action.TargetWithoutContext="EditDocument"
-													 cm:Message.Attach="Click=Execute($dataContext)" />
-										<tk:MenuItem Header="Delete Document"
-													 cm:Action.TargetWithoutContext="DeleteDocument"
-													 cm:Message.Attach="Click=Execute($dataContext)" />
-									</tk:ContextMenu>
-								</tk:ContextMenuService.ContextMenu>
-								<ContentControl Content="{Binding}"
-												ContentTemplate="{Binding DataTemplate}" />
-							</Grid>
+							<ContentControl cm:View.Model="{Binding}" />
 						</DataTemplate>
-					</ListBox.ItemTemplate>
-				</ListBox>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
 
-				<!-- the visibility binding didn't work until I used Bind.Model; not sure why... -->
-				<TextBlock cm:Bind.Model="{Binding Documents}"
-						   Style="{StaticResource Instruction}"
+				<TextBlock Style="{StaticResource Instruction}"
 						   Text="The database contains no documents."
-						   Visibility="{Binding HasNoResults, Converter={StaticResource booleanToVisibility}}"
+						   Visibility="{Binding HasDocuments, Converter={StaticResource booleanToOppositeVisibility}}"
 						   d:IsHidden="True"
 						   d:IsLocked="True" />
 			</Grid>

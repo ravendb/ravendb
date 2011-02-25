@@ -9,9 +9,9 @@
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
 			 xmlns:dtk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
-			 mc:Ignorable="d">
+			 mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480">
 
-	<Grid>
+	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />

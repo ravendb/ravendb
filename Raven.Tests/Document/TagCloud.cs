@@ -112,7 +112,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 
 				using (var session = store.OpenSession())
 				{
-					var posts = session.Query<Post>("Raven/DocumentsByEntityName")
+					var posts = session.Query<Post>()
 						.Customize(q => q.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5)))
 						.ToArray();
 

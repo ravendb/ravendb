@@ -3,28 +3,33 @@
 	using System;
 	using System.Linq;
 	using System.Threading.Tasks;
+	using System.Windows;
 	using Caliburn.Micro;
+	using Action = System.Action;
 
 	public interface IBindablePagedQuery
 	{
-		double? ItemSize { get; set; }
-		double HeightOfPage { get; set; }
+		Size? ItemElementSize { get; set; }
+		Size PageElementSize { get; set; }
+		void AdjustResultsForPageSize();
 	}
 
 	public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
 	{
-		public BindablePagedQuery(Func<int, int, Task<T[]>> query) : base(query, t => t)
+		public BindablePagedQuery(Func<int, int, Task<T[]>> query)
+			: base(query, t => t)
 		{
 		}
 	}
 
 	public class BindablePagedQuery<TResult, TViewModel> : BindableCollection<TViewModel>, IBindablePagedQuery
 	{
-		readonly Func<int, int, Task<TResult[]>> query;
+		Func<int, int, Task<TResult[]>> query;
 		readonly Func<TResult, TViewModel> transform;
 		int currentPage;
 		bool isLoading;
 		int pageSize;
+		bool hasLoadedFirstPage;
 
 		public BindablePagedQuery(Func<int, int, Task<TResult[]>> query, Func<TResult, TViewModel> transform)
 		{
@@ -35,17 +40,79 @@
 
 		public int PageSize
 		{
-			get
-			{
-				return (ItemSize.HasValue)
-				       	? (int) Math.Floor(HeightOfPage/ItemSize.Value)
-				       	: pageSize;
-			}
+			get { return CalculateItemsPerPage(); }
 			set { pageSize = value; }
 		}
 
-		public double? ItemSize { get; set; }
-		public double HeightOfPage { get; set; }
+		public Size? ItemElementSize { get; set; }
+		public Size PageElementSize { get; set; }
+
+		public void AdjustResultsForPageSize()
+		{
+			if (!hasLoadedFirstPage) return;
+			if(IsLoading) return;
+
+			IsLoading = true;
+
+			if (Count >= PageSize)
+			{
+				RemoveOverflowResults();
+			}
+			else
+			{
+				RequestAdditionalResults();
+			}
+			
+		}
+		void RemoveOverflowResults()
+		{
+			for (int i = PageSize + 1; i < Count; i++)
+			{
+				RemoveAt(i);
+			}
+
+			AdjustNumberOfPages();
+
+			IsLoading = false;
+		}
+
+		void AdjustNumberOfPages()
+		{
+			var total = GetTotalResults();
+			NumberOfPages = Convert.ToInt32(total / PageSize + (total % PageSize == 0 ? 0 : 1));
+		}
+
+		void RequestAdditionalResults()
+		{
+			var delta = PageSize - Count;
+			var start = (CurrentPage * PageSize) + Count;
+
+			query(start, delta)
+				.ContinueWith(x =>
+				              	{
+				              		IsNotifying = false;
+				              		AddRange(x.Result.Select(transform));
+				              		IsNotifying = true;
+
+									AdjustNumberOfPages();
+
+				              		Refresh();
+
+				              		IsLoading = false;
+				              	});
+		}
+
+		int CalculateItemsPerPage()
+		{	
+			if(!ItemElementSize.HasValue) return pageSize;
+
+			var itemSize = ItemElementSize.Value;
+
+			var cols = Math.Floor(PageElementSize.Width /itemSize.Width);
+			var rows = Math.Floor(PageElementSize.Height /itemSize.Height);
+
+			return (int)(cols * rows);
+		}
 
 		public Func<long> GetTotalResults { get; set; }
 
@@ -96,29 +163,43 @@
 			{
 				isLoading = value;
 				NotifyOfPropertyChange("IsLoading");
+				Refresh();
 			}
+		}
+
+		public Func<int, int, Task<TResult[]>> Query
+		{
+			set { query = value; }
 		}
 
 		public void LoadPage(int page = 0)
 		{
+			LoadPage(null, page);
+		}
+
+		public void LoadPage(Action afterLoaded, int page = 0)
+		{
 			IsLoading = true;
 
-			query(page*PageSize, PageSize)
+			query(page * PageSize, PageSize)
 				.ContinueWith(x =>
-				              	{
-				              		IsNotifying = false;
-				              		Clear();
-				              		AddRange(x.Result.Select(transform));
-				              		IsNotifying = true;
+								{
+									hasLoadedFirstPage = true;
 
-				              		CurrentPage = page;
-				              		var total = GetTotalResults();
-				              		NumberOfPages = Convert.ToInt32(total/PageSize + (total%PageSize == 0 ? 0 : 1));
+									IsNotifying = false;
+									Clear();
+									AddRange(x.Result.Select(transform));
+									IsNotifying = true;
 
-				              		Refresh();
+									CurrentPage = page;
+									AdjustNumberOfPages();
 
-				              		IsLoading = false;
-				              	});
+									Refresh();
+
+									IsLoading = false;
+
+									if (afterLoaded != null) afterLoaded();
+								});
 		}
 
 		public void MoveFirst()

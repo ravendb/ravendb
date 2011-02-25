@@ -113,7 +113,7 @@ namespace Raven.Database.Storage
 
 	    public string[] IndexNames
 		{
-			get { return indexCache.Keys.ToArray(); }
+			get { return indexCache.Keys.OrderBy(name => name).ToArray(); }
 		}
 
 	    public string AddIndex(IndexDefinition indexDefinition)

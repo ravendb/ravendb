@@ -51,6 +51,17 @@ namespace Raven.Client.Client.Async
 		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize);
 
 		/// <summary>
+		/// Begins an async get operation for documents whose id starts with the specified prefix
+		/// </summary>
+		/// <param name="prefix">Prefix that the ids begin with.</param>
+		/// <param name="start">Paging start.</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		Task<JsonDocument[]> GetDocumentsStartingWithAsync(string prefix, int start, int pageSize);
+
+		/// <summary>
 		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>

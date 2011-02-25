@@ -5,6 +5,7 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Tests.Bugs.DTC;
+using Raven.Tests.Document;
 using Raven.Tests.Stress;
 using Xunit;
 
@@ -14,16 +15,12 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			//for (int i = 0; i < 15; i++)
-			//{
-			//    var memoryStream = new MemoryStream(File.ReadAllBytes(@"c:\work\test2.data"));
-			//    var sp = Stopwatch.StartNew();
-			//    var readFrom = JToken.ReadFrom(new BsonReader(memoryStream));
-			//    Console.WriteLine(sp.ElapsedMilliseconds);
-			//    sp.Restart();
-			//    readFrom.DeepClone();
-			//    Console.WriteLine(sp.ElapsedMilliseconds);
-			//}
+			while (true)
+			{
+				using (var x = new DocumentStoreServerTests())
+					x.Can_create_index_using_linq_from_client();
+				Console.WriteLine(DateTime.Now);
+			}
 		}
 	}
 }

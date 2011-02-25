@@ -48,6 +48,19 @@ namespace Raven.Database.Data
 		public int Successes { get; set; }
 
 		/// <summary>
+		/// Gets or sets the number of reduce attempts.
+		/// </summary>
+		public int ReduceAttempts { get; set; }
+		/// <summary>
+		/// Gets or sets the number of reduce errors.
+		/// </summary>
+		public int ReduceErrors { get; set; }
+		/// <summary>
+		/// Gets or sets the number of reduce successes.
+		/// </summary>
+		public int ReduceSuccesses { get; set; }
+
+		/// <summary>
 		/// Gets the failure rate.
 		/// </summary>
 		/// <value>The failure rate.</value>

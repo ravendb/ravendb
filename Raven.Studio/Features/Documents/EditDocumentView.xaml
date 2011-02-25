@@ -1,15 +1,17 @@
-﻿<UserControl x:Class="Raven.Studio.Features.Database.DocumentView"
+﻿<UserControl x:Class="Raven.Studio.Features.Documents.EditDocumentView"
 			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:r="clr-namespace:Raven.Studio.Controls"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting" xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity" xmlns:local="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
+			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
+			 xmlns:c="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
+			 mc:Ignorable="d"
+			 d:DesignHeight="480"
+			 d:DesignWidth="640">
 
-	<Grid>
+	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="1.5*" />
 			<ColumnDefinition Width="16" />
@@ -25,10 +27,11 @@
 				<RowDefinition />
 			</Grid.RowDefinitions>
 
-			<TextBlock x:Name="DisplayId"
+			<TextBlock x:Name="Id"
 					   Style="{StaticResource Header}" />
 
-			<Grid Grid.Row="1">
+			<Grid Grid.Row="1"
+				  Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}">
 				<StackPanel Orientation="Horizontal">
 					<Border Margin="0,2,2,2"
 							CornerRadius="2"
@@ -61,6 +64,7 @@
 			</Grid>
 
 			<TextBox Text="{Binding Id, Mode=TwoWay}"
+					 Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}"
 					 Grid.Row="2" />
 
 			<Border Grid.Row="3"
@@ -71,15 +75,31 @@
 					Margin="0"
 					d:IsLocked="True">
 
-				<sh:SyntaxHighlightingTextBox SourceCode="{Binding JsonData, Mode=TwoWay}"
+				<!--<sh:SyntaxHighlightingTextBox SourceCode="{Binding JsonData, Mode=TwoWay}"
 											  SourceLanguage="Json"
-											  FontSize="16" />
+											  FontSize="16" />-->
+				<c:TabControl>
+					<c:TabItem Header="Data">
+						<TextBox Text="{Binding JsonData, Mode=TwoWay}"
+								 AcceptsReturn="True"
+								 FontFamily="Monaco"
+								 FontSize="16" />
+					</c:TabItem>
+					<c:TabItem Header="Metadata"
+							   Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}">
+						<TextBox Text="{Binding JsonMetadata, Mode=TwoWay}"
+								 AcceptsReturn="True"
+								 FontFamily="Monaco"
+								 FontSize="16" />
+					</c:TabItem>
+				</c:TabControl>
 
 			</Border>
 
 		</Grid>
 
 		<Grid x:Name="details"
+			  Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}"
 			  Grid.Column="2"
 			  Margin="0,42,0,0">
 			<Grid.RowDefinitions>

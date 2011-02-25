@@ -3,6 +3,8 @@
     using System.ComponentModel.Composition;
     using Caliburn.Micro;
     using Features.Database;
+    using Features.Documents;
+    using Framework;
     using Messages;
     using Plugin;
 
@@ -26,7 +28,7 @@
             {
                 session.Advanced.AsyncDatabaseCommands
                     .GetAsync(key)
-                    .ContinueWith(get =>
+                    .ContinueOnSuccess(get =>
                     {
                         if (get.Result == null)
                         {
@@ -34,7 +36,7 @@
                         }
                         else
                         {
-                            var doc = IoC.Get<DocumentViewModel>();
+                            var doc = IoC.Get<EditDocumentViewModel>();
                             doc.Initialize(get.Result);
                             events.Publish(new DatabaseScreenRequested(() => doc));
 							events.Publish(new WorkCompleted());

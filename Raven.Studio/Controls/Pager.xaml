@@ -1,54 +1,56 @@
 ﻿<UserControl x:Class="Raven.Studio.Controls.Pager"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-             mc:Ignorable="d"
-             d:DesignHeight="300"
-             d:DesignWidth="400">
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 mc:Ignorable="d"
+			 d:DesignHeight="300"
+			 d:DesignWidth="400">
 
-    <Grid Margin="0 2"
-          Visibility="{Binding HasResults, Converter={StaticResource booleanToVisibility}}">
-        <Grid.Resources>
-            <Style TargetType="Button">
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border Margin="0,2,2,2"
-                                    CornerRadius="2"
-                                    Background="#19000000"
-                                    Padding="4,2">
-                                <TextBlock TextWrapping="Wrap"
-                                           Text="{TemplateBinding Content}"
-                                           FontSize="8" />
-                            </Border>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-        </Grid.Resources>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition />
-        </Grid.ColumnDefinitions>
+	<Grid x:Name="LayoutRoot"
+		  x:FieldModifier="public"
+		  Margin="0 2"
+		  Visibility="{Binding HasResults, Converter={StaticResource booleanToVisibility}}">
+		<Grid.Resources>
+			<Style TargetType="Button">
+				<Setter Property="Template">
+					<Setter.Value>
+						<ControlTemplate TargetType="Button">
+							<Border Margin="0,2,2,2"
+									CornerRadius="2"
+									Background="#19000000"
+									Padding="4,2">
+								<TextBlock TextWrapping="Wrap"
+										   Text="{TemplateBinding Content}"
+										   FontSize="8" />
+							</Border>
+						</ControlTemplate>
+					</Setter.Value>
+				</Setter>
+			</Style>
+		</Grid.Resources>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto" />
+			<ColumnDefinition />
+		</Grid.ColumnDefinitions>
 
-        <TextBlock Text="{Binding Status}"
-                   VerticalAlignment="Center" />
+		<TextBlock Text="{Binding Status}"
+				   VerticalAlignment="Center" />
 
-        <StackPanel Orientation="Horizontal"
-                    Grid.Column="1"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Right">
-            <Button cm:Message.Attach="MoveFirst"
-                    Content="|&lt;-" />
-            <Button cm:Message.Attach="MovePrevious"
-                    Content="&lt;&lt;" />
-            <Button cm:Message.Attach="MoveNext"
-                    Content="&gt;&gt;" />
-            <Button cm:Message.Attach="MoveLast"
-                    Content="-&gt;|" />
-        </StackPanel>
-    </Grid>
-    
+		<StackPanel Orientation="Horizontal"
+					Grid.Column="1"
+					VerticalAlignment="Center"
+					HorizontalAlignment="Right">
+			<Button cm:Message.Attach="MoveFirst"
+					Content="|&lt;-" />
+			<Button cm:Message.Attach="MovePrevious"
+					Content="&lt;&lt;" />
+			<Button cm:Message.Attach="MoveNext"
+					Content="&gt;&gt;" />
+			<Button cm:Message.Attach="MoveLast"
+					Content="-&gt;|" />
+		</StackPanel>
+	</Grid>
+
 </UserControl>

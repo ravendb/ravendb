@@ -49,6 +49,8 @@ namespace Raven.Tests.Document
 					}
 			};
 			documentStore.Initialize();
+	
+			new RavenDocumentsByEntityName().Execute(documentStore);
 			return documentStore;
 		}
 

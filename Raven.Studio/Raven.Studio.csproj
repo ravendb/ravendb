@@ -87,6 +87,7 @@
     <Reference Include="System.Net" />
     <Reference Include="System.Windows.Controls, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Controls.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.Input, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Controls.Toolkit">
       <HintPath>..\SharedLibs\Silverlight\Toolkit\System.Windows.Controls.Toolkit.dll</HintPath>
     </Reference>
@@ -106,15 +107,16 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Raven.Client.Lightweight\Client\SerializationHelper.cs">
-      <Link>Framework\SerializationHelper.cs</Link>
-    </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
+    <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
+    <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
+    <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
     <Compile Include="Commands\EditDocument.cs" />
@@ -122,9 +124,18 @@
     <Compile Include="Commands\SaveDocument.cs" />
     <Compile Include="Commands\SearchForDocumentById.cs" />
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
+    <Compile Include="Features\Documents\DocumentViewModel.cs" />
+    <Compile Include="Features\Documents\ISupportDocumentTemplate.cs" />
+    <Compile Include="Features\Query\QueryViewModel.cs" />
+    <Compile Include="Features\StartUp\DefaultDatabaseInitializer.cs" />
+    <Compile Include="Features\StartUp\IDatabaseInitializer.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
+    <Compile Include="Framework\BindableCollectionExtensions.cs" />
+    <Compile Include="Framework\Enumeration.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
+    <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
+    <Compile Include="Messages\CollectionTemplateUpdated.cs" />
     <Compile Include="Messages\DatabaseScreenRequested.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
     <Compile Include="Messages\NotificationRaised.cs" />
@@ -155,13 +166,12 @@
     <Compile Include="Converters\MagnitudeToListConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Converters\TypeToBrushConverter.cs" />
-    <Compile Include="Features\Database\DocumentTemplateProvider.cs" />
-    <Compile Include="Features\Database\DocumentViewModel.cs" />
+    <Compile Include="Features\Documents\DocumentTemplateProvider.cs" />
+    <Compile Include="Features\Documents\EditDocumentViewModel.cs" />
     <Compile Include="Framework\ConventionalCatalog.cs" />
     <Compile Include="Framework\DateTimeExtensions.cs" />
     <Compile Include="Framework\DictionaryExtensions.cs" />
     <Compile Include="Features\Database\SummaryViewModel.cs" />
-    <Compile Include="Dialogs\InformationDialogViewModel.cs" />
     <Compile Include="Framework\BindablePagedQuery.cs" />
     <Compile Include="Framework\DoubleClickEvent.cs" />
     <Compile Include="Framework\ScreenExtensions.cs" />
@@ -178,18 +188,25 @@
     <Compile Include="Messages\IndexUpdated.cs" />
     <Compile Include="Features\Indexes\EditIndexViewModel.cs" />
     <Compile Include="Messages\DisplayCurrentDatabaseRequested.cs" />
-    <Compile Include="Features\Linq\LinqEditorViewModel.cs" />
+    <Compile Include="Features\Query\LinqEditorViewModel.cs" />
     <Compile Include="Messages\WorkCompleted.cs" />
     <Compile Include="Messages\WorkStarted.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shell\BusyStatusViewModel.cs" />
     <Compile Include="Shell\ErrorViewModel.cs" />
+    <Compile Include="Shell\IMessageBox.cs" />
+    <Compile Include="Shell\MessageBoxOptions.cs" />
+    <Compile Include="Shell\MessageBoxView.xaml.cs">
+      <DependentUpon>MessageBoxView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Shell\MessageBoxViewModel.cs" />
     <Compile Include="Shell\NavigationViewModel.cs" />
     <Compile Include="Shell\NotificationsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
     <Compile Include="Features\Database\DatabaseViewModel.cs" />
     <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
+    <Compile Include="Shell\ShowMessageBox.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -232,19 +249,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Database\DocumentView.xaml">
+    <Page Include="Features\Collections\EditCollectionTemplateView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Database\Document\Preview.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Database\Document\Thumb.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Database\Document\Tooltip.xaml">
+    <Page Include="Features\Documents\EditDocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -260,6 +269,22 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Documents\DocumentView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Documents\Document\Preview.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Documents\Document\Tooltip.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Query\QueryView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Statistics\ErrorsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -268,17 +293,13 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Linq\LinqEditorView.xaml">
+    <Page Include="Features\Query\LinqEditorView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\ErrorWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Dialogs\InformationDialogView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\BrowseDocumentsView.xaml">
       <SubType>Designer</SubType>
@@ -287,6 +308,11 @@
     <Page Include="Features\Indexes\BrowseIndexesView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Properties\DesignTimeResources.xaml" Condition="'$(DesignTime)'=='true' OR ('$(SolutionPath)'!='' AND Exists('$(SolutionPath)') AND '$(BuildingInsideVisualStudio)'!='true' AND '$(BuildingInsideExpressionBlend)'!='true')">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+      <ContainsDesignTimeResources>true</ContainsDesignTimeResources>
     </Page>
     <Page Include="Resources\Brushes.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -305,6 +331,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Shell\ErrorView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Shell\MessageBoxView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -382,7 +412,7 @@
     <DesignData Include="SampleData\BrowseDocumentsViewModelSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
-    <DesignData Include="SampleData\DocumentsSampleData.xaml">
+    <DesignData Include="SampleData\ServerErrorSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
   </ItemGroup>

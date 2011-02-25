@@ -81,8 +81,8 @@ namespace Raven.Database
 			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
 			{
 				backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
-					Math.Min(3, Environment.ProcessorCount),
 					// we need a minimum of three task threads - one for indexing dispatch, one for tasks, one for indexing ops
+					Math.Max(3, configuration.MaxNumberOfParallelIndexTasks + 2),
 					configuration.BackgroundTasksPriority);
 			}
 			else
@@ -104,10 +104,9 @@ namespace Raven.Database
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
 			configuration.Container.SatisfyImportsOnce(TransactionalStorage);
 
-			bool newDb;
 			try
 			{
-				newDb = TransactionalStorage.Initialize(this);
+				TransactionalStorage.Initialize(this);
 			}
 			catch (Exception)
 			{
@@ -141,10 +140,6 @@ namespace Raven.Database
 				Dispose();
 				throw;
 			}
-			if (!newDb)
-				return;
-
-			OnNewlyCreatedDatabase();
 		}
 
 		private void InitializeTriggers()
@@ -166,47 +161,6 @@ namespace Raven.Database
 			{
 				task.Execute(this);
 			}
-		}
-
-		private void OnNewlyCreatedDatabase()
-		{
-			PutIndex("Raven/DocumentsByEntityName",
-					 new IndexDefinition
-					 {
-						 Map =
-						 @"from doc in docs 
-where doc[""@metadata""][""Raven-Entity-Name""] != null 
-select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
-",
-						 Indexes = { { "Tag", FieldIndexing.NotAnalyzed } },
-						 Stores = { { "Tag", FieldStorage.No } }
-					 });
-
-			PutIndex("Raven/DocumentCollections",
-					 new IndexDefinition
-					 {
-						 Map =
-						 @"from doc in docs
-let Name = doc[""@metadata""][""Raven-Entity-Name""]
-where Name != null
-select new { Name , Count = 1}
-",
-						 Reduce = @"from result in results
-group result by result.Name into g
-select new { Name = g.Key, Count = g.Sum(x=>x.Count) }"
-					});
-
-			PutIndex("Raven/OrphanDocuments",
-					 new IndexDefinition
-					 {
-						 Map =
-						 @"from doc in docs
-where doc[""@metadata""][""Raven-Entity-Name""] == null
-select new { Tag = ""Orphan""}
-",
-						 Indexes = { { "Tag", FieldIndexing.NotAnalyzed } },
-						 Stores = { { "Tag", FieldStorage.No } }
-					 });
 		}
 
 		public DatabaseStatistics Statistics
@@ -332,7 +286,7 @@ select new { Tag = ""Orphan""}
 
 			DocumentRetriever.EnsureIdInMetadata(document);
 			return new DocumentRetriever(null, ReadTriggers)
-				.ProcessReadVetoes(document, transactionInformation,ReadOperation.Load);
+				.ExecuteReadTriggers(document, transactionInformation,ReadOperation.Load);
 		}
 
 		public JsonDocumentMetadata GetDocumentMetadata(string key, TransactionInformation transactionInformation)
@@ -811,7 +765,7 @@ select new { Tag = ""Orphan""}
 				{
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever
-						.ProcessReadVetoes(doc, null, ReadOperation.Load);
+						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
 					if (document == null)
 						continue;
 
@@ -836,10 +790,7 @@ select new { Tag = ""Orphan""}
 				{
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever
-						.ProcessReadVetoes(doc, null,
-						// here we want to have the Load semantic, not Query, because we need this to be
-						// as close as possible to the full database contents
-						ReadOperation.Load);
+						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
 					if (document == null)
 						continue;
 
@@ -1061,6 +1012,14 @@ select new { Tag = ""Orphan""}
 					productVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).ProductVersion.ToString();
 				return productVersion;
 			}
+		}
+
+		public string[] GetIndexFields(string index)
+		{
+			var abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
+			if(abstractViewGenerator == null)
+				return new string[0];
+			return abstractViewGenerator.Fields;
 		}
 	}
 }

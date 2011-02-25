@@ -29,7 +29,7 @@ namespace Raven.Client.Client
 		/// <summary>
 		/// Occurs when a json request is created
 		/// </summary>
-		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
+		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
 
 		/// <summary>
 		/// Creates the HTTP json request.
@@ -71,7 +71,7 @@ namespace Raven.Client.Client
 		/// <value>The response headers.</value>
 		public IDictionary<string, IList<string>> ResponseHeaders { get; set; }
 
-	
+
 
 		private HttpJsonRequest(string url, string method, JObject metadata)
 		{
@@ -79,7 +79,7 @@ namespace Raven.Client.Client
 
 			WriteMetadata(metadata);
 			webRequest.Method = method;
-			if(method != "GET")
+			if (method != "GET")
 				webRequest.ContentType = "application/json; charset=utf-8";
 		}
 
@@ -91,7 +91,30 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public Task<string> ReadResponseStringAsync()
 		{
-			return webRequest.GetResponseAsync().ContinueWith(t => ReadStringInternal(() => t.Result));
+			return webRequest
+				.GetResponseAsync()
+				.ContinueWith(t => ReadStringInternal(() => t.Result));
+		}
+
+		public Task<byte[]> ReadResponseBytesAsync()
+		{
+			return webRequest
+				.GetResponseAsync()
+				.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes));
+		}
+
+		static byte[] ConvertStreamToBytes(Stream input)
+		{
+			var buffer = new byte[16 * 1024];
+			using (var ms = new MemoryStream())
+			{
+				int read;
+				while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+				{
+					ms.Write(buffer, 0, read);
+				}
+				return ms.ToArray();
+			}
 		}
 
 		/// <summary>
@@ -103,8 +126,20 @@ namespace Raven.Client.Client
 		{
 			return ReadStringInternal(() => webRequest.EndGetResponse(result));
 		}
-		
+
 		private string ReadStringInternal(Func<WebResponse> getResponse)
+		{
+			return ReadResponse(getResponse, responseStream =>
+				{
+					var reader = new StreamReader(responseStream);
+					var text = reader.ReadToEnd();
+					return text;
+				}
+			);
+
+		}
+
+		private T ReadResponse<T>(Func<WebResponse> getResponse, Func<Stream, T> handleResponse)
 		{
 			WebResponse response;
 			try
@@ -114,7 +149,7 @@ namespace Raven.Client.Client
 			catch (WebException e)
 			{
 				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null || 
+				if (httpWebResponse == null ||
 					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
 						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 					throw;
@@ -124,15 +159,14 @@ namespace Raven.Client.Client
 					throw new InvalidOperationException(sr.ReadToEnd(), e);
 				}
 			}
-			
-			ResponseHeaders = response.Headers.AllKeys.ToDictionary(key => key, key => (IList<string>)new List<string> { response.Headers[key] });
-			ResponseStatusCode = ((HttpWebResponse) response).StatusCode;
+
+			ResponseHeaders = response.Headers.AllKeys
+					.ToDictionary(key => key, key => (IList<string>)new List<string> { response.Headers[key] });
+			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 
 			using (var responseStream = response.GetResponseStream())
 			{
-				var reader = new StreamReader(responseStream);
-				var text = reader.ReadToEnd();
-				return text;
+				return handleResponse(responseStream);
 			}
 		}
 
@@ -192,7 +226,7 @@ namespace Raven.Client.Client
 																		   var dataStream = t.Result;
 																		   using (dataStream)
 																		   {
-                                                                               dataStream.Write(byteArray, 0, byteArray.Length);
+																			   dataStream.Write(byteArray, 0, byteArray.Length);
 																			   dataStream.Close();
 																		   }
 																	   });

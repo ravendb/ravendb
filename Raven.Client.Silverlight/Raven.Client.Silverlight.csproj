@@ -96,6 +96,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\AsyncSpatialDocumentQuery.cs">
       <Link>Document\AsyncSpatialDocumentQuery.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\FailoverBehavior.cs">
+      <Link>Document\FailoverBehavior.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
       <Link>IAsyncDocumentQuery.cs</Link>
     </Compile>
@@ -107,6 +110,12 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
       <Link>IDocumentQueryListener.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenCollections.cs">
+      <Link>Indexes\RavenCollections.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenDocumentsByEntityName.cs">
+      <Link>Indexes\RavenDocumentsByEntityName.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\LinqExtensions_Obsolete.cs">
       <Link>Linq\LinqExtensions_Obsolete.cs</Link>
@@ -488,9 +497,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\TypeSystem.cs">
       <Link>Linq\TypeSystem.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\RavenExtensions.cs">
-      <Link>RavenExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentSession.cs">
       <Link>Shard\ShardedDocumentSession.cs</Link>

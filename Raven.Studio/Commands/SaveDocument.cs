@@ -3,6 +3,7 @@
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Features.Database;
+	using Features.Documents;
 	using Framework;
 	using Messages;
 	using Newtonsoft.Json;
@@ -21,14 +22,16 @@
 			this.server = server;
 		}
 
-		public void Execute(DocumentViewModel document)
+		public void Execute(EditDocumentViewModel document)
 		{
-			document.PrepareForSave();
-
 			if(!ValidateJson(document.JsonData) || !ValidateJson(document.JsonMetadata)) return;
 
+			document.PrepareForSave();
+
+			var jdoc = document.JsonDocument;
+
 			server.OpenSession().Advanced.AsyncDatabaseCommands
-				.PutAsync(document.Id, null, document.JsonDocument.DataAsJson,null)
+				.PutAsync(document.Id, jdoc.Etag, jdoc.DataAsJson, jdoc.Metadata)
 				.ContinueOnSuccess(put =>
 				                   	{
 										document.Id = put.Result.Key;
@@ -39,7 +42,7 @@
 
 		bool ValidateJson(string json)
 		{
-			if(json == null) return true;
+			if(string.IsNullOrEmpty(json)) return true;
 
 			try
 			{

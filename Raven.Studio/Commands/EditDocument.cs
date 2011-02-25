@@ -2,7 +2,7 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Features.Database;
+	using Features.Documents;
 	using Messages;
 
 	public class EditDocument
@@ -17,7 +17,10 @@
 
 		public void Execute(DocumentViewModel document)
 		{
-			events.Publish(new DatabaseScreenRequested(()=>document));
+			var editScreen = IoC.Get<EditDocumentViewModel>();
+			editScreen.Initialize(document.JsonDocument);
+
+			events.Publish(new DatabaseScreenRequested(() => editScreen));
 		}
 	}
 }

@@ -59,7 +59,7 @@ namespace Raven.Database.Indexing
                     indexWriter.DeleteDocuments(new Term("__document_id", documentId.ToLowerInvariant()));
                     return doc;
                 });
-                foreach (var doc in RobustEnumeration(documentsWrapped, viewGenerator.MapDefinition, actions, context))
+                foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
                 {
                     count++;
 

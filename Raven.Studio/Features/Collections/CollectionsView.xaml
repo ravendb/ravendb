@@ -6,9 +6,12 @@
 			 xmlns:converters="clr-namespace:Raven.Studio.Converters"
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+			 xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Layout;assembly=Microsoft.Expression.Interactions"
+			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
 			 mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
+			 d:DesignHeight="480"
+			 d:DesignWidth="640">
 
 	<UserControl.Resources>
 		<converters:MagnitudeToListConverter x:Key="magnitudeToList"
@@ -77,7 +80,7 @@
 
 	</UserControl.Resources>
 
-	<Grid>
+	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="Auto" />
 			<ColumnDefinition />
@@ -133,8 +136,6 @@
 				<TextBlock Style="{StaticResource PanelTitle}"
 						   Text="SYSTEM COLLECTIONS" />
 				<StackPanel>
-					<ContentControl x:Name="OrphansCollection"
-									ContentTemplate="{StaticResource CollectionTemplate}" />
 					<ContentControl x:Name="RavenCollection"
 									ContentTemplate="{StaticResource CollectionTemplate}" />
 				</StackPanel>
@@ -144,37 +145,43 @@
 
 		<Grid Grid.Column="1"
 			  Visibility="{Binding HasCollections, Converter={StaticResource booleanToVisibility}}">
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="0.951*" />
-				<RowDefinition Height="Auto" />
-			</Grid.RowDefinitions>
 
 			<Border Background="WhiteSmoke"
-					Grid.RowSpan="3"
 					CornerRadius="5,0,0,0" />
 
-			<TextBlock HorizontalAlignment="Left"
-					   TextWrapping="Wrap"
-					   Text="{Binding ActiveCollection.Name}"
-					   Margin="12,6,0,6"
-					   FontWeight="Bold" />
+			<tk:DockPanel Margin="12 0 0 6">
 
-			<ItemsControl x:Name="ActiveCollectionDocuments"
-						  Grid.Row="1">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<ContentControl cm:View.Model="{Binding}"
-										cm:View.Context="Thumb" />
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
+				<TextBlock tk:DockPanel.Dock="Top"
+						   HorizontalAlignment="Left"
+						   TextWrapping="Wrap"
+						   Text="{Binding ActiveCollection.Name}"
+						   Style="{StaticResource PanelTitle}"
+						   Margin="0 6 0 6" />
 
-			<c:Pager Grid.Row="2"
-					 Watcher="{Binding ActiveCollectionDocuments}"
-					 DataContext="{Binding ActiveCollectionDocuments}"
-					 cm:Action.Target="{Binding ActiveCollectionDocuments}"
-					 PageContainer="{Binding ElementName=ActiveCollectionDocuments}" />
+				<StackPanel tk:DockPanel.Dock="Top"
+							Orientation="Horizontal">
+					<Border Margin="0,2,2,2"
+							CornerRadius="2"
+							Background="#19000000"
+							Padding="4,2">
+						<HyperlinkButton Content="Edit Template"
+										 cm:Message.Attach="EditTemplate"
+										 FontSize="9.333" />
+					</Border>
+				</StackPanel>
+
+				<c:Pager tk:DockPanel.Dock="Top"
+						 ItemsSource="{Binding ActiveCollectionDocuments}"
+						 PageContainer="{Binding ElementName=ActiveCollectionDocuments}" />
+
+				<ItemsControl x:Name="ActiveCollectionDocuments"
+							  ItemsPanel="{StaticResource FluidWrapPanel}"
+							  Margin="0 0 0 6"
+							  Grid.Row="1" />
+
+			</tk:DockPanel>
+
+
 		</Grid>
 
 	</Grid>

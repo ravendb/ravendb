@@ -281,6 +281,7 @@
 		}
 
 		[Asynchronous]
+		[Ignore]
 		public IEnumerable<Task> Can_send_a_linq_query_as_a_string()
 		{
 			var dbname = GenerateNewDatabaseName();

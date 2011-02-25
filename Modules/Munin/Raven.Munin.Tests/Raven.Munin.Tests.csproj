@@ -51,6 +51,7 @@
     <Compile Include="CanWorkWithTwoDicsInSameFile.cs" />
     <Compile Include="Conflicts.cs" />
     <Compile Include="MultiDicInSingleFile.cs" />
+    <Compile Include="MyToDoList.cs" />
     <Compile Include="Optimize.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Puts.cs" />

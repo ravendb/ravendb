@@ -2,19 +2,22 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
+	using Database;
 	using Framework;
 	using Messages;
 	using Plugin;
 	using Raven.Database.Indexing;
 
-	[Export]
-	public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>,
+	[Export(typeof(IDatabaseScreenMenuItem))]
+	public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>, IDatabaseScreenMenuItem,
 	                                      IHandle<IndexUpdated>
 	{
 		readonly IServer server;
 		IndexDefinition activeIndex;
 		string filter;
 		bool isBusy;
+
+		public int Index { get { return 30; } }
 
 		[ImportingConstructor]
 		public BrowseIndexesViewModel(IServer server)

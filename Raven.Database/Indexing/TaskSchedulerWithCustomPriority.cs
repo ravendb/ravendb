@@ -13,7 +13,6 @@ namespace Raven.Database.Indexing
 	[HostProtection(SecurityAction.LinkDemand, Synchronization = true, ExternalThreading = true)]
 	public class TaskSchedulerWithCustomPriority : TaskScheduler, IDisposable
 	{
-		private readonly int maxThreads;
 		private readonly ThreadPriority _threadPriority;
 		private readonly List<Thread> _threads = new List<Thread>();
 		private BlockingCollection<Task> _tasks = new BlockingCollection<Task>();
@@ -22,7 +21,6 @@ namespace Raven.Database.Indexing
 		{
 			if (maxThreads < 1) throw new ArgumentOutOfRangeException("maxThreads");
 
-			this.maxThreads = maxThreads;
 			_threadPriority = threadPriority;
 			for (int i = 0; i < maxThreads; i++)
 			{
