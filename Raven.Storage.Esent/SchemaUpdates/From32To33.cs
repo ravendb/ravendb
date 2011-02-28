@@ -27,7 +27,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 			Transaction tx;
 			using (tx = new Transaction(session))
 			{
-				using (var tbl = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
+				using (var tbl = new Table(session, dbid, "indexes_stats", OpenTableGrbit.PermitDDL | OpenTableGrbit.DenyRead|OpenTableGrbit.DenyWrite))
 				{
 					JET_COLUMNID columnid;
 					var defaultValue = BitConverter.GetBytes(0);
