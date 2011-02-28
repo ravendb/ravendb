@@ -13,15 +13,23 @@ namespace Raven.Web
 {
 	public class ForwardToRavenRespondersFactory : IHttpHandlerFactory
 	{
+		private static readonly object locker = new object();
+
 		static readonly RavenConfiguration ravenConfiguration = new RavenConfiguration();
 		static readonly DocumentDatabase database;
 		static readonly HttpServer server;
 
 		static ForwardToRavenRespondersFactory()
 		{
-			database = new DocumentDatabase(ravenConfiguration);
-			database.SpinBackgroundWorkers();
-			server = new RavenDbHttpServer(ravenConfiguration, database);
+			lock (locker)
+			{
+				if (database != null)
+					return;
+
+				database = new DocumentDatabase(ravenConfiguration);
+				database.SpinBackgroundWorkers();
+				server = new RavenDbHttpServer(ravenConfiguration, database);
+			}
 		}
 
 		public IHttpHandler GetHandler(HttpContext context, string requestType, string url, string pathTranslated)
