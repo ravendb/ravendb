@@ -170,7 +170,7 @@ namespace Raven.Database.Indexing
 			get
 			{
 				var name = Name ?? string.Empty;
-				if (name.StartsWith("Raven")) return "Builtin";
+				if (name.StartsWith("Studio")) return "Studio";
 				if (name.StartsWith("Temp")) return "Temp";
 				if (name.StartsWith("Auto")) return "Auto";
 				if (IsCompiled) return "Compiled";
