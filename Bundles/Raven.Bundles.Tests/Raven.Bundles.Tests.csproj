@@ -57,6 +57,8 @@
     <Compile Include="Authorization\Bugs\Kwal.cs" />
     <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
     <Compile Include="Authorization\Bugs\WhenUsingMultiTenancy.cs" />
+    <Compile Include="Authorization\Bugs\WithChangingOfUser.cs" />
+    <Compile Include="Authorization\CanAskAuthQuestions.cs" />
     <Compile Include="Authorization\CanHandleAuthQuestions.cs" />
     <Compile Include="Authorization\Deleting.cs" />
     <Compile Include="Authorization\Reading.cs" />
@@ -70,6 +72,7 @@
     <Compile Include="Replication\FailureHandling.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
     <Compile Include="Replication\SimpleReplication.cs" />
+    <Compile Include="Replication\WritesDuringFailover.cs" />
     <Compile Include="Versioning\Versioning.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

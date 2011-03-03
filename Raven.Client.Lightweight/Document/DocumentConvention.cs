@@ -37,6 +37,7 @@ namespace Raven.Client.Document
 				new Converters.Int32Converter(),
 				new Converters.Int64Converter(),
 			};
+			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
@@ -48,6 +49,13 @@ namespace Raven.Client.Document
 			MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
 		}
+
+
+		/// <summary>
+		/// How should we behave in a replicated environment when we can't 
+		/// reach the primary node and need to failover to secondary node(s).
+		/// </summary>
+		public FailoverBehavior FailoverBehavior { get; set; }
 
 		/// <summary>
 		/// Register an action to customize the json serializer used by the <see cref="DocumentStore"/>

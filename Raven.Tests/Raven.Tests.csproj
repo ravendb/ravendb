@@ -131,6 +131,8 @@
     <Compile Include="Bugs\CustomDynamicObject.cs" />
     <Compile Include="Bugs\CustomEntityName.cs" />
     <Compile Include="Bugs\DateRanges.cs" />
+    <Compile Include="Bugs\DateTimeInLocalTime.cs" />
+    <Compile Include="Bugs\DateTimeInLocalTimeRemote.cs" />
     <Compile Include="Bugs\DecimalPrecision.cs" />
     <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
     <Compile Include="Bugs\DocumentUrl.cs" />
@@ -149,6 +151,7 @@
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
     <Compile Include="Bugs\FailDelete.cs" />
     <Compile Include="Bugs\FailStore.cs" />
+    <Compile Include="Bugs\GetDocumentUrlOnTrasient.cs" />
     <Compile Include="Bugs\HierarchicalData.cs" />
     <Compile Include="Bugs\HierarchyFromClient.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
@@ -201,6 +204,7 @@
     <Compile Include="Bugs\Metadata\LastModifiedLocal.cs" />
     <Compile Include="Bugs\Metadata\LastModifiedRemote.cs" />
     <Compile Include="Bugs\Metadata\MetadataPropertyInEntity.cs" />
+    <Compile Include="Bugs\MoreDtcIssues.cs" />
     <Compile Include="Bugs\MultiEntityIndex.cs" />
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
     <Compile Include="Bugs\MultiTenancy\Basic.cs" />
@@ -245,6 +249,7 @@
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\ReportQueryCount.cs" />
     <Compile Include="Bugs\ReuseQuery.cs" />
+    <Compile Include="Bugs\SelectManyIssue.cs" />
     <Compile Include="Bugs\SelectManyOnNull.cs" />
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SerializingEntities.cs" />
@@ -266,6 +271,8 @@
     <Compile Include="Bugs\UsingLongAsId.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\UsingSwedishCollation.cs" />
+    <Compile Include="Bugs\VeryBigResultSet.cs" />
+    <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\Vlko\Relations.cs" />
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />

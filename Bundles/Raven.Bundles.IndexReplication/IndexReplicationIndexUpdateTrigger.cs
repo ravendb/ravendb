@@ -9,6 +9,7 @@ using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Text;
+using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
 using Raven.Bundles.IndexReplication.Data;
 using Raven.Database.Json;
@@ -47,8 +48,9 @@ namespace Raven.Bundles.IndexReplication
             private readonly DbConnection connection;
             private readonly IndexReplicationDestination destination;
             private DbTransaction tx;
+			private static Regex datePattern = new Regex(@"\d{17}", RegexOptions.Compiled);
 
-            public ReplicateToSqlIndexUpdateBatcher(DbConnection connection, IndexReplicationDestination destination)
+        	public ReplicateToSqlIndexUpdateBatcher(DbConnection connection, IndexReplicationDestination destination)
             {
                 this.connection = connection;
                 this.destination = destination;
@@ -106,7 +108,24 @@ namespace Raven.Bundles.IndexReplication
                             parameter.Value = numField.GetNumericValue();
                         }
                         else
-                            parameter.Value = field.StringValue();
+                        {
+                        	var stringValue = field.StringValue();
+							if(datePattern.IsMatch(stringValue))
+							{
+								try
+								{
+									parameter.Value = DateTools.StringToDate(stringValue);
+								}
+								catch 
+								{
+									parameter.Value = stringValue;
+								}
+							}
+                        	else
+							{
+								parameter.Value = stringValue;
+							}
+                        }
                         cmd.Parameters.Add(parameter);
                         sb.Append(parameter.ParameterName).Append(", ");
                     }

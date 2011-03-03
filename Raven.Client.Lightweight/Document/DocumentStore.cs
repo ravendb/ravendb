@@ -404,7 +404,7 @@ namespace Raven.Client.Document
 		protected virtual void InitializeInternal()
 		{
 #if !SILVERLIGHT
-			var replicationInformer = new ReplicationInformer();
+			var replicationInformer = new ReplicationInformer(Conventions);
 			databaseCommandsGenerator = () =>
 			{
 				var serverClient = new ServerClient(Url, Conventions, credentials, replicationInformer);

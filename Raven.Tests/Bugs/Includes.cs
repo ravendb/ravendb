@@ -53,7 +53,7 @@ namespace Raven.Tests.Bugs
 							Id = customer.Id,
 							Name = customer.Name
 						},
-						Name = "MyOrder #" + (i + 1)
+						Name = (i + 1).ToString()
 					});
 				}
 				session.SaveChanges();
@@ -76,6 +76,48 @@ namespace Raven.Tests.Bugs
 				Assert.NotNull(customer);
 
                 Assert.Equal(1, session.Advanced.NumberOfRequests);
+			}
+		}
+
+		[Fact]
+		public void FromLuceneQuery()
+		{
+			using (var session = store.OpenSession())
+			{
+				var orders = session.Advanced.LuceneQuery<Order>()
+					.Include(x=>x.Customer.Id)
+					.WaitForNonStaleResults()
+					.WhereEquals("Name", "3")
+					.ToArray();
+
+				Assert.Equal(1, orders.Length);
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+				var customer = session.Load<Customer>(orders[0].Customer.Id);
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
+			}
+		}
+
+
+		[Fact]
+		public void FromLinqQuery()
+		{
+			using (var session = store.OpenSession())
+			{
+				var orders = session.Query<Order>()
+					.Customize(x =>
+					{
+						x.Include<Order>(z => z.Customer.Id);
+						x.WaitForNonStaleResults();
+					})
+					.Where(x => x.Name == "3")
+					.ToArray();
+
+				Assert.Equal(1, orders.Length);
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+				var customer = session.Load<Customer>(orders[0].Customer.Id);
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
 			}
 		}
 

@@ -12,7 +12,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "3.2";
+		public const string SchemaVersion = "3.3";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -121,6 +121,25 @@ namespace Raven.Storage.Esent
 				coltyp = JET_coltyp.Long,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
 			}, defaultValue, defaultValue.Length, out columnid);
+
+			Api.JetAddColumn(session, tableid, "reduce_attempts", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
+			}, defaultValue, defaultValue.Length, out columnid);
+
+			Api.JetAddColumn(session, tableid, "reduce_errors", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
+			}, defaultValue, defaultValue.Length, out columnid);
+
+			Api.JetAddColumn(session, tableid, "reduce_successes", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
+			}, defaultValue, defaultValue.Length, out columnid);
+
 
 			const string indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,

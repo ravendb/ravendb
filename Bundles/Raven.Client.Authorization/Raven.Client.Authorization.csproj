@@ -46,6 +46,9 @@
     <Compile Include="..\Raven.Bundles.Authorization\Constants.cs">
       <Link>Constants.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Bundles.Authorization\OperationAllowedResult.cs">
+      <Link>OperationAllowedResult.cs</Link>
+    </Compile>
     <Compile Include="AuthorizationClientExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

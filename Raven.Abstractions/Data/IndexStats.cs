@@ -14,6 +14,11 @@ namespace Raven.Database.Data
 		public int IndexingSuccesses { get; set; }
 		public int IndexingErrors { get; set; }
 
+		public int ReduceIndexingAttempts { get; set; }
+		public int ReduceIndexingSuccesses { get; set; }
+		public int ReduceIndexingErrors { get; set; }
+
+
 		public Guid LastIndexedEtag { get; set; }
 		public DateTime LastIndexedTimestamp { get; set; }
 	}

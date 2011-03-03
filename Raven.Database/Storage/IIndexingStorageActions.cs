@@ -18,6 +18,11 @@ namespace Raven.Database.Storage
 		void IncrementIndexingFailure();
 		void DecrementIndexingAttempt();
 
+		void IncrementReduceIndexingAttempt();
+		void IncrementReduceSuccessIndexing();
+		void IncrementReduceIndexingFailure();
+		void DecrementReduceIndexingAttempt();
+
 		IEnumerable<IndexStats> GetIndexesStats();
 		void AddIndex(string name);
 		void DeleteIndex(string name);

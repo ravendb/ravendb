@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Backup;
 using Raven.Database.Config;
@@ -29,6 +30,7 @@ namespace Raven.Tests.Storage
 				DataDirectory = "raven.db.test.esent",
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
 			});
+			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
 		public override void Dispose()

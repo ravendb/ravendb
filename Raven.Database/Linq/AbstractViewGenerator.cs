@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Database.Indexing;
+using System.Linq;
 
 namespace Raven.Database.Linq
 {
@@ -36,6 +37,11 @@ namespace Raven.Database.Linq
         public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
     	public string ForEntityName { get; set; }
+
+    	public string[] Fields
+    	{
+    		get { return fields.ToArray(); }
+    	}
 
     	protected AbstractViewGenerator()
         {
