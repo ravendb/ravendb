@@ -8,9 +8,9 @@
 
 	public static class TaskExtensions
 	{
-		public static void ContinueOnSuccess<T>(this Task<T> task, Action<Task<T>> onSuccess)
+		public static Task ContinueOnSuccess<T>(this Task<T> task, Action<Task<T>> onSuccess)
 		{
-			task.ContinueWith(child =>
+			return task.ContinueWith(child =>
 			{
 				if (child.IsFaulted)
 				{
@@ -23,9 +23,9 @@
 			});
 		}
 
-		public static void ContinueOnSuccess(this Task task, Action<Task> onSuccess)
+		public static Task ContinueOnSuccess(this Task task, Action<Task> onSuccess)
 		{
-			task.ContinueWith(child =>
+			return task.ContinueWith(child =>
 			                  	{
 									if (child.IsFaulted)
 									{
