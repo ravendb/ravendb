@@ -1,6 +1,8 @@
 ﻿namespace Raven.Studio.Framework
 {
 	using System;
+	using System.IO;
+	using System.Net;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
 	using Client.Extensions;
@@ -59,8 +61,24 @@
 
 			//if(single.Message == "Security error.") 
 			//    return "Silverlight is not able to connect to the specified address for the server. Is it running?";
-			
-			return ( single == null) 
+
+		    var webException = single as WebException;
+            if(webException != null)
+            {
+                var httpWebResponse = webException.Response as HttpWebResponse;
+                if(httpWebResponse != null)
+                {
+                    using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+                    {
+                        return "The remote server returned an error: " + httpWebResponse.StatusDescription +
+                               Environment.NewLine + 
+                               reader.ReadToEnd();
+                    }
+
+                }
+            }
+
+		    return ( single == null) 
 			       	? null
 			       	: single.Message;
 		}
