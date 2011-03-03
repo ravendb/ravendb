@@ -5,6 +5,7 @@ namespace Raven.Studio.Features.Indexes
 	using System.Linq;
 	using Caliburn.Micro;
 	using Framework;
+	using Messages;
 	using Plugin;
 	using Raven.Database.Indexing;
 
@@ -12,17 +13,19 @@ namespace Raven.Studio.Features.Indexes
 	{
 		readonly IndexDefinition index;
 		readonly IServer server;
-		bool isBusy;
+	    private readonly IEventAggregator events;
+	    bool isBusy;
 		string name;
 
-		public EditIndexViewModel(IndexDefinition index, IServer server)
+		public EditIndexViewModel(IndexDefinition index, IServer server, IEventAggregator events)
 		{
 			DisplayName = "Edit Index";
 
 			this.index = index;
 			this.server = server;
+		    this.events = events;
 
-			CompositionInitializer.SatisfyImports(this);
+		    CompositionInitializer.SatisfyImports(this);
 
 			Name = index.Name;
 			LoadFields();
@@ -95,6 +98,7 @@ namespace Raven.Studio.Features.Indexes
 					.ContinueOnSuccess(task =>
 					              	{
 					              		IsBusy = false;
+                                        events.Publish(new IndexUpdated{Index = this,IsRemoved = true});
 					              	});
 			}
 		}
