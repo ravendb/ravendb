@@ -437,7 +437,7 @@ namespace Raven.Client.Client.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
-			string requestUri = url + "/indexes/" + name;
+			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name);
 			var webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(requestUri));
 			AddOperationHeaders(webRequest);
 			webRequest.Method = "HEAD";
