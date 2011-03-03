@@ -52,6 +52,11 @@
 
             BeginRefreshIndexes(session);
         }
+        
+        public void CreateNewIndex()
+        {
+            ActivateItem( new EditIndexViewModel(new IndexDefinition(){}, server,events));
+        }
 
         private void BeginRefreshIndexes(IAsyncDocumentSession session)
         {
@@ -103,9 +108,10 @@
 
         public void Handle(IndexUpdated message)
         {
+             BeginRefreshIndexes(server.OpenSession());
+
              if(message.IsRemoved)
              {
-                 BeginRefreshIndexes(server.OpenSession());
                  ActiveItem = null;
              }
         }

@@ -1,82 +1,99 @@
 ﻿<UserControl x:Class="Raven.Studio.Features.Indexes.BrowseIndexesView"
-			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-			 xmlns:b="clr-namespace:Raven.Studio.Behaviors"
-			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-			 xmlns:c="clr-namespace:Raven.Studio.Controls"
-			 xmlns:dtk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
-			 mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480">
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+             xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+             xmlns:b="clr-namespace:Raven.Studio.Behaviors"
+             xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+             xmlns:c="clr-namespace:Raven.Studio.Controls"
+             xmlns:dtk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="480">
 
-	<Grid Background="{StaticResource DefaultScreenBackground}">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-		</Grid.RowDefinitions>
+    <Grid Background="{StaticResource DefaultScreenBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-		<tk:DockPanel>
-			<TextBlock Text="Indexes"
-					   tk:DockPanel.Dock="Left"
-					   Style="{StaticResource Header}" />
+        <tk:DockPanel>
+            <TextBlock Text="Indexes"
+                       tk:DockPanel.Dock="Left"
+                       Style="{StaticResource Header}" />
 
-			<StackPanel Orientation="Horizontal"
-						tk:DockPanel.Dock="Right"
-						HorizontalAlignment="Right"
-						VerticalAlignment="Bottom"
-						Margin="0,0,0,10">
-				<TextBox x:Name="searchBox"
-						 Width="350">
-					<i:Interaction.Behaviors>
-						<b:Watermark Text="search by index name"
-									 Foreground="LightGray" />
-					</i:Interaction.Behaviors>
-				</TextBox>
-				<HyperlinkButton Style="{StaticResource SearchButtonStyle}" />
-			</StackPanel>
-		</tk:DockPanel>
+            <StackPanel Orientation="Horizontal"
+                        tk:DockPanel.Dock="Right"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,10">
+                <TextBox x:Name="searchBox"
+                         Width="350">
+                    <i:Interaction.Behaviors>
+                        <b:Watermark Text="search by index name"
+                                     Foreground="LightGray" />
+                    </i:Interaction.Behaviors>
+                </TextBox>
+                <HyperlinkButton Style="{StaticResource SearchButtonStyle}" />
+            </StackPanel>
+        </tk:DockPanel>
 
-		<Grid Grid.Row="1">
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition />
-				<ColumnDefinition Width="2*" />
-			</Grid.ColumnDefinitions>
+        <tk:DockPanel Grid.Row="1">
 
-			<Grid>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="*" />
-					<RowDefinition Height="Auto" />
-				</Grid.RowDefinitions>
+            <StackPanel tk:DockPanel.Dock="Top"
+                        Orientation="Horizontal">
+                <Border Margin="0,2,2,2"
+                        CornerRadius="2"
+                        Background="#19000000"
+                        Padding="4,2">
+                    <HyperlinkButton Content="New Index"
+                                     cm:Message.Attach="CreateNewIndex"
+                                     FontSize="9.333" />
+                </Border>
+            </StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="2*" />
+                </Grid.ColumnDefinitions>
 
-				<c:Pager Grid.Row="0"
-						 cm:Bind.Model="{Binding Indexes}" />
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-				<ListBox Grid.Row="1"
-						 ItemsSource="{Binding Indexes}"
-						 SelectedItem="{Binding ActiveIndex, Mode=TwoWay}">
-					<ListBox.ItemTemplate>
-						<DataTemplate>
-							<StackPanel>
-								<TextBlock Text="{Binding Name}" />
-								<TextBlock Text="{Binding Type}" />
-							</StackPanel>
-						</DataTemplate>
-					</ListBox.ItemTemplate>
-				</ListBox>
+                    <c:Pager Grid.Row="0"
+                             cm:Bind.Model="{Binding Indexes}" />
 
-				<c:Pager Grid.Row="2"
-						 cm:Bind.Model="{Binding Indexes}" />
-			</Grid>
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Indexes}"
+                             SelectedItem="{Binding ActiveIndex, Mode=TwoWay}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Text="{Binding Type}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
-			<Border Grid.Column="1"
-					Padding="4">
-				<ContentControl x:Name="ActiveItem" />
-			</Border>
+                    <c:Pager Grid.Row="2"
+                             cm:Bind.Model="{Binding Indexes}" />
+                </Grid>
 
-		</Grid>
-	</Grid>
+                <Border Grid.Column="1"
+                        Padding="4">
+                    <ContentControl x:Name="ActiveItem" />
+                </Border>
+
+            </Grid>
+        </tk:DockPanel>
+
+    </Grid>
 
 </UserControl>
