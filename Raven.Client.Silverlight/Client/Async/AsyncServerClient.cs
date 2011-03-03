@@ -538,7 +538,8 @@ namespace Raven.Client.Client.Async
 		/// <param name="pageSize">Size of the page.</param>
 		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
 		{
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/?start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
+		    var url2 = (url + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url2, "GET", credentials, convention);
 
 			return request.ReadResponseStringAsync()
 				.ContinueWith(task =>
