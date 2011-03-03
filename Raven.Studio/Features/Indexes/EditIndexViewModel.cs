@@ -83,6 +83,7 @@ namespace Raven.Studio.Features.Indexes
 					.ContinueOnSuccess(task =>
 					{
 						IsBusy = false;
+                        events.Publish(new IndexUpdated {Index = this});
 					});
 			}
 			
