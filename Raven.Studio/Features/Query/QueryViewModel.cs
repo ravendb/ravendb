@@ -13,7 +13,6 @@
 	using Plugin;
 	using Raven.Database.Data;
 
-	[Export(typeof (IDatabaseScreenMenuItem))]
 	public class QueryViewModel : Screen, IDatabaseScreenMenuItem
 	{
 		readonly IServer server;
@@ -94,6 +93,10 @@
 					              		QueryResults.GetTotalResults = () => x.Result.TotalResults;
 										
 										QueryResultsStatus = DetermineResultsStatus(x.Result);
+                                        
+                                        //maybe we added a temp index?
+                                        if (indexName.StartsWith("dynamic"))
+                                            GetIndexNames();
 
 					              		return x.Result.Results
 					              			.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
@@ -112,18 +115,23 @@
 
 		protected override void OnActivate()
 		{
-			using (var session = server.OpenSession())
-			{
-				session.Advanced.AsyncDatabaseCommands
-					.GetIndexNamesAsync(0, 1000)
-					.ContinueOnSuccess(x =>
-					                   	{
-					                   		var items = new List<string>(x.Result);
-					                   		items.Insert(0, "dynamic");
-					                   		Indexes.Replace(items);
-					                   		CurrentIndex = Indexes[0];
-					                   	});
-			}
+		    GetIndexNames();
 		}
+
+	    private void GetIndexNames()
+	    {
+	        using (var session = server.OpenSession())
+	        {
+	            session.Advanced.AsyncDatabaseCommands
+	                .GetIndexNamesAsync(0, 1000)
+	                .ContinueOnSuccess(x =>
+	                                       {
+	                                           var items = new List<string>(x.Result);
+	                                           items.Insert(0, "dynamic");
+	                                           Indexes.Replace(items);
+	                                           CurrentIndex = Indexes[0];
+	                                       });
+	        }
+	    }
 	}
 }

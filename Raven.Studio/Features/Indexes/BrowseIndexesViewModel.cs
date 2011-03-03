@@ -1,122 +1,130 @@
 ﻿namespace Raven.Studio.Features.Indexes
 {
-	using System.ComponentModel.Composition;
-	using Caliburn.Micro;
-	using Database;
-	using Framework;
-	using Messages;
-	using Plugin;
-	using Raven.Database.Indexing;
+    using System.ComponentModel.Composition;
+    using Caliburn.Micro;
+    using Client;
+    using Database;
+    using Framework;
+    using Messages;
+    using Plugin;
+    using Raven.Database.Indexing;
+    using System.Threading.Tasks;
 
-	[Export(typeof(IDatabaseScreenMenuItem))]
-	public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>, IDatabaseScreenMenuItem,
-	                                      IHandle<IndexUpdated>
-	{
-		readonly IServer server;
-		IndexDefinition activeIndex;
-		string filter;
-		bool isBusy;
+    public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>, IDatabaseScreenMenuItem,
+                                          IHandle<IndexUpdated>
+    {
+        readonly IServer server;
+        private readonly IEventAggregator events;
+        IndexDefinition activeIndex;
+        string filter;
+        bool isBusy;
 
-		public int Index { get { return 30; } }
+        public int Index { get { return 30; } }
 
-		[ImportingConstructor]
-		public BrowseIndexesViewModel(IServer server)
-		{
-			DisplayName = "Indexes";
+        [ImportingConstructor]
+        public BrowseIndexesViewModel(IServer server, IEventAggregator events)
+        {
+            DisplayName = "Indexes";
 
-			this.server = server;
-		}
+            this.server = server;
+            this.events = events;
+            events.Subscribe(this);
 
-		protected override void OnActivate()
-		{
-			var session = server.OpenSession();
-			Indexes = new BindablePagedQuery<IndexDefinition>(session.Advanced.AsyncDatabaseCommands.GetIndexesAsync);
-		}
+            Indexes = new BindablePagedQuery<IndexDefinition>((start, pageSize) =>
+                                                                  {
+                                                                      var session = server.OpenSession();
 
-		public bool IsBusy
-		{
-			get { return isBusy; }
-			set
-			{
-				isBusy = value;
-				NotifyOfPropertyChange(() => IsBusy);
-			}
-		}
+                                                                      return session.Advanced.AsyncDatabaseCommands
+                                                                          .GetIndexesAsync(start, pageSize)
+                                                                          .ContinueWith(x =>
+                                                                                            {
+                                                                                                session.Dispose();
+                                                                                                return x;
+                                                                                            }).Unwrap();
 
-		public BindablePagedQuery<IndexDefinition> Indexes { get; private set; }
+                                                                  });
 
-		public IndexDefinition ActiveIndex
-		{
-			get { return activeIndex; }
-			set
-			{
-				activeIndex = value;
-				if (activeIndex != null)
-					ActiveItem = new EditIndexViewModel(activeIndex, server);
-				NotifyOfPropertyChange(() => ActiveIndex);
-			}
-		}
+        }
 
-		public string Filter
-		{
-			get { return filter; }
-			set
-			{
-				if (filter != value)
-				{
-					filter = value;
-					NotifyOfPropertyChange(() => Filter);
-					Search(filter);
-				}
-			}
-		}
+        protected override void OnActivate()
+        {
+            var session = server.OpenSession();
 
-		public void Handle(IndexUpdated message)
-		{
-			//IndexViewModel index = message.Index;
+            BeginRefreshIndexes(session);
+        }
 
-			//if (index.Database == Database)
-			//{
-			//    if (message.IsRemoved)
-			//    {
-			//        AllItems.Remove(index);
-			//        Items.Remove(index);
-			//    }
-			//    else
-			//    {
-			//        AllItems.Add(index);
-			//        Items.Add(index);
-			//    }
-			//}
-		}
+        private void BeginRefreshIndexes(IAsyncDocumentSession session)
+        {
+            IsBusy = true;
 
-		protected override void OnInitialize()
-		{
-			IsBusy = true;
+            session.Advanced.AsyncDatabaseCommands
+                .GetStatisticsAsync()
+                .ContinueOnSuccess(x => RefreshIndexes(x.Result.CountOfIndexes))
+                .ContinueWith(task => session.Dispose());
+        }
 
-			using (var session = server.OpenSession())
-			{
-				session.Advanced.AsyncDatabaseCommands
-					.GetStatisticsAsync()
-					.ContinueOnSuccess(x => RefreshIndexes(x.Result.CountOfIndexes));
-			}
-		}
+        public bool IsBusy
+        {
+            get { return isBusy; }
+            set
+            {
+                isBusy = value;
+                NotifyOfPropertyChange(() => IsBusy);
+            }
+        }
 
-		void RefreshIndexes(int totalIndexCount)
-		{
-			Indexes.GetTotalResults = () => totalIndexCount;
-			Indexes.LoadPage();
-			IsBusy = false;
-		}
+        public BindablePagedQuery<IndexDefinition> Indexes { get; private set; }
 
-		public void Search(string text)
-		{
-			//text = text.Trim();
-			//Items.Clear();
+        public IndexDefinition ActiveIndex
+        {
+            get { return activeIndex; }
+            set
+            {
+                activeIndex = value;
+                if (activeIndex != null)
+                    ActiveItem = new EditIndexViewModel(activeIndex, server,events);
+                NotifyOfPropertyChange(() => ActiveIndex);
+            }
+        }
 
-			//Items.AddRange(!string.IsNullOrEmpty(text) && text != WatermarkFilterString
-			//                ? AllItems.Where(item => item.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) >= 0)
-			//                : AllItems);
-		}
-	}
+        public string Filter
+        {
+            get { return filter; }
+            set
+            {
+                if (filter != value)
+                {
+                    filter = value;
+                    NotifyOfPropertyChange(() => Filter);
+                    Search(filter);
+                }
+            }
+        }
+
+        public void Handle(IndexUpdated message)
+        {
+             if(message.IsRemoved)
+             {
+                 BeginRefreshIndexes(server.OpenSession());
+                 ActiveItem = null;
+             }
+        }
+
+        void RefreshIndexes(int totalIndexCount)
+        {
+            Indexes.GetTotalResults = () => totalIndexCount;
+            Indexes.LoadPage();
+            IsBusy = false;
+        }
+
+        public void Search(string text)
+        {
+            //text = text.Trim();
+            //Items.Clear();
+
+            //Items.AddRange(!string.IsNullOrEmpty(text) && text != WatermarkFilterString
+            //                ? AllItems.Where(item => item.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) >= 0)
+            //                : AllItems);
+        }
+    }
 }

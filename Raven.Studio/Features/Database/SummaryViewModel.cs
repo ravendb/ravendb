@@ -11,7 +11,6 @@
 	using Messages;
 	using Plugin;
 
-	[Export(typeof(IDatabaseScreenMenuItem))]
 	public class SummaryViewModel : Screen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{
