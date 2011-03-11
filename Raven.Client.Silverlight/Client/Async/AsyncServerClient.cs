@@ -643,18 +643,48 @@ namespace Raven.Client.Client.Async
 
 		}
 
-		private static Exception ThrowConcurrencyException(WebException e)
+	    public class ConcurrencyExceptionResult
+	    {
+	        private readonly string url1;
+	        private readonly Guid actualETag1;
+	        private readonly Guid expectedETag1;
+	        private readonly string error1;
+
+	        public string url
+	        {
+	            get { return url1; }
+	        }
+
+	        public Guid actualETag
+	        {
+	            get { return actualETag1; }
+	        }
+
+	        public Guid expectedETag
+	        {
+	            get { return expectedETag1; }
+	        }
+
+	        public string error
+	        {
+	            get { return error1; }
+	        }
+
+	        public ConcurrencyExceptionResult(string url, Guid actualETag, Guid expectedETag, string error)
+	        {
+	            url1 = url;
+	            actualETag1 = actualETag;
+	            expectedETag1 = expectedETag;
+	            error1 = error;
+	        }
+	    }
+
+	    private static Exception ThrowConcurrencyException(WebException e)
 		{
 			using (var sr = new StreamReader(e.Response.GetResponseStream()))
 			{
 				var text = sr.ReadToEnd();
-				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
-				{
-					url = (string)null,
-					actualETag = Guid.Empty,
-					expectedETag = Guid.Empty,
-					error = (string)null
-				});
+				var errorResults = JsonConvert.DeserializeAnonymousType(text, new ConcurrencyExceptionResult((string)null, Guid.Empty, Guid.Empty, (string)null));
 				return new ConcurrencyException(errorResults.error)
 				{
 					ActualETag = errorResults.actualETag,
