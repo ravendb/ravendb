@@ -9,8 +9,9 @@
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;
+	using System.Linq;
 
-	[Export(typeof(EditDocumentViewModel))]
+    [Export(typeof(EditDocumentViewModel))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class EditDocumentViewModel : Screen
 	{
@@ -82,25 +83,39 @@
 
 		public void Initialize(JsonDocument doc)
 		{
-			document = doc;
+		    document = doc;
 
-			Id = document.Key;
-			JsonData = PrepareRawJsonString(document.DataAsJson);
-
-			IsProjection = string.IsNullOrEmpty(Id) && (document.Metadata == null);
-
-			if (IsProjection) return;
-
-			JsonMetadata = PrepareRawJsonString(document.Metadata);
-
-			metadata = ParseJsonToDictionary(document.Metadata);
-
-			LastModified = metadata.IfPresent<DateTime>("Last-Modified");
-			CollectionType = DocumentViewModel.DetermineCollectionType(document.Metadata);
-			ClrType = metadata.IfPresent<string>("Raven-Clr-Type");
+		    UpdateDocumentFromJsonDocument();
 		}
 
-		public void PrepareForSave()
+	    public void UpdateDocumentFromJsonDocument()
+	    {
+	        Id = document.Key;
+	        JsonData = PrepareRawJsonString(document.DataAsJson);
+
+	        IsProjection = string.IsNullOrEmpty(Id) && (document.Metadata == null);
+
+	        if (IsProjection) return;
+
+            if (document.Metadata != null)
+            {
+                foreach (var property in document.Metadata.Properties().ToList())
+                {
+                    if(property.Name.StartsWith("@"))
+                        property.Remove();
+                }
+            }
+
+	        JsonMetadata = PrepareRawJsonString(document.Metadata);
+
+	        metadata = ParseJsonToDictionary(document.Metadata);
+
+	        LastModified = metadata.IfPresent<DateTime>("Last-Modified");
+	        CollectionType = DocumentViewModel.DetermineCollectionType(document.Metadata);
+	        ClrType = metadata.IfPresent<string>("Raven-Clr-Type");
+	    }
+
+	    public void PrepareForSave()
 		{
 			document.DataAsJson = ToJObject(JsonData);
 			document.Metadata = ToJObject(JsonMetadata);
