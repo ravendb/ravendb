@@ -109,7 +109,7 @@ namespace Raven.Http.Extensions
 			{
 				if (header.Name.StartsWith("@"))
 					continue;
-				context.Response.Headers[header.Name] = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+				context.Response.Headers[header.Name] = WriteHeaderValue(header);
 			}
             if (headers["@Http-Status-Code"] != null)
             {
@@ -120,7 +120,16 @@ namespace Raven.Http.Extensions
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
-		private static string StripQuotesIfNeeded(string str)
+	    private static string WriteHeaderValue(JProperty header)
+	    {
+            if(header.Value.Type == JTokenType.Date)
+            {
+                return header.Value.Value<DateTime>().ToString("r");
+            }
+	        return StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+	    }
+
+	    private static string StripQuotesIfNeeded(string str)
 		{
 			if (str.StartsWith("\"") && str.EndsWith("\""))
 				return str.Substring(1, str.Length - 2);
