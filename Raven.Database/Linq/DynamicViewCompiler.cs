@@ -388,12 +388,15 @@ namespace Raven.Database.Linq
 		{
 			TransformQueryToClass();
 			string tempFileName = null;
+			FileStream stream = null;
 			try
 			{
 				try
 				{
 					tempFileName = Path.GetTempFileName();
-					File.WriteAllText(tempFileName, CompiledQueryText);
+					// we force a lock on the file so nothing can remove it while we are compiling this
+					stream = new FileStream(tempFileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
+					new StreamWriter(stream).Write(CompiledQueryText);
 				}
 				catch (Exception)
 				{
@@ -405,6 +408,8 @@ Raven requiers access to the temp directory in order to compile indexes.");
 			}
 			finally
 			{
+				if (stream != null)
+					stream.Dispose();
 				if (tempFileName != null)
 					File.Delete(tempFileName);
 			}
