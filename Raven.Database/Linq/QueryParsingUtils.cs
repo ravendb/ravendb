@@ -167,7 +167,7 @@ namespace Raven.Database.Linq
             {
 				TempFiles = new TempFileCollection(basePath,false),
                 GenerateExecutable = false,
-                GenerateInMemory = false,
+                GenerateInMemory = true,
                 IncludeDebugInformation = true,
             };
             foreach (var assembly in assemblies)

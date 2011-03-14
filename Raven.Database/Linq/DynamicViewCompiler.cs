@@ -38,7 +38,7 @@ namespace Raven.Database.Linq
 		{
 			this.indexDefinition = indexDefinition;
 			this.extensions = extensions;
-			this.basePath = Path.Combine(basePath, "Temp");
+			this.basePath = Path.Combine(basePath, "TemporaryIndexDefinitionsAsSource");
 			if (Directory.Exists(this.basePath) == false)
 				Directory.CreateDirectory(this.basePath);
 			this.name = MonoHttpUtility.UrlEncode(name);
