@@ -292,7 +292,7 @@ namespace Raven.Database.Data
 				.Where(key => key.StartsWith("SortHint")).ToArray();
 			foreach (string sortHintHeader in sortHintHeaders)
 			{
-				String[] split = sortHintHeader.Split('_');
+				String[] split = sortHintHeader.Split(sortHintHeader.Contains("-") ? '-' : '_'); // we only use _ for backward compatability
 				String fieldName = Uri.UnescapeDataString(split[1]);
 				string fieldType = headers[sortHintHeader];
 
