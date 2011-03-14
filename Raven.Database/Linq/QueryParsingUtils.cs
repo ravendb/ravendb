@@ -145,7 +145,7 @@ namespace Raven.Database.Linq
         }
 
 
-        public static Type Compile(string fileName, string name, string queryText, AbstractDynamicCompilationExtension[] extensions)
+        public static Type Compile(string source, string name, string queryText, AbstractDynamicCompilationExtension[] extensions, string basePath)
         {
             var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
             var assemblies = new HashSet<string>
@@ -165,6 +165,7 @@ namespace Raven.Database.Linq
             }
             var compilerParameters = new CompilerParameters
             {
+				TempFiles = new TempFileCollection(basePath,false),
                 GenerateExecutable = false,
                 GenerateInMemory = false,
                 IncludeDebugInformation = true,
@@ -173,7 +174,7 @@ namespace Raven.Database.Linq
             {
                 compilerParameters.ReferencedAssemblies.Add(assembly);
             }
-            var compileAssemblyFromFile = provider.CompileAssemblyFromFile(compilerParameters, fileName);
+            var compileAssemblyFromFile = provider.CompileAssemblyFromSource(compilerParameters, source);
             var results = compileAssemblyFromFile;
 
             if (results.Errors.HasErrors)

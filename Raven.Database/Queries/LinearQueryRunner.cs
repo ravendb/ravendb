@@ -38,6 +38,7 @@ namespace Raven.Database.Queries
             RemoteQueryResults result;
             using (var remoteSingleQueryRunner = queryRunnerManager.CreateSingleQueryRunner(
                 database.TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain,
+				database.IndexDefinitionStorage.IndexDefinitionsPath,
                 database.TransactionalStorage.StateForRunningQueriesInRemoteAppDomain))
             {
                 result = remoteSingleQueryRunner.Query(query);

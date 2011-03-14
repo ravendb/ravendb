@@ -503,13 +503,13 @@ namespace Raven.Database
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 			definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
-			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(definition))
+			switch (IndexDefinitionStorage.FindIndexCreationOptions(definition))
 			{
 				case IndexCreationOptions.Noop:
 					return name;
 				case IndexCreationOptions.Update:
 					// ensure that the code can compile
-					new DynamicViewCompiler(name, definition, Extensions).GenerateInstance();
+					new DynamicViewCompiler(name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath).GenerateInstance();
 					DeleteIndex(name);
 					break;
 			}
