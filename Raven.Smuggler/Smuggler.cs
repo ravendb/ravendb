@@ -74,6 +74,9 @@ Usage:
                 jsonWriter.WriteStartArray();
                 using (var webClient = new WebClient())
                 {
+                    webClient.UseDefaultCredentials = true;
+                    webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
+
                     int totalCount = 0;
                     while (true)
                     {
@@ -101,6 +104,9 @@ Usage:
                 {
                     using (var webClient = new WebClient())
                     {
+                        webClient.UseDefaultCredentials = true;
+                        webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
+
                         var lastEtag = Guid.Empty;
                         int totalCount = 0;
                         while (true)
