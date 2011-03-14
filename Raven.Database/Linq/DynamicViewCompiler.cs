@@ -400,9 +400,12 @@ namespace Raven.Database.Linq
 				}
 				catch (Exception)
 				{
-					throw new InvalidOperationException(@"Raven could not write to the temp directory.
+					throw new InvalidOperationException(
+						string.Format(
+							@"Raven could not write to the temp directory.
 This is usually the result of security settings when running in IIS.
-Raven requiers access to the temp directory in order to compile indexes.");
+Raven requiers access to the temp directory ({0}) in order to compile indexes.",
+							Path.GetTempPath()));
 				}
 				GeneratedType = QueryParsingUtils.Compile(tempFileName, CSharpSafeName, CompiledQueryText, extensions);
 			}
