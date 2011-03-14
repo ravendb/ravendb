@@ -146,7 +146,7 @@
 			                   	{
 			                   		template =
 			                   			(DataTemplate) XamlReader.Load(
-			                   				@"<DataTemplate xmlns=""http://schemas.microsoft.com/client/2007"">" + innerXaml +
+			                   				@"<DataTemplate xmlns=""http://schemas.microsoft.com/client/2007"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"">" + innerXaml +
 			                   				@"</DataTemplate>"
 			                   			               	);
 			                   	}

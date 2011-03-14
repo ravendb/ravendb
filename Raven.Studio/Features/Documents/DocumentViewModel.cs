@@ -63,7 +63,7 @@
                 if (selectToken == null || 
                     selectToken.Type == JTokenType.Null || 
                     selectToken.Type == JTokenType.Undefined)
-                    return "null";
+                    return null;
                 if (selectToken.Type == JTokenType.Object ||
                     selectToken.Type == JTokenType.Array)
                     return selectToken.ToString(Formatting.Indented);

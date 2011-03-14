@@ -59,7 +59,7 @@
                      Grid.Row="3" />
             <sh:SyntaxHighlightingTextBox Grid.Row="3"
                                           Grid.Column="1"
-                                          SourceCode="{Binding Transform, Mode=TwoWay}"
+                                          SourceCode="{Binding TransformResults, Mode=TwoWay}"
                                           SourceLanguage="CSharp"
                                           FontSize="16" />
 

@@ -35,7 +35,9 @@
 				.ContinueOnSuccess(put =>
 				                   	{
 										document.Id = put.Result.Key;
-				                   		events.Publish(new DocumentUpdated(document));
+				                   	    document.JsonDocument.Etag = put.Result.ETag;
+				                        document.UpdateDocumentFromJsonDocument();
+                                        events.Publish(new DocumentUpdated(document));
 				                   	});
 			
 		}

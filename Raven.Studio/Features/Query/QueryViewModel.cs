@@ -93,6 +93,7 @@
 					              		QueryResults.GetTotalResults = () => x.Result.TotalResults;
 										
 										QueryResultsStatus = DetermineResultsStatus(x.Result);
+
                                         
                                         //maybe we added a temp index?
                                         if (indexName.StartsWith("dynamic"))
@@ -124,13 +125,24 @@
 	        {
 	            session.Advanced.AsyncDatabaseCommands
 	                .GetIndexNamesAsync(0, 1000)
-	                .ContinueOnSuccess(x =>
-	                                       {
-	                                           var items = new List<string>(x.Result);
-	                                           items.Insert(0, "dynamic");
-	                                           Indexes.Replace(items);
-	                                           CurrentIndex = Indexes[0];
-	                                       });
+	                .ContinueWith(x => session.Advanced.AsyncDatabaseCommands
+	                                       .GetCollectionsAsync(0, 25)
+	                                       .ContinueWith(task =>
+	                                                         {
+	                                                             string oldSelection = CurrentIndex;
+
+	                                                             var items = new List<string>(x.Result);
+
+	                                                             foreach (var collection in task.Result)
+	                                                             {
+	                                                                 items.Insert(0, "dynamic/" + collection.Name);
+	                                                             }
+
+	                                                             items.Insert(0, "dynamic");
+
+	                                                             Indexes.Replace(items);
+	                                                             CurrentIndex = oldSelection;
+	                                                         }));
 	        }
 	    }
 	}
