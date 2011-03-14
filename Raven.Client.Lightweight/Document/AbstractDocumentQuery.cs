@@ -1255,16 +1255,26 @@ If you really want to do in memory filtering on the data returned from the query
 
         private void HandleInternalMetadata(JObject result)
         {
-			// recursively scan the nested objects
-        	foreach (var nested in result.Properties().Select(property => property.Value).OfType<JObject>())
-        	{
-        		HandleInternalMetadata(nested);
-        	}
-
-        	// Implant a property with "id" value ... if not exists
+			// Implant a property with "id" value ... if not exists
         	var metadata = result.Value<JObject>("@metadata");
         	if (metadata == null) 
+        	{
+				// if the item has metadata, then nested items will not have it, so we can skip recursing down
+				foreach (var nested in result.Properties().Select(property => property.Value))
+				{
+					var jObject = nested as JObject;
+					if(jObject != null)
+						HandleInternalMetadata(jObject);
+					var jArray = nested as JArray;
+					if (jArray == null) 
+						continue;
+					foreach (var item in jArray.OfType<JObject>())
+					{
+						HandleInternalMetadata(item);
+					}
+				}
 				return;
+        	}
 
         	var entityName = metadata.Value<string>("Raven-Entity-Name");
 
