@@ -1255,29 +1255,27 @@ If you really want to do in memory filtering on the data returned from the query
 
         private void HandleInternalMetadata(JObject result)
         {
-            // Dive in recursively
-            if (result.Value<JObject>("@metadata") == null && result.ToString().Contains("@metadata"))
-            {
-                foreach (var property in result.Properties())
-                {
-                    if (property.ToString().Contains("@metadata"))
-                    {
-                        HandleInternalMetadata((JObject)property.Value);
-                    }
-                }
-            }
-            // Implant a property with "id" value ... if not exists
-            if (result.Value<JObject>("@metadata") != null)
-            {
-                if (result.Value<JObject>("@metadata") != null && result.Property("Id") == null)
-                {
-                    // add Id 
-                    var id = result.Value<JObject>("@metadata").Value<string>("@id");
-                    result.Add("Id", id);
-                }
-            }
+			// recursively scan the nested objects
+        	foreach (var nested in result.Properties().Select(property => property.Value).OfType<JObject>())
+        	{
+        		HandleInternalMetadata(nested);
+        	}
+
+        	// Implant a property with "id" value ... if not exists
+        	var metadata = result.Value<JObject>("@metadata");
+        	if (metadata == null) 
+				return;
+
+        	var entityName = metadata.Value<string>("Raven-Entity-Name");
+
+			var idPropName = theSession.Conventions.GetIdentityPropertyNameFromEntityName(entityName);
+			if (result.Property(idPropName) != null)
+				return;
+
+			result[idPropName] = metadata.Value<string>("@id");
         }
-        private static string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
+
+    	private static string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
         {
             if (whereEqualsParams.Value == null)
             {
