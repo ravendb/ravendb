@@ -38,7 +38,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
@@ -399,6 +399,10 @@
     <Compile Include="Triggers\AttachmentReadTrigger.cs" />
     <Compile Include="Triggers\AttachmentPutTriggers.cs" />
     <Compile Include="Triggers\AuditPutTrigger.cs" />
+    <Compile Include="Triggers\Bugs\AuditTrigger.cs" />
+    <Compile Include="Triggers\Bugs\ModifyingMetadataFromTrigger.cs" />
+    <Compile Include="Triggers\Bugs\Person.cs" />
+    <Compile Include="Triggers\Bugs\Program.cs" />
     <Compile Include="Triggers\CascadeDeleteTrigger.cs" />
     <Compile Include="Triggers\DeleteTriggers.cs" />
     <Compile Include="Triggers\IndexToDataTable.cs" />

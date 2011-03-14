@@ -139,7 +139,7 @@ namespace Raven.Http.Extensions
 				if (header.Name.StartsWith("@"))
 					continue;
 
-				var value = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+				var value =  WriteHeaderValue(header);
 				switch (header.Name)
 				{
 					case "Content-Type":
@@ -159,7 +159,16 @@ namespace Raven.Http.Extensions
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
-		private static string StripQuotesIfNeeded(string str)
+	    private static string WriteHeaderValue(JProperty header)
+	    {
+            if(header.Value.Type == JTokenType.Date)
+            {
+                return header.Value.Value<DateTime>().ToString("r");
+            }
+	        return StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+	    }
+
+	    private static string StripQuotesIfNeeded(string str)
 		{
 			if (str.StartsWith("\"") && str.EndsWith("\""))
 				return str.Substring(1, str.Length - 2);
