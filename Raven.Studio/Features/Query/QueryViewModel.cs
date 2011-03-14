@@ -6,7 +6,6 @@
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
-	using Client.Client;
 	using Database;
 	using Documents;
 	using Framework;
@@ -15,9 +14,11 @@
 
 	public class QueryViewModel : Screen, IDatabaseScreenMenuItem
 	{
+		readonly List<string> dynamicIndex = new List<string>();
 		readonly IServer server;
 		string currentIndex;
 		string queryResultsStatus;
+		bool shouldShowDynamicIndexes;
 
 		[ImportingConstructor]
 		public QueryViewModel(IServer server)
@@ -58,6 +59,17 @@
 			}
 		}
 
+		public bool ShouldShowDynamicIndexes
+		{
+			get { return shouldShowDynamicIndexes; }
+			set
+			{
+				shouldShowDynamicIndexes = value;
+				NotifyOfPropertyChange(() => ShouldShowDynamicIndexes);
+				GetIndexNames();
+			}
+		}
+
 		public bool CanExecute
 		{
 			get { return !string.IsNullOrEmpty(CurrentIndex); }
@@ -91,13 +103,13 @@
 					.ContinueWith(x =>
 					              	{
 					              		QueryResults.GetTotalResults = () => x.Result.TotalResults;
-										
-										QueryResultsStatus = DetermineResultsStatus(x.Result);
 
-                                        
-                                        //maybe we added a temp index?
-                                        if (indexName.StartsWith("dynamic"))
-                                            GetIndexNames();
+					              		QueryResultsStatus = DetermineResultsStatus(x.Result);
+
+
+					              		//maybe we added a temp index?
+					              		if (indexName.StartsWith("dynamic"))
+					              			GetIndexNames();
 
 					              		return x.Result.Results
 					              			.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
@@ -109,41 +121,64 @@
 		static string DetermineResultsStatus(QueryResult result)
 		{
 			//TODO: give the user some info about skipped results, etc?
-			if(result.TotalResults == 0) return "No documents matched the query.";
-			if(result.TotalResults == 1) return "1 document found.";
-			return string.Format("{0} documents found.",result.TotalResults);
+			if (result.TotalResults == 0) return "No documents matched the query.";
+			if (result.TotalResults == 1) return "1 document found.";
+			return string.Format("{0} documents found.", result.TotalResults);
 		}
 
 		protected override void OnActivate()
 		{
-		    GetIndexNames();
+			GetIndexNames();
 		}
 
-	    private void GetIndexNames()
-	    {
-	        using (var session = server.OpenSession())
-	        {
-	            session.Advanced.AsyncDatabaseCommands
-	                .GetIndexNamesAsync(0, 1000)
-	                .ContinueWith(x => session.Advanced.AsyncDatabaseCommands
-	                                       .GetCollectionsAsync(0, 25)
-	                                       .ContinueWith(task =>
-	                                                         {
-	                                                             string oldSelection = CurrentIndex;
+		void ReplaceVisibleList(IEnumerable<string> newList)
+		{
+			string oldSelection = CurrentIndex;
+			Indexes.Replace(newList);
+			CurrentIndex = oldSelection;
+		}
 
-	                                                             var items = new List<string>(x.Result);
+		void GetIndexNames()
+		{
+			if (ShouldShowDynamicIndexes)
+			{
+				ShowDynamicIndexes();
+			}
+			else
+			{
+				using (var session = server.OpenSession())
+				{
+					session.Advanced.AsyncDatabaseCommands
+						.GetIndexNamesAsync(0, 1000)
+						.ContinueWith(x => ReplaceVisibleList(x.Result));
+				}
+			}
+		}
 
-	                                                             foreach (var collection in task.Result)
-	                                                             {
-	                                                                 items.Insert(0, "dynamic/" + collection.Name);
-	                                                             }
+		void ShowDynamicIndexes()
+		{
+			if (dynamicIndex.Count != 0)
+			{
+				ReplaceVisibleList(dynamicIndex);
+				return;
+			}
 
-	                                                             items.Insert(0, "dynamic");
+			using (var session = server.OpenSession())
+			{
+				session.Advanced.AsyncDatabaseCommands
+					.GetCollectionsAsync(0, 250)
+					.ContinueWith(task =>
+					{
+					    foreach (var collection in task.Result)
+					    {
+					        dynamicIndex.Insert(0, "dynamic/" + collection.Name);
+					    }
 
-	                                                             Indexes.Replace(items);
-	                                                             CurrentIndex = oldSelection;
-	                                                         }));
-	        }
-	    }
+					    dynamicIndex.Insert(0, "dynamic");
+
+					    ReplaceVisibleList(dynamicIndex);
+					});
+			}
+		}
 	}
 }

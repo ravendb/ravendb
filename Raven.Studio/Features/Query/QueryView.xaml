@@ -28,6 +28,16 @@
 								   IsTextCompletionEnabled="True"
 								   ItemsSource="{Binding Indexes}"
 								   SelectedItem="{Binding CurrentIndex,Mode=TwoWay}" />
+
+			<StackPanel Orientation="Horizontal"
+						tk:DockPanel.Dock="Top">
+				<RadioButton GroupName="IndexGroup"
+							 IsChecked="{Binding ShouldShowDynamicIndexes, Mode=TwoWay}"
+							 Content="Dynamic" />
+				<RadioButton GroupName="IndexGroup"
+							 Content="Static" />
+			</StackPanel>
+
 			<ListBox ItemsSource="{Binding Indexes}"
 					 SelectedItem="{Binding CurrentIndex,Mode=TwoWay}" />
 		</tk:DockPanel>
