@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
-using System.Diagnostics;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Config;
