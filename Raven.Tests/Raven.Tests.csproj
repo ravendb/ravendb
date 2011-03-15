@@ -183,6 +183,7 @@
     <Compile Include="Bugs\InMemoryOnly.cs" />
     <Compile Include="Bugs\InvalidIds.cs" />
     <Compile Include="Bugs\Issue199.cs" />
+    <Compile Include="Bugs\JsonDeserialization.cs" />
     <Compile Include="Bugs\KeyGeneration.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
     <Compile Include="Bugs\LinqGitHub147.cs" />
