@@ -305,6 +305,7 @@
     <Compile Include="Document\ZoneCountResult.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
+    <Compile Include="Indexes\CreateIndexesWithCasting.cs" />
     <Compile Include="Indexes\CustomAnalyzer.cs" />
     <Compile Include="Indexes\DynamicQueryMapping.cs" />
     <Compile Include="Indexes\ExpressionOperatorPrecedenceTest.cs" />

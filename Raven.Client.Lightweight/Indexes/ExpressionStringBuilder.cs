@@ -1479,6 +1479,12 @@ namespace Raven.Client.Indexes
 					break;
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
+					
+					this.Out("(");
+					this.Out(node.Type.FullName);
+					this.Out(")");
+					this.Out("(");
+					break;
 				case ExpressionType.ArrayLength:
 					// we don't want to do nothing for those
 					this.Out("(");
