@@ -247,7 +247,7 @@ namespace Raven.Database.Indexing
 						trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
 					logIndexing.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
 					AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
-					actions.Indexing.IncrementSuccessIndexing();
+					actions.Indexing.IncrementReduceSuccessIndexing();
 				}
 				batchers.ApplyAndIgnoreAllErrors(
 					e =>
