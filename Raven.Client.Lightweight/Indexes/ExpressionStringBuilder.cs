@@ -1482,7 +1482,9 @@ namespace Raven.Client.Indexes
 					// we only cast enums and types is mscorlib), we don't support anything else
 					// because the VB compiler like to put converts all over the place, and include
 					// types that we can't really support (only exists on the client)
-					if (node.Type.IsEnum || node.Type.Assembly == typeof(string).Assembly)
+					if ((node.Type.IsEnum ||
+						node.Type.Assembly == typeof(string).Assembly) &&
+						node.Type.IsGenericType == false)
 					{
 						this.Out("(");
 						this.Out(node.Type.FullName);
