@@ -305,7 +305,7 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
-			if(Encoding.Unicode.GetByteCount(key)>=255)
+			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
 				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "key");
 
 			if (string.IsNullOrEmpty(key))
@@ -717,6 +717,7 @@ namespace Raven.Database
 
 		public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
 		{
+			if (name == null) throw new ArgumentNullException("name");
 			if (Encoding.Unicode.GetByteCount(name) >= 255)
 				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "name");
 
