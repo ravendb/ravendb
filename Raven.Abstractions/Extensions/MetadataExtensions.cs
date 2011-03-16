@@ -23,11 +23,16 @@ namespace Raven.Database.Data
             new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     		{
 				"Non-Authoritive-Information",
-				"Content-Type"
+				"Content-Type",
+				
     		};
 
         private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
+			// Raven internal headers
+			"Raven-Server-Build",
+
+
             "Allow",
             "Content-Disposition",
             "Content-Encoding",
