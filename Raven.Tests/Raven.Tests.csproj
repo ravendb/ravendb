@@ -312,6 +312,7 @@
     <Compile Include="Indexes\LinqIndexesFromClient.cs" />
     <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
     <Compile Include="Indexes\MapOnlyView.cs" />
+    <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
