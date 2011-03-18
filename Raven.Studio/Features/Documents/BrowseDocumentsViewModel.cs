@@ -6,7 +6,6 @@ namespace Raven.Studio.Features.Documents
 	using Database;
 	using Framework;
 	using Messages;
-	using Plugin;
 	using Raven.Database;
 
 	public class BrowseDocumentsViewModel : RavenScreen, IDatabaseScreenMenuItem,

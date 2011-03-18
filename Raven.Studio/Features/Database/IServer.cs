@@ -1,21 +1,21 @@
-namespace Raven.Studio.Plugin
+namespace Raven.Studio.Features.Database
 {
 	using System;
 	using System.Collections.Generic;
 	using Client;
-	using Database.Data;
+	using Statistics;
 
 	public interface IServer
 	{
 		string Address { get; }
 		string Name { get; }
-		IAsyncDocumentSession OpenSession();
 		IEnumerable<string> Databases { get; }
 		string CurrentDatabase { get; }
+		IStatisticsSet Statistics { get; }
+		bool IsInitialized { get; }
+		IAsyncDocumentSession OpenSession();
 		void OpenDatabase(string name, Action callback);
 		void Connect(Uri serverAddress, Action callback);
-		DatabaseStatistics Statistics { get; }
-		bool IsInitialized { get; }
 		event EventHandler CurrentDatabaseChanged;
 		event EventHandler Connected;
 	}

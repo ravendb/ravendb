@@ -7,7 +7,6 @@ namespace Raven.Studio.Features.Database
 	using Framework;
 	using Indexes;
 	using Messages;
-	using Plugin;
 	using Query;
 	using System.Linq;
 

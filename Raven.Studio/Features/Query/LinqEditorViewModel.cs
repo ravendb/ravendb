@@ -6,9 +6,9 @@ namespace Raven.Studio.Features.Query
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
 	using Client.Client;
+	using Database;
 	using Documents;
 	using Framework;
-	using Plugin;
 
 	[Export]
 	public class LinqEditorViewModel : Screen

@@ -5,10 +5,10 @@
 	using System.Text;
 	using Abstractions.Data;
 	using Caliburn.Micro;
+	using Database;
 	using Documents;
 	using Messages;
 	using Newtonsoft.Json.Linq;
-	using Plugin;
 
 	[Export]
 	public class EditCollectionTemplateViewModel : Screen

@@ -3,7 +3,7 @@
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Plugin;
+	using Database;
 	using Raven.Database.Data;
 
 	[Export]
@@ -21,7 +21,8 @@
 
 		public IEnumerable<ServerError> Errors
 		{
-			get { return server.Statistics.Errors; }
+			get { return null; }
+			//get { return server.Statistics.Errors; }
 		}
 
 		public IServer Server

@@ -9,7 +9,6 @@
 	using Documents;
 	using Framework;
 	using Messages;
-	using Plugin;
 
 	public class SummaryViewModel : Screen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>

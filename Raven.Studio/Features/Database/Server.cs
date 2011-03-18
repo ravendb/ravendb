@@ -10,9 +10,9 @@ namespace Raven.Studio.Features.Database
 	using Client.Document;
 	using Framework;
 	using Messages;
-	using Plugin;
 	using Raven.Database.Data;
 	using StartUp;
+	using Statistics;
 	using Action = System.Action;
 
 	[Export(typeof(IServer))]
@@ -34,7 +34,7 @@ namespace Raven.Studio.Features.Database
 		IEnumerable<string> databases;
 
 		bool isInitialized;
-		DatabaseStatistics statistics;
+		Statistics statistics = new Statistics();
 		DocumentStore store;
 
 		[ImportingConstructor]
@@ -133,14 +133,9 @@ namespace Raven.Studio.Features.Database
 					: store.OpenAsyncSession(CurrentDatabase);
 		}
 
-		public DatabaseStatistics Statistics
+		public IStatisticsSet Statistics
 		{
 			get { return statistics; }
-			private set
-			{
-				statistics = value;
-				NotifyOfPropertyChange(() => Statistics);
-			}
 		}
 
 		public event EventHandler CurrentDatabaseChanged = delegate { };
@@ -164,12 +159,12 @@ namespace Raven.Studio.Features.Database
 
 		void RefreshStatistics(bool clear)
 		{
-			if (clear) Statistics = null;
+			if (clear) statistics = new Statistics();
 
 			if (snapshots.ContainsKey(CurrentDatabase))
 			{
 				var snapshot = snapshots[CurrentDatabase];
-				Statistics = snapshot;
+				statistics.Accept(snapshot);
 			}
 
 			RetrieveStatisticsForCurrentDatabase();
@@ -186,9 +181,11 @@ namespace Raven.Studio.Features.Database
 					.ContinueOnSuccess(x =>
 					{
 						snapshots[CurrentDatabase] = x.Result;
-						Statistics = x.Result;
+						statistics.Accept(x.Result);
 					});
 			}
 		}
 	}
+
+
 }

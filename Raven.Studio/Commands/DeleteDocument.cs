@@ -2,8 +2,8 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
+	using Features.Database;
 	using Messages;
-	using Plugin;
 	using Shell;
 
 	public class DeleteDocument
