@@ -1,6 +1,7 @@
 ﻿namespace Raven.Studio.Framework
 {
 	using System;
+	using System.Collections.Generic;
 	using System.IO;
 	using System.Net;
 	using System.Threading.Tasks;
@@ -81,6 +82,27 @@
 		    return ( single == null) 
 			       	? null
 			       	: single.Message;
+		}
+
+		public static void ExecuteInSequence(this IEnumerable<Task> tasks, System.Action callback)
+		{
+			var enumerator = tasks.GetEnumerator();
+			ExecuteNextTask(enumerator, callback);
+		}
+
+		static void ExecuteNextTask(IEnumerator<Task> enumerator, System.Action callback)
+		{
+			bool moveNextSucceeded = enumerator.MoveNext();
+
+			if (!moveNextSucceeded)
+			{
+				if (callback != null) callback();
+				return;
+			}
+
+			enumerator
+				.Current
+				.ContinueWith(x => ExecuteNextTask(enumerator, callback));
 		}
 	}
 }

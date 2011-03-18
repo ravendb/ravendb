@@ -1,11 +1,9 @@
 namespace Raven.Studio.Features.Database
 {
 	using System;
-	using System.Collections;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using System.Linq;
-	using System.Threading.Tasks;
 	using System.Windows.Threading;
 	using Caliburn.Micro;
 	using Client;
@@ -19,20 +17,17 @@ namespace Raven.Studio.Features.Database
 
 	[Export(typeof(IServer))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class Server : PropertyChangedBase, IServer,
-						  IHandle<StatisticsUpdateRequested>
+	public class Server : PropertyChangedBase, IServer, IHandle<StatisticsUpdateRequested>
 	{
 		const string DefaultDatabaseName = "Default Database";
 		readonly IDatabaseInitializer[] databaseInitializers;
 
-		readonly Dictionary<string, DatabaseStatistics> snapshots
-			= new Dictionary<string, DatabaseStatistics>();
+		readonly Dictionary<string, DatabaseStatistics> snapshots = new Dictionary<string, DatabaseStatistics>();
 
 		readonly List<string> startupChecks = new List<string>();
 		readonly DispatcherTimer timer;
 
-		readonly TimeSpan updateFrequency = new TimeSpan(0, 0, 0,
-														 5, 0);
+		readonly TimeSpan updateFrequency = new TimeSpan(0, 0, 0, 5, 0);
 
 		string currentDatabase;
 
@@ -43,15 +38,12 @@ namespace Raven.Studio.Features.Database
 		DocumentStore store;
 
 		[ImportingConstructor]
-		public Server(IEventAggregator events,
-					  [ImportMany] IDatabaseInitializer[]
-						databaseInitializers)
+		public Server(IEventAggregator events, [ImportMany] IDatabaseInitializer[] databaseInitializers)
 		{
 			this.databaseInitializers = databaseInitializers;
 
 			timer = new DispatcherTimer { Interval = updateFrequency };
-			timer.Tick +=
-				delegate { RetrieveStatisticsForCurrentDatabase(); };
+			timer.Tick += delegate { RetrieveStatisticsForCurrentDatabase(); };
 			events.Subscribe(this);
 		}
 
@@ -69,25 +61,25 @@ namespace Raven.Studio.Features.Database
 			store.OpenAsyncSession().Advanced.AsyncDatabaseCommands
 				.GetDatabaseNamesAsync()
 				.ContinueOnSuccess(t =>
-									{
-										var databases = new List<string>
-				                   		                	{
-				                   		                		DefaultDatabaseName
-				                   		                	};
-										databases.AddRange(t.Result);
-										Databases = databases;
+				{
+					var dbs = new List<string>
+				                   		{
+				                   		    DefaultDatabaseName
+				                   		};
+					dbs.AddRange(t.Result);
+					Databases = dbs;
 
-										OpenDatabase(databases[0], () =>
-																	{
-																		IsInitialized = true;
-																		Execute.OnUIThread(() => timer.Start());
+					OpenDatabase(dbs[0], () =>
+					{
+						IsInitialized = true;
+						Execute.OnUIThread(() => timer.Start());
 
-																		Connected(this, EventArgs.Empty);
+						Connected(this, EventArgs.Empty);
 
-																		if (callback != null) callback();
-																	});
+						if (callback != null) callback();
+					});
 
-									});
+				});
 		}
 
 		public string CurrentDatabase
@@ -151,9 +143,7 @@ namespace Raven.Studio.Features.Database
 			}
 		}
 
-		public event EventHandler CurrentDatabaseChanged =
-			delegate { };
-
+		public event EventHandler CurrentDatabaseChanged = delegate { };
 		public event EventHandler Connected = delegate { };
 
 		void RaiseCurrentDatabaseChanged() { CurrentDatabaseChanged(this, EventArgs.Empty); }
@@ -168,7 +158,7 @@ namespace Raven.Studio.Features.Database
 				var tasks = from initializer in databaseInitializers
 							from task in initializer.Initialize(session)
 							select task;
-				ExecuteTasks(tasks, callback);
+				tasks.ExecuteInSequence(callback);
 			}
 		}
 
@@ -199,27 +189,6 @@ namespace Raven.Studio.Features.Database
 						Statistics = x.Result;
 					});
 			}
-		}
-
-		public void ExecuteTasks(IEnumerable<Task> tasks, Action callback)
-		{
-			var enumerator = tasks.GetEnumerator();
-			ExecuteNextTask(enumerator, callback);
-		}
-
-		static void ExecuteNextTask(IEnumerator<Task> enumerator, Action callback)
-		{
-			bool moveNextSucceeded = enumerator.MoveNext();
-
-			if (!moveNextSucceeded)
-			{
-				if (callback != null) callback();
-				return;
-			}
-
-			enumerator
-				.Current
-				.ContinueWith(x => ExecuteNextTask(enumerator, callback));
 		}
 	}
 }
