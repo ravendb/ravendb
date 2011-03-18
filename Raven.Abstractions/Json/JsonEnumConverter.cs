@@ -21,7 +21,10 @@ namespace Raven.Http.Json
 		/// <param name="serializer">The calling serializer.</param>
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
-			writer.WriteValue(value.ToString());
+			if(value == null)
+				writer.WriteNull();
+			else
+				writer.WriteValue(value.ToString());
 		}
 
 		/// <summary>
@@ -34,7 +37,10 @@ namespace Raven.Http.Json
 		/// <returns>The object value.</returns>
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
-			return Enum.Parse(objectType, reader.Value.ToString(), true);
+			var enumType = Nullable.GetUnderlyingType(objectType) ?? objectType;
+			if (enumType != objectType && reader.TokenType == JsonToken.Null)//nullable
+				return null;
+			return Enum.Parse(enumType, reader.Value.ToString(), true);
 		}
 
 		/// <summary>
