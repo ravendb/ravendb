@@ -109,7 +109,7 @@ namespace Raven.Database.Config
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
 
-			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ??
+			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ??  Settings["Raven/StorageEngine"] ?? 
 			                     //  "esent";
 								 	 "munin";
 		}

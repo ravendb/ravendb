@@ -1,3 +1,4 @@
+using System;
 using Xunit;
 using System.Linq;
 
@@ -24,7 +25,7 @@ namespace Raven.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					var users = session.Query<User>()
-						.Customize(x=>x.WaitForNonStaleResults())
+						.Customize(x=>x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
 						.Take(20000)
 						.ToArray();
 					Assert.Equal(15000, users.Length);

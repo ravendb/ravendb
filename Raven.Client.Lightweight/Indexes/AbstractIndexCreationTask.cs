@@ -46,7 +46,7 @@ namespace Raven.Client.Indexes
 		/// Gets or sets the document store.
 		/// </summary>
 		/// <value>The document store.</value>
-		public DocumentConvention Conventions { get; private set; }
+		public DocumentConvention Conventions { get; set; }
 
 #if !NET_3_5
 		/// <summary>

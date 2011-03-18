@@ -33,6 +33,15 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
+		public void Will_keep_cast_in_query()
+		{
+			var dynamicQueryCompiler = new DynamicViewCompiler("caster", new IndexDefinition { Map = "from x in docs select new { Id = (int)x.Id }" }, new AbstractDynamicCompilationExtension[0], ".");
+			dynamicQueryCompiler.GenerateInstance();
+
+			Assert.Contains("(int)x.Id", dynamicQueryCompiler.CompiledQueryText);
+		}
+
+		[Fact]
 		public void Can_create_new_instance_from_query()
 		{
 			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0], ".");

@@ -281,12 +281,37 @@ namespace Raven.Client.Linq
 		private void VisitEquals(MethodCallExpression expression)
 		{
 			var memberInfo = GetMember(expression.Object);
+			bool isAnalyzed;
 
+			if(expression.Arguments.Count == 2 && 
+				expression.Arguments[1].NodeType==ExpressionType.Constant && 
+				expression.Arguments[1].Type == typeof(StringComparison))
+			{
+				switch ((StringComparison)((ConstantExpression)expression.Arguments[1]).Value)
+				{
+					case StringComparison.CurrentCulture:
+					case StringComparison.Ordinal:
+					case StringComparison.InvariantCulture:
+						isAnalyzed = false;
+						break;
+					case StringComparison.CurrentCultureIgnoreCase:
+					case StringComparison.InvariantCultureIgnoreCase:
+					case StringComparison.OrdinalIgnoreCase:
+						isAnalyzed = true;
+						break;
+					default:
+						throw new ArgumentOutOfRangeException();
+				}
+			}
+			else
+			{
+				isAnalyzed = memberInfo.Type != typeof(string);
+			}
 			luceneQuery.WhereEquals(new WhereEqualsParams
 			{
 				FieldName = memberInfo.Path,
 				Value = GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
-				IsAnalyzed = memberInfo.Type != typeof (string),
+				IsAnalyzed = isAnalyzed,
 				AllowWildcards = false
 			});
 		}
