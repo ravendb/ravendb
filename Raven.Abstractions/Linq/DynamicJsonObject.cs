@@ -444,7 +444,7 @@ namespace Raven.Database.Linq
 
 		public static bool operator !=(DynamicNullObject left, object right)
 		{
-			return (right is DynamicNullObject) == false;
+			return right != null && (right is DynamicNullObject) == false ;
 		}
 
 		public static bool operator >(DynamicNullObject left, object right)

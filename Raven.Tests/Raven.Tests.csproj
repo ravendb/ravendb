@@ -213,6 +213,7 @@
     <Compile Include="Bugs\MultiTenancy\NoCaseSensitive.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\Nullables.cs" />
+    <Compile Include="Bugs\NullCoalasing.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
     <Compile Include="Bugs\OrderOfInsertionDoesNotAffectQuerying.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
