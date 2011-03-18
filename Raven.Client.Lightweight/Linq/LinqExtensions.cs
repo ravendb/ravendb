@@ -31,7 +31,8 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public static IEnumerable<TResult> As<TResult>(this IQueryable queryable)
 		{
-			var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);
+			var ofType = Queryable.OfType<TResult>(queryable);
+			var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
 			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
 			return results;
@@ -42,7 +43,8 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public static IRavenQueryable<TResult> AsProjection<TResult>(this IQueryable queryable)
 		{
-			var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);
+			var ofType = Queryable.OfType<TResult>(queryable);
+			var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
 			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
 			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));

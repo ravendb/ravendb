@@ -485,6 +485,9 @@ namespace Raven.Client.Linq
 		{
 			switch (expression.Method.Name)
 			{
+				case "OfType":
+					// nothing to do here, we don't really care about types anyway for the linq query
+					break;
 				case "Where":
 				{
 					insideWhere++;

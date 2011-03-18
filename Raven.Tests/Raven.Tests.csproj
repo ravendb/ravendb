@@ -272,6 +272,7 @@
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Bugs\User.cs" />
+    <Compile Include="Bugs\UsingAsProjection.cs" />
     <Compile Include="Bugs\UsingEnumInLinq.cs" />
     <Compile Include="Bugs\UsingLongAsId.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
