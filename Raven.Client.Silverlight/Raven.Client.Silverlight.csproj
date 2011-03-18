@@ -99,6 +99,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\FailoverBehavior.cs">
       <Link>Document\FailoverBehavior.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
+      <Link>Extensions\DatabaseCommandsExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
       <Link>IAsyncDocumentQuery.cs</Link>
     </Compile>
