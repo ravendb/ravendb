@@ -11,7 +11,8 @@ namespace Raven.Studio.Plugin
 		string Name { get; }
 		IAsyncDocumentSession OpenSession();
 		IEnumerable<string> Databases { get; }
-		string CurrentDatabase { get; set; }
+		string CurrentDatabase { get; }
+		void OpenDatabase(string name, Action callback);
 		void Connect(Uri serverAddress, Action callback);
 		DatabaseStatistics Statistics { get; }
 		bool IsInitialized { get; }
