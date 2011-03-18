@@ -17,8 +17,8 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void Can_sort_according_to_swedish_sorting_rules()
         {
-            var names = new[]{"a", "b", "ö", "ä", "å"};
-            var sortedNames = new[] {"a", "b", "å", "ä", "ö"};
+            var names = new[] { "a", "b", "\u00F6", "\u00E4", "\u00E5" };
+            var sortedNames = new[] { "a", "b", "\u00E5", "\u00E4", "\u00F6" };
 
             using (var store = NewDocumentStore())
             {
