@@ -744,7 +744,7 @@ namespace Raven.Client.Client.Async
 		{
 			var query = new IndexQuery { Start = start, PageSize = pageSize, SortedFields = new[] { new SortedField("Name"), } };
 
-			return QueryAsync("Studio/DocumentCollections", query, new string[] { })
+			return QueryAsync("Raven/DocumentCollections", query, new string[] { })
 					.ContinueWith(task => task.Result.Results.Select(x => x.Deserialize<Collection>(convention)).ToArray());
 		}
 
