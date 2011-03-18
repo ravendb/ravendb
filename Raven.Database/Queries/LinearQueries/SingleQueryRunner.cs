@@ -22,11 +22,13 @@ namespace Raven.Database.Queries.LinearQueries
         private readonly ConcurrentDictionary<string, AbstractViewGenerator> queryCache;
 
         private readonly IRemoteStorage remoteStorage;
+    	private string basePath;
 
-        public SingleQueryRunner(IRemoteStorage remoteStorage, ConcurrentDictionary<string, AbstractViewGenerator> queryCache)
+    	public SingleQueryRunner(IRemoteStorage remoteStorage, ConcurrentDictionary<string, AbstractViewGenerator> queryCache, string basePath)
         {
             this.remoteStorage = remoteStorage;
-            this.queryCache = queryCache;
+    		this.basePath = basePath;
+    		this.queryCache = queryCache;
         }
 
 
@@ -35,7 +37,7 @@ namespace Raven.Database.Queries.LinearQueries
             var viewGenerator = queryCache.GetOrAdd(query.Query,
                                                     s =>
                                                     new DynamicViewCompiler("query", new IndexDefinition { Map = query.Query, },
-                                                                            new AbstractDynamicCompilationExtension[0])
+                                                                            new AbstractDynamicCompilationExtension[0], basePath)
                                                     {
                                                         RequiresSelectNewAnonymousType = false
                                                     }.GenerateInstance());

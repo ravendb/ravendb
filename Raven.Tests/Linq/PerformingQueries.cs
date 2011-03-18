@@ -34,7 +34,7 @@ namespace Raven.Tests.Linq
 {'type':'page', title: 'there', content: 'foobar 2', size: 3, '@metadata': {'@id': 2} },
 {'type':'revision', size: 4, _id: 3}
 ]");
-			var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0]);
+			var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0], ".");
 			var compiledQuery = transformer.GenerateInstance();
 			var actual = compiledQuery.MapDefinition(documents)
 				.Cast<object>().ToArray();
@@ -65,7 +65,7 @@ select new { GeoHash = SampleGeoLocation.GeoHash(doc.loc, doc.lang) }
 			                                          new AbstractDynamicCompilationExtension[]
 			                                          {
 			                                          	new SampleDynamicCompilationExtension()
-			                                          });
+			                                          }, ".");
 			var compiledQuery = transformer.GenerateInstance();
 			var actual = compiledQuery.MapDefinition(documents)
 				.Cast<object>().ToArray();

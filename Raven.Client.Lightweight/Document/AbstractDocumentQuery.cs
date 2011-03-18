@@ -112,10 +112,10 @@ namespace Raven.Client.Document
         /// Should we wait for non stale results
         /// </summary>
         protected bool theWaitForNonStaleResults;
-		/// <summary>
-		/// The paths to include when loading the query
-		/// </summary>
-    	protected HashSet<string> includes = new HashSet<string>();
+        /// <summary>
+        /// The paths to include when loading the query
+        /// </summary>
+        protected HashSet<string> includes = new HashSet<string>();
         /// <summary>
         /// What aggregated operation to execute
         /// </summary>
@@ -162,7 +162,7 @@ namespace Raven.Client.Document
         /// </summary>
         public IDocumentSession Session
         {
-            get { return (IDocumentSession) theSession; }
+            get { return (IDocumentSession)theSession; }
         }
 #endif
 
@@ -206,12 +206,12 @@ namespace Raven.Client.Document
         /// <param name = "theSession">The session.</param>
         public AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
 #if !SILVERLIGHT
-                                     IDatabaseCommands databaseCommands,
+ IDatabaseCommands databaseCommands,
 #endif
 #if !NET_3_5
-                                     IAsyncDatabaseCommands asyncDatabaseCommands,
+ IAsyncDatabaseCommands asyncDatabaseCommands,
 #endif
-                                     string indexName,
+ string indexName,
                                      string[] projectionFields,
                                      IDocumentQueryListener[] queryListeners)
         {
@@ -398,10 +398,10 @@ namespace Raven.Client.Document
         {
             fieldName = EnsureValidFieldName(new WhereEqualsParams
             {
-            	FieldName = fieldName
+                FieldName = fieldName
             });
             fieldName = descending ? "-" + fieldName : fieldName;
-            orderByFields = orderByFields.Concat(new[] {fieldName}).ToArray();
+            orderByFields = orderByFields.Concat(new[] { fieldName }).ToArray();
             sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
         }
 
@@ -482,39 +482,39 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
 
-		/// <summary>
-		///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
-		///   that is nearly always a mistake.
-		/// </summary>
-		[Obsolete(
-			@"
+        /// <summary>
+        ///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
+        ///   that is nearly always a mistake.
+        /// </summary>
+        [Obsolete(
+            @"
 You cannot issue an in memory filter - such as Count(x=>x.Name == ""Ayende"") - on IDocumentQuery. 
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
 Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.LuceneQuery<T>() is intended for lower level API access.
 If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Count(x=>x.Name == ""Ayende"")
 "
-			, true)]
-		public int Count(Func<T, bool> predicate)
-		{
-			throw new NotSupportedException();
-		}
+            , true)]
+        public int Count(Func<T, bool> predicate)
+        {
+            throw new NotSupportedException();
+        }
 
-		/// <summary>
-		///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
-		///   that is nearly always a mistake.
-		/// </summary>
-		[Obsolete(
-			@"
+        /// <summary>
+        ///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
+        ///   that is nearly always a mistake.
+        /// </summary>
+        [Obsolete(
+            @"
 You cannot issue an in memory filter - such as Count() - on IDocumentQuery. 
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
 Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.LuceneQuery<T>() is intended for lower level API access.
 If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Count()
 "
-			, true)]
-		public int Count()
-		{
-			throw new NotSupportedException();
-		}
+            , true)]
+        public int Count()
+        {
+            throw new NotSupportedException();
+        }
 
         /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
@@ -569,8 +569,8 @@ If you really want to do in memory filtering on the data returned from the query
         {
             WhereEquals(new WhereEqualsParams
             {
-            	FieldName = fieldName,
-				Value = value
+                FieldName = fieldName,
+                Value = value
             });
         }
 
@@ -584,10 +584,10 @@ If you really want to do in memory filtering on the data returned from the query
         {
             WhereEquals(new WhereEqualsParams
             {
-            	AllowWildcards = isAnalyzed,
-				IsAnalyzed = isAnalyzed,
-				FieldName = fieldName,
-				Value = value
+                AllowWildcards = isAnalyzed,
+                IsAnalyzed = isAnalyzed,
+                FieldName = fieldName,
+                Value = value
             });
         }
 
@@ -632,7 +632,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///   Matches exact value
         /// </summary>
-		public void WhereEquals(WhereEqualsParams whereEqualsParams)
+        public void WhereEquals(WhereEqualsParams whereEqualsParams)
         {
             var fieldName = EnsureValidFieldName(whereEqualsParams);
             var transformToEqualValue = TransformToEqualValue(whereEqualsParams);
@@ -655,14 +655,14 @@ If you really want to do in memory filtering on the data returned from the query
                 return whereEqualsParams.FieldName;
             if (theSession.Conventions == null)
                 return whereEqualsParams.FieldName;
-			if(whereEqualsParams.IsNestedPath)
-				return whereEqualsParams.FieldName;
-            var identityProperty = theSession.Conventions.GetIdentityProperty(typeof (T));
+            if (whereEqualsParams.IsNestedPath)
+                return whereEqualsParams.FieldName;
+            var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
             if (identityProperty != null && identityProperty.Name == whereEqualsParams.FieldName)
             {
                 return "__document_id";
             }
-			return whereEqualsParams.FieldName;
+            return whereEqualsParams.FieldName;
         }
 
         ///<summary>
@@ -688,10 +688,10 @@ If you really want to do in memory filtering on the data returned from the query
         {
             WhereEquals(new WhereEqualsParams
             {
-            	AllowWildcards = true,
-				IsAnalyzed = true,
-				FieldName = fieldName,
-				Value = value
+                AllowWildcards = true,
+                IsAnalyzed = true,
+                FieldName = fieldName,
+                Value = value
             });
         }
 
@@ -704,13 +704,13 @@ If you really want to do in memory filtering on the data returned from the query
         {
             // NOTE: doesn't fully match StartsWith semantics
             WhereEquals(
-				new WhereEqualsParams
-				{
-					FieldName = fieldName,
-					Value = String.Concat(value, "*"),
-					IsAnalyzed = true,
-					AllowWildcards = true
-				});
+                new WhereEqualsParams
+                {
+                    FieldName = fieldName,
+                    Value = String.Concat(value, "*"),
+                    IsAnalyzed = true,
+                    AllowWildcards = true
+                });
         }
 
         /// <summary>
@@ -724,14 +724,14 @@ If you really want to do in memory filtering on the data returned from the query
             // You cannot use a * or ? symbol as the first character of a search
 
             // NOTE: doesn't fully match EndsWith semantics
-        	WhereEquals(
-        		new WhereEqualsParams
-        		{
-        			FieldName = fieldName,
-        			Value = String.Concat("*", value),
-					AllowWildcards = true,
-					IsAnalyzed = true
-        		});
+            WhereEquals(
+                new WhereEqualsParams
+                {
+                    FieldName = fieldName,
+                    Value = String.Concat("*", value),
+                    AllowWildcards = true,
+                    IsAnalyzed = true
+                });
         }
 
         /// <summary>
@@ -753,7 +753,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             NegateIfNeeded();
 
-            fieldName = EnsureValidFieldName(new WhereEqualsParams{FieldName = fieldName});
+            fieldName = EnsureValidFieldName(new WhereEqualsParams { FieldName = fieldName });
 
             theQueryText.Append(fieldName).Append(":{");
             theQueryText.Append(start == null ? "*" : TransformToRangeValue(start));
@@ -780,7 +780,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             NegateIfNeeded();
 
-			fieldName = EnsureValidFieldName(new WhereEqualsParams { FieldName = fieldName });
+            fieldName = EnsureValidFieldName(new WhereEqualsParams { FieldName = fieldName });
             theQueryText.Append(fieldName).Append(":[");
             theQueryText.Append(start == null ? "*" : TransformToRangeValue(start));
             theQueryText.Append(" TO ");
@@ -1205,7 +1205,7 @@ If you really want to do in memory filtering on the data returned from the query
                     continue;
 
                 addOperationHeader(
-                    string.Format("SortHint_{0}", Uri.EscapeDataString(sortByHint.Key.Trim('-'))),
+                    string.Format("SortHint-{0}", Uri.EscapeDataString(sortByHint.Key.Trim('-'))),
                     FromPrimitiveTypestring(sortByHint.Value.Name).ToString());
             }
         }
@@ -1216,26 +1216,28 @@ If you really want to do in memory filtering on the data returned from the query
             if (projectionFields != null && projectionFields.Length > 0
                 // we asked for a projection directly from the index
                 || metadata == null)
-                // we aren't querying a document, we are probably querying a map reduce index result
+            // we aren't querying a document, we are probably querying a map reduce index result
             {
-                if (typeof (T) == typeof (JObject))
-                    return (T) (object) result;
+                if (typeof(T) == typeof(JObject))
+                    return (T)(object)result;
 
 #if !NET_3_5
-                if (typeof (T) == typeof (object))
+                if (typeof(T) == typeof(object))
                 {
-                    return (T) (object) new DynamicJsonObject(result);
+                    return (T)(object)new DynamicJsonObject(result);
                 }
 #endif
+                HandleInternalMetadata(result);
+
                 var deserializedResult =
-                    (T) theSession.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof (T));
+                    (T)theSession.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof(T));
 
                 var documentId = result.Value<string>("__document_id"); //check if the result contain the reserved name
                 if (string.IsNullOrEmpty(documentId) == false)
                 {
                     // we need to make an addtional check, since it is possible that a value was explicitly stated
                     // for the identity property, in which case we don't want to override it.
-                    var identityProperty = theSession.Conventions.GetIdentityProperty(typeof (T));
+                    var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
                     if (identityProperty == null ||
                         (result.Property(identityProperty.Name) == null ||
                             result.Property(identityProperty.Name).Value.Type == JTokenType.Null))
@@ -1251,21 +1253,53 @@ If you really want to do in memory filtering on the data returned from the query
                                           metadata);
         }
 
-        private static string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
+        private void HandleInternalMetadata(JObject result)
         {
-        	if (whereEqualsParams.Value == null)
+			// Implant a property with "id" value ... if not exists
+        	var metadata = result.Value<JObject>("@metadata");
+        	if (metadata == null) 
+        	{
+				// if the item has metadata, then nested items will not have it, so we can skip recursing down
+				foreach (var nested in result.Properties().Select(property => property.Value))
+				{
+					var jObject = nested as JObject;
+					if(jObject != null)
+						HandleInternalMetadata(jObject);
+					var jArray = nested as JArray;
+					if (jArray == null) 
+						continue;
+					foreach (var item in jArray.OfType<JObject>())
+					{
+						HandleInternalMetadata(item);
+					}
+				}
+				return;
+        	}
+
+        	var entityName = metadata.Value<string>("Raven-Entity-Name");
+
+			var idPropName = theSession.Conventions.GetIdentityPropertyNameFromEntityName(entityName);
+			if (result.Property(idPropName) != null)
+				return;
+
+			result[idPropName] = metadata.Value<string>("@id");
+        }
+
+    	private static string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
+        {
+            if (whereEqualsParams.Value == null)
             {
                 return "[[NULL_VALUE]]";
             }
 
             if (whereEqualsParams.Value is bool)
             {
-                return (bool) whereEqualsParams.Value ? "true" : "false";
+                return (bool)whereEqualsParams.Value ? "true" : "false";
             }
 
             if (whereEqualsParams.Value is DateTime)
             {
-                return DateTools.DateToString((DateTime) whereEqualsParams.Value, DateTools.Resolution.MILLISECOND);
+                return DateTools.DateToString((DateTime)whereEqualsParams.Value, DateTools.Resolution.MILLISECOND);
             }
 
             var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),
@@ -1283,17 +1317,17 @@ If you really want to do in memory filtering on the data returned from the query
                 return "[[NULL_VALUE]]";
 
             if (value is int)
-                return NumberUtil.NumberToString((int) value);
+                return NumberUtil.NumberToString((int)value);
             if (value is long)
-                return NumberUtil.NumberToString((long) value);
+                return NumberUtil.NumberToString((long)value);
             if (value is decimal)
-                return NumberUtil.NumberToString((double) (decimal) value);
+                return NumberUtil.NumberToString((double)(decimal)value);
             if (value is double)
-                return NumberUtil.NumberToString((double) value);
+                return NumberUtil.NumberToString((double)value);
             if (value is float)
-                return NumberUtil.NumberToString((float) value);
+                return NumberUtil.NumberToString((float)value);
             if (value is DateTime)
-                return DateTools.DateToString((DateTime) value, DateTools.Resolution.MILLISECOND);
+                return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 
             return RavenQuery.Escape(value.ToString(), false);
         }
@@ -1323,25 +1357,25 @@ If you really want to do in memory filtering on the data returned from the query
             return lastEquality;
         }
 #if !NET_3_5
-		/// <summary>
-		/// Returns a list of results for a query asynchronously. 
-		/// </summary>
-		public Task<IList<T>> ToListAsync()
-		{
-			return QueryResultAsync
-				.ContinueWith(r =>
-				{
-					var result = r.Result;
+        /// <summary>
+        /// Returns a list of results for a query asynchronously. 
+        /// </summary>
+        public Task<IList<T>> ToListAsync()
+        {
+            return QueryResultAsync
+                .ContinueWith(r =>
+                {
+                    var result = r.Result;
 
-					foreach (var include in result.Includes)
-					{
-						var metadata = include.Value<JObject>("@metadata");
-						theSession.TrackEntity<object>(metadata.Value<string>("@id"), include, metadata);
-					}
+                    foreach (var include in result.Includes)
+                    {
+                        var metadata = include.Value<JObject>("@metadata");
+                        theSession.TrackEntity<object>(metadata.Value<string>("@id"), include, metadata);
+                    }
 
-					return (IList<T>)result.Results.Select(Deserialize).ToList();
-				});
-		}
-		#endif
+                    return (IList<T>)result.Results.Select(Deserialize).ToList();
+                });
+        }
+#endif
     }
 }

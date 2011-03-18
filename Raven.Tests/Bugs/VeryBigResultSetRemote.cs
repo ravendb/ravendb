@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Raven.Client.Document;
 using Xunit;
 
@@ -25,7 +26,9 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var users = session.Query<User>().Take(20000).ToArray();
+					var users = session.Query<User>()
+						.Customize(x=>x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
+						.Take(20000).ToArray();
 					Assert.Equal(15000, users.Length);
 				}
 			}

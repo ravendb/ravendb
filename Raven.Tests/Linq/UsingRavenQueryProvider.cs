@@ -22,22 +22,12 @@ using System.Diagnostics;
 
 namespace Raven.Tests.Linq
 {
-    public class UsingRavenQueryProvider
+    public class UsingRavenQueryProvider 
     {
-        string directoryName;
-
-        public UsingRavenQueryProvider()
-        {
-            //When running in the XUnit GUI strange things happen is we just create a path relative to 
-            //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
-            directoryName = Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
-            IOExtensions.DeleteDirectory(directoryName);
-        }
-
         [Fact]
         public void Can_perform_Skip_Take_Query()
         {
-            using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
+            using (var db = new EmbeddableDocumentStore() { RunInMemory = true})
             {
                 db.Initialize();
 
@@ -89,7 +79,7 @@ namespace Raven.Tests.Linq
         [Fact]
         public void Can_perform_First_and_FirstOrDefault_Query()
         {
-            using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
+             using (var db = new EmbeddableDocumentStore() { RunInMemory = true})
             {
                 db.Initialize();
 
@@ -129,7 +119,7 @@ namespace Raven.Tests.Linq
         [Fact]
         public void Can_perform_Single_and_SingleOrDefault_Query()
         {
-            using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
+             using (var db = new EmbeddableDocumentStore() { RunInMemory = true})
             {
                 db.Initialize();
 
@@ -172,7 +162,7 @@ namespace Raven.Tests.Linq
 
         [Fact]
         public void Can_perform_Boolean_Queries() {
-            using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
+             using (var db = new EmbeddableDocumentStore() { RunInMemory = true})
             {
                 db.Initialize();
 
@@ -215,7 +205,7 @@ namespace Raven.Tests.Linq
             DateTime secondTime = firstTime.AddMonths(1);  // use .AddHours(1) to get a second bug, timezone related
             DateTime thirdTime = secondTime.AddMonths(1);  // use .AddHours(1) to get a second bug, timezone related
             
-            using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName }) {
+             using (var db = new EmbeddableDocumentStore() { RunInMemory = true}) {
                 db.Initialize();
 
                 string indexName = "UserIndex";
@@ -274,7 +264,7 @@ namespace Raven.Tests.Linq
 		[Fact] // See issue #105 (http://github.com/ravendb/ravendb/issues/#issue/105)
 		public void Does_Not_Ignore_Expressions_Before_Where()
 		{
-            using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
+             using (var db = new EmbeddableDocumentStore() { RunInMemory = true})
 			{
 				db.Initialize();
 
@@ -308,7 +298,7 @@ namespace Raven.Tests.Linq
         [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
         public void Can_Use_Static_Fields_In_Where_Clauses()
         {
-            using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
+             using (var db = new EmbeddableDocumentStore() { RunInMemory = true})
             {
                 db.Initialize();
 
@@ -355,7 +345,7 @@ namespace Raven.Tests.Linq
 
 		public void Can_Use_Static_Properties_In_Where_Clauses()
 		{
-			using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
+			 using (var db = new EmbeddableDocumentStore() { RunInMemory = true})
 			{
 				db.Initialize();
 
@@ -389,7 +379,7 @@ namespace Raven.Tests.Linq
 		[Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
 		public void Can_use_inequality_to_compare_dates()
 		{
-            using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
+             using (var db = new EmbeddableDocumentStore() { RunInMemory = true})
 			{
 				db.Initialize();
 
@@ -429,7 +419,7 @@ namespace Raven.Tests.Linq
         //discussion here http://groups.google.com/group/ravendb/browse_thread/thread/3df57d19d41fc21
         public void Can_do_projection_in_query_result()
         {
-            using (var store = new EmbeddableDocumentStore() { DataDirectory = directoryName })
+			using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
             {
                 store.Initialize();
 

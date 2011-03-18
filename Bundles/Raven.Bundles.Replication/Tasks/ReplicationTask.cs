@@ -261,7 +261,7 @@ namespace Raven.Bundles.Replication.Tasks
         {
             try
             {
-                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateAttachments?from=" + docDb.Configuration.ServerUrl);
+				var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl());
                 request.UseDefaultCredentials = true;
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 request.Method = "POST";
@@ -304,7 +304,7 @@ namespace Raven.Bundles.Replication.Tasks
         {
             try
             {
-                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateDocs?from=" + docDb.Configuration.ServerUrl);
+				var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateDocs?from=" + UrlEncodedServerUrl());
                 request.UseDefaultCredentials = true;
             	request.ContentType = "application/json; charset=utf-8";
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
@@ -407,7 +407,7 @@ namespace Raven.Bundles.Replication.Tasks
         {
             try
             {
-                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/lastEtag?from=" + docDb.Configuration.ServerUrl);
+                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/lastEtag?from=" + UrlEncodedServerUrl());
                 request.UseDefaultCredentials = true;
                 request.Timeout = replicationRequestTimeoutInMs;
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
@@ -433,7 +433,12 @@ namespace Raven.Bundles.Replication.Tasks
             return null;
         }
 
-        private string[] GetReplicationDestinations()
+    	private string UrlEncodedServerUrl()
+    	{
+			return Uri.EscapeUriString(docDb.Configuration.ServerUrl);
+    	}
+
+    	private string[] GetReplicationDestinations()
         {
             var document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
             if (document == null)

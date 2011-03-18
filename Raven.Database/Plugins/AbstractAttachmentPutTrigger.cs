@@ -10,7 +10,7 @@ using Newtonsoft.Json.Linq;
 namespace Raven.Database.Plugins
 {
     [InheritedExport]
-    public class AbstractAttachmentPutTrigger : IRequiresDocumentDatabaseInitialization
+    public abstract class AbstractAttachmentPutTrigger : IRequiresDocumentDatabaseInitialization
     {
         /// <summary>
         ///  Ask the trigger whatever the PUT should be vetoed.

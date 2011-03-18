@@ -81,8 +81,7 @@ namespace Raven.Bundles.Tests.Expiration
                 var company2 = session.Load<Company>(company.Id);
                 Assert.NotNull(company2);
                 var metadata = session.Advanced.GetMetadataFor(company2);
-                var dateAsJsStr = @"\/Date("+(long)( expiry - new DateTime(1970,1,1) ).TotalMilliseconds+@")\/";
-                Assert.Equal(dateAsJsStr, metadata.Value<string>("Raven-Expiration-Date"));
+				Assert.Equal(expiry.ToString(), metadata.Value<DateTime>("Raven-Expiration-Date").ToString());
             }
         }
 

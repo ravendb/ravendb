@@ -60,6 +60,17 @@ namespace Raven.Database.Json
 		    var array = token as JArray;
             if (array != null)
                 return new DynamicJsonObject.DynamicList(array.Select(DynamicJsonObject.TransformToValue).ToArray());
+
+            var typeName = token.Value<string>("$type");
+            if(typeName != null)
+            {
+                var type = Type.GetType(typeName, false);
+                if(type != null)
+                {
+                    return serializer.Deserialize(new JTokenReader(token), type);
+                }
+            }
+
 		    return new DynamicJsonObject((JObject)token);
 		}
 

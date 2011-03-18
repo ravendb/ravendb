@@ -31,7 +31,7 @@ namespace Raven.Tests.Indexes
                                 from line in order.OrderLines
                                 select new { line.ProductId }
             }.ToIndexDefinition(new DocumentConvention());
-			var generator = new DynamicViewCompiler("test", indexDefinition, new AbstractDynamicCompilationExtension[0])
+			var generator = new DynamicViewCompiler("test", indexDefinition, new AbstractDynamicCompilationExtension[0], ".")
                 .GenerateInstance();
 
 
@@ -73,7 +73,7 @@ namespace Raven.Tests.Indexes
 				                select new { role }
 			}.ToIndexDefinition(new DocumentConvention());
 
-			new DynamicViewCompiler("test", indexDefinition, new AbstractDynamicCompilationExtension[0])
+			new DynamicViewCompiler("test", indexDefinition, new AbstractDynamicCompilationExtension[0], ".")
                 .GenerateInstance();
 		}
 

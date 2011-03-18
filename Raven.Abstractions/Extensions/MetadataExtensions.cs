@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
@@ -22,11 +23,16 @@ namespace Raven.Database.Data
             new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     		{
 				"Non-Authoritive-Information",
-				"Content-Type"
+				"Content-Type",
+				
     		};
 
         private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
+			// Raven internal headers
+			"Raven-Server-Build",
+
+
             "Allow",
             "Content-Disposition",
             "Content-Encoding",
@@ -174,6 +180,9 @@ namespace Raven.Database.Data
                     return JObject.Parse(val);
                 if (val.StartsWith("["))
                     return JArray.Parse(val);
+                DateTime result;
+                if (DateTime.TryParseExact(val, "r", CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
+                    return new JValue(result);
                 return new JValue(val);
             }
             catch (Exception exc)

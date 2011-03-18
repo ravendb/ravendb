@@ -38,7 +38,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
@@ -183,6 +183,7 @@
     <Compile Include="Bugs\InMemoryOnly.cs" />
     <Compile Include="Bugs\InvalidIds.cs" />
     <Compile Include="Bugs\Issue199.cs" />
+    <Compile Include="Bugs\JsonDeserialization.cs" />
     <Compile Include="Bugs\KeyGeneration.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
     <Compile Include="Bugs\LinqGitHub147.cs" />
@@ -228,6 +229,7 @@
     <Compile Include="Bugs\Queries\TermsRemote.cs" />
     <Compile Include="Bugs\Queries\WithAs.cs" />
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
+    <Compile Include="Bugs\QueryByTypeOnly.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
     <Compile Include="Bugs\QueryingWithDynamicRavenQueryInspector.cs" />
     <Compile Include="Bugs\QueryOptimizer\LinqToQueryParameters.cs" />
@@ -254,6 +256,7 @@
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SerializingEntities.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
+    <Compile Include="Bugs\SortingById.cs" />
     <Compile Include="Bugs\SortingOnLong.cs" />
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\SpatialQueries.cs" />
@@ -302,12 +305,14 @@
     <Compile Include="Document\ZoneCountResult.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
+    <Compile Include="Indexes\CreateIndexesWithCasting.cs" />
     <Compile Include="Indexes\CustomAnalyzer.cs" />
     <Compile Include="Indexes\DynamicQueryMapping.cs" />
     <Compile Include="Indexes\ExpressionOperatorPrecedenceTest.cs" />
     <Compile Include="Indexes\LinqIndexesFromClient.cs" />
     <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
     <Compile Include="Indexes\MapOnlyView.cs" />
+    <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
@@ -399,6 +404,10 @@
     <Compile Include="Triggers\AttachmentReadTrigger.cs" />
     <Compile Include="Triggers\AttachmentPutTriggers.cs" />
     <Compile Include="Triggers\AuditPutTrigger.cs" />
+    <Compile Include="Triggers\Bugs\AuditTrigger.cs" />
+    <Compile Include="Triggers\Bugs\ModifyingMetadataFromTrigger.cs" />
+    <Compile Include="Triggers\Bugs\Person.cs" />
+    <Compile Include="Triggers\Bugs\Program.cs" />
     <Compile Include="Triggers\CascadeDeleteTrigger.cs" />
     <Compile Include="Triggers\DeleteTriggers.cs" />
     <Compile Include="Triggers\IndexToDataTable.cs" />

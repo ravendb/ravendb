@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -304,6 +305,9 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
+			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
+				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "key");
+
 			if (string.IsNullOrEmpty(key))
 			{
 				// we no longer sort by the key, so it doesn't matter
@@ -503,13 +507,13 @@ namespace Raven.Database
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 			definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
-			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(definition))
+			switch (IndexDefinitionStorage.FindIndexCreationOptions(definition))
 			{
 				case IndexCreationOptions.Noop:
 					return name;
 				case IndexCreationOptions.Update:
 					// ensure that the code can compile
-					new DynamicViewCompiler(name, definition, Extensions).GenerateInstance();
+					new DynamicViewCompiler(name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath).GenerateInstance();
 					DeleteIndex(name);
 					break;
 			}
@@ -713,6 +717,10 @@ namespace Raven.Database
 
 		public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
 		{
+			if (name == null) throw new ArgumentNullException("name");
+			if (Encoding.Unicode.GetByteCount(name) >= 255)
+				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "name");
+
 			Guid newEtag = Guid.Empty;
 			TransactionalStorage.Batch(actions =>
 			{

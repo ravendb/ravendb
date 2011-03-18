@@ -16,7 +16,6 @@ namespace Raven.Tests.Linq
 {
 	public class WhereClause : IDisposable
 	{
-		private readonly RavenQueryStatistics ravenQueryStatistics = new RavenQueryStatistics();
 		private IDocumentStore documentStore;
 		private IDocumentSession documentSession;
 
@@ -28,6 +27,26 @@ namespace Raven.Tests.Linq
 				RunInMemory = true
 			}.Initialize();
 			documentSession = documentStore.OpenSession();
+		}
+
+		[Fact]
+		public void CanForceUsingIgnoreCase()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from user in indexedUsers
+					where user.Name.Equals("ayende", StringComparison.InvariantCultureIgnoreCase)
+					select user;
+			Assert.Equal("Name:ayende", q.ToString());
+		}
+
+		[Fact]
+		public void CanForceUsingCase()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from user in indexedUsers
+					where user.Name.Equals("ayende", StringComparison.InvariantCulture)
+					select user;
+			Assert.Equal("Name:[[ayende]]", q.ToString());
 		}
 
 		[Fact]
