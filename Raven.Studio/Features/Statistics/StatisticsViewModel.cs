@@ -2,13 +2,12 @@
 {
 	using System.Collections.Generic;
 	using Caliburn.Micro;
-	using Database;
 	using Raven.Database.Data;
 
-	public class Statistics: IStatisticsSet
+	public class StatisticsViewModel: IStatisticsSet
 	{
-		readonly Dictionary<string, StatisitcsEntry> hash = new Dictionary<string, StatisitcsEntry>();
-		public Statistics() { Items = new BindableCollection<IStatisticsItem>(); }
+		readonly Dictionary<string, Statistic> hash = new Dictionary<string, Statistic>();
+		public StatisticsViewModel() { Items = new BindableCollection<IStatisticsItem>(); }
 
 		public IObservableCollection<IStatisticsItem> Items { get; private set; }
 
@@ -22,16 +21,21 @@
 			UpdateOrSetStatEntry("tasks", stats.ApproximateTaskCount);
 		}
 
+		public void OpenCorrespondingScreen(IStatisticsItem item)
+		{
+			
+		}
+
 		void UpdateOrSetStatEntry(string label, object value)
 		{
-			UpdateOrSetStatEntry(new StatisitcsEntry
+			UpdateOrSetStatEntry(new Statistic
 			                     	{
 			                     		Label = label,
 			                     		Value = value.ToString()
 			                     	});
 		}
 
-		void UpdateOrSetStatEntry(StatisitcsEntry entry)
+		void UpdateOrSetStatEntry(Statistic entry)
 		{
 			var key = entry.Label;
 			if (!hash.ContainsKey(key))
@@ -42,22 +46,6 @@
 			else
 			{
 				hash[key].Value = entry.Value;
-			}
-		}
-	}
-
-	public class StatisitcsEntry : PropertyChangedBase, IStatisticsItem
-	{
-		string value;
-		public string Label { get; set; }
-
-		public string Value
-		{
-			get { return value; }
-			set
-			{
-				this.value = value;
-				NotifyOfPropertyChange(() => Value);
 			}
 		}
 	}

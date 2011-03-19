@@ -133,7 +133,8 @@
     <Compile Include="Features\StartUp\IDatabaseInitializer.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
     <Compile Include="Features\Statistics\IStatisticsSet.cs" />
-    <Compile Include="Features\Statistics\Statistics.cs" />
+    <Compile Include="Features\Statistics\Statistic.cs" />
+    <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
     <Compile Include="Framework\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
@@ -288,7 +289,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Statistics\Statistics.xaml">
+    <Page Include="Features\Statistics\StatisticsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

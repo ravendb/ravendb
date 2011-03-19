@@ -1,0 +1,60 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Statistics.StatisticsView"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 mc:Ignorable="d"
+			 d:DesignHeight="480"
+			 d:DesignWidth="640">
+	<UserControl.Resources>
+		<Style TargetType="TextBlock">
+			<Setter Property="FontSize"
+					Value="13.667" />
+			<Setter Property="HorizontalAlignment"
+					Value="Right" />
+		</Style>
+
+		<Style TargetType="c:Label"
+			   BasedOn="{StaticResource LabelBaseStyle}">
+			<Setter Property="HorizontalAlignment"
+					Value="Left" />
+		</Style>
+	</UserControl.Resources>
+
+	<Grid Background="{StaticResource DefaultScreenBackground}">
+
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition />
+		</Grid.RowDefinitions>
+
+		<TextBlock Style="{StaticResource PanelTitle}"
+				   Text="STATISTICS" />
+
+		<ItemsControl ItemsSource="{Binding Items}"
+					  Grid.Row="1"
+					  HorizontalAlignment="Left"
+					  Margin="8,0,0,0">
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<Grid Background="Transparent"
+						  cm:Message.Attach="[Event MouseLeftButtonDown] = OpenCorrespondingScreen($dataContext)">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="*" />
+						</Grid.ColumnDefinitions>
+
+						<TextBlock Text="{Binding Label}"
+								   Grid.Column="0" />
+
+						<c:Label Content="{Binding Value}"
+								 Grid.Column="1" />
+					</Grid>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
+	</Grid>
+</UserControl>

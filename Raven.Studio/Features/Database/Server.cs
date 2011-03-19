@@ -34,7 +34,7 @@ namespace Raven.Studio.Features.Database
 		IEnumerable<string> databases;
 
 		bool isInitialized;
-		Statistics statistics = new Statistics();
+		StatisticsViewModel statistics = new StatisticsViewModel();
 		DocumentStore store;
 
 		[ImportingConstructor]
@@ -159,7 +159,7 @@ namespace Raven.Studio.Features.Database
 
 		void RefreshStatistics(bool clear)
 		{
-			if (clear) statistics = new Statistics();
+			if (clear) statistics = new StatisticsViewModel();
 
 			if (snapshots.ContainsKey(CurrentDatabase))
 			{

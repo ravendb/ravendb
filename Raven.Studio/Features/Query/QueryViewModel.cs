@@ -9,7 +9,6 @@
 	using Database;
 	using Documents;
 	using Framework;
-	using Plugin;
 	using Raven.Database.Data;
 
 	public class QueryViewModel : Screen, IDatabaseScreenMenuItem
@@ -28,14 +27,18 @@
 			this.server = server;
 			Indexes = new BindableCollection<string>();
 			TermsForCurrentIndex = new BindableCollection<string>();
+			FieldsForCurrentIndex = new BindableCollection<string>();
 			QueryResults =
 				new BindablePagedQuery<DocumentViewModel>(
 					(start, size) => { throw new Exception("Replace this when executing the query."); });
+
+			ShouldShowDynamicIndexes = true;
 		}
 
 		public IObservableCollection<string> Indexes { get; private set; }
 		public string QueryTerms { get; set; }
 		public IObservableCollection<string> TermsForCurrentIndex { get; private set; }
+		public IObservableCollection<string> FieldsForCurrentIndex { get; private set; }
 		public BindablePagedQuery<DocumentViewModel> QueryResults { get; private set; }
 
 		public string QueryResultsStatus
@@ -56,6 +59,8 @@
 				currentIndex = value;
 				NotifyOfPropertyChange(() => CurrentIndex);
 				NotifyOfPropertyChange(() => CanExecute);
+
+				if(!string.IsNullOrEmpty(currentIndex)) GetFieldsForCurrentIndex();
 			}
 		}
 
@@ -106,7 +111,6 @@
 
 					              		QueryResultsStatus = DetermineResultsStatus(x.Result);
 
-
 					              		//maybe we added a temp index?
 					              		if (indexName.StartsWith("dynamic"))
 					              			GetIndexNames();
@@ -116,6 +120,18 @@
 					              			.ToArray();
 					              	});
 			}
+		}
+
+		void GetFieldsForCurrentIndex()
+		{
+			using (var session = server.OpenSession())
+			session.Advanced.AsyncDatabaseCommands
+					.GetIndexAsync(CurrentIndex)
+					.ContinueWith(x =>
+					{
+						var id = x.Result;
+
+					});
 		}
 
 		static string DetermineResultsStatus(QueryResult result)
@@ -140,6 +156,8 @@
 
 		void GetIndexNames()
 		{
+			if(!server.IsInitialized) return;
+
 			if (ShouldShowDynamicIndexes)
 			{
 				ShowDynamicIndexes();
