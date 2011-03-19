@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
 using MvcMusicStore.Models;
@@ -15,14 +16,14 @@ namespace MvcMusicStore.Controllers
     //[Authorize(Roles = "Administrator")]
     public class StoreManagerController : Controller
     {
-        private IDocumentSession session = MvcApplication.CurrentSession;
+        private readonly IDocumentSession session = MvcApplication.CurrentSession;
 
         //
         // GET: /StoreManager/
 
         public ActionResult Index()
         {
-            var albums = session.Advanced.LuceneQuery<Album>().ToArray();
+            var albums = session.Query<Album>().ToArray();
 
             return View(albums);
         }
@@ -48,8 +49,8 @@ namespace MvcMusicStore.Controllers
             var viewModel = new StoreManagerViewModel
             {
                 Album = session.Load<Album>(id),
-                Genres = session.Advanced.LuceneQuery<Genre>().ToList(),
-                Artists = session.Advanced.LuceneQuery<Album.AlbumArtist>("Artists").ToList()
+                Genres = session.Query<Genre>().ToList(),
+                Artists = session.Advanced.LuceneQuery<Album.AlbumArtist>().ToList()
             };
 
             return View(viewModel);
@@ -63,9 +64,9 @@ namespace MvcMusicStore.Controllers
         {
             var viewModel = new StoreManagerViewModel
             {
-                Album = new Album(),
-                Genres = session.Advanced.LuceneQuery<Genre>().ToList(),
-                Artists = session.Advanced.LuceneQuery<Album.AlbumArtist>("Artists").ToList()
+                Album = new Album { Artist = new Album.AlbumArtist(), Genre = new Album.AlbumGenre() },
+                Genres = session.Query<Genre>().ToList(),
+                Artists = session.Advanced.LuceneQuery<Album.AlbumArtist>().ToList()
             };
 
             return View(viewModel);
@@ -104,7 +105,6 @@ namespace MvcMusicStore.Controllers
         {
             session.Delete(session.Load<Album>(id));
             session.SaveChanges();
-
 
             return View("Deleted");
         }
