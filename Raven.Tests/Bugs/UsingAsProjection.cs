@@ -48,10 +48,11 @@ namespace Raven.Tests.Bugs
 					using (IDocumentSession session = documentStore.OpenSession())
 					{
 						var user = session.Query<Account, UsersIndexTask>()
+							.Customize(x=>x.WaitForNonStaleResults())
 							.AsProjection<User>()
 							.Where(x => x.Email == "a")
 							.FirstOrDefault();
-						var k = user.Password == "secret";
+						Assert.Equal("1", user.Password);
 					}
 				}
 			}
