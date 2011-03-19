@@ -59,7 +59,7 @@ namespace Raven.Tests.Bugs.Queries
                                     select b;
 
                     var results = blogs.Provider.CreateQuery(blogQuery.Expression).As<Blog>().ToArray();
-                    Assert.True(results[0].Title == "two");
+                	Assert.True(results.Any(x => x.Title == "two"));
                 }
             }
         }

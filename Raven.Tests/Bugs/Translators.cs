@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs
                 TransformResults =
                     (database, users) => from user in users
                                          let partner = database.Load<User>(user.PartnerId)
-										 let x = partner == null ? partner.Age/2 : 1
+										 let x = partner.Age/2  // force an error
                                          select new {User = user.Name, Partner = partner.Name};
             }
         }
