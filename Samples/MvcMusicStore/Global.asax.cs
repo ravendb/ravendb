@@ -32,6 +32,7 @@ namespace MvcMusicStore
 
             IndexCreation.CreateIndexes(typeof(IndexingTasks.SoldAlbums_Count).Assembly, _documentStore);
             IndexCreation.CreateIndexes(typeof(IndexingTasks.Albums_CountSold).Assembly, _documentStore);
+            IndexCreation.CreateIndexes(typeof(IndexingTasks.Albums_ByGenre).Assembly, _documentStore);
 
             AreaRegistration.RegisterAllAreas();
 

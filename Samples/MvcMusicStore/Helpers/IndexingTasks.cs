@@ -34,5 +34,16 @@ namespace MvcMusicStore.Helpers
                 Index(x => x.CountSold, FieldIndexing.NotAnalyzedNoNorms);
             }
         }
+
+        public class Albums_ByGenre : AbstractIndexCreationTask<Album>
+        {
+            public Albums_ByGenre()
+            {
+                Map = albums => from album in albums
+                                select new { album.Genre.Name };
+
+                Index(x => x.Genre.Name, FieldIndexing.NotAnalyzedNoNorms);
+            }
+        }
     }
 }
