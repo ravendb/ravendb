@@ -96,7 +96,7 @@ namespace Raven.Database.Impl
 					{
 						FieldStorage value;
 						if (indexDefinition.Stores.TryGetValue(fieldToFetch, out value) == false &&
-							value != FieldStorage.No)
+						    value != FieldStorage.No)
 							continue;
 						hasStoredFields = true;
 					}
@@ -112,6 +112,7 @@ namespace Raven.Database.Impl
 					var aggOpr = aggregationOperation & ~AggregationOperation.Dynamic;
 					fieldsToFetch = fieldsToFetch.Concat(new[] {aggOpr.ToString()});
 				}
+
 				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection.Property(fieldToFetch) == null);
 				var doc = GetDocumentWithCaching(queryResult.Key);
 				if (doc != null)
@@ -119,8 +120,12 @@ namespace Raven.Database.Impl
 					var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
 					foreach (var property in result.Properties())
 					{
-						if(property.Value == null || property.Value.Type == JTokenType.Null)
+						if (property.Value == null || property.Value.Type == JTokenType.Null)
+						{
+							if ("Id".Equals(property.Name))
+								queryResult.Projection[property.Name] = queryResult.Key;
 							continue;
+						}
 						queryResult.Projection[property.Name] = property.Value;
 					}
 				}
