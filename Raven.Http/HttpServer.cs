@@ -328,7 +328,6 @@ namespace Raven.Http
             }
             finally
             {
-                CurrentOperationContext.Headers.Value = null;
                 currentDatabase.Value = DefaultResourceStore;
                 currentConfiguration.Value = DefaultConfiguration;
             }
