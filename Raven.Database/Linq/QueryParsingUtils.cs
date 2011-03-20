@@ -99,6 +99,8 @@ namespace Raven.Database.Linq
                 throw new InvalidOperationException(
                     "Variable initializer must be a select query expression returning an anonymous object");
 
+        	variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
+
             return variable;
         }
 
@@ -141,7 +143,8 @@ namespace Raven.Database.Linq
             if (objectCreateExpression.IsAnonymousType == false && objectCreateExpression.CreateType.Type.Contains("Anonymous") == false)
 				throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type but returning " + objectCreateExpression.CreateType.Type);
 
-            return variable;
+			variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
+			return variable;
         }
 
 

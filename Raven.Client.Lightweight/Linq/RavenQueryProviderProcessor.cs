@@ -485,6 +485,9 @@ namespace Raven.Client.Linq
 		{
 			switch (expression.Method.Name)
 			{
+				case "OfType":
+					VisitExpression(expression.Arguments[0]);
+					break;
 				case "Where":
 				{
 					insideWhere++;
