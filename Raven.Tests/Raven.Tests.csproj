@@ -136,6 +136,7 @@
     <Compile Include="Bugs\DecimalPrecision.cs" />
     <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
     <Compile Include="Bugs\DocumentUrl.cs" />
+    <Compile Include="Bugs\DTC\UsingDtcForDelete.cs" />
     <Compile Include="Bugs\DTC\UsingDtcForCreate.cs" />
     <Compile Include="Bugs\DTC\UsingDTCForUpdates.cs" />
     <Compile Include="Bugs\DTC\UsingRemoteDTC.cs" />
