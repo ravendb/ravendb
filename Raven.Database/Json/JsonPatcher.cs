@@ -218,7 +218,7 @@ namespace Raven.Database.Json
 		{
 			var array = TryGetArray(property);
 			if(array == null)
-				throw new InvalidOperationException("Cannot insert value to '" + propName + "' because it is not an array");
+				throw new InvalidOperationException("Cannot modify '" + propName + "' because it is not an array");
 			return array;
 		}
 
