@@ -118,8 +118,12 @@ namespace Raven.Munin
 
     	public override void Dispose()
         {
-            log.Dispose();
-            base.Dispose();
+			Action parentDispose = base.Dispose;
+            Write(_ =>
+            {
+				log.Dispose();
+				parentDispose();
+            });
         }
 
         public void Delete()
