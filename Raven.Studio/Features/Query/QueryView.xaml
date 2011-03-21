@@ -7,7 +7,9 @@
              xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
              xmlns:r="clr-namespace:Raven.Studio.Controls"
              xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-             xmlns:input="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input" xmlns:f="clr-namespace:Raven.Studio.Framework" mc:Ignorable="d"
+             xmlns:input="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input"
+             xmlns:f="clr-namespace:Raven.Studio.Framework"
+             mc:Ignorable="d"
              d:DesignHeight="480"
              d:DesignWidth="640">
 
@@ -90,13 +92,21 @@
 
             </tk:DockPanel>
 
-            <tk:DockPanel x:Name="HasSuggestedTerms">
+            <tk:DockPanel x:Name="HasSuggestedTerms"
+                          Grid.Row="1">
 
                 <TextBlock tk:DockPanel.Dock="Top"
                            Style="{StaticResource PanelTitle}"
                            Text="Suggested Terms for Field" />
 
-                <ListBox x:Name="TermsForCurrentField" />
+                <ListBox x:Name="TermsForCurrentField">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       f:DoubleClickEvent.AttachAction="AddTermToQuery($dataContext)" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
 
             </tk:DockPanel>
 

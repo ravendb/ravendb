@@ -5,6 +5,7 @@
 	using System.ComponentModel.Composition;
 	using System.Linq;
 	using System.Threading.Tasks;
+	using Abstractions.Data;
 	using Caliburn.Micro;
 	using Database;
 	using Documents;
@@ -155,11 +156,10 @@
         void GetTermsForCurrentField()
         {
             TermsForCurrentField.Clear();
-
-            //using (var session = server.OpenSession())
-            //    session.Advanced.AsyncDatabaseCommands
-            //            .get
-            //            .ContinueWith(x => FieldsForCurrentIndex.AddRange(x.Result.Fields));
+            using (var session = server.OpenSession())
+                session.Advanced.AsyncDatabaseCommands
+                        .GetTermsAsync(CurrentIndex, CurrentField, fromValue:string.Empty, pageSize:20)
+                        .ContinueWith(x => TermsForCurrentField.AddRange(x.Result));
         }
 
         public void AddFieldToQuery(string field)
@@ -167,6 +167,16 @@
             if (!string.IsNullOrEmpty(Query)) field = " " + field;
             field += ":";
             Query += field;
+        }
+
+        public void AddTermToQuery(string term)
+        {
+            var q = (Query ?? string.Empty).Trim();
+            var field = CurrentField + ":";
+            if (!q.EndsWith(field))
+                Query += field + " \"" + term + "\"";
+            else
+                Query += term;
         }
 
 	    private string currentField;

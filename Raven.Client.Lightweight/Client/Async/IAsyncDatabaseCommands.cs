@@ -201,7 +201,7 @@ namespace Raven.Client.Client.Async
         /// starting point for the next query
         ///</summary>
         ///<returns></returns>
-        Task<IEnumerable<string>> GetTermsAsync(string index, string field, string fromValue, int pageSize);
+        Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize);
 	}
 }
 #endif

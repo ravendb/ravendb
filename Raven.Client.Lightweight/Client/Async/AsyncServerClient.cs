@@ -586,7 +586,7 @@ namespace Raven.Client.Client.Async
         /// starting point for the next query
         ///</summary>
         ///<returns></returns>
-        public Task<IEnumerable<string>> GetTermsAsync(string index, string field, string fromValue, int pageSize)
+        public Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize)
         {
             throw new NotImplementedException();
         }
