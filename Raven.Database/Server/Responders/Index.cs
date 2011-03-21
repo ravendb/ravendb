@@ -123,10 +123,12 @@ namespace Raven.Database.Server.Responders
 				context.SetStatusToNotFound();
 				return;
 			}
+
+			indexDefinition.Fields = Database.GetIndexFields(index);
+
 			context.WriteJson(new
 			{
 				Index = indexDefinition,
-				Fields = Database.GetIndexFields(index)
 			});
 		}
 
