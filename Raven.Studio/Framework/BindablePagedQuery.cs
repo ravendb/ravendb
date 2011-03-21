@@ -51,8 +51,11 @@
         public void ClearResults()
         {
             hasLoadedFirstPage = false;
-            CurrentPage = 0;
+            
+            Clear();
+
             NumberOfPages = 0;
+            CurrentPage = 0;
         }
 
 		public void AdjustResultsForPageSize()

@@ -78,6 +78,7 @@
                 NotifyOfPropertyChange(() => HasCurrentIndex);
 
                 QueryResults.ClearResults();
+			    QueryResultsStatus = string.Empty;
 
 				if(!string.IsNullOrEmpty(currentIndex)) GetFieldsForCurrentIndex();
 			}
