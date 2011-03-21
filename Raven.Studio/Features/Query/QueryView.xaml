@@ -19,6 +19,7 @@
 				   Style="{StaticResource Header}" />
 
 		<tk:DockPanel tk:DockPanel.Dock="Left"
+					  Width="180"
 					  Margin="0 0 8 0">
 			<TextBlock tk:DockPanel.Dock="Top"
 					   Style="{StaticResource PanelTitle}"
