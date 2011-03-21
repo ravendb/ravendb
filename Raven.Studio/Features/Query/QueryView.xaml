@@ -35,6 +35,7 @@
 							 IsChecked="{Binding ShouldShowDynamicIndexes, Mode=TwoWay}"
 							 Content="Dynamic" />
 				<RadioButton GroupName="IndexGroup"
+							 IsChecked="{Binding ShouldShowDynamicIndexes, Converter={StaticResource booleanToOpposite}}"
 							 Content="Static" />
 			</StackPanel>
 
