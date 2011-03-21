@@ -62,6 +62,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.1.110.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL" />
+    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.1.110.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL" />
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
@@ -114,6 +116,10 @@
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Controls\SyntaxEditor\JsonEditor.cs" />
+    <Compile Include="Controls\SyntaxEditor\LinqEditor.cs" />
+    <Compile Include="Controls\SyntaxEditor\SyntaxEditorHelper.cs" />
+    <Compile Include="Controls\SyntaxEditor\XamlEditor.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
@@ -371,10 +377,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Resources\ControlTemplates\JeffWilcox.SyntaxHighlighting.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Resources\ControlTemplates\Menu.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -393,6 +395,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\CSharp.langdef" />
+    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\JScript.langdef" />
+    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\Xaml.langdef" />
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>
