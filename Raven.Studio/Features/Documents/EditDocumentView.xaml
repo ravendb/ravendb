@@ -6,8 +6,7 @@
 			 xmlns:r="clr-namespace:Raven.Studio.Controls"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
-			 xmlns:c="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
-			 mc:Ignorable="d"
+			 xmlns:c="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls" xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit" mc:Ignorable="d"
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
 
@@ -17,8 +16,17 @@
 			<ColumnDefinition Width="16" />
 			<ColumnDefinition />
 		</Grid.ColumnDefinitions>
+        
+        <ti:ContextMenuService.ContextMenu>
+            <ti:ContextMenu>
+                <ti:MenuItem Header="Copy Document Id to Clipboard"
+                             Tag="{Binding Id}"
+                             cm:Action.TargetWithoutContext="CopyDocumentIdToClipboard"
+                             cm:Message.Attach="Click=Execute($this.Tag)" />
+            </ti:ContextMenu>
+        </ti:ContextMenuService.ContextMenu>
 
-		<Grid x:Name="document"
+        <Grid x:Name="document"
 			  Margin="12,0,0,0">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
@@ -63,11 +71,11 @@
 				</StackPanel>
 			</Grid>
 
-			<TextBox Text="{Binding Id, Mode=TwoWay}"
-					 Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}"
-					 Grid.Row="2" />
+            <TextBox Text="{Binding Id, Mode=TwoWay}"
+                     Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}"
+                     Grid.Row="2" />
 
-			<Border Grid.Row="3"
+                <Border Grid.Row="3"
 					Padding="0 8 0 0"
 					BorderThickness="1"
 					CornerRadius="2"
