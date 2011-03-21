@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Text;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using System.Linq;
@@ -94,7 +95,9 @@ namespace Raven.Database.Server.Responders
 
 		private void GetIndexQueryRessult(IHttpContext context, string index)
 		{
-			var queryResult = ExecuteQuery(context, index);
+			Guid indexEtag;
+
+			QueryResult queryResult = ExecuteQuery(context, index, out indexEtag);
 
 			if (queryResult == null)
 				return;
@@ -106,12 +109,14 @@ namespace Raven.Database.Server.Responders
 					.Select(x => x["@metadata"].Value<string>("@id"))
 					.Where(x => x != null)
 				);
-			var command = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+			var command = new AddIncludesCommand(Database, GetRequestTransaction(context),
+			                                     (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
 			foreach (var result in queryResult.Results)
 			{
 				command.Execute(result);
 			}
-			context.Response.AddHeader("ETag", queryResult.IndexEtag.ToString());
+			
+			context.Response.AddHeader("ETag", indexEtag.ToString());
 			context.WriteJson(queryResult);
 		}
 
@@ -130,37 +135,36 @@ namespace Raven.Database.Server.Responders
 			});
 		}
 
-		private QueryResult ExecuteQuery(IHttpContext context, string index)
+		private QueryResult ExecuteQuery(IHttpContext context, string index, out Guid indexEtag)
 		{
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 
 			return index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
-				PerformQueryAgainstDynamicIndex(context, index, indexQuery) : 
-				PerformQueryAgainstExistingIndex(context, index, indexQuery);
+				PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag) : 
+				PerformQueryAgainstExistingIndex(context, index, indexQuery, out indexEtag);
 		}
 
-		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery)
+		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
-			var indexEtag = GetIndexEtag(index);
+			indexEtag = GetIndexEtag(index);
 			if (context.MatchEtag(indexEtag))
 			{
 				context.SetStatusToNotModified();
 				return null;
 			}
 
-			var queryResult = Database.Query(index, indexQuery);
-			queryResult.IndexEtag = indexEtag;
-			return queryResult;
+			return Database.Query(index, indexQuery);
 		}
 
-		private QueryResult PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery)
+		private QueryResult PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
 			string entityName = null;
 			if (index.StartsWith("dynamic/"))
 				entityName = index.Substring("dynamic/".Length);
 
 			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery.Query);
-			var indexEtag = Guid.Empty;
+
+
 			if (Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
 				indexEtag = GetIndexEtag(dynamicIndexName);
@@ -170,10 +174,20 @@ namespace Raven.Database.Server.Responders
 					return null;
 				}
 			}
+			else
+			{
+				indexEtag = Guid.Empty;
+			}
 
 			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
-			if(indexEtag != Guid.Empty)
-				queryResult.IndexEtag = indexEtag;
+
+			// have to check here because we might be getting the index etag just 
+			// as we make a switch from temp to auto, and we need to refresh the etag
+			// if that is the case. This can also happen when the optmizer
+			// decided to switch indexes for a query.
+			if (queryResult.IndexName != dynamicIndexName)
+				indexEtag = GetIndexEtag(queryResult.IndexName);
+
 			return queryResult;
 		}
 
@@ -190,10 +204,10 @@ namespace Raven.Database.Server.Responders
 			});
 			using(var md5 = MD5.Create())
 			{
-				var list = new List<byte>(64);
+				var list = new List<byte>();
+				list.AddRange(Encoding.Unicode.GetBytes(indexName));
 				list.AddRange(lastDocEtag.ToByteArray());
 				list.AddRange(indexLastUpdatedAt.Item2.ToByteArray());
-				list.AddRange(BitConverter.GetBytes(indexLastUpdatedAt.Item1.ToBinary()));
 				list.AddRange(BitConverter.GetBytes(isStale));
 				return new Guid(md5.ComputeHash(list.ToArray()));
 			}
