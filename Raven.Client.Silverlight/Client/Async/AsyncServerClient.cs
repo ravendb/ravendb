@@ -838,6 +838,17 @@ namespace Raven.Client.Client.Async
 
 			return request.ReadResponseStringAsync();
 		}
+
+        ///<summary>
+        /// Get the possible terms for the specified field in the index asynchronously
+        /// You can page through the results by use fromValue parameter as the 
+        /// starting point for the next query
+        ///</summary>
+        ///<returns></returns>
+	    public Task<IEnumerable<string>> GetTermsAsync(string index, string field, string fromValue, int pageSize)
+	    {
+	        throw new NotImplementedException();
+	    }
 	}
 }
 
