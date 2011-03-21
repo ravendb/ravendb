@@ -180,17 +180,21 @@ namespace Raven.Database.Server.Responders
 		private Guid GetIndexEtag(string indexName)
 		{
 			Guid lastDocEtag = Guid.Empty;
+			bool isStale = false;
 			Tuple<DateTime, Guid> indexLastUpdatedAt = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
+				isStale = accessor.Staleness.IsIndexStale(indexName, null, null);
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 				indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(indexName);
 			});
 			using(var md5 = MD5.Create())
 			{
-				var list = new List<byte>(32);
+				var list = new List<byte>(64);
 				list.AddRange(lastDocEtag.ToByteArray());
 				list.AddRange(indexLastUpdatedAt.Item2.ToByteArray());
+				list.AddRange(BitConverter.GetBytes(indexLastUpdatedAt.Item1.ToBinary()));
+				list.AddRange(BitConverter.GetBytes(isStale));
 				return new Guid(md5.ComputeHash(list.ToArray()));
 			}
 		}
