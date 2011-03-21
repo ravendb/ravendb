@@ -9,6 +9,7 @@
     using Raven.Database.Indexing;
     using System.Threading.Tasks;
 
+	[Export]
     public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>, IDatabaseScreenMenuItem,
                                           IHandle<IndexUpdated>
     {

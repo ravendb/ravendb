@@ -34,13 +34,14 @@ namespace Raven.Studio.Features.Database
 		IEnumerable<string> databases;
 
 		bool isInitialized;
-		StatisticsViewModel statistics = new StatisticsViewModel();
+		readonly StatisticsViewModel statistics;
 		DocumentStore store;
 
 		[ImportingConstructor]
-		public Server(IEventAggregator events, [ImportMany] IDatabaseInitializer[] databaseInitializers)
+		public Server(IEventAggregator events, [ImportMany] IDatabaseInitializer[] databaseInitializers, StatisticsViewModel statistics)
 		{
 			this.databaseInitializers = databaseInitializers;
+			this.statistics = statistics;
 
 			timer = new DispatcherTimer { Interval = updateFrequency };
 			timer.Tick += delegate { RetrieveStatisticsForCurrentDatabase(); };
@@ -159,7 +160,7 @@ namespace Raven.Studio.Features.Database
 
 		void RefreshStatistics(bool clear)
 		{
-			if (clear) statistics = new StatisticsViewModel();
+			//if (clear) statistics = new StatisticsViewModel();
 
 			if (snapshots.ContainsKey(CurrentDatabase))
 			{

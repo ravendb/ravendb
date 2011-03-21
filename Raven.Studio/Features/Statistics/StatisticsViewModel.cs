@@ -1,37 +1,49 @@
 ﻿namespace Raven.Studio.Features.Statistics
 {
+	using System;
 	using System.Collections.Generic;
+	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Raven.Database.Data;
 
+	[Export]
 	public class StatisticsViewModel: IStatisticsSet
 	{
+		readonly IEventAggregator events;
 		readonly Dictionary<string, Statistic> hash = new Dictionary<string, Statistic>();
-		public StatisticsViewModel() { Items = new BindableCollection<IStatisticsItem>(); }
+
+		[ImportingConstructor]
+		public StatisticsViewModel(IEventAggregator events)
+		{
+			Items = new BindableCollection<IStatisticsItem>();
+			this.events = events;
+		}
 
 		public IObservableCollection<IStatisticsItem> Items { get; private set; }
 
 		public void Accept(DatabaseStatistics stats)
 		{
-			UpdateOrSetStatEntry("documents", stats.CountOfDocuments);
-			UpdateOrSetStatEntry("indexes", stats.CountOfIndexes);
-			UpdateOrSetStatEntry("stale", stats.StaleIndexes.Length);
-			UpdateOrSetStatEntry("errors", stats.Errors.Length);
-			UpdateOrSetStatEntry("triggers", stats.Triggers.Length);
-			UpdateOrSetStatEntry("tasks", stats.ApproximateTaskCount);
+			UpdateOrSetStatEntry("documents", stats.CountOfDocuments, IoC.Get<Documents.BrowseDocumentsViewModel>);
+			UpdateOrSetStatEntry("indexes", stats.CountOfIndexes, IoC.Get<Indexes.BrowseIndexesViewModel>);
+			UpdateOrSetStatEntry("stale", stats.StaleIndexes.Length, null);
+			UpdateOrSetStatEntry("errors", stats.Errors.Length, IoC.Get<ErrorsViewModel>);
+			UpdateOrSetStatEntry("triggers", stats.Triggers.Length, null);
+			UpdateOrSetStatEntry("tasks", stats.ApproximateTaskCount, null);
 		}
 
-		public void OpenCorrespondingScreen(IStatisticsItem item)
+		public void RaiseMessageForStat(IStatisticsItem item)
 		{
-			
+			if(item.ScreenToOpen == null) return;
+			events.Publish(new Messages.DatabaseScreenRequested(item.ScreenToOpen));
 		}
 
-		void UpdateOrSetStatEntry(string label, object value)
+		void UpdateOrSetStatEntry(string label, object value, Func<IScreen> openScreen)
 		{
 			UpdateOrSetStatEntry(new Statistic
 			                     	{
 			                     		Label = label,
-			                     		Value = value.ToString()
+			                     		Value = value.ToString(),
+										ScreenToOpen = openScreen
 			                     	});
 		}
 
