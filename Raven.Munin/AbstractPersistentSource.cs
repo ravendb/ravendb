@@ -19,8 +19,10 @@ namespace Raven.Munin
         private readonly ThreadLocal<IList<PersistentDictionaryState>> currentStates =
             new ThreadLocal<IList<PersistentDictionaryState>>(() => null);
 
+    	private bool disposed;
 
-        protected AbstractPersistentSource()
+
+    	protected AbstractPersistentSource()
         {
             pool = new StreamsPool(CreateClonedStreamForReadOnlyPurposes);
         }
@@ -40,6 +42,9 @@ namespace Raven.Munin
 
         public T Read<T>(Func<Stream, T> readOnlyAction)
         {
+			if (disposed)
+				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
+            
             var needUpdating = currentStates.Value == null;
             if (needUpdating)
                 currentStates.Value = globalStates;
@@ -58,6 +63,8 @@ namespace Raven.Munin
 
         public T Read<T>(Func<T> readOnlyAction)
         {
+			if(disposed)
+				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
             var needUpdating = currentStates.Value == null;
             if (needUpdating)
                 currentStates.Value = globalStates;
@@ -74,6 +81,9 @@ namespace Raven.Munin
 
         public IEnumerable<T> Read<T>(Func<IEnumerable<T>> readOnlyAction)
         {
+			if (disposed)
+				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
+            
             var needUpdating = currentStates.Value == null;
             if (needUpdating)
                 currentStates.Value = globalStates;
@@ -95,6 +105,9 @@ namespace Raven.Munin
         {
             lock (this)
             {
+				if (disposed)
+					throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
+            
                 try
                 {
                     currentStates.Value = new List<PersistentDictionaryState>(
@@ -132,6 +145,7 @@ namespace Raven.Munin
     	public virtual void Dispose()
         {
             pool.Dispose();
+    		disposed = true;
         }
     }
 }
