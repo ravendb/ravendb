@@ -18,6 +18,11 @@ namespace Raven.Studio.Features.Database
 
 		public IServer Server { get; private set; }
 
+		public void OpenSelectedDatabase()
+		{
+			SelectDatabase(Server.CurrentDatabase);
+		}
+
 		public void SelectDatabase(string database)
 		{
 			WorkStarted();

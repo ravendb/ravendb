@@ -90,7 +90,13 @@ namespace Raven.Studio.Features.Database
 
 		public void OpenDatabase(string name, Action callback)
 		{
-			if (name == currentDatabase) return;
+			if (callback == null) callback = ()=> { };
+
+			if (name == currentDatabase)
+			{
+				callback();
+				return;
+			}
 
 			currentDatabase = name;
 			InitializeCurrentDatabase(() =>
@@ -100,7 +106,7 @@ namespace Raven.Studio.Features.Database
 				RefreshStatistics(true);
 				RaiseCurrentDatabaseChanged();
 
-				if (callback != null) callback();
+				callback();
 			});
 		}
 
