@@ -61,7 +61,6 @@
                 <s:XamlEditor Text="{Binding Xaml, Mode=TwoWay}"
                               FontFamily="Monaco"
                               FontSize="16" />
-
             </Border>
 
         </Grid>
