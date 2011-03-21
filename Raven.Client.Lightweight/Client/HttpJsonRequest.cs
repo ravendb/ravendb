@@ -192,7 +192,7 @@ namespace Raven.Client.Client
 				reader.Close();
 				if (method == "GET" && cacheRequest)
 				{
-					cache.Add(url, new CachedRequest
+					cache.Set(url, new CachedRequest
 					{
 						Data = text,
 						Headers = response.Headers
