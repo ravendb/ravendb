@@ -77,6 +77,8 @@
 				NotifyOfPropertyChange(() => CanExecute);
                 NotifyOfPropertyChange(() => HasCurrentIndex);
 
+                QueryResults.ClearResults();
+
 				if(!string.IsNullOrEmpty(currentIndex)) GetFieldsForCurrentIndex();
 			}
 		}
