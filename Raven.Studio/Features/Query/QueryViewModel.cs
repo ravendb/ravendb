@@ -216,9 +216,11 @@
 
 		void ReplaceVisibleList(IEnumerable<string> newList)
 		{
-			string oldSelection = CurrentIndex;
+            if( !newList.Except(Indexes).Any() ) return;
+
+            string oldSelection = currentIndex;
 			Indexes.Replace(newList);
-			CurrentIndex = oldSelection;
+            currentIndex = oldSelection;
 		}
 
 		void GetIndexNames()
