@@ -23,7 +23,7 @@ namespace Raven.Storage.Esent.StorageActions
             {
                 return false;
             }
-            if (IsStaleByEtag(entityName))
+            if (IsStaleByEtag())
             {
                 if (cutOff != null)
                 {
@@ -80,34 +80,20 @@ namespace Raven.Storage.Esent.StorageActions
             return new Guid(lastEtag);
         }
 
-        private bool IsStaleByEtag(string entityName)
+        private bool IsStaleByEtag()
         {
-            var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
-            Api.JetSetCurrentIndex(session, Documents, "by_etag");
-            if (!Api.TryMoveLast(session, Documents))
-            {
-                return false;
-            }
-            do
-            {
-                var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
-                if (CompareArrays(lastEtag, lastIndexedEtag) <= 0)
-                    break;
-
-                if (entityName != null)
-                {
-                    var metadata =
-                        Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).
-                            ToJObject();
-                    if (metadata.Value<string>("Raven-Entity-Name") != entityName)
-                        continue;
-                }
-                return true;
-            } while (Api.TryMovePrevious(session, Documents));
-            return false;
+        	var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
+        	                                         tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
+        	Api.JetSetCurrentIndex(session, Documents, "by_etag");
+        	if (!Api.TryMoveLast(session, Documents))
+        	{
+        		return false;
+        	}
+        	var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
+        	return CompareArrays(lastEtag, lastIndexedEtag) > 0;
         }
 
-        private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
+    	private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
         {
             for (int i = 0; i < docEtagBinary.Length; i++)
             {
