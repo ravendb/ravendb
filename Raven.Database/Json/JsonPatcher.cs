@@ -109,7 +109,8 @@ namespace Raven.Database.Json
 				throw new InvalidOperationException("Cannot understand modified value from  '" + propName +
 													"' because could not find nested array of commands");
 
-			switch (property.Value.Type)
+			var arrayOrValue = TryGetArray(property) ?? property.Value;
+			switch (arrayOrValue.Type)
 			{
 				case JTokenType.Object:
 					foreach (var cmd in nestedCommands)
@@ -119,33 +120,33 @@ namespace Raven.Database.Json
 					}
 					break;
 				case JTokenType.Array:
-                    var position = patchCmd.Position;
-                    var allPositionsIsSelected = patchCmd.AllPositions.HasValue ? patchCmd.AllPositions.Value : false;
-                    if (position == null && !allPositionsIsSelected)
-                        throw new InvalidOperationException("Cannot modify value from  '" + propName +
-                                                            "' because position element does not exists or not an integer and allPositions is not set");
-                    var valueList = new List<JToken>();
-                    if (allPositionsIsSelected)
-                    {
-                        valueList.AddRange(property.Value.Value<JArray>());
-                    }
-                    else
-                    {
-                        valueList.Add(property.Value.Value<JArray>()[position]);
-                    }
+					var position = patchCmd.Position;
+					var allPositionsIsSelected = patchCmd.AllPositions.HasValue ? patchCmd.AllPositions.Value : false;
+					if (position == null && !allPositionsIsSelected)
+						throw new InvalidOperationException("Cannot modify value from  '" + propName +
+						                                    "' because position element does not exists or not an integer and allPositions is not set");
+					var valueList = new List<JToken>();
+					if (allPositionsIsSelected)
+					{
+						valueList.AddRange(arrayOrValue);
+					}
+					else
+					{
+						valueList.Add(arrayOrValue[position]);
+					}
 
-                    foreach (var value in valueList)
-                    {
-                        foreach (var cmd in nestedCommands)
-                        {
-                            new JsonPatcher(value.Value<JObject>()).Apply(cmd);
-                        }
-                    }
-            		break;
-                default:
-                    throw new InvalidOperationException("Can't understand how to deal with: " + property.Value.Type);
-            }
-        }
+					foreach (var value in valueList)
+					{
+						foreach (var cmd in nestedCommands)
+						{
+							new JsonPatcher(value.Value<JObject>()).Apply(cmd);
+						}
+					}
+					break;
+				default:
+					throw new InvalidOperationException("Can't understand how to deal with: " + property.Value.Type);
+			}
+		}
 
 		private void RemoveValue(PatchRequest patchCmd, string propName, JProperty property)
 		{
@@ -155,9 +156,8 @@ namespace Raven.Database.Json
 				property = new JProperty(propName, new JArray());
 				document.Add(property);
 			}
-			var array = property.Value as JArray;
-			if (array == null)
-				throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because it is not an array");
+			var array = GetArray(property, propName);
+
 			var position = patchCmd.Position;
 			var value = patchCmd.Value;
 			if (position == null && value == null)
@@ -209,12 +209,32 @@ namespace Raven.Database.Json
 				property = new JProperty(propName, new JArray());
 				document.Add(property);
 			}
-			var array = property.Value as JArray;
-			if (array == null)
-				throw new InvalidOperationException("Cannot insert value to '" + propName + "' because it is not an array");
+			var array = GetArray(property, propName);
 
 			array.Add(patchCmd.Value);
 		}
+
+		private JArray GetArray(JProperty property, string propName)
+		{
+			var array = TryGetArray(property);
+			if(array == null)
+				throw new InvalidOperationException("Cannot insert value to '" + propName + "' because it is not an array");
+			return array;
+		}
+
+		private JArray TryGetArray(JProperty property)
+		{
+			var array = property.Value as JArray;
+			if (array == null)
+			{
+				var jObject = property.Value as JObject;
+				if (jObject == null || jObject.Property("$values") == null)
+					return null;
+				array = jObject.Value<JArray>("$values");
+			}
+			return array;
+		}
+
 
 		private void RemoveProperty(PatchRequest patchCmd, string propName, JProperty property)
 		{

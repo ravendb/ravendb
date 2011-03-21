@@ -263,7 +263,6 @@
     <Compile Include="Bugs\SortingOnLong.cs" />
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\SpatialQueries.cs" />
-    <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
     <Compile Include="Bugs\TransformResults\ComplexValuesFromTransformResults.cs" />
     <Compile Include="Bugs\TransformResults\StackOverFlowIndexes.cs" />
     <Compile Include="Bugs\TransformResults\StackOverFlowTypes.cs" />

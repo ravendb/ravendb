@@ -184,5 +184,48 @@ namespace Raven.Tests.Bugs
 				}
 			}
 		}
+
+		[Fact]
+		public void CanRemoveValuesToList()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new Post
+					{
+						Comments = new List<Comment>
+					        		           	{
+					        		           		new Comment {AuthorId = "authors/123"}
+					        		           	}
+					});
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.Batch(
+					new[]
+						{
+							new PatchCommandData
+								{
+									Key = "posts/1",
+									Patches = new[]
+									          	{
+									          		new PatchRequest
+									          			{
+									          				Type = PatchCommandType.Remove,
+									          				Name = "Comments",
+															Position = 0
+									          			},
+									          	}
+								}
+						});
+
+				using (var s = store.OpenSession())
+				{
+					var comments = s.Load<Post>("posts/1").Comments;
+					Assert.Equal(0, comments.Count);
+				}
+			}
+		}
 	}
 }
