@@ -1,142 +1,180 @@
 ﻿<UserControl x:Class="Raven.Studio.Features.Indexes.EditIndexView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
-             xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-             xmlns:data="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
-             xmlns:c="clr-namespace:Raven.Studio.Controls"
-             xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting" xmlns:s="clr-namespace:Raven.Studio.Controls.SyntaxEditor" mc:Ignorable="d"
-             d:DesignHeight="480"
-             d:DesignWidth="640">
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+			 mc:Ignorable="d"
+			 d:DesignHeight="480"
+			 d:DesignWidth="640">
 
-    <UserControl.Resources>
-        <Style TargetType="TextBox">
-            <Setter Property="Margin"
-                    Value="0,0,0,10" />
-        </Style>
-    </UserControl.Resources>
+	<UserControl.Resources>
+		<Style TargetType="Editors:LinqEditor">
+			<Setter Property="MinHeight"
+					Value="100" />
+		</Style>
+	</UserControl.Resources>
 
-    <tk:BusyIndicator IsBusy="{Binding IsBusy}">
-        <Grid Background="{StaticResource DefaultScreenBackground}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+	<tk:BusyIndicator IsBusy="{Binding IsBusy}">
+		<Grid Background="{StaticResource DefaultScreenBackground}"
+			  Margin="4,0,0,0">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
 
-            <c:Label Content="NAME" />
-            <TextBox Grid.Column="1"
-                     Text="{Binding Name, Mode=TwoWay}" />
+			<c:Label Content="name" />
+			<TextBox Grid.Column="1"
+					 Text="{Binding Name, Mode=TwoWay}"
+					 Margin="0 0 0 8" />
 
-            <c:Label Content="MAP"
-                     Grid.Row="1" />
-            <s:LinqEditor Grid.Row="1"
-                            Grid.Column="1"
-                            Text="{Binding Map, Mode=TwoWay}"
-                            FontSize="16" />
+			<c:Label Content="map"
+					 Grid.Row="1" />
+			<Editors:LinqEditor Grid.Row="1"
+								Grid.Column="1"
+								Text="{Binding Map, Mode=TwoWay}"
+								Margin="0 0 0 8" />
 
-            <c:Label Content="REDUCE"
-                     Grid.Row="2" />
-            <s:LinqEditor Grid.Row="2"
-                            Grid.Column="1"
-                            Text="{Binding Reduce, Mode=TwoWay}"
-                            FontSize="16" />
+			<c:Label Content="reduce"
+					 Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}"
+					 Grid.Row="2" />
+			<Grid Grid.Row="2"
+				  Grid.Column="1"
+				  Margin="0 0 0 8">
+				<Button x:Name="AddReduce"
+						VerticalAlignment="Top"
+						HorizontalAlignment="Left"
+						Content="reduce" />
+				<Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}"
+									Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}" />
+			</Grid>
 
-            <c:Label Content="TRANSFORM"
-                     Grid.Row="3" />
-            <s:LinqEditor Grid.Row="3"
-                            Grid.Column="1"
-                            Text="{Binding TransformResults, Mode=TwoWay}"
-                            FontSize="16" />
+			<c:Label Content="transform"
+					 Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
+					 Grid.Row="3" />
+			<Grid Grid.Row="3"
+				  Grid.Column="1"
+				  Margin="0 0 0 8">
+				<Button x:Name="AddTransformResults"
+						VerticalAlignment="Top"
+						HorizontalAlignment="Left"
+						Content="transform results" />
+				<Editors:LinqEditor Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
+									Text="{Binding TransformResults, Mode=TwoWay}" />
+			</Grid>
 
-            <StackPanel Grid.Row="4">
-                <c:Label Content="CUSTOMIZE" />
-                <StackPanel Orientation="Horizontal"
-                            Margin="0 0 4 0"
-                            HorizontalAlignment="Right">
-                    <Button x:Name="AddField"
-                            Height="25"
-                            Width="25">
-                        <Image Source="../../../Resources/Images/add-small.png" />
-                    </Button>
-                    <Button Height="25"
-                            cm:Message.Attach="RemoveField(fieldsGrid.SelectedItem)"
-                            Width="25">
-                        <Image Source="../../../Resources/Images/delete-small.png" />
-                    </Button>
-                </StackPanel>
-            </StackPanel>
+			<Button x:Name="AddField"
+					Grid.Row="4"
+					ToolTipService.ToolTip="Customize this index."
+					Content="+"
+					HorizontalAlignment="Right"
+					VerticalAlignment="Top"
+					Margin="0,0,4,0" />
 
-            <!--<data:DataGrid x:Name="fieldsGrid"
-						   Grid.Column="1"
-						   Grid.Row="4"
-						   ItemsSource="{Binding Fields}"
-						   SelectionMode="Single"
-						   AutoGenerateColumns="False">
-				<data:DataGrid.Columns>
-					<data:DataGridTextColumn Header="field"
-											 Width="*"
-											 Binding="{Binding Name, Mode=TwoWay}" />
-					<data:DataGridTemplateColumn Header="store"
-												 Width="150">
-						<data:DataGridTemplateColumn.CellEditingTemplate>
-							<DataTemplate>
-								<ComboBox ItemsSource="{Binding Storage, Mode=OneTime, Converter={StaticResource enumToEnumerable}}"
-										  SelectedIndex="{Binding Storage, Mode=TwoWay, Converter={StaticResource enumToInt}}" />
-							</DataTemplate>
-						</data:DataGridTemplateColumn.CellEditingTemplate>
-					</data:DataGridTemplateColumn>
-					<data:DataGridTemplateColumn Header="index"
-												 Width="150">
-						<data:DataGridTemplateColumn.CellEditingTemplate>
-							<DataTemplate>
-								<ComboBox ItemsSource="{Binding Indexing, Mode=OneTime, Converter={StaticResource enumToEnumerable}}"
-										  SelectedIndex="{Binding Indexing, Mode=TwoWay, Converter={StaticResource enumToInt}}" />
-							</DataTemplate>
-						</data:DataGridTemplateColumn.CellEditingTemplate>
-					</data:DataGridTemplateColumn>
-					<data:DataGridTemplateColumn Header="sort"
-												 Width="150">
-						<data:DataGridTemplateColumn.CellEditingTemplate>
-							<DataTemplate>
-								<ComboBox ItemsSource="{Binding Sort, Mode=OneTime, Converter={StaticResource enumToEnumerable}}"
-										  SelectedIndex="{Binding Sort, Mode=TwoWay, Converter={StaticResource enumToInt}}" />
-							</DataTemplate>
-						</data:DataGridTemplateColumn.CellEditingTemplate>
-					</data:DataGridTemplateColumn>
-					<data:DataGridTextColumn Header="analyzer"
-											 Width="150"
-											 Binding="{Binding Analyzer, Mode=TwoWay}" />
-				</data:DataGrid.Columns>
-			</data:DataGrid>-->
+			<ItemsControl Grid.Column="1"
+						  Grid.Row="4"
+						  ItemsSource="{Binding Fields}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Border d:DesignWidth="420"
+								d:DesignHeight="120"
+								BorderBrush="{StaticResource DividerBrush}"
+								BorderThickness="1,0,0,0"
+								CornerRadius="5"
+								Margin="0,0,0,6"
+								VerticalAlignment="Top"
+								HorizontalAlignment="Left">
+							<Grid Margin="4,4,0,4">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="Auto" />
+									<ColumnDefinition Width="Auto" />
+									<ColumnDefinition Width="Auto" />
+									<ColumnDefinition Width="Auto" />
+									<ColumnDefinition Width="*" />
+								</Grid.ColumnDefinitions>
+								<Grid.RowDefinitions>
+									<RowDefinition Height="Auto" />
+									<RowDefinition Height="4" />
+									<RowDefinition Height="Auto" />
+									<RowDefinition Height="4" />
+									<RowDefinition Height="Auto" />
+								</Grid.RowDefinitions>
 
-            <StackPanel Grid.Column="2"
-                        Grid.Row="5"
-                        Margin="0 10"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right">
-                <Button x:Name="Save"
-                        ToolTipService.ToolTip="Save Index">
-                    <Image Source="../../../Resources/Images/save-small.png"
-                           Stretch="None" />
-                </Button>
-                <Button x:Name="Remove"
-                        ToolTipService.ToolTip="Delete Index">
-                    <Image Source="../../../Resources/Images/delete-small.png"
-                           Stretch="None" />
-                </Button>
-            </StackPanel>
-        </Grid>
-    </tk:BusyIndicator>
+								<c:Label Content="field" />
+								<TextBox Text="{Binding Name, Mode=TwoWay}"
+										 Grid.Column="1"
+										 Grid.ColumnSpan="3" />
+								<Button Content="-"
+										cm:Message.Attach="RemoveField($dataContext)"
+										HorizontalAlignment="Left"
+										Grid.Column="4" />
+
+								<c:Label Content="storage"
+										 Grid.Row="2" />
+								<ComboBox ItemsSource="{Binding Storage, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+										  SelectedIndex="{Binding Storage, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+										  Grid.Row="2"
+										  Grid.Column="1"
+										  MinWidth="80" />
+
+								<c:Label Content="indexing"
+										 Grid.Row="2"
+										 Grid.Column="2"
+										 Margin="8,0,4,0" />
+								<ComboBox ItemsSource="{Binding Indexing, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+										  SelectedIndex="{Binding Indexing, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+										  Grid.Row="2"
+										  Grid.Column="3" />
+
+								<c:Label Content="sort"
+										 Grid.Row="4" />
+								<ComboBox ItemsSource="{Binding Sort, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+										  SelectedIndex="{Binding Sort, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+										  Grid.Row="4"
+										  Grid.Column="1" />
+
+								<c:Label Content="analyzer"
+										 Grid.Row="4"
+										 Grid.Column="2"
+										 Margin="8,0,4,0" />
+								<TextBox Text="{Binding Analyzer}"
+										 Grid.Row="4"
+										 Grid.Column="3"
+										 MinWidth="160" />
+							</Grid>
+						</Border>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+
+			<StackPanel Grid.Column="2"
+						Grid.Row="5"
+						Margin="0 10"
+						Orientation="Horizontal"
+						HorizontalAlignment="Right">
+				<Button x:Name="Save"
+						ToolTipService.ToolTip="Save Index">
+					<Image Source="../../../Resources/Images/save-small.png"
+						   Stretch="None" />
+				</Button>
+				<Button x:Name="Remove"
+						ToolTipService.ToolTip="Delete Index">
+					<Image Source="../../../Resources/Images/delete-small.png"
+						   Stretch="None" />
+				</Button>
+			</StackPanel>
+		</Grid>
+	</tk:BusyIndicator>
 
 </UserControl>

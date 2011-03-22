@@ -11,7 +11,7 @@
 	<Grid x:Name="LayoutRoot"
 		  x:FieldModifier="public"
 		  Margin="0 2"
-		  Visibility="{Binding HasResults, Converter={StaticResource booleanToVisibility}}">
+		  Visibility="{Binding HasResults, Converter={StaticResource visibleWhenTrue}}">
 		<Grid.Resources>
 			<Style TargetType="Button">
 				<Setter Property="Template">

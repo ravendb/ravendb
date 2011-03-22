@@ -1,16 +1,16 @@
-﻿namespace Raven.Studio.Controls.SyntaxEditor
+﻿namespace Raven.Studio.Controls.Editors
 {
-    using System.IO;
-    using System.Reflection;
-    using ActiproSoftware.Text;
-    using ActiproSoftware.Text.Implementation;
+	using System.IO;
+	using System.Reflection;
+	using ActiproSoftware.Text;
+	using ActiproSoftware.Text.Implementation;
 
-    ///<summary>	
+	///<summary>	
     /// Provides some helper methods.	
     ///</summary>	
     public static class SyntaxEditorHelper
     {
-        public const string DefinitionPath = "Raven.Studio.Controls.SyntaxEditor.Definitions.";
+        public const string DefinitionPath = "Raven.Studio.Controls.Editors.Definitions.";
 
         /// <summary>
         /// Initializes an existing <see cref="ISyntaxLanguage"/> from a language definition (.langdef file) from a resource stream.

@@ -22,9 +22,9 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			if (Settings.VirtualDirectory != "/")
-				context.Response.Redirect(Settings.VirtualDirectory + "/raven/index.html");
+				context.Response.Redirect(Settings.VirtualDirectory + "/raven/studio.html");
 			else
-				context.Response.Redirect("/raven/index.html");
+				context.Response.Redirect("/raven/studio.html");
 		}
 	}
 }

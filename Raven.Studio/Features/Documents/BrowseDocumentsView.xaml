@@ -80,7 +80,7 @@
 
 				<TextBlock Style="{StaticResource Instruction}"
 						   Text="The database contains no documents."
-						   Visibility="{Binding HasDocuments, Converter={StaticResource booleanToOppositeVisibility}}"
+						   Visibility="{Binding HasDocuments, Converter={StaticResource visibleWhenFalse}}"
 						   d:IsHidden="True"
 						   d:IsLocked="True" />
 			</Grid>

@@ -1,0 +1,215 @@
+﻿<Raven_Studio_Features_Collections:CollectionsViewModel xmlns:Raven_Studio_Features_Collections="clr-namespace:Raven.Studio.Features.Collections" xmlns:Raven_Studio_Features_Documents="clr-namespace:Raven.Studio.Features.Documents" xmlns:Raven_Database="clr-namespace:Raven.Database;assembly=Raven.Client.Silverlight" xmlns:System="clr-namespace:System;assembly=mscorlib" xmlns:Raven_Abstractions_Data="clr-namespace:Raven.Abstractions.Data;assembly=Raven.Client.Silverlight" DisplayName="Fringilla vestibulum mus" HasCollections="True" IsNotifying="True" Index="15" IsInitialized="False" IsBusy="False" IsActive="True">
+	<Raven_Studio_Features_Collections:CollectionsViewModel.ActiveCollectionDocuments>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Customers" ClrType="Sample.Raven.Customer" DisplayId="Phasellus duis quisque consequat" Id="Convallis vivamus accumsan" LastModified="03/22/2011 11:19:38" Summary="Mauris parturient aliquam amet sed">
+			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+				<Raven_Database:JsonDocument Key="Nam dignissim nunc aenean fusce" LastModified="03/22/2011 11:19:38" NonAuthoritiveInformation="True">
+					<Raven_Database:JsonDocument.Etag>
+						<System:Guid/>
+					</Raven_Database:JsonDocument.Etag>
+				</Raven_Database:JsonDocument>
+			</Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+		</Raven_Studio_Features_Documents:DocumentViewModel>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Vestibulum vestibulum aptent blandit" ClrType="Bibendum ante nullam aliquet" DisplayId="Lorem elementum commodo" Id="Dictumst morbi facilisis" LastModified="03/22/2011 11:19:38" Summary="Nulla proin dis fermentum arcu">
+			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+				<Raven_Database:JsonDocument Key="Conubia adipiscing" LastModified="03/22/2011 11:19:38" NonAuthoritiveInformation="False">
+					<Raven_Database:JsonDocument.Etag>
+						<System:Guid/>
+					</Raven_Database:JsonDocument.Etag>
+				</Raven_Database:JsonDocument>
+			</Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+		</Raven_Studio_Features_Documents:DocumentViewModel>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Diam eget hendrerit auctor" ClrType="Fringilla habitasse" DisplayId="Cubilia est elit congue enim" Id="Eleifend cursus parturient hac himenaeos" LastModified="03/22/2011 11:19:38" Summary="Dolor egestas facilisi eros">
+			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+				<Raven_Database:JsonDocument Key="Dapibus imperdiet augue erat" LastModified="03/22/2011 11:19:38" NonAuthoritiveInformation="True">
+					<Raven_Database:JsonDocument.Etag>
+						<System:Guid/>
+					</Raven_Database:JsonDocument.Etag>
+				</Raven_Database:JsonDocument>
+			</Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+		</Raven_Studio_Features_Documents:DocumentViewModel>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Felis malesuada ipsum nibh faucibus" ClrType="Fames euismod" DisplayId="Feugiat justo" Id="Penatibus porttitor lacus" LastModified="03/22/2011 11:19:38" Summary="Gravida tincidunt dictum">
+			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+				<Raven_Database:JsonDocument Key="Nisi lorem nisl" LastModified="03/22/2011 11:19:38" NonAuthoritiveInformation="False">
+					<Raven_Database:JsonDocument.Etag>
+						<System:Guid/>
+					</Raven_Database:JsonDocument.Etag>
+				</Raven_Database:JsonDocument>
+			</Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+		</Raven_Studio_Features_Documents:DocumentViewModel>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Ultricies iaculis mus habitant" ClrType="Leo lectus magna vestibulum tristique" DisplayId="Libero inceptos" Id="Interdum vestibulum" LastModified="03/22/2011 11:19:38" Summary="Odio non">
+			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+				<Raven_Database:JsonDocument Key="Massa nunc nec adipiscing" LastModified="03/22/2011 11:19:38" NonAuthoritiveInformation="True">
+					<Raven_Database:JsonDocument.Etag>
+						<System:Guid/>
+					</Raven_Database:JsonDocument.Etag>
+				</Raven_Database:JsonDocument>
+			</Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+		</Raven_Studio_Features_Documents:DocumentViewModel>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Pharetra lacinia metus placerat" ClrType="Lobortis nascetur per" DisplayId="Orci pulvinar laoreet pede sagittis" Id="Venenatis morbi vulputate natoque quam" LastModified="03/22/2011 11:19:38" Summary="Ligula netus quis litora">
+			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+				<Raven_Database:JsonDocument Key="Curabitur neque phasellus" LastModified="03/22/2011 11:19:38" NonAuthoritiveInformation="False">
+					<Raven_Database:JsonDocument.Etag>
+						<System:Guid/>
+					</Raven_Database:JsonDocument.Etag>
+				</Raven_Database:JsonDocument>
+			</Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+		</Raven_Studio_Features_Documents:DocumentViewModel>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Convallis posuere urna cras luctus" ClrType="Nulla consequat senectus" DisplayId="Parturient magnis duis dignissim" Id="Vestibulum elementum facilisis sociosqu" LastModified="03/22/2011 11:19:38" Summary="Potenti mattis fringilla vestibulum porta">
+			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+				<Raven_Database:JsonDocument Key="Nunc suscipit fermentum" LastModified="03/22/2011 11:19:38" NonAuthoritiveInformation="True">
+					<Raven_Database:JsonDocument.Etag>
+						<System:Guid/>
+					</Raven_Database:JsonDocument.Etag>
+				</Raven_Database:JsonDocument>
+			</Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+		</Raven_Studio_Features_Documents:DocumentViewModel>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Pretium mauris ultrices mollis montes" ClrType="Amet torquent adipiscing purus" DisplayId="Rhoncus nostra habitasse" Id="Vehicula hendrerit sodales" LastModified="03/22/2011 11:19:38" Summary="Volutpat himenaeos primis ante parturient">
+			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+				<Raven_Database:JsonDocument Key="Ornare platea" LastModified="03/22/2011 11:19:38" NonAuthoritiveInformation="False">
+					<Raven_Database:JsonDocument.Etag>
+						<System:Guid/>
+					</Raven_Database:JsonDocument.Etag>
+				</Raven_Database:JsonDocument>
+			</Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+		</Raven_Studio_Features_Documents:DocumentViewModel>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Sed maecenas praesent accumsan aliquam" ClrType="Viverra rutrum" DisplayId="Bibendum vestibulum sapien vestibulum risus" Id="Integer imperdiet" LastModified="03/22/2011 11:19:38" Summary="Parturient semper malesuada penatibus sociis">
+			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+				<Raven_Database:JsonDocument Key="Velit adipiscing" LastModified="03/22/2011 11:19:38" NonAuthoritiveInformation="True">
+					<Raven_Database:JsonDocument.Etag>
+						<System:Guid/>
+					</Raven_Database:JsonDocument.Etag>
+				</Raven_Database:JsonDocument>
+			</Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+		</Raven_Studio_Features_Documents:DocumentViewModel>
+		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Sem curae arcu donec" ClrType="Vitae class vestibulum" DisplayId="Sit porttitor" Id="Vel taciti" LastModified="03/22/2011 11:19:38" Summary="Tellus elit">
+			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+				<Raven_Database:JsonDocument Key="Diam etiam eget" LastModified="03/22/2011 11:19:38" NonAuthoritiveInformation="False">
+					<Raven_Database:JsonDocument.Etag>
+						<System:Guid/>
+					</Raven_Database:JsonDocument.Etag>
+				</Raven_Database:JsonDocument>
+			</Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
+		</Raven_Studio_Features_Documents:DocumentViewModel>
+	</Raven_Studio_Features_Collections:CollectionsViewModel.ActiveCollectionDocuments>
+	<Raven_Studio_Features_Collections:CollectionsViewModel.ActiveCollection>
+		<Raven_Abstractions_Data:Collection Name="Aliquam vestibulum class maecenas">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+	</Raven_Studio_Features_Collections:CollectionsViewModel.ActiveCollection>
+	<Raven_Studio_Features_Collections:CollectionsViewModel.Collections>
+		<Raven_Abstractions_Data:Collection Name="Tincidunt tristique vestibulum ultricies">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Dictumst eleifend adipiscing">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Venenatis fusce lorem facilisi enim">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Quisque vulputate">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Morbi faucibus tempor vivamus erat">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Eros nam habitant nulla">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Aliquam nibh inceptos nisi tempus">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Tortor sed proin">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Interdum parturient">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Lobortis nisl nascetur">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+	</Raven_Studio_Features_Collections:CollectionsViewModel.Collections>
+	<Raven_Studio_Features_Collections:CollectionsViewModel.LargestCollectionCount>
+		<System:Int64/>
+	</Raven_Studio_Features_Collections:CollectionsViewModel.LargestCollectionCount>
+	<Raven_Studio_Features_Collections:CollectionsViewModel.RavenCollection>
+		<Raven_Abstractions_Data:Collection Name="Curabitur vestibulum pharetra placerat">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+	</Raven_Studio_Features_Collections:CollectionsViewModel.RavenCollection>
+	<Raven_Studio_Features_Collections:CollectionsViewModel.SystemCollections>
+		<Raven_Abstractions_Data:Collection Name="Augue nunc pulvinar dis">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Aliquet odio">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Blandit vestibulum phasellus">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Consequat convallis dignissim adipiscing">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Orci pede est">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Turpis varius sagittis hac aenean">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Commodo mauris quam">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Parturient leo">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Quis elementum conubia cubilia">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+		<Raven_Abstractions_Data:Collection Name="Facilisis nullam fermentum dapibus">
+			<Raven_Abstractions_Data:Collection.Count>
+				<System:Int64/>
+			</Raven_Abstractions_Data:Collection.Count>
+		</Raven_Abstractions_Data:Collection>
+	</Raven_Studio_Features_Collections:CollectionsViewModel.SystemCollections>
+</Raven_Studio_Features_Collections:CollectionsViewModel>
