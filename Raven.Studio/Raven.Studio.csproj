@@ -62,8 +62,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.1.110.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL" />
-    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.1.110.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL" />
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.Text.Silverlight">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Text.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
