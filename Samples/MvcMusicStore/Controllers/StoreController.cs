@@ -13,7 +13,7 @@ namespace MvcMusicStore.Controllers
 {
     public class StoreController : Controller
     {
-        IDocumentSession session = MvcApplication.CurrentSession;
+        private readonly IDocumentSession session = MvcApplication.CurrentSession;
 
         //
         // GET: /Store/
@@ -41,9 +41,7 @@ namespace MvcMusicStore.Controllers
         {
             // Retrieve Genre from database
             var genre = session.Load<Genre>(id);
-            var albums = session.Advanced.LuceneQuery<Album>("AlbumsByGenre")
-                .WhereEquals("Genre",id)
-                .ToArray();
+            var albums = session.Query<Album>().Where(x => id.Equals(x.Genre.Name)).ToArray();
             var viewModel = new StoreBrowseViewModel
             {
                 Genre = genre,

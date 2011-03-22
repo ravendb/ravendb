@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
@@ -328,7 +329,7 @@ namespace Raven.Http
             }
             finally
             {
-                CurrentOperationContext.Headers.Value = null;
+                CurrentOperationContext.Headers.Value = new NameValueCollection();
                 currentDatabase.Value = DefaultResourceStore;
                 currentConfiguration.Value = DefaultConfiguration;
             }
