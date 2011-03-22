@@ -41,9 +41,11 @@ namespace Raven.Database.Queries
 								return result;
 						}
 					}
-					while (termEnum.Term() == null || field.Equals(termEnum.Term().Field()))
+					while (termEnum.Term() == null || 
+						field.Equals(termEnum.Term().Field()))
 					{
-						result.Add(termEnum.Term().Text());
+						if (termEnum.Term() != null)
+							result.Add(termEnum.Term().Text());
 
 						if (result.Count >= pageSize)
 							break;
