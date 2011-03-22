@@ -226,6 +226,7 @@
     <Compile Include="Bugs\Queries\StatsOnDynamicQueries.cs" />
     <Compile Include="Bugs\Queries\TermsLocal.cs" />
     <Compile Include="Bugs\Queries\TermsRemote.cs" />
+    <Compile Include="Bugs\Queries\WhereTester.cs" />
     <Compile Include="Bugs\Queries\WithAs.cs" />
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryByTypeOnly.cs" />
