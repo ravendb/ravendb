@@ -15,6 +15,7 @@
         public JsonEditor()
         {
             Document.Language = DefaultLanguage;
+			IsTextDataBindingEnabled = true;
         }
     }
 }

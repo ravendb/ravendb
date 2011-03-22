@@ -15,6 +15,7 @@
         public XamlEditor()
         {
             Document.Language = DefaultLanguage;
+			IsTextDataBindingEnabled = true;
         }
     }
 }

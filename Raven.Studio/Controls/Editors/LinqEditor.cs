@@ -15,6 +15,7 @@
         public LinqEditor()
         {
             Document.Language = DefaultLanguage;
+			IsTextDataBindingEnabled = true;
         }
     }
 }

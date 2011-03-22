@@ -86,15 +86,11 @@
 
 				<c:TabControl>
 					<c:TabItem Header="Data">
-						<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}"
-											FontFamily="Monaco"
-											FontSize="16" />
+						<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}" />
 					</c:TabItem>
 					<c:TabItem Header="Metadata"
 							   Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}">
-						<Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay}"
-											FontFamily="Monaco"
-											FontSize="16" />
+						<Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay}" />
 					</c:TabItem>
 				</c:TabControl>
 
