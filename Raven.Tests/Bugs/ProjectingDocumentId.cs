@@ -56,6 +56,7 @@ namespace Raven.Tests.Bugs
             public string Description { get; set; }
         }
 
+		[Fact]
         public void ShouldIdentifyDocumentIdAlsoWithProjectionRetrieveDocumentInternal()
         {
             using (var store = NewDocumentStore())
