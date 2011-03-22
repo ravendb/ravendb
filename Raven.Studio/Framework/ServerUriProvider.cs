@@ -34,10 +34,9 @@
 			else if (HtmlPage.Document.DocumentUri.Scheme == "file")
 			{
 				uri = "http://localhost:8080";
-			} else 
+			} 
+			else 
 			{
-			
-
 				uri = string.Format("{0}://{1}:{2}",
 				                    HtmlPage.Document.DocumentUri.Scheme,
 				                    HtmlPage.Document.DocumentUri.Host,
