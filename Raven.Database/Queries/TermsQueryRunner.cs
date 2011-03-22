@@ -35,13 +35,13 @@ namespace Raven.Database.Queries
 				{
 					if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value
 					{
-						while (fromValue.Equals(termEnum.Term().Text()))
+						while (termEnum.Term() == null || fromValue.Equals(termEnum.Term().Text()))
 						{
 							if (termEnum.Next() == false)
 								return result;
 						}
 					}
-					while (field.Equals(termEnum.Term().Field()))
+					while (termEnum.Term() == null || field.Equals(termEnum.Term().Field()))
 					{
 						result.Add(termEnum.Term().Text());
 
