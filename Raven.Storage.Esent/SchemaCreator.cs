@@ -12,7 +12,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "3.3";
+		public const string SchemaVersion = "3.4";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -35,6 +35,7 @@ namespace Raven.Storage.Esent
 					CreateTasksTable(dbid);
 					CreateMapResultsTable(dbid);
 					CreateIndexingStatsTable(dbid);
+					CreateIndexingStatsReduceTable(dbid);
 					CreateFilesTable(dbid);
                     CreateQueueTable(dbid);
 					CreateIdentityTable(dbid);
@@ -122,6 +123,32 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
 			}, defaultValue, defaultValue.Length, out columnid);
 
+			const string indexDef = "+key\0\0";
+			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+			                   100);
+		}
+
+		private void CreateIndexingStatsReduceTable(JET_DBID dbid)
+		{
+			JET_TABLEID tableid;
+			Api.JetCreateTable(session, dbid, "indexes_stats_reduce", 16, 100, out tableid);
+			JET_COLUMNID columnid;
+
+			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+			{
+				cbMax = 255,
+				coltyp = JET_coltyp.Text,
+				cp = JET_CP.Unicode,
+				grbit = ColumndefGrbit.ColumnTagged
+			}, null, 0, out columnid);
+
+			var defaultValue = BitConverter.GetBytes(0);
+			Api.JetAddColumn(session, tableid, "reduce_successes", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
+			}, defaultValue, defaultValue.Length, out columnid);
+
 			Api.JetAddColumn(session, tableid, "reduce_attempts", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.Long,
@@ -134,16 +161,9 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
 			}, defaultValue, defaultValue.Length, out columnid);
 
-			Api.JetAddColumn(session, tableid, "reduce_successes", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Long,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
-			}, defaultValue, defaultValue.Length, out columnid);
-
-
 			const string indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-			                   100);
+							   100);
 		}
 
         private void CreateTransactionsTable(JET_DBID dbid)

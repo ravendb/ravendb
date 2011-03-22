@@ -176,7 +176,7 @@ namespace Raven.Storage.Esent
 						TempDirectory = Path.Combine(path, "temp"),
 						SystemDirectory = Path.Combine(path, "system"),
 						LogFileDirectory = Path.Combine(path, "logs"),
-						MaxVerPages = 128,
+						MaxVerPages = 256,
 						BaseName = "RVN",
 						EventSource = "Raven",
 						LogBuffers = 8192,

@@ -22,6 +22,8 @@ cp $raven\Raven.Http.dll .\Server
 cp $raven\Raven.Storage.Managed.dll .\Server
 cp $raven\Raven.Abstractions.dll .\Server
 cp $raven\Spatial.Net.dll .\Server
+cp $raven\SpellChecker.Net.dll .\Server
+cp $raven\Raven.Munin.dll .\Server
 
 start .\Server\Raven.Server.exe
 

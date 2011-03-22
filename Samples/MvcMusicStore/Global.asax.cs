@@ -9,8 +9,11 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
+using MvcMusicStore.Controllers;
+using MvcMusicStore.Helpers;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 
 namespace MvcMusicStore
 {
@@ -26,6 +29,8 @@ namespace MvcMusicStore
         {
             _documentStore = new DocumentStore { Url = "http://localhost:8080/" };
             _documentStore.Initialize();
+
+            IndexCreation.CreateIndexes(typeof(IndexingTasks.SoldAlbums_Count).Assembly, _documentStore);
 
             AreaRegistration.RegisterAllAreas();
 

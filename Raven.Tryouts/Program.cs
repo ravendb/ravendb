@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Document;
 using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
@@ -7,10 +8,11 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
+			int i = 0;
 			while (true)
 			{
-				new VeryBigResultSet().CanGetVeryBigResultSetsEvenThoughItIsBadForYou();
-				Console.WriteLine(DateTime.Now);
+				new VeryBigResultSetRemote().CanGetVeryBigResultSetsEvenThoughItIsBadForYou();
+				Console.WriteLine(++i);
 			}
 		}
 	}

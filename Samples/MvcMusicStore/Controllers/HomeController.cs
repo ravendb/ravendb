@@ -8,6 +8,8 @@ using System.Linq;
 using System.Web.Mvc;
 using MvcMusicStore.Models;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Database.Indexing;
 
 namespace MvcMusicStore.Controllers
 {
@@ -28,37 +30,9 @@ namespace MvcMusicStore.Controllers
         {
             var session = MvcApplication.CurrentSession;
 
-            return session.Advanced.LuceneQuery<Album>("AlbumsByCountSold")
-                 .Take(count)
-                 .OrderBy("-Quantity")
-                 .ToArray();
-        }
-
-        private IEnumerable<Album> GetTopSellingAlbums_Map_Reduce(int count)
-        {
-            var session = MvcApplication.CurrentSession;
-
-            // Get count most sold albums ids
-            var topSoldAlbumIds = session.Advanced.LuceneQuery<SoldAlbum>("SoldAlbums")
-                .OrderBy("-Quantity")
-                .Take(count)
-                .Select(x => x.Album)
-                .ToArray();
-
-            // get the actual album documents
-            var topSoldAlbums = session.Load<Album>(topSoldAlbumIds);
-            // if we don't have enough sold albums
-            if (topSoldAlbums.Length < count)
-            {
-                // top it off from the unsold albums
-                var justRegularAlbums = session.Advanced.LuceneQuery<Album>()
-                    .Take(count);
-                topSoldAlbums = topSoldAlbums.Concat(justRegularAlbums)
-                    .Distinct()
-                    .Take(count)
-                    .ToArray();
-            }
-            return topSoldAlbums;
+            return session.Query<Album>()
+                .OrderByDescending(x => x.CountSold)
+                .Take(count);
         }
 
         public ActionResult AddCountSoldtoAlbum()
@@ -83,7 +57,7 @@ namespace MvcMusicStore.Controllers
                         .Where(x => x.Album == id)
                         .SingleOrDefault();
 
-                    album.CountSold = result == null ? 0 : result.Quantity;
+                    album.CountSold = (result == null) ? 0 : result.Quantity;
                 }
 
                 count += albums.Length;

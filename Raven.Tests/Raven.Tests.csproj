@@ -136,6 +136,7 @@
     <Compile Include="Bugs\DecimalPrecision.cs" />
     <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
     <Compile Include="Bugs\DocumentUrl.cs" />
+    <Compile Include="Bugs\DTC\UsingDtcForDelete.cs" />
     <Compile Include="Bugs\DTC\UsingDtcForCreate.cs" />
     <Compile Include="Bugs\DTC\UsingDTCForUpdates.cs" />
     <Compile Include="Bugs\DTC\UsingRemoteDTC.cs" />
@@ -173,6 +174,7 @@
     <Compile Include="Bugs\Indexing\IndexingOnDictionary.cs" />
     <Compile Include="Bugs\Indexing\MissingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\RemoteIndexingOnDictionary.cs" />
+    <Compile Include="Bugs\Indexing\UsingSortOptions.cs" />
     <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\TransactionIndexByMrn.cs" />
     <Compile Include="Bugs\Indexing\WillGroupValuesUsingComplexValues.cs" />
@@ -183,6 +185,7 @@
     <Compile Include="Bugs\InMemoryOnly.cs" />
     <Compile Include="Bugs\InvalidIds.cs" />
     <Compile Include="Bugs\Issue199.cs" />
+    <Compile Include="Bugs\JsonDeserialization.cs" />
     <Compile Include="Bugs\KeyGeneration.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
     <Compile Include="Bugs\LinqGitHub147.cs" />
@@ -211,7 +214,9 @@
     <Compile Include="Bugs\MultiTenancy\CreatingIndexes.cs" />
     <Compile Include="Bugs\MultiTenancy\NoCaseSensitive.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
+    <Compile Include="Bugs\NullableEnum.cs" />
     <Compile Include="Bugs\Nullables.cs" />
+    <Compile Include="Bugs\NullCoalasing.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
     <Compile Include="Bugs\OrderOfInsertionDoesNotAffectQuerying.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
@@ -260,7 +265,6 @@
     <Compile Include="Bugs\SortingOnLong.cs" />
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\SpatialQueries.cs" />
-    <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
     <Compile Include="Bugs\TransformResults\ComplexValuesFromTransformResults.cs" />
     <Compile Include="Bugs\TransformResults\StackOverFlowIndexes.cs" />
     <Compile Include="Bugs\TransformResults\StackOverFlowTypes.cs" />
@@ -270,6 +274,7 @@
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Bugs\User.cs" />
+    <Compile Include="Bugs\UsingAsProjection.cs" />
     <Compile Include="Bugs\UsingEnumInLinq.cs" />
     <Compile Include="Bugs\UsingLongAsId.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
@@ -305,12 +310,14 @@
     <Compile Include="Document\ZoneCountResult.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
+    <Compile Include="Indexes\CreateIndexesWithCasting.cs" />
     <Compile Include="Indexes\CustomAnalyzer.cs" />
     <Compile Include="Indexes\DynamicQueryMapping.cs" />
     <Compile Include="Indexes\ExpressionOperatorPrecedenceTest.cs" />
     <Compile Include="Indexes\LinqIndexesFromClient.cs" />
     <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
     <Compile Include="Indexes\MapOnlyView.cs" />
+    <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />

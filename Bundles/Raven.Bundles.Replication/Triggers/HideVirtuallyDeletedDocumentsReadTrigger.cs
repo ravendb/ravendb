@@ -16,6 +16,8 @@ namespace Raven.Bundles.Replication.Triggers
         public override ReadVetoResult AllowRead(string key, JObject metadata, ReadOperation operation,
                                                  TransactionInformation transactionInformation)
         {
+			if(metadata == null)
+				return ReadVetoResult.Allowed; // this is a projection, it is allowed
             if (ReplicationContext.IsInReplicationContext)
                 return ReadVetoResult.Allowed;
             JToken value;
