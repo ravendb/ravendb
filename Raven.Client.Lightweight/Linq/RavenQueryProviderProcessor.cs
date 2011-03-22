@@ -630,7 +630,10 @@ namespace Raven.Client.Linq
 			        var idPropertyName = (idProperty == null) ? string.Empty : idProperty.Name;
                     foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
                     {
-                        if (!string.IsNullOrEmpty(idPropertyName) && field.Equals(idPropertyName))
+						if (string.IsNullOrEmpty(idPropertyName))
+							continue;
+
+                        if (field.Equals(idPropertyName))
                             FieldsToFetch.Add("__document_id");
                         else
                             FieldsToFetch.Add(field);
