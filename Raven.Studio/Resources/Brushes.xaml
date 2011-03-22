@@ -52,6 +52,8 @@
 					  Offset="0" />
 	</LinearGradientBrush>
 
+	<SolidColorBrush x:Key="SelectedItemHighlightBrush"
+					 Color="#ffdcdcdc" />
 
 	<Color x:Key="HighlightDarkColor">#FF119EDA</Color>
 	<Color x:Key="HighlightLightColor">#FFB2E0F4</Color>
