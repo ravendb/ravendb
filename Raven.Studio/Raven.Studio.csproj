@@ -68,7 +68,7 @@
     <Reference Include="ActiproSoftware.Text.Silverlight">
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
-	<Reference Include="ActiproSoftware.Shared.Silverlight">
+    <Reference Include="ActiproSoftware.Shared.Silverlight">
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Shared.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight">
@@ -427,6 +427,9 @@
   </ItemGroup>
   <ItemGroup>
     <DesignData Include="SampleData\BrowseDocumentsViewModelSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+    </DesignData>
+    <DesignData Include="SampleData\CollectionsViewModelSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\ServerErrorSampleData.xaml">
