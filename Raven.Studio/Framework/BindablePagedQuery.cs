@@ -12,6 +12,7 @@
 		Size? ItemElementSize { get; set; }
 		Size PageElementSize { get; set; }
 		void AdjustResultsForPageSize();
+	    void ClearResults();
 	}
 
 	public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
@@ -46,6 +47,16 @@
 
 		public Size? ItemElementSize { get; set; }
 		public Size PageElementSize { get; set; }
+
+        public void ClearResults()
+        {
+            hasLoadedFirstPage = false;
+            
+            Clear();
+
+            NumberOfPages = 0;
+            CurrentPage = 0;
+        }
 
 		public void AdjustResultsForPageSize()
 		{

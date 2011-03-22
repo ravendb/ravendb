@@ -526,7 +526,6 @@ namespace Raven.Client.Client.Async
 					{
 						var json = (JToken)serializer.Deserialize(reader);
 						return json.Select(x => x.Value<string>()).ToArray();
-
 					}
 				});
 		}
@@ -838,6 +837,29 @@ namespace Raven.Client.Client.Async
 
 			return request.ReadResponseStringAsync();
 		}
+
+        ///<summary>
+        /// Get the possible terms for the specified field in the index asynchronously
+        /// You can page through the results by use fromValue parameter as the 
+        /// starting point for the next query
+        ///</summary>
+        ///<returns></returns>
+	    public Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize)
+	    {
+            return url.Terms(index,field,fromValue,pageSize)
+                .NoCache()
+                .ToJsonRequest(this, credentials, convention)
+                .ReadResponseStringAsync()
+                .ContinueWith(task =>
+                {
+                    var serializer = convention.CreateSerializer();
+                    using (var reader = new JsonTextReader(new StringReader(task.Result)))
+                    {
+                        var json = (JToken)serializer.Deserialize(reader);
+                        return json.Select(x => x.Value<string>()).ToArray();
+                    }
+                });
+	    }
 	}
 }
 

@@ -39,6 +39,11 @@
 			return url + "/databases/";
 		}
 
+        public static string Terms(this string url, string index, string field, string fromValue, int pageSize)
+        {
+            return url + "/terms/" + index + "?field=" + field + "&fromValue=" + fromValue + "&pageSize=" + pageSize;
+        }
+
 		public static string Docs(this string url, string key)
 		{
 			return url + "/docs/" + HttpUtility.HtmlEncode(key);
