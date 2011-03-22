@@ -628,9 +628,12 @@ namespace Raven.Client.Linq
 			        newExpressionType = newExpression.Type;
                     var idProperty = this.luceneQuery.DocumentConvention.GetIdentityProperty(newExpressionType);
 			        var idPropertyName = (idProperty == null) ? string.Empty : idProperty.Name;
-                    foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name).Where(x => !x.Equals(idPropertyName)))
+                    foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
                     {
-                        FieldsToFetch.Add(field);
+                        if (!string.IsNullOrEmpty(idPropertyName) && field.Equals(idPropertyName))
+                            FieldsToFetch.Add("__document_id");
+                        else
+                            FieldsToFetch.Add(field);
                     }
 			        break;
 				//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
