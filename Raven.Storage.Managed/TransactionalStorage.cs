@@ -73,12 +73,7 @@ namespace Raven.Storage.Managed
         [DebuggerNonUserCode]
         public void Batch(Action<IStorageActionsAccessor> action)
         {
-            if (disposed)
-            {
-                Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
-                return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
-            }
-            if(current.Value != null)
+			if(current.Value != null)
             {
                 action(current.Value);
                 return;
@@ -86,6 +81,12 @@ namespace Raven.Storage.Managed
             disposerLock.EnterReadLock();
             try
             {
+				if (disposed)
+				{
+					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
+					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+				}
+
                 Interlocked.Exchange(ref lastUsageTime, DateTime.Now.ToBinary());
                 using (tableStroage.BeginTransaction())
                 {
