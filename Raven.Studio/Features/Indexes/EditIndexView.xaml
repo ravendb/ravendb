@@ -8,7 +8,7 @@
              xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
              xmlns:data="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
              xmlns:c="clr-namespace:Raven.Studio.Controls"
-             xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting" xmlns:s="clr-namespace:Raven.Studio.Controls.SyntaxEditor" mc:Ignorable="d"
+             xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting" xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors" mc:Ignorable="d"
              d:DesignHeight="480"
              d:DesignWidth="640">
 
@@ -40,21 +40,21 @@
 
             <c:Label Content="MAP"
                      Grid.Row="1" />
-            <s:LinqEditor Grid.Row="1"
+            <Editors:LinqEditor Grid.Row="1"
                             Grid.Column="1"
                             Text="{Binding Map, Mode=TwoWay}"
                             FontSize="16" />
 
             <c:Label Content="REDUCE"
                      Grid.Row="2" />
-            <s:LinqEditor Grid.Row="2"
+            <Editors:LinqEditor Grid.Row="2"
                             Grid.Column="1"
                             Text="{Binding Reduce, Mode=TwoWay}"
                             FontSize="16" />
 
             <c:Label Content="TRANSFORM"
                      Grid.Row="3" />
-            <s:LinqEditor Grid.Row="3"
+            <Editors:LinqEditor Grid.Row="3"
                             Grid.Column="1"
                             Text="{Binding TransformResults, Mode=TwoWay}"
                             FontSize="16" />

@@ -3,9 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-             xmlns:s="clr-namespace:Raven.Studio.Controls.SyntaxEditor"
-             mc:Ignorable="d"
+             xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro" xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors" mc:Ignorable="d"
              d:DesignHeight="300"
              d:DesignWidth="400">
 
@@ -58,7 +56,7 @@
                     Margin="0"
                     d:IsLocked="True">
 
-                <s:XamlEditor Text="{Binding Xaml, Mode=TwoWay}"
+                <Editors:XamlEditor Text="{Binding Xaml, Mode=TwoWay}"
                               FontFamily="Monaco"
                               FontSize="16" />
             </Border>

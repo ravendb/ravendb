@@ -68,6 +68,9 @@
     <Reference Include="ActiproSoftware.Text.Silverlight">
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
+	<Reference Include="ActiproSoftware.Shared.Silverlight">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Shared.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
@@ -120,10 +123,10 @@
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
     <Compile Include="Commands\EditIndex.cs" />
-    <Compile Include="Controls\SyntaxEditor\JsonEditor.cs" />
-    <Compile Include="Controls\SyntaxEditor\LinqEditor.cs" />
-    <Compile Include="Controls\SyntaxEditor\SyntaxEditorHelper.cs" />
-    <Compile Include="Controls\SyntaxEditor\XamlEditor.cs" />
+    <Compile Include="Controls\Editors\JsonEditor.cs" />
+    <Compile Include="Controls\Editors\LinqEditor.cs" />
+    <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
+    <Compile Include="Controls\Editors\XamlEditor.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
@@ -399,9 +402,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\CSharp.langdef" />
-    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\JScript.langdef" />
-    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\Xaml.langdef" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\CSharp.langdef" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\JScript.langdef" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>
