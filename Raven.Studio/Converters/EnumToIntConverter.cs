@@ -6,8 +6,6 @@
 
 	public class EnumToIntConverter : IValueConverter
 	{
-		#region IValueConverter Members
-
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			return (int) value;
@@ -17,7 +15,5 @@
 		{
 			return Enum.Parse(targetType, value.ToString(), true);
 		}
-
-		#endregion
 	}
 }

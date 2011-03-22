@@ -12,8 +12,6 @@
 	{
 		readonly Dictionary<Type, List<object>> cache = new Dictionary<Type, List<object>>();
 
-		#region IValueConverter Members
-
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			Type type = value.GetType();
@@ -43,7 +41,5 @@
 		{
 			throw new NotImplementedException();
 		}
-
-		#endregion
 	}
 }

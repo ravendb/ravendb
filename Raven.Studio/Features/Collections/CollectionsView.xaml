@@ -145,7 +145,7 @@
 		</Grid>
 
 		<Grid Grid.Column="1"
-			  Visibility="{Binding HasCollections, Converter={StaticResource booleanToVisibility}}">
+			  Visibility="{Binding HasCollections, Converter={StaticResource visibleWhenTrue}}">
 
 			<Border CornerRadius="5,0,0,0"
 					BorderBrush="{StaticResource SelectedItemHighlightBrush}"

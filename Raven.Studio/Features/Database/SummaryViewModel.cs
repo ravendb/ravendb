@@ -10,7 +10,7 @@
 	using Framework;
 	using Messages;
 
-	public class SummaryViewModel : Screen, IDatabaseScreenMenuItem,
+	public class SummaryViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
@@ -20,6 +20,7 @@
 
 		[ImportingConstructor]
 		public SummaryViewModel(IServer server, IEventAggregator events)
+			: base(events)
 		{
 			this.server = server;
 			this.events = events;
@@ -69,9 +70,9 @@
 
 		public void NavigateToCollection(Collection collection)
 		{
-			events.Publish( new DatabaseScreenRequested( ()=>
+			events.Publish(new DatabaseScreenRequested(() =>
 			{
-			    var vm = IoC.Get<CollectionsViewModel>();
+				var vm = IoC.Get<CollectionsViewModel>();
 				vm.ActiveCollection = collection;
 				return vm;
 			}));
@@ -81,6 +82,7 @@
 		{
 			using (var session = server.OpenSession())
 			{
+				WorkStarted("fetching collections");
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 25)
 					.ContinueOnSuccess(x =>
@@ -88,15 +90,17 @@
 											Collections = x.Result;
 											NotifyOfPropertyChange(() => LargestCollectionCount);
 											NotifyOfPropertyChange(() => Collections);
+											WorkCompleted("fetching collections");
 										});
 
+				WorkStarted("fetching recent documents");
 				session.Advanced.AsyncDatabaseCommands
 					.GetDocumentsAsync(0, 12)
 					.ContinueOnSuccess(x =>
 										{
-											RecentDocuments = new BindableCollection<DocumentViewModel>(
-												x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
+											RecentDocuments = new BindableCollection<DocumentViewModel>(x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
 											NotifyOfPropertyChange(() => RecentDocuments);
+											WorkCompleted("fetching recent documents");
 										});
 			}
 		}

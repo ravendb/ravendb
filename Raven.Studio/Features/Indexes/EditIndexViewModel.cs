@@ -1,7 +1,7 @@
 namespace Raven.Studio.Features.Indexes
 {
+	using System;
 	using System.Collections.Generic;
-	using System.ComponentModel.Composition;
 	using System.Linq;
 	using Caliburn.Micro;
 	using Database;
@@ -9,36 +9,28 @@ namespace Raven.Studio.Features.Indexes
 	using Messages;
 	using Raven.Database.Indexing;
 
-	public class EditIndexViewModel : Screen
+	public class EditIndexViewModel : RavenScreen
 	{
 		readonly IndexDefinition index;
 		readonly IServer server;
-	    private readonly IEventAggregator events;
-	    bool isBusy;
 		string name;
+		bool shouldShowReduce;
+		bool shouldShowTransformResults;
 
 		public EditIndexViewModel(IndexDefinition index, IServer server, IEventAggregator events)
+			: base(events)
 		{
 			DisplayName = "Edit Index";
 
 			this.index = index;
 			this.server = server;
-		    this.events = events;
-
-		    CompositionInitializer.SatisfyImports(this);
 
 			Name = index.Name;
-			LoadFields();
-		}
+			ShouldShowReduce = !string.IsNullOrEmpty(index.Reduce);
+			ShouldShowTransformResults = !string.IsNullOrEmpty(index.TransformResults);
+			AvailabeFields = new BindableCollection<string>(index.Fields);
 
-		public bool IsBusy
-		{
-			get { return isBusy; }
-			set
-			{
-				isBusy = value;
-				NotifyOfPropertyChange(() => IsBusy);
-			}
+			LoadFields();
 		}
 
 		public string Name
@@ -52,55 +44,100 @@ namespace Raven.Studio.Features.Indexes
 		}
 
 		public IObservableCollection<FieldProperties> Fields { get; private set; }
+		public IObservableCollection<string> AvailabeFields { get; private set; }
 
 		public string Map
 		{
 			get { return index.Map; }
-			set { index.Map = value; }
+			set
+			{
+				index.Map = value;
+				NotifyOfPropertyChange(() => Map);
+			}
 		}
 
 		public string Reduce
 		{
 			get { return index.Reduce; }
-			set { index.Reduce = value; }
+			set
+			{
+				index.Reduce = value;
+				NotifyOfPropertyChange(() => Reduce);
+			}
 		}
 
 		public string TransformResults
 		{
 			get { return index.TransformResults; }
-			set { index.TransformResults = value; }
+			set
+			{
+				index.TransformResults = value;
+				NotifyOfPropertyChange(() => TransformResults);
+			}
+		}
+
+		public bool ShouldShowReduce
+		{
+			get { return shouldShowReduce; }
+			set
+			{
+				shouldShowReduce = value;
+				NotifyOfPropertyChange(() => ShouldShowReduce);
+			}
+		}
+
+		public bool ShouldShowTransformResults
+		{
+			get { return shouldShowTransformResults; }
+			set
+			{
+				shouldShowTransformResults = value;
+				NotifyOfPropertyChange(() => ShouldShowTransformResults);
+			}
+		}
+
+		public void AddTransformResults()
+		{
+			ShouldShowTransformResults = true;
+		}
+
+		public void AddReduce()
+		{
+			ShouldShowReduce = true;
 		}
 
 		public void Save()
 		{
-			IsBusy = true;
+			WorkStarted("saving index " + Name);
 			SaveFields();
 
-			using(var session = server.OpenSession())
+			if(string.IsNullOrEmpty(index.Reduce)) index.Reduce = null;
+			if (string.IsNullOrEmpty(index.TransformResults)) index.TransformResults = null;
+
+			using (var session = server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.PutIndexAsync(Name, index, true)
 					.ContinueOnSuccess(task =>
-					{
-						IsBusy = false;
-                        events.Publish(new IndexUpdated {Index = this});
-					});
+					                   	{
+					                   		WorkCompleted("saving index " + Name);
+					                   		Events.Publish(new IndexUpdated {Index = this});
+					                   	});
 			}
-			
 		}
 
 		public void Remove()
 		{
-			IsBusy = true;
-			using(var session = server.OpenSession())
+			WorkStarted("removing index " + Name);
+			using (var session = server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.DeleteIndexAsync(Name)
 					.ContinueOnSuccess(task =>
-					              	{
-					              		IsBusy = false;
-                                        events.Publish(new IndexUpdated{Index = this,IsRemoved = true});
-					              	});
+					                   	{
+					                   		WorkCompleted("removing index " + Name);
+					                   		Events.Publish(new IndexUpdated {Index = this, IsRemoved = true});
+					                   	});
 			}
 		}
 
@@ -114,7 +151,7 @@ namespace Raven.Studio.Features.Indexes
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
 		}
 
-		void CreateOrEditField<T>(IDictionary<string, T> dictionary, System.Action<FieldProperties, T> setter)
+		void CreateOrEditField<T>(IDictionary<string, T> dictionary, Action<FieldProperties, T> setter)
 		{
 			if (dictionary == null) return;
 
@@ -143,14 +180,16 @@ namespace Raven.Studio.Features.Indexes
 				index.Indexes[item.Name] = item.Indexing;
 				index.Stores[item.Name] = item.Storage;
 				index.SortOptions[item.Name] = item.Sort;
-				index.Analyzers[item.Name] = item.Analyzer;
+
+				if(!string.IsNullOrEmpty(item.Analyzer))
+					index.Analyzers[item.Name] = item.Analyzer;
 			}
 		}
 
 		public void AddField()
 		{
 			if (Fields.Any(field => string.IsNullOrEmpty(field.Name))) return;
-			
+
 			Fields.Add(new FieldProperties());
 		}
 

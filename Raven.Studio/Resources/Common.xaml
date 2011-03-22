@@ -3,12 +3,12 @@
 					xmlns:converters="clr-namespace:Raven.Studio.Converters">
 
 	<!--Converters-->
-	<converters:BooleanToVisibilityConverter x:Key="booleanToVisibility" />
-	<converters:NullToVisibilityConverter x:Key="nullToVisibility" />
+	<converters:BooleanToVisibilityConverter x:Key="visibleWhenTrue" />
+	<converters:NullToVisibilityConverter x:Key="hiddenWhenNull" />
 	<converters:BooleanToOppositeBooleanConverter x:Key="booleanToOpposite" />
-	<converters:BooleanToOppositeVisibilityConverter x:Key="booleanToOppositeVisibility" />
-	<converters:EnumToIntConverter x:Key="enumToInt" />
-	<converters:EnumToEnumerableConverter x:Key="enumToEnumerable" />
+	<converters:BooleanToOppositeVisibilityConverter x:Key="visibleWhenFalse" />
+	<converters:EnumToIntConverter x:Key="enumeratedValue" />
+	<converters:EnumToEnumerableConverter x:Key="enumerationFromValue" />
 	<converters:HowLongSinceConverter x:Key="howLongSince" />
 	<converters:TypeToBrushConverter x:Key="typeToBrush" />
     <converters:VisibleWhenEmptyConverter x:Key="visibleWhenEmpty" />

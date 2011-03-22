@@ -52,7 +52,7 @@
 							</StackPanel>
 
 							<StackPanel Grid.Column="2"
-										Visibility="{Binding ShouldDisplaySystemButtons, Converter={StaticResource booleanToVisibility}}"
+										Visibility="{Binding ShouldDisplaySystemButtons, Converter={StaticResource visibleWhenTrue}}"
 										Orientation="Horizontal"
 										Margin="0,0,10,0"
 										VerticalAlignment="Top">
@@ -100,7 +100,7 @@
 				</Grid>
 
 				<Grid x:Name="resizeHandles"
-					  Visibility="{Binding ShouldDisplaySystemButtons, Converter={StaticResource booleanToVisibility}}">
+					  Visibility="{Binding ShouldDisplaySystemButtons, Converter={StaticResource visibleWhenTrue}}">
 										
 					<Rectangle VerticalAlignment="Top"
 							   HorizontalAlignment="Stretch"

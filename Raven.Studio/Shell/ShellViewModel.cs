@@ -2,6 +2,7 @@
 {
 	using System;
 	using System.ComponentModel.Composition;
+	using System.Diagnostics;
 	using System.Linq;
 	using System.Windows;
 	using Caliburn.Micro;
@@ -42,14 +43,17 @@
 			this.databaseScreen = databaseScreen;
 			this.events = events;
 			events.Subscribe(this);
-			events.Publish(new WorkStarted());
+			
 
 			Items.Add(start);
 			Items.Add(databaseScreen);
 
+			events.Publish(new WorkStarted("Connecting to server"));
 			server.Connect(new Uri(uriProvider.GetServerUri()),
 			               () =>
 			               	{
+								events.Publish(new WorkCompleted("Connecting to server"));
+
 			               		if (server.Databases.Count() == 1)
 			               		{
 			               			ActivateItem(databaseScreen);
@@ -58,8 +62,6 @@
 			               		{
 			               			ActivateItem(start);
 			               		}
-
-			               		events.Publish(new WorkCompleted());
 			               	});
 		}
 

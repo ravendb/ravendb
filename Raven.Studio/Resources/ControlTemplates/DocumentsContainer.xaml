@@ -34,7 +34,7 @@
 				<ContentControl.Effect>
 					<DropShadowEffect />
 				</ContentControl.Effect>
-				<ContentControl Visibility="{Binding IsDocumentPreviewed, Converter={StaticResource booleanToVisibility}}"
+				<ContentControl Visibility="{Binding IsDocumentPreviewed, Converter={StaticResource visibleWhenTrue}}"
 								Margin="20">
 					<StackPanel Orientation="Horizontal"
 								DataContext="{Binding ActiveItem}">
