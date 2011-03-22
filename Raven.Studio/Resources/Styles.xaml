@@ -50,8 +50,6 @@
 				Value="Right" />
 		<Setter Property="FontFamily"
 				Value="Segoe UI" />
-		<Setter Property="TextOptions.TextHintingMode"
-				Value="Animated" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="c:Label">

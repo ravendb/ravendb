@@ -4,9 +4,9 @@ namespace Raven.Studio.Features.Indexes
 	using System.ComponentModel.Composition;
 	using System.Linq;
 	using Caliburn.Micro;
+	using Database;
 	using Framework;
 	using Messages;
-	using Plugin;
 	using Raven.Database.Indexing;
 
 	public class EditIndexViewModel : Screen

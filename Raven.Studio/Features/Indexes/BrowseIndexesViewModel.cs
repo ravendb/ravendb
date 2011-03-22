@@ -6,10 +6,10 @@
     using Database;
     using Framework;
     using Messages;
-    using Plugin;
     using Raven.Database.Indexing;
     using System.Threading.Tasks;
 
+	[Export]
     public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>, IDatabaseScreenMenuItem,
                                           IHandle<IndexUpdated>
     {

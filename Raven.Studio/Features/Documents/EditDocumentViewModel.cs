@@ -134,8 +134,8 @@
 		public void Prettify()
 		{
 			//NOTE: is there a better way to reformat the json? This seems heavy.
-			var obj = JsonConvert.DeserializeObject(JsonData);
-			JsonData = JsonConvert.SerializeObject(obj, Formatting.Indented);
+			JsonData = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(JsonData), Formatting.Indented);
+			JsonMetadata = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(JsonMetadata), Formatting.Indented);
 		}
 
 		static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)

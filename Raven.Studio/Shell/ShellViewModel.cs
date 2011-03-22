@@ -8,7 +8,6 @@
 	using Features.Database;
 	using Framework;
 	using Messages;
-	using Plugin;
 
 	[Export(typeof(IShell))]
 	[PartCreationPolicy(CreationPolicy.Shared)]

@@ -8,7 +8,6 @@
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
-	using Plugin;
 
 	public class SaveDocument
 	{

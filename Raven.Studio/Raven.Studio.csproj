@@ -62,6 +62,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.1.110.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL" />
+    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.1.110.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL" />
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
@@ -112,10 +114,17 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
+    <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Controls\SyntaxEditor\JsonEditor.cs" />
+    <Compile Include="Controls\SyntaxEditor\LinqEditor.cs" />
+    <Compile Include="Controls\SyntaxEditor\SyntaxEditorHelper.cs" />
+    <Compile Include="Controls\SyntaxEditor\XamlEditor.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
+    <Compile Include="Features\Database\IServer.cs" />
+    <Compile Include="Features\Statistics\IStatisticsItem.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
@@ -130,6 +139,9 @@
     <Compile Include="Features\StartUp\DefaultDatabaseInitializer.cs" />
     <Compile Include="Features\StartUp\IDatabaseInitializer.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
+    <Compile Include="Features\Statistics\IStatisticsSet.cs" />
+    <Compile Include="Features\Statistics\Statistic.cs" />
+    <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
     <Compile Include="Framework\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
@@ -159,7 +171,6 @@
     <Compile Include="Converters\BooleanToOppositeBooleanConverter.cs" />
     <Compile Include="Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
-    <Compile Include="Converters\CategoryIsActiveConverter.cs" />
     <Compile Include="Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Converters\EnumToIntConverter.cs" />
     <Compile Include="Converters\HowLongSinceConverter.cs" />
@@ -285,6 +296,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Statistics\StatisticsView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Features\Statistics\ErrorsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -362,10 +377,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Resources\ControlTemplates\JeffWilcox.SyntaxHighlighting.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Resources\ControlTemplates\Menu.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -384,6 +395,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\CSharp.langdef" />
+    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\JScript.langdef" />
+    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\Xaml.langdef" />
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>
@@ -393,10 +407,6 @@
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
       <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
       <Name>Raven.Client.Silverlight</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Studio.Plugin\Raven.Studio.Plugin.csproj">
-      <Project>{0BA36A77-F8CA-400C-8F89-3726143BFA96}</Project>
-      <Name>Raven.Studio.Plugin</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
