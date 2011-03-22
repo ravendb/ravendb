@@ -4,14 +4,13 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:cm="http://www.caliburnproject.org"
 			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-			 xmlns:c="clr-namespace:Raven.Studio.Controls"
-			 x:Class="Raven.Studio.Shell.ShellView"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls" xmlns:f="clr-namespace:Raven.Studio.Framework" x:Class="Raven.Studio.Shell.ShellView"
 			 mc:Ignorable="d"
 			 UseLayoutRounding="True"
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
 
-	<Border Background="White"
+	<Border Background="{StaticResource DefaultScreenBackground}"
 			BorderBrush="#17497A"
 			BorderThickness="1">
 		<Border BorderBrush="#5D8491"
@@ -19,7 +18,7 @@
 			<Grid>
 				<Grid>
 					<Grid.RowDefinitions>
-						<RowDefinition Height="30" />
+						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="*" />
@@ -27,9 +26,10 @@
 					</Grid.RowDefinitions>
 
 					<Border x:Name="titleBorder"
+							Height="30"
 							Background="{StaticResource DarkGradient}"
-							cm:Message.Attach="[Event MouseLeftButtonDown] = [Action DragWindow]">
-
+							cm:Message.Attach="[Event MouseLeftButtonDown] = [Action DragWindow]"
+							f:DoubleClickEvent.AttachAction="ToggleWindow">
 						<Grid>
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="Auto" />
@@ -52,12 +52,13 @@
 							</StackPanel>
 
 							<StackPanel Grid.Column="2"
+										Visibility="{Binding ShouldDisplaySystemButtons, Converter={StaticResource booleanToVisibility}}"
 										Orientation="Horizontal"
 										Margin="0,0,10,0"
 										VerticalAlignment="Top">
 								<Button x:Name="MinimizeWindow"
 										Style="{StaticResource MinimizeWindowButton}" />
-								<Button x:Name="ToogleWindow"
+								<Button x:Name="ToggleWindow"
 										Style="{StaticResource ToggleWindowButton}" />
 								<Button x:Name="CloseWindow"
 										Style="{StaticResource CloseWindowButton}" />
@@ -98,65 +99,69 @@
 
 				</Grid>
 
-				<Rectangle VerticalAlignment="Top"
-						   HorizontalAlignment="Stretch"
-						   Fill="Transparent"
-						   Height="5"
-						   Cursor="SizeNS"
-						   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Top')]" />
+				<Grid x:Name="resizeHandles"
+					  Visibility="{Binding ShouldDisplaySystemButtons, Converter={StaticResource booleanToVisibility}}">
+										
+					<Rectangle VerticalAlignment="Top"
+							   HorizontalAlignment="Stretch"
+							   Fill="Transparent"
+							   Height="5"
+							   Cursor="SizeNS"
+							   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Top')]" />
 
-				<Rectangle VerticalAlignment="Bottom"
-						   HorizontalAlignment="Stretch"
-						   Fill="Transparent"
-						   Height="5"
-						   Cursor="SizeNS"
-						   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Bottom')]" />
+					<Rectangle VerticalAlignment="Bottom"
+							   HorizontalAlignment="Stretch"
+							   Fill="Transparent"
+							   Height="5"
+							   Cursor="SizeNS"
+							   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Bottom')]" />
 
-				<Rectangle VerticalAlignment="Stretch"
-						   HorizontalAlignment="Left"
-						   Fill="Transparent"
-						   Width="5"
-						   Cursor="SizeWE"
-						   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Left')]" />
+					<Rectangle VerticalAlignment="Stretch"
+							   HorizontalAlignment="Left"
+							   Fill="Transparent"
+							   Width="5"
+							   Cursor="SizeWE"
+							   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Left')]" />
 
-				<Rectangle VerticalAlignment="Stretch"
-						   HorizontalAlignment="Right"
-						   Fill="Transparent"
-						   Width="5"
-						   Cursor="SizeWE"
-						   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Right')]" />
+					<Rectangle VerticalAlignment="Stretch"
+							   HorizontalAlignment="Right"
+							   Fill="Transparent"
+							   Width="5"
+							   Cursor="SizeWE"
+							   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Right')]" />
 
-				<Rectangle Cursor="SizeNWSE"
-						   VerticalAlignment="Top"
-						   HorizontalAlignment="Left"
-						   Fill="Transparent"
-						   Width="10"
-						   Height="10"
-						   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('TopLeft')]" />
+					<Rectangle Cursor="SizeNWSE"
+							   VerticalAlignment="Top"
+							   HorizontalAlignment="Left"
+							   Fill="Transparent"
+							   Width="10"
+							   Height="10"
+							   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('TopLeft')]" />
 
-				<Rectangle Cursor="SizeNWSE"
-						   VerticalAlignment="Bottom"
-						   HorizontalAlignment="Right"
-						   Fill="Transparent"
-						   Width="10"
-						   Height="10"
-						   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('BottomRight')]" />
+					<Rectangle Cursor="SizeNWSE"
+							   VerticalAlignment="Bottom"
+							   HorizontalAlignment="Right"
+							   Fill="Transparent"
+							   Width="10"
+							   Height="10"
+							   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('BottomRight')]" />
 
-				<Rectangle Cursor="SizeNESW"
-						   VerticalAlignment="Bottom"
-						   HorizontalAlignment="Left"
-						   Fill="Transparent"
-						   Width="10"
-						   Height="10"
-						   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('BottomLeft')]" />
+					<Rectangle Cursor="SizeNESW"
+							   VerticalAlignment="Bottom"
+							   HorizontalAlignment="Left"
+							   Fill="Transparent"
+							   Width="10"
+							   Height="10"
+							   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('BottomLeft')]" />
 
-				<Rectangle Cursor="SizeNESW"
-						   VerticalAlignment="Top"
-						   HorizontalAlignment="Right"
-						   Fill="Transparent"
-						   Width="10"
-						   Height="10"
-						   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('TopRight')]" />
+					<Rectangle Cursor="SizeNESW"
+							   VerticalAlignment="Top"
+							   HorizontalAlignment="Right"
+							   Fill="Transparent"
+							   Width="10"
+							   Height="10"
+							   cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('TopRight')]" />
+				</Grid>
 			</Grid>
 		</Border>
 	</Border>
