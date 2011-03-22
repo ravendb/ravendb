@@ -625,12 +625,14 @@ namespace Raven.Client.Linq
 				//See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
 				case ExpressionType.New:                
 					var newExpression = ((NewExpression) body);
-					newExpressionType = newExpression.Type;
-					foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
-					{
-						FieldsToFetch.Add(field);
-					}
-					break;
+			        newExpressionType = newExpression.Type;
+                    var idProperty = this.luceneQuery.DocumentConvention.GetIdentityProperty(newExpressionType);
+			        var idPropertyName = (idProperty == null) ? string.Empty : idProperty.Name;
+                    foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name).Where(x => !x.Equals(idPropertyName)))
+                    {
+                        FieldsToFetch.Add(field);
+                    }
+			        break;
 				//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
 				case ExpressionType.MemberInit:
 					var memberInitExpression = ((MemberInitExpression)body);
