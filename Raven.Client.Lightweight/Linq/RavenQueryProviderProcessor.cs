@@ -626,13 +626,10 @@ namespace Raven.Client.Linq
 				case ExpressionType.New:                
 					var newExpression = ((NewExpression) body);
 			        newExpressionType = newExpression.Type;
-                    var idProperty = this.luceneQuery.DocumentConvention.GetIdentityProperty(newExpressionType);
+                    var idProperty = luceneQuery.DocumentConvention.GetIdentityProperty(newExpressionType);
 			        var idPropertyName = (idProperty == null) ? string.Empty : idProperty.Name;
                     foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
                     {
-						if (string.IsNullOrEmpty(idPropertyName))
-							continue;
-
                         if (field.Equals(idPropertyName))
                             FieldsToFetch.Add("__document_id");
                         else
