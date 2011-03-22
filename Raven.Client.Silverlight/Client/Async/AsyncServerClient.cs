@@ -423,12 +423,8 @@ namespace Raven.Client.Client.Async
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 					{
 						var json = (JToken)serializer.Deserialize(reader);
-						var indexDefinition = serializer.Deserialize<IndexDefinition>(new JTokenReader(json["Index"]));
-						foreach (JValue field in json.Value<JArray>("Fields"))
-						{
-							indexDefinition.Fields.Add((string)field.Value);
-						}
-						return indexDefinition;
+						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+						return JsonConvert.DeserializeObject<IndexDefinition>(json["Index"].ToString());
 					}
 				});
 		}
