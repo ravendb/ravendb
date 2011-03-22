@@ -136,6 +136,7 @@
     <Compile Include="Bugs\DecimalPrecision.cs" />
     <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
     <Compile Include="Bugs\DocumentUrl.cs" />
+    <Compile Include="Bugs\DTC\UsingDtcForDelete.cs" />
     <Compile Include="Bugs\DTC\UsingDtcForCreate.cs" />
     <Compile Include="Bugs\DTC\UsingDTCForUpdates.cs" />
     <Compile Include="Bugs\DTC\UsingRemoteDTC.cs" />
@@ -173,6 +174,7 @@
     <Compile Include="Bugs\Indexing\IndexingOnDictionary.cs" />
     <Compile Include="Bugs\Indexing\MissingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\RemoteIndexingOnDictionary.cs" />
+    <Compile Include="Bugs\Indexing\UsingSortOptions.cs" />
     <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\TransactionIndexByMrn.cs" />
     <Compile Include="Bugs\Indexing\WillGroupValuesUsingComplexValues.cs" />
@@ -262,7 +264,6 @@
     <Compile Include="Bugs\SortingOnLong.cs" />
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\SpatialQueries.cs" />
-    <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
     <Compile Include="Bugs\TransformResults\ComplexValuesFromTransformResults.cs" />
     <Compile Include="Bugs\TransformResults\StackOverFlowIndexes.cs" />
     <Compile Include="Bugs\TransformResults\StackOverFlowTypes.cs" />

@@ -104,27 +104,27 @@ namespace Raven.Bundles.Replication.Tasks
 
         private bool IsNotFailing(string dest, int currentReplicationAttempts)
         {
-            var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + dest, null);
+			var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(dest), null);
             if (jsonDocument == null)
                 return true;
             var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
             if (failureInformation.FailureCount > 1000)
             {
-                var shouldReplicateTo = currentReplicationAttempts%1000 == 0;
+                var shouldReplicateTo = currentReplicationAttempts%10 == 0;
                 log.DebugFormat("Failure count for {0} is {1}, skipping replication: {2}",
                     dest, failureInformation.FailureCount, shouldReplicateTo == false);
                 return shouldReplicateTo;
             }
             if (failureInformation.FailureCount > 100)
             {
-                var shouldReplicateTo = currentReplicationAttempts % 100 == 0;
+                var shouldReplicateTo = currentReplicationAttempts % 5 == 0;
                 log.DebugFormat("Failure count for {0} is {1}, skipping replication: {2}",
                     dest, failureInformation.FailureCount, shouldReplicateTo == false);
                 return shouldReplicateTo;
             }
             if (failureInformation.FailureCount > 10)
             {
-                var shouldReplicateTo = currentReplicationAttempts % 10 == 0;
+                var shouldReplicateTo = currentReplicationAttempts % 2 == 0;
                 log.DebugFormat("Failure count for {0} is {1}, skipping replication: {2}",
                     dest, failureInformation.FailureCount, shouldReplicateTo == false);
                 return shouldReplicateTo;
@@ -132,7 +132,12 @@ namespace Raven.Bundles.Replication.Tasks
             return true;
         }
 
-        private void WarnIfNoReplicationTargetsWereFound()
+    	private static string EscapeDestinationName(string dest)
+    	{
+    		return Uri.EscapeDataString(dest.Replace("http://", "").Replace("/", "").Replace(":",""));
+    	}
+
+    	private void WarnIfNoReplicationTargetsWereFound()
         {
             if (firstTimeFoundNoReplicationDocument)
             {
@@ -237,20 +242,20 @@ namespace Raven.Bundles.Replication.Tasks
 
         private void IncrementFailureCount(string destination)
         {
-            var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + destination, null);
+			var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
             var failureInformation = new DestinationFailureInformation {Destination = destination};
             if (jsonDocument != null)
             {
                 failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
             }
             failureInformation.FailureCount += 1;
-            docDb.Put(ReplicationConstants.RavenReplicationDestinationsBasePath + destination, null,
+			docDb.Put(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
                       JObject.FromObject(failureInformation), new JObject(), null);
         }
 
         private bool IsFirstFailue(string destination)
         {
-            var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath+destination, null);
+			var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
             if (jsonDocument == null)
                 return true;
             var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
@@ -304,6 +309,7 @@ namespace Raven.Bundles.Replication.Tasks
         {
             try
             {
+            	log.DebugFormat("Starting to replicate {0} documents to {1}", jsonDocuments.Count, destination);
 				var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateDocs?from=" + UrlEncodedServerUrl());
                 request.UseDefaultCredentials = true;
             	request.ContentType = "application/json; charset=utf-8";
@@ -356,7 +362,9 @@ namespace Raven.Bundles.Replication.Tasks
                 {
                     jsonDocuments = new JArray(actions.Documents.GetDocumentsAfter(etag)
                         .Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
-                        .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId) // only replicate documents created on this instance
+                        .Where(x =>
+							x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == null ||
+							x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId) // only replicate documents created on this instance
                         .Where(x=> x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
                         .Select(x=>
                         {
@@ -435,7 +443,7 @@ namespace Raven.Bundles.Replication.Tasks
 
     	private string UrlEncodedServerUrl()
     	{
-			return Uri.EscapeUriString(docDb.Configuration.ServerUrl);
+			return Uri.EscapeDataString(docDb.Configuration.ServerUrl);
     	}
 
     	private string[] GetReplicationDestinations()

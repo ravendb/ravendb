@@ -431,7 +431,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"],
 					Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value);
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"],
-					Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["metadata"], Encoding.Unicode), Encoding.Unicode);
+					Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]));
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"], true);
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
 
