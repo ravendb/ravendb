@@ -31,7 +31,7 @@ namespace Raven.Database.Data
 			// Raven internal headers
 			"Raven-Server-Build",
 			"Non-Authoritive-Information",
-
+			"Raven-Timer-Request",
 
             "Allow",
             "Content-Disposition",
@@ -105,6 +105,9 @@ namespace Raven.Database.Data
 		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
 		public static JObject FilterHeaders(this JObject self, bool isServerDocument)
 		{
+			if (self == null)
+				return self;
+
 			var metadata = new JObject();
 			foreach (var header in self)
 			{
