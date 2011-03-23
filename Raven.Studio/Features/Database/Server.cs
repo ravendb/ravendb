@@ -200,7 +200,7 @@ namespace Raven.Studio.Features.Database
 					                   	{
 					                   		snapshots[CurrentDatabase] = x.Result;
 					                   		statistics.Accept(x.Result);
-					                   		Errors = x.Result.Errors;
+					                   		Errors = x.Result.Errors.OrderByDescending(error => error.Timestamp);
 					                   	});
 			}
 		}
