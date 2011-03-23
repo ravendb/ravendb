@@ -31,6 +31,7 @@
 			<tk:DockPanel>
 				<StackPanel tk:DockPanel.Dock="Right"
 							Margin="8 0 0 0"
+							MaxWidth="260"
 							Visibility="{Binding RelatedErrors, Converter={StaticResource hiddenWhenEmpty}}">
 					<c:Label Content="errors"
 							 HorizontalAlignment="Left" />
