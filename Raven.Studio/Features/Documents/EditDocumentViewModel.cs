@@ -25,7 +25,7 @@ namespace Raven.Studio.Features.Documents
 		private DateTime lastModified;
 		private IDictionary<string, JToken> metadata;
 		private bool nonAuthoritiveInformation;
-		private readonly ObservableCollection<string> references = new ObservableCollection<string>();
+		private readonly BindableCollection<string> references = new BindableCollection<string>();
 
 		[ImportingConstructor]
 		public EditDocumentViewModel(IEventAggregator events)
