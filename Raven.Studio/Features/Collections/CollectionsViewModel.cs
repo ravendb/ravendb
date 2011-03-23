@@ -12,7 +12,6 @@
 	using Documents;
 	using Framework;
 	using Messages;
-	using Plugin;
 	using Raven.Database.Data;
 
 	[Export(typeof(CollectionsViewModel))]

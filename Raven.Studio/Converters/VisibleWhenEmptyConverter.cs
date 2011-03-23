@@ -2,15 +2,12 @@
 {
     using System;
     using System.Collections;
-    using System.Collections.Generic;
     using System.Globalization;
-    using System.Linq;
     using System.Windows;
     using System.Windows.Data;
 
     public class VisibleWhenEmptyConverter : IValueConverter
     {
-        #region IValueConverter Members
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
@@ -24,7 +21,5 @@
         {
             throw new NotImplementedException();
         }
-
-        #endregion
     }
 }

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 #if !SILVERLIGHT
+using System.Runtime.CompilerServices;
 using System.Transactions;
 #endif
 using Newtonsoft.Json.Linq;
@@ -416,21 +417,43 @@ more responsive application.
 		/// <param name="id">The id.</param>
 		protected internal void TrySetIdentity<T>(T entity, string id)
 		{
-			var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
-			if (identityProperty != null && identityProperty.CanWrite)
-			{
-				if (identityProperty.PropertyType == typeof(string))
-				{
-					identityProperty.SetValue(entity, id, null);
-				}
-				else // need converting
-				{
-					var converter = Conventions.IdentityTypeConvertors.FirstOrDefault(x=>x.CanConvertFrom(identityProperty.PropertyType));
-					if(converter == null)
-						throw new ArgumentException("Could not convert identity to type " + identityProperty.PropertyType + " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
+			var entityType = entity.GetType();
+			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
+			if (identityProperty == null) 
+				return;
 
-					identityProperty.SetValue(entity, converter.ConvertTo(id), null);
-				}
+			if (identityProperty.CanWrite)
+			{
+				SetPropertyOrField(identityProperty.PropertyType, val => identityProperty.SetValue(entity, val, null), id);
+			}
+			else 
+			{
+				const BindingFlags privateInstanceField = BindingFlags.Instance|BindingFlags.NonPublic;
+				var fieldInfo = entityType.GetField("<" + identityProperty.Name + ">i__Field", privateInstanceField) ??
+								entityType.GetField("<" + identityProperty.Name + ">k__BackingField", privateInstanceField);
+
+				if (fieldInfo == null)
+					return;
+
+				SetPropertyOrField(identityProperty.PropertyType, val => fieldInfo.SetValue(entity, val), id);
+			}
+		}
+
+		private void SetPropertyOrField(Type propertyOrFieldType, Action<object> setIdenitifer, string id)
+		{
+			if (propertyOrFieldType == typeof (string))
+			{
+				setIdenitifer(id);
+			}
+			else // need converting
+			{
+				var converter =
+					Conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(propertyOrFieldType));
+				if (converter == null)
+					throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
+					                            " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
+
+				setIdenitifer(converter.ConvertTo(id));
 			}
 		}
 

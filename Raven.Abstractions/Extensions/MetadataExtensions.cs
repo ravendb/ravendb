@@ -22,7 +22,6 @@ namespace Raven.Database.Data
         private static readonly HashSet<string> HeadersToIgnoreServerDocument =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     		{
-				"Non-Authoritive-Information",
 				"Content-Type",
 				
     		};
@@ -31,7 +30,8 @@ namespace Raven.Database.Data
 		{
 			// Raven internal headers
 			"Raven-Server-Build",
-
+			"Non-Authoritive-Information",
+			"Raven-Timer-Request",
 
             "Allow",
             "Content-Disposition",
@@ -96,6 +96,30 @@ namespace Raven.Database.Data
 			"Via",
 			"Warning",
 		};
+
+		/// <summary>
+		/// Filters the headers from unwanted headers
+		/// </summary>
+		/// <param name="self">The self.</param>
+		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
+		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static JObject FilterHeaders(this JObject self, bool isServerDocument)
+		{
+			if (self == null)
+				return self;
+
+			var metadata = new JObject();
+			foreach (var header in self)
+			{
+				if (HeadersToIgnoreClient.Contains(header.Key))
+					continue;
+				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
+					continue;
+				var headerName = CaptureHeaderName(header.Key);
+				metadata.Add(headerName, header.Value);
+			}
+			return metadata;
+		}
 
 #if SILVERLIGHT
 		/// <summary>

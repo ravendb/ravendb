@@ -70,7 +70,7 @@ namespace Raven.Database.Server.Responders
 		private void Put(IHttpContext context, string index)
 		{
 			var data = context.ReadJsonObject<IndexDefinition>();
-			if (data.Map == null)
+			if (data == null || data.Map == null)
 			{
 				context.SetStatusToBadRequest();
 				context.Write("Expected json document with 'Map' property");
@@ -128,10 +128,12 @@ namespace Raven.Database.Server.Responders
 				context.SetStatusToNotFound();
 				return;
 			}
+
+			indexDefinition.Fields = Database.GetIndexFields(index);
+
 			context.WriteJson(new
 			{
 				Index = indexDefinition,
-				Fields = Database.GetIndexFields(index)
 			});
 		}
 

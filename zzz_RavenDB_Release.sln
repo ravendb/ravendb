@@ -32,6 +32,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Abstractions.g.3.5", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Silverlight", "Raven.Client.Silverlight\Raven.Client.Silverlight.csproj", "{8A1DB308-D56B-49BC-A421-A2AB32617215}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Studio", "Raven.Studio\Raven.Studio.csproj", "{AB130CB7-E4D4-4496-BEE6-0538963475FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -202,6 +204,16 @@ Global
 		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|x86.ActiveCfg = Release|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

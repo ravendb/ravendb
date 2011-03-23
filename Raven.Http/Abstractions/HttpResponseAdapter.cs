@@ -66,6 +66,11 @@ namespace Raven.Http.Abstractions
 			response.Cache.SetCacheability(HttpCacheability.Public);
 		}
 
+		public void WriteFile(string path)
+		{
+			response.WriteFile(path);
+		}
+
 		public string ContentType
 		{
 			get { return response.ContentType; }

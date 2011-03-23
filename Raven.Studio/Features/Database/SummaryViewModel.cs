@@ -1,4 +1,7 @@
-﻿namespace Raven.Studio.Features.Database
+﻿using System.Threading.Tasks;
+using Raven.Client;
+
+namespace Raven.Studio.Features.Database
 {
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
@@ -9,9 +12,8 @@
 	using Documents;
 	using Framework;
 	using Messages;
-	using Plugin;
 
-	public class SummaryViewModel : Screen, IDatabaseScreenMenuItem,
+	public class SummaryViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
@@ -21,6 +23,7 @@
 
 		[ImportingConstructor]
 		public SummaryViewModel(IServer server, IEventAggregator events)
+			: base(events)
 		{
 			this.server = server;
 			this.events = events;
@@ -70,9 +73,9 @@
 
 		public void NavigateToCollection(Collection collection)
 		{
-			events.Publish( new DatabaseScreenRequested( ()=>
+			events.Publish(new DatabaseScreenRequested(() =>
 			{
-			    var vm = IoC.Get<CollectionsViewModel>();
+				var vm = IoC.Get<CollectionsViewModel>();
 				vm.ActiveCollection = collection;
 				return vm;
 			}));
@@ -82,24 +85,42 @@
 		{
 			using (var session = server.OpenSession())
 			{
-				session.Advanced.AsyncDatabaseCommands
-					.GetCollectionsAsync(0, 25)
-					.ContinueOnSuccess(x =>
-										{
-											Collections = x.Result;
-											NotifyOfPropertyChange(() => LargestCollectionCount);
-											NotifyOfPropertyChange(() => Collections);
-										});
+				WorkStarted("fetching collections");
+				ExecuteCollectionQueryWithRetry(session, 5);
 
+				WorkStarted("fetching recent documents");
 				session.Advanced.AsyncDatabaseCommands
 					.GetDocumentsAsync(0, 12)
 					.ContinueOnSuccess(x =>
 										{
-											RecentDocuments = new BindableCollection<DocumentViewModel>(
-												x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
+											RecentDocuments = new BindableCollection<DocumentViewModel>(x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
 											NotifyOfPropertyChange(() => RecentDocuments);
+											WorkCompleted("fetching recent documents");
 										});
 			}
+		}
+
+		private void ExecuteCollectionQueryWithRetry(IAsyncDocumentSession session, int retry)
+		{
+			session.Advanced.AsyncDatabaseCommands
+				.GetCollectionsAsync(0, 25)
+				.ContinueWith(task =>
+				{
+					if(task.Exception != null && retry > 0)
+					{
+						TaskEx.Delay(50)
+							.ContinueWith(_ => ExecuteCollectionQueryWithRetry(session, retry - 1));
+						return;
+					}
+
+					task.ContinueOnSuccess(x =>
+					{
+						Collections = x.Result;
+						NotifyOfPropertyChange(() => LargestCollectionCount);
+						NotifyOfPropertyChange(() => Collections);
+						WorkCompleted("fetching collections");
+					});
+				});
 		}
 	}
 }

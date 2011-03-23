@@ -52,6 +52,8 @@
 					  Offset="0" />
 	</LinearGradientBrush>
 
+	<SolidColorBrush x:Key="SelectedItemHighlightBrush"
+					 Color="#ffdcdcdc" />
 
 	<Color x:Key="HighlightDarkColor">#FF119EDA</Color>
 	<Color x:Key="HighlightLightColor">#FFB2E0F4</Color>
@@ -78,5 +80,16 @@
 	</LinearGradientBrush>
 	<SolidColorBrush x:Key="DefaultScreenBackground"
 					 Color="White" />
+	<LinearGradientBrush x:Key="DividerBrush"
+						 EndPoint="0.5,1"
+						 StartPoint="0.5,0">
+		<GradientStop Color="#00123C65" />
+		<GradientStop Color="#BF123C65"
+					  Offset="0.25" />
+		<GradientStop Color="#00123C65"
+					  Offset="1" />
+		<GradientStop Color="#BF123C65"
+					  Offset="0.75" />
+	</LinearGradientBrush>
 
 </ResourceDictionary>

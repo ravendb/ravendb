@@ -20,5 +20,6 @@ namespace Raven.Http.Abstractions
 		void Redirect(string url);
 		void Close();
 		void SetPublicCachability();
+		void WriteFile(string path);
 	}
 }

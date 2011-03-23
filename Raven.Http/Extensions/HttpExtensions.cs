@@ -388,40 +388,52 @@ namespace Raven.Http.Extensions
 		public static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string ravenPath, string docPath)
 		{
 			var filePath = Path.Combine(ravenPath, docPath);
+			context.Response.ContentType = GetContentType(docPath);
+			switch (File.Exists(filePath))
+			{
+				case false:
+					WriteEmbeddedFile(context, asm, docPath);
+					break;
+				default:
+					WriteFile(context, filePath);
+					break;
+			}
+		}
+
+		private static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string docPath)
+		{
 			byte[] bytes;
 			var etagValue = context.Request.Headers["If-Match"];
-			context.Response.ContentType = GetContentType(docPath);
-			if (File.Exists(filePath) == false)
+			if (etagValue == EmbeddedLastChangedDate)
 			{
-				if (etagValue == EmbeddedLastChangedDate)
+				context.SetStatusToNotModified();
+				return;
+			}
+			string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", "."); 
+			using (var resource = asm.GetManifestResourceStream(resourceName))
+			{
+				if (resource == null)
 				{
-					context.SetStatusToNotModified();
+					context.SetStatusToNotFound();
 					return;
 				}
-				string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", "."); 
-				using (var resource = asm.GetManifestResourceStream(resourceName))
-				{
-					if (resource == null)
-					{
-						context.SetStatusToNotFound();
-						return;
-					}
-					bytes = resource.ReadData();
-				}
-				context.Response.AddHeader("ETag", EmbeddedLastChangedDate);
+				bytes = resource.ReadData();
 			}
-			else
-			{
-				var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
-				if (etagValue == fileEtag)
-				{
-					context.SetStatusToNotModified();
-					return;
-				}
-				bytes = File.ReadAllBytes(filePath);
-				context.Response.AddHeader("ETag", fileEtag);
-			}
+			context.Response.AddHeader("ETag", EmbeddedLastChangedDate);
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
+		}
+
+		public static void WriteFile(this IHttpContext context, string filePath)
+		{
+			var etagValue = context.Request.Headers["If-Match"];
+			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
+			if (etagValue == fileEtag)
+			{
+				context.SetStatusToNotModified();
+				return;
+			}
+			context.Response.AddHeader("ETag", fileEtag);
+			context.Response.WriteFile(filePath);
 		}
 
 		private static string GetContentType(string docPath)

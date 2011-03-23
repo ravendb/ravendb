@@ -7,7 +7,6 @@
 	using Features.Documents;
 	using Framework;
 	using Messages;
-	using Plugin;
 
 	public class EditDocumentById
 	{

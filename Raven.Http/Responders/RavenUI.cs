@@ -33,7 +33,5 @@ namespace Raven.Http.Responders
 			var docPath = context.GetRequestUrl().Replace("/raven/", "");
 			context.WriteEmbeddedFile(ResourceStore.GetType().Assembly,Settings.WebDir, docPath);
 		}
-
-		
 	}
 }

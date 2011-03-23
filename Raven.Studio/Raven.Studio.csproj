@@ -62,6 +62,15 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.Text.Silverlight">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Text.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.Shared.Silverlight">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Shared.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
@@ -112,10 +121,19 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
+    <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
+    <Compile Include="Commands\CopyServerError.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Controls\Editors\JsonEditor.cs" />
+    <Compile Include="Controls\Editors\LinqEditor.cs" />
+    <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
+    <Compile Include="Controls\Editors\XamlEditor.cs" />
+    <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
+    <Compile Include="Features\Database\IServer.cs" />
+    <Compile Include="Features\Statistics\IStatisticsItem.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
@@ -130,11 +148,15 @@
     <Compile Include="Features\StartUp\DefaultDatabaseInitializer.cs" />
     <Compile Include="Features\StartUp\IDatabaseInitializer.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
+    <Compile Include="Features\Statistics\IStatisticsSet.cs" />
+    <Compile Include="Features\Statistics\Statistic.cs" />
+    <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
     <Compile Include="Framework\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
+    <Compile Include="Framework\SimpleLogger.cs" />
     <Compile Include="Messages\CollectionTemplateUpdated.cs" />
     <Compile Include="Messages\DatabaseScreenRequested.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
@@ -159,7 +181,6 @@
     <Compile Include="Converters\BooleanToOppositeBooleanConverter.cs" />
     <Compile Include="Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
-    <Compile Include="Converters\CategoryIsActiveConverter.cs" />
     <Compile Include="Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Converters\EnumToIntConverter.cs" />
     <Compile Include="Converters\HowLongSinceConverter.cs" />
@@ -237,6 +258,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
+    <Page Include="Data\ServerErrorView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Collections\CollectionsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -284,6 +309,10 @@
     <Page Include="Features\Query\QueryView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Statistics\StatisticsView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Statistics\ErrorsView.xaml">
       <SubType>Designer</SubType>
@@ -362,10 +391,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Resources\ControlTemplates\JeffWilcox.SyntaxHighlighting.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Resources\ControlTemplates\Menu.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -384,6 +409,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Controls\Editors\Definitions\CSharp.langdef" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\JScript.langdef" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>
@@ -393,10 +421,6 @@
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
       <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
       <Name>Raven.Client.Silverlight</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Studio.Plugin\Raven.Studio.Plugin.csproj">
-      <Project>{0BA36A77-F8CA-400C-8F89-3726143BFA96}</Project>
-      <Name>Raven.Studio.Plugin</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -410,6 +434,9 @@
   </ItemGroup>
   <ItemGroup>
     <DesignData Include="SampleData\BrowseDocumentsViewModelSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+    </DesignData>
+    <DesignData Include="SampleData\CollectionsViewModelSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\ServerErrorSampleData.xaml">
@@ -432,6 +459,7 @@
     </VisualStudio>
   </ProjectExtensions>
   <PropertyGroup>
-    <PostBuildEvent>copy /y "$(TargetDir)$(TargetName).xap" "$(SolutionDir)\Raven.Database\Server\WebUI\Raven.Studio.xap"</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>

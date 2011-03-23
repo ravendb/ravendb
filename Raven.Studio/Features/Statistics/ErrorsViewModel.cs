@@ -3,7 +3,7 @@
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Plugin;
+	using Database;
 	using Raven.Database.Data;
 
 	[Export]
@@ -16,12 +16,12 @@
 		{
 			DisplayName = "Errors";
 			this.server = server;
-			//server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange( ()=> Errors );};
+			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange( ()=> Errors );};
 		}
 
 		public IEnumerable<ServerError> Errors
 		{
-			get { return server.Statistics.Errors; }
+			get { return server.Errors; }
 		}
 
 		public IServer Server

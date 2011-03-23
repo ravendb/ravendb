@@ -2,10 +2,10 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
+	using Features.Database;
 	using Features.Indexes;
 	using Framework;
 	using Messages;
-	using Plugin;
 
 	public class EditIndex
 	{

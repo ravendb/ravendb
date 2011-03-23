@@ -8,9 +8,9 @@
 	using System.Windows.Markup;
 	using System.Windows.Media;
 	using Caliburn.Micro;
+	using Database;
 	using Framework;
 	using Messages;
-	using Plugin;
 
 	[Export(typeof (IDocumentTemplateProvider))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
