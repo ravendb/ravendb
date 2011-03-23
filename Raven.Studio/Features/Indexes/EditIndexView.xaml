@@ -28,20 +28,11 @@
 				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
 
-			<tk:DockPanel>
-				<StackPanel tk:DockPanel.Dock="Right"
-							Margin="8 0 0 0"
-							Visibility="{Binding RelatedErrors, Converter={StaticResource hiddenWhenEmpty}}">
-					<c:Label Content="errors"
-							 HorizontalAlignment="Left" />
-					<ItemsControl ItemsSource="{Binding RelatedErrors}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<ContentControl cm:View.Model="{Binding}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</StackPanel>
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition MinWidth="300" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
 
 				<Grid>
 					<Grid.ColumnDefinitions>
@@ -182,7 +173,22 @@
 						</ItemsControl.ItemTemplate>
 					</ItemsControl>
 				</Grid>
-			</tk:DockPanel>
+
+				<StackPanel Grid.Column="1"
+				            Margin="8 0 0 0"
+				            MaxWidth="260"
+				            Visibility="{Binding RelatedErrors, Converter={StaticResource hiddenWhenEmpty}}">
+					<c:Label Content="errors"
+					         HorizontalAlignment="Left" />
+					<ItemsControl ItemsSource="{Binding RelatedErrors}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<ContentControl cm:View.Model="{Binding}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</StackPanel>
+			</Grid>
 
 			<tk:DockPanel x:Name="query"
 						  Grid.Row="1"
