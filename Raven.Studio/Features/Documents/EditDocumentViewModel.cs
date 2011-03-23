@@ -15,7 +15,6 @@
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class EditDocumentViewModel : Screen
 	{
-		readonly IEventAggregator events;
 		JsonDocument document;
 		string id;
 		string jsonData;
@@ -25,8 +24,6 @@
 		[ImportingConstructor]
 		public EditDocumentViewModel(IEventAggregator events)
 		{
-			this.events = events;
-
 			metadata = new Dictionary<string, JToken>();
 
 			Id = "";
@@ -69,7 +66,31 @@
 			}
 		}
 
-		public IDictionary<string, JToken> Metadata
+		private bool nonAuthoritiveInformation;
+
+		public bool NonAuthoritiveInformation
+		{
+			get { return nonAuthoritiveInformation; }
+			set
+			{
+				nonAuthoritiveInformation = value;
+				NotifyOfPropertyChange(()=>NonAuthoritiveInformation);
+			}
+		}
+
+		
+		private string etag;
+    	public string Etag
+    	{
+    		get { return etag; }
+    		set
+    		{
+    			etag = value;
+    			NotifyOfPropertyChange(() => Etag);
+    		}
+    	}
+
+    	public IDictionary<string, JToken> Metadata
 		{
 			get { return metadata; }
 		}
@@ -110,12 +131,14 @@
 
 	        metadata = ParseJsonToDictionary(document.Metadata);
 
-	        LastModified = metadata.IfPresent<DateTime>("Last-Modified");
+	    	LastModified = document.LastModified;
 	        CollectionType = DocumentViewModel.DetermineCollectionType(document.Metadata);
 	        ClrType = metadata.IfPresent<string>("Raven-Clr-Type");
+	    	Etag = document.Etag.ToString();
+			NonAuthoritiveInformation = document.NonAuthoritiveInformation;
 	    }
 
-	    public void PrepareForSave()
+    	public void PrepareForSave()
 		{
 			document.DataAsJson = ToJObject(JsonData);
 			document.Metadata = ToJObject(JsonMetadata);

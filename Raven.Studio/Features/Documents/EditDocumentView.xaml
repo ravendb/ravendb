@@ -107,6 +107,7 @@
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
 				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
 
@@ -154,16 +155,58 @@
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
+			<Grid Margin="0,12,0,0"
+				  Grid.Row="2">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="*" />
+				</Grid.RowDefinitions>
 
-			<StackPanel Orientation="Vertical"
-						Grid.Row="2"
-						Margin="0,12,0,0"
-						Grid.RowSpan="2">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="120" />
+					<ColumnDefinition Width="8" />
+					<ColumnDefinition />
+				</Grid.ColumnDefinitions>
+
 				<TextBlock  Style="{StaticResource PanelTitle}"
-							Text="REFERENCES"
+							Text="DETAILS"
 							Margin="12,6,0,6" />
-				<ItemsControl Margin="0,0,0,12" />
-			</StackPanel>
+
+				<TextBlock HorizontalAlignment="Right"
+						   TextWrapping="Wrap"
+						   FontSize="12"
+						   VerticalAlignment="Top"
+						   Text="ETag"
+						   Grid.Row="1"
+						   Foreground="#99000000"
+						   Margin="0,2,0,0" />
+				<TextBlock HorizontalAlignment="Left"
+						   TextWrapping="Wrap"
+						   VerticalAlignment="Top"
+						   Grid.Row="1"
+						   Grid.Column="2"
+						   Text="{Binding ETag}"
+						   FontSize="14.667" />
+
+				<TextBlock HorizontalAlignment="Right"
+						   TextWrapping="Wrap"
+						   FontSize="12"
+						   VerticalAlignment="Top"
+						   Text="Last-Modified"
+						   Foreground="#99000000"
+						   Grid.Row="2"
+						   Margin="0,2,0,0" />
+				<TextBlock HorizontalAlignment="Left"
+						   TextWrapping="Wrap"
+						   VerticalAlignment="Top"
+						   Grid.Row="2"
+						   Grid.Column="2"
+						   Text="{Binding LastModified}"
+						   FontSize="14.667" />
+			</Grid>
+			
 		</Grid>
 
 		<!--TODO: to be replaced -->
