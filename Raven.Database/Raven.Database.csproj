@@ -346,6 +346,8 @@
     <Compile Include="Server\RavenDbHttpServer.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
+    <Compile Include="Server\Responders\AdminStartIndexing.cs" />
+    <Compile Include="Server\Responders\AdminStopIndexing.cs" />
     <Compile Include="Server\Responders\BuildVersion.cs" />
     <Compile Include="Server\Responders\ClientAccessPolicy.cs" />
     <Compile Include="Server\Responders\Databases.cs" />
