@@ -9,9 +9,10 @@ namespace Raven.Http.Responders
 {
 	public class RavenRoot : AbstractRequestResponder
 	{
+		public const string RootPath = "/raven/studio.html";
 		public override string UrlPattern
 		{
-			get { return "^/raven$"; }
+			get { return "^/(raven)?$"; }
 		}
 
 		public override string[] SupportedVerbs
@@ -22,12 +23,12 @@ namespace Raven.Http.Responders
 		public override void Respond(IHttpContext context)
 		{
 			if(Settings.VirtualDirectory != "/")
-				context.Response.Redirect( Settings.VirtualDirectory + "/raven/index.html");
+				context.Response.Redirect( Settings.VirtualDirectory + RootPath);
 			else
-				context.Response.Redirect("/raven/index.html");
+				context.Response.Redirect(RootPath);
 		}
 
-        public override bool IsUserInterfaceRequest
+		public override bool IsUserInterfaceRequest
         {
             get
             {
