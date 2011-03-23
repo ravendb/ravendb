@@ -1,25 +1,28 @@
-﻿namespace Raven.Studio.Features.Documents
-{
-	using System;
-	using System.Collections.Generic;
-	using System.ComponentModel.Composition;
-	using System.Text;
-	using Caliburn.Micro;
-	using Framework;
-	using Newtonsoft.Json;
-	using Newtonsoft.Json.Linq;
-	using Raven.Database;
-	using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.Linq;
+using System.Text;
+using Caliburn.Micro;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Database;
+using Raven.Studio.Framework;
 
-    [Export(typeof(EditDocumentViewModel))]
+namespace Raven.Studio.Features.Documents
+{
+	[Export(typeof (EditDocumentViewModel))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class EditDocumentViewModel : Screen
 	{
-		JsonDocument document;
-		string id;
-		string jsonData;
-		string jsonMetadata;
-		IDictionary<string, JToken> metadata;
+		private JsonDocument document;
+		private string etag;
+		private string id;
+		private string jsonData;
+		private string jsonMetadata;
+		private DateTime lastModified;
+		private IDictionary<string, JToken> metadata;
+		private bool nonAuthoritiveInformation;
 
 		[ImportingConstructor]
 		public EditDocumentViewModel(IEventAggregator events)
@@ -34,7 +37,16 @@
 
 		public string ClrType { get; private set; }
 		public string CollectionType { get; private set; }
-		public DateTime LastModified { get; private set; }
+
+		public DateTime LastModified
+		{
+			get { return lastModified; }
+			set
+			{
+				lastModified = value;
+				NotifyOfPropertyChange(() => LastModified);
+			}
+		}
 
 		public string Id
 		{
@@ -66,31 +78,28 @@
 			}
 		}
 
-		private bool nonAuthoritiveInformation;
-
 		public bool NonAuthoritiveInformation
 		{
 			get { return nonAuthoritiveInformation; }
 			set
 			{
 				nonAuthoritiveInformation = value;
-				NotifyOfPropertyChange(()=>NonAuthoritiveInformation);
+				NotifyOfPropertyChange(() => NonAuthoritiveInformation);
 			}
 		}
 
-		
-		private string etag;
-    	public string Etag
-    	{
-    		get { return etag; }
-    		set
-    		{
-    			etag = value;
-    			NotifyOfPropertyChange(() => Etag);
-    		}
-    	}
 
-    	public IDictionary<string, JToken> Metadata
+		public string Etag
+		{
+			get { return etag; }
+			set
+			{
+				etag = value;
+				NotifyOfPropertyChange(() => Etag);
+			}
+		}
+
+		public IDictionary<string, JToken> Metadata
 		{
 			get { return metadata; }
 		}
@@ -104,41 +113,41 @@
 
 		public void Initialize(JsonDocument doc)
 		{
-		    document = doc;
+			document = doc;
 
-		    UpdateDocumentFromJsonDocument();
+			UpdateDocumentFromJsonDocument();
 		}
 
-	    public void UpdateDocumentFromJsonDocument()
-	    {
-	        Id = document.Key;
-	        JsonData = PrepareRawJsonString(document.DataAsJson);
+		public void UpdateDocumentFromJsonDocument()
+		{
+			Id = document.Key;
+			JsonData = PrepareRawJsonString(document.DataAsJson);
 
-	        IsProjection = string.IsNullOrEmpty(Id) && (document.Metadata == null);
+			IsProjection = string.IsNullOrEmpty(Id) && (document.Metadata == null);
 
-	        if (IsProjection) return;
+			if (IsProjection) return;
 
-            if (document.Metadata != null)
-            {
-                foreach (var property in document.Metadata.Properties().ToList())
-                {
-                    if(property.Name.StartsWith("@"))
-                        property.Remove();
-                }
-            }
+			if (document.Metadata != null)
+			{
+				foreach (JProperty property in document.Metadata.Properties().ToList())
+				{
+					if (property.Name.StartsWith("@"))
+						property.Remove();
+				}
+			}
 
-	        JsonMetadata = PrepareRawJsonString(document.Metadata);
+			JsonMetadata = PrepareRawJsonString(document.Metadata);
 
-	        metadata = ParseJsonToDictionary(document.Metadata);
+			metadata = ParseJsonToDictionary(document.Metadata);
 
-	    	LastModified = document.LastModified;
-	        CollectionType = DocumentViewModel.DetermineCollectionType(document.Metadata);
-	        ClrType = metadata.IfPresent<string>("Raven-Clr-Type");
-	    	Etag = document.Etag.ToString();
+			LastModified = document.LastModified;
+			CollectionType = DocumentViewModel.DetermineCollectionType(document.Metadata);
+			ClrType = metadata.IfPresent<string>("Raven-Clr-Type");
+			Etag = document.Etag.ToString();
 			NonAuthoritiveInformation = document.NonAuthoritiveInformation;
-	    }
+		}
 
-    	public void PrepareForSave()
+		public void PrepareForSave()
 		{
 			document.DataAsJson = ToJObject(JsonData);
 			document.Metadata = ToJObject(JsonMetadata);
@@ -149,7 +158,7 @@
 			NotifyOfPropertyChange(() => Metadata);
 		}
 
-		static JObject ToJObject(string json)
+		private static JObject ToJObject(string json)
 		{
 			return string.IsNullOrEmpty(json) ? new JObject() : JObject.Parse(json);
 		}
@@ -160,13 +169,13 @@
 			JsonMetadata = Prettify(JsonMetadata);
 		}
 
-    	private static string Prettify(string json)
-    	{
+		private static string Prettify(string json)
+		{
 			//NOTE: is there a better way to reformat the json? This seems heavy.
 			return JsonConvert.SerializeObject(JsonConvert.DeserializeObject(json), Formatting.Indented);
-    	}
+		}
 
-    	static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
+		private static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
 		{
 			IDictionary<string, JToken> result = new Dictionary<string, JToken>();
 
@@ -178,9 +187,9 @@
 			return result;
 		}
 
-		static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, JToken>> data)
+		private static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, JToken>> data)
 		{
-			var result = new StringBuilder().AppendLine("{");
+			StringBuilder result = new StringBuilder().AppendLine("{");
 
 			foreach (var item in data)
 			{
@@ -192,7 +201,7 @@
 			return result.ToString();
 		}
 
-		static string InitialJsonData()
+		private static string InitialJsonData()
 		{
 			return @"{
 	""PropertyName"": """"

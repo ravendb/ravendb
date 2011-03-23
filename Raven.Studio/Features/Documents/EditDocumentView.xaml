@@ -187,7 +187,7 @@
 						   VerticalAlignment="Top"
 						   Grid.Row="1"
 						   Grid.Column="2"
-						   Text="{Binding ETag}"
+						   Text="{Binding Etag}"
 						   FontSize="14.667" />
 
 				<TextBlock HorizontalAlignment="Right"
