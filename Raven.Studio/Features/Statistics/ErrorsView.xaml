@@ -27,19 +27,21 @@
 
 		<Grid Grid.Row="1">
 			<Grid.ColumnDefinitions>
-				<ColumnDefinition />
+				<ColumnDefinition Width="2*" />
 				<ColumnDefinition />
 			</Grid.ColumnDefinitions>
 
-			<ItemsControl BorderThickness="0"
-						  ItemsSource="{Binding Server.Errors}">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<ContentControl cm:View.Model="{Binding}" />
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
-
+			<ScrollViewer BorderThickness="0"
+						  VerticalScrollBarVisibility="Auto">
+				<ItemsControl BorderThickness="0"
+							  ItemsSource="{Binding Server.Errors}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<ContentControl cm:View.Model="{Binding}" />
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</ScrollViewer>
 		</Grid>
 	</Grid>
 
