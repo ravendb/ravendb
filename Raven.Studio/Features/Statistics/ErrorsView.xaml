@@ -54,27 +54,37 @@
 						  ItemsSource="{Binding Server.Errors}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
-						<tk:DockPanel d:DesignWidth="595" d:DesignHeight="121" d:DataContext="{d:DesignData /SampleData/ServerErrorSampleData.xaml}">
-							<StackPanel Margin="0 0 0 8">
-								<TextBlock Text="{Binding Error}"
-									Style="{StaticResource Error}" />
+						<Border d:DesignWidth="420"
+								d:DesignHeight="120"
+								BorderBrush="{StaticResource DividerBrush}"
+								BorderThickness="1,0,0,0"
+								CornerRadius="5"
+								Margin="0,0,0,6"
+								Padding="6 0 0 0"
+								VerticalAlignment="Top"
+								HorizontalAlignment="Left">
+							<tk:DockPanel d:DataContext="{d:DesignData /SampleData/ServerErrorSampleData.xaml}">
+								<StackPanel Margin="0 0 0 8">
+									<TextBlock Text="{Binding Error}"
+											   Style="{StaticResource Error}" />
 
-								<tk:WrapPanel Orientation="Horizontal">
-									<TextBlock Text="Occurred while indexing document " />
-									<HyperlinkButton Content="{Binding Document}"
-										cm:Action.TargetWithoutContext="EditDocumentById"
-										cm:Message.Attach="Execute($this.Content)" />
-									<TextBlock Text=" with " />
-									<HyperlinkButton Content="{Binding Index}"
-										cm:Action.TargetWithoutContext="EditIndex"
-										cm:Message.Attach="Execute($this.Content)" />
-									
-								</tk:WrapPanel>
+									<tk:WrapPanel Orientation="Horizontal">
+										<TextBlock Text="Occurred while indexing document " />
+										<HyperlinkButton Content="{Binding Document}"
+														 cm:Action.TargetWithoutContext="EditDocumentById"
+														 cm:Message.Attach="Execute($this.Content)" />
+										<TextBlock Text=" with " />
+										<HyperlinkButton Content="{Binding Index}"
+														 cm:Action.TargetWithoutContext="EditIndex"
+														 cm:Message.Attach="Execute($this.Content)" />
 
-								<TextBlock Text="{Binding Timestamp, Converter={StaticResource howLongSince}}"
-									Style="{StaticResource howLongSinceStyle}" />
-							</StackPanel>
-						</tk:DockPanel>
+									</tk:WrapPanel>
+
+									<TextBlock Text="{Binding Timestamp, Converter={StaticResource howLongSince}}"
+											   Style="{StaticResource howLongSinceStyle}" />
+								</StackPanel>
+							</tk:DockPanel>
+						</Border>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
