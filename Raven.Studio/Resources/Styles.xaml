@@ -10,6 +10,14 @@
 		<ResourceDictionary Source="Fonts.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
+	<Style x:Key="howLongSinceStyle"
+		   TargetType="TextBlock">
+		<Setter Property="Foreground"
+				Value="{StaticResource AccentTextBrush}" />
+		<Setter Property="FontStyle"
+				Value="Italic" />
+	</Style>
+
 	<Style x:Key="SectionHeader"
 		   TargetType="TextBlock">
 		<Setter Property="FontFamily"

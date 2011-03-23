@@ -12,5 +12,6 @@
 	<converters:HowLongSinceConverter x:Key="howLongSince" />
 	<converters:TypeToBrushConverter x:Key="typeToBrush" />
     <converters:VisibleWhenEmptyConverter x:Key="visibleWhenEmpty" />
+	<converters:HiddenWhenEmptyConverter x:Key="hiddenWhenEmpty" />
 
 </ResourceDictionary>

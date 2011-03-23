@@ -9,25 +9,6 @@
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
 
-	<UserControl.Resources>
-		<Style x:Key="Error"
-			   TargetType="TextBlock">
-			<Setter Property="Foreground"
-					Value="DarkRed" />
-			<Setter Property="FontSize"
-					Value="16" />
-		</Style>
-
-		<Style x:Key="howLongSinceStyle"
-			   TargetType="TextBlock">
-			<Setter Property="Foreground"
-					Value="{StaticResource AccentTextBrush}" />
-			<Setter Property="FontStyle"
-					Value="Italic" />
-		</Style>
-
-	</UserControl.Resources>
-
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -54,37 +35,7 @@
 						  ItemsSource="{Binding Server.Errors}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
-						<Border d:DesignWidth="420"
-								d:DesignHeight="120"
-								BorderBrush="{StaticResource DividerBrush}"
-								BorderThickness="1,0,0,0"
-								CornerRadius="5"
-								Margin="0,0,0,6"
-								Padding="6 0 0 0"
-								VerticalAlignment="Top"
-								HorizontalAlignment="Left">
-							<tk:DockPanel d:DataContext="{d:DesignData /SampleData/ServerErrorSampleData.xaml}">
-								<StackPanel Margin="0 0 0 8">
-									<TextBlock Text="{Binding Error}"
-											   Style="{StaticResource Error}" />
-
-									<tk:WrapPanel Orientation="Horizontal">
-										<TextBlock Text="Occurred while indexing document " />
-										<HyperlinkButton Content="{Binding Document}"
-														 cm:Action.TargetWithoutContext="EditDocumentById"
-														 cm:Message.Attach="Execute($this.Content)" />
-										<TextBlock Text=" with " />
-										<HyperlinkButton Content="{Binding Index}"
-														 cm:Action.TargetWithoutContext="EditIndex"
-														 cm:Message.Attach="Execute($this.Content)" />
-
-									</tk:WrapPanel>
-
-									<TextBlock Text="{Binding Timestamp, Converter={StaticResource howLongSince}}"
-											   Style="{StaticResource howLongSinceStyle}" />
-								</StackPanel>
-							</tk:DockPanel>
-						</Border>
+						<ContentControl cm:View.Model="{Binding}" />
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>

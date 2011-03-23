@@ -45,7 +45,13 @@ namespace Raven.Studio.Features.Indexes
 
 			QueryResults = new BindablePagedQuery<DocumentViewModel>(
 				(start, size) => { throw new Exception("Replace this when executing the query."); });
+
+			RelatedErrors = (from error in this.server.Errors
+							where error.Index == index.Name
+							select error).ToList();
 		}
+
+		public IEnumerable<ServerError> RelatedErrors { get; private set; }
 
 		public string Name
 		{
@@ -88,7 +94,7 @@ namespace Raven.Studio.Features.Indexes
 			get { return index.TransformResults; }
 			set
 			{
-				if(index.TransformResults == null && string .IsNullOrEmpty(value)) return;
+				if (index.TransformResults == null && string.IsNullOrEmpty(value)) return;
 				CheckForDirt(index.TransformResults, value);
 				index.TransformResults = value;
 				NotifyOfPropertyChange(() => TransformResults);
@@ -150,11 +156,11 @@ namespace Raven.Studio.Features.Indexes
 				session.Advanced.AsyncDatabaseCommands
 					.PutIndexAsync(Name, index, true)
 					.ContinueOnSuccess(task =>
-					                   	{
-					                   		IsDirty = false;
-					                   		WorkCompleted("saving index " + Name);
-					                   		Events.Publish(new IndexUpdated {Index = this});
-					                   	});
+										{
+											IsDirty = false;
+											WorkCompleted("saving index " + Name);
+											Events.Publish(new IndexUpdated { Index = this });
+										});
 			}
 		}
 
@@ -166,10 +172,10 @@ namespace Raven.Studio.Features.Indexes
 				session.Advanced.AsyncDatabaseCommands
 					.DeleteIndexAsync(Name)
 					.ContinueOnSuccess(task =>
-					                   	{
-					                   		WorkCompleted("removing index " + Name);
-					                   		Events.Publish(new IndexUpdated {Index = this, IsRemoved = true});
-					                   	});
+										{
+											WorkCompleted("removing index " + Name);
+											Events.Publish(new IndexUpdated { Index = this, IsRemoved = true });
+										});
 			}
 		}
 
@@ -183,7 +189,7 @@ namespace Raven.Studio.Features.Indexes
 				var field = Fields.FirstOrDefault(f => f.Name == localItem.Key);
 				if (field == null)
 				{
-					field = new FieldProperties {Name = localItem.Key};
+					field = new FieldProperties { Name = localItem.Key };
 					Fields.Add(field);
 				}
 				setter(field, localItem.Value);
@@ -233,21 +239,21 @@ namespace Raven.Studio.Features.Indexes
 			{
 				var indexName = Name;
 				var query = new IndexQuery
-				            	{
-				            		Start = start,
-				            		PageSize = pageSize,
-				            	};
+								{
+									Start = start,
+									PageSize = pageSize,
+								};
 
 				return session.Advanced.AsyncDatabaseCommands
 					.QueryAsync(indexName, query, null)
 					.ContinueWith(x =>
-					              	{
-					              		QueryResults.GetTotalResults = () => x.Result.TotalResults;
+									{
+										QueryResults.GetTotalResults = () => x.Result.TotalResults;
 
-					              		return x.Result.Results
-					              			.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
-					              			.ToArray();
-					              	});
+										return x.Result.Results
+											.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
+											.ToArray();
+									});
 			}
 		}
 	}
