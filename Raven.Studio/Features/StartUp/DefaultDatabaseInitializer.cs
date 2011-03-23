@@ -18,10 +18,10 @@
 		public IEnumerable<Task> Initialize(IAsyncDocumentSession session)
 		{
 			yield return session.Advanced.AsyncDatabaseCommands
-				.PutIndexAsync<RavenDocumentsByEntityName>(true);
+				.PutIndexAsync<RavenDocumentsByEntityName>(false);
 				
 			yield return session.Advanced.AsyncDatabaseCommands
-				.PutIndexAsync<RavenCollections>(true);
+				.PutIndexAsync<RavenCollections>(false);
 
 			SimpleLogger.Start("preloading collection templates");
 			var templateProvider = IoC.Get<IDocumentTemplateProvider>();
