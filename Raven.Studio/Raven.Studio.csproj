@@ -149,6 +149,7 @@
     <Compile Include="Features\StartUp\IDatabaseInitializer.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
     <Compile Include="Features\Statistics\IStatisticsSet.cs" />
+    <Compile Include="Features\Statistics\StaleIndexesViewModel.cs" />
     <Compile Include="Features\Statistics\Statistic.cs" />
     <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
     <Compile Include="Framework\BindableCollectionExtensions.cs" />
@@ -201,6 +202,7 @@
     <Compile Include="Messages\DocumentDeleted.cs" />
     <Compile Include="Messages\NavigationOccurred.cs" />
     <Compile Include="Commands\OpenErrorsScreen.cs" />
+    <Compile Include="Messages\StatisticsUpdated.cs" />
     <Compile Include="Messages\StatisticsUpdateRequested.cs" />
     <Compile Include="Features\Database\Server.cs" />
     <Compile Include="Features\Indexes\FieldProperties.cs" />
@@ -307,6 +309,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Query\QueryView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Statistics\StaleIndexesView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

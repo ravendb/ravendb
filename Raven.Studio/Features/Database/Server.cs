@@ -20,6 +20,7 @@ namespace Raven.Studio.Features.Database
 	public class Server : PropertyChangedBase, IServer, IHandle<StatisticsUpdateRequested>
 	{
 		const string DefaultDatabaseName = "Default Database";
+		readonly IEventAggregator events;
 		readonly IDatabaseInitializer[] databaseInitializers;
 
 		readonly Dictionary<string, DatabaseStatistics> snapshots = new Dictionary<string, DatabaseStatistics>();
@@ -41,6 +42,7 @@ namespace Raven.Studio.Features.Database
 		[ImportingConstructor]
 		public Server(IEventAggregator events, [ImportMany] IDatabaseInitializer[] databaseInitializers, StatisticsViewModel statistics)
 		{
+			this.events = events;
 			this.databaseInitializers = databaseInitializers;
 			this.statistics = statistics;
 
@@ -201,6 +203,7 @@ namespace Raven.Studio.Features.Database
 					                   		snapshots[CurrentDatabase] = x.Result;
 					                   		statistics.Accept(x.Result);
 					                   		Errors = x.Result.Errors.OrderByDescending(error => error.Timestamp);
+											events.Publish(new StatisticsUpdated(x.Result));
 					                   	});
 			}
 		}
