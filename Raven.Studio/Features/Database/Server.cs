@@ -59,6 +59,8 @@ namespace Raven.Studio.Features.Database
 			store = new DocumentStore { Url = Address };
 			store.Initialize();
 
+			SelectDatabase(DefaultDatabaseName, callback);
+
 			store.OpenAsyncSession().Advanced.AsyncDatabaseCommands
 				.GetDatabaseNamesAsync()
 				.ContinueOnSuccess(t =>
@@ -70,17 +72,22 @@ namespace Raven.Studio.Features.Database
 					dbs.AddRange(t.Result);
 					Databases = dbs;
 
-					OpenDatabase(dbs[0], () =>
-					{
-						IsInitialized = true;
-						Execute.OnUIThread(() => timer.Start());
-
-						Connected(this, EventArgs.Empty);
-
-						if (callback != null) callback();
-					});
+					SelectDatabase(dbs[0], callback);
 
 				});
+		}
+
+		private void SelectDatabase(string name, Action callback)
+		{
+			OpenDatabase(name, () =>
+			{
+				IsInitialized = true;
+				Execute.OnUIThread(() => timer.Start());
+
+				Connected(this, EventArgs.Empty);
+
+				if (callback != null) callback();
+			});
 		}
 
 		public string CurrentDatabase
