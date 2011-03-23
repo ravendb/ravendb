@@ -707,6 +707,7 @@ namespace Raven.Client.Client.Async
 			return url.Stats()
 				.NoCache()
 				.ToJsonRequest(this, credentials, convention)
+				.AddOperationHeader("Raven-Timer-Request" , "true")
 				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
