@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Data;
 
 namespace Raven.Client.Client
 {
@@ -25,7 +26,7 @@ namespace Raven.Client.Client
 			        	LastModified = DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture),
 			        	Etag = new Guid(metadata["@etag"].Value<string>()),
 			        	NonAuthoritiveInformation = metadata.Value<bool>("Non-Authoritive-Information"),
-			        	Metadata = metadata,
+			        	Metadata = metadata.FilterHeaders(isServerDocument: false),
 			        	DataAsJson = doc,
 			        });
 		}

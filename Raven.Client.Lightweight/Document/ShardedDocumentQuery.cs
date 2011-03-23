@@ -481,7 +481,15 @@ namespace Raven.Client.Document
 				);
 		}
 
-		/// <summary>
+        /// <summary>
+        /// Gets the document convention from the query session
+        /// </summary>
+	    public DocumentConvention DocumentConvention
+	    {
+	        get { return shardSessions[0].Advanced.Conventions; }
+	    }
+
+	    /// <summary>
 		/// Gets the query result
 		/// Execute the query the first time that this is called.
 		/// </summary>

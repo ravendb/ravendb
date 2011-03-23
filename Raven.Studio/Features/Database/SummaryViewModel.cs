@@ -1,4 +1,7 @@
-﻿namespace Raven.Studio.Features.Database
+﻿using System.Threading.Tasks;
+using Raven.Client;
+
+namespace Raven.Studio.Features.Database
 {
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
@@ -83,15 +86,7 @@
 			using (var session = server.OpenSession())
 			{
 				WorkStarted("fetching collections");
-				session.Advanced.AsyncDatabaseCommands
-					.GetCollectionsAsync(0, 25)
-					.ContinueOnSuccess(x =>
-										{
-											Collections = x.Result;
-											NotifyOfPropertyChange(() => LargestCollectionCount);
-											NotifyOfPropertyChange(() => Collections);
-											WorkCompleted("fetching collections");
-										});
+				ExecuteCollectionQueryWithRetry(session, 5);
 
 				WorkStarted("fetching recent documents");
 				session.Advanced.AsyncDatabaseCommands
@@ -103,6 +98,29 @@
 											WorkCompleted("fetching recent documents");
 										});
 			}
+		}
+
+		private void ExecuteCollectionQueryWithRetry(IAsyncDocumentSession session, int retry)
+		{
+			session.Advanced.AsyncDatabaseCommands
+				.GetCollectionsAsync(0, 25)
+				.ContinueWith(task =>
+				{
+					if(task.Exception != null && retry > 0)
+					{
+						TaskEx.Delay(50)
+							.ContinueWith(_ => ExecuteCollectionQueryWithRetry(session, retry - 1));
+						return;
+					}
+
+					task.ContinueOnSuccess(x =>
+					{
+						Collections = x.Result;
+						NotifyOfPropertyChange(() => LargestCollectionCount);
+						NotifyOfPropertyChange(() => Collections);
+						WorkCompleted("fetching collections");
+					});
+				});
 		}
 	}
 }
