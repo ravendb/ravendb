@@ -133,12 +133,17 @@
 
 		public void Prettify()
 		{
-			//NOTE: is there a better way to reformat the json? This seems heavy.
-			JsonData = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(JsonData), Formatting.Indented);
-			JsonMetadata = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(JsonMetadata), Formatting.Indented);
+			JsonData = Prettify(JsonData);
+			JsonMetadata = Prettify(JsonMetadata);
 		}
 
-		static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
+    	private static string Prettify(string json)
+    	{
+			//NOTE: is there a better way to reformat the json? This seems heavy.
+			return JsonConvert.SerializeObject(JsonConvert.DeserializeObject(json), Formatting.Indented);
+    	}
+
+    	static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
 		{
 			IDictionary<string, JToken> result = new Dictionary<string, JToken>();
 
@@ -152,13 +157,14 @@
 
 		static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, JToken>> data)
 		{
-			var result = new StringBuilder("{\n");
+			var result = new StringBuilder().AppendLine("{");
 
 			foreach (var item in data)
 			{
-				result.AppendFormat("\"{0}\" : {1},\n", item.Key, item.Value);
+				result.AppendFormat("\t\"{0}\" : {1},", item.Key, item.Value)
+					.AppendLine();
 			}
-			result.Append("}");
+			result.AppendLine("}");
 
 			return result.ToString();
 		}
