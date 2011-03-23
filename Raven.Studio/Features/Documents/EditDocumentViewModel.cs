@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Caliburn.Micro;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -23,6 +25,7 @@ namespace Raven.Studio.Features.Documents
 		private DateTime lastModified;
 		private IDictionary<string, JToken> metadata;
 		private bool nonAuthoritiveInformation;
+		private readonly ObservableCollection<string> references = new ObservableCollection<string>();
 
 		[ImportingConstructor]
 		public EditDocumentViewModel(IEventAggregator events)
@@ -64,8 +67,24 @@ namespace Raven.Studio.Features.Documents
 			set
 			{
 				jsonData = value;
+				UpdateReferences();
 				NotifyOfPropertyChange(() => JsonData);
 			}
+		}
+
+		private void UpdateReferences()
+		{
+			var referencesIds = Regex.Matches(jsonData, @"""(\w+/\w+)""");
+			references.Clear();
+			foreach (Match match in referencesIds)
+			{
+				references.Add(match.Groups[1].Value);
+			}
+		}
+
+		public ObservableCollection<string> References
+		{
+			get { return references; }
 		}
 
 		public string JsonMetadata

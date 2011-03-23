@@ -155,6 +155,7 @@
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
+			
 			<Grid Margin="0,12,0,0"
 				  Grid.Row="2">
 				<Grid.RowDefinitions>
@@ -187,7 +188,7 @@
 						   VerticalAlignment="Top"
 						   Grid.Row="1"
 						   Grid.Column="2"
-						   Text="{Binding Etag}"
+						   Text="{Binding ETag}"
 						   FontSize="14.667" />
 
 				<TextBlock HorizontalAlignment="Right"
@@ -206,7 +207,38 @@
 						   Text="{Binding LastModified}"
 						   FontSize="14.667" />
 			</Grid>
-			
+
+			<StackPanel Orientation="Vertical"
+						Grid.Row="4"
+						Margin="0,12,0,0"
+						Grid.RowSpan="2">
+				<Border Background="WhiteSmoke"
+						CornerRadius="5,0,0,5"
+						Grid.RowSpan="2" />
+
+				<Border Background="WhiteSmoke"
+						CornerRadius="5,0,0,5"
+						Grid.RowSpan="2"
+						Grid.Row="2"
+						Margin="0,12,0,0"
+						d:LayoutOverrides="GridBox" />
+
+				<TextBlock Style="{StaticResource PanelTitle}"
+						   Text="REFERENCES"
+						   Margin="12,6,0,6" />
+
+				<ItemsControl x:Name="References"
+							  Grid.Row="1"
+							  Margin="12,0,0,12">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<HyperlinkButton Content="{Binding}"
+											 cm:Action.TargetWithoutContext="EditDocumentById"
+											 cm:Message.Attach="Execute($this.Content)" />
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</StackPanel>
 		</Grid>
 
 		<!--TODO: to be replaced -->
