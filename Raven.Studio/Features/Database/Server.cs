@@ -97,7 +97,7 @@ namespace Raven.Studio.Features.Database
 
 		public void OpenDatabase(string name, Action callback)
 		{
-			if (callback == null) callback = ()=> { };
+			if (callback == null) callback = () => { };
 
 			if (name == currentDatabase)
 			{
@@ -196,9 +196,12 @@ namespace Raven.Studio.Features.Database
 					{
 						snapshots[CurrentDatabase] = x.Result;
 						statistics.Accept(x.Result);
+						Errors = x.Result.Errors;
 					});
 			}
 		}
+
+		public IEnumerable<ServerError> Errors { get; private set; }
 	}
 
 

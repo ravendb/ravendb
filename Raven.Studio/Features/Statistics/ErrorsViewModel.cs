@@ -16,13 +16,12 @@
 		{
 			DisplayName = "Errors";
 			this.server = server;
-			//server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange( ()=> Errors );};
+			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange( ()=> Errors );};
 		}
 
 		public IEnumerable<ServerError> Errors
 		{
-			get { return null; }
-			//get { return server.Statistics.Errors; }
+			get { return server.Errors; }
 		}
 
 		public IServer Server

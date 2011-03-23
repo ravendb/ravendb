@@ -3,6 +3,7 @@ namespace Raven.Studio.Features.Database
 	using System;
 	using System.Collections.Generic;
 	using Client;
+	using Raven.Database.Data;
 	using Statistics;
 
 	public interface IServer
@@ -13,6 +14,7 @@ namespace Raven.Studio.Features.Database
 		string CurrentDatabase { get; }
 		IStatisticsSet Statistics { get; }
 		bool IsInitialized { get; }
+		IEnumerable<ServerError> Errors { get; }
 		IAsyncDocumentSession OpenSession();
 		void OpenDatabase(string name, Action callback);
 		void Connect(Uri serverAddress, Action callback);

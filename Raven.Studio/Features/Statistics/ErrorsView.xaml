@@ -41,7 +41,7 @@
 
 			<TextBlock Style="{StaticResource Instruction}"
 					   Text="The database contains no errors."
-					   Visibility="{Binding Server.Statistics.Errors, Converter={StaticResource visibleWhenEmpty}}" />
+					   Visibility="{Binding Server.Errors, Converter={StaticResource visibleWhenEmpty}}" />
 		</tk:DockPanel>
 
 		<Grid Grid.Row="1">
@@ -51,7 +51,7 @@
 			</Grid.ColumnDefinitions>
 
 			<ItemsControl BorderThickness="0"
-						  ItemsSource="{Binding Server.Statistics.Errors}">
+						  ItemsSource="{Binding Server.Errors}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
 						<tk:DockPanel d:DesignWidth="595" d:DesignHeight="121" d:DataContext="{d:DesignData /SampleData/ServerErrorSampleData.xaml}">
