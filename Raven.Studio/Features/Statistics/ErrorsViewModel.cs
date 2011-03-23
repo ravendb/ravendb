@@ -6,6 +6,7 @@
 	using Database;
 	using Raven.Database.Data;
 
+	//NOTE: it would probably make more sense to remove IServer.Errors and rely on the message StatisticsUpdated
 	[Export]
 	public class ErrorsViewModel : Screen
 	{
