@@ -1,15 +1,22 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using Raven.Http.Plugins;
 
 namespace Raven.Http.Responders
 {
 	public class SilverlightUI : AbstractRequestResponder
 	{
+		[Import(AllowDefault = true)]
+		public ISilverlightRequestedAware SilverlightRequestedAware { get; set; }
+
+		private bool notifiedAboutSilverlightBeingRequested;
+
 		public override string UrlPattern
 		{
 			get { return @"^/silverlight/(.+\.xap)$"; }
@@ -22,6 +29,12 @@ namespace Raven.Http.Responders
 
 		public override void Respond(IHttpContext context)
 		{
+			if(notifiedAboutSilverlightBeingRequested == false)
+			{
+				if (SilverlightRequestedAware != null)
+					SilverlightRequestedAware.SilverlightWasRequested(this.ResourceStore);
+				notifiedAboutSilverlightBeingRequested = true;
+			}
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var fileName = match.Groups[1].Value;
 			var paths = GetPaths(fileName);
