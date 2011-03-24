@@ -31,9 +31,15 @@ namespace Raven.Http.Responders
 		{
 			if(notifiedAboutSilverlightBeingRequested == false)
 			{
-				if (SilverlightRequestedAware != null)
-					SilverlightRequestedAware.SilverlightWasRequested(this.ResourceStore);
-				notifiedAboutSilverlightBeingRequested = true;
+				lock (this)
+				{
+					if (notifiedAboutSilverlightBeingRequested == false && 
+						SilverlightRequestedAware != null)
+
+						SilverlightRequestedAware.SilverlightWasRequested(ResourceStore);
+
+					notifiedAboutSilverlightBeingRequested = true;
+				}
 			}
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var fileName = match.Groups[1].Value;
