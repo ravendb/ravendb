@@ -54,7 +54,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
@@ -115,6 +115,10 @@
       <Project>{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}</Project>
       <Name>Raven.Http</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Scenarios\Raven.Scenarios.csproj">
       <Project>{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}</Project>
       <Name>Raven.Scenarios</Name>
@@ -148,11 +152,6 @@
       <ProductName>Windows Installer 3.1</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Raven.Database\RavenDB.snk">
-      <Link>RavenDB.snk</Link>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Stress\Data\data_100KB.txt">
