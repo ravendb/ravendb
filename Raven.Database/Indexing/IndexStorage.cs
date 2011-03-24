@@ -170,7 +170,7 @@ namespace Raven.Database.Indexing
 				log.DebugFormat("Query on non existing index {0}", index);
 				throw new InvalidOperationException("Index " + index + " does not exists");
 			}
-			return value.Query(query, shouldIncludeInResults);
+	    	return new Index.IndexQueryOperation(value, query, shouldIncludeInResults).Query();
 		}
 
 		public void RemoveFromIndex(string index, string[] keys, WorkContext context)
