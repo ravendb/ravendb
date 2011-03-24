@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -20,50 +18,31 @@ namespace Raven.Json.Linq
             get { return JTokenType.Object; }
         }
 
-        public Dictionary<string, RavenJToken> Properties
+        public IDictionary<string, RavenJToken> Properties
         {
-            get
-            {
-                if (_properties == null)
-                    _properties = new Dictionary<string, RavenJToken>();
-                return _properties;
-            }
+            get { return _properties ?? (_properties = new CopyOnWriteJDictionary<string>()); }
         }
-        private Dictionary<string, RavenJToken> _properties;
+        private CopyOnWriteJDictionary<string> _properties;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JObject"/> class.
+        /// Initializes a new instance of the <see cref="RavenJObject"/> class.
         /// </summary>
         public RavenJObject()
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JObject"/> class from another <see cref="JObject"/> object.
+        /// Initializes a new instance of the <see cref="RavenJObject"/> class from another <see cref="RavenJObject"/> object.
         /// </summary>
-        /// <param name="other">A <see cref="JObject"/> object to copy from.</param>
+        /// <param name="other">A <see cref="RavenJObject"/> object to copy from.</param>
         public RavenJObject(RavenJObject other)
         {
-            var en = other.Properties.GetEnumerator();
-            while (en.MoveNext())
-            {
-                Properties.Add(en.Current.Key, en.Current.Value.DeepClone());
-            }
+            _properties = (CopyOnWriteJDictionary<string>) other._properties.Clone();
         }
 
-        internal override RavenJToken CloneToken()
+        public override RavenJToken CloneToken()
         {
             return new RavenJObject(this);
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JObject"/> class with the specified content.
-        /// </summary>
-        /// <param name="propName">Propery name for this content</param>
-        /// <param name="content">The contents of the object.</param>
-        public RavenJObject(string propName, RavenJToken content)
-        {
-            Properties.Add(propName, content);
         }
 
         /// <summary>
@@ -71,7 +50,7 @@ namespace Raven.Json.Linq
         /// </summary>
         /// <param name="reader">A <see cref="JsonReader"/> that will be read for the content of the <see cref="RavenJObject"/>.</param>
         /// <returns>A <see cref="RavenJObject"/> that contains the JSON that was read from the specified <see cref="JsonReader"/>.</returns>
-        public static new RavenJObject Load(JsonReader reader)
+        public static RavenJObject Load(JsonReader reader)
         {
             ValidationUtils.ArgumentNotNull(reader, "reader");
 
@@ -90,7 +69,7 @@ namespace Raven.Json.Linq
                 throw new Exception("Unexpected end of json object");
 
             string propName = null;
-            RavenJObject o = new RavenJObject();
+            var o = new RavenJObject();
             do
             {
                 switch (reader.TokenType)
