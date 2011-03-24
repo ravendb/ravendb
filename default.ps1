@@ -261,6 +261,7 @@ task CreateDocs {
 
 task CopyDocFiles -depends CreateDocs {
 	cp $base_dir\license.txt $build_dir\Output\license.txt
+	cp $base_dir\\DefaultConfigs\Start.cmd $build_dir\Output\Start.cmd
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
 	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
