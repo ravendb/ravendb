@@ -14,20 +14,15 @@ namespace Raven.Json.Linq
     public abstract class RavenJToken
     {
         /// <summary>
-        /// Gets the node type for this <see cref="JToken"/>.
+        /// Gets the node type for this <see cref="RavenJToken"/>.
         /// </summary>
         /// <value>The type.</value>
         public abstract JTokenType Type { get; }
 
-        internal abstract RavenJToken CloneToken();
-
         /// <summary>
-        /// Creates a new instance of the <see cref="JToken"/>. All child tokens are recursively cloned.
+        /// Clones this object
         /// </summary>
-        /// <returns>A new instance of the <see cref="JToken"/>.</returns>
-        public RavenJToken DeepClone()
-        {
-            return CloneToken();
-        }
+        /// <returns>A cloned RavenJToken</returns>
+        public abstract RavenJToken CloneToken();
     }
 }

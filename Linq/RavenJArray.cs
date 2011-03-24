@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -24,12 +22,11 @@ namespace Raven.Json.Linq
         /// <param name="other">A <see cref="JArray"/> object to copy from.</param>
         public RavenJArray(RavenJArray other)
         {
-            if (other.Length > 0)
-            {
-                // clone array the hard way
-                foreach (var item in other._items)
-                    this.Items.Add(item.DeepClone());
-            }
+            if (other.Length == 0) return;
+
+            // clone array the hard way
+            foreach (var item in other._items)
+                Items.Add(item.CloneToken());
         }
 
         /// <summary>
@@ -41,25 +38,20 @@ namespace Raven.Json.Linq
             get { return JTokenType.Array; }
         }
 
-        internal override RavenJToken CloneToken()
+        public override RavenJToken CloneToken()
         {
             return new RavenJArray(this);
         }
 
-        public int Length { get { if (_items == null) return 0; return _items.Count; } }
+        public int Length { get { return _items == null ? 0 : _items.Count; } }
 
         public List<RavenJToken> Items
         {
-            get
-            {
-                if (_items == null)
-                    _items = new List<RavenJToken>();
-                return _items;
-            }
+            get { return _items ?? (_items = new List<RavenJToken>()); }
         }
         private List<RavenJToken> _items;
 
-        internal static new RavenJArray Load(JsonReader reader)
+        internal static RavenJArray Load(JsonReader reader)
         {
             if (reader.TokenType != JsonToken.StartArray)
                 throw new Exception(
@@ -69,12 +61,15 @@ namespace Raven.Json.Linq
             if (reader.Read() == false)
                 throw new Exception("Unexpected end of json array");
 
+            var ar = new RavenJArray();
             RavenJToken val = null;
-            RavenJArray ar = new RavenJArray();
             do
             {
                 switch (reader.TokenType)
                 {
+                    case JsonToken.Comment:
+                        // ignore comments
+                        break;
                     case JsonToken.EndArray:
                         return ar;
                     case JsonToken.StartObject:
@@ -92,7 +87,7 @@ namespace Raven.Json.Linq
                 }
             } while (reader.Read());
 
-            return null;
+            throw new Exception("Error reading JArray from JsonReader.");
         }
     }
 }

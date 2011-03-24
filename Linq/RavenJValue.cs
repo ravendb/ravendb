@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -57,9 +54,9 @@ namespace Raven.Json.Linq
         {
         }
 
-        internal override RavenJToken CloneToken()
+        public override RavenJToken CloneToken()
         {
-            return new RavenJValue(this);
+            return new RavenJValue(Value, Type);
         }
 
         /// <summary>
@@ -173,7 +170,7 @@ namespace Raven.Json.Linq
 
         internal static RavenJValue Load(JsonReader reader)
         {
-            RavenJValue v = null;
+            RavenJValue v;
             switch (reader.TokenType)
             {
                 case JsonToken.String:
