@@ -9,6 +9,7 @@ namespace Raven.Studio.Features.Database
 	using Caliburn.Micro;
 	using Client;
 	using Client.Document;
+	using Client.Extensions;
 	using Framework;
 	using Messages;
 	using Raven.Database.Data;
@@ -38,7 +39,6 @@ namespace Raven.Studio.Features.Database
 		IEnumerable<ServerError> errors;
 
 		bool isInitialized;
-		DocumentStore store;
 
 		[ImportingConstructor]
 		public Server(IEventAggregator events, [ImportMany] IDatabaseInitializer[] databaseInitializers, StatisticsViewModel statistics)
@@ -54,18 +54,19 @@ namespace Raven.Studio.Features.Database
 
 		public bool HasCurrentDatabase { get { return !string.IsNullOrEmpty(CurrentDatabase); } }
 		public void Handle(StatisticsUpdateRequested message) { RefreshStatistics(false); }
+        public IDocumentStore Store { get; private set; }
 
 		public void Connect(Uri serverAddress, Action callback)
 		{
 			Address = serverAddress.OriginalString;
 			Name = serverAddress.OriginalString;
 
-			store = new DocumentStore {Url = Address};
-			store.Initialize();
+            Store = new DocumentStore { Url = Address };
+            Store.Initialize();
 
 			SelectDatabase(DefaultDatabaseName, callback);
 
-			store.OpenAsyncSession().Advanced.AsyncDatabaseCommands
+            Store.OpenAsyncSession().Advanced.AsyncDatabaseCommands
 				.GetDatabaseNamesAsync()
 				.ContinueOnSuccess(t =>
 				                   	{
@@ -114,6 +115,18 @@ namespace Raven.Studio.Features.Database
 			}
 		}
 
+        public void CreateDatabase(string databaseName, Action callback)
+        {
+            Store.AsyncDatabaseCommands
+                .EnsureDatabaseExistsAsync(databaseName)
+                .ContinueWith(create =>
+                                  {
+                                     if(callback != null) callback();
+                                      databases = databases.Union(new[] {databaseName});
+                                      NotifyOfPropertyChange(()=>Databases);
+                                  });
+        }
+
 		public bool IsInitialized
 		{
 			get { return isInitialized; }
@@ -130,8 +143,8 @@ namespace Raven.Studio.Features.Database
 		public IAsyncDocumentSession OpenSession()
 		{
 			return (CurrentDatabase == DefaultDatabaseName)
-			       	? store.OpenAsyncSession()
-			       	: store.OpenAsyncSession(CurrentDatabase);
+			       	? Store.OpenAsyncSession()
+			       	: Store.OpenAsyncSession(CurrentDatabase);
 		}
 
 		public IStatisticsSet Statistics { get { return statistics; } }
