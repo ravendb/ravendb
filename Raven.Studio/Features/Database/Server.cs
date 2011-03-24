@@ -4,6 +4,7 @@ namespace Raven.Studio.Features.Database
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using System.Linq;
+	using System.Threading.Tasks;
 	using System.Windows.Threading;
 	using Caliburn.Micro;
 	using Client;
@@ -183,8 +184,7 @@ namespace Raven.Studio.Features.Database
 
 			if (snapshots.ContainsKey(CurrentDatabase))
 			{
-				var snapshot = snapshots[CurrentDatabase];
-				statistics.Accept(snapshot);
+                ProcessStatistics(snapshots[CurrentDatabase]);
 			}
 
 			RetrieveStatisticsForCurrentDatabase();
@@ -199,13 +199,18 @@ namespace Raven.Studio.Features.Database
 				session.Advanced.AsyncDatabaseCommands
 					.GetStatisticsAsync()
 					.ContinueOnSuccess(x =>
-					                   	{
-					                   		snapshots[CurrentDatabase] = x.Result;
-					                   		statistics.Accept(x.Result);
-					                   		Errors = x.Result.Errors.OrderByDescending(error => error.Timestamp);
-											events.Publish(new StatisticsUpdated(x.Result));
-					                   	});
+					                       {
+					                           snapshots[CurrentDatabase] = x.Result;
+					                           ProcessStatistics(x.Result);
+					                       });
 			}
 		}
+
+	    private void ProcessStatistics(DatabaseStatistics mostRecent)
+	    {
+	        statistics.Accept(mostRecent);
+	        Errors = mostRecent.Errors.OrderByDescending(error => error.Timestamp);
+	        events.Publish(new StatisticsUpdated(mostRecent));
+	    }
 	}
 }
