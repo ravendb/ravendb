@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Tryouts.Json
 {
@@ -17,15 +18,28 @@ namespace Raven.Tryouts.Json
         {
             var stopWatch = new Stopwatch();
             Console.WriteLine("Starting Json performence test...");
-            
+
+            //Console.WriteLine("Using Newsoft Json.NET containers:");
+            //stopWatch.Start();
+            //var jo = ExecuteManyFileReads(BigJsonPath);
+            //stopWatch.Stop();
+            //Console.WriteLine("Reading took " + stopWatch.ElapsedMilliseconds + " ms");
+
+            //stopWatch.Reset();
+            //stopWatch.Start();
+            //CloneALot(jo);
+            //stopWatch.Stop();
+            //Console.WriteLine("Cloning took " + stopWatch.ElapsedMilliseconds + " ms");
+
+            Console.WriteLine("Using Raven.Json containers:");
             stopWatch.Start();
-            var jo = ExecuteManyFileReads(BigJsonPath);
+            var jo2 = ExecuteManyFileReads2(BigJsonPath);
             stopWatch.Stop();
             Console.WriteLine("Reading took " + stopWatch.ElapsedMilliseconds + " ms");
 
             stopWatch.Reset();
             stopWatch.Start();
-            CloneALot(jo);
+            CloneALot2(jo2);
             stopWatch.Stop();
             Console.WriteLine("Cloning took " + stopWatch.ElapsedMilliseconds + " ms");
         }
@@ -42,9 +56,28 @@ namespace Raven.Tryouts.Json
                 return temp;
         }
 
+        public static RavenJObject ExecuteManyFileReads2(string filePath)
+        {
+            RavenJObject temp = null;
+            for (int i = 0; i < 100; i++)
+            {
+                using (var streamReader = File.OpenText(filePath))
+                using (var jsonReader = new JsonTextReader(streamReader))
+                    temp = RavenJObject.Load(jsonReader);
+            }
+            return temp;
+        }
+
         public static void CloneALot(JToken jt)
         {
             JToken temp;
+            for (int i = 0; i < 100; i++)
+                temp = jt.DeepClone();
+        }
+
+        public static void CloneALot2(RavenJToken jt)
+        {
+            RavenJToken temp;
             for (int i = 0; i < 100; i++)
                 temp = jt.DeepClone();
         }
