@@ -155,6 +155,8 @@ namespace Raven.Database.Indexing
 		{
 			if (fieldsToFetch == null || fieldsToFetch.Length == 0)
 				fieldsToFetch = document.GetFields().OfType<Fieldable>().Select(x => x.Name()).ToArray();
+			if (fieldsToFetch.Contains("__reduce_id") == false)
+				fieldsToFetch = fieldsToFetch.Concat(new[] {"__reduce_id"}).Distinct().ToArray();
 			return base.RetrieveDocument(document, fieldsToFetch);
 		}
 

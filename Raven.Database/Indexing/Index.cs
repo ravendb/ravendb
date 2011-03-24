@@ -136,7 +136,7 @@ namespace Raven.Database.Indexing
 		private static JObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
 		{
 			return new JObject(
-				fieldsToFetch.Concat(new[] {"__document_id"}).Distinct()
+				fieldsToFetch
 					.SelectMany(name => document.GetFields(name) ?? new Field[0])
 					.Where(x => x != null)
 					.Where(
@@ -451,6 +451,9 @@ namespace Raven.Database.Indexing
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
+			private readonly bool isDistinctQuery;
+			readonly HashSet<JObject> alreadyReturned;
+			private readonly string[] fieldsToFetch;
 
 			public IndexQueryOperation(
 				Index parent,
@@ -460,13 +463,21 @@ namespace Raven.Database.Indexing
 				this.parent = parent;
 				this.indexQuery = indexQuery;
 				this.shouldIncludeInResults = shouldIncludeInResults;
+
+				isDistinctQuery = indexQuery.AggregationOperation.HasFlag(AggregationOperation.Distinct) &&
+				                  indexQuery.FieldsToFetch != null && indexQuery.FieldsToFetch.Length > 0;
+				if (isDistinctQuery)
+					alreadyReturned = new HashSet<JObject>(new JTokenEqualityComparer());
+				fieldsToFetch = this.indexQuery.FieldsToFetch;
+				if (isDistinctQuery == false)
+				{
+					fieldsToFetch = fieldsToFetch.Concat(new[] {"__document_id"}).ToArray();
+				}
 			}
 
 			public IEnumerable<IndexQueryResult> Query()
 			{
 				AssertQueryDoesNotContainFieldsThatAreNotIndexes();
-				bool isDistinctQuery = indexQuery.AggregationOperation.HasFlag(AggregationOperation.Distinct);
-				var alreadyReturned = new HashSet<IndexQueryResult>();
 				IndexSearcher indexSearcher;
 				using (parent.searcher.Use(out indexSearcher))
 				{
@@ -488,33 +499,51 @@ namespace Raven.Database.Indexing
 						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 						indexQuery.TotalSize.Value = search.totalHits;
 
-						if (isDistinctQuery) // add results that were already there in previous pages
-						{
-							for (int i = 0; i < start; i++)
-							{
-								Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
-								alreadyReturned.Add(parent.RetrieveDocument(document, indexQuery.FieldsToFetch));
-							}
-						}
+						RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start);
 
 						for (int i = start; i < search.totalHits && (i - start) < pageSize; i++)
 						{
 							Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
-							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, indexQuery.FieldsToFetch);
-							if (shouldIncludeInResults(indexQueryResult) == false)
+							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch);
+							if (ShouldIncludeInResults(indexQueryResult) == false)
 							{
 								indexQuery.SkippedResults.Value++;
 								skippedResultsInCurrentLoop++;
 								continue;
 							}
-							if (isDistinctQuery && alreadyReturned.Add(indexQueryResult))
-								continue;
+						
 							returnedResults++;
 							yield return indexQueryResult;
 							if (returnedResults == indexQuery.PageSize)
 								yield break;
 						}
 					} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
+				}
+			}
+
+			private bool ShouldIncludeInResults(IndexQueryResult indexQueryResult)
+			{
+				if (shouldIncludeInResults(indexQueryResult) == false)
+					return false;
+				if (isDistinctQuery)
+				{
+					if (alreadyReturned.Add(indexQueryResult.Projection) == false)
+						return false;
+				}
+				return true;
+			}
+
+			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start)
+			{
+				if (isDistinctQuery) // add results that were already there in previous pages
+				{
+					var min = Math.Min(start, search.totalHits);
+					for (int i = 0; i < min; i++)
+					{
+						Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
+						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch);
+						alreadyReturned.Add(indexQueryResult.Projection);
+					}
 				}
 			}
 

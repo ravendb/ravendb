@@ -13,7 +13,15 @@ namespace Raven.Abstractions.Data
 		None = 0,
 		Count = 1,
 
+		Distinct = 1 << 26,
+		Dynamic = 1 << 27
+	}
 
-		Dynamic = 0x8000000
+	public static class AggregationOperationExtensions
+	{
+		public static AggregationOperation RemoveOptionals(this AggregationOperation operation)
+		{
+			return (operation & ~AggregationOperation.Distinct) & ~AggregationOperation.Dynamic;
+		}
 	}
 }

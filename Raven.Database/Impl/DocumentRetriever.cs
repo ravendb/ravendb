@@ -109,8 +109,7 @@ namespace Raven.Database.Impl
 				}
 				if (aggregationOperation != AggregationOperation.None)
 				{
-					var aggOpr = aggregationOperation & ~AggregationOperation.Dynamic;
-					fieldsToFetch = fieldsToFetch.Concat(new[] {aggOpr.ToString()});
+					fieldsToFetch = fieldsToFetch.Concat(new[] {aggregationOperation.RemoveOptionals().ToString()});
 				}
 				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection.Property(fieldToFetch) == null);
 				var doc = GetDocumentWithCaching(queryResult.Key);
@@ -132,6 +131,7 @@ namespace Raven.Database.Impl
 				Projection = queryResult.Projection,
 			};
 		}
+
 
 		private JsonDocument GetDocumentWithCaching(string key)
 		{

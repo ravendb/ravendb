@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Data;
 
@@ -489,115 +490,119 @@ namespace Raven.Client.Linq
 					VisitExpression(expression.Arguments[0]);
 					break;
 				case "Where":
-				{
-					insideWhere++;
-					VisitExpression(expression.Arguments[0]);
-					if (chainedWhere) luceneQuery.AndAlso();
-					if(insideWhere > 1)
-						luceneQuery.OpenSubclause();
-					VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-					if (insideWhere > 1)
-						luceneQuery.CloseSubclause();
-					chainedWhere = true;
-					insideWhere--;
-					break;
-				}
+					{
+						insideWhere++;
+						VisitExpression(expression.Arguments[0]);
+						if (chainedWhere) luceneQuery.AndAlso();
+						if (insideWhere > 1)
+							luceneQuery.OpenSubclause();
+						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						if (insideWhere > 1)
+							luceneQuery.CloseSubclause();
+						chainedWhere = true;
+						insideWhere--;
+						break;
+					}
 				case "Select":
-				{
-					VisitExpression(expression.Arguments[0]);
-					VisitSelect(((UnaryExpression) expression.Arguments[1]).Operand);
-					break;
-				}
+					{
+						VisitExpression(expression.Arguments[0]);
+						VisitSelect(((UnaryExpression) expression.Arguments[1]).Operand);
+						break;
+					}
 				case "Skip":
-				{
-					VisitExpression(expression.Arguments[0]);
-					VisitSkip(((ConstantExpression) expression.Arguments[1]));
-					break;
-				}
+					{
+						VisitExpression(expression.Arguments[0]);
+						VisitSkip(((ConstantExpression) expression.Arguments[1]));
+						break;
+					}
 				case "Take":
-				{
-					VisitExpression(expression.Arguments[0]);
-					VisitTake(((ConstantExpression) expression.Arguments[1]));
-					break;
-				}
+					{
+						VisitExpression(expression.Arguments[0]);
+						VisitTake(((ConstantExpression) expression.Arguments[1]));
+						break;
+					}
 				case "First":
 				case "FirstOrDefault":
-				{
-					VisitExpression(expression.Arguments[0]);
-					if (expression.Arguments.Count == 2)
 					{
-						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
-					}
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						}
 
-					if (expression.Method.Name == "First")
-					{
-						VisitFirst();
+						if (expression.Method.Name == "First")
+						{
+							VisitFirst();
+						}
+						else
+						{
+							VisitFirstOrDefault();
+						}
+						break;
 					}
-					else
-					{
-						VisitFirstOrDefault();
-					}
-					break;
-				}
 				case "Single":
 				case "SingleOrDefault":
-				{
-					VisitExpression(expression.Arguments[0]);
-					if (expression.Arguments.Count == 2)
 					{
-						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
-					}
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						}
 
-					if (expression.Method.Name == "Single")
-					{
-						VisitSingle();
+						if (expression.Method.Name == "Single")
+						{
+							VisitSingle();
+						}
+						else
+						{
+							VisitSingleOrDefault();
+						}
+						break;
 					}
-					else
-					{
-						VisitSingleOrDefault();
-					}
-					break;
-				}
 				case "All":
-				{
-					VisitExpression(expression.Arguments[0]);
-					VisitAll((Expression<Func<T, bool>>) ((UnaryExpression) expression.Arguments[1]).Operand);
-					break;
-				}
+					{
+						VisitExpression(expression.Arguments[0]);
+						VisitAll((Expression<Func<T, bool>>) ((UnaryExpression) expression.Arguments[1]).Operand);
+						break;
+					}
 				case "Any":
-				{
-					VisitExpression(expression.Arguments[0]);
-					if (expression.Arguments.Count == 2)
 					{
-						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
-					}
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						}
 
-					VisitAny();
-					break;
-				}
+						VisitAny();
+						break;
+					}
 				case "Count":
-				{
-					VisitExpression(expression.Arguments[0]);
-					if (expression.Arguments.Count == 2)
 					{
-						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
-					}
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						}
 
-					VisitCount();
+						VisitCount();
+						break;
+					}
+				case "Distinct":
+					luceneQuery.GroupBy(AggregationOperation.Distinct);
+					VisitExpression(expression.Arguments[0]);
 					break;
-				}
 				case "OrderBy":
 				case "ThenBy":
 				case "ThenByDescending":
 				case "OrderByDescending":
 					VisitExpression(expression.Arguments[0]);
 					VisitOrderBy((LambdaExpression) ((UnaryExpression) expression.Arguments[1]).Operand,
-								 expression.Method.Name.EndsWith("Descending"));
+					             expression.Method.Name.EndsWith("Descending"));
 					break;
 				default:
-				{
-					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-				}
+					{
+						throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+					}
 			}
 		}
 
