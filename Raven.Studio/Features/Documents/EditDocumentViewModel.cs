@@ -208,16 +208,7 @@ namespace Raven.Studio.Features.Documents
 
 		private static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, JToken>> data)
 		{
-			StringBuilder result = new StringBuilder().AppendLine("{");
-
-			foreach (var item in data)
-			{
-				result.AppendFormat("\t\"{0}\" : {1},", item.Key, item.Value)
-					.AppendLine();
-			}
-			result.AppendLine("}");
-
-			return result.ToString();
+		    return JsonConvert.SerializeObject(data, Formatting.Indented);
 		}
 
 		private static string InitialJsonData()
