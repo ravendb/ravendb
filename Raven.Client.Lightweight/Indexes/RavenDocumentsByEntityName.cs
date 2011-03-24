@@ -23,11 +23,10 @@ namespace Raven.Client.Indexes
 		{
 			return new IndexDefinition
 			{
-				Map =
-					@"from doc in docs 
-where doc[""@metadata""][""Raven-Entity-Name""] != null 
-select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
-",
+				Map = @"from doc in docs 
+let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+where  Tag != null 
+select new { Tag };",
 				Indexes = {{"Tag", FieldIndexing.NotAnalyzed}},
 				Stores = {{"Tag", FieldStorage.No}}
 			};
