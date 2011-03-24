@@ -12,8 +12,9 @@
 	using Caliburn.Micro;
 	using Framework;
 	using Shell;
+	using Shell.MessageBox;
 
-	public class AppBootstrapper : Bootstrapper<IShell>
+    public class AppBootstrapper : Bootstrapper<IShell>
 	{
 		CompositionContainer container;
 

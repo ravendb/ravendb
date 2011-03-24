@@ -219,19 +219,19 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shell\BusyStatusViewModel.cs" />
     <Compile Include="Shell\ErrorViewModel.cs" />
-    <Compile Include="Shell\IMessageBox.cs" />
-    <Compile Include="Shell\MessageBoxOptions.cs" />
-    <Compile Include="Shell\MessageBoxView.xaml.cs">
+    <Compile Include="Shell\MessageBox\IMessageBox.cs" />
+    <Compile Include="Shell\MessageBox\MessageBoxOptions.cs" />
+    <Compile Include="Shell\MessageBox\MessageBoxView.xaml.cs">
       <DependentUpon>MessageBoxView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Shell\MessageBoxViewModel.cs" />
+    <Compile Include="Shell\MessageBox\MessageBoxViewModel.cs" />
     <Compile Include="Shell\NavigationViewModel.cs" />
     <Compile Include="Shell\NotificationsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
     <Compile Include="Features\Database\DatabaseViewModel.cs" />
     <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
-    <Compile Include="Shell\ShowMessageBox.cs" />
+    <Compile Include="Shell\MessageBox\ShowMessageBox.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -371,7 +371,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Shell\MessageBoxView.xaml">
+    <Page Include="Shell\MessageBox\MessageBoxView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
