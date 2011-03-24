@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -13,25 +14,27 @@ namespace Raven.Tryouts.Json
     public static class PerfTest
     {
         private const string BigJsonPath = @"z:\Pool5.json";
+        private const int IterationsCount = 100;
 
         public static void RunPerfTest()
         {
             var stopWatch = new Stopwatch();
-            Console.WriteLine("Starting Json performence test...");
+            Console.WriteLine("Starting Json performance test with " + IterationsCount + " iterations...");
 
-            //Console.WriteLine("Using Newsoft Json.NET containers:");
-            //stopWatch.Start();
-            //var jo = ExecuteManyFileReads(BigJsonPath);
-            //stopWatch.Stop();
-            //Console.WriteLine("Reading took " + stopWatch.ElapsedMilliseconds + " ms");
+            Console.WriteLine("Using Newtonsoft Json.NET containers:");
+            stopWatch.Start();
+            var jo = ExecuteManyFileReads(BigJsonPath);
+            stopWatch.Stop();
+            Console.WriteLine("Reading took " + stopWatch.ElapsedMilliseconds + " ms");
 
-            //stopWatch.Reset();
-            //stopWatch.Start();
-            //CloneALot(jo);
-            //stopWatch.Stop();
-            //Console.WriteLine("Cloning took " + stopWatch.ElapsedMilliseconds + " ms");
+            stopWatch.Reset();
+            stopWatch.Start();
+            CloneALot(jo);
+            stopWatch.Stop();
+            Console.WriteLine("Cloning took " + stopWatch.ElapsedMilliseconds + " ms");
 
             Console.WriteLine("Using Raven.Json containers:");
+            stopWatch.Reset();
             stopWatch.Start();
             var jo2 = ExecuteManyFileReads2(BigJsonPath);
             stopWatch.Stop();
@@ -46,22 +49,24 @@ namespace Raven.Tryouts.Json
 
         public static JObject ExecuteManyFileReads(string filePath)
         {
-                JObject temp = null;
-                for (int i = 0; i < 100; i++)
-                {
-                    using (var streamReader = File.OpenText(filePath))
-                    using (var jsonReader = new JsonTextReader(streamReader))
-                        temp = JObject.Load(jsonReader);
-                }
-                return temp;
+            string text = File.ReadAllText(filePath);
+            JObject temp = null;
+            for (int i = 0; i < IterationsCount; i++)
+            {
+                using (var streamReader = new StringReader(text))
+                using (var jsonReader = new JsonTextReader(streamReader))
+                    temp = JObject.Load(jsonReader);
+            }
+            return temp;
         }
 
         public static RavenJObject ExecuteManyFileReads2(string filePath)
         {
+            string text = File.ReadAllText(filePath);
             RavenJObject temp = null;
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < IterationsCount; i++)
             {
-                using (var streamReader = File.OpenText(filePath))
+                using (var streamReader = new StringReader(text))
                 using (var jsonReader = new JsonTextReader(streamReader))
                     temp = RavenJObject.Load(jsonReader);
             }
@@ -71,15 +76,15 @@ namespace Raven.Tryouts.Json
         public static void CloneALot(JToken jt)
         {
             JToken temp;
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < IterationsCount; i++)
                 temp = jt.DeepClone();
         }
 
         public static void CloneALot2(RavenJToken jt)
         {
             RavenJToken temp;
-            for (int i = 0; i < 100; i++)
-                temp = jt.DeepClone();
+            for (int i = 0; i < IterationsCount; i++)
+                temp = jt.CloneToken();
         }
 
         public static JToken CloneJsonObject(JToken jo)
