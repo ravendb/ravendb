@@ -12,7 +12,11 @@ using Raven.Studio.Framework;
 
 namespace Raven.Studio.Features.Documents
 {
-	[Export(typeof (EditDocumentViewModel))]
+    using System.Windows;
+    using System.Windows.Input;
+    using Commands;
+
+    [Export(typeof (EditDocumentViewModel))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class EditDocumentViewModel : Screen
 	{
@@ -25,9 +29,10 @@ namespace Raven.Studio.Features.Documents
 		private IDictionary<string, JToken> metadata;
 		private bool nonAuthoritiveInformation;
 		private readonly BindableCollection<string> references = new BindableCollection<string>();
+        private IKeyboardShortcutBinder keys;
 
 		[ImportingConstructor]
-		public EditDocumentViewModel(IEventAggregator events)
+		public EditDocumentViewModel(IEventAggregator events, IKeyboardShortcutBinder keys)
 		{
 			metadata = new Dictionary<string, JToken>();
 
@@ -35,7 +40,16 @@ namespace Raven.Studio.Features.Documents
 			document = new JsonDocument();
 			JsonData = InitialJsonData();
 			events.Subscribe(this);
+		    this.keys = keys;
+
+            keys.Register<SaveDocument>(Key.S, ModifierKeys.Control, x => x.Execute(this), this);
 		}
+
+        public override void AttachView(object view, object context)
+        {
+            keys.Initialize((FrameworkElement)view);
+            base.AttachView(view, context);
+        }
 
 		public string ClrType { get; private set; }
 		public string CollectionType { get; private set; }

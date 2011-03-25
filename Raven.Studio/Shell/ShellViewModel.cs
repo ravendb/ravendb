@@ -2,7 +2,6 @@
 {
 	using System;
 	using System.ComponentModel.Composition;
-	using System.Diagnostics;
 	using System.Linq;
 	using System.Windows;
 	using Caliburn.Micro;
@@ -30,6 +29,7 @@
 			BusyStatusViewModel busyStatus,
 			SelectDatabaseViewModel start,
 			DatabaseViewModel databaseScreen,
+            IKeyboardShortcutBinder binder,
 			IEventAggregator events)
 		{
 			this.navigation = navigation;
@@ -41,7 +41,8 @@
 			                     		navigation.Breadcrumbs.Clear();
 			                     	});
 			this.databaseScreen = databaseScreen;
-			this.events = events;
+		    this.binder = binder;
+		    this.events = events;
 			events.Subscribe(this);
 			
 
@@ -64,6 +65,13 @@
 			               		}
 			               	});
 		}
+
+	    IKeyboardShortcutBinder binder;
+        public override void AttachView(object view, object context)
+        {
+            binder.Initialize((FrameworkElement)view); 
+            base.AttachView(view, context);
+        }
 
 		public BusyStatusViewModel BusyStatus { get { return busyStatus; } }
 

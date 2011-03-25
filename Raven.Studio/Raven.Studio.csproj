@@ -156,6 +156,9 @@
     <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
     <Compile Include="Framework\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
+    <Compile Include="Framework\IKeyboardShortcutBinder.cs" />
+    <Compile Include="Framework\KeyboardShortcutBinder.cs" />
+    <Compile Include="Framework\KeyCombination.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
