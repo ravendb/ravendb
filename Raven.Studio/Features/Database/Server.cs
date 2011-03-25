@@ -81,7 +81,11 @@ namespace Raven.Studio.Features.Database
 				                   	});
 		}
 
-		public string CurrentDatabase { get { return currentDatabase; } }
+	    public string CurrentDatabase
+	    {
+	        get { return currentDatabase; } 
+            set { currentDatabase = value; NotifyOfPropertyChange(()=>CurrentDatabase); }
+	    }
 
 		public void OpenDatabase(string name, Action callback)
 		{
