@@ -182,7 +182,11 @@ namespace Raven.Studio.Features.Database
 
         void InitializeCurrentDatabase(Action callback)
         {
-            if (startupChecks.Contains(CurrentDatabase)) return;
+            if (startupChecks.Contains(CurrentDatabase))
+            {
+                callback();
+                return;
+            }
             startupChecks.Add(CurrentDatabase);
 
             using (var session = OpenSession())
