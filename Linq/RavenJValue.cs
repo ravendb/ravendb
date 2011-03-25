@@ -12,7 +12,7 @@ namespace Raven.Json.Linq
         private object _value;
 
         /// <summary>
-        /// Gets the node type for this <see cref="JToken"/>.
+        /// Gets the node type for this <see cref="RavenJToken"/>.
         /// </summary>
         /// <value>The type.</value>
         public override JTokenType Type
@@ -46,7 +46,7 @@ namespace Raven.Json.Linq
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class from another <see cref="JValue"/> object.
+        /// Initializes a new instance of the <see cref="RavenJValue"/> class from another <see cref="RavenJValue"/> object.
         /// </summary>
         /// <param name="other">A <see cref="JValue"/> object to copy from.</param>
         public RavenJValue(RavenJValue other)
@@ -60,7 +60,16 @@ namespace Raven.Json.Linq
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+        /// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        public RavenJValue(int value)
+            : this(value, JTokenType.Integer)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
         /// </summary>
         /// <param name="value">The value.</param>
         public RavenJValue(long value)
@@ -69,7 +78,7 @@ namespace Raven.Json.Linq
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+        /// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
         /// </summary>
         /// <param name="value">The value.</param>
         [CLSCompliant(false)]
@@ -79,7 +88,7 @@ namespace Raven.Json.Linq
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+        /// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
         /// </summary>
         /// <param name="value">The value.</param>
         public RavenJValue(double value)
@@ -88,7 +97,7 @@ namespace Raven.Json.Linq
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+        /// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
         /// </summary>
         /// <param name="value">The value.</param>
         public RavenJValue(DateTime value)
@@ -97,7 +106,7 @@ namespace Raven.Json.Linq
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+        /// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
         /// </summary>
         /// <param name="value">The value.</param>
         public RavenJValue(bool value)
@@ -106,7 +115,7 @@ namespace Raven.Json.Linq
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+        /// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
         /// </summary>
         /// <param name="value">The value.</param>
         public RavenJValue(string value)
@@ -115,7 +124,7 @@ namespace Raven.Json.Linq
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+        /// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
         /// </summary>
         /// <param name="value">The value.</param>
         public RavenJValue(object value)
