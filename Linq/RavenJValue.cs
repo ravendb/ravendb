@@ -203,5 +203,65 @@ namespace Raven.Json.Linq
             }
             return v;
         }
+
+        /// <summary>
+        /// Writes this token to a <see cref="JsonWriter"/>.
+        /// </summary>
+        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
+        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
+        /*public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+        {
+            switch (_valueType)
+            {
+                case JTokenType.Comment:
+                    writer.WriteComment(_value.ToString());
+                    return;
+                case JTokenType.Raw:
+                    writer.WriteRawValue((_value != null) ? _value.ToString() : null);
+                    return;
+                case JTokenType.Null:
+                    writer.WriteNull();
+                    return;
+                case JTokenType.Undefined:
+                    writer.WriteUndefined();
+                    return;
+            }
+
+            JsonConverter matchingConverter;
+            if (_value != null && ((matchingConverter = JsonSerializer.GetMatchingConverter(converters, _value.GetType())) != null))
+            {
+                matchingConverter.WriteJson(writer, _value, new JsonSerializer());
+                return;
+            }
+
+            switch (_valueType)
+            {
+                case JTokenType.Integer:
+                    writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.Float:
+                    writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.String:
+                    writer.WriteValue((_value != null) ? _value.ToString() : null);
+                    return;
+                case JTokenType.Boolean:
+                    writer.WriteValue(Convert.ToBoolean(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.Date:
+#if !PocketPC && !NET20
+                    if (_value is DateTimeOffset)
+                        writer.WriteValue((DateTimeOffset)_value);
+                    else
+#endif
+                        writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture)); ;
+                    return;
+                case JTokenType.Bytes:
+                    writer.WriteValue((byte[])_value);
+                    return;
+            }
+
+            throw MiscellaneousUtils.CreateArgumentOutOfRangeException("TokenType", _valueType, "Unexpected token type.");
+        }*/
     }
 }
