@@ -99,15 +99,17 @@ namespace Raven.Json.Utilities
                 if (_localChanges != null && _localChanges.TryGetValue(key, out val))
                     return val == DeletedMarker ? null : val;
 
-                if (_inherittedValues == null)
-                    return null;
+                if (_inherittedValues != null && _inherittedValues.TryGetValue(key, out val))
+                {
+                    if (val == DeletedMarker)
+                        return null;
 
-                val = _inherittedValues[key];
-
-                // Will also perform a copy-on-write clone on object supporting this
-                var safeVal = val.CloneToken();
-                LocalChanges[key] = safeVal;
-                return safeVal;
+                    // Will also perform a copy-on-write clone on object supporting this
+                    var safeVal = val.CloneToken();
+                    LocalChanges[key] = safeVal;
+                    return safeVal;
+                }
+                return null;
             }
             set { LocalChanges[key] = value; }
         }
