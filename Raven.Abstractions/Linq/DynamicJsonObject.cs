@@ -12,11 +12,12 @@ using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Linq
 {
 	/// <summary>
-	/// A dynamic implementation on top of <see cref="JObject"/>
+	/// A dynamic implementation on top of <see cref="RavenJObject"/>
 	/// </summary>
 	public class DynamicJsonObject : DynamicObject, IEnumerable<object>
 	{
@@ -75,13 +76,13 @@ namespace Raven.Database.Linq
 			return GetEnumerator();
 		}
 
-		private readonly JObject inner;
+		private readonly RavenJObject inner;
 
 		/// <summary>
 		/// Gets the inner json object
 		/// </summary>
 		/// <value>The inner.</value>
-		public JObject Inner
+		public RavenJObject Inner
 		{
 			get { return inner; }
 		}
@@ -90,7 +91,7 @@ namespace Raven.Database.Linq
 		/// Initializes a new instance of the <see cref="DynamicJsonObject"/> class.
 		/// </summary>
 		/// <param name="inner">The obj.</param>
-		public DynamicJsonObject(JObject inner)
+		public DynamicJsonObject(RavenJObject inner)
 		{
 			this.inner = inner;
 		}

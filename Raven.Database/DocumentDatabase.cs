@@ -29,6 +29,7 @@ using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Http;
 using Raven.Http.Exceptions;
+using Raven.Json.Linq;
 using Index = Raven.Database.Indexing.Index;
 using Task = Raven.Database.Tasks.Task;
 using TransactionInformation = Raven.Http.TransactionInformation;
@@ -303,7 +304,7 @@ namespace Raven.Database
 				.ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
 		}
 
-		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
+        public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
 				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "key");
@@ -370,7 +371,7 @@ namespace Raven.Database
 			}
 		}
 
-		private void AssertPutOperationNotVetoed(string key, JObject metadata, JObject document, TransactionInformation transactionInformation)
+		private void AssertPutOperationNotVetoed(string key, RavenJObject metadata, RavenJObject document, TransactionInformation transactionInformation)
 		{
 			var vetoResult = PutTriggers
 				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, document, metadata, transactionInformation) })
@@ -414,17 +415,16 @@ namespace Raven.Database
 			}
 		}
 
-		private static void RemoveReservedProperties(JObject document)
+        private static void RemoveReservedProperties(RavenJObject document)
 		{
 			var toRemove = new HashSet<string>();
-			foreach (var property in document.Properties())
+			foreach (var propertyName in document.Properties.Keys.Where(propertyName => propertyName.StartsWith("@")))
 			{
-				if (property.Name.StartsWith("@"))
-					toRemove.Add(property.Name);
+			    toRemove.Add(propertyName);
 			}
 			foreach (var propertyName in toRemove)
 			{
-				document.Remove(propertyName);
+				document.Properties.Remove(propertyName);
 			}
 		}
 
@@ -950,11 +950,11 @@ namespace Raven.Database
 					throw new InvalidOperationException("Backup is already running");
 				}
 			}
-			Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(new BackupStatus
+			Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(new BackupStatus
 			{
 				Started = DateTime.UtcNow,
 				IsRunning = true,
-			}), new JObject(), null);
+			}), new RavenJObject(), null);
 			IndexStorage.FlushAllIndexes();
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory);
 		}

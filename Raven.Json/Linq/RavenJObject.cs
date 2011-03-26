@@ -10,7 +10,7 @@ namespace Raven.Json.Linq
     public class RavenJObject : RavenJToken
     {
         /// <summary>
-        /// Gets the node type for this <see cref="JToken"/>.
+        /// Gets the node type for this <see cref="RavenJToken"/>.
         /// </summary>
         /// <value>The type.</value>
         public override JTokenType Type
@@ -43,6 +43,46 @@ namespace Raven.Json.Linq
         public override RavenJToken CloneToken()
         {
             return new RavenJObject(this);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="RavenJObject"/> from an object.
+        /// </summary>
+		/// <param name="o">The object that will be used to create <see cref="RavenJObject"/>.</param>
+		/// <returns>A <see cref="RavenJObject"/> with the values of the specified object</returns>
+        public static new RavenJObject FromObject(object o)
+        {
+            return FromObject(o, new JsonSerializer());
+        }
+
+        /// <summary>
+        /// Creates a <see cref="RavenJArray"/> from an object.
+        /// </summary>
+        /// <param name="o">The object that will be used to create <see cref="RavenJArray"/>.</param>
+        /// <param name="jsonSerializer">The <see cref="JsonSerializer"/> that will be used to read the object.</param>
+        /// <returns>A <see cref="RavenJArray"/> with the values of the specified object</returns>
+        public static new RavenJObject FromObject(object o, JsonSerializer jsonSerializer)
+        {
+            RavenJToken token = FromObjectInternal(o, jsonSerializer);
+
+            if (token != null && token.Type != JTokenType.Object)
+                throw new ArgumentException("Object serialized to {0}. JObject instance expected.".FormatWith(CultureInfo.InvariantCulture, token.Type));
+
+            return (RavenJObject)token;
+        }
+
+        /// <summary>
+        /// Gets or sets the <see cref="RavenJToken"/> with the specified property name.
+        /// </summary>
+        /// <value></value>
+        public RavenJToken this[string propertyName]
+        {
+            get
+            {
+                ValidationUtils.ArgumentNotNull(propertyName, "propertyName");
+                return Properties[propertyName];
+            }
+            set { Properties[propertyName] = value; }
         }
 
         /// <summary>

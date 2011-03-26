@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Http.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Json
 {
@@ -100,7 +101,7 @@ namespace Raven.Database.Json
 		/// <summary>
 		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
 		/// </summary>
-		public static T JsonDeserialization<T>(this JObject self)
+		public static T JsonDeserialization<T>(this RavenJObject self)
 		{
 			return (T)new JsonSerializer().Deserialize(new JTokenReader(self), typeof(T));
 		}

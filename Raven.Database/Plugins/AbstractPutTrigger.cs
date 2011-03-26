@@ -5,9 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition;
-using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
 {
@@ -21,7 +21,7 @@ namespace Raven.Database.Plugins
         ///  </summary><remarks>
         ///  This method SHOULD NOT modify either the document or the metadata.
         ///  </remarks><param name="key">The document key</param><param name="document">The new document about to be put into Raven</param><param name="metadata">The new document metadata</param><param name="transactionInformation">The current transaction, if it exists</param><returns>Whatever the put was vetoed or not</returns>
-        public virtual VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+        public virtual VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             return VetoResult.Allowed;
         }
