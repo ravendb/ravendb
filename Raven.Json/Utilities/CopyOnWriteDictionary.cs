@@ -43,7 +43,27 @@ namespace Raven.Json.Utilities
 
         public ICollection<TKey> Keys
         {
-            get { throw new NotImplementedException(); }
+            get
+            {
+                ICollection<TKey> keys = null;
+                if (_inherittedValues != null)
+                {
+                    keys = _inherittedValues.Keys;
+                }
+                if (_localChanges != null)
+                {
+                    if (keys == null)
+                        keys = _localChanges.Keys;
+                    else
+                    {
+                        foreach (var key in  _localChanges.Keys)
+                        {
+                            keys.Add(key);
+                        }
+                    }
+                }
+                return keys;
+            }
         }
 
         public bool Remove(TKey key)
