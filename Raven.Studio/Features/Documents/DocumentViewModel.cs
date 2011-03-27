@@ -112,6 +112,8 @@
                 return BuiltinCollectionName.Projection; // meaning that the document is a projection and not a 'real' document
 
             var entity = metadata.IfPresent<string>("Raven-Entity-Name");
+			if (entity != null)
+				entity = entity.ToLower();
             return entity ??
                 (id.StartsWith("Raven/")
                     ? BuiltinCollectionName.System

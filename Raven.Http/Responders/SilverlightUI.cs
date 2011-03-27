@@ -60,10 +60,10 @@ namespace Raven.Http.Responders
 
 		private IEnumerable<string> GetPaths(string fileName)
 		{
-			//local path
-			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
 			// dev path
 			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\Raven.Studio\bin\debug", fileName);
+			//local path
+			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
 			// web ui path
 			yield return Path.Combine(this.ResourceStore.Configuration.WebDir, fileName);
 		}
