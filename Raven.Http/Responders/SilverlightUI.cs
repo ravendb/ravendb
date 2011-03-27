@@ -15,8 +15,6 @@ namespace Raven.Http.Responders
 		[Import(AllowDefault = true)]
 		public ISilverlightRequestedAware SilverlightRequestedAware { get; set; }
 
-		private bool notifiedAboutSilverlightBeingRequested;
-
 		public override string UrlPattern
 		{
 			get { return @"^/silverlight/(.+\.xap)$"; }
@@ -29,18 +27,13 @@ namespace Raven.Http.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			if(notifiedAboutSilverlightBeingRequested == false)
+			ResourceStore.ExternalState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
 			{
-				lock (this)
-				{
-					if (notifiedAboutSilverlightBeingRequested == false && 
-						SilverlightRequestedAware != null)
+				if (SilverlightRequestedAware != null)
+					SilverlightRequestedAware.SilverlightWasRequested(ResourceStore);
+				return true;
+			});
 
-						SilverlightRequestedAware.SilverlightWasRequested(ResourceStore);
-
-					notifiedAboutSilverlightBeingRequested = true;
-				}
-			}
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var fileName = match.Groups[1].Value;
 			var paths = GetPaths(fileName);

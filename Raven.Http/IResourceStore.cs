@@ -4,11 +4,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Raven.Http
 {
     public interface IResourceStore : IDisposable
     {
         IRaveHttpnConfiguration Configuration { get; }
+		ConcurrentDictionary<string, object> ExternalState { get; set; }
     }
 }

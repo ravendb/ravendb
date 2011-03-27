@@ -81,6 +81,8 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
+			ExternalState = new ConcurrentDictionary<string, object>();
+
 			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
 			{
 				backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
@@ -205,6 +207,8 @@ namespace Raven.Database
 		{
 			get { return Configuration; }
 		}
+
+		public ConcurrentDictionary<string, object> ExternalState { get; set; }
 
 		public InMemoryRavenConfiguration Configuration
 		{
