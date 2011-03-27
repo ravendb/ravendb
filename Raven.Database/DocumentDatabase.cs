@@ -14,7 +14,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using log4net;
+using Lucene.Net.Util;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -542,8 +544,10 @@ namespace Raven.Database
 
 
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
-					if (viewGenerator != null)
-						entityName = viewGenerator.ForEntityName;
+					if (viewGenerator == null)
+						throw new InvalidOperationException("Could not find index named: " + index);
+
+					entityName = viewGenerator.ForEntityName;
 
 					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, entityName);
 					indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
@@ -554,8 +558,12 @@ namespace Raven.Database
 					}
 					var docRetriever = new DocumentRetriever(actions, ReadTriggers);
 					var indexDefinition = GetIndexDefinition(index);
-					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, query.FieldsToFetch,query.AggregationOperation))
-									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, query.FieldsToFetch, query.AggregationOperation)
+					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
+					                                      viewGenerator.ReduceDefinition == null
+					                                      	? Abstractions.Data.Constacts.DocumentIdFieldName
+					                                      	: Abstractions.Data.Constacts.ReduceKeyFieldName);
+					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch)
+									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
 										 where doc != null
 										 select doc;
@@ -620,7 +628,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true)
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Constacts.DocumentIdFieldName))
 													select queryResult.Key);
 				});
 			stale = isStale;

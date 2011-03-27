@@ -624,7 +624,7 @@ namespace Raven.Client.Linq
 			switch (body.NodeType)
 			{
 				case ExpressionType.MemberAccess:
-					FieldsToFetch.Add(((MemberExpression) body).Member.Name);
+					AddToFieldsToFetch(((MemberExpression)body).Member.Name);
 					break;
 				//Anonomyous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
 				//See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
@@ -632,13 +632,9 @@ namespace Raven.Client.Linq
 					var newExpression = ((NewExpression) body);
 			        newExpressionType = newExpression.Type;
                     var idProperty = luceneQuery.DocumentConvention.GetIdentityProperty(newExpressionType);
-			        var idPropertyName = (idProperty == null) ? string.Empty : idProperty.Name;
                     foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
                     {
-                        if (field.Equals(idPropertyName))
-                            FieldsToFetch.Add("__document_id");
-                        else
-                            FieldsToFetch.Add(field);
+						AddToFieldsToFetch(field);
                     }
 			        break;
 				//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
@@ -647,7 +643,7 @@ namespace Raven.Client.Linq
 					newExpressionType = memberInitExpression.NewExpression.Type;
 					foreach (var field in memberInitExpression.Bindings.Cast<MemberAssignment>().Select(x => x.Member.Name))
 					{
-						FieldsToFetch.Add(field);
+						AddToFieldsToFetch(field);
 					}
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
@@ -655,6 +651,19 @@ namespace Raven.Client.Linq
 				
 				default:
 					throw new NotSupportedException("Node not supported: " + body.NodeType);
+			}
+		}
+
+		private void AddToFieldsToFetch(string field)
+		{
+			var identityProperty = luceneQuery.DocumentConvention.GetIdentityProperty(typeof(T));
+			if (identityProperty != null && identityProperty.Name == field)
+			{
+				FieldsToFetch.Add(Constacts.DocumentIdFieldName);
+			}
+			else
+			{
+				FieldsToFetch.Add(field);
 			}
 		}
 

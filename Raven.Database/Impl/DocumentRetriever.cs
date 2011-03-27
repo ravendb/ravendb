@@ -43,10 +43,10 @@ namespace Raven.Database.Impl
 			this.triggers = triggers;
 		}
 
-		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, string[] fieldsToFetch, AggregationOperation aggregationOperation)
+		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
 		{
 			return ExecuteReadTriggers(ProcessReadVetoes(
-				RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, aggregationOperation),
+				RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition),
 				null, ReadOperation.Query), null, ReadOperation.Query);
 		}
 
@@ -75,9 +75,8 @@ namespace Raven.Database.Impl
 		private JsonDocument RetrieveDocumentInternal(
 			IndexQueryResult queryResult,
 			HashSet<string> loadedIds,
-			IEnumerable<string> fieldsToFetch, 
-			IndexDefinition indexDefinition,
-			AggregationOperation aggregationOperation)
+			FieldsToFetch fieldsToFetch, 
+			IndexDefinition indexDefinition)
 		{
 			if (queryResult.Projection == null)
 			{
@@ -87,7 +86,7 @@ namespace Raven.Database.Impl
 				return GetDocumentWithCaching(queryResult.Key);
 			}
 
-			if (fieldsToFetch != null)
+			if (fieldsToFetch.IsProjection)
 			{
 				if (indexDefinition.IsMapReduce == false)
 				{
@@ -106,10 +105,6 @@ namespace Raven.Database.Impl
 						if (loadedIds.Add(queryResult.Key) == false)
 							return null;
 					}
-				}
-				if (aggregationOperation != AggregationOperation.None)
-				{
-					fieldsToFetch = fieldsToFetch.Concat(new[] {aggregationOperation.RemoveOptionals().ToString()});
 				}
 				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection.Property(fieldToFetch) == null);
 				var doc = GetDocumentWithCaching(queryResult.Key);
@@ -160,9 +155,9 @@ namespace Raven.Database.Impl
             metadata.Add("@id", new JValue(doc.Key));
 	    }
 
-	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, string[] fieldsToFetch, AggregationOperation aggregationOperation)
+	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
 		{
-			var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch, indexDefinition, aggregationOperation);
+			var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch, indexDefinition);
 			if (doc == null)
 				return false;
 			doc = ProcessReadVetoes(doc, null, ReadOperation.Query);

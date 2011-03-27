@@ -140,7 +140,7 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count, "Tags,Id")
-						.WaitForNonStaleResults()
+						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))
 						.ToArray();
 
 					Assert.Equal(2, objects.Length);

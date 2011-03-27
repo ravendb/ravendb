@@ -102,7 +102,7 @@ namespace Raven.Tests.Bugs
 						.Skip(1)
 						.ToList();
 
-					Assert.Equal(2, objects.Count);
+					Assert.Equal(1, objects.Count);
 					Assert.Equal("rahien", objects[0].Name);
 				}
 			}

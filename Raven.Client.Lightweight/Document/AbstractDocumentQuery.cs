@@ -660,7 +660,7 @@ If you really want to do in memory filtering on the data returned from the query
             var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
             if (identityProperty != null && identityProperty.Name == whereEqualsParams.FieldName)
             {
-                return "__document_id";
+				return Constacts.DocumentIdFieldName;
             }
             return whereEqualsParams.FieldName;
         }
@@ -1232,7 +1232,7 @@ If you really want to do in memory filtering on the data returned from the query
                 var deserializedResult =
                     (T)theSession.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof(T));
 
-                var documentId = result.Value<string>("__document_id"); //check if the result contain the reserved name
+                var documentId = result.Value<string>(Constacts.DocumentIdFieldName); //check if the result contain the reserved name
                 if (string.IsNullOrEmpty(documentId) == false)
                 {
                     // we need to make an addtional check, since it is possible that a value was explicitly stated

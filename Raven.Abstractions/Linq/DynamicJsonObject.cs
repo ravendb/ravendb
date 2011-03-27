@@ -12,6 +12,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Linq
 {
@@ -163,7 +164,7 @@ namespace Raven.Database.Linq
 		/// <returns></returns>
 		public object GetValue(string name)
 		{
-			if (name == "__document_id")
+			if (name == Constacts.DocumentIdFieldName)
 			{
 				return GetDocumentId();
 			}
@@ -205,7 +206,7 @@ namespace Raven.Database.Linq
 					return id.Value<string>() ?? (object)new DynamicNullObject();
 				}
 			}
-			return inner.Value<string>("__document_id") ?? (object)new DynamicNullObject();
+			return inner.Value<string>(Constacts.DocumentIdFieldName) ?? (object)new DynamicNullObject();
 		}
 
 		/// <summary>

@@ -21,6 +21,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -123,13 +124,12 @@ namespace Raven.Database.Indexing
 		                                    WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
 
-		protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
+		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch)
 		{
-			bool shouldBuildProjection = fieldsToFetch == null || fieldsToFetch.Length == 0;
 			return new IndexQueryResult
 			{
-				Key = document.Get("__document_id"),
-				Projection = shouldBuildProjection ? null : CreateDocumentFromFields(document, fieldsToFetch)
+				Key = document.Get(Constacts.DocumentIdFieldName),
+				Projection = fieldsToFetch.IsProjection ? CreateDocumentFromFields(document, fieldsToFetch) : null
 			};
 		}
 
@@ -320,7 +320,7 @@ namespace Raven.Database.Indexing
 			var dic = current as DynamicJsonObject;
 			if (dic == null)
 				return null;
-			object value = dic.GetValue("__document_id");
+			object value = dic.GetValue(Constacts.DocumentIdFieldName);
 			if (value == null)
 				return null;
 			return value.ToString();
@@ -451,28 +451,23 @@ namespace Raven.Database.Indexing
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
-			private readonly bool isDistinctQuery;
 			readonly HashSet<JObject> alreadyReturned;
-			private readonly string[] fieldsToFetch;
+			private readonly FieldsToFetch fieldsToFetch;
 
 			public IndexQueryOperation(
 				Index parent,
 				IndexQuery indexQuery,
-				Func<IndexQueryResult, bool> shouldIncludeInResults)
+				Func<IndexQueryResult, bool> shouldIncludeInResults,
+				FieldsToFetch fieldsToFetch)
 			{
 				this.parent = parent;
 				this.indexQuery = indexQuery;
 				this.shouldIncludeInResults = shouldIncludeInResults;
+				this.fieldsToFetch = fieldsToFetch;
 
-				isDistinctQuery = indexQuery.AggregationOperation.HasFlag(AggregationOperation.Distinct) &&
-				                  indexQuery.FieldsToFetch != null && indexQuery.FieldsToFetch.Length > 0;
-				if (isDistinctQuery)
+				if (fieldsToFetch.IsDistinctQuery)
 					alreadyReturned = new HashSet<JObject>(new JTokenEqualityComparer());
-				fieldsToFetch = this.indexQuery.FieldsToFetch;
-				if (isDistinctQuery == false)
-				{
-					fieldsToFetch = fieldsToFetch.Concat(new[] {"__document_id"}).ToArray();
-				}
+				
 			}
 
 			public IEnumerable<IndexQueryResult> Query()
@@ -525,25 +520,23 @@ namespace Raven.Database.Indexing
 			{
 				if (shouldIncludeInResults(indexQueryResult) == false)
 					return false;
-				if (isDistinctQuery)
-				{
-					if (alreadyReturned.Add(indexQueryResult.Projection) == false)
+				if (fieldsToFetch.IsDistinctQuery && alreadyReturned.Add(indexQueryResult.Projection) == false)
 						return false;
-				}
 				return true;
 			}
 
 			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start)
 			{
-				if (isDistinctQuery) // add results that were already there in previous pages
+				if (fieldsToFetch.IsDistinctQuery == false) 
+					return;
+
+				// add results that were already there in previous pages
+				var min = Math.Min(start, search.totalHits);
+				for (int i = 0; i < min; i++)
 				{
-					var min = Math.Min(start, search.totalHits);
-					for (int i = 0; i < min; i++)
-					{
-						Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
-						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch);
-						alreadyReturned.Add(indexQueryResult.Projection);
-					}
+					Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch);
+					alreadyReturned.Add(indexQueryResult.Projection);
 				}
 			}
 
