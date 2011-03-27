@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -56,7 +57,6 @@ namespace Raven.Json.Linq
             return FromObjectInternal(o, jsonSerializer);
         }
 
-        /*
         /// <summary>
         /// Returns the indented JSON for this token.
         /// </summary>
@@ -85,13 +85,79 @@ namespace Raven.Json.Linq
 
                 return sw.ToString();
             }
-        }*/
+        }
 
         /// <summary>
         /// Writes this token to a <see cref="JsonWriter"/>.
         /// </summary>
         /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
         /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-        //public abstract void WriteTo(JsonWriter writer, params JsonConverter[] converters);
+        public abstract void WriteTo(JsonWriter writer, params JsonConverter[] converters);
+
+		/// <summary>
+		/// Creates a <see cref="RavenJToken"/> from a <see cref="JsonReader"/>.
+		/// </summary>
+		/// <param name="reader">An <see cref="JsonReader"/> positioned at the token to read into this <see cref="JToken"/>.</param>
+		/// <returns>
+		/// An <see cref="RavenJToken"/> that contains the token and its descendant tokens
+		/// that were read from the reader. The runtime type of the token is determined
+		/// by the token type of the first token encountered in the reader.
+		/// </returns>
+		public static RavenJToken ReadFrom(JsonReader reader)
+		{
+			ValidationUtils.ArgumentNotNull(reader, "reader");
+
+			if (reader.TokenType == JsonToken.None)
+			{
+				if (!reader.Read())
+					throw new Exception("Error reading JToken from JsonReader.");
+			}
+
+			switch (reader.TokenType)
+			{
+				case JsonToken.StartObject:
+					return RavenJObject.Load(reader);
+				case JsonToken.StartArray:
+					return RavenJArray.Load(reader);
+				case JsonToken.String:
+				case JsonToken.Integer:
+				case JsonToken.Float:
+				case JsonToken.Date:
+				case JsonToken.Boolean:
+				case JsonToken.Bytes:
+				case JsonToken.Null:
+				case JsonToken.Undefined:
+					return new RavenJValue(reader.Value);
+			}
+
+			// TODO: loading constructor and parameters?
+			throw new Exception("Error reading JToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+		}
+
+		/// <summary>
+		/// Load a <see cref="RavenJToken"/> from a string that contains JSON.
+		/// </summary>
+		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
+		/// <returns>A <see cref="RavenJToken"/> populated from the string that contains JSON.</returns>
+		public static RavenJToken Parse(string json)
+		{
+			JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+
+			return Load(jsonReader);
+		}
+
+		/// <summary>
+		/// Creates a <see cref="JToken"/> from a <see cref="JsonReader"/>.
+		/// </summary>
+		/// <param name="reader">An <see cref="JsonReader"/> positioned at the token to read into this <see cref="JToken"/>.</param>
+		/// <returns>
+		/// An <see cref="JToken"/> that contains the token and its descendant tokens
+		/// that were read from the reader. The runtime type of the token is determined
+		/// by the token type of the first token encountered in the reader.
+		/// </returns>
+		public static RavenJToken Load(JsonReader reader)
+		{
+			return ReadFrom(reader);
+		}
     }
 }
