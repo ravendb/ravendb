@@ -68,6 +68,7 @@
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\Bugs\ReplicatingDanish.cs" />
+    <Compile Include="Replication\Bugs\SameEtagFromDifferentServers.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />

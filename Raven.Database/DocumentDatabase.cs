@@ -267,7 +267,7 @@ namespace Raven.Database
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
-		private static long sequentialUuidCounter;
+		private long sequentialUuidCounter;
 
 		public Guid CreateSequentialUuid()
 		{
