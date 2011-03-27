@@ -384,7 +384,7 @@ more responsive application.
 
 			var entity = default(T);
 			EnsureNotReadVetoed(metadata);
-			var documentType = metadata.Value<string>("Raven-Clr-Type");
+			var documentType = Conventions.GetClrType(id, documentFound, metadata);
 			if (documentType != null)
 			{
 				var type = Type.GetType(documentType);
@@ -788,9 +788,9 @@ more responsive application.
 				objectAsJson.Remove(identityProperty.Name);
 			}
 #if !SILVERLIGHT
-			metadata["Raven-Clr-Type"] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
+			metadata[Raven.Abstractions.Data.Constacts.RavenClrType] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
 #else
-			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.AssemblyQualifiedName);
+			metadata[Raven.Abstractions.Data.Constacts.RavenClrType] = JToken.FromObject(entityType.AssemblyQualifiedName);
 #endif
 			var entityConverted = OnEntityConverted;
 			if (entityConverted != null)

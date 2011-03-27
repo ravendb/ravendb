@@ -1278,7 +1278,7 @@ If you really want to do in memory filtering on the data returned from the query
 
         	var entityName = metadata.Value<string>("Raven-Entity-Name");
 
-			var idPropName = theSession.Conventions.GetIdentityPropertyNameFromEntityName(entityName);
+			var idPropName = theSession.Conventions.FindIdentityPropertyNameFromEntityName(entityName);
 			if (result.Property(idPropName) != null)
 				return;
 
