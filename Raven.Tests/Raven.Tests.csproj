@@ -166,6 +166,7 @@
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\Indexing\CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize.cs" />
     <Compile Include="Bugs\Indexing\ComplexLinq.cs" />
+    <Compile Include="Bugs\Indexing\ComplexUsage.cs" />
     <Compile Include="Bugs\Indexing\CreateIndexesOnRemoteServer.cs" />
     <Compile Include="Bugs\Indexing\DynamicFields.cs" />
     <Compile Include="Bugs\Indexing\DynamicQueriesCanSort.cs" />
