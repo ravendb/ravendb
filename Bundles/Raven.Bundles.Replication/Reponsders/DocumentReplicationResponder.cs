@@ -96,7 +96,9 @@ namespace Raven.Bundles.Replication.Reponsders
             }
 
 
-            var newDocumentConflictId = id + "/conflicts/" + metadata.Value<string>("@etag");
+        	var newDocumentConflictId = id + "/conflicts/" +
+        	                            metadata.Value<string>(ReplicationConstants.RavenReplicationSource) + "/" +
+        	                            metadata.Value<string>("@etag");
             metadata.Add(ReplicationConstants.RavenReplicationConflict, JToken.FromObject(true));
 			actions.Documents.AddDocument(newDocumentConflictId, null, document, metadata);
 
