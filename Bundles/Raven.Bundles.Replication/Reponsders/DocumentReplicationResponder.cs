@@ -115,7 +115,7 @@ namespace Raven.Bundles.Replication.Reponsders
                 
             // we have a new conflict
             // move the existing doc to a conflict and create a conflict document
-            var existingDocumentConflictId = id +"/conflicts/"+existingDoc.Etag;
+        	var existingDocumentConflictId = id + "/conflicts/" + Database.TransactionalStorage.Id + "/" + existingDoc.Etag;
             
             existingDoc.Metadata.Add(ReplicationConstants.RavenReplicationConflict, JToken.FromObject(true));
 			actions.Documents.AddDocument(existingDocumentConflictId, null, existingDoc.DataAsJson, existingDoc.Metadata);

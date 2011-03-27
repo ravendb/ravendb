@@ -97,7 +97,9 @@ namespace Raven.Bundles.Replication.Reponsders
             }
 
 
-            var newDocumentConflictId = id + "/conflicts/" + lastEtag;
+            var newDocumentConflictId = id + "/conflicts/" +
+				metadata.Value<string>(ReplicationConstants.RavenReplicationSource) + 
+				"/" + lastEtag;
             metadata.Add(ReplicationConstants.RavenReplicationConflict, JToken.FromObject(true));
             actions.Attachments.AddAttachment(newDocumentConflictId, null, data, metadata);
 
@@ -114,7 +116,7 @@ namespace Raven.Bundles.Replication.Reponsders
                 
             // we have a new conflict
             // move the existing doc to a conflict and create a conflict document
-            var existingDocumentConflictId = id +"/conflicts/"+existingAttachment.Etag;
+			var existingDocumentConflictId = id + "/conflicts/" + Database.TransactionalStorage.Id + "/" + existingAttachment.Etag;
             
             existingAttachment.Metadata.Add(ReplicationConstants.RavenReplicationConflict, JToken.FromObject(true));
             actions.Attachments.AddAttachment(existingDocumentConflictId, null, existingAttachment.Data, existingAttachment.Metadata);
