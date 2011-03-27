@@ -66,7 +66,7 @@ namespace Raven.Json.Linq
             RavenJToken token = FromObjectInternal(o, jsonSerializer);
 
             if (token != null && token.Type != JTokenType.Object)
-                throw new ArgumentException("Object serialized to {0}. JObject instance expected.".FormatWith(CultureInfo.InvariantCulture, token.Type));
+                throw new ArgumentException("Object serialized to {0}. RavenJObject instance expected.".FormatWith(CultureInfo.InvariantCulture, token.Type));
 
             return (RavenJObject)token;
         }
@@ -169,5 +169,26 @@ namespace Raven.Json.Linq
 
             throw new Exception("Error reading JObject from JsonReader.");
         }
+
+		/// <summary>
+		/// Writes this token to a <see cref="JsonWriter"/>.
+		/// </summary>
+		/// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
+		/// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
+		public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+		{
+			writer.WriteStartObject();
+
+			if (_properties != null)
+			{
+				foreach (var property in _properties)
+				{
+					writer.WritePropertyName(property.Key);
+					property.Value.WriteTo(writer, converters);
+				}
+			}
+
+			writer.WriteEndObject();
+		}
     }
 }

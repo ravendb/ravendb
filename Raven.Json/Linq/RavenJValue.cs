@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -204,12 +205,31 @@ namespace Raven.Json.Linq
             return v;
         }
 
+		// Taken from Newtonsoft's Json.NET JsonSerializer
+		internal static JsonConverter GetMatchingConverter(IList<JsonConverter> converters, Type objectType)
+		{
+			ValidationUtils.ArgumentNotNull(objectType, "objectType");
+
+			if (converters != null)
+			{
+				for (int i = 0; i < converters.Count; i++)
+				{
+					JsonConverter converter = converters[i];
+
+					if (converter.CanConvert(objectType))
+						return converter;
+				}
+			}
+
+			return null;
+		}
+
         /// <summary>
         /// Writes this token to a <see cref="JsonWriter"/>.
         /// </summary>
         /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
         /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-        /*public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+        public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
         {
             switch (_valueType)
             {
@@ -228,7 +248,7 @@ namespace Raven.Json.Linq
             }
 
             JsonConverter matchingConverter;
-            if (_value != null && ((matchingConverter = JsonSerializer.GetMatchingConverter(converters, _value.GetType())) != null))
+            if (_value != null && ((matchingConverter = GetMatchingConverter(converters, _value.GetType())) != null))
             {
                 matchingConverter.WriteJson(writer, _value, new JsonSerializer());
                 return;
@@ -262,6 +282,6 @@ namespace Raven.Json.Linq
             }
 
             throw MiscellaneousUtils.CreateArgumentOutOfRangeException("TokenType", _valueType, "Unexpected token type.");
-        }*/
+        }
     }
 }
