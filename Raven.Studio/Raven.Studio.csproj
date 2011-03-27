@@ -412,6 +412,7 @@
     <EmbeddedResource Include="Controls\Editors\Definitions\CSharp.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\JScript.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
+    <EmbeddedResource Include="SampleData\MvcMusicStore_Dump.json" />
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>
