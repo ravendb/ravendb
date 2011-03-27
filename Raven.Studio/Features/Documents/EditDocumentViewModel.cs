@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.Composition;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using Caliburn.Micro;
 using Newtonsoft.Json;
@@ -13,7 +12,11 @@ using Raven.Studio.Framework;
 
 namespace Raven.Studio.Features.Documents
 {
-	[Export(typeof (EditDocumentViewModel))]
+    using System.Windows;
+    using System.Windows.Input;
+    using Commands;
+
+    [Export(typeof (EditDocumentViewModel))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class EditDocumentViewModel : Screen
 	{
@@ -26,9 +29,10 @@ namespace Raven.Studio.Features.Documents
 		private IDictionary<string, JToken> metadata;
 		private bool nonAuthoritiveInformation;
 		private readonly BindableCollection<string> references = new BindableCollection<string>();
+        private IKeyboardShortcutBinder keys;
 
 		[ImportingConstructor]
-		public EditDocumentViewModel(IEventAggregator events)
+		public EditDocumentViewModel(IEventAggregator events, IKeyboardShortcutBinder keys)
 		{
 			metadata = new Dictionary<string, JToken>();
 
@@ -36,7 +40,16 @@ namespace Raven.Studio.Features.Documents
 			document = new JsonDocument();
 			JsonData = InitialJsonData();
 			events.Subscribe(this);
+		    this.keys = keys;
+
+            keys.Register<SaveDocument>(Key.S, ModifierKeys.Control, x => x.Execute(this), this);
 		}
+
+        public override void AttachView(object view, object context)
+        {
+            keys.Initialize((FrameworkElement)view);
+            base.AttachView(view, context);
+        }
 
 		public string ClrType { get; private set; }
 		public string CollectionType { get; private set; }
@@ -208,16 +221,7 @@ namespace Raven.Studio.Features.Documents
 
 		private static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, JToken>> data)
 		{
-			StringBuilder result = new StringBuilder().AppendLine("{");
-
-			foreach (var item in data)
-			{
-				result.AppendFormat("\t\"{0}\" : {1},", item.Key, item.Value)
-					.AppendLine();
-			}
-			result.AppendLine("}");
-
-			return result.ToString();
+		    return JsonConvert.SerializeObject(data, Formatting.Indented);
 		}
 
 		private static string InitialJsonData()

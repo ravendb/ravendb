@@ -75,6 +75,12 @@ namespace Raven.Client
 		/// </summary>
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession();
+
+        /// <summary>
+        /// Opens the async session.
+        /// </summary>
+        /// <returns></returns>
+        IAsyncDocumentSession OpenAsyncSession(string database);
 #endif
 
 #if !SILVERLIGHT

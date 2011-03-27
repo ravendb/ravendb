@@ -1,8 +1,8 @@
-﻿namespace Raven.Studio.Shell
+﻿namespace Raven.Studio.Shell.MessageBox
 {
-	using Caliburn.Micro;
+    using Caliburn.Micro;
 
-	public interface IMessageBox : IScreen
+    public interface IMessageBox : IScreen
 	{
 		string Message { get; set; }
 		MessageBoxOptions Options { get; set; }
