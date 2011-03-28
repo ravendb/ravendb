@@ -363,7 +363,7 @@ task UploadUnstable -depends Unstable, DoRelease, Upload {
 task CreateNugetPackage {
   $accessPath = "$base_dir\..\Nuget-Access-Key.txt"
   
-  if( $global:uploadCategory -ne "RavenDB") // we only publish the stable version out
+  if( $global:uploadCategory -ne "RavenDB") # we only publish the stable version out
   {
     return
   }
