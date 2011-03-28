@@ -363,6 +363,11 @@ task UploadUnstable -depends Unstable, DoRelease, Upload {
 task CreateNugetPackage {
   $accessPath = "$base_dir\..\Nuget-Access-Key.txt"
   
+  if( $global:uploadCategory -ne "RavenDB") // we only publish the stable version out
+  {
+    return
+  }
+  
   if ( (Test-Path $accessPath) -eq $false )
   {
     return;
@@ -418,7 +423,9 @@ task CreateNugetPackage {
   
   & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB.$version.$env:buildlabel.nupkg" $accessKey
   
-  $prevVersion = ($env:buildlabel - 1)
   
-  & "$tools_dir\nuget.exe" delete RavenDB "$version.$prevVersion" $accessKey -source http://packages.nuget.org/v1/ -NoPrompt
+  # This is prune to failure since the previous package may not exists
+  
+  #$prevVersion = ($env:buildlabel - 1)
+  # & "$tools_dir\nuget.exe" delete RavenDB "$version.$prevVersion" $accessKey -source http://packages.nuget.org/v1/ -NoPrompt
 }
