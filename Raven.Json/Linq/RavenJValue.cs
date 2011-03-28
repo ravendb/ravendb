@@ -7,7 +7,7 @@ using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
-    public class RavenJValue : RavenJToken
+	public class RavenJValue : RavenJToken, IEquatable<RavenJValue>, IFormattable, IComparable, IComparable<RavenJValue>
     {
         private JTokenType _valueType;
         private object _value;
@@ -178,7 +178,7 @@ namespace Raven.Json.Linq
             }
         }
 
-        internal static RavenJValue Load(JsonReader reader)
+        internal new static RavenJValue Load(JsonReader reader)
         {
             RavenJValue v;
             switch (reader.TokenType)
@@ -274,7 +274,7 @@ namespace Raven.Json.Linq
                         writer.WriteValue((DateTimeOffset)_value);
                     else
 #endif
-                        writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture)); ;
+                        writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture));
                     return;
                 case JTokenType.Bytes:
                     writer.WriteValue((byte[])_value);
@@ -283,5 +283,192 @@ namespace Raven.Json.Linq
 
             throw MiscellaneousUtils.CreateArgumentOutOfRangeException("TokenType", _valueType, "Unexpected token type.");
         }
+
+		/// <summary>
+		/// Determines whether the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>.
+		/// </summary>
+		/// <param name="obj">The <see cref="T:System.Object"/> to compare with the current <see cref="T:System.Object"/>.</param>
+		/// <returns>
+		/// true if the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>; otherwise, false.
+		/// </returns>
+		/// <exception cref="T:System.NullReferenceException">
+		/// The <paramref name="obj"/> parameter is null.
+		/// </exception>
+		public override bool Equals(object obj)
+		{
+			if (obj == null)
+				return false;
+
+			var otherValue = obj as RavenJValue;
+			return otherValue != null ? Equals(otherValue) : base.Equals(obj);
+		}
+
+		/// <summary>
+		/// Serves as a hash function for a particular type.
+		/// </summary>
+		/// <returns>
+		/// A hash code for the current <see cref="T:System.Object"/>.
+		/// </returns>
+		public override int GetHashCode()
+		{
+			return _value == null ? 0 : _value.GetHashCode();
+		}
+
+		public int CompareTo(object obj)
+		{
+			throw new NotImplementedException();
+		}
+
+		public bool Equals(RavenJValue other)
+		{
+			return other != null && ValuesEquals(this, other);
+		}
+
+		private static bool ValuesEquals(RavenJValue v1, RavenJValue v2)
+		{
+			return (v1 == v2 || (v1._valueType == v2._valueType && Compare(v1._valueType, v1._value, v2._value) == 0));
+		}
+
+		public int CompareTo(RavenJValue other)
+		{
+			return other == null ? 1 : Compare(_valueType, _value, other._value);
+		}
+
+		private static int Compare(JTokenType valueType, object objA, object objB)
+		{
+			if (objA == null && objB == null)
+				return 0;
+			if (objA != null && objB == null)
+				return 1;
+			if (objA == null && objB != null)
+				return -1;
+
+			switch (valueType)
+			{
+				case JTokenType.Integer:
+					if (objA is ulong || objB is ulong || objA is decimal || objB is decimal)
+						return Convert.ToDecimal(objA, CultureInfo.InvariantCulture).CompareTo(Convert.ToDecimal(objB, CultureInfo.InvariantCulture));
+					else if (objA is float || objB is float || objA is double || objB is double)
+						return CompareFloat(objA, objB);
+					else
+						return Convert.ToInt64(objA, CultureInfo.InvariantCulture).CompareTo(Convert.ToInt64(objB, CultureInfo.InvariantCulture));
+				case JTokenType.Float:
+					return CompareFloat(objA, objB);
+				case JTokenType.Comment:
+				case JTokenType.String:
+				case JTokenType.Raw:
+					string s1 = Convert.ToString(objA, CultureInfo.InvariantCulture);
+					string s2 = Convert.ToString(objB, CultureInfo.InvariantCulture);
+
+					return s1.CompareTo(s2);
+				case JTokenType.Boolean:
+					bool b1 = Convert.ToBoolean(objA, CultureInfo.InvariantCulture);
+					bool b2 = Convert.ToBoolean(objB, CultureInfo.InvariantCulture);
+
+					return b1.CompareTo(b2);
+				case JTokenType.Date:
+					if (objA is DateTime)
+					{
+						DateTime date1 = Convert.ToDateTime(objA, CultureInfo.InvariantCulture);
+						DateTime date2 = Convert.ToDateTime(objB, CultureInfo.InvariantCulture);
+
+						return date1.CompareTo(date2);
+					}
+					else
+					{
+						if (!(objB is DateTimeOffset))
+							throw new ArgumentException("Object must be of type DateTimeOffset.");
+
+						DateTimeOffset date1 = (DateTimeOffset)objA;
+						DateTimeOffset date2 = (DateTimeOffset)objB;
+
+						return date1.CompareTo(date2);
+					}
+				case JTokenType.Bytes:
+					if (!(objB is byte[]))
+						throw new ArgumentException("Object must be of type byte[].");
+
+					byte[] bytes1 = objA as byte[];
+					byte[] bytes2 = objB as byte[];
+					if (bytes1 == null)
+						return -1;
+					if (bytes2 == null)
+						return 1;
+
+					return MiscellaneousUtils.ByteArrayCompare(bytes1, bytes2);
+				default:
+					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("valueType", valueType, "Unexpected value type: {0}".FormatWith(CultureInfo.InvariantCulture, valueType));
+			}
+		}
+
+		private static int CompareFloat(object objA, object objB)
+		{
+			double d1 = Convert.ToDouble(objA, CultureInfo.InvariantCulture);
+			double d2 = Convert.ToDouble(objB, CultureInfo.InvariantCulture);
+
+			// take into account possible floating point errors
+			if (MathUtils.ApproxEquals(d1, d2))
+				return 0;
+
+			return d1.CompareTo(d2);
+		}
+
+		/// <summary>
+		/// Returns a <see cref="System.String"/> that represents this instance.
+		/// </summary>
+		/// <returns>
+		/// A <see cref="System.String"/> that represents this instance.
+		/// </returns>
+		public override string ToString()
+		{
+			if (_value == null)
+				return string.Empty;
+
+			return _value.ToString();
+		}
+
+		/// <summary>
+		/// Returns a <see cref="System.String"/> that represents this instance.
+		/// </summary>
+		/// <param name="format">The format.</param>
+		/// <returns>
+		/// A <see cref="System.String"/> that represents this instance.
+		/// </returns>
+		public string ToString(string format)
+		{
+			return ToString(format, CultureInfo.CurrentCulture);
+		}
+
+		/// <summary>
+		/// Returns a <see cref="System.String"/> that represents this instance.
+		/// </summary>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>
+		/// A <see cref="System.String"/> that represents this instance.
+		/// </returns>
+		public string ToString(IFormatProvider formatProvider)
+		{
+			return ToString(null, formatProvider);
+		}
+
+		/// <summary>
+		/// Returns a <see cref="System.String"/> that represents this instance.
+		/// </summary>
+		/// <param name="format">The format.</param>
+		/// <param name="formatProvider">The format provider.</param>
+		/// <returns>
+		/// A <see cref="System.String"/> that represents this instance.
+		/// </returns>
+		public string ToString(string format, IFormatProvider formatProvider)
+		{
+			if (_value == null)
+				return string.Empty;
+
+			var formattable = _value as IFormattable;
+			if (formattable != null)
+				return formattable.ToString(format, formatProvider);
+			
+			return _value.ToString();
+		}
     }
 }
