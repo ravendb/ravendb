@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -31,6 +32,15 @@ namespace Raven.Json.Linq
         {
         }
 
+		public RavenJObject(params KeyValuePair<string, RavenJToken>[] props)
+		{
+			_properties = new CopyOnWriteJDictionary<string>();
+			foreach (var kv in props)
+			{
+				_properties.Add(kv);
+			}
+		}
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenJObject"/> class from another <see cref="RavenJObject"/> object.
         /// </summary>
@@ -44,6 +54,11 @@ namespace Raven.Json.Linq
         {
             return new RavenJObject(this);
         }
+
+		public void AddValueProperty(string key, object value)
+		{
+			Properties.Add(key, new RavenJValue(value));
+		}
 
         /// <summary>
         /// Creates a <see cref="RavenJObject"/> from an object.
@@ -90,7 +105,7 @@ namespace Raven.Json.Linq
         /// </summary>
         /// <param name="reader">A <see cref="JsonReader"/> that will be read for the content of the <see cref="RavenJObject"/>.</param>
         /// <returns>A <see cref="RavenJObject"/> that contains the JSON that was read from the specified <see cref="JsonReader"/>.</returns>
-        public static RavenJObject Load(JsonReader reader)
+        public new static RavenJObject Load(JsonReader reader)
         {
             ValidationUtils.ArgumentNotNull(reader, "reader");
 
@@ -169,6 +184,18 @@ namespace Raven.Json.Linq
 
             throw new Exception("Error reading JObject from JsonReader.");
         }
+
+		/// <summary>
+		/// Load a <see cref="RavenJObject"/> from a string that contains JSON.
+		/// </summary>
+		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
+		/// <returns>A <see cref="RavenJObject"/> populated from the string that contains JSON.</returns>
+		public static new RavenJObject Parse(string json)
+		{
+			JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+
+			return Load(jsonReader);
+		}
 
 		/// <summary>
 		/// Writes this token to a <see cref="JsonWriter"/>.

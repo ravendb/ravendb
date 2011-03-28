@@ -1,25 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
-    public class RavenJArray : RavenJToken
+    public class RavenJArray : RavenJToken, IEnumerable<RavenJToken>
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="JArray"/> class.
+		/// Initializes a new instance of the <see cref="RavenJArray"/> class.
         /// </summary>
         public RavenJArray()
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JArray"/> class from another <see cref="JArray"/> object.
+		/// Initializes a new instance of the <see cref="RavenJArray"/> class from another <see cref="RavenJArray"/> object.
         /// </summary>
-        /// <param name="other">A <see cref="JArray"/> object to copy from.</param>
+		/// <param name="other">A <see cref="RavenJArray"/> object to copy from.</param>
         public RavenJArray(RavenJArray other)
         {
             if (other.Length == 0) return;
@@ -29,8 +30,24 @@ namespace Raven.Json.Linq
                 Items.Add(item.CloneToken());
         }
 
-        /// <summary>
-        /// Gets the node type for this <see cref="JToken"/>.
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenJArray"/> class with the specified content.
+		/// </summary>
+		/// <param name="content">The contents of the array.</param>
+		public RavenJArray(params object[] content)
+		{
+			_items = new List<RavenJToken>();
+			foreach (var item in content)
+			{
+				if (item.GetType().IsSubclassOf(typeof(RavenJToken)))
+					_items.Add((RavenJToken)item);
+				else
+					_items.Add(new RavenJValue(item));
+			}
+		}
+
+    	/// <summary>
+        /// Gets the node type for this <see cref="RavenJToken"/>.
         /// </summary>
         /// <value>The type.</value>
         public override JTokenType Type
@@ -51,7 +68,7 @@ namespace Raven.Json.Linq
         }
         private List<RavenJToken> _items;
 
-        internal static RavenJArray Load(JsonReader reader)
+        internal new static RavenJArray Load(JsonReader reader)
         {
             if (reader.TokenType != JsonToken.StartArray)
                 throw new Exception(
@@ -91,6 +108,18 @@ namespace Raven.Json.Linq
         }
 
 		/// <summary>
+		/// Load a <see cref="RavenJArray"/> from a string that contains JSON.
+		/// </summary>
+		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
+		/// <returns>A <see cref="RavenJArray"/> populated from the string that contains JSON.</returns>
+		public static new RavenJArray Parse(string json)
+		{
+			JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+
+			return Load(jsonReader);
+		}
+
+		/// <summary>
 		/// Writes this token to a <see cref="JsonWriter"/>.
 		/// </summary>
 		/// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
@@ -109,5 +138,23 @@ namespace Raven.Json.Linq
 
 			writer.WriteEndArray();
 		}
-    }
+
+		#region IEnumerable<RavenJToken> Members
+
+		public IEnumerator<RavenJToken> GetEnumerator()
+		{
+			return Items.GetEnumerator();
+		}
+
+		#endregion
+
+		#region IEnumerable Members
+
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
+
+		#endregion
+	}
 }
