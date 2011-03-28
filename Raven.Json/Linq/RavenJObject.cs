@@ -50,6 +50,48 @@ namespace Raven.Json.Linq
             _properties = (CopyOnWriteJDictionary<string>) other._properties.Clone();
         }
 
+		/// <summary>
+		/// Gets the <see cref="JToken"/> with the specified key.
+		/// </summary>
+		/// <value>The <see cref="JToken"/> with the specified key.</value>
+		public override RavenJToken this[object key]
+		{
+			get
+			{
+				ValidationUtils.ArgumentNotNull(key, "o");
+
+				var propertyName = key as string;
+				if (propertyName == null)
+					throw new ArgumentException("Accessed RavenJObject values with invalid key value: {0}. Object property name expected.".FormatWith(CultureInfo.InvariantCulture, MiscellaneousUtils.ToString(key)));
+
+				return this[propertyName];
+			}
+			set
+			{
+				ValidationUtils.ArgumentNotNull(key, "o");
+
+				var propertyName = key as string;
+				if (propertyName == null)
+					throw new ArgumentException("Set RavenJObject values with invalid key value: {0}. Object property name expected.".FormatWith(CultureInfo.InvariantCulture, MiscellaneousUtils.ToString(key)));
+
+				this[propertyName] = value;
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the <see cref="RavenJToken"/> with the specified property name.
+		/// </summary>
+		/// <value></value>
+		public RavenJToken this[string propertyName]
+		{
+			get
+			{
+				ValidationUtils.ArgumentNotNull(propertyName, "propertyName");
+				return Properties[propertyName];
+			}
+			set { Properties[propertyName] = value; }
+		}
+
         public override RavenJToken CloneToken()
         {
             return new RavenJObject(this);
@@ -84,20 +126,6 @@ namespace Raven.Json.Linq
                 throw new ArgumentException("Object serialized to {0}. RavenJObject instance expected.".FormatWith(CultureInfo.InvariantCulture, token.Type));
 
             return (RavenJObject)token;
-        }
-
-        /// <summary>
-        /// Gets or sets the <see cref="RavenJToken"/> with the specified property name.
-        /// </summary>
-        /// <value></value>
-        public RavenJToken this[string propertyName]
-        {
-            get
-            {
-                ValidationUtils.ArgumentNotNull(propertyName, "propertyName");
-                return Properties[propertyName];
-            }
-            set { Properties[propertyName] = value; }
         }
 
         /// <summary>

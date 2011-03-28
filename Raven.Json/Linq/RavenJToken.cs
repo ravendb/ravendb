@@ -21,6 +21,16 @@ namespace Raven.Json.Linq
         /// <returns>A cloned RavenJToken</returns>
         public abstract RavenJToken CloneToken();
 
+		/// <summary>
+		/// Gets the <see cref="JToken"/> with the specified key.
+		/// </summary>
+		/// <value>The <see cref="JToken"/> with the specified key.</value>
+		public virtual RavenJToken this[object key]
+		{
+			get { throw new InvalidOperationException("Cannot access child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
+			set { throw new InvalidOperationException("Cannot set child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
+		}
+
         internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
         {
             ValidationUtils.ArgumentNotNull(o, "o");
@@ -158,6 +168,17 @@ namespace Raven.Json.Linq
 		public static RavenJToken Load(JsonReader reader)
 		{
 			return ReadFrom(reader);
+		}
+
+		/// <summary>
+		/// Gets the <see cref="RavenJToken"/> with the specified key converted to the specified type.
+		/// </summary>
+		/// <typeparam name="T">The type to convert the token to.</typeparam>
+		/// <param name="key">The token key.</param>
+		/// <returns>The converted token value.</returns>
+		public virtual T Value<T>(object key)
+		{
+			return this[key].Convert<RavenJToken, T>();
 		}
     }
 }
