@@ -50,6 +50,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Linq\Extensions.cs" />
     <Compile Include="Linq\RavenJArray.cs" />
     <Compile Include="Linq\RavenJObject.cs" />
     <Compile Include="Linq\RavenJToken.cs" />
