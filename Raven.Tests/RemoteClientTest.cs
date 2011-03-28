@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
@@ -23,6 +24,7 @@ namespace Raven.Tests
 
         protected RavenDbServer GetNewServer()
         {
+			HttpJsonRequest.ResetCache();
         	var ravenDbServer = new RavenDbServer(new RavenConfiguration
         	{
         		Port = 8080,

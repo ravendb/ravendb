@@ -11,6 +11,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Web;
 using Raven.Bundles.Authorization;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Http;
@@ -37,7 +38,8 @@ namespace Raven.Bundles.Tests.Authorization
 
 		protected AuthorizationTest()
 		{
-		    database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
+			HttpJsonRequest.ResetCache(); 
+			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
             server = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
 			{
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All,

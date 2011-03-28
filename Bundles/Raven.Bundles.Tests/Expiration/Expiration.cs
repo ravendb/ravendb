@@ -12,6 +12,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Expiration;
 using Raven.Bundles.Tests.Versioning;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Server;
@@ -28,7 +29,8 @@ namespace Raven.Bundles.Tests.Expiration
 
         public Expiration()
         {
-            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning.Versioning)).CodeBase);
+			HttpJsonRequest.ResetCache();
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
             database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
             ravenDbServer = new RavenDbServer(

@@ -13,6 +13,7 @@ using System.Reflection;
 using Raven.Bundles.Expiration;
 using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
 using Raven.Server;
@@ -31,7 +32,8 @@ namespace Raven.Bundles.Tests.IndexReplication
 
         public ReplicateToSql()
         {
-            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning.Versioning)).CodeBase);
+			HttpJsonRequest.ResetCache(); 
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
             database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
             ravenDbServer = new RavenDbServer(
