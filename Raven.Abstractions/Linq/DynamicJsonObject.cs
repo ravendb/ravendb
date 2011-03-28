@@ -7,10 +7,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Linq;
-using System.Linq.Expressions;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
@@ -23,7 +21,7 @@ namespace Raven.Database.Linq
 	{
 		public IEnumerator<dynamic> GetEnumerator()
 		{
-			foreach (var item in Inner)
+			foreach (var item in Inner.Properties)
 			{
                 if(item.Key[0] == '$')
                     continue;
@@ -140,7 +138,8 @@ namespace Raven.Database.Linq
 					}
 					return new DynamicJsonObject(jObject);
 				case JTokenType.Array:
-					return new DynamicList(jToken.Select(TransformToValue).ToArray());
+					var ar = jToken as RavenJArray; // cannot result in null because jToken.Type is set to Array
+					return new DynamicList(ar.Select(TransformToValue).ToArray());
 				case JTokenType.Date:
 					return jToken.Value<DateTime>();
 				case JTokenType.Null:
