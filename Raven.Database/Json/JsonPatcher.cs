@@ -5,28 +5,23 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Exceptions;
 using Raven.Http.Exceptions;
 using System.Linq;
-using Raven.Abstractions.Json;
-using Raven.Database.Linq.PrivateExtensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Json
 {
-
-
 	public class JsonPatcher
 	{
-		private readonly JObject document;
+		private readonly RavenJObject document;
 
-		public JsonPatcher(JObject document)
+		public JsonPatcher(RavenJObject document)
 		{
 			this.document = document;
 		}
 
-		public JObject Apply(PatchRequest[] patch)
+		public RavenJObject Apply(PatchRequest[] patch)
 		{
 			foreach (var patchCmd in patch)
 			{
@@ -115,7 +110,7 @@ namespace Raven.Database.Json
 				case JTokenType.Object:
 					foreach (var cmd in nestedCommands)
 					{
-						var nestedDoc = property.Value.Value<JObject>();
+						var nestedDoc = property.Value.Value<RavenJObject>();
 						new JsonPatcher(nestedDoc).Apply(cmd);
 					}
 					break;

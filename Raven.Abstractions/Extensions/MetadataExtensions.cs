@@ -11,6 +11,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Data
 {
@@ -153,24 +154,24 @@ namespace Raven.Database.Data
         /// <param name="self">The self.</param>
         /// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
         /// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-        public static JObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
+        public static RavenJObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
         {
-            var metadata = new JObject();
+            var metadata = new RavenJObject();
             foreach (string header in self)
             {
                 try
                 {
-
                     if (HeadersToIgnoreClient.Contains(header))
                         continue;
                     if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
                         continue;
                     var values = self.GetValues(header);
                     var headerName = CaptureHeaderName(header);
+					// TODO: Can values be null?
                     if (values.Length == 1)
-                        metadata.Add(headerName, GetValue(values[0]));
+                        metadata[headerName] = GetValue(values[0]);
                     else
-                        metadata.Add(headerName, new JArray(values.Select(GetValue)));
+                        metadata.Properties.Add(headerName, new RavenJArray(values.Select(GetValue)));
                 }
                 catch (Exception exc)
                 {
@@ -196,18 +197,18 @@ namespace Raven.Database.Data
             return sb.ToString();
         }
 
-        private static JToken GetValue(string val)
+        private static RavenJToken GetValue(string val)
         {
             try
             {
                 if (val.StartsWith("{"))
-                    return JObject.Parse(val);
+                    return RavenJObject.Parse(val);
                 if (val.StartsWith("["))
-                    return JArray.Parse(val);
+                    return RavenJArray.Parse(val);
                 DateTime result;
                 if (DateTime.TryParseExact(val, "r", CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
-                    return new JValue(result);
-                return new JValue(val);
+                    return new RavenJValue(result);
+                return new RavenJValue(val);
             }
             catch (Exception exc)
             {

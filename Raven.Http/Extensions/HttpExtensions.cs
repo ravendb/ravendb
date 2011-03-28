@@ -18,6 +18,7 @@ using Raven.Database.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
 using Raven.Http.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Http.Extensions
 {
@@ -39,11 +40,11 @@ namespace Raven.Http.Extensions
 			return Encoding.GetEncoding(match.Groups[1].Value);
 		}
 
-		public static JObject ReadJson(this IHttpContext context)
+		public static RavenJObject ReadJson(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
 			using (var jsonReader = new JsonTextReader(streamReader))
-				return JObject.Load(jsonReader);
+				return RavenJObject.Load(jsonReader);
 		}
 
 		public static T ReadJsonObject<T>(this IHttpContext context)
@@ -63,12 +64,12 @@ namespace Raven.Http.Extensions
 				return JArray.Load(jsonReader);
 		}
 
-		public static JArray ReadBsonArray(this IHttpContext context)
+		public static RavenJArray ReadBsonArray(this IHttpContext context)
 		{
 			using (var jsonReader = new BsonReader(context.Request.InputStream))
 			{
-				var jObject = JObject.Load(jsonReader);
-				return new JArray(jObject.Values());
+				var jObject = RavenJObject.Load(jsonReader);
+				return new RavenJArray(jObject.Properties.Values);
 			}
 		}
 
@@ -116,7 +117,7 @@ namespace Raven.Http.Extensions
 			streamWriter.Flush();
 		}
 
-		public static void WriteData(this IHttpContext context, JObject data, JObject headers, Guid etag)
+		public static void WriteData(this IHttpContext context, RavenJObject data, RavenJObject headers, Guid etag)
 		{
 			var str = data.ToString(Formatting.None);
 			var jsonp = context.Request.QueryString["jsonp"];
@@ -132,21 +133,21 @@ namespace Raven.Http.Extensions
 			WriteData(context, Encoding.UTF8.GetBytes(str), headers, etag);
 		}
 
-		public static void WriteData(this IHttpContext context, byte[] data, JObject headers, Guid etag)
+		public static void WriteData(this IHttpContext context, byte[] data, RavenJObject headers, Guid etag)
 		{
-			foreach (var header in headers.Properties())
+			foreach (var header in headers.Properties)
 			{
-				if (header.Name.StartsWith("@"))
+				if (header.Key.StartsWith("@"))
 					continue;
 
-				var value =  WriteHeaderValue(header);
-				switch (header.Name)
+				var value =  GetHeaderValue(header.Value);
+				switch (header.Key)
 				{
 					case "Content-Type":
 						context.Response.ContentType = value;
 						break;
 					default:
-						context.Response.AddHeader(header.Name, value);
+						context.Response.AddHeader(header.Key, value);
 						break;
 				}
 			}
@@ -159,13 +160,17 @@ namespace Raven.Http.Extensions
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
-	    private static string WriteHeaderValue(JProperty header)
+	    private static string GetHeaderValue(RavenJToken header)
 	    {
-            if(header.Value.Type == JTokenType.Date)
+	    	var headerValue = header as RavenJValue;
+			if (headerValue == null)
+				return string.Empty;
+
+			if (headerValue.Type == JTokenType.Date)
             {
-                return header.Value.Value<DateTime>().ToString("r");
+                return headerValue.Value<DateTime>().ToString("r");
             }
-	        return StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+	        return StripQuotesIfNeeded(headerValue.ToString(Formatting.None));
 	    }
 
 	    private static string StripQuotesIfNeeded(string str)

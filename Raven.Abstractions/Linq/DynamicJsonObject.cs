@@ -55,7 +55,7 @@ namespace Raven.Database.Linq
 		{
 			var dynamicJsonObject = other as DynamicJsonObject;
 			if (dynamicJsonObject != null)
-				return new JTokenEqualityComparer().Equals(inner, dynamicJsonObject.inner);
+				return new RavenJTokenEqualityComparer().Equals(inner, dynamicJsonObject.inner);
 			return base.Equals(other);
 		}
 
@@ -68,7 +68,7 @@ namespace Raven.Database.Linq
 		/// <filterpriority>2</filterpriority>
 		public override int GetHashCode()
 		{
-			return new JTokenEqualityComparer().GetHashCode(inner);
+			return new RavenJTokenEqualityComparer().GetHashCode(inner);
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -127,13 +127,13 @@ namespace Raven.Database.Linq
 			return true;
 		}
 
-	    public static object TransformToValue(JToken jToken)
+	    public static object TransformToValue(RavenJToken jToken)
 		{
 			switch (jToken.Type)
 			{
 				case JTokenType.Object:
-					var jObject = (JObject)jToken;
-					var values = jObject.Value<JArray>("$values");
+					var jObject = (RavenJObject)jToken;
+					var values = jObject.Value<RavenJArray>("$values");
 					if (values != null)
 					{
 						return new DynamicList(values.Select(TransformToValue).ToArray());
@@ -168,7 +168,7 @@ namespace Raven.Database.Linq
 			{
 				return GetDocumentId();
 			}
-			JToken value;
+			RavenJToken value;
 			if (inner.TryGetValue(name, out value))
 			{
 				return TransformToValue(value);

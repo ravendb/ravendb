@@ -5,14 +5,14 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
     public interface ITransactionStorageActions
     {
-        Guid AddDocumentInTransaction(string key, Guid? etag, JObject data, JObject metadata, TransactionInformation transactionInformation);
+		Guid AddDocumentInTransaction(string key, Guid? etag, RavenJObject data, RavenJObject metadata, TransactionInformation transactionInformation);
         void DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag);
         void RollbackTransaction(Guid txId);
         void ModifyTransactionId(Guid fromTxId, Guid toTxId, TimeSpan timeout);

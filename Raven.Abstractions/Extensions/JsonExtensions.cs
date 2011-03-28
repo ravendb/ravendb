@@ -18,18 +18,20 @@ namespace Raven.Database.Json
 	/// </summary>
 	public static class JsonExtensions
 	{
-	    public static JObject ToJObject(object result)
+	    public static RavenJObject ToJObject(object result)
         {
 #if !NET_3_5
-            var dynamicJsonObject = result as Raven.Database.Linq.DynamicJsonObject;
+            var dynamicJsonObject = result as Linq.DynamicJsonObject;
             if (dynamicJsonObject != null)
                 return dynamicJsonObject.Inner;
 #endif
             if (result is string || result is ValueType)
             {
-                return new JObject(new JProperty("Value", new JValue(result)));
+                var ret = new RavenJObject();
+            	ret.Properties.Add("Value", new RavenJValue(result));
+            	return ret;
             }
-            return JObject.FromObject(result, new JsonSerializer
+            return RavenJObject.FromObject(result, new JsonSerializer
                                               	{
                                               		Converters =
                                               			{
@@ -81,7 +83,7 @@ namespace Raven.Database.Json
         /// <summary>
         /// Convert a JToken to a byte array
         /// </summary>
-        public static void WriteTo(this JToken self, Stream stream)
+        public static void WriteTo(this RavenJToken self, Stream stream)
         {
             self.WriteTo(new BsonWriter(stream)
             {
@@ -103,7 +105,7 @@ namespace Raven.Database.Json
 		/// </summary>
 		public static T JsonDeserialization<T>(this RavenJObject self)
 		{
-			return (T)new JsonSerializer().Deserialize(new JTokenReader(self), typeof(T));
+			return (T)new JsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
 		}
 	}
 }

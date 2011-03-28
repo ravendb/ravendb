@@ -8,13 +8,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client
 {
@@ -51,7 +51,7 @@ namespace Raven.Client.Client
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		PutResult Put(string key, Guid? etag, JObject document, JObject metadata);
+		PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Deletes the document with the specified key.
@@ -67,7 +67,7 @@ namespace Raven.Client.Client
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata);
+		void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata);
 		/// <summary>
 		/// Gets the attachment by the specified key
 		/// </summary>
