@@ -10,7 +10,9 @@ using System.Text.RegularExpressions;
 using System.Web;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using System.Linq;
 using Raven.Database.Plugins;
@@ -329,14 +331,14 @@ namespace Raven.Database.Linq
 
 			var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
 
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == "__document_id"))
+			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constacts.DocumentIdFieldName))
 				return;
 
 			objectInitializer.CreateExpressions.Add(
 				new NamedArgumentExpression
 				{
-					Name = "__document_id",
-					Expression = new MemberReferenceExpression(identifierExpression, "__document_id")
+					Name = Constacts.DocumentIdFieldName,
+					Expression = new MemberReferenceExpression(identifierExpression, Constacts.DocumentIdFieldName)
 				});
 		}
 
@@ -376,14 +378,14 @@ namespace Raven.Database.Linq
 
 			var identifierExpression = new IdentifierExpression(queryExpression.FromClause.Identifier);
 
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == "__document_id"))
+			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constacts.DocumentIdFieldName))
 				return variableDeclaration;
 
 			objectInitializer.CreateExpressions.Add(
 				new NamedArgumentExpression
 				{
-					Name = "__document_id",
-					Expression = new MemberReferenceExpression(identifierExpression, "__document_id")
+					Name = Constacts.DocumentIdFieldName,
+					Expression = new MemberReferenceExpression(identifierExpression, Constacts.DocumentIdFieldName)
 				});
 			return variableDeclaration;
 		}

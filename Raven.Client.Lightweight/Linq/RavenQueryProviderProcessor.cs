@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Data;
 
@@ -489,115 +490,119 @@ namespace Raven.Client.Linq
 					VisitExpression(expression.Arguments[0]);
 					break;
 				case "Where":
-				{
-					insideWhere++;
-					VisitExpression(expression.Arguments[0]);
-					if (chainedWhere) luceneQuery.AndAlso();
-					if(insideWhere > 1)
-						luceneQuery.OpenSubclause();
-					VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-					if (insideWhere > 1)
-						luceneQuery.CloseSubclause();
-					chainedWhere = true;
-					insideWhere--;
-					break;
-				}
+					{
+						insideWhere++;
+						VisitExpression(expression.Arguments[0]);
+						if (chainedWhere) luceneQuery.AndAlso();
+						if (insideWhere > 1)
+							luceneQuery.OpenSubclause();
+						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						if (insideWhere > 1)
+							luceneQuery.CloseSubclause();
+						chainedWhere = true;
+						insideWhere--;
+						break;
+					}
 				case "Select":
-				{
-					VisitExpression(expression.Arguments[0]);
-					VisitSelect(((UnaryExpression) expression.Arguments[1]).Operand);
-					break;
-				}
+					{
+						VisitExpression(expression.Arguments[0]);
+						VisitSelect(((UnaryExpression) expression.Arguments[1]).Operand);
+						break;
+					}
 				case "Skip":
-				{
-					VisitExpression(expression.Arguments[0]);
-					VisitSkip(((ConstantExpression) expression.Arguments[1]));
-					break;
-				}
+					{
+						VisitExpression(expression.Arguments[0]);
+						VisitSkip(((ConstantExpression) expression.Arguments[1]));
+						break;
+					}
 				case "Take":
-				{
-					VisitExpression(expression.Arguments[0]);
-					VisitTake(((ConstantExpression) expression.Arguments[1]));
-					break;
-				}
+					{
+						VisitExpression(expression.Arguments[0]);
+						VisitTake(((ConstantExpression) expression.Arguments[1]));
+						break;
+					}
 				case "First":
 				case "FirstOrDefault":
-				{
-					VisitExpression(expression.Arguments[0]);
-					if (expression.Arguments.Count == 2)
 					{
-						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
-					}
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						}
 
-					if (expression.Method.Name == "First")
-					{
-						VisitFirst();
+						if (expression.Method.Name == "First")
+						{
+							VisitFirst();
+						}
+						else
+						{
+							VisitFirstOrDefault();
+						}
+						break;
 					}
-					else
-					{
-						VisitFirstOrDefault();
-					}
-					break;
-				}
 				case "Single":
 				case "SingleOrDefault":
-				{
-					VisitExpression(expression.Arguments[0]);
-					if (expression.Arguments.Count == 2)
 					{
-						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
-					}
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						}
 
-					if (expression.Method.Name == "Single")
-					{
-						VisitSingle();
+						if (expression.Method.Name == "Single")
+						{
+							VisitSingle();
+						}
+						else
+						{
+							VisitSingleOrDefault();
+						}
+						break;
 					}
-					else
-					{
-						VisitSingleOrDefault();
-					}
-					break;
-				}
 				case "All":
-				{
-					VisitExpression(expression.Arguments[0]);
-					VisitAll((Expression<Func<T, bool>>) ((UnaryExpression) expression.Arguments[1]).Operand);
-					break;
-				}
+					{
+						VisitExpression(expression.Arguments[0]);
+						VisitAll((Expression<Func<T, bool>>) ((UnaryExpression) expression.Arguments[1]).Operand);
+						break;
+					}
 				case "Any":
-				{
-					VisitExpression(expression.Arguments[0]);
-					if (expression.Arguments.Count == 2)
 					{
-						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
-					}
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						}
 
-					VisitAny();
-					break;
-				}
+						VisitAny();
+						break;
+					}
 				case "Count":
-				{
-					VisitExpression(expression.Arguments[0]);
-					if (expression.Arguments.Count == 2)
 					{
-						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
-					}
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						}
 
-					VisitCount();
+						VisitCount();
+						break;
+					}
+				case "Distinct":
+					luceneQuery.GroupBy(AggregationOperation.Distinct);
+					VisitExpression(expression.Arguments[0]);
 					break;
-				}
 				case "OrderBy":
 				case "ThenBy":
 				case "ThenByDescending":
 				case "OrderByDescending":
 					VisitExpression(expression.Arguments[0]);
 					VisitOrderBy((LambdaExpression) ((UnaryExpression) expression.Arguments[1]).Operand,
-								 expression.Method.Name.EndsWith("Descending"));
+					             expression.Method.Name.EndsWith("Descending"));
 					break;
 				default:
-				{
-					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-				}
+					{
+						throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+					}
 			}
 		}
 
@@ -619,7 +624,7 @@ namespace Raven.Client.Linq
 			switch (body.NodeType)
 			{
 				case ExpressionType.MemberAccess:
-					FieldsToFetch.Add(((MemberExpression) body).Member.Name);
+					AddToFieldsToFetch(((MemberExpression)body).Member.Name);
 					break;
 				//Anonomyous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
 				//See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
@@ -627,13 +632,9 @@ namespace Raven.Client.Linq
 					var newExpression = ((NewExpression) body);
 			        newExpressionType = newExpression.Type;
                     var idProperty = luceneQuery.DocumentConvention.GetIdentityProperty(newExpressionType);
-			        var idPropertyName = (idProperty == null) ? string.Empty : idProperty.Name;
                     foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
                     {
-                        if (field.Equals(idPropertyName))
-                            FieldsToFetch.Add("__document_id");
-                        else
-                            FieldsToFetch.Add(field);
+						AddToFieldsToFetch(field);
                     }
 			        break;
 				//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
@@ -642,7 +643,7 @@ namespace Raven.Client.Linq
 					newExpressionType = memberInitExpression.NewExpression.Type;
 					foreach (var field in memberInitExpression.Bindings.Cast<MemberAssignment>().Select(x => x.Member.Name))
 					{
-						FieldsToFetch.Add(field);
+						AddToFieldsToFetch(field);
 					}
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
@@ -650,6 +651,19 @@ namespace Raven.Client.Linq
 				
 				default:
 					throw new NotSupportedException("Node not supported: " + body.NodeType);
+			}
+		}
+
+		private void AddToFieldsToFetch(string field)
+		{
+			var identityProperty = luceneQuery.DocumentConvention.GetIdentityProperty(typeof(T));
+			if (identityProperty != null && identityProperty.Name == field)
+			{
+				FieldsToFetch.Add(Constacts.DocumentIdFieldName);
+			}
+			else
+			{
+				FieldsToFetch.Add(field);
 			}
 		}
 

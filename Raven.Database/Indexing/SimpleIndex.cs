@@ -11,7 +11,9 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Linq.PrivateExtensions;
@@ -56,7 +58,7 @@ namespace Raven.Database.Indexing
                                 );
                         },
                         trigger => trigger.OnIndexEntryDeleted(name, documentId));
-                    indexWriter.DeleteDocuments(new Term("__document_id", documentId.ToLowerInvariant()));
+                    indexWriter.DeleteDocuments(new Term(Constacts.DocumentIdFieldName, documentId.ToLowerInvariant()));
                     return doc;
                 });
                 foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
@@ -72,7 +74,7 @@ namespace Raven.Database.Indexing
                     if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
                     {
                         var luceneDoc = new Document();
-                        luceneDoc.Add(new Field("__document_id", indexingResult.NewDocId.ToLowerInvariant(), Field.Store.YES,
+						luceneDoc.Add(new Field(Constacts.DocumentIdFieldName, indexingResult.NewDocId.ToLowerInvariant(), Field.Store.YES,
                                                 Field.Index.NOT_ANALYZED));
 
                         madeChanges = true;
@@ -136,7 +138,7 @@ namespace Raven.Database.Indexing
             return new IndexingResult()
             {
                 Fields = abstractFields,
-                NewDocId = properties.Find("__document_id", false).GetValue(doc) as string,
+				NewDocId = properties.Find(Constacts.DocumentIdFieldName, false).GetValue(doc) as string,
                 ShouldSkip = properties.Count > 1  // we always have at least __document_id
                             && abstractFields.Count == 0
             };
@@ -172,7 +174,7 @@ namespace Raven.Database.Indexing
                             context.AddError(name,  key, exception.Message );
                         },
                         trigger => trigger.OnIndexEntryDeleted(name, key)));
-                writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
+				writer.DeleteDocuments(keys.Select(k => new Term(Constacts.DocumentIdFieldName, k)).ToArray());
                 batchers.ApplyAndIgnoreAllErrors(
                     e =>
                     {

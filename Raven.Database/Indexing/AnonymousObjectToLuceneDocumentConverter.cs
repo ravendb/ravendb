@@ -12,7 +12,9 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Linq;
 
 namespace Raven.Database.Indexing
@@ -23,7 +25,7 @@ namespace Raven.Database.Indexing
 		{
 			return (from property in properties.Cast<PropertyDescriptor>()
 			        let name = property.Name
-			        where name != "__document_id"
+					where name != Constacts.DocumentIdFieldName
 			        let value = property.GetValue(val)
 			        from field in CreateFields(name, value, indexDefinition, defaultStorage)
 			        select field);
@@ -33,7 +35,7 @@ namespace Raven.Database.Indexing
         {
         	return (from property in document.Cast<JProperty>()
         	        let name = property.Name
-        	        where name != "__document_id"
+					where name != Constacts.DocumentIdFieldName
         	        let value = GetPropertyValue(property)
         	        from field in CreateFields(name, value, indexDefinition, defaultStorage)
         	        select field);

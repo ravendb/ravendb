@@ -101,6 +101,9 @@
 			<TextBlock Text="The database contains no documents."
 					   Style="{StaticResource Instruction}"
 					   Visibility="{Binding RecentDocuments, Converter={StaticResource visibleWhenEmpty}}" />
+      <Button x:Name="CreateSampleData" 
+             Content="Create sample data"
+					   Visibility="{Binding RecentDocuments, Converter={StaticResource visibleWhenEmpty}}" />
 
 		</StackPanel>
 

@@ -1,5 +1,13 @@
-﻿using System.Threading.Tasks;
+﻿using System.IO;
+using System.Threading.Tasks;
+using System.Windows;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Database.Data;
+using Raven.Database.Indexing;
+using Raven.Database.Json;
+using System.Linq;
 
 namespace Raven.Studio.Features.Database
 {
@@ -55,6 +63,41 @@ namespace Raven.Studio.Features.Database
 				return (Collections == null || !Collections.Any())
 						? 0
 						: Collections.Max(x => x.Count);
+			}
+		}
+
+		public void CreateSampleData()
+		{
+			// this code assumes a small enough dataset, and doesn't do any sort
+			// of paging or batching whatsoever.
+
+			using(var sampleData= typeof(SummaryViewModel).Assembly.GetManifestResourceStream("Raven.Studio.SampleData.MvcMusicStore_Dump.json"))
+			using(var streamReader = new StreamReader(sampleData))
+			using(var documentSession = Server.OpenSession())
+			{
+				var musicStoreData = (JObject)JToken.ReadFrom(new JsonTextReader(streamReader));
+				foreach (var index in musicStoreData.Value<JArray>("Indexes"))
+				{
+					var indexName = index.Value<string>("name");
+					documentSession.Advanced.AsyncDatabaseCommands.PutIndexAsync(indexName,
+						index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>()
+						, true)
+						.ContinueOnSuccess(task => { });
+				}
+
+				documentSession.Advanced.AsyncDatabaseCommands.BatchAsync(
+						musicStoreData.Value<JArray>("Docs").OfType<JObject>().Select(doc =>
+						{
+							var metadata = doc.Value<JObject>("@metadata");
+							doc.Remove("@metadata");
+							return new PutCommandData
+							{
+								Document = doc,
+								Metadata = metadata,
+								Key = metadata.Value<string>("@id"),
+							};
+						}).ToArray()
+					).ContinueOnSuccess(task => { }); ;
 			}
 		}
 

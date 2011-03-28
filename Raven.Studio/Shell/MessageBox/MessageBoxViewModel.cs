@@ -1,9 +1,9 @@
-﻿namespace Raven.Studio.Shell
+﻿namespace Raven.Studio.Shell.MessageBox
 {
-	using System.ComponentModel.Composition;
-	using Caliburn.Micro;
+    using System.ComponentModel.Composition;
+    using Caliburn.Micro;
 
-	[Export(typeof (IMessageBox))]
+    [Export(typeof (IMessageBox))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class MessageBoxViewModel : Screen, IMessageBox
 	{

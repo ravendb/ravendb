@@ -10,7 +10,23 @@
 		<ResourceDictionary Source="Fonts.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
-	<Style x:Key="howLongSinceStyle"
+    <Style x:Key="Grouping"
+           TargetType="Border">
+        <Setter Property="BorderBrush"
+                Value="{StaticResource DividerBrush}" />
+        <Setter Property="BorderThickness"
+                Value="1,0,0,0" />
+        <Setter Property="CornerRadius"
+                Value="5" />
+        <Setter Property="Padding"
+                Value="6 0 0 0" />
+        <Setter Property="VerticalAlignment"
+                Value="Top" />
+        <Setter Property="HorizontalAlignment"
+                Value="Left" />
+    </Style>
+    
+    <Style x:Key="howLongSinceStyle"
 		   TargetType="TextBlock">
 		<Setter Property="Foreground"
 				Value="{StaticResource AccentTextBrush}" />

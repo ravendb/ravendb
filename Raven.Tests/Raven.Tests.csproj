@@ -134,6 +134,7 @@
     <Compile Include="Bugs\DateTimeInLocalTime.cs" />
     <Compile Include="Bugs\DateTimeInLocalTimeRemote.cs" />
     <Compile Include="Bugs\DecimalPrecision.cs" />
+    <Compile Include="Bugs\Distinct.cs" />
     <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
     <Compile Include="Bugs\DocumentUrl.cs" />
     <Compile Include="Bugs\DTC\UsingDtcForDelete.cs" />
@@ -165,6 +166,7 @@
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\Indexing\CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize.cs" />
     <Compile Include="Bugs\Indexing\ComplexLinq.cs" />
+    <Compile Include="Bugs\Indexing\ComplexUsage.cs" />
     <Compile Include="Bugs\Indexing\CreateIndexesOnRemoteServer.cs" />
     <Compile Include="Bugs\Indexing\DynamicFields.cs" />
     <Compile Include="Bugs\Indexing\DynamicQueriesCanSort.cs" />

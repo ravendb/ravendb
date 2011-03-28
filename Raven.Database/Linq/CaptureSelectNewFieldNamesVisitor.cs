@@ -73,6 +73,13 @@ namespace Raven.Database.Linq
             {
                 FieldNames.Add(expression.MemberName);
             }
+
+			foreach (
+			  var expression in
+				  objectCreateExpression.ObjectInitializer.CreateExpressions.OfType<IdentifierExpression>())
+			{
+				FieldNames.Add(expression.Identifier);
+			}
         }
     }
 }

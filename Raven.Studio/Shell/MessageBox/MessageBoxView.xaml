@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Raven.Studio.Shell.MessageBoxView"
+﻿<UserControl x:Class="Raven.Studio.Shell.MessageBox.MessageBoxView"
 			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 MaxWidth="375">

@@ -6,6 +6,8 @@
 	{
 		public static string HowLongSince(this DateTime start)
 		{
+            if (start == default(DateTime)) return "unknown";
+
 			var values = start.TimePassedSince();
 
 			if (values[0] > 0) return FormatHowLongSince("{0} year", values[0]);

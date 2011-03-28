@@ -3,7 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro" xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors" mc:Ignorable="d"
+             xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+             xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+             mc:Ignorable="d"
              d:DesignHeight="300"
              d:DesignWidth="400">
 
@@ -20,7 +22,12 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
             <TextBlock Text="{Binding Collection.Name, StringFormat='\{0\} Template'}"
                        Style="{StaticResource Header}" />
@@ -50,17 +57,20 @@
 
             <Border Grid.Row="3"
                     Padding="0 8 0 0"
-                    BorderThickness="1"
-                    CornerRadius="2"
-                    BorderBrush="#0A000000"
                     Margin="0"
+                    MinWidth="400"
                     d:IsLocked="True">
-
-                <Editors:XamlEditor Text="{Binding Xaml, Mode=TwoWay}"
-                              FontFamily="Monaco"
-                              FontSize="16" />
+                <Editors:XamlEditor Text="{Binding Xaml, Mode=TwoWay}" />
             </Border>
 
+            <TextBlock Grid.Column="1"
+                       Grid.Row="3"
+                       FontSize="16"
+                       Margin="8 0 0 0"
+                       Foreground="Red"
+                       MaxWidth="200"
+                       TextWrapping="Wrap"
+                       Text="{Binding ValidationSummary}" />
         </Grid>
 
     </Grid>

@@ -13,6 +13,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 
 
@@ -218,7 +219,7 @@ namespace Raven.Client.Indexes
 			var name = member.Name;
 			var identityProperty = convention.GetIdentityProperty(member.DeclaringType);
 			if (identityProperty == member && instance.NodeType == ExpressionType.Parameter && translateIdentityProperty)
-				name = "__document_id";
+				name = Constacts.DocumentIdFieldName;
 			if (instance != null)
 			{
 				this.Visit(instance);

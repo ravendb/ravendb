@@ -12,8 +12,8 @@
 	{
 		const double GoldenAngle = 0.381966;
 
-		readonly Dictionary<string, double> baseHues = new Dictionary<string, double>();
-		readonly Dictionary<string, Color> colors = new Dictionary<string, Color>();
+		readonly Dictionary<string, double> baseHues = new Dictionary<string, double>(StringComparer.InvariantCultureIgnoreCase);
+		readonly Dictionary<string, Color> colors = new Dictionary<string, Color>(StringComparer.InvariantCultureIgnoreCase);
 
 		public TemplateColorProvider()
 		{

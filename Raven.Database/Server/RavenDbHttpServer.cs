@@ -110,8 +110,6 @@ namespace Raven.Database.Server
                 return documentDatabase;
             });
             return true;
-
-
         }
 
 

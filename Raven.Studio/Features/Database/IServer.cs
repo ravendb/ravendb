@@ -15,10 +15,11 @@ namespace Raven.Studio.Features.Database
 		IStatisticsSet Statistics { get; }
 		bool IsInitialized { get; }
 		IEnumerable<ServerError> Errors { get; }
-		IAsyncDocumentSession OpenSession();
+	    IAsyncDocumentSession OpenSession();
 		void OpenDatabase(string name, Action callback);
 		void Connect(Uri serverAddress, Action callback);
 		event EventHandler CurrentDatabaseChanged;
 		event EventHandler Connected;
+	    void CreateDatabase(string databaseName, Action callback);
 	}
 }

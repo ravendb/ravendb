@@ -12,8 +12,9 @@
 	using Caliburn.Micro;
 	using Framework;
 	using Shell;
+	using Shell.MessageBox;
 
-	public class AppBootstrapper : Bootstrapper<IShell>
+    public class AppBootstrapper : Bootstrapper<IShell>
 	{
 		CompositionContainer container;
 
@@ -118,6 +119,7 @@
 		void ShowMessageBox(string message, string title, MessageBoxOptions options = MessageBoxOptions.Ok,
 							Action<IMessageBox> callback = null)
 		{
+            Execute.OnUIThread( ()=>{
 			var box = container.GetExportedValue<IMessageBox>();
 
 			box.DisplayName = title;
@@ -128,6 +130,7 @@
 				box.Deactivated += (s, e) => callback(box);
 
 			container.GetExportedValue<IWindowManager>().ShowDialog(box);
+            });
 		}
 	}
 }

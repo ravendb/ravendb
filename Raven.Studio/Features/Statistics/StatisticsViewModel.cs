@@ -24,8 +24,8 @@
 		public void Accept(DatabaseStatistics stats)
 		{
 			UpdateOrSetStatEntry("documents", stats.CountOfDocuments, IoC.Get<Documents.BrowseDocumentsViewModel>);
-			UpdateOrSetStatEntry("indexes", stats.CountOfIndexes, IoC.Get<Indexes.BrowseIndexesViewModel>);
-			UpdateOrSetStatEntry("stale", stats.StaleIndexes.Length, null);
+			UpdateOrSetStatEntry("indexes", stats.CountOfIndexes, IoC.Get<IndexesViewModel>);
+            UpdateOrSetStatEntry("stale", stats.StaleIndexes.Length, IoC.Get<IndexesViewModel>);
 			UpdateOrSetStatEntry("errors", stats.Errors.Length, IoC.Get<ErrorsViewModel>);
 			UpdateOrSetStatEntry("triggers", stats.Triggers.Length, null);
 			UpdateOrSetStatEntry("tasks", stats.ApproximateTaskCount, null);

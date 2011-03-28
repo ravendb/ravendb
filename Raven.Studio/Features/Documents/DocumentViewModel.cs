@@ -19,8 +19,8 @@
         {
             this.inner = inner;
             Id = inner.Metadata.IfPresent<string>("@id");
-            LastModified = inner.Metadata.IfPresent<DateTime>("Last-Modified");
-            ClrType = inner.Metadata.IfPresent<string>("Raven-Clr-Type");
+            LastModified = inner.LastModified;
+			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constacts.RavenClrType);
             CollectionType = DetermineCollectionType();
         }
 
@@ -112,6 +112,8 @@
                 return BuiltinCollectionName.Projection; // meaning that the document is a projection and not a 'real' document
 
             var entity = metadata.IfPresent<string>("Raven-Entity-Name");
+			if (entity != null)
+				entity = entity.ToLower();
             return entity ??
                 (id.StartsWith("Raven/")
                     ? BuiltinCollectionName.System

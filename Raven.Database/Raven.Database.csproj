@@ -121,12 +121,14 @@
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Impl\DocumentRetriever.cs" />
     <Compile Include="Impl\Logging\AsyncBufferingAppender.cs" />
+    <Compile Include="Indexing\FieldsToFetch.cs" />
     <Compile Include="Indexing\IIndexExtension.cs" />
     <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
     <Compile Include="Indexing\TasksExecuter.cs" />
     <Compile Include="Linq\CaptureQueryParameterNamesVisitor.cs" />
     <Compile Include="Linq\TransformNullCoalasingOperatorVisitor.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
+    <Compile Include="Plugins\Builtins\CreateSilverlightIndexes.cs" />
     <Compile Include="Queries\DynamicQueryExtensions.cs" />
     <Compile Include="Queries\DynamicQueryOptimizer.cs" />
     <Compile Include="Queries\DynamicQueryRunner.cs" />
@@ -346,6 +348,8 @@
     <Compile Include="Server\RavenDbHttpServer.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
+    <Compile Include="Server\Responders\AdminStartIndexing.cs" />
+    <Compile Include="Server\Responders\AdminStopIndexing.cs" />
     <Compile Include="Server\Responders\BuildVersion.cs" />
     <Compile Include="Server\Responders\ClientAccessPolicy.cs" />
     <Compile Include="Server\Responders\Databases.cs" />

@@ -14,8 +14,10 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Lucene.Net.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
@@ -30,7 +32,6 @@ namespace Raven.Database.Indexing
 {
 	public class MapReduceIndex : Index
 	{
-
 		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 			: base(directory, name, indexDefinition, viewGenerator)
 		{
@@ -128,7 +129,7 @@ namespace Raven.Database.Indexing
 			}
 			else
 			{
-				var docIdProp = TypeDescriptor.GetProperties(doc).Find("__document_id", false);
+				var docIdProp = TypeDescriptor.GetProperties(doc).Find(Constacts.DocumentIdFieldName, false);
 				documentIdFetcher = o => docIdProp.GetValue(o);
 			}
 			return documentIdFetcher;
@@ -151,10 +152,11 @@ namespace Raven.Database.Indexing
 		}
 
 
-		protected override IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
+		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch)
 		{
-			if (fieldsToFetch == null || fieldsToFetch.Length == 0)
-				fieldsToFetch = document.GetFields().OfType<Fieldable>().Select(x => x.Name()).ToArray();
+			if (fieldsToFetch.IsProjection == false)
+				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().OfType<Fieldable>().Select(x => x.Name()).ToArray());
+			fieldsToFetch.EnsureHasField(Constacts.ReduceKeyFieldName);
 			return base.RetrieveDocument(document, fieldsToFetch);
 		}
 
@@ -184,7 +186,7 @@ namespace Raven.Database.Indexing
 				{
 					logIndexing.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
 				}
-				writer.DeleteDocuments(keys.Select(k => new Term("__reduce_key", k.ToLowerInvariant())).ToArray());
+				writer.DeleteDocuments(keys.Select(k => new Term(Constacts.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
 				return true;
 			});
 		}
@@ -205,7 +207,7 @@ namespace Raven.Database.Indexing
 				foreach (var reduceKey in reduceKeys)
 				{
 					var entryKey = reduceKey;
-					indexWriter.DeleteDocuments(new Term("__reduce_key", entryKey.ToLowerInvariant()));
+					indexWriter.DeleteDocuments(new Term(Constacts.ReduceKeyFieldName, entryKey.ToLowerInvariant()));
 					batchers.ApplyAndIgnoreAllErrors(
 						exception =>
 						{
@@ -228,7 +230,7 @@ namespace Raven.Database.Indexing
 					string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
 
 					var luceneDoc = new Document();
-					luceneDoc.Add(new Field("__reduce_key", reduceKeyAsString.ToLowerInvariant(), Field.Store.NO, Field.Index.NOT_ANALYZED));
+					luceneDoc.Add(new Field(Constacts.ReduceKeyFieldName, reduceKeyAsString.ToLowerInvariant(), Field.Store.NO, Field.Index.NOT_ANALYZED));
 					foreach (var field in fields)
 					{
 						luceneDoc.Add(field);

@@ -17,11 +17,15 @@
 	{
 		public IEnumerable<Task> Initialize(IAsyncDocumentSession session)
 		{
-			yield return session.Advanced.AsyncDatabaseCommands
-				.PutIndexAsync<RavenDocumentsByEntityName>(true);
-				
-			yield return session.Advanced.AsyncDatabaseCommands
-				.PutIndexAsync<RavenCollections>(true);
+			// those are no longer needed, when we request the
+			// Silverlight UI from the server, those indexes will 
+			// be created automatically
+
+			//yield return session.Advanced.AsyncDatabaseCommands
+			//    .PutIndexAsync<RavenDocumentsByEntityName>(true);
+
+			//yield return session.Advanced.AsyncDatabaseCommands
+			//    .PutIndexAsync<RavenCollections>(true);
 
 			SimpleLogger.Start("preloading collection templates");
 			var templateProvider = IoC.Get<IDocumentTemplateProvider>();

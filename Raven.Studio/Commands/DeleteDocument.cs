@@ -4,9 +4,9 @@
 	using Caliburn.Micro;
 	using Features.Database;
 	using Messages;
-	using Shell;
+	using Shell.MessageBox;
 
-	public class DeleteDocument
+    public class DeleteDocument
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;

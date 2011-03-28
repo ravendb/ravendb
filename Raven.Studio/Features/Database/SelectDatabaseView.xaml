@@ -1,75 +1,105 @@
 ﻿<UserControl x:Class="Raven.Studio.Features.Database.SelectDatabaseView"
-			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro" xmlns:f="clr-namespace:Raven.Studio.Framework" mc:Ignorable="d"
-			 d:DesignHeight="480"
-			 d:DesignWidth="640">
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+             xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+             xmlns:f="clr-namespace:Raven.Studio.Framework"
+             xmlns:c="clr-namespace:Raven.Studio.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="480"
+             d:DesignWidth="640">
 
-	<Grid Margin="48 0 0 12" Background="{StaticResource DefaultScreenBackground}">
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition />
-			<ColumnDefinition Width="2*" />
-		</Grid.ColumnDefinitions>
+    <Grid Margin="48 0 0 12"
+          Background="{StaticResource DefaultScreenBackground}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
 
-		<tk:DockPanel>
-			<TextBlock tk:DockPanel.Dock="Top"
-					   Text="DATABASES"
-					   Style="{StaticResource PanelTitle}" />
-			<ListBox ItemsSource="{Binding Server.Databases}"
-					 SelectedItem="{Binding Server.CurrentDatabase, Mode=TwoWay}">
-				<ListBox.ItemTemplate>
-					<DataTemplate>
-						<TextBlock Text="{Binding}"
-								   f:DoubleClickEvent.AttachAction="SelectDatabase($dataContext)" />
-					</DataTemplate>
-				</ListBox.ItemTemplate>
-				<ListBox.ItemContainerStyle>
-					<Style TargetType="ListBoxItem">
-						<Setter Property="HorizontalContentAlignment"
-								Value="Stretch" />
-					</Style>
-				</ListBox.ItemContainerStyle>
-			</ListBox>
-		</tk:DockPanel>
+        <tk:DockPanel>
+            <TextBlock tk:DockPanel.Dock="Top"
+                       Text="DATABASES"
+                       Style="{StaticResource PanelTitle}" />
+            <ListBox ItemsSource="{Binding Server.Databases}"
+                     SelectedItem="{Binding Server.CurrentDatabase, Mode=TwoWay}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}"
+                                   f:DoubleClickEvent.AttachAction="SelectDatabase($dataContext)" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment"
+                                Value="Stretch" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
+        </tk:DockPanel>
 
-		<Grid Grid.Column="1"
-			  Margin="12,0,0,0">
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="2*" />
-				<RowDefinition Height="*" />
-			</Grid.RowDefinitions>
+        <Grid Grid.Column="1"
+              Margin="12,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="2*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-			<StackPanel Orientation="Vertical"
-						VerticalAlignment="Top">
-				<TextBlock Style="{StaticResource Header}"
-						   Text="Select a Database" />
-				<TextBlock Style="{StaticResource Instruction}"
-						   Text="To get started, select a database from the panel on the left." />
+            <StackPanel Orientation="Vertical"
+                        VerticalAlignment="Top">
+                <TextBlock Style="{StaticResource Header}"
+                           Text="Select a Database" />
+                <TextBlock Style="{StaticResource Instruction}"
+                           Text="To get started, select a database from the panel on the left." />
 
-				<StackPanel x:Name="Server_HasCurrentDatabase"
-							Margin="0 12 0 0">
-					<TextBlock  Style="{StaticResource Instruction}"
-								Text="The currently selected database is" />
+                <StackPanel x:Name="Server_HasCurrentDatabase"
+                            Margin="0 12 0 0">
+                    <TextBlock  Style="{StaticResource Instruction}"
+                                Text="The currently selected database is" />
 
-					<TextBlock x:Name="Server_CurrentDatabase"
-							   Style="{StaticResource HighlightedValue}"
-							   Margin="12 0 0 0" />
-					<ContentControl cm:View.Model="{Binding Server.Statistics}"
-									Margin="12 8 0 0" />
+                    <TextBlock x:Name="Server_CurrentDatabase"
+                               Style="{StaticResource HighlightedValue}"
+                               Margin="12 0 0 0" />
+                    <ContentControl cm:View.Model="{Binding Server.Statistics}"
+                                    Margin="12 8 0 0" />
 
-					<Button x:Name="OpenSelectedDatabase"
-							Margin="12 12 0 0"
-							HorizontalAlignment="Left"
-							Content="Use this database" />
+                    <Button x:Name="OpenSelectedDatabase"
+                            Margin="12 12 0 0"
+                            HorizontalAlignment="Left"
+                            Content="Use this database" />
 
-				</StackPanel>
+                </StackPanel>
 
-			</StackPanel>
-		</Grid>
-	</Grid>
+                <Grid>
+                    <Button x:Name="BeginCreateNewDatabase"
+                            Content="Create New Database"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="12,12,0,0" />
+
+                    <Border Visibility="{Binding ShowCreateDatabaseForm}"
+                            Background="{StaticResource DefaultScreenBackground}"
+                            Style="{StaticResource Grouping}"
+                            Margin="12,12,0,0"
+                            Padding="6,6,0,6">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <c:Label Content="Database Name" />
+                                <TextBox Text="{Binding NewDatabaseName, Mode=TwoWay}"
+                                         Width="240" />
+                            </StackPanel>
+                            <Button x:Name="CreateNewDatabase"
+                                    Content="Create"
+                                    Margin="0,8,0,0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </StackPanel>
+        </Grid>
+    </Grid>
 
 </UserControl>

@@ -235,8 +235,8 @@ namespace Raven.Database.Data
 
 			var dynamicQueryMapping = new DynamicQueryMapping
 			{
-				AggregationOperation = query.AggregationOperation & ~AggregationOperation.Dynamic,
-				DynamicAggregation = (query.AggregationOperation & AggregationOperation.Dynamic) == AggregationOperation.Dynamic,
+				AggregationOperation = query.AggregationOperation.RemoveOptionals(),
+				DynamicAggregation = query.AggregationOperation.HasFlag(AggregationOperation.Dynamic),
 				ForEntityName = entityName,
 				SortDescriptors = GetSortInfo(fields)
 			};
