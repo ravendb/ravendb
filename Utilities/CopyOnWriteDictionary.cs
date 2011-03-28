@@ -45,24 +45,20 @@ namespace Raven.Json.Utilities
         {
             get
             {
-                ICollection<TKey> keys = null;
-                if (_inherittedValues != null)
-                {
-                    keys = _inherittedValues.Keys;
-                }
-                if (_localChanges != null)
-                {
-                    if (keys == null)
-                        keys = _localChanges.Keys;
-                    else
-                    {
-                        foreach (var key in  _localChanges.Keys)
-                        {
-                            keys.Add(key);
-                        }
-                    }
-                }
-                return keys;
+                ICollection<TKey> ret = new HashSet<TKey>();
+            	foreach (var key in _inherittedValues.Keys)
+            	{
+            		if (_localChanges.ContainsKey(key))
+            			continue;
+					ret.Add(key);
+            	}
+				foreach (var key in _localChanges.Keys)
+				{
+					if (_localChanges[key] == DeletedMarker)
+						continue;
+					ret.Add(key);
+				}
+            	return ret;
             }
         }
 
@@ -88,7 +84,15 @@ namespace Raven.Json.Utilities
 
         public ICollection<RavenJToken> Values
         {
-            get { throw new NotImplementedException(); }
+            get
+            {
+            	ICollection<RavenJToken> ret = new HashSet<RavenJToken>();
+            	foreach (var key in Keys)
+            	{
+					ret.Add(this[key]);
+            	}
+            	return ret;
+            }
         }
 
         public RavenJToken this[TKey key]
