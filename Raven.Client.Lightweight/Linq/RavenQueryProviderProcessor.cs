@@ -659,7 +659,7 @@ namespace Raven.Client.Linq
 			var identityProperty = luceneQuery.DocumentConvention.GetIdentityProperty(typeof(T));
 			if (identityProperty != null && identityProperty.Name == field)
 			{
-				FieldsToFetch.Add(Constacts.DocumentIdFieldName);
+				FieldsToFetch.Add(Constants.DocumentIdFieldName);
 			}
 			else
 			{

@@ -20,7 +20,7 @@
             this.inner = inner;
             Id = inner.Metadata.IfPresent<string>("@id");
             LastModified = inner.LastModified;
-			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constacts.RavenClrType);
+			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
             CollectionType = DetermineCollectionType();
         }
 

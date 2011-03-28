@@ -790,7 +790,7 @@ more responsive application.
 #if !SILVERLIGHT
 			metadata[Raven.Abstractions.Data.Constacts.RavenClrType] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
 #else
-			metadata[Raven.Abstractions.Data.Constacts.RavenClrType] = JToken.FromObject(entityType.AssemblyQualifiedName);
+			metadata[Raven.Abstractions.Data.Constants.RavenClrType] = JToken.FromObject(entityType.AssemblyQualifiedName);
 #endif
 			var entityConverted = OnEntityConverted;
 			if (entityConverted != null)

@@ -164,7 +164,7 @@ namespace Raven.Database.Linq
 		/// <returns></returns>
 		public object GetValue(string name)
 		{
-			if (name == Constacts.DocumentIdFieldName)
+			if (name == Constants.DocumentIdFieldName)
 			{
 				return GetDocumentId();
 			}
@@ -206,7 +206,7 @@ namespace Raven.Database.Linq
 					return id.Value<string>() ?? (object)new DynamicNullObject();
 				}
 			}
-			return inner.Value<string>(Constacts.DocumentIdFieldName) ?? (object)new DynamicNullObject();
+			return inner.Value<string>(Constants.DocumentIdFieldName) ?? (object)new DynamicNullObject();
 		}
 
 		/// <summary>

@@ -41,7 +41,7 @@ namespace Raven.Client.Document
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
-			FindClrType = (id, doc, metadata) => metadata.Value<string>(Raven.Abstractions.Data.Constacts.RavenClrType);
+			FindClrType = (id, doc, metadata) => metadata.Value<string>(Raven.Abstractions.Data.Constants.RavenClrType);
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";

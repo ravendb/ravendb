@@ -174,7 +174,7 @@ namespace Raven.Studio.Features.Documents
 
 			LastModified = document.LastModified;
 			CollectionType = DocumentViewModel.DetermineCollectionType(document.Metadata);
-			ClrType = metadata.IfPresent<string>(Raven.Abstractions.Data.Constacts.RavenClrType);
+			ClrType = metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
 			Etag = document.Etag.ToString();
 			NonAuthoritiveInformation = document.NonAuthoritiveInformation;
 		}

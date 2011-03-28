@@ -219,7 +219,7 @@ namespace Raven.Client.Indexes
 			var name = member.Name;
 			var identityProperty = convention.GetIdentityProperty(member.DeclaringType);
 			if (identityProperty == member && instance.NodeType == ExpressionType.Parameter && translateIdentityProperty)
-				name = Constacts.DocumentIdFieldName;
+				name = Constants.DocumentIdFieldName;
 			if (instance != null)
 			{
 				this.Visit(instance);
