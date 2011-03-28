@@ -14,6 +14,7 @@ using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Queries.LinearQueries
 {
@@ -34,7 +35,7 @@ namespace Raven.Database.Queries.LinearQueries
 
         public RemoteQueryResults Query(LinearQuery query)
         {
-            var viewGenerator = queryCache.GetOrAdd(query.Query,
+            var viewGenerator = queryCache.GetOrAddAtomically(query.Query,
                                                     s =>
                                                     new DynamicViewCompiler("query", new IndexDefinition { Map = query.Query, },
                                                                             new AbstractDynamicCompilationExtension[0], basePath)
