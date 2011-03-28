@@ -5,12 +5,12 @@
 	using System.ComponentModel.Composition;
 	using System.Linq;
 	using System.Threading.Tasks;
-	using Abstractions.Data;
 	using Caliburn.Micro;
 	using Database;
 	using Documents;
 	using Framework;
 	using Raven.Database.Data;
+	using Raven.Client.Extensions;
 
 	public class QueryViewModel : Screen, IDatabaseScreenMenuItem
 	{
@@ -128,6 +128,12 @@
 					.QueryAsync(indexName, q, null)
 					.ContinueWith(x =>
 					              	{
+										if (x.Exception != null)
+										{
+											QueryResultsStatus = x.Exception.ExtractSingleInnerException().Message;
+											return new DocumentViewModel[]{};
+										}
+						
 					              		QueryResults.GetTotalResults = () => x.Result.TotalResults;
 
 					              		QueryResultsStatus = DetermineResultsStatus(x.Result);
@@ -138,7 +144,7 @@
 
 					              		return x.Result.Results
 					              			.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
-					              			.ToArray();
+											.ToArray();
 					              	});
 			}
 		}
