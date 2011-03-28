@@ -245,5 +245,51 @@ namespace Raven.Json.Linq
 
 			writer.WriteEndObject();
 		}
+
+		internal override bool DeepEquals(RavenJToken node)
+		{
+			var t = node as RavenJObject;
+			if (t == null)
+				return false;
+
+			if (_properties == null || t._properties == null)
+			{
+				if (_properties == t._properties)
+					return true;
+				return false;
+			}
+
+			RavenJToken v1, v2;
+			foreach (var key in _properties.Keys)
+			{
+				if (!t._properties.TryGetValue(key, out v2) || !_properties.TryGetValue(key, out v1))
+					return false;
+
+				if (v1 == null || v2 == null)
+				{
+					if (v1 == v2)
+						continue;
+
+					return false;
+				}
+
+				if (!v1.DeepEquals(v2))
+					return false;
+			}
+			return true;
+		}
+
+		internal override int GetDeepHashCode()
+		{
+			int hashCode = 0;
+			if (_properties != null)
+			{
+				foreach (RavenJToken item in _properties.Values)
+				{
+					hashCode ^= item.GetDeepHashCode();
+				}
+			}
+			return hashCode;
+		}
     }
 }

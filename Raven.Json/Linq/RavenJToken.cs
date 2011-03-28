@@ -180,5 +180,19 @@ namespace Raven.Json.Linq
 		{
 			return this[key].Convert<RavenJToken, T>();
 		}
+
+		/// <summary>
+		/// Compares the values of two tokens, including the values of all descendant tokens.
+		/// </summary>
+		/// <param name="t1">The first <see cref="JToken"/> to compare.</param>
+		/// <param name="t2">The second <see cref="JToken"/> to compare.</param>
+		/// <returns>true if the tokens are equal; otherwise false.</returns>
+		public static bool DeepEquals(RavenJToken t1, RavenJToken t2)
+		{
+			return (t1 == t2 || (t1 != null && t2 != null && t1.DeepEquals(t2)));
+		}
+
+		internal abstract bool DeepEquals(RavenJToken node);
+		internal abstract int GetDeepHashCode();
     }
 }

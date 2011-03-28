@@ -413,6 +413,19 @@ namespace Raven.Json.Linq
 			return d1.CompareTo(d2);
 		}
 
+		internal override bool DeepEquals(RavenJToken node)
+		{
+			var other = node as RavenJValue;
+			return other != null && ValuesEquals(this, other);
+		}
+
+		internal override int GetDeepHashCode()
+		{
+			int valueHashCode = (_value != null) ? _value.GetHashCode() : 0;
+
+			return _valueType.GetHashCode() ^ valueHashCode;
+		}
+
 		/// <summary>
 		/// Returns a <see cref="System.String"/> that represents this instance.
 		/// </summary>

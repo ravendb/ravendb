@@ -54,6 +54,7 @@
     <Compile Include="Linq\RavenJArray.cs" />
     <Compile Include="Linq\RavenJObject.cs" />
     <Compile Include="Linq\RavenJToken.cs" />
+    <Compile Include="Linq\RavenJTokenEqualityComparer.cs" />
     <Compile Include="Linq\RavenJTokenWriter.cs" />
     <Compile Include="Linq\RavenJValue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
