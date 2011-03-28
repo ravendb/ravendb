@@ -58,7 +58,7 @@ namespace Raven.Database.Indexing
                                 );
                         },
                         trigger => trigger.OnIndexEntryDeleted(name, documentId));
-                    indexWriter.DeleteDocuments(new Term(Constacts.DocumentIdFieldName, documentId.ToLowerInvariant()));
+					indexWriter.DeleteDocuments(new Term(Constants.DocumentIdFieldName, documentId.ToLowerInvariant()));
                     return doc;
                 });
                 foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
@@ -74,7 +74,7 @@ namespace Raven.Database.Indexing
                     if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
                     {
                         var luceneDoc = new Document();
-						luceneDoc.Add(new Field(Constacts.DocumentIdFieldName, indexingResult.NewDocId.ToLowerInvariant(), Field.Store.YES,
+						luceneDoc.Add(new Field(Constants.DocumentIdFieldName, indexingResult.NewDocId.ToLowerInvariant(), Field.Store.YES,
                                                 Field.Index.NOT_ANALYZED));
 
                         madeChanges = true;
@@ -138,7 +138,7 @@ namespace Raven.Database.Indexing
             return new IndexingResult()
             {
                 Fields = abstractFields,
-				NewDocId = properties.Find(Constacts.DocumentIdFieldName, false).GetValue(doc) as string,
+				NewDocId = properties.Find(Constants.DocumentIdFieldName, false).GetValue(doc) as string,
                 ShouldSkip = properties.Count > 1  // we always have at least __document_id
                             && abstractFields.Count == 0
             };
@@ -174,7 +174,7 @@ namespace Raven.Database.Indexing
                             context.AddError(name,  key, exception.Message );
                         },
                         trigger => trigger.OnIndexEntryDeleted(name, key)));
-				writer.DeleteDocuments(keys.Select(k => new Term(Constacts.DocumentIdFieldName, k)).ToArray());
+				writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k)).ToArray());
                 batchers.ApplyAndIgnoreAllErrors(
                     e =>
                     {

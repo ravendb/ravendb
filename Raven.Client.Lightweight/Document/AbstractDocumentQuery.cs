@@ -1289,7 +1289,7 @@ If you really want to do in memory filtering on the data returned from the query
         {
             if (whereEqualsParams.Value == null)
             {
-                return "[[NULL_VALUE]]";
+				return Constants.NullValueNotAnalyzed;
             }
 
             if (whereEqualsParams.Value is bool)
@@ -1314,7 +1314,7 @@ If you really want to do in memory filtering on the data returned from the query
         private static string TransformToRangeValue(object value)
         {
             if (value == null)
-                return "[[NULL_VALUE]]";
+				return Constants.NullValueNotAnalyzed;
 
             if (value is int)
                 return NumberUtil.NumberToString((int)value);

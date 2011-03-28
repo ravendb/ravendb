@@ -52,7 +52,7 @@ namespace Raven.Database.Impl
 				Start = indexQuery.Start,
 				Cutoff = indexQuery.Cutoff,
 				PageSize = int.MaxValue,
-				FieldsToFetch = new[] { Constacts.DocumentIdFieldName },
+				FieldsToFetch = new[] { Constants.DocumentIdFieldName },
 				SortedFields = indexQuery.SortedFields
 			};
 

@@ -788,7 +788,7 @@ more responsive application.
 				objectAsJson.Remove(identityProperty.Name);
 			}
 #if !SILVERLIGHT
-			metadata[Raven.Abstractions.Data.Constacts.RavenClrType] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
+			metadata[Raven.Abstractions.Data.Constants.RavenClrType] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
 #else
 			metadata[Raven.Abstractions.Data.Constants.RavenClrType] = JToken.FromObject(entityType.AssemblyQualifiedName);
 #endif

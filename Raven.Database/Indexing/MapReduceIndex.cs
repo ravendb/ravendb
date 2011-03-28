@@ -129,7 +129,7 @@ namespace Raven.Database.Indexing
 			}
 			else
 			{
-				var docIdProp = TypeDescriptor.GetProperties(doc).Find(Constacts.DocumentIdFieldName, false);
+				var docIdProp = TypeDescriptor.GetProperties(doc).Find(Raven.Abstractions.Data.Constants.DocumentIdFieldName, false);
 				documentIdFetcher = o => docIdProp.GetValue(o);
 			}
 			return documentIdFetcher;
@@ -156,7 +156,7 @@ namespace Raven.Database.Indexing
 		{
 			if (fieldsToFetch.IsProjection == false)
 				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().OfType<Fieldable>().Select(x => x.Name()).ToArray());
-			fieldsToFetch.EnsureHasField(Constacts.ReduceKeyFieldName);
+			fieldsToFetch.EnsureHasField(Raven.Abstractions.Data.Constants.ReduceKeyFieldName);
 			return base.RetrieveDocument(document, fieldsToFetch);
 		}
 
@@ -186,7 +186,7 @@ namespace Raven.Database.Indexing
 				{
 					logIndexing.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
 				}
-				writer.DeleteDocuments(keys.Select(k => new Term(Constacts.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
+				writer.DeleteDocuments(keys.Select(k => new Term(Raven.Abstractions.Data.Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
 				return true;
 			});
 		}
@@ -207,7 +207,7 @@ namespace Raven.Database.Indexing
 				foreach (var reduceKey in reduceKeys)
 				{
 					var entryKey = reduceKey;
-					indexWriter.DeleteDocuments(new Term(Constacts.ReduceKeyFieldName, entryKey.ToLowerInvariant()));
+					indexWriter.DeleteDocuments(new Term(Raven.Abstractions.Data.Constants.ReduceKeyFieldName, entryKey.ToLowerInvariant()));
 					batchers.ApplyAndIgnoreAllErrors(
 						exception =>
 						{
@@ -230,7 +230,7 @@ namespace Raven.Database.Indexing
 					string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
 
 					var luceneDoc = new Document();
-					luceneDoc.Add(new Field(Constacts.ReduceKeyFieldName, reduceKeyAsString.ToLowerInvariant(), Field.Store.NO, Field.Index.NOT_ANALYZED));
+					luceneDoc.Add(new Field(Raven.Abstractions.Data.Constants.ReduceKeyFieldName, reduceKeyAsString.ToLowerInvariant(), Field.Store.NO, Field.Index.NOT_ANALYZED));
 					foreach (var field in fields)
 					{
 						luceneDoc.Add(field);

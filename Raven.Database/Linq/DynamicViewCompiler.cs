@@ -331,14 +331,14 @@ namespace Raven.Database.Linq
 
 			var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
 
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constacts.DocumentIdFieldName))
+			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 				return;
 
 			objectInitializer.CreateExpressions.Add(
 				new NamedArgumentExpression
 				{
-					Name = Constacts.DocumentIdFieldName,
-					Expression = new MemberReferenceExpression(identifierExpression, Constacts.DocumentIdFieldName)
+					Name = Constants.DocumentIdFieldName,
+					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 				});
 		}
 
@@ -378,14 +378,14 @@ namespace Raven.Database.Linq
 
 			var identifierExpression = new IdentifierExpression(queryExpression.FromClause.Identifier);
 
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constacts.DocumentIdFieldName))
+			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 				return variableDeclaration;
 
 			objectInitializer.CreateExpressions.Add(
 				new NamedArgumentExpression
 				{
-					Name = Constacts.DocumentIdFieldName,
-					Expression = new MemberReferenceExpression(identifierExpression, Constacts.DocumentIdFieldName)
+					Name = Constants.DocumentIdFieldName,
+					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 				});
 			return variableDeclaration;
 		}

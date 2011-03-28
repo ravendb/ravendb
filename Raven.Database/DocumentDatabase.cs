@@ -564,8 +564,8 @@ namespace Raven.Database
 					var indexDefinition = GetIndexDefinition(index);
 					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
 					                                      viewGenerator.ReduceDefinition == null
-					                                      	? Abstractions.Data.Constacts.DocumentIdFieldName
-					                                      	: Abstractions.Data.Constacts.ReduceKeyFieldName);
+					                                      	? Abstractions.Data.Constants.DocumentIdFieldName
+					                                      	: Abstractions.Data.Constants.ReduceKeyFieldName);
 					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch)
 									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
@@ -632,7 +632,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Constacts.DocumentIdFieldName))
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Raven.Abstractions.Data.Constants.DocumentIdFieldName))
 													select queryResult.Key);
 				});
 			stale = isStale;

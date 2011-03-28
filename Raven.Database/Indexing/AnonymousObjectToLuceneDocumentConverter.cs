@@ -25,7 +25,7 @@ namespace Raven.Database.Indexing
 		{
 			return (from property in properties.Cast<PropertyDescriptor>()
 			        let name = property.Name
-					where name != Constacts.DocumentIdFieldName
+					where name != Constants.DocumentIdFieldName
 			        let value = property.GetValue(val)
 			        from field in CreateFields(name, value, indexDefinition, defaultStorage)
 			        select field);
@@ -35,7 +35,7 @@ namespace Raven.Database.Indexing
         {
         	return (from property in document.Cast<JProperty>()
         	        let name = property.Name
-					where name != Constacts.DocumentIdFieldName
+					where name != Constants.DocumentIdFieldName
         	        let value = GetPropertyValue(property)
         	        from field in CreateFields(name, value, indexDefinition, defaultStorage)
         	        select field);
@@ -77,7 +77,7 @@ namespace Raven.Database.Indexing
 
 			if (value == null)
 			{
-				yield return new Field(name, "NULL_VALUE", indexDefinition.GetStorage(name, defaultStorage),
+				yield return new Field(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
 								 Field.Index.NOT_ANALYZED);
 				yield break;
 			}
@@ -85,7 +85,7 @@ namespace Raven.Database.Indexing
 			{
 				if(((DynamicNullObject)value ).IsExplicitNull)
 				{
-					yield return new Field(name, "NULL_VALUE", indexDefinition.GetStorage(name, defaultStorage),
+					yield return new Field(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
 							 Field.Index.NOT_ANALYZED);
 				}
 				yield break;

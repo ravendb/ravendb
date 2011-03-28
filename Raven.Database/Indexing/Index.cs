@@ -128,7 +128,7 @@ namespace Raven.Database.Indexing
 		{
 			return new IndexQueryResult
 			{
-				Key = document.Get(Constacts.DocumentIdFieldName),
+				Key = document.Get(Constants.DocumentIdFieldName),
 				Projection = fieldsToFetch.IsProjection ? CreateDocumentFromFields(document, fieldsToFetch) : null
 			};
 		}
@@ -158,12 +158,15 @@ namespace Raven.Database.Indexing
 
 		private static JProperty CreateProperty(Field fld, Document document)
 		{
+			var stringValue = fld.StringValue();
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
 			{
-				object val = JsonConvert.DeserializeObject(fld.StringValue());
+				object val = JsonConvert.DeserializeObject(stringValue);
 				return new JProperty(fld.Name(), val);
 			}
-			return new JProperty(fld.Name(), fld.StringValue());
+			if (stringValue == Constants.NullValue)
+				stringValue = null;
+			return new JProperty(fld.Name(), stringValue);
 		}
 
 		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, bool> action)
@@ -320,7 +323,7 @@ namespace Raven.Database.Indexing
 			var dic = current as DynamicJsonObject;
 			if (dic == null)
 				return null;
-			object value = dic.GetValue(Constacts.DocumentIdFieldName);
+			object value = dic.GetValue(Constants.DocumentIdFieldName);
 			if (value == null)
 				return null;
 			return value.ToString();
