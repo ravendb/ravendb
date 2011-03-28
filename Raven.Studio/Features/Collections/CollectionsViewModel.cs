@@ -7,7 +7,6 @@
 	using System.Threading.Tasks;
 	using Abstractions.Data;
 	using Caliburn.Micro;
-	using Client.Client;
 	using Database;
 	using Documents;
 	using Framework;
@@ -18,7 +17,6 @@
 	public class CollectionsViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{
-		readonly Collection raven = new Collection { Name = "Raven", Count = 0 };
 		readonly IServer server;
 		Collection activeCollection;
 
@@ -33,12 +31,10 @@
 			events.Subscribe(this);
 
 			this.server = server;
-			SystemCollections = new BindableCollection<Collection>();
 			ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
 		}
 
 		public IEnumerable<Collection> Collections { get; private set; }
-		public BindableCollection<Collection> SystemCollections { get; private set; }
 		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments { get; private set; }
 
 		public Collection ActiveCollection
@@ -67,11 +63,6 @@
 		public bool HasCollections
 		{
 			get { return Collections != null && Collections.Any(); }
-		}
-
-		public Collection RavenCollection
-		{
-			get { return raven; }
 		}
 
 		void GetDocumentsForActiveCollection()
@@ -124,15 +115,6 @@
 
 											WorkCompleted();
 										});
-
-				//session.Advanced.AsyncDatabaseCommands
-				//    .GetDocumentsStartingWithAsync("Raven",0,1)
-				//    .ContinueOnSuccess(x =>
-				//                        {
-				//                            var c = new Collection { Count = x.Result.TotalResults, Name = "Orphans" };
-				//                            OrphansCollection = c;
-				//                            NotifyOfPropertyChange(() => OrphansCollection);
-				//                        });
 			}
 		}
 
