@@ -122,7 +122,16 @@ namespace Raven.Studio.Features.Database
         {
             Store.AsyncDatabaseCommands
                 .EnsureDatabaseExistsAsync(databaseName)
-                .ContinueWith(create =>
+				.ContinueWith(task =>
+				{
+					if (task.Exception != null)
+						return task;
+
+					return Store.AsyncDatabaseCommands
+						.ForDatabase(databaseName)
+						.EnsureSilverlightStartUpAsync();
+				})
+                .ContinueOnSuccess(create =>
                                   {
                                       if (callback != null) callback();
                                       databases = databases.Union(new[] { databaseName });

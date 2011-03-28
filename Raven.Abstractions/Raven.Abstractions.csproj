@@ -78,6 +78,7 @@
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Extensions\ConcurrentDictionaryExtensions.cs" />
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />

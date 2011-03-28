@@ -580,6 +580,14 @@ namespace Raven.Client.Client.Async
 			throw new NotImplementedException();
 		}
 
+		/// <summary>
+		/// Ensures that the silverlight startup tasks have run
+		/// </summary>
+		public Task EnsureSilverlightStartUpAsync()
+		{
+			throw new NotImplementedException();
+		}
+
         ///<summary>
         /// Get the possible terms for the specified field in the index asynchronously
         /// You can page through the results by use fromValue parameter as the 

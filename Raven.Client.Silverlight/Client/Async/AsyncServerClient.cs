@@ -839,7 +839,19 @@ namespace Raven.Client.Client.Async
 			return request.ReadResponseStringAsync();
 		}
 
-        ///<summary>
+		/// <summary>
+		/// Ensures that the silverlight startup tasks have run
+		/// </summary>
+		public Task EnsureSilverlightStartUpAsync()
+		{
+			return url
+				.SilverlightEnsuresStartup()
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseBytesAsync();
+		}
+
+		///<summary>
         /// Get the possible terms for the specified field in the index asynchronously
         /// You can page through the results by use fromValue parameter as the 
         /// starting point for the next query
