@@ -15,6 +15,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Json;
 using Raven.Http.Exceptions;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
@@ -101,15 +102,15 @@ namespace Raven.Client.Document
 						databaseCommands.Put(RavenKeyGeneratorsHilo + tag,
 									 Guid.Empty,
 									 // sending empty guid means - ensure the that the document does NOT exists
-									 JObject.FromObject(new HiLoKey{ServerHi = 2}),
-									 new JObject());
+									 RavenJObject.FromObject(new HiLoKey{ServerHi = 2}),
+									 new RavenJObject());
 						return 1;
 					}
 					var hiLoKey = document.DataAsJson.JsonDeserialization<HiLoKey>();
 					var newHi = hiLoKey.ServerHi;
 					hiLoKey.ServerHi += 1;
 					databaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
-								 JObject.FromObject(hiLoKey),
+								 RavenJObject.FromObject(hiLoKey),
 								 document.Metadata);
 					return newHi;
 				}
@@ -134,8 +135,8 @@ namespace Raven.Client.Document
 					{
 						databaseCommands.PutAsync(RavenKeyGeneratorsHilo + tag,
 										Guid.Empty, // sending empty guid means - ensure the that the document does NOT exists
-										JObject.FromObject(new HiLoKey { ServerHi = 2 }),
-										new JObject())
+										RavenJObject.FromObject(new HiLoKey { ServerHi = 2 }),
+										new RavenJObject())
 										.Wait();
 						return 1;
 					}
@@ -143,7 +144,7 @@ namespace Raven.Client.Document
 					var newHi = hiLoKey.ServerHi;
 					hiLoKey.ServerHi += 1;
 					databaseCommands.PutAsync(RavenKeyGeneratorsHilo + tag, document.Etag,
-					                          JObject.FromObject(hiLoKey),
+					                          RavenJObject.FromObject(hiLoKey),
 					                          document.Metadata)
 						.Wait();
 					return newHi;

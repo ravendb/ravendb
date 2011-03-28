@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client
 {
@@ -77,7 +78,7 @@ namespace Raven.Client.Client
 		/// <param name="credentials">The credentials.</param>
 		/// <param name="convention">The document conventions governing this request</param>
 		/// <returns></returns>
-		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials, DocumentConvention convention)
+		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
 		{
 			var request = new HttpJsonRequest(url, method, metadata, credentials, convention.ShouldCacheRequest(url));
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
@@ -96,11 +97,11 @@ namespace Raven.Client.Client
 		public NameValueCollection ResponseHeaders { get; set; }
 
 		private HttpJsonRequest(string url, string method, ICredentials credentials, bool cacheRequest)
-			: this(url, method, new JObject(), credentials,cacheRequest)
+			: this(url, method, new RavenJObject(), credentials,cacheRequest)
 		{
 		}
 
-		private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials, bool cacheRequest)
+		private HttpJsonRequest(string url, string method, RavenJObject metadata, ICredentials credentials, bool cacheRequest)
 		{
 			this.url = url;
 			this.method = method;
@@ -210,15 +211,15 @@ namespace Raven.Client.Client
 		/// <value>The response status code.</value>
 		public HttpStatusCode ResponseStatusCode { get; set; }
 
-		private void WriteMetadata(JObject metadata)
+		private void WriteMetadata(RavenJObject metadata)
 		{
-			if (metadata == null || metadata.Count == 0)
+			if (metadata == null || metadata.Properties.Count == 0)
 			{
 				webRequest.ContentLength = 0;
 				return;
 			}
 
-			foreach (var prop in metadata)
+			foreach (var prop in metadata.Properties)
 			{
 				if (prop.Value == null)
 					continue;
@@ -230,7 +231,7 @@ namespace Raven.Client.Client
 				var headerName = prop.Key;
 				if (headerName == "ETag")
 					headerName = "If-Match";
-				var value = prop.Value.Value<object>().ToString();
+				var value = prop.Value<object>().ToString();
 				switch (headerName)
 				{
 					case "Content-Length":

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
@@ -19,7 +18,6 @@ using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
-using Raven.Database.Extensions;
 using Raven.Http;
 using Raven.Json.Linq;
 

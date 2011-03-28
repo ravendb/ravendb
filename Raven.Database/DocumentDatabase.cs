@@ -760,9 +760,9 @@ namespace Raven.Database
 
 		}
 
-		public JArray GetDocumentsWithIdStartingWith(string idPrefix, int start, int pageSize)
+		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, int start, int pageSize)
 		{
-			var list = new JArray();
+			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
 				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start)
@@ -776,7 +776,7 @@ namespace Raven.Database
 					if (document == null)
 						continue;
 
-					list.Add(document.ToJson());
+					list.Items.Add(document.ToJson());
 				}
 			});
 			return list;
@@ -801,7 +801,7 @@ namespace Raven.Database
 					if (document == null)
 						continue;
 
-					list.Add(document.ToJson());
+					list.Items.Add(document.ToJson());
 				}
 			});
 			return list;
