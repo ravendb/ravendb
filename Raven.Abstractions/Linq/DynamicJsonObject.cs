@@ -169,13 +169,13 @@ namespace Raven.Database.Linq
 				return GetDocumentId();
 			}
 			RavenJToken value;
-			if (inner.TryGetValue(name, out value))
+			if (inner.Properties.TryGetValue(name, out value))
 			{
 				return TransformToValue(value);
 			}
             if(name.StartsWith("_"))
             {
-                if (inner.TryGetValue(name.Substring(1), out value))
+                if (inner.Properties.TryGetValue(name.Substring(1), out value))
                 {
                     return TransformToValue(value);
                 } 
@@ -197,7 +197,7 @@ namespace Raven.Database.Linq
 		/// <returns></returns>
 		public object GetDocumentId()
 		{
-			var metadata = inner["@metadata"];
+			var metadata = inner["@metadata"] as RavenJObject;
 			if (metadata != null)
 			{
 				var id = metadata["@id"];
