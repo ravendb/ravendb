@@ -175,6 +175,39 @@ namespace Raven.Json.Linq
 			writer.WriteEndArray();
 		}
 
+		internal override bool DeepEquals(RavenJToken node)
+		{
+			var t = node as RavenJArray;
+			if (t == null)
+				return false;
+
+			if (_items == null)
+				return t.Items.Count == 0;
+
+			if (_items.Count != t.Items.Count)
+				return false;
+
+			for (int i = 0; i < _items.Count; i++ )
+			{
+				if (!_items[i].DeepEquals(t._items[i]))
+					return false;
+			}
+			return true;
+		}
+
+		internal override int GetDeepHashCode()
+		{
+			int hashCode = 0;
+			if (_items != null)
+			{
+				foreach (RavenJToken item in _items)
+				{
+					hashCode ^= item.GetDeepHashCode();
+				}
+			}
+			return hashCode;
+		}
+
 		#region IEnumerable<RavenJToken> Members
 
 		public IEnumerator<RavenJToken> GetEnumerator()
