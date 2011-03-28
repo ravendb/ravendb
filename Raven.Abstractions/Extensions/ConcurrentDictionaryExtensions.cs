@@ -1,3 +1,4 @@
+#if !NET_3_5
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -27,3 +28,4 @@ namespace Raven.Abstractions.Extensions
 		}
 	}
 }
+#endif
