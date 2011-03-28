@@ -7,7 +7,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Globalization;
 using System.Linq;
 using System.Threading;
 using log4net;
@@ -19,8 +18,10 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -33,18 +34,22 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public abstract class Index : IDisposable
 	{
-		[ImportMany]
-		public IEnumerable<AbstractAnalyzerGenerator> AnalyzerGenerators { get; set; }
-
+		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof (Index) + ".Indexing");
+		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof (Index) + ".Querying");
+		private readonly List<Document> currentlyIndexDocumented = new List<Document>();
 		private readonly Directory directory;
-		protected readonly ILog logIndexing = LogManager.GetLogger(typeof(Index) + ".Indexing");
-		protected readonly ILog logQuerying = LogManager.GetLogger(typeof(Index) + ".Querying");
-		protected readonly string name;
 		protected readonly IndexDefinition indexDefinition;
+
+		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
+			new ConcurrentDictionary<string, IIndexExtension>();
+
+		protected readonly string name;
+
 		private readonly AbstractViewGenerator viewGenerator;
-		private CurrentIndexSearcher searcher;
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
+		private IndexWriter indexWriter;
+		private CurrentIndexSearcher searcher;
 
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
@@ -65,20 +70,15 @@ namespace Raven.Database.Indexing
 			// writing to the index
 			this.directory.ClearLock("write.lock");
 
-            searcher = new CurrentIndexSearcher(new IndexSearcher(directory, true));
+			searcher = new CurrentIndexSearcher(new IndexSearcher(directory, true));
 		}
 
-		public void Flush()
+		[ImportMany]
+		public IEnumerable<AbstractAnalyzerGenerator> AnalyzerGenerators { get; set; }
+
+		internal CurrentIndexSearcher Searcher
 		{
-			lock (writeLock)
-			{
-				if (disposed)
-					return;
-				if (indexWriter != null)
-				{
-					indexWriter.Commit();
-				}
-			}
+			get { return searcher; }
 		}
 
 		#region IDisposable Members
@@ -97,7 +97,7 @@ namespace Raven.Database.Indexing
 					searcher.MarkForDispoal();
 				if (indexWriter != null)
 				{
-					var writer = indexWriter;
+					IndexWriter writer = indexWriter;
 					indexWriter = null;
 					writer.Close();
 				}
@@ -107,189 +107,67 @@ namespace Raven.Database.Indexing
 
 		#endregion
 
-		public IEnumerable<IndexQueryResult> Query(IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults)
+		public void Flush()
 		{
-			AssertQueryDoesNotContainFieldsThatAreNotIndexes(indexQuery.Query, indexQuery.SortedFields);
-
-			IndexSearcher indexSearcher;
-			using (searcher.Use(out indexSearcher))
+			lock (writeLock)
 			{
-				var luceneQuery = GetLuceneQuery(indexQuery);
-				var start = indexQuery.Start;
-				var pageSize = indexQuery.PageSize;
-				var returnedResults = 0;
-				var skippedResultsInCurrentLoop = 0;
-				do
+				if (disposed)
+					return;
+				if (indexWriter != null)
 				{
-					if (skippedResultsInCurrentLoop > 0)
-					{
-						start = start + pageSize;
-						// trying to guesstimate how many results we will need to read from the index
-						// to get enough unique documents to match the page size
-						pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
-						skippedResultsInCurrentLoop = 0;
-					}
-					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
-					indexQuery.TotalSize.Value = search.totalHits;
-					for (var i = start; i < search.totalHits && (i - start) < pageSize; i++)
-					{
-						var document = indexSearcher.Doc(search.scoreDocs[i].doc);
-						var indexQueryResult = RetrieveDocument(document, indexQuery.FieldsToFetch);
-						if (shouldIncludeInResults(indexQueryResult) == false)
-						{
-							indexQuery.SkippedResults.Value++;
-							skippedResultsInCurrentLoop++;
-							continue;
-						}
-						returnedResults++;
-						yield return indexQueryResult;
-						if (returnedResults == indexQuery.PageSize)
-							yield break;
-					}
-				} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
-			}
-		}
-
-		private void AssertQueryDoesNotContainFieldsThatAreNotIndexes(string query, SortedField[] fields)
-		{
-			var hashSet = SimpleQueryParser.GetFields(query);
-			foreach (var field in hashSet)
-			{
-				var f = field;
-				if (f.EndsWith("_Range"))
-				{
-					f = f.Substring(0, f.Length - "_Range".Length);
-				}
-				if (viewGenerator.ContainsField(f) == false)
-					throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
-			}
-
-			if (fields == null)
-				return;
-
-			foreach (var field in fields)
-			{
-				var f = field.Field;
-				if (f.EndsWith("_Range"))
-				{
-					f = f.Substring(0, f.Length - "_Range".Length);
-				}
-				if (viewGenerator.ContainsField(f) == false)
-					throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
-			}
-		}
-
-		private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize, IndexQuery indexQuery)
-		{
-			Filter filter = indexQuery.GetFilter();
-			Sort sort = indexQuery.GetSort(filter, indexDefinition);
-
-			if (pageSize == int.MaxValue) // we want all docs
-			{
-				var gatherAllCollector = new GatherAllCollector();
-				indexSearcher.Search(luceneQuery, filter, gatherAllCollector);
-				return gatherAllCollector.ToTopDocs();
-			}
-			// NOTE: We get Start + Pagesize results back so we have something to page on
-			if (sort != null)
-			{
-				return indexSearcher.Search(luceneQuery, filter, pageSize + start, sort);
-			}
-			return indexSearcher.Search(luceneQuery, filter, pageSize + start);
-		}
-
-		private Query GetLuceneQuery(IndexQuery indexQuery)
-		{
-			var query = indexQuery.Query;
-			Query luceneQuery;
-			if (string.IsNullOrEmpty(query))
-			{
-				logQuerying.DebugFormat("Issuing query on index {0} for all documents", name);
-				luceneQuery = new MatchAllDocsQuery();
-			}
-			else
-			{
-				logQuerying.DebugFormat("Issuing query on index {0} for: {1}", name, query);
-				var toDispose = new List<Action>();
-				PerFieldAnalyzerWrapper analyzer = null;
-				try
-				{
-					analyzer = CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
-					analyzer = AnalyzerGenerators.Aggregate(analyzer, (currentAnalyzer, generator) =>
-					{
-						var newAnalyzer = generator.GenerateAnalzyerForQuerying(name, indexQuery.Query, currentAnalyzer);
-						if (newAnalyzer != currentAnalyzer)
-						{
-							DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
-						}
-						return CreateAnalyzer(newAnalyzer, toDispose); ;
-					});
-					luceneQuery = QueryBuilder.BuildQuery(query, analyzer);
-				}
-				finally
-				{
-					DisposeAnalyzerAndFriends(toDispose, analyzer);
+					indexWriter.Commit();
 				}
 			}
-			return luceneQuery;
 		}
 
-		private void DisposeAnalyzerAndFriends(List<Action> toDispose, PerFieldAnalyzerWrapper analyzer)
+		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
+		                                    WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
+
+
+		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch)
 		{
-			if (analyzer != null)
-				analyzer.Close();
-			foreach (var dispose in toDispose)
-			{
-				dispose();
-			}
-			toDispose.Clear();
-		}
-
-		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
-
-
-		protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
-		{
-			var shouldBuildProjection = fieldsToFetch == null || fieldsToFetch.Length == 0;
 			return new IndexQueryResult
 			{
-				Key = document.Get("__document_id"),
-				Projection = shouldBuildProjection ? null : CreateDocumentFromFields(document, fieldsToFetch)
+				Key = document.Get(Constants.DocumentIdFieldName),
+				Projection = fieldsToFetch.IsProjection ? CreateDocumentFromFields(document, fieldsToFetch) : null
 			};
 		}
 
 		private static JObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
 		{
 			return new JObject(
-				fieldsToFetch.Concat(new[] { "__document_id" }).Distinct()
+				fieldsToFetch
 					.SelectMany(name => document.GetFields(name) ?? new Field[0])
 					.Where(x => x != null)
-					.Where(x => x.Name().EndsWith("_IsArray") == false && x.Name().EndsWith("_Range") == false && x.Name().EndsWith("_ConvertToJson") == false)
+					.Where(
+						x =>
+						x.Name().EndsWith("_IsArray") == false && x.Name().EndsWith("_Range") == false &&
+						x.Name().EndsWith("_ConvertToJson") == false)
 					.Select(fld => CreateProperty(fld, document))
 					.GroupBy(x => x.Name)
 					.Select(g =>
 					{
 						if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
 						{
-						    return g.First();
+							return g.First();
 						}
-					    return new JProperty(g.Key, g.Select(x => x.Value));
+						return new JProperty(g.Key, g.Select(x => x.Value));
 					})
 				);
 		}
 
-	    private static JProperty CreateProperty(Field fld, Document document)
+		private static JProperty CreateProperty(Field fld, Document document)
 		{
+			var stringValue = fld.StringValue();
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
 			{
-				var val = JsonConvert.DeserializeObject(fld.StringValue());
+				object val = JsonConvert.DeserializeObject(stringValue);
 				return new JProperty(fld.Name(), val);
 			}
-			return new JProperty(fld.Name(), fld.StringValue());
+			if (stringValue == Constants.NullValue)
+				stringValue = null;
+			return new JProperty(fld.Name(), stringValue);
 		}
-
-		IndexWriter indexWriter;
-		private ConcurrentDictionary<string,IIndexExtension> indexExtensions = new ConcurrentDictionary<string, IIndexExtension>();
 
 		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, bool> action)
 		{
@@ -316,7 +194,7 @@ namespace Raven.Database.Indexing
 					try
 					{
 						shouldRecreateSearcher = action(indexWriter, analyzer);
-						foreach (var indexExtension in indexExtensions.Values)
+						foreach (IIndexExtension indexExtension in indexExtensions.Values)
 						{
 							indexExtension.OnDocumentsIndexed(currentlyIndexDocumented);
 						}
@@ -332,7 +210,7 @@ namespace Raven.Database.Indexing
 					currentlyIndexDocumented.Clear();
 					if (analyzer != null)
 						analyzer.Close();
-					foreach (var dispose in toDispose)
+					foreach (Action dispose in toDispose)
 					{
 						dispose();
 					}
@@ -348,7 +226,7 @@ namespace Raven.Database.Indexing
 			var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer);
 			foreach (var analyzer in indexDefinition.Analyzers)
 			{
-				var analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(analyzer.Key, analyzer.Value);
+				Analyzer analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(analyzer.Key, analyzer.Value);
 				if (analyzerInstance == null)
 					continue;
 				toDispose.Add(analyzerInstance.Close);
@@ -370,7 +248,7 @@ namespace Raven.Database.Indexing
 						perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, keywordAnalyzer);
 						break;
 					case FieldIndexing.Analyzed:
-						if(indexDefinition.Analyzers.ContainsKey(fieldIndexing.Key))
+						if (indexDefinition.Analyzers.ContainsKey(fieldIndexing.Key))
 							continue;
 						if (standardAnalyzer == null)
 						{
@@ -384,7 +262,8 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IndexingFunc func, IStorageActionsAccessor actions, WorkContext context)
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IndexingFunc func,
+		                                                     IStorageActionsAccessor actions, WorkContext context)
 		{
 			return new RobustEnumerator
 			{
@@ -393,11 +272,11 @@ namespace Raven.Database.Indexing
 				OnError = (exception, o) =>
 				{
 					context.AddError(name,
-									 TryGetDocKey(o),
-									 exception.Message
+					                 TryGetDocKey(o),
+					                 exception.Message
 						);
 					logIndexing.WarnFormat(exception, "Failed to execute indexing function on {0} on {1}", name,
-										   TryGetDocKey(o));
+					                       TryGetDocKey(o));
 					try
 					{
 						actions.Indexing.IncrementIndexingFailure();
@@ -411,7 +290,8 @@ namespace Raven.Database.Indexing
 			}.RobustEnumeration(input, func);
 		}
 
-		protected IEnumerable<object> RobustEnumerationReduce(IEnumerable<object> input, IndexingFunc func, IStorageActionsAccessor actions, WorkContext context)
+		protected IEnumerable<object> RobustEnumerationReduce(IEnumerable<object> input, IndexingFunc func,
+		                                                      IStorageActionsAccessor actions, WorkContext context)
 		{
 			return new RobustEnumerator
 			{
@@ -420,11 +300,11 @@ namespace Raven.Database.Indexing
 				OnError = (exception, o) =>
 				{
 					context.AddError(name,
-									 TryGetDocKey(o),
-									 exception.Message
+					                 TryGetDocKey(o),
+					                 exception.Message
 						);
 					logIndexing.WarnFormat(exception, "Failed to execute indexing function on {0} on {1}", name,
-										   TryGetDocKey(o));
+					                       TryGetDocKey(o));
 					try
 					{
 						actions.Indexing.IncrementReduceIndexingFailure();
@@ -443,7 +323,7 @@ namespace Raven.Database.Indexing
 			var dic = current as DynamicJsonObject;
 			if (dic == null)
 				return null;
-			var value = dic.GetValue("__document_id");
+			object value = dic.GetValue(Constants.DocumentIdFieldName);
 			if (value == null)
 				return null;
 			return value.ToString();
@@ -460,36 +340,73 @@ namespace Raven.Database.Indexing
 				searcher.MarkForDispoal();
 				if (indexWriter == null)
 				{
-				    searcher = new CurrentIndexSearcher(new IndexSearcher(directory, true));
+					searcher = new CurrentIndexSearcher(new IndexSearcher(directory, true));
 				}
 				else
 				{
-				    searcher = new CurrentIndexSearcher(new IndexSearcher(indexWriter.GetReader()));
+					searcher = new CurrentIndexSearcher(new IndexSearcher(indexWriter.GetReader()));
 				}
 				Thread.MemoryBarrier(); // force other threads to see this write
 			}
 		}
 
-		internal CurrentIndexSearcher Searcher
+		protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
 		{
-			get { return searcher; }
+			Analyzer newAnalyzer = AnalyzerGenerators.Aggregate(analyzer,
+			                                                    (currentAnalyzer, generator) =>
+			                                                    {
+			                                                    	Analyzer generateAnalyzer =
+			                                                    		generator.GenerateAnalyzerForIndexing(name, luceneDoc,
+			                                                    		                                      currentAnalyzer);
+			                                                    	if (generateAnalyzer != currentAnalyzer &&
+			                                                    	    currentAnalyzer != analyzer)
+			                                                    		currentAnalyzer.Close();
+			                                                    	return generateAnalyzer;
+			                                                    });
+
+			try
+			{
+				if (indexExtensions.Count > 0)
+					currentlyIndexDocumented.Add(luceneDoc);
+
+				currentIndexWriter.AddDocument(luceneDoc, newAnalyzer);
+			}
+			finally
+			{
+				if (newAnalyzer != analyzer)
+					newAnalyzer.Close();
+			}
 		}
 
-		internal class CurrentIndexSearcher
+		public IIndexExtension GetExtension(string indexExtensionKey)
 		{
+			IIndexExtension val;
+			indexExtensions.TryGetValue(indexExtensionKey, out val);
+			return val;
+		}
+
+		public void SetExtension(string indexExtensionKey, IIndexExtension extension)
+		{
+			indexExtensions.TryAdd(indexExtensionKey, extension);
+		}
+
+		#region Nested type: CurrentIndexSearcher
+
+		public class CurrentIndexSearcher
+		{
+			private readonly IndexSearcher searcher;
 			private bool shouldDisposeWhenThereAreNoUsages;
 			private int useCount;
-		    private readonly IndexSearcher searcher;
 
-		    public CurrentIndexSearcher(IndexSearcher searcher)
-		    {
-		        this.searcher = searcher;
-		    }
+			public CurrentIndexSearcher(IndexSearcher searcher)
+			{
+				this.searcher = searcher;
+			}
 
-		    public IDisposable Use(out IndexSearcher indexSearcher)
+			public IDisposable Use(out IndexSearcher indexSearcher)
 			{
 				Interlocked.Increment(ref useCount);
-                indexSearcher = searcher;
+				indexSearcher = searcher;
 				return new CleanUp(this);
 			}
 
@@ -513,11 +430,11 @@ namespace Raven.Database.Indexing
 
 				public void Dispose()
 				{
-					var uses = Interlocked.Decrement(ref parent.useCount);
+					int uses = Interlocked.Decrement(ref parent.useCount);
 					if (parent.shouldDisposeWhenThereAreNoUsages && uses == 0)
 					{
-                        var indexReader = parent.searcher.GetIndexReader();
-                        parent.searcher.Close();
+						IndexReader indexReader = parent.searcher.GetIndexReader();
+						parent.searcher.Close();
 						indexReader.Close();
 					}
 				}
@@ -528,43 +445,202 @@ namespace Raven.Database.Indexing
 			#endregion
 		}
 
-		private readonly List<Document> currentlyIndexDocumented = new List<Document>();
+		#endregion
 
-		protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
+		#region Nested type: IndexQueryOperation
+
+		internal class IndexQueryOperation
 		{
-			var newAnalyzer = AnalyzerGenerators.Aggregate(analyzer,
-				(currentAnalyzer, generator) =>
+			private readonly IndexQuery indexQuery;
+			private readonly Index parent;
+			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
+			readonly HashSet<JObject> alreadyReturned;
+			private readonly FieldsToFetch fieldsToFetch;
+
+			public IndexQueryOperation(
+				Index parent,
+				IndexQuery indexQuery,
+				Func<IndexQueryResult, bool> shouldIncludeInResults,
+				FieldsToFetch fieldsToFetch)
+			{
+				this.parent = parent;
+				this.indexQuery = indexQuery;
+				this.shouldIncludeInResults = shouldIncludeInResults;
+				this.fieldsToFetch = fieldsToFetch;
+
+				if (fieldsToFetch.IsDistinctQuery)
+					alreadyReturned = new HashSet<JObject>(new JTokenEqualityComparer());
+				
+			}
+
+			public IEnumerable<IndexQueryResult> Query()
+			{
+				AssertQueryDoesNotContainFieldsThatAreNotIndexes();
+				IndexSearcher indexSearcher;
+				using (parent.searcher.Use(out indexSearcher))
 				{
-					var generateAnalyzer = generator.GenerateAnalyzerForIndexing(name, luceneDoc, currentAnalyzer);
-					if (generateAnalyzer != currentAnalyzer && currentAnalyzer != analyzer)
-						currentAnalyzer.Close();
-					return generateAnalyzer;
-				});
+					Query luceneQuery = GetLuceneQuery();
+					int start = indexQuery.Start;
+					int pageSize = indexQuery.PageSize;
+					int returnedResults = 0;
+					int skippedResultsInCurrentLoop = 0;
+					do
+					{
+						if (skippedResultsInCurrentLoop > 0)
+						{
+							start = start + pageSize;
+							// trying to guesstimate how many results we will need to read from the index
+							// to get enough unique documents to match the page size
+							pageSize = skippedResultsInCurrentLoop*indexQuery.PageSize;
+							skippedResultsInCurrentLoop = 0;
+						}
+						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
+						indexQuery.TotalSize.Value = search.totalHits;
 
-			try
-			{
-				if(indexExtensions.Count > 0)
-					currentlyIndexDocumented.Add(luceneDoc);
+						RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start);
 
-				currentIndexWriter.AddDocument(luceneDoc, newAnalyzer);
+						for (int i = start; i < search.totalHits && (i - start) < pageSize; i++)
+						{
+							Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
+							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch);
+							if (ShouldIncludeInResults(indexQueryResult) == false)
+							{
+								indexQuery.SkippedResults.Value++;
+								skippedResultsInCurrentLoop++;
+								continue;
+							}
+						
+							returnedResults++;
+							yield return indexQueryResult;
+							if (returnedResults == indexQuery.PageSize)
+								yield break;
+						}
+					} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
+				}
 			}
-			finally
+
+			private bool ShouldIncludeInResults(IndexQueryResult indexQueryResult)
 			{
-				if (newAnalyzer != analyzer)
-					newAnalyzer.Close();
+				if (shouldIncludeInResults(indexQueryResult) == false)
+					return false;
+				if (fieldsToFetch.IsDistinctQuery && alreadyReturned.Add(indexQueryResult.Projection) == false)
+						return false;
+				return true;
+			}
+
+			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start)
+			{
+				if (fieldsToFetch.IsDistinctQuery == false) 
+					return;
+
+				// add results that were already there in previous pages
+				var min = Math.Min(start, search.totalHits);
+				for (int i = 0; i < min; i++)
+				{
+					Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch);
+					alreadyReturned.Add(indexQueryResult.Projection);
+				}
+			}
+
+			private void AssertQueryDoesNotContainFieldsThatAreNotIndexes()
+			{
+				HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery.Query);
+				foreach (string field in hashSet)
+				{
+					string f = field;
+					if (f.EndsWith("_Range"))
+					{
+						f = f.Substring(0, f.Length - "_Range".Length);
+					}
+					if (parent.viewGenerator.ContainsField(f) == false)
+						throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
+				}
+
+				if (indexQuery.SortedFields == null)
+					return;
+
+				foreach (SortedField field in indexQuery.SortedFields)
+				{
+					string f = field.Field;
+					if (f.EndsWith("_Range"))
+					{
+						f = f.Substring(0, f.Length - "_Range".Length);
+					}
+					if (parent.viewGenerator.ContainsField(f) == false)
+						throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
+				}
+			}
+
+			private Query GetLuceneQuery()
+			{
+				string query = indexQuery.Query;
+				Query luceneQuery;
+				if (string.IsNullOrEmpty(query))
+				{
+					logQuerying.DebugFormat("Issuing query on index {0} for all documents", parent.name);
+					luceneQuery = new MatchAllDocsQuery();
+				}
+				else
+				{
+					logQuerying.DebugFormat("Issuing query on index {0} for: {1}", parent.name, query);
+					var toDispose = new List<Action>();
+					PerFieldAnalyzerWrapper analyzer = null;
+					try
+					{
+						analyzer = parent.CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
+						analyzer = parent.AnalyzerGenerators.Aggregate(analyzer, (currentAnalyzer, generator) =>
+						{
+							Analyzer newAnalyzer = generator.GenerateAnalzyerForQuerying(parent.name, indexQuery.Query, currentAnalyzer);
+							if (newAnalyzer != currentAnalyzer)
+							{
+								DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
+							}
+							return parent.CreateAnalyzer(newAnalyzer, toDispose);
+							;
+						});
+						luceneQuery = QueryBuilder.BuildQuery(query, analyzer);
+					}
+					finally
+					{
+						DisposeAnalyzerAndFriends(toDispose, analyzer);
+					}
+				}
+				return luceneQuery;
+			}
+
+			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, PerFieldAnalyzerWrapper analyzer)
+			{
+				if (analyzer != null)
+					analyzer.Close();
+				foreach (Action dispose in toDispose)
+				{
+					dispose();
+				}
+				toDispose.Clear();
+			}
+
+			private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize,
+			                             IndexQuery indexQuery)
+			{
+				Filter filter = indexQuery.GetFilter();
+				Sort sort = indexQuery.GetSort(filter, parent.indexDefinition);
+
+				if (pageSize == int.MaxValue) // we want all docs
+				{
+					var gatherAllCollector = new GatherAllCollector();
+					indexSearcher.Search(luceneQuery, filter, gatherAllCollector);
+					return gatherAllCollector.ToTopDocs();
+				}
+				// NOTE: We get Start + Pagesize results back so we have something to page on
+				if (sort != null)
+				{
+					return indexSearcher.Search(luceneQuery, filter, pageSize + start, sort);
+				}
+				return indexSearcher.Search(luceneQuery, filter, pageSize + start);
 			}
 		}
 
-		public IIndexExtension GetExtension(string indexExtensionKey)
-		{
-			IIndexExtension val;
-			indexExtensions.TryGetValue(indexExtensionKey, out val);
-			return val;
-		}
-
-		public void SetExtension(string indexExtensionKey, IIndexExtension extension)
-		{
-			indexExtensions.TryAdd(indexExtensionKey, extension);
-		}
+		#endregion
 	}
 }

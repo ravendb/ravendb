@@ -2,6 +2,7 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
+	using Framework;
 	using Messages;
 
 	//TODO: this is admittedly naive, we can make it more robust after all the essential functionality is in place
@@ -24,16 +25,18 @@
 			get { return count > 0; }
 		}
 
-		public void Handle(WorkCompleted message)
-		{
-			count--;
-			NotifyOfPropertyChange( ()=> IsBusy);
-		}
-
 		public void Handle(WorkStarted message)
 		{
+			if (!string.IsNullOrEmpty(message.Job)) SimpleLogger.Start(message.Job);
 			count++;
 			NotifyOfPropertyChange(() => IsBusy);
+		}
+
+		public void Handle(WorkCompleted message)
+		{
+			if(!string.IsNullOrEmpty(message.Job)) SimpleLogger.End(message.Job);
+			count--;
+			NotifyOfPropertyChange( ()=> IsBusy);
 		}
 	}
 }

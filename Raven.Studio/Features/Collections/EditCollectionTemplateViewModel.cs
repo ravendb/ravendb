@@ -1,115 +1,144 @@
 ﻿namespace Raven.Studio.Features.Collections
 {
-	using System;
-	using System.ComponentModel.Composition;
-	using System.Text;
-	using Abstractions.Data;
-	using Caliburn.Micro;
-	using Documents;
-	using Messages;
-	using Newtonsoft.Json.Linq;
-	using Plugin;
+    using System;
+    using System.ComponentModel.Composition;
+    using System.Text;
+    using System.Windows.Markup;
+    using Abstractions.Data;
+    using Caliburn.Micro;
+    using Database;
+    using Documents;
+    using Messages;
+    using Newtonsoft.Json.Linq;
 
-	[Export]
-	public class EditCollectionTemplateViewModel : Screen
-	{
-		readonly IEventAggregator events;
-		readonly IDocumentTemplateProvider templateProvider;
-		readonly IServer server;
-		string xaml;
+    [Export]
+    public class EditCollectionTemplateViewModel : Screen
+    {
+        private readonly IEventAggregator events;
+        private readonly IServer server;
+        private readonly IDocumentTemplateProvider templateProvider;
+        private string validationSummary;
+        private string xaml;
 
-		[ImportingConstructor]
-		public EditCollectionTemplateViewModel(IServer server, IEventAggregator events, IDocumentTemplateProvider templateProvider)
-		{
-			this.server = server;
-			this.events = events;
-			this.templateProvider = templateProvider;
-		}
+        [ImportingConstructor]
+        public EditCollectionTemplateViewModel(IServer server, IEventAggregator events,
+                                               IDocumentTemplateProvider templateProvider)
+        {
+            this.server = server;
+            this.events = events;
+            this.templateProvider = templateProvider;
+        }
 
-		JObject Metadata { get; set; }
+        private JObject Metadata { get; set; }
 
-		public string Xaml
-		{
-			get { return xaml; }
-			set
-			{
-				xaml = value;
-				NotifyOfPropertyChange(() => Xaml);
-			}
-		}
+        public string Xaml
+        {
+            get { return xaml; }
+            set
+            {
+                xaml = value;
+                ValidationSummary = string.Empty;
+                NotifyOfPropertyChange(() => Xaml);
+            }
+        }
 
-		Guid? Etag { get; set; }
+        private Guid? Etag { get; set; }
 
-		string TemplateKey
-		{
-			get { return Collection.Name + "Template"; }
-		}
+        private string TemplateKey
+        {
+            get { return Collection.Name + "Template"; }
+        }
 
-		public Collection Collection { get; set; }
+        public Collection Collection { get; set; }
 
-		public void Save()
-		{
-			//TODO: validate xaml before saving
+        public string ValidationSummary
+        {
+            get { return validationSummary; }
+            set
+            {
+                validationSummary = value;
+                NotifyOfPropertyChange(() => ValidationSummary);
+            }
+        }
 
-			using (var session = server.OpenSession())
-			{
-				var encoding = new UTF8Encoding();
-				var bytes = encoding.GetBytes(Xaml);
+        private bool IsXamlValid()
+        {
+            try
+            {
+                XamlReader.Load(Xaml);
+            }
+            catch (Exception e)
+            {
+                ValidationSummary = e.Message;
+                return false;
+            }
 
-				session.Advanced.AsyncDatabaseCommands
-					.PutAttachmentAsync(TemplateKey, Etag, bytes, Metadata)
-					.ContinueWith(put => events.Publish(new CollectionTemplateUpdated(TemplateKey, Xaml)));
-			}
-		}
+            return true;
+        }
 
-		public void RestoreDefault()
-		{
-			SetDefaultXaml();
+        public void Save()
+        {
+            if (!IsXamlValid()) return;
 
-			using (var session = server.OpenSession())
-			{
-				session.Advanced.AsyncDatabaseCommands
-					.DeleteAttachmentAsync(TemplateKey, Etag)
-					.ContinueWith(put => events.Publish(new CollectionTemplateUpdated(TemplateKey, null)));
-			}
-		}
+            using (var session = server.OpenSession())
+            {
+                var encoding = new UTF8Encoding();
+                var bytes = encoding.GetBytes(Xaml);
 
-		protected override void OnActivate()
-		{
-			Reset();
+                session.Advanced.AsyncDatabaseCommands
+                    .PutAttachmentAsync(TemplateKey, Etag, bytes, Metadata)
+                    .ContinueWith(put => events.Publish(new CollectionTemplateUpdated(TemplateKey, Xaml)));
+            }
+        }
 
-			using (var session = server.OpenSession())
-			{
-				session.Advanced.AsyncDatabaseCommands
-					.GetAttachmentAsync(TemplateKey)
-					.ContinueWith(get =>
-					              	{
-					              		if (get.Result == null)
-					              		{
-					              			SetDefaultXaml();
-											return;
-					              		}
+        public void RestoreDefault()
+        {
+            SetDefaultXaml();
 
-					              		Etag = get.Result.Etag;
-					              		Metadata = get.Result.Metadata;
+            using (var session = server.OpenSession())
+            {
+                session.Advanced.AsyncDatabaseCommands
+                    .DeleteAttachmentAsync(TemplateKey, Etag)
+                    .ContinueWith(put => events.Publish(new CollectionTemplateUpdated(TemplateKey, null)));
+            }
+        }
 
-					              		var encoding = new UTF8Encoding();
-					              		var bytes = get.Result.Data;
-					              		Xaml = encoding.GetString(bytes, 0, bytes.Length);
-					              	});
-			}
-		}
+        protected override void OnActivate()
+        {
+            Reset();
 
-		void SetDefaultXaml()
-		{
-			Xaml = templateProvider.GetTemplateXamlFor(TemplateKey.Replace("Template",string.Empty));
-		}
+            using (var session = server.OpenSession())
+            {
+                session.Advanced.AsyncDatabaseCommands
+                    .GetAttachmentAsync(TemplateKey)
+                    .ContinueWith(get =>
+                                      {
+                                          if (get.Result == null)
+                                          {
+                                              SetDefaultXaml();
+                                              return;
+                                          }
 
-		void Reset()
-		{
-			Etag = null;
-			Metadata = null;
-			Xaml = string.Empty;
-		}
-	}
+                                          Etag = get.Result.Etag;
+                                          Metadata = get.Result.Metadata;
+
+                                          var encoding = new UTF8Encoding();
+                                          var bytes = get.Result.Data;
+                                          Xaml = encoding.GetString(bytes, 0, bytes.Length);
+                                      });
+            }
+        }
+
+        private void SetDefaultXaml()
+        {
+            Xaml = templateProvider.GetTemplateXamlFor(TemplateKey.Replace("Template", string.Empty));
+        }
+
+        private void Reset()
+        {
+            Etag = null;
+            Metadata = null;
+            Xaml = string.Empty;
+        }
+    }
 }

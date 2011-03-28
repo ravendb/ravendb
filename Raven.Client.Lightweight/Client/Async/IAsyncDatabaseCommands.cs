@@ -194,6 +194,14 @@ namespace Raven.Client.Client.Async
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		Task DeleteAttachmentAsync(string key, Guid? etag);
+
+        ///<summary>
+        /// Get the possible terms for the specified field in the index asynchronously
+        /// You can page through the results by use fromValue parameter as the 
+        /// starting point for the next query
+        ///</summary>
+        ///<returns></returns>
+        Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize);
 	}
 }
 #endif

@@ -8,9 +8,9 @@
 	using System.Windows.Markup;
 	using System.Windows.Media;
 	using Caliburn.Micro;
+	using Database;
 	using Framework;
 	using Messages;
-	using Plugin;
 
 	[Export(typeof (IDocumentTemplateProvider))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
@@ -146,7 +146,7 @@
 			                   	{
 			                   		template =
 			                   			(DataTemplate) XamlReader.Load(
-			                   				@"<DataTemplate xmlns=""http://schemas.microsoft.com/client/2007"">" + innerXaml +
+			                   				@"<DataTemplate xmlns=""http://schemas.microsoft.com/client/2007"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"">" + innerXaml +
 			                   				@"</DataTemplate>"
 			                   			               	);
 			                   	}

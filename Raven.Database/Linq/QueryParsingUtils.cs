@@ -99,6 +99,8 @@ namespace Raven.Database.Linq
                 throw new InvalidOperationException(
                     "Variable initializer must be a select query expression returning an anonymous object");
 
+        	variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
+
             return variable;
         }
 
@@ -139,13 +141,14 @@ namespace Raven.Database.Linq
                 throw new InvalidOperationException("Variable initializer select must have a lambda expression with an object create expression");
 
             if (objectCreateExpression.IsAnonymousType == false && objectCreateExpression.CreateType.Type.Contains("Anonymous") == false)
-                throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type");
+				throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type but returning " + objectCreateExpression.CreateType.Type);
 
-            return variable;
+			variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
+			return variable;
         }
 
 
-        public static Type Compile(string fileName, string name, string queryText, AbstractDynamicCompilationExtension[] extensions)
+        public static Type Compile(string source, string name, string queryText, AbstractDynamicCompilationExtension[] extensions, string basePath)
         {
             var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
             var assemblies = new HashSet<string>
@@ -165,15 +168,16 @@ namespace Raven.Database.Linq
             }
             var compilerParameters = new CompilerParameters
             {
+				TempFiles = new TempFileCollection(basePath,false),
                 GenerateExecutable = false,
-                GenerateInMemory = false,
+                GenerateInMemory = true,
                 IncludeDebugInformation = true,
             };
             foreach (var assembly in assemblies)
             {
                 compilerParameters.ReferencedAssemblies.Add(assembly);
             }
-            var compileAssemblyFromFile = provider.CompileAssemblyFromFile(compilerParameters, fileName);
+            var compileAssemblyFromFile = provider.CompileAssemblyFromSource(compilerParameters, source);
             var results = compileAssemblyFromFile;
 
             if (results.Errors.HasErrors)

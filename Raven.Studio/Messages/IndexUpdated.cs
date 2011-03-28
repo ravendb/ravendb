@@ -1,11 +1,15 @@
 ﻿namespace Raven.Studio.Messages
 {
-	using Features.Indexes;
+    using Features.Indexes;
 
-	public class IndexUpdated
-	{
-		public EditIndexViewModel Index { get; set; }
+    public class IndexUpdated : NotificationRaised
+    {
+        public IndexUpdated() : base("Index updated", NotificationLevel.Info)
+        {
+        }
 
-		public bool IsRemoved { get; set; }
-	}
+        public EditIndexViewModel Index { get; set; }
+
+        public bool IsRemoved { get; set; }
+    }
 }

@@ -235,8 +235,8 @@ namespace Raven.Database.Data
 
 			var dynamicQueryMapping = new DynamicQueryMapping
 			{
-				AggregationOperation = query.AggregationOperation & ~AggregationOperation.Dynamic,
-				DynamicAggregation = (query.AggregationOperation & AggregationOperation.Dynamic) == AggregationOperation.Dynamic,
+				AggregationOperation = query.AggregationOperation.RemoveOptionals(),
+				DynamicAggregation = query.AggregationOperation.HasFlag(AggregationOperation.Dynamic),
 				ForEntityName = entityName,
 				SortDescriptors = GetSortInfo(fields)
 			};
@@ -292,8 +292,10 @@ namespace Raven.Database.Data
 				.Where(key => key.StartsWith("SortHint")).ToArray();
 			foreach (string sortHintHeader in sortHintHeaders)
 			{
-				String[] split = sortHintHeader.Split('_');
+				String[] split = sortHintHeader.Split(sortHintHeader.Contains("-") ? '-' : '_'); // we only use _ for backward compatability
 				String fieldName = Uri.UnescapeDataString(split[1]);
+				if (fieldName.EndsWith("_Range"))
+					fieldName = fieldName.Substring(0, fieldName.Length - "_Range".Length);
 				string fieldType = headers[sortHintHeader];
 
 				sortInfo.Add(new DynamicSortInfo

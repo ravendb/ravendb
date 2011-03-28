@@ -3,10 +3,10 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:r="clr-namespace:Raven.Studio.Controls"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
 			 xmlns:c="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
+			 xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
+			 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
@@ -17,6 +17,15 @@
 			<ColumnDefinition Width="16" />
 			<ColumnDefinition />
 		</Grid.ColumnDefinitions>
+
+		<ti:ContextMenuService.ContextMenu>
+			<ti:ContextMenu>
+				<ti:MenuItem Header="Copy Document Id to Clipboard"
+							 Tag="{Binding Id}"
+							 cm:Action.TargetWithoutContext="CopyDocumentIdToClipboard"
+							 cm:Message.Attach="Click=Execute($this.Tag)" />
+			</ti:ContextMenu>
+		</ti:ContextMenuService.ContextMenu>
 
 		<Grid x:Name="document"
 			  Margin="12,0,0,0">
@@ -31,7 +40,7 @@
 					   Style="{StaticResource Header}" />
 
 			<Grid Grid.Row="1"
-				  Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}">
+				  Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}">
 				<StackPanel Orientation="Horizontal">
 					<Border Margin="0,2,2,2"
 							CornerRadius="2"
@@ -64,7 +73,7 @@
 			</Grid>
 
 			<TextBox Text="{Binding Id, Mode=TwoWay}"
-					 Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}"
+					 Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}"
 					 Grid.Row="2" />
 
 			<Border Grid.Row="3"
@@ -75,22 +84,13 @@
 					Margin="0"
 					d:IsLocked="True">
 
-				<!--<sh:SyntaxHighlightingTextBox SourceCode="{Binding JsonData, Mode=TwoWay}"
-											  SourceLanguage="Json"
-											  FontSize="16" />-->
 				<c:TabControl>
 					<c:TabItem Header="Data">
-						<TextBox Text="{Binding JsonData, Mode=TwoWay}"
-								 AcceptsReturn="True"
-								 FontFamily="Monaco"
-								 FontSize="16" />
+						<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}" />
 					</c:TabItem>
 					<c:TabItem Header="Metadata"
-							   Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}">
-						<TextBox Text="{Binding JsonMetadata, Mode=TwoWay}"
-								 AcceptsReturn="True"
-								 FontFamily="Monaco"
-								 FontSize="16" />
+							   Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}">
+						<Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay}" />
 					</c:TabItem>
 				</c:TabControl>
 
@@ -99,10 +99,11 @@
 		</Grid>
 
 		<Grid x:Name="details"
-			  Visibility="{Binding IsProjection, Converter={StaticResource booleanToOppositeVisibility}}"
+			  Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}"
 			  Grid.Column="2"
 			  Margin="0,42,0,0">
 			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
@@ -154,15 +155,89 @@
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
+			
+			<Grid Margin="0,12,0,0"
+				  Grid.Row="2">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="*" />
+				</Grid.RowDefinitions>
+
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="120" />
+					<ColumnDefinition Width="8" />
+					<ColumnDefinition />
+				</Grid.ColumnDefinitions>
+
+				<TextBlock  Style="{StaticResource PanelTitle}"
+							Text="DETAILS"
+							Margin="12,6,0,6" />
+
+				<TextBlock HorizontalAlignment="Right"
+						   TextWrapping="Wrap"
+						   FontSize="12"
+						   VerticalAlignment="Top"
+						   Text="ETag"
+						   Grid.Row="1"
+						   Foreground="#99000000"
+						   Margin="0,2,0,0" />
+				<TextBlock HorizontalAlignment="Left"
+						   TextWrapping="Wrap"
+						   VerticalAlignment="Top"
+						   Grid.Row="1"
+						   Grid.Column="2"
+						   Text="{Binding ETag}"
+						   FontSize="14.667" />
+
+				<TextBlock HorizontalAlignment="Right"
+						   TextWrapping="Wrap"
+						   FontSize="12"
+						   VerticalAlignment="Top"
+						   Text="Last-Modified"
+						   Foreground="#99000000"
+						   Grid.Row="2"
+						   Margin="0,2,0,0" />
+				<TextBlock HorizontalAlignment="Left"
+						   TextWrapping="Wrap"
+						   VerticalAlignment="Top"
+						   Grid.Row="2"
+						   Grid.Column="2"
+						   Text="{Binding LastModified}"
+						   FontSize="14.667" />
+			</Grid>
 
 			<StackPanel Orientation="Vertical"
-						Grid.Row="2"
+						Grid.Row="4"
 						Margin="0,12,0,0"
 						Grid.RowSpan="2">
-				<TextBlock  Style="{StaticResource PanelTitle}"
-							Text="REFERENCES"
-							Margin="12,6,0,6" />
-				<ItemsControl Margin="0,0,0,12" />
+				<Border Background="WhiteSmoke"
+						CornerRadius="5,0,0,5"
+						Grid.RowSpan="2" />
+
+				<Border Background="WhiteSmoke"
+						CornerRadius="5,0,0,5"
+						Grid.RowSpan="2"
+						Grid.Row="2"
+						Margin="0,12,0,0"
+						d:LayoutOverrides="GridBox" />
+
+				<TextBlock Style="{StaticResource PanelTitle}"
+						   Text="REFERENCES"
+						   Margin="12,6,0,6" />
+
+				<ItemsControl x:Name="References"
+							  Grid.Row="1"
+							  Margin="12,0,0,12">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<HyperlinkButton Content="{Binding}"
+											 cm:Action.TargetWithoutContext="EditDocumentById"
+											 cm:Message.Attach="Execute($this.Content)" />
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
 			</StackPanel>
 		</Grid>
 

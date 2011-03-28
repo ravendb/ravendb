@@ -6,9 +6,8 @@
     using Features.Documents;
     using Framework;
     using Messages;
-    using Plugin;
 
-    public class SearchForDocumentById
+	public class SearchForDocumentById
     {
         readonly IEventAggregator events;
         readonly IServer server;

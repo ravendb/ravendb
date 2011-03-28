@@ -9,25 +9,6 @@
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
 
-	<UserControl.Resources>
-		<Style x:Key="Error"
-			   TargetType="TextBlock">
-			<Setter Property="Foreground"
-					Value="DarkRed" />
-			<Setter Property="FontSize"
-					Value="16" />
-		</Style>
-
-		<Style x:Key="howLongSinceStyle"
-			   TargetType="TextBlock">
-			<Setter Property="Foreground"
-					Value="{StaticResource AccentTextBrush}" />
-			<Setter Property="FontStyle"
-					Value="Italic" />
-		</Style>
-
-	</UserControl.Resources>
-
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -41,44 +22,26 @@
 
 			<TextBlock Style="{StaticResource Instruction}"
 					   Text="The database contains no errors."
-					   Visibility="{Binding Server.Statistics.Errors, Converter={StaticResource visibleWhenEmpty}}" />
+					   Visibility="{Binding Server.Errors, Converter={StaticResource visibleWhenEmpty}}" />
 		</tk:DockPanel>
 
 		<Grid Grid.Row="1">
 			<Grid.ColumnDefinitions>
-				<ColumnDefinition />
+				<ColumnDefinition Width="2*" />
 				<ColumnDefinition />
 			</Grid.ColumnDefinitions>
 
-			<ItemsControl BorderThickness="0"
-						  ItemsSource="{Binding Server.Statistics.Errors}">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<tk:DockPanel d:DesignWidth="595" d:DesignHeight="121" d:DataContext="{d:DesignData /SampleData/ServerErrorSampleData.xaml}">
-							<StackPanel Margin="0 0 0 8">
-								<TextBlock Text="{Binding Error}"
-									Style="{StaticResource Error}" />
-
-								<tk:WrapPanel Orientation="Horizontal">
-									<TextBlock Text="Occurred while indexing document " />
-									<HyperlinkButton Content="{Binding Document}"
-										cm:Action.TargetWithoutContext="EditDocumentById"
-										cm:Message.Attach="Execute($this.Content)" />
-									<TextBlock Text=" with " />
-									<HyperlinkButton Content="{Binding Index}"
-										cm:Action.TargetWithoutContext="EditIndex"
-										cm:Message.Attach="Execute($this.Content)" />
-									
-								</tk:WrapPanel>
-
-								<TextBlock Text="{Binding Timestamp, Converter={StaticResource howLongSince}}"
-									Style="{StaticResource howLongSinceStyle}" />
-							</StackPanel>
-						</tk:DockPanel>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
-
+			<ScrollViewer BorderThickness="0"
+						  VerticalScrollBarVisibility="Auto">
+				<ItemsControl BorderThickness="0"
+							  ItemsSource="{Binding Server.Errors}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<ContentControl cm:View.Model="{Binding}" />
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</ScrollViewer>
 		</Grid>
 	</Grid>
 

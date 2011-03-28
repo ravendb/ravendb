@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
+using Raven.Client.Document;
 using Raven.Database.Data;
 
 namespace Raven.Client
@@ -26,6 +27,11 @@ namespace Raven.Client
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
         /// <param name="fields">The fields.</param>
         IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
+
+        /// <summary>
+        /// Gets the document convention from the query session
+        /// </summary>
+	    DocumentConvention DocumentConvention { get; }
 
 #if !SILVERLIGHT
 		/// <summary>

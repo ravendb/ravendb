@@ -116,7 +116,12 @@ namespace Raven.Database.Storage
 			get { return indexCache.Keys.OrderBy(name => name).ToArray(); }
 		}
 
-	    public string AddIndex(IndexDefinition indexDefinition)
+		public string IndexDefinitionsPath
+		{
+			get { return path; }
+		}
+
+		public string AddIndex(IndexDefinition indexDefinition)
 		{
 			DynamicViewCompiler transformer = AddAndCompileIndex(indexDefinition);
             if(configuration.RunInMemory == false)
@@ -132,7 +137,7 @@ namespace Raven.Database.Storage
 		private DynamicViewCompiler AddAndCompileIndex(IndexDefinition indexDefinition)
 		{
 			var name = FixupIndexName(indexDefinition.Name, path);
-			var transformer = new DynamicViewCompiler(name, indexDefinition, extensions);
+			var transformer = new DynamicViewCompiler(name, indexDefinition, extensions, path);
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
 			indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) =>
@@ -189,7 +194,7 @@ namespace Raven.Database.Storage
 			return value;
 		}
 
-		public IndexCreationOptions FindIndexCreationOptionsOptions(IndexDefinition indexDef)
+		public IndexCreationOptions FindIndexCreationOptions(IndexDefinition indexDef)
 		{
 			if (indexCache.ContainsKey(indexDef.Name))
 			{
@@ -217,7 +222,8 @@ namespace Raven.Database.Storage
 			{
 				prefix = index.Substring(0, 5);
 			}
-			if (path.Length + index.Length > 230)
+			if (path.Length + index.Length > 230 || 
+				Encoding.Unicode.GetByteCount(index) >= 255)
 			{
 				using (var md5 = MD5.Create())
 				{

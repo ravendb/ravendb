@@ -197,6 +197,9 @@ namespace Raven.Client.Client
 				var headerName = prop.Key;
 				if (headerName == "ETag")
 					headerName = "If-Match";
+                if(headerName.StartsWith("@") ||
+                    headerName == "Last-Modified")
+                    continue;
 				var value = prop.Value.Value<object>().ToString();
 				switch (headerName)
 				{
@@ -236,12 +239,22 @@ namespace Raven.Client.Client
 		/// Adds the operation headers.
 		/// </summary>
 		/// <param name="operationsHeaders">The operations headers.</param>
-		public void AddOperationHeaders(IDictionary<string, string> operationsHeaders)
+		public HttpJsonRequest AddOperationHeaders(IDictionary<string, string> operationsHeaders)
 		{
 			foreach (var header in operationsHeaders)
 			{
 				webRequest.Headers[header.Key] = header.Value;
 			}
+			return this;
+		}
+
+		/// <summary>
+		/// Adds the operation header
+		/// </summary>
+		public HttpJsonRequest AddOperationHeader(string key, string value)
+		{
+			webRequest.Headers[key] = value;
+			return this;
 		}
 	}
 }

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
@@ -194,23 +195,32 @@ namespace Raven.Http
             finally
             {
                 ctx.FinalizeResonse();
-                // we filter out requests for the UI because they fill the log with information
-                // we probably don't care about
-                if (ravenUiRequest == false)
-                {
-                    var curReq = Interlocked.Increment(ref reqNum);
-                    logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
-                                       curReq, ctx.Request.HttpMethod, sw.ElapsedMilliseconds, ctx.Response.StatusCode,
-                                       ctx.Request.Url.PathAndQuery,
-                                       currentTenantId.Value);
-
-					ctx.OutputSavedLogItems(logger);
-
-                }
+				sw.Stop();
+                
+                LogHttpRequestStats(ctx, sw, ravenUiRequest);
             }
         }
 
-        private void HandleException(IHttpContext ctx, Exception e)
+    	private void LogHttpRequestStats(IHttpContext ctx, Stopwatch sw, bool ravenUiRequest)
+    	{
+    		if (ravenUiRequest) 
+				return;
+			// we filter out requests for the UI because they fill the log with information
+			// we probably don't care about them anyway. That said, we do output them if they take too
+			// long.
+    		if (ctx.Request.Headers["Raven-Timer-Request"] == "true" && sw.ElapsedMilliseconds <= 25) 
+				return;
+
+    		var curReq = Interlocked.Increment(ref reqNum);
+    		logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
+    		                   curReq, ctx.Request.HttpMethod, sw.ElapsedMilliseconds, ctx.Response.StatusCode,
+    		                   ctx.Request.Url.PathAndQuery,
+    		                   currentTenantId.Value);
+
+    		ctx.OutputSavedLogItems(logger);
+    	}
+
+    	private void HandleException(IHttpContext ctx, Exception e)
         {
             try
             {
@@ -328,7 +338,7 @@ namespace Raven.Http
             }
             finally
             {
-                CurrentOperationContext.Headers.Value = null;
+                CurrentOperationContext.Headers.Value = new NameValueCollection();
                 currentDatabase.Value = DefaultResourceStore;
                 currentConfiguration.Value = DefaultConfiguration;
             }

@@ -70,6 +70,14 @@ namespace Raven.Http.Abstractions
             response.Close();
         }
 
+    	public void WriteFile(string path)
+    	{
+    		using(var file = File.OpenRead(path))
+    		{
+    			file.CopyTo(OutputStream);
+    		}
+    	}
+
     	public void SetPublicCachability()
     	{
     		response.Headers["Cache-Control"] = "Public";

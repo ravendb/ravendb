@@ -9,11 +9,14 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using log4net;
+using Lucene.Net.Util;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -78,6 +81,8 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
+			ExternalState = new ConcurrentDictionary<string, object>();
+
 			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
 			{
 				backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
@@ -203,6 +208,8 @@ namespace Raven.Database
 			get { return Configuration; }
 		}
 
+		public ConcurrentDictionary<string, object> ExternalState { get; set; }
+
 		public InMemoryRavenConfiguration Configuration
 		{
 			get;
@@ -260,7 +267,7 @@ namespace Raven.Database
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
-		private static long sequentialUuidCounter;
+		private long sequentialUuidCounter;
 
 		public Guid CreateSequentialUuid()
 		{
@@ -304,6 +311,9 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
+			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
+				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "key");
+
 			if (string.IsNullOrEmpty(key))
 			{
 				// we no longer sort by the key, so it doesn't matter
@@ -503,13 +513,13 @@ namespace Raven.Database
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 			definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
-			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(definition))
+			switch (IndexDefinitionStorage.FindIndexCreationOptions(definition))
 			{
 				case IndexCreationOptions.Noop:
 					return name;
 				case IndexCreationOptions.Update:
 					// ensure that the code can compile
-					new DynamicViewCompiler(name, definition, Extensions).GenerateInstance();
+					new DynamicViewCompiler(name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath).GenerateInstance();
 					DeleteIndex(name);
 					break;
 			}
@@ -538,8 +548,10 @@ namespace Raven.Database
 
 
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
-					if (viewGenerator != null)
-						entityName = viewGenerator.ForEntityName;
+					if (viewGenerator == null)
+						throw new InvalidOperationException("Could not find index named: " + index);
+
+					entityName = viewGenerator.ForEntityName;
 
 					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, entityName);
 					indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
@@ -550,8 +562,12 @@ namespace Raven.Database
 					}
 					var docRetriever = new DocumentRetriever(actions, ReadTriggers);
 					var indexDefinition = GetIndexDefinition(index);
-					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, query.FieldsToFetch,query.AggregationOperation))
-									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, query.FieldsToFetch, query.AggregationOperation)
+					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
+					                                      viewGenerator.ReduceDefinition == null
+					                                      	? Abstractions.Data.Constants.DocumentIdFieldName
+					                                      	: Abstractions.Data.Constants.ReduceKeyFieldName);
+					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch)
+									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
 										 where doc != null
 										 select doc;
@@ -616,7 +632,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true)
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Raven.Abstractions.Data.Constants.DocumentIdFieldName))
 													select queryResult.Key);
 				});
 			stale = isStale;
@@ -713,6 +729,10 @@ namespace Raven.Database
 
 		public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
 		{
+			if (name == null) throw new ArgumentNullException("name");
+			if (Encoding.Unicode.GetByteCount(name) >= 255)
+				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "name");
+
 			Guid newEtag = Guid.Empty;
 			TransactionalStorage.Batch(actions =>
 			{

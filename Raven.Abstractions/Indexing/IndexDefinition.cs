@@ -76,6 +76,11 @@ namespace Raven.Database.Indexing
 		public IDictionary<string, string> Analyzers { get; set; }
 
 		/// <summary>
+		/// The fields that are queryable in the index
+		/// </summary>
+		public IList<string> Fields {get;set;}
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinition"/> class.
 		/// </summary>
 		public IndexDefinition()
@@ -84,6 +89,7 @@ namespace Raven.Database.Indexing
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
 			SortOptions = new Dictionary<string, SortOptions>();
+			Fields = new List<string>();
 		}
 
 		/// <summary>
@@ -170,7 +176,6 @@ namespace Raven.Database.Indexing
 			get
 			{
 				var name = Name ?? string.Empty;
-				if (name.StartsWith("Raven")) return "Builtin";
 				if (name.StartsWith("Temp")) return "Temp";
 				if (name.StartsWith("Auto")) return "Auto";
 				if (IsCompiled) return "Compiled";

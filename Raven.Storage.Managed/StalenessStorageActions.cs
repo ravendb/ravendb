@@ -35,7 +35,7 @@ namespace Raven.Storage.Managed
             var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
             var lastIndexedTime = readResult.Key.Value<DateTime>("lastTimestamp");
 
-            if (IsStaleByEtag(entityName, lastIndexedEtag))
+            if (IsStaleByEtag(lastIndexedEtag))
             {
                 if (cutOff == null)
                     return true;
@@ -80,23 +80,16 @@ namespace Raven.Storage.Managed
             return Guid.Empty;
         }
 
-        private bool IsStaleByEtag(string entityName, byte [] lastIndexedEtag)
+        private bool IsStaleByEtag(byte [] lastIndexedEtag)
         {
-            foreach (var doc in storage.Documents["ByEtag"].SkipFromEnd(0))
-            {
-                var docEtag = doc.Value<byte[]>("etag");
-                if (CompareArrays(docEtag, lastIndexedEtag) <= 0)
-                    break;
-                if(entityName != null && 
-                   StringComparer.InvariantCultureIgnoreCase.Equals(entityName, doc.Value<string>("entityName")) == false)
-                    continue;
-                return true;
-            }
-            return false;
+        	return storage.Documents["ByEtag"].SkipFromEnd(0)
+				.Select(doc => doc.Value<byte[]>("etag"))
+				.Select(docEtag => CompareArrays(docEtag, lastIndexedEtag) > 0)
+				.FirstOrDefault();
         }
 
 
-        private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
+    	private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
         {
             for (int i = 0; i < docEtagBinary.Length; i++)
             {

@@ -1,4 +1,7 @@
-﻿namespace Raven.Studio.Commands
+﻿using System;
+using Raven.Database.Data;
+
+namespace Raven.Studio.Commands
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
@@ -8,7 +11,6 @@
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
-	using Plugin;
 
 	public class SaveDocument
 	{
@@ -35,7 +37,12 @@
 				.ContinueOnSuccess(put =>
 				                   	{
 										document.Id = put.Result.Key;
-				                   		events.Publish(new DocumentUpdated(document));
+				                   		document.JsonDocument.Metadata =
+				                   			document.JsonDocument.Metadata.FilterHeaders(isServerDocument: false);
+				                   	    document.JsonDocument.Etag = put.Result.ETag;
+										document.JsonDocument.LastModified = DateTime.Now;
+				                        document.UpdateDocumentFromJsonDocument();
+                                        events.Publish(new DocumentUpdated(document));
 				                   	});
 			
 		}

@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 namespace Raven.Database.Plugins
 {
     [InheritedExport]
-    public class AbstractAttachmentReadTrigger : IRequiresDocumentDatabaseInitialization
+    public abstract class AbstractAttachmentReadTrigger : IRequiresDocumentDatabaseInitialization
     {
         /// <summary>
         ///  Ask the trigger whatever the document should be read by the user.

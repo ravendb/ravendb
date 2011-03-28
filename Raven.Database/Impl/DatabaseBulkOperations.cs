@@ -6,6 +6,7 @@
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Raven.Http;
@@ -51,7 +52,7 @@ namespace Raven.Database.Impl
 				Start = indexQuery.Start,
 				Cutoff = indexQuery.Cutoff,
 				PageSize = int.MaxValue,
-				FieldsToFetch = new[] { "__document_id" },
+				FieldsToFetch = new[] { Constants.DocumentIdFieldName },
 				SortedFields = indexQuery.SortedFields
 			};
 

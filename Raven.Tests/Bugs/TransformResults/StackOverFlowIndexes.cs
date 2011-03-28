@@ -34,7 +34,7 @@ namespace LiveProjectionsBug
                                     User = user,
                                     Question = question
                                 };
-            
+
         }
     }
     public class Answers_ByQuestion : AbstractIndexCreationTask<AnswerVote, AnswerViewItem>
@@ -76,6 +76,59 @@ namespace LiveProjectionsBug
                     VoteTotal = result.VoteTotal
                 };
             this.SortOptions.Add(x => x.VoteTotal, Raven.Database.Indexing.SortOptions.Int);
+        }
+    }
+
+    public class Answers_ByAnswerEntity : AbstractIndexCreationTask<Answer>
+    {
+        public Answers_ByAnswerEntity()
+        {
+            Map = docs => from doc in docs
+                          select new
+                          {
+                              AnswerId = doc.Id,
+                              UserId = doc.UserId,
+                              QuestionId = doc.QuestionId,
+                              Content = doc.Content
+                          };
+
+            TransformResults = (database, results) =>
+                                                        from result in results
+                                                        let question = database.Load<Question>(result.QuestionId)
+                                                        select new // AnswerEntity
+                                                        {
+                                                            Id = result.Id,
+                                                            Question = question,
+                                                            Content = result.Content,
+                                                            UserId = result.UserId
+                                                        };
+        }
+    }
+    public class Votes_ByAnswerEntity : AbstractIndexCreationTask<AnswerVote>
+    {
+        public Votes_ByAnswerEntity()
+        {
+            Map = docs => from doc in docs
+                          select new
+                          {
+                              AnswerId = doc.AnswerId,
+                              QuestionId = doc.QuestionId,
+                              VoteTotal = doc.Delta
+                          };
+
+            TransformResults = (database, results) =>
+                               from result in results
+                               // this won't work because 'AnswerEntity' is not the stored type, its 'Answer' type
+                               let answer = database.Load<AnswerEntity>(result.AnswerId)
+                               // Should be like this
+                               //let answer =database.Load<Answer, Answers_ByAnswerEntity>(result.AnswerId)
+                               //                 .As<AnswerEntity>();
+                                                     select new // AnswerVoteEntity
+                                                        {
+                                                            QuestionId = result.QuestionId,
+                                                            Answer = answer,
+                                                            Delta = result.Delta,
+                                                        };
         }
     }
 }

@@ -8,7 +8,7 @@ using System.ComponentModel.Composition;
 namespace Raven.Database.Plugins
 {
     [InheritedExport]
-    public class AbstractAttachmentDeleteTrigger : IRequiresDocumentDatabaseInitialization
+    public abstract class AbstractAttachmentDeleteTrigger : IRequiresDocumentDatabaseInitialization
     {
         /// <summary>
         ///  Ask the trigger whatever the DELETE should be vetoed.

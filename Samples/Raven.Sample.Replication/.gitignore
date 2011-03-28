@@ -1,0 +1,7 @@
+Servers/*/*.exe
+Servers/*/*.dll
+Servers/*/*.log
+Servers/*/*.log.*
+Servers/*/*.exe
+Servers/*/Plugins/
+Servers/*/Data/*

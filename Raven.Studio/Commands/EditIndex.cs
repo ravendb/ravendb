@@ -2,10 +2,10 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
+	using Features.Database;
 	using Features.Indexes;
 	using Framework;
 	using Messages;
-	using Plugin;
 
 	public class EditIndex
 	{
@@ -26,7 +26,7 @@
 				.GetIndexAsync(indexName)
 				.ContinueOnSuccess(get =>
 					{
-						events.Publish(new DatabaseScreenRequested(() => new EditIndexViewModel(get.Result, server)));
+						events.Publish(new DatabaseScreenRequested(() => new EditIndexViewModel(get.Result, server, events)));
 						events.Publish(new WorkCompleted());
 					});
 		}

@@ -6,11 +6,9 @@ namespace Raven.Studio.Features.Documents
 	using Database;
 	using Framework;
 	using Messages;
-	using Plugin;
 	using Raven.Database;
 
-	[Export(typeof(IDatabaseScreenMenuItem))]
-	[PartCreationPolicy(CreationPolicy.Shared)]
+	[Export]
 	public class BrowseDocumentsViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{

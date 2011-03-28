@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
@@ -21,12 +22,17 @@ namespace Raven.Database.Data
         private static readonly HashSet<string> HeadersToIgnoreServerDocument =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     		{
-				"Non-Authoritive-Information",
-				"Content-Type"
+				"Content-Type",
+				
     		};
 
         private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
+			// Raven internal headers
+			"Raven-Server-Build",
+			"Non-Authoritive-Information",
+			"Raven-Timer-Request",
+
             "Allow",
             "Content-Disposition",
             "Content-Encoding",
@@ -90,6 +96,30 @@ namespace Raven.Database.Data
 			"Via",
 			"Warning",
 		};
+
+		/// <summary>
+		/// Filters the headers from unwanted headers
+		/// </summary>
+		/// <param name="self">The self.</param>
+		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
+		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static JObject FilterHeaders(this JObject self, bool isServerDocument)
+		{
+			if (self == null)
+				return self;
+
+			var metadata = new JObject();
+			foreach (var header in self)
+			{
+				if (HeadersToIgnoreClient.Contains(header.Key))
+					continue;
+				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
+					continue;
+				var headerName = CaptureHeaderName(header.Key);
+				metadata.Add(headerName, header.Value);
+			}
+			return metadata;
+		}
 
 #if SILVERLIGHT
 		/// <summary>
@@ -174,6 +204,9 @@ namespace Raven.Database.Data
                     return JObject.Parse(val);
                 if (val.StartsWith("["))
                     return JArray.Parse(val);
+                DateTime result;
+                if (DateTime.TryParseExact(val, "r", CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
+                    return new JValue(result);
                 return new JValue(val);
             }
             catch (Exception exc)

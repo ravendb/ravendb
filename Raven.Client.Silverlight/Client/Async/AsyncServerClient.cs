@@ -437,7 +437,7 @@ namespace Raven.Client.Client.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
-			string requestUri = url + "/indexes/" + name;
+			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name);
 			var webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(requestUri));
 			AddOperationHeaders(webRequest);
 			webRequest.Method = "HEAD";
@@ -526,7 +526,6 @@ namespace Raven.Client.Client.Async
 					{
 						var json = (JToken)serializer.Deserialize(reader);
 						return json.Select(x => x.Value<string>()).ToArray();
-
 					}
 				});
 		}
@@ -538,7 +537,8 @@ namespace Raven.Client.Client.Async
 		/// <param name="pageSize">Size of the page.</param>
 		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
 		{
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/?start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
+		    var url2 = (url + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url2, "GET", credentials, convention);
 
 			return request.ReadResponseStringAsync()
 				.ContinueWith(task =>
@@ -642,18 +642,48 @@ namespace Raven.Client.Client.Async
 
 		}
 
-		private static Exception ThrowConcurrencyException(WebException e)
+	    public class ConcurrencyExceptionResult
+	    {
+	        private readonly string url1;
+	        private readonly Guid actualETag1;
+	        private readonly Guid expectedETag1;
+	        private readonly string error1;
+
+	        public string url
+	        {
+	            get { return url1; }
+	        }
+
+	        public Guid actualETag
+	        {
+	            get { return actualETag1; }
+	        }
+
+	        public Guid expectedETag
+	        {
+	            get { return expectedETag1; }
+	        }
+
+	        public string error
+	        {
+	            get { return error1; }
+	        }
+
+	        public ConcurrencyExceptionResult(string url, Guid actualETag, Guid expectedETag, string error)
+	        {
+	            url1 = url;
+	            actualETag1 = actualETag;
+	            expectedETag1 = expectedETag;
+	            error1 = error;
+	        }
+	    }
+
+	    private static Exception ThrowConcurrencyException(WebException e)
 		{
 			using (var sr = new StreamReader(e.Response.GetResponseStream()))
 			{
 				var text = sr.ReadToEnd();
-				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
-				{
-					url = (string)null,
-					actualETag = Guid.Empty,
-					expectedETag = Guid.Empty,
-					error = (string)null
-				});
+				var errorResults = JsonConvert.DeserializeAnonymousType(text, new ConcurrencyExceptionResult((string)null, Guid.Empty, Guid.Empty, (string)null));
 				return new ConcurrencyException(errorResults.error)
 				{
 					ActualETag = errorResults.actualETag,
@@ -677,6 +707,7 @@ namespace Raven.Client.Client.Async
 			return url.Stats()
 				.NoCache()
 				.ToJsonRequest(this, credentials, convention)
+				.AddOperationHeader("Raven-Timer-Request" , "true")
 				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
@@ -713,7 +744,7 @@ namespace Raven.Client.Client.Async
 		{
 			var query = new IndexQuery { Start = start, PageSize = pageSize, SortedFields = new[] { new SortedField("Name"), } };
 
-			return QueryAsync("Studio/DocumentCollections", query, new string[] { })
+			return QueryAsync("Raven/DocumentCollections", query, new string[] { })
 					.ContinueWith(task => task.Result.Results.Select(x => x.Deserialize<Collection>(convention)).ToArray());
 		}
 
@@ -807,6 +838,29 @@ namespace Raven.Client.Client.Async
 
 			return request.ReadResponseStringAsync();
 		}
+
+        ///<summary>
+        /// Get the possible terms for the specified field in the index asynchronously
+        /// You can page through the results by use fromValue parameter as the 
+        /// starting point for the next query
+        ///</summary>
+        ///<returns></returns>
+	    public Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize)
+	    {
+            return url.Terms(index,field,fromValue,pageSize)
+                .NoCache()
+                .ToJsonRequest(this, credentials, convention)
+                .ReadResponseStringAsync()
+                .ContinueWith(task =>
+                {
+                    var serializer = convention.CreateSerializer();
+                    using (var reader = new JsonTextReader(new StringReader(task.Result)))
+                    {
+                        var json = (JToken)serializer.Deserialize(reader);
+                        return json.Select(x => x.Value<string>()).ToArray();
+                    }
+                });
+	    }
 	}
 }
 

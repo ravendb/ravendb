@@ -72,6 +72,9 @@
     <Compile Include="..\Raven.Abstractions\Data\Collection.cs">
       <Link>Data\Collection.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\Constacts.cs">
+      <Link>Data\Constacts.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\IJsonDocumentMetadata.cs">
       <Link>Data\IJsonDocumentMetadata.cs</Link>
     </Compile>
@@ -98,6 +101,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\FailoverBehavior.cs">
       <Link>Document\FailoverBehavior.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
+      <Link>Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
       <Link>IAsyncDocumentQuery.cs</Link>

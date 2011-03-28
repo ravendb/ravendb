@@ -13,6 +13,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 
 
@@ -218,7 +219,7 @@ namespace Raven.Client.Indexes
 			var name = member.Name;
 			var identityProperty = convention.GetIdentityProperty(member.DeclaringType);
 			if (identityProperty == member && instance.NodeType == ExpressionType.Parameter && translateIdentityProperty)
-				name = "__document_id";
+				name = Constants.DocumentIdFieldName;
 			if (instance != null)
 			{
 				this.Visit(instance);
@@ -1479,6 +1480,19 @@ namespace Raven.Client.Indexes
 					break;
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
+					// we only cast enums and types is mscorlib), we don't support anything else
+					// because the VB compiler like to put converts all over the place, and include
+					// types that we can't really support (only exists on the client)
+					if ((node.Type.IsEnum ||
+						node.Type.Assembly == typeof(string).Assembly) &&
+						node.Type.IsGenericType == false)
+					{
+						this.Out("(");
+						this.Out(node.Type.FullName);
+						this.Out(")");
+					}
+					this.Out("(");
+					break;
 				case ExpressionType.ArrayLength:
 					// we don't want to do nothing for those
 					this.Out("(");

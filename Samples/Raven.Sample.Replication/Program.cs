@@ -44,7 +44,7 @@ namespace Raven.Sample.Replication
                 }
                 catch (ConflictException e)
                 {
-                    Console.WriteLine("Choose which document you want to preserver:");
+                    Console.WriteLine("Choose which document you want to preserve:");
                     var list = new List<JsonDocument>();
                     for (int i = 0; i < e.ConflictedVersionIds.Length; i++)
                     {

@@ -10,7 +10,9 @@ using System.Text.RegularExpressions;
 using System.Web;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using System.Linq;
 using Raven.Database.Plugins;
@@ -26,6 +28,7 @@ namespace Raven.Database.Linq
 	{
 		private readonly IndexDefinition indexDefinition;
 		private readonly AbstractDynamicCompilationExtension[] extensions;
+		private readonly string basePath;
 		private const string mapReduceTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
 
 		private readonly string name;
@@ -33,10 +36,13 @@ namespace Raven.Database.Linq
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForMap = new CaptureQueryParameterNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForReduce = new CaptureQueryParameterNamesVisitor();
 
-		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, AbstractDynamicCompilationExtension[] extensions)
+		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, AbstractDynamicCompilationExtension[] extensions, string basePath)
 		{
 			this.indexDefinition = indexDefinition;
 			this.extensions = extensions;
+			this.basePath = Path.Combine(basePath, "TemporaryIndexDefinitionsAsSource");
+			if (Directory.Exists(this.basePath) == false)
+				Directory.CreateDirectory(this.basePath);
 			this.name = MonoHttpUtility.UrlEncode(name);
 		    RequiresSelectNewAnonymousType = true;
 		}
@@ -325,14 +331,14 @@ namespace Raven.Database.Linq
 
 			var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
 
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == "__document_id"))
+			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 				return;
 
 			objectInitializer.CreateExpressions.Add(
 				new NamedArgumentExpression
 				{
-					Name = "__document_id",
-					Expression = new MemberReferenceExpression(identifierExpression, "__document_id")
+					Name = Constants.DocumentIdFieldName,
+					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 				});
 		}
 
@@ -372,14 +378,14 @@ namespace Raven.Database.Linq
 
 			var identifierExpression = new IdentifierExpression(queryExpression.FromClause.Identifier);
 
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == "__document_id"))
+			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 				return variableDeclaration;
 
 			objectInitializer.CreateExpressions.Add(
 				new NamedArgumentExpression
 				{
-					Name = "__document_id",
-					Expression = new MemberReferenceExpression(identifierExpression, "__document_id")
+					Name = Constants.DocumentIdFieldName,
+					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 				});
 			return variableDeclaration;
 		}
@@ -387,27 +393,9 @@ namespace Raven.Database.Linq
 		public AbstractViewGenerator GenerateInstance()
 		{
 			TransformQueryToClass();
-			string tempFileName = null;
-			try
-			{
-				try
-				{
-					tempFileName = Path.GetTempFileName();
-					File.WriteAllText(tempFileName, CompiledQueryText);
-				}
-				catch (Exception)
-				{
-					throw new InvalidOperationException(@"Raven could not write to the temp directory.
-This is usually the result of security settings when running in IIS.
-Raven requiers access to the temp directory in order to compile indexes.");
-				}
-				GeneratedType = QueryParsingUtils.Compile(tempFileName, CSharpSafeName, CompiledQueryText, extensions);
-			}
-			finally
-			{
-				if (tempFileName != null)
-					File.Delete(tempFileName);
-			}
+			
+			GeneratedType = QueryParsingUtils.Compile(CompiledQueryText, CSharpSafeName, CompiledQueryText, extensions, basePath);
+			
 			return (AbstractViewGenerator) Activator.CreateInstance(GeneratedType);
 		}
 	}

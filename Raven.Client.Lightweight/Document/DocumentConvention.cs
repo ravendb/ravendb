@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Abstractions.Json;
 using Raven.Client.Converters;
@@ -33,13 +34,15 @@ namespace Raven.Client.Document
 		{
 			IdentityTypeConvertors = new List<ITypeConverter>
 			{
-				new Converters.GuidConverter(),
-				new Converters.Int32Converter(),
-				new Converters.Int64Converter(),
+				new GuidConverter(),
+				new Int32Converter(),
+				new Int64Converter(),
 			};
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
+			FindClrType = (id, doc, metadata) => metadata.Value<string>(Raven.Abstractions.Data.Constants.RavenClrType);
+			FindIdentityPropertyNameFromEntityName = entityName => "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";
 			JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)
@@ -160,6 +163,11 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Gets or sets the function to find the clr type of a document.
+		/// </summary>
+		public Func<string, JObject, JObject, string> FindClrType { get; set; }
+
+		/// <summary>
 		/// Gets or sets the json contract resolver.
 		/// </summary>
 		/// <value>The json contract resolver.</value>
@@ -181,6 +189,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value>The find identity property.</value>
 		public Func<PropertyInfo, bool> FindIdentityProperty { get; set; }
+
+		/// <summary>
+		/// Get or sets the function to get the identity property name from the entity name
+		/// </summary>
+		public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
 
 		/// <summary>
 		/// Gets or sets the document key generator.
@@ -220,6 +233,14 @@ namespace Raven.Client.Document
 			};
 			CustomizeJsonSerializer(jsonSerializer);
 			return jsonSerializer;
+		}
+
+		/// <summary>
+		/// Get the CLR type (if exists) from the document
+		/// </summary>
+		public string GetClrType(string id, JObject document, JObject metadata)
+		{
+			return FindClrType(id, document, metadata);
 		}
 	}
 }

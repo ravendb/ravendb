@@ -10,6 +10,30 @@
 		<ResourceDictionary Source="Fonts.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
+    <Style x:Key="Grouping"
+           TargetType="Border">
+        <Setter Property="BorderBrush"
+                Value="{StaticResource DividerBrush}" />
+        <Setter Property="BorderThickness"
+                Value="1,0,0,0" />
+        <Setter Property="CornerRadius"
+                Value="5" />
+        <Setter Property="Padding"
+                Value="6 0 0 0" />
+        <Setter Property="VerticalAlignment"
+                Value="Top" />
+        <Setter Property="HorizontalAlignment"
+                Value="Left" />
+    </Style>
+    
+    <Style x:Key="howLongSinceStyle"
+		   TargetType="TextBlock">
+		<Setter Property="Foreground"
+				Value="{StaticResource AccentTextBrush}" />
+		<Setter Property="FontStyle"
+				Value="Italic" />
+	</Style>
+
 	<Style x:Key="SectionHeader"
 		   TargetType="TextBlock">
 		<Setter Property="FontFamily"
@@ -50,8 +74,6 @@
 				Value="Right" />
 		<Setter Property="FontFamily"
 				Value="Segoe UI" />
-		<Setter Property="TextOptions.TextHintingMode"
-				Value="Animated" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="c:Label">
@@ -484,6 +506,111 @@
 								<SolidColorBrush Color="{StaticResource HighlightLightColor}" />
 							</Rectangle.Stroke>
 						</Rectangle>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="CollectionListBoxItemStyle"
+		   TargetType="ListBoxItem">
+		<Setter Property="Padding"
+				Value="6 3 3 3" />
+		<Setter Property="HorizontalContentAlignment"
+				Value="Left" />
+		<Setter Property="VerticalContentAlignment"
+				Value="Top" />
+		<Setter Property="Background"
+				Value="{StaticResource DefaultScreenBackground}" />
+		<Setter Property="BorderThickness"
+				Value="1" />
+		<Setter Property="TabNavigation"
+				Value="Local" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ListBoxItem">
+					<Grid Background="Transparent"
+						  d:DesignWidth="240"
+						  d:DesignHeight="30">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.2">
+										<VisualTransition.GeneratedEasingFunction>
+											<CircleEase EasingMode="EaseInOut" />
+										</VisualTransition.GeneratedEasingFunction>
+									</VisualTransition>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Normal" />
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<DoubleAnimation Duration="0"
+														 To="1"
+														 Storyboard.TargetProperty="(UIElement.Opacity)"
+														 Storyboard.TargetName="HoverHighlight"
+														 d:IsOptimized="True" />
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Disabled">
+									<Storyboard>
+										<DoubleAnimation Duration="0"
+														 To=".55"
+														 Storyboard.TargetProperty="Opacity"
+														 Storyboard.TargetName="contentPresenter" />
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="SelectionStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.2">
+										<VisualTransition.GeneratedEasingFunction>
+											<CircleEase EasingMode="EaseInOut" />
+										</VisualTransition.GeneratedEasingFunction>
+									</VisualTransition>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Unselected" />
+								<VisualState x:Name="Selected">
+									<Storyboard>
+										<DoubleAnimation Duration="0"
+														 To="1"
+														 Storyboard.TargetProperty="(UIElement.Opacity)"
+														 Storyboard.TargetName="SelectionHighlight"
+														 d:IsOptimized="True" />
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="SelectedUnfocused">
+									<Storyboard>
+										<DoubleAnimation Duration="0"
+														 To="1"
+														 Storyboard.TargetProperty="(UIElement.Opacity)"
+														 Storyboard.TargetName="SelectionHighlight"
+														 d:IsOptimized="True" />
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="FocusStates">
+								<VisualState x:Name="Focused" />
+								<VisualState x:Name="Unfocused" />
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+
+						<Border x:Name="SelectionHighlight"
+								CornerRadius="5,0,0,5"
+								BorderThickness="1,1,0,1"
+								BorderBrush="{StaticResource SelectedItemHighlightBrush}"
+								Opacity="0" />
+
+						<Border x:Name="HoverHighlight"
+								BorderThickness="1,1,0,1"
+								BorderBrush="{StaticResource AccentTextBrush}"
+								CornerRadius="5,0,0,5"
+								Opacity="0" />
+
+						<ContentPresenter x:Name="contentPresenter"
+										  ContentTemplate="{TemplateBinding ContentTemplate}"
+										  Content="{TemplateBinding Content}"
+										  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+										  Margin="{TemplateBinding Padding}" />
 					</Grid>
 				</ControlTemplate>
 			</Setter.Value>

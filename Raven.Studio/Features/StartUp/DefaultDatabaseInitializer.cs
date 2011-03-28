@@ -6,34 +6,28 @@
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
 	using Client;
+	using Client.Extensions;
+	using Client.Indexes;
 	using Collections;
 	using Documents;
 	using Framework;
-	using Raven.Database.Indexing;
 
 	[Export(typeof (IDatabaseInitializer))]
 	public class DefaultDatabaseInitializer : IDatabaseInitializer
 	{
 		public IEnumerable<Task> Initialize(IAsyncDocumentSession session)
 		{
-			yield return session.Advanced.AsyncDatabaseCommands
-				.PutIndexAsync(@"Studio/DocumentCollections",
-				               new IndexDefinition
-				               	{
-				               		Map =
-				               			@"from doc in docs
-let Name = doc[""@metadata""][""Raven-Entity-Name""]
-where Name != null
-select new { Name , Count = 1}
-",
-				               		Reduce =
-				               			@"from result in results
-group result by result.Name into g
-select new { Name = g.Key, Count = g.Sum(x=>x.Count) }"
-				               	}, true);
+			// those are no longer needed, when we request the
+			// Silverlight UI from the server, those indexes will 
+			// be created automatically
 
+			//yield return session.Advanced.AsyncDatabaseCommands
+			//    .PutIndexAsync<RavenDocumentsByEntityName>(true);
 
-			// preload collection templates
+			//yield return session.Advanced.AsyncDatabaseCommands
+			//    .PutIndexAsync<RavenCollections>(true);
+
+			SimpleLogger.Start("preloading collection templates");
 			var templateProvider = IoC.Get<IDocumentTemplateProvider>();
 			var collections = session.Advanced.AsyncDatabaseCommands.GetCollectionsAsync(0, 25);
 			yield return collections;
@@ -45,6 +39,8 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }"
 
 			foreach (var task in preloading)
 				yield return task;
+
+			SimpleLogger.End("preloading collection templates");
 		}
 	}
 }

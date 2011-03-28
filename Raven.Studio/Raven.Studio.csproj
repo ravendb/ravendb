@@ -62,12 +62,22 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.Text.Silverlight">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Text.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.Shared.Silverlight">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Shared.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="Caliburn.Micro">
       <HintPath>..\SharedLibs\Silverlight\Caliburn.Micro.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.CSharp, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.Expression.Interactions">
       <HintPath>..\SharedLibs\Silverlight\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
@@ -112,10 +122,20 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
+    <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
+    <Compile Include="Commands\CopyServerError.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Controls\Editors\JsonEditor.cs" />
+    <Compile Include="Controls\Editors\LinqEditor.cs" />
+    <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
+    <Compile Include="Controls\Editors\XamlEditor.cs" />
+    <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
+    <Compile Include="Features\Database\IServer.cs" />
+    <Compile Include="Features\Statistics\DynamicViewModel.cs" />
+    <Compile Include="Features\Statistics\IStatisticsItem.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
@@ -130,11 +150,19 @@
     <Compile Include="Features\StartUp\DefaultDatabaseInitializer.cs" />
     <Compile Include="Features\StartUp\IDatabaseInitializer.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
+    <Compile Include="Features\Statistics\IStatisticsSet.cs" />
+    <Compile Include="Features\Statistics\IndexesViewModel.cs" />
+    <Compile Include="Features\Statistics\Statistic.cs" />
+    <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
     <Compile Include="Framework\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
+    <Compile Include="Framework\IKeyboardShortcutBinder.cs" />
+    <Compile Include="Framework\KeyboardShortcutBinder.cs" />
+    <Compile Include="Framework\KeyCombination.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
+    <Compile Include="Framework\SimpleLogger.cs" />
     <Compile Include="Messages\CollectionTemplateUpdated.cs" />
     <Compile Include="Messages\DatabaseScreenRequested.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
@@ -159,7 +187,6 @@
     <Compile Include="Converters\BooleanToOppositeBooleanConverter.cs" />
     <Compile Include="Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
-    <Compile Include="Converters\CategoryIsActiveConverter.cs" />
     <Compile Include="Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Converters\EnumToIntConverter.cs" />
     <Compile Include="Converters\HowLongSinceConverter.cs" />
@@ -180,6 +207,7 @@
     <Compile Include="Messages\DocumentDeleted.cs" />
     <Compile Include="Messages\NavigationOccurred.cs" />
     <Compile Include="Commands\OpenErrorsScreen.cs" />
+    <Compile Include="Messages\StatisticsUpdated.cs" />
     <Compile Include="Messages\StatisticsUpdateRequested.cs" />
     <Compile Include="Features\Database\Server.cs" />
     <Compile Include="Features\Indexes\FieldProperties.cs" />
@@ -194,19 +222,19 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shell\BusyStatusViewModel.cs" />
     <Compile Include="Shell\ErrorViewModel.cs" />
-    <Compile Include="Shell\IMessageBox.cs" />
-    <Compile Include="Shell\MessageBoxOptions.cs" />
-    <Compile Include="Shell\MessageBoxView.xaml.cs">
+    <Compile Include="Shell\MessageBox\IMessageBox.cs" />
+    <Compile Include="Shell\MessageBox\MessageBoxOptions.cs" />
+    <Compile Include="Shell\MessageBox\MessageBoxView.xaml.cs">
       <DependentUpon>MessageBoxView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Shell\MessageBoxViewModel.cs" />
+    <Compile Include="Shell\MessageBox\MessageBoxViewModel.cs" />
     <Compile Include="Shell\NavigationViewModel.cs" />
     <Compile Include="Shell\NotificationsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
     <Compile Include="Features\Database\DatabaseViewModel.cs" />
     <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
-    <Compile Include="Shell\ShowMessageBox.cs" />
+    <Compile Include="Shell\MessageBox\ShowMessageBox.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -237,6 +265,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
+    <Page Include="Data\ServerErrorView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Collections\CollectionsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -284,6 +316,14 @@
     <Page Include="Features\Query\QueryView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Statistics\IndexesView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Statistics\StatisticsView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Statistics\ErrorsView.xaml">
       <SubType>Designer</SubType>
@@ -334,7 +374,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Shell\MessageBoxView.xaml">
+    <Page Include="Shell\MessageBox\MessageBoxView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -362,10 +402,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Resources\ControlTemplates\JeffWilcox.SyntaxHighlighting.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Resources\ControlTemplates\Menu.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -384,6 +420,10 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Controls\Editors\Definitions\CSharp.langdef" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\JScript.langdef" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
+    <EmbeddedResource Include="SampleData\MvcMusicStore_Dump.json" />
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>
@@ -393,10 +433,6 @@
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
       <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
       <Name>Raven.Client.Silverlight</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Studio.Plugin\Raven.Studio.Plugin.csproj">
-      <Project>{0BA36A77-F8CA-400C-8F89-3726143BFA96}</Project>
-      <Name>Raven.Studio.Plugin</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -410,6 +446,9 @@
   </ItemGroup>
   <ItemGroup>
     <DesignData Include="SampleData\BrowseDocumentsViewModelSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+    </DesignData>
+    <DesignData Include="SampleData\CollectionsViewModelSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\ServerErrorSampleData.xaml">
@@ -432,6 +471,7 @@
     </VisualStudio>
   </ProjectExtensions>
   <PropertyGroup>
-    <PostBuildEvent>copy /y "$(TargetDir)$(TargetName).xap" "$(SolutionDir)\Raven.Database\Server\WebUI\Raven.Studio.xap"</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>

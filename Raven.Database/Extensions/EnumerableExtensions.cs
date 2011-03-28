@@ -19,6 +19,13 @@ namespace Raven.Database.Extensions
 			}
 		}
 
+		public static IEnumerable<T> EmptyIfNull<T>(this IEnumerable<T> self)
+		{
+			if (self == null)
+				return new T[0];
+			return self;
+		}
+
         public static void ApplyAndIgnoreAllErrors<T>(this IEnumerable<T> self, Action<Exception> errorAction, Action<T> action)
         {
             foreach (var item in self)

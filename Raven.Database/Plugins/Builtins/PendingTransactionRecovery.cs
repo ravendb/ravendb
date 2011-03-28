@@ -17,7 +17,7 @@ namespace Raven.Database.Plugins.Builtins
 
 		public void Execute(DocumentDatabase database)
 		{
-		    HashSet<Guid> resourceManagersRequiringRecovery =  new HashSet<Guid>();
+		    var resourceManagersRequiringRecovery =  new HashSet<Guid>();
 			database.TransactionalStorage.Batch(actions =>
 			{
 				foreach (var txId in actions.Transactions.GetTransactionIds())

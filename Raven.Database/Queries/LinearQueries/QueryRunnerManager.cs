@@ -27,10 +27,10 @@ namespace Raven.Database.Queries.LinearQueries
 			get { return queryCache.Count; }
 		}
 
-		public IRemoteSingleQueryRunner CreateSingleQueryRunner(Type remoteStorageType, object state)
+		public IRemoteSingleQueryRunner CreateSingleQueryRunner(Type remoteStorageType, string basePath, object state)
 		{
 			var remoteStorage = (IRemoteStorage)Activator.CreateInstance(remoteStorageType, state);
-			return new SingleQueryRunner(remoteStorage, queryCache);
+			return new SingleQueryRunner(remoteStorage, queryCache, basePath);
 		}
 	}
 }
