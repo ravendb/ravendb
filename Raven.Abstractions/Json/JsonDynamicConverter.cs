@@ -68,7 +68,7 @@ namespace Raven.Database.Json
                 var type = Type.GetType(typeName, false);
                 if(type != null)
                 {
-                    return serializer.Deserialize(new RavenJTokenReader(token), type);
+                	return serializer.Deserialize(new RavenJTokenReader(token), type);
                 }
             }
 

@@ -9,11 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client.Async
 {
@@ -141,7 +141,7 @@ namespace Raven.Client.Client.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
-		Task<PutResult> PutAsync(string key, Guid? etag, JObject document, JObject metadata);
+		Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
@@ -179,7 +179,7 @@ namespace Raven.Client.Client.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		Task PutAttachmentAsync(string key, Guid? etag, byte[] data, JObject metadata);
+		Task PutAttachmentAsync(string key, Guid? etag, byte[] data, RavenJObject metadata);
 
 		/// <summary>
 		/// Gets the attachment by the specified key asyncronously

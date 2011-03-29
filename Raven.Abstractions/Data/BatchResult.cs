@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database
 {
@@ -32,6 +32,6 @@ namespace Raven.Database
 		/// Gets or sets the updated metadata.
 		/// </summary>
 		/// <value>The metadata.</value>
-		public JObject Metadata { get; set; }
+		public RavenJObject Metadata { get; set; }
 	}
 }

@@ -37,8 +37,8 @@ namespace Raven.Json.Utilities
 
         public bool ContainsKey(TKey key)
         {
-            return (_inherittedValues != null && _inherittedValues.ContainsKey(key)) ||
-                (_localChanges != null && _localChanges.ContainsKey(key));
+            return (_inherittedValues != null && _inherittedValues.ContainsKey(key) && _inherittedValues[key] != DeletedMarker) ||
+                (_localChanges != null && _localChanges.ContainsKey(key) && _localChanges[key] != DeletedMarker);
         }
 
         public ICollection<TKey> Keys

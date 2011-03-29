@@ -10,16 +10,17 @@ using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client
 {
 	internal static class SerializationHelper
 	{
-		public static IEnumerable<JsonDocument> JObjectsToJsonDocuments(IEnumerable<JObject> responses)
+		public static IEnumerable<JsonDocument> RavenJObjectsToJsonDocuments(IEnumerable<RavenJObject> responses)
 		{
 			return (from doc in responses
-			        let metadata = (JObject)doc["@metadata"]
-			        let _ = doc.Remove("@metadata")
+			        let metadata = (RavenJObject)doc.Properties["@metadata"]
+			        let _ = doc.Properties.Remove("@metadata")
 			        select new JsonDocument
 			        {
 			        	Key = metadata["@id"].Value<string>(),
@@ -31,14 +32,14 @@ namespace Raven.Client.Client
 			        });
 		}
 
-		public static IEnumerable<JsonDocument> ToJsonDocuments(this IEnumerable<JObject> responses)
+		public static IEnumerable<JsonDocument> ToJsonDocuments(this IEnumerable<RavenJObject> responses)
 		{
-			return JObjectsToJsonDocuments(responses);
+			return RavenJObjectsToJsonDocuments(responses);
 		}
 
-		public static JsonDocument ToJsonDocument(this JObject response)
+		public static JsonDocument ToJsonDocument(this RavenJObject response)
 		{
-			return JObjectsToJsonDocuments(new[] { response }).First();
+			return RavenJObjectsToJsonDocuments(new[] { response }).First();
 		}
 	}
 }

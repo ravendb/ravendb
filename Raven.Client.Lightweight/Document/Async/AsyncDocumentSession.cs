@@ -9,7 +9,6 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Client;
 using Raven.Client.Client.Async;
 using Raven.Database;
 

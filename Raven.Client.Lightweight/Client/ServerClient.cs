@@ -516,9 +516,9 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private void DirectDelete(string key, Guid? etag, string operationUrl)
 		{
-			var metadata = new JObject();
+			var metadata = new RavenJObject();
 			if (etag != null)
-				metadata.Add("ETag", new JValue(etag.Value.ToString()));
+				metadata.Properties.Add("ETag", new RavenJValue(etag.Value.ToString()));
 			AddTransactionInformation(metadata);
 			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
@@ -747,11 +747,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private BatchResult[] DirectBatch(IEnumerable<ICommandData> commandDatas, string operationUrl)
 		{
-			var metadata = new JObject();
+			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var req = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/bulk_docs", "POST", metadata, credentials, convention);
 			req.AddOperationHeaders(OperationsHeaders);
-			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
+			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 			req.Write(jArray.ToString(Formatting.None));
 
 			string response;

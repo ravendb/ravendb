@@ -104,20 +104,20 @@ namespace Raven.Database.Data
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static JObject FilterHeaders(this JObject self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this RavenJObject self, bool isServerDocument)
 		{
 			if (self == null)
 				return self;
 
-			var metadata = new JObject();
-			foreach (var header in self)
+			var metadata = new RavenJObject();
+			foreach (var header in self.Properties)
 			{
 				if (HeadersToIgnoreClient.Contains(header.Key))
 					continue;
 				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
 					continue;
 				var headerName = CaptureHeaderName(header.Key);
-				metadata.Add(headerName, header.Value);
+				metadata.Properties.Add(headerName, header.Value);
 			}
 			return metadata;
 		}

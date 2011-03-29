@@ -22,6 +22,8 @@ using Raven.Database.Data;
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Database.Linq;
+using Raven.Json.Linq;
+
 #endif
 
 namespace Raven.Client.Document
@@ -171,7 +173,7 @@ namespace Raven.Client.Document
 		/// <typeparam name="T"></typeparam>
 		/// <param name="instance">The instance.</param>
 		/// <returns></returns>
-		public JObject GetMetadataFor<T>(T instance)
+		public RavenJObject GetMetadataFor<T>(T instance)
 		{
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
@@ -191,8 +193,8 @@ namespace Raven.Client.Document
 						ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
 						Key = id,
 						OriginalMetadata = jsonDocument.Metadata,
-						Metadata = new JObject(jsonDocument.Metadata),
-						OriginalValue = new JObject()
+						Metadata = new RavenJObject(jsonDocument.Metadata),
+						OriginalValue = new RavenJObject()
 					};
 				}
 				else
@@ -287,13 +289,13 @@ more responsive application.
 		/// <returns></returns>
 		protected T TrackEntity<T>(JsonDocument documentFound)
 		{
-			if (documentFound.Metadata.Property("@etag") == null)
+			if (!documentFound.Metadata.Properties.ContainsKey("@etag"))
 			{
-				documentFound.Metadata.Add("@etag", new JValue(documentFound.Etag.ToString()));
+				documentFound.Metadata.Properties.Add("@etag", new RavenJValue(documentFound.Etag.ToString()));
 			}
-			if(documentFound.Metadata.Property("Last-Modified") == null)
+			if(!documentFound.Metadata.Properties.ContainsKey("Last-Modified"))
 			{
-				documentFound.Metadata.Add("Last-Modified", documentFound.LastModified);
+				documentFound.Metadata.Properties.Add("Last-Modified", new RavenJValue(documentFound.LastModified));
 			}
 			if(documentFound.NonAuthoritiveInformation && AllowNonAuthoritiveInformation == false)
 			{
@@ -311,7 +313,7 @@ more responsive application.
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		public T TrackEntity<T>(string key, JObject document, JObject metadata)
+		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata)
 		{
 			object entity;
 			if (entitiesByKey.TryGetValue(key, out entity) == false)
@@ -325,7 +327,7 @@ more responsive application.
 				return (T) entity;
 			}
 			var etag = metadata.Value<string>("@etag");
-			document.Remove("@metadata");
+			document.Properties.Remove("@metadata");
 			if(metadata.Value<bool>("Non-Authoritive-Information") && 
 				AllowNonAuthoritiveInformation == false)
 			{
@@ -336,7 +338,7 @@ more responsive application.
 			{
 				OriginalValue = document,
 				Metadata = metadata,
-				OriginalMetadata = new JObject(metadata),
+				OriginalMetadata = new RavenJObject(metadata),
 				ETag = new Guid(etag),
 				Key = key
 			};
@@ -377,9 +379,9 @@ more responsive application.
 		/// <param name="documentFound">The document found.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		protected object ConvertToEntity<T>(string id, JObject documentFound, JObject metadata)
+		protected object ConvertToEntity<T>(string id, RavenJObject documentFound, RavenJObject metadata)
 		{
-			if(typeof(T) == typeof(JObject))
+			if(typeof(T) == typeof(RavenJObject))
 				return (T) (object) documentFound;
 
 			var entity = default(T);
@@ -395,7 +397,7 @@ more responsive application.
 			{
 				entity = documentFound.Deserialize<T>(Conventions);
 #if !NET_3_5
-				var document = entity as JObject;
+				var document = entity as RavenJObject;
 				if (document != null)
 				{
 					entity = (T)(object)(new DynamicJsonObject(document));
@@ -457,9 +459,9 @@ more responsive application.
 			}
 		}
 
-		private static void EnsureNotReadVetoed(JObject metadata)
+		private static void EnsureNotReadVetoed(RavenJObject metadata)
 		{
-			var readVeto = metadata.Value<JObject>("Raven-Read-Veto");
+			var readVeto = metadata.Value<RavenJObject>("Raven-Read-Veto");
 			if (readVeto == null)
 				return;
 
@@ -516,16 +518,16 @@ more responsive application.
 			}
 
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
-			var metadata = new JObject();
+			var metadata = new RavenJObject();
 			if(tag != null)
-				metadata.Add(new JProperty(RavenEntityName, new JValue(tag)));
+				metadata.Properties.Add(RavenEntityName, new RavenJValue(tag));
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
 				Key = id,
 				Metadata = metadata,
-				OriginalMetadata = new JObject(),
+				OriginalMetadata = new RavenJObject(),
 				ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
-				OriginalValue = new JObject()
+				OriginalValue = new RavenJObject()
 			});
 			if (id != null)
 				entitiesByKey[id] = entity;
@@ -637,11 +639,11 @@ more responsive application.
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
 
-				batchResult.Metadata["@etag"] = new JValue(batchResult.Etag.ToString());
+				batchResult.Metadata["@etag"] = new RavenJValue(batchResult.Etag.ToString());
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
-				documentMetadata.OriginalMetadata = new JObject(batchResult.Metadata);
+				documentMetadata.OriginalMetadata = new RavenJObject(batchResult.Metadata);
 				documentMetadata.Metadata = batchResult.Metadata;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
@@ -772,12 +774,12 @@ more responsive application.
 			if (documentMetadata == null)
 				return true; 
 			var newObj = ConvertEntityToJson(entity, documentMetadata.Metadata);
-			var equalityComparer = new JTokenEqualityComparer();
+			var equalityComparer = new RavenJTokenEqualityComparer();
 			return equalityComparer.Equals(newObj, documentMetadata.OriginalValue) == false ||
 				equalityComparer.Equals(documentMetadata.Metadata, documentMetadata.OriginalMetadata) == false;
 		}
 
-		private JObject ConvertEntityToJson(object entity, JObject metadata)
+		private RavenJObject ConvertEntityToJson(object entity, RavenJObject metadata)
 		{
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
@@ -785,12 +787,12 @@ more responsive application.
 			var objectAsJson = GetObjectAsJson(entity);
 			if (identityProperty != null)
 			{
-				objectAsJson.Remove(identityProperty.Name);
+				objectAsJson.Properties.Remove(identityProperty.Name);
 			}
 #if !SILVERLIGHT
-			metadata["Raven-Clr-Type"] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
+			metadata["Raven-Clr-Type"] = RavenJToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
 #else
-			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.AssemblyQualifiedName);
+			metadata["Raven-Clr-Type"] = RavenJToken.FromObject(entityType.AssemblyQualifiedName);
 #endif
 			var entityConverted = OnEntityConverted;
 			if (entityConverted != null)
@@ -799,12 +801,12 @@ more responsive application.
 			return objectAsJson;
 		}
 
-		private JObject GetObjectAsJson(object entity)
+		private RavenJObject GetObjectAsJson(object entity)
 		{
-			var jObject = entity as JObject;
+			var jObject = entity as RavenJObject;
 			if (jObject != null)
 				return jObject;
-			return JObject.FromObject(entity, Conventions.CreateSerializer());
+			return RavenJObject.FromObject(entity, Conventions.CreateSerializer());
 		}
 
 
@@ -880,12 +882,12 @@ more responsive application.
 			/// Gets or sets the original value.
 			/// </summary>
 			/// <value>The original value.</value>
-			public JObject OriginalValue { get; set; }
+			public RavenJObject OriginalValue { get; set; }
 			/// <summary>
 			/// Gets or sets the metadata.
 			/// </summary>
 			/// <value>The metadata.</value>
-			public JObject Metadata { get; set; }
+			public RavenJObject Metadata { get; set; }
 			/// <summary>
 			/// Gets or sets the ETag.
 			/// </summary>
@@ -900,7 +902,7 @@ more responsive application.
 			/// Gets or sets the original metadata.
 			/// </summary>
 			/// <value>The original metadata.</value>
-			public JObject OriginalMetadata { get; set; }
+			public RavenJObject OriginalMetadata { get; set; }
 		}
 
 		/// <summary>

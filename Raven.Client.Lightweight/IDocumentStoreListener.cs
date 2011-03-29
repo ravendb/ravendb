@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
@@ -18,7 +18,7 @@ namespace Raven.Client
         /// <param name="key">The key.</param>
         /// <param name="entityInstance">The entity instance.</param>
         /// <param name="metadata">The metadata.</param>
-        void BeforeStore(string key, object entityInstance, JObject metadata);
+        void BeforeStore(string key, object entityInstance, RavenJObject metadata);
 
         /// <summary>
         /// Invoked after the store request is sent to the server.
@@ -26,6 +26,6 @@ namespace Raven.Client
         /// <param name="key">The key.</param>
         /// <param name="entityInstance">The entity instance.</param>
         /// <param name="metadata">The metadata.</param>
-        void AfterStore(string key, object entityInstance, JObject metadata);
+        void AfterStore(string key, object entityInstance, RavenJObject metadata);
     }
 }

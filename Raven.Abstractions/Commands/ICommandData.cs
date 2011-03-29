@@ -4,8 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Data
 {
@@ -31,11 +31,11 @@ namespace Raven.Database.Data
 		Guid? Etag { get; }
 
 		TransactionInformation TransactionInformation { get; set; }
-    	JObject Metadata { get; }
+    	RavenJObject Metadata { get; }
 
         /// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
-		JObject ToJson();
+		RavenJObject ToJson();
     }
 }

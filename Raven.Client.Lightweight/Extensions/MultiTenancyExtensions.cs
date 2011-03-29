@@ -11,6 +11,7 @@ using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Database.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
 {
@@ -34,7 +35,7 @@ namespace Raven.Client.Extensions
 		/// </remarks>
 		public static void EnsureDatabaseExists(this IDatabaseCommands self,string name)
 		{
-			var doc = JObject.FromObject(new DatabaseDocument
+			var doc = RavenJObject.FromObject(new DatabaseDocument
 			{
 				Settings =
 					{
@@ -47,7 +48,7 @@ namespace Raven.Client.Extensions
 #if !SILVERLIGHT
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 #endif
-				self.Put(docId, null, doc, new JObject());
+				self.Put(docId, null, doc, new RavenJObject());
 		}
 #endif
 
@@ -57,7 +58,7 @@ namespace Raven.Client.Extensions
 		///</summary>
 		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name)
 		{
-			var doc = JObject.FromObject(new DatabaseDocument
+			var doc = RavenJObject.FromObject(new DatabaseDocument
 			{
 				Settings =
 					{
@@ -72,7 +73,7 @@ namespace Raven.Client.Extensions
                     if (get.Result != null)
                         return get;
 
-                    return (Task)self.PutAsync(docId, null, doc, new JObject());
+                    return (Task)self.PutAsync(docId, null, doc, new RavenJObject());
 				})
                 .Unwrap();
 		}
