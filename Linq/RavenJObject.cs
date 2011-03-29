@@ -324,5 +324,10 @@ namespace Raven.Json.Linq
 		}
 
 		#endregion
+
+		public void Add(string propName, RavenJToken token)
+		{
+			Properties.Add(propName, token);
+		}
 	}
 }
