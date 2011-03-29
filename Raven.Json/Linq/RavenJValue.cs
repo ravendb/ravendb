@@ -25,7 +25,7 @@ namespace Raven.Json.Linq
         /// Gets or sets the underlying token value.
         /// </summary>
         /// <value>The underlying token value.</value>
-        public object Value
+        public new object Value
         {
             get { return _value; }
             set

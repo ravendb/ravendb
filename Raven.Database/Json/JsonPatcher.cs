@@ -246,7 +246,7 @@ namespace Raven.Database.Json
 				document.Properties.Add(propName, patchCmd.Value);
 				return;
 			}
-			property.Value = patchCmd.Value;
+			property.Value = (patchCmd.Value as RavenJValue).Value;
 		}
 
 
@@ -254,17 +254,20 @@ namespace Raven.Database.Json
 		{
 			if (patchCmd.Value.Type != JTokenType.Integer)
 				throw new InvalidOperationException("Cannot increment when value is not an integer");
+
+			var valToSet = patchCmd.Value as RavenJValue; // never null since we made sure it's JTokenType.Integer
+
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			var val = property as RavenJValue;
 			if (val == null)
 			{
-				document.AddValueProperty(propName, patchCmd.Value);
+				document[propName] = valToSet.Value<int>();
 				return;
 			}
 			if (val.Value == null || val.Type == JTokenType.Null)
-				val.Value = patchCmd.Value;
+				val.Value = valToSet.Value<int>();
 			else
-				val.Value = RavenJToken.FromObject(val.Value<int>() + patchCmd.Value.Value<int>());
+				val.Value = RavenJToken.FromObject(val.Value<int>() + valToSet.Value<int>()).Value<int>();
 		}
 		private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
 		{
