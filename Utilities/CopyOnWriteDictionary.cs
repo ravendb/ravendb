@@ -45,18 +45,25 @@ namespace Raven.Json.Utilities
         {
             get
             {
-                ICollection<TKey> ret = new HashSet<TKey>();
-            	foreach (var key in _inherittedValues.Keys)
-            	{
-            		if (_localChanges.ContainsKey(key))
-            			continue;
-					ret.Add(key);
-            	}
-				foreach (var key in _localChanges.Keys)
+            	ICollection<TKey> ret = new HashSet<TKey>();
+				if (_inherittedValues != null)
 				{
-					if (_localChanges[key] == DeletedMarker)
-						continue;
-					ret.Add(key);
+					foreach (var key in _inherittedValues.Keys)
+					{
+						if (_localChanges.ContainsKey(key))
+							continue;
+						ret.Add(key);
+					}
+				}
+
+				if (_localChanges != null)
+				{
+					foreach (var key in _localChanges.Keys)
+					{
+						if (_localChanges[key] == DeletedMarker)
+							continue;
+						ret.Add(key);
+					}
 				}
             	return ret;
             }
@@ -120,13 +127,72 @@ namespace Raven.Json.Utilities
 
         #endregion
 
-        #region Other not important operations
-        public IEnumerator<KeyValuePair<TKey, RavenJToken>> GetEnumerator()
-        {
-            throw new NotImplementedException();
-        }
+		public class CopyOnWriteDictEnumerator : IEnumerator<KeyValuePair<TKey, RavenJToken>>
+		{
+			private IEnumerator<KeyValuePair<TKey, RavenJToken>> _inheritted, _local, _current;
 
-        IEnumerator IEnumerable.GetEnumerator()
+			public CopyOnWriteDictEnumerator(IEnumerator<KeyValuePair<TKey, RavenJToken>> inheritted, IEnumerator<KeyValuePair<TKey, RavenJToken>> local)
+			{
+				_inheritted = inheritted;
+				_local = local;
+				_current = _inheritted ?? _local;
+			}
+
+			public void Dispose()
+			{
+				if (_inheritted != null) _inheritted.Dispose();
+				if (_local != null) _local.Dispose();
+			}
+
+			public bool MoveNext()
+			{
+				if (_current == null)
+					return false;
+
+				if (!_current.MoveNext())
+				{
+					if (_current == _inheritted && _local != null)
+					{
+						_current = _local;
+						return _current.MoveNext();
+					}
+					return false;
+				}
+				return true;
+			}
+
+			public void Reset()
+			{
+				if (_inheritted != null) _inheritted.Reset();
+				if (_local != null) _local.Reset();
+				_current = _inheritted ?? _local;
+			}
+
+			public KeyValuePair<TKey, RavenJToken> Current
+			{
+				get
+				{
+					if (_current == null)
+						throw new InvalidOperationException();
+					return _current.Current;
+				}
+			}
+
+			object IEnumerator.Current
+			{
+				get { return Current; }
+			}
+		}
+
+		public IEnumerator<KeyValuePair<TKey, RavenJToken>> GetEnumerator()
+		{
+			return new CopyOnWriteDictEnumerator(
+				_inherittedValues != null ? _inherittedValues.GetEnumerator() : null,
+				_localChanges != null ? _localChanges.GetEnumerator() : null
+				);
+		}
+
+    	IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
         }
@@ -136,7 +202,9 @@ namespace Raven.Json.Utilities
             Add(item.Key, item.Value);
         }
 
-        public void Clear()
+		#region Other not important operations
+
+		public void Clear()
         {
             throw new NotImplementedException();
         }
