@@ -125,7 +125,7 @@ namespace Raven.Json.Linq
 						current = o[propertyName];
 
 						if (current == null && errorWhenNoMatch)
-							throw new Exception("Property '{0}' does not exist on JObject.".FormatWith(CultureInfo.InvariantCulture, propertyName));
+							throw new Exception("Property '{0}' does not exist on RavenJObject.".FormatWith(CultureInfo.InvariantCulture, propertyName));
 					}
 					else
 					{
