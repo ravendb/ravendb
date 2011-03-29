@@ -89,7 +89,9 @@
 		                             Func<Type, DependencyObject, object, UIElement> original)
 		{
 			string viewTypeName;
+			Type viewType;
 			
+			// case 1: types that are not in the Studio assembly
 			if(modelType.Assembly != Assembly.GetExecutingAssembly())
 			{
 				var name = "Raven.Studio.Data." + modelType.Name;
@@ -105,7 +107,7 @@
 					viewTypeName = viewTypeName + "." + context;
 				}
 
-				var viewType = (from assmebly in AssemblySource.Instance
+				viewType = (from assmebly in AssemblySource.Instance
 				                from type in assmebly.GetExportedTypes()
 				                where type.FullName == viewTypeName
 				                select type).FirstOrDefault();
@@ -113,6 +115,18 @@
 				if (viewType != null)
 					return ViewLocator.GetOrCreateViewType(viewType);
 			}
+
+			// case 2: simplified convention
+			viewTypeName = modelType.FullName + "View";
+			viewType = (from assmebly in AssemblySource.Instance
+							from type in assmebly.GetExportedTypes()
+							where type.FullName == viewTypeName
+							select type).FirstOrDefault();
+
+			if (viewType != null)
+				return ViewLocator.GetOrCreateViewType(viewType);
+
+			// case 3: apply the default when all else fails
 			return original(modelType, viewLocation, context);
 		}
 
