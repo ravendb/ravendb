@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Silverlight
+﻿using System.Net;
+
+namespace Raven.Tests.Silverlight
 {
 	using System;
 	using System.Collections.Generic;
@@ -80,7 +82,7 @@
 		}
 
 		[Asynchronous]
-		[ExpectedException(typeof(Exception))]
+		[ExpectedException(typeof(WebException))]
 		public IEnumerable<Task> Querying_against_a_nonindexed_field_raises_an_exception()
 		{
 			var dbname = GenerateNewDatabaseName();

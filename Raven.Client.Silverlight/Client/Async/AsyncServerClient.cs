@@ -236,7 +236,7 @@ namespace Raven.Client.Client.Async
 				var jo = JObject.Load(new JsonTextReader(content));
 				var error = jo.Deserialize<ServerRequestError>(convention);
 
-				throw new Exception(error.Error);
+				throw new WebException(error.Error);
 			}
 			return false;
 		}
