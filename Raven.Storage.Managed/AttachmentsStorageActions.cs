@@ -8,15 +8,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using log4net;
-using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
-using Raven.Database;
 using Raven.Database.Data;
-using Raven.Database.Exceptions;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Storage;
 using Raven.Http.Exceptions;
+using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -33,7 +31,7 @@ namespace Raven.Storage.Managed
             this.generator = generator;
         }
 
-        public Guid AddAttachment(string key, Guid? etag, byte[] data, JObject headers)
+        public Guid AddAttachment(string key, Guid? etag, byte[] data, RavenJObject headers)
         {
             AssertValidEtag(key, etag, "PUT");
 
@@ -41,11 +39,11 @@ namespace Raven.Storage.Managed
             headers.WriteTo(ms);
             ms.Write(data,0,data.Length);
             var newEtag = generator.CreateSequentialUuid();
-           var result = storage.Attachments.Put(new JObject
-            {
-                {"key", key},
-                {"etag", newEtag.ToByteArray()}
-            }, ms.ToArray());
+			var result = storage.Attachments.Put(new RavenJObject
+			(
+				new KeyValuePair<string, RavenJToken>("key", new RavenJValue(key)),
+				new KeyValuePair<string, RavenJToken>("etag", new RavenJValue(newEtag.ToByteArray()))
+			), ms.ToArray());
            if (result == false)
                throw new ConcurrencyException("PUT attempted on attachment '" + key + "' while it was locked by another transaction");
             logger.DebugFormat("Adding attachment {0}", key);
@@ -54,10 +52,8 @@ namespace Raven.Storage.Managed
 
         private void AssertValidEtag(string key, Guid? etag, string op)
         {
-            var readResult = storage.Attachments.Read(new JObject
-            {
-                {"key", key},
-            });
+        	var readResult =
+        		storage.Attachments.Read(new RavenJObject(new KeyValuePair<string, RavenJToken>("key", new RavenJValue(key))));
 
             if(readResult != null && etag != null)
             {
@@ -78,7 +74,7 @@ namespace Raven.Storage.Managed
         {
             AssertValidEtag(key, etag, "DELETE");
 
-            if (storage.Attachments.Remove(new JObject { { "key", key } }) == false)
+            if (!storage.Attachments.Remove(new RavenJObject(new KeyValuePair<string, RavenJToken>("key", new RavenJValue(key)))))
                 throw new ConcurrencyException("DELETE attempted on attachment '" + key +
                                                "'  while it was locked by another transaction");
             logger.DebugFormat("Attachment with key '{0}' was deleted", key);
@@ -86,7 +82,7 @@ namespace Raven.Storage.Managed
 
         public Attachment GetAttachment(string key)
         {
-            var readResult = storage.Attachments.Read(new JObject { { "key", key } });
+        	var readResult = storage.Attachments.Read(new RavenJObject(new KeyValuePair<string, RavenJToken>("key", new RavenJValue(key))));
             if (readResult == null)
                 return null;
             var attachmentDAta = readResult.Data();
@@ -117,7 +113,8 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value)
         {
-            return from key in storage.Attachments["ByEtag"].SkipAfter(new JObject { { "etag", value.ToByteArray() } })
+            return from key in storage.Attachments["ByEtag"]
+					   .SkipAfter(new RavenJObject( new KeyValuePair<string, RavenJToken>("etag", new RavenJValue(value.ToByteArray()))))
                    let attachment = GetAttachment(key.Value<string>("key"))
                    select new AttachmentInformation
                    {

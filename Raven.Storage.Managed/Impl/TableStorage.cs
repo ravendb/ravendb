@@ -6,6 +6,7 @@
 using System;
 using System.Runtime.Caching;
 using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Munin;
 
 namespace Raven.Storage.Managed.Impl
@@ -22,7 +23,7 @@ namespace Raven.Storage.Managed.Impl
 			return null;
 		}
 
-    	public void SetCachedDocument(string key, Guid etag, Tuple<JObject,JObject> doc)
+		public void SetCachedDocument(string key, Guid etag, Tuple<RavenJObject, RavenJObject> doc)
 		{
 			cachedSerializedDocuments["Doc/" + key + "/" + etag] = doc;
 		}
@@ -47,7 +48,7 @@ namespace Raven.Storage.Managed.Impl
             });
 
             DocumentsModifiedByTransactions =
-                Add(new Table(x => new JObject {{"key", x.Value<string>("key")}},
+                Add(new Table(x => new RavenJObject {{"key", x.Value<string>("key")}},
                               "DocumentsModifiedByTransactions")
                 {
                     {"ByTxId", x => new ComparableByteArray(x.Value<byte[]>("txId"))}
@@ -66,7 +67,7 @@ namespace Raven.Storage.Managed.Impl
                 {"ByViewAndDocumentId", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("docId"))}
             });
 
-            Queues = Add(new Table(x => new JObject
+            Queues = Add(new Table(x => new RavenJObject
             {
                 {"name", x.Value<string>("name")},
                 {"id", x.Value<byte[]>("id")},

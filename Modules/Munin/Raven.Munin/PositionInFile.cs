@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Munin
 {
@@ -11,6 +11,6 @@ namespace Raven.Munin
     {
         public long Position { get; set; }
         public int Size { get; set; }
-        public JToken Key { get; set; }
+        public RavenJToken Key { get; set; }
     }
 }
