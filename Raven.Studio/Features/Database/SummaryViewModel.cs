@@ -156,13 +156,13 @@ namespace Raven.Studio.Features.Database
 						return;
 					}
 
-					task.ContinueOnSuccess(x =>
+					task.ContinueWith(x =>
 					{
 						Collections = x.Result;
 						NotifyOfPropertyChange(() => LargestCollectionCount);
 						NotifyOfPropertyChange(() => Collections);
 						WorkCompleted("fetching collections");
-					});
+					}, faulted => events.Publish(new NotificationRaised("Unable to retreive collections from server.", NotificationLevel.Error)));
 				});
 		}
 	}
