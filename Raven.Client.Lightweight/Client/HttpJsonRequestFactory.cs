@@ -12,21 +12,22 @@ namespace Raven.Client.Client
 	/// Create the HTTP Json Requests to the RavenDB Server
 	/// and manages the http cache
 	///</summary>
-	public class HttpJsonRequestFactory
+	public class HttpJsonRequestFactory : IDisposable
 	{
 		/// <summary>
 		/// Occurs when a json request is created
 		/// </summary>
 		public event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
 
-		private ObjectCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
+		private MemoryCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
 
 		internal int NumOfCachedRequests;
 
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
+		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials,
+													 DocumentConvention convention)
 		{
 			return CreateHttpJsonRequest(self, url, method, new JObject(), credentials, convention);
 		}
@@ -41,7 +42,8 @@ namespace Raven.Client.Client
 		/// <param name="credentials">The credentials.</param>
 		/// <param name="convention">The document conventions governing this request</param>
 		/// <returns></returns>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials, DocumentConvention convention)
+		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata,
+													 ICredentials credentials, DocumentConvention convention)
 		{
 			var request = new HttpJsonRequest(url, method, metadata, credentials, this);
 			ConfigureCaching(url, method, convention, request);
@@ -52,11 +54,11 @@ namespace Raven.Client.Client
 		private void ConfigureCaching(string url, string method, DocumentConvention convention, HttpJsonRequest request)
 		{
 			request.ShouldCacheRequest = convention.ShouldCacheRequest(url);
-			if (!request.ShouldCacheRequest || method != "GET") 
+			if (!request.ShouldCacheRequest || method != "GET")
 				return;
 
 			var cachedRequest = (CachedRequest)cache.Get(url);
-			if (cachedRequest == null) 
+			if (cachedRequest == null)
 				return;
 			request.CachedRequestDetails = cachedRequest;
 			request.WebRequest.Headers["If-None-Match"] = cachedRequest.Headers["ETag"];
@@ -97,7 +99,7 @@ namespace Raven.Client.Client
 		internal void CacheResponse(WebResponse response, string text, HttpJsonRequest httpJsonRequest)
 		{
 			if (httpJsonRequest.Method == "GET" && httpJsonRequest.ShouldCacheRequest &&
-			    string.IsNullOrEmpty(response.Headers["ETag"]) == false)
+				string.IsNullOrEmpty(response.Headers["ETag"]) == false)
 			{
 				cache.Set(httpJsonRequest.Url, new CachedRequest
 				{
@@ -105,6 +107,15 @@ namespace Raven.Client.Client
 					Headers = response.Headers
 				}, new CacheItemPolicy()); // cache as much as possible, for as long as possible, using the default cache limits
 			}
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
+		public void Dispose()
+		{
+			cache.Dispose();
 		}
 	}
 }

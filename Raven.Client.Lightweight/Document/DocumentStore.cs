@@ -257,6 +257,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public virtual void Dispose()
 		{
+			jsonRequestFactory.Dispose();
 			Stored = null;
 		}
 

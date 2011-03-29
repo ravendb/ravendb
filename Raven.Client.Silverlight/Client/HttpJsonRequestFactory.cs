@@ -9,7 +9,7 @@ namespace Raven.Client.Client
 	/// Create the HTTP Json Requests to the RavenDB Server
 	/// and manages the http cache
 	///</summary>
-	public class HttpJsonRequestFactory
+	public class HttpJsonRequestFactory : IDisposable
 	{
 		/// <summary>
 		/// Occurs when a json request is created
@@ -47,5 +47,8 @@ namespace Raven.Client.Client
 			return request;
 		}
 
+		public void Dispose()
+		{
+		}
 	}
 }
