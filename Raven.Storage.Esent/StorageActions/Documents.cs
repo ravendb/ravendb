@@ -8,12 +8,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Json;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -45,11 +45,10 @@ namespace Raven.Storage.Esent.StorageActions
 			return DocumentByKeyInternal(key, transactionInformation, (metadata, func) => metadata);
 		}
 
-		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<JsonDocumentMetadata, Func<string, Guid, JObject, JObject>, T> createResult)
+		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<JsonDocumentMetadata, Func<string, Guid, RavenJObject, RavenJObject>, T> createResult)
 			where T : class
 		{
-			JObject data;
-			JObject metadata;
+			RavenJObject metadata;
 			if (transactionInformation != null)
 			{
 				Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
@@ -101,7 +100,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}, ReadDocumentData);
 		}
 
-		private JObject ReadDocumentMetadataInTransaction(string key, Guid etag)
+		private RavenJObject ReadDocumentMetadataInTransaction(string key, Guid etag)
 		{
 			var cachedDocument = cacher.GetCachedDocument(key, etag);
 			if (cachedDocument != null)
@@ -113,7 +112,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		}
 
-		private JObject ReadDocumentDataInTransaction(string key, Guid etag, JObject metadata)
+		private RavenJObject ReadDocumentDataInTransaction(string key, Guid etag, RavenJObject metadata)
 		{
 			var cachedDocument = cacher.GetCachedDocument(key, etag);
 			if (cachedDocument != null)
@@ -123,11 +122,11 @@ namespace Raven.Storage.Esent.StorageActions
 
 			var dataBuffer = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
 			var data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
-			cacher.SetCachedDocument(key, etag, Tuple.Create(new JObject(metadata), new JObject(data)));
+			cacher.SetCachedDocument(key, etag, Tuple.Create(new RavenJObject(metadata), new RavenJObject(data)));
 			return data;
 		}
 
-		private JObject ReadDocumentMetadata(string key, Guid existingEtag)
+		private RavenJObject ReadDocumentMetadata(string key, Guid existingEtag)
 		{
 			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
 			if (existingCachedDocument != null)
@@ -136,7 +135,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 		}
 
-		private JObject ReadDocumentData(string key, Guid existingEtag, JObject metadata)
+		private RavenJObject ReadDocumentData(string key, Guid existingEtag, RavenJObject metadata)
 		{
 			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
 			if (existingCachedDocument != null)
@@ -146,7 +145,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			var data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
 
-			cacher.SetCachedDocument(key, existingEtag, Tuple.Create(new JObject(metadata), new JObject(data)));
+			cacher.SetCachedDocument(key, existingEtag, Tuple.Create(new RavenJObject(metadata), new RavenJObject(data)));
 
 			return data;
 		}
@@ -284,7 +283,7 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, Documents));
 		}
 
-		public Guid AddDocument(string key, Guid? etag, JObject data, JObject metadata)
+		public Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -322,7 +321,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public Guid AddDocumentInTransaction(string key, Guid? etag, JObject data, JObject metadata, TransactionInformation transactionInformation)
+		public Guid AddDocumentInTransaction(string key, Guid? etag, RavenJObject data, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -370,7 +369,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public bool DeleteDocument(string key, Guid? etag, out JObject metadata)
+		public bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata)
 		{
 			metadata = null;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");

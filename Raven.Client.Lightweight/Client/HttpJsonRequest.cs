@@ -231,7 +231,7 @@ namespace Raven.Client.Client
 				var headerName = prop.Key;
 				if (headerName == "ETag")
 					headerName = "If-Match";
-				var value = prop.Value<object>().ToString();
+				var value = prop.Value.Value<object>().ToString();
 				switch (headerName)
 				{
 					case "Content-Length":

@@ -7,7 +7,6 @@ using System;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
 using Raven.Http.Json;
 using Raven.Json.Linq;
 
@@ -46,9 +45,9 @@ namespace Raven.Database.Json
 		/// <summary>
 		/// Convert a byte array to a JObject
 		/// </summary>
-		public static JObject ToJObject(this byte [] self)
+		public static RavenJObject ToJObject(this byte [] self)
 		{
-			return JObject.Load(new BsonReader(new MemoryStream(self))
+			return RavenJObject.Load(new BsonReader(new MemoryStream(self))
 			{
 				DateTimeKindHandling = DateTimeKind.Utc,
 			});
@@ -57,9 +56,9 @@ namespace Raven.Database.Json
         /// <summary>
         /// Convert a byte array to a JObject
         /// </summary>
-        public static JObject ToJObject(this Stream self)
+        public static RavenJObject ToJObject(this Stream self)
         {
-            return JObject.Load(new BsonReader(self)
+            return RavenJObject.Load(new BsonReader(self)
             {
                 DateTimeKindHandling = DateTimeKind.Utc,
             });
@@ -68,7 +67,7 @@ namespace Raven.Database.Json
 		/// <summary>
 		/// Convert a JToken to a byte array
 		/// </summary>
-		public static byte[] ToBytes(this JToken self)
+		public static byte[] ToBytes(this RavenJToken self)
 		{
 			using (var memoryStream = new MemoryStream())
 			{

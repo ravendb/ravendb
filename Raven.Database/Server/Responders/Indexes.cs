@@ -3,9 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -25,7 +25,7 @@ namespace Raven.Database.Server.Responders
 		{
 			var namesOnlyString = context.Request.QueryString["namesOnly"];
 			bool namesOnly;
-			JArray indexes;
+			RavenJArray indexes;
 			if(bool.TryParse(namesOnlyString, out namesOnly) && namesOnly)
 				indexes = Database.GetIndexNames(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize));
 			else

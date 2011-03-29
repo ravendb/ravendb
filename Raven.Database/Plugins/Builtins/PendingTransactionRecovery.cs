@@ -7,13 +7,13 @@ using System;
 using System.Collections.Generic;
 using System.Transactions;
 using log4net;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins.Builtins
 {
 	public class PendingTransactionRecovery : IStartupTask
 	{
-	    private ILog logger = LogManager.GetLogger(typeof (PendingTransactionRecovery));
+	    private readonly ILog logger = LogManager.GetLogger(typeof (PendingTransactionRecovery));
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -71,7 +71,7 @@ namespace Raven.Database.Plugins.Builtins
 
 			public void Prepare(PreparingEnlistment preparingEnlistment)
 			{
-				database.PutStatic("transactions/recoveryInformation/" + txId, null, preparingEnlistment.RecoveryInformation(), new JObject());
+				database.PutStatic("transactions/recoveryInformation/" + txId, null, preparingEnlistment.RecoveryInformation(), new RavenJObject());
 				preparingEnlistment.Prepared();
 			}
 
