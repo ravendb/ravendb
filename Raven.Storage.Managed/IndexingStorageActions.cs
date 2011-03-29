@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -44,12 +45,12 @@ namespace Raven.Storage.Managed
 			storage.IndexingStats.UpdateKey(index);
 		}
 
-        private JObject GetCurrentIndex()
+        private RavenJObject GetCurrentIndex()
         {
             var readResult = storage.IndexingStats.Read(new JObject { { "index", currentIndex.Value } });
             if (readResult == null)
                 throw new ArgumentException("There is no index with the name: " + currentIndex.Value);
-        	var key = (JObject)readResult.Key;
+        	var key = (RavenJObject)readResult.Key;
 			EnsureKeyMatchExpectedSchema(key);
         	return key;
         }
@@ -189,7 +190,7 @@ namespace Raven.Storage.Managed
 
         public void UpdateLastIndexed(string index, Guid etag, DateTime timestamp)
         {
-            var readResult = storage.IndexingStats.Read(new JObject { { "index", index } });
+            var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", index } });
             if (readResult == null)
                 throw new ArgumentException("There is no index with the name: " + index);
 

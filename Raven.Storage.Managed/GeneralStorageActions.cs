@@ -3,9 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -21,14 +21,14 @@ namespace Raven.Storage.Managed
 
         public long GetNextIdentityValue(string name)
         {
-            var result = storage.Identity.Read(new JObject{{"name", name}});
+            var result = storage.Identity.Read(new RavenJObject(new KeyValuePair<string, RavenJToken>("name", name)));
             if(result == null)
             {
-                storage.Identity.UpdateKey(new JObject
-                {
-                    {"name",name},
-                    {"id", 1}
-                });
+				storage.Identity.UpdateKey(new RavenJObject
+				(
+				new KeyValuePair<string, RavenJToken>("name", name),
+				new KeyValuePair<string, RavenJToken>("id", 1)
+				));
                 return 1;
             }
             var val = result.Key.Value<int>("id") + 1;

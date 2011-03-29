@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Storage.Esent
@@ -22,15 +23,15 @@ namespace Raven.Storage.Esent
 
 		private readonly ObjectCache cachedSerializedDocuments = new MemoryCache(typeof(RemoteEsentStorage).FullName + ".Cache");
 
-		public Tuple<JObject, JObject> GetCachedDocument(string key, Guid etag)
+		public Tuple<RavenJObject, RavenJObject> GetCachedDocument(string key, Guid etag)
 		{
-			var cachedDocument = (Tuple<JObject, JObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
+			var cachedDocument = (Tuple<RavenJObject, RavenJObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
 			if (cachedDocument != null)
-				return Tuple.Create(new JObject(cachedDocument.Item1), new JObject(cachedDocument.Item2));
+				return Tuple.Create(new RavenJObject(cachedDocument.Item1), new RavenJObject(cachedDocument.Item2));
 			return null;
 		}
 
-		public void SetCachedDocument(string key, Guid etag, Tuple<JObject, JObject> doc)
+		public void SetCachedDocument(string key, Guid etag, Tuple<RavenJObject, RavenJObject> doc)
 		{
 			cachedSerializedDocuments["Doc/" + key + "/" + etag] = doc;
 		}
