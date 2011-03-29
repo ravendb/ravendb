@@ -24,6 +24,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -258,38 +259,38 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		private static JObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
+		private static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
 		{
-			return new JObject(
+			return new RavenJObject(
 				fieldsToFetch.Concat(new[] { "__document_id" }).Distinct()
 					.SelectMany(name => document.GetFields(name) ?? new Field[0])
 					.Where(x => x != null)
 					.Where(x => x.Name().EndsWith("_IsArray") == false && x.Name().EndsWith("_Range") == false && x.Name().EndsWith("_ConvertToJson") == false)
 					.Select(fld => CreateProperty(fld, document))
-					.GroupBy(x => x.Name)
+					.GroupBy(x => x.Key)
 					.Select(g =>
 					{
 						if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
 						{
 						    return g.First();
 						}
-					    return new JProperty(g.Key, g.Select(x => x.Value));
+					    return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray(g.Select(x => x.Value)));
 					})
 				);
 		}
 
-	    private static JProperty CreateProperty(Field fld, Document document)
+	    private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
 		{
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
 			{
 				var val = JsonConvert.DeserializeObject(fld.StringValue());
-				return new JProperty(fld.Name(), val);
+				return new KeyValuePair<string, RavenJToken>(fld.Name(), new RavenJValue(val));
 			}
-			return new JProperty(fld.Name(), fld.StringValue());
+			return new KeyValuePair<string, RavenJToken>(fld.Name(), new RavenJValue(fld.StringValue()));
 		}
 
 		IndexWriter indexWriter;
-		private ConcurrentDictionary<string,IIndexExtension> indexExtensions = new ConcurrentDictionary<string, IIndexExtension>();
+		private readonly ConcurrentDictionary<string,IIndexExtension> indexExtensions = new ConcurrentDictionary<string, IIndexExtension>();
 
 		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, bool> action)
 		{
