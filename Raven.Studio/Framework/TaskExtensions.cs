@@ -11,6 +11,37 @@
 
 	public static class TaskExtensions
 	{
+
+		public static Task ContinueWith<T>(this Task<T> task, Action<Task<T>> onSuccess, Action<Task<T>> onFault)
+		{
+			return task.ContinueWith(child =>
+			{
+				if (child.IsFaulted)
+				{
+					onFault(child);
+				}
+				else
+				{
+					onSuccess(child);
+				}
+			});
+		}
+
+		public static Task ContinueWith(this Task task, Action<Task> onSuccess, Action<Task> onFault)
+		{
+			return task.ContinueWith(child =>
+			{
+				if (child.IsFaulted)
+				{
+					onFault(child);
+				}
+				else
+				{
+					onSuccess(child);
+				}
+			});
+		}
+
 		public static Task ContinueOnSuccess<T>(this Task<T> task, Action<Task<T>> onSuccess)
 		{
 			return task.ContinueWith(child =>
