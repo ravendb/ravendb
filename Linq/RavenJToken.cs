@@ -197,5 +197,37 @@ namespace Raven.Json.Linq
 
 		internal abstract bool DeepEquals(RavenJToken node);
 		internal abstract int GetDeepHashCode();
+
+		/// <summary>
+		/// Selects the token that matches the object path.
+		/// </summary>
+		/// <param name="path">
+		/// The object path from the current <see cref="JToken"/> to the <see cref="JToken"/>
+		/// to be returned. This must be a string of property names or array indexes separated
+		/// by periods, such as <code>Tables[0].DefaultView[0].Price</code> in C# or
+		/// <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
+		/// </param>
+		/// <returns>The <see cref="JToken"/> that matches the object path or a null reference if no matching token is found.</returns>
+		public RavenJToken SelectToken(string path)
+		{
+			return SelectToken(path, false);
+		}
+
+		/// <summary>
+		/// Selects the token that matches the object path.
+		/// </summary>
+		/// <param name="path">
+		/// The object path from the current <see cref="JToken"/> to the <see cref="JToken"/>
+		/// to be returned. This must be a string of property names or array indexes separated
+		/// by periods, such as <code>Tables[0].DefaultView[0].Price</code> in C# or
+		/// <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
+		/// </param>
+		/// <param name="errorWhenNoMatch">A flag to indicate whether an error should be thrown if no token is found.</param>
+		/// <returns>The <see cref="JToken"/> that matches the object path.</returns>
+		public RavenJToken SelectToken(string path, bool errorWhenNoMatch)
+		{
+			var p = new RavenJPath(path);
+			return p.Evaluate(this, errorWhenNoMatch);
+		}
     }
 }
