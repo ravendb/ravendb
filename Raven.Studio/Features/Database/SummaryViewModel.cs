@@ -156,6 +156,7 @@
 					{
 						if (task.Exception != null && retry > 0)
 						{
+							WorkCompleted("fetching collections");
 							TaskEx.Delay(50)
 								.ContinueWith(_ => ExecuteCollectionQueryWithRetry(session, retry - 1));
 							return;
