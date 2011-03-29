@@ -1,6 +1,7 @@
 ﻿namespace Raven.Studio.Framework
 {
 	using System;
+	using System.ComponentModel;
 	using System.Linq;
 	using System.Threading.Tasks;
 	using System.Windows;
@@ -13,6 +14,7 @@
 		Size PageElementSize { get; set; }
 		void AdjustResultsForPageSize();
 	    void ClearResults();
+		event EventHandler<EventArgs<bool>> IsLoadingChanged;
 	}
 
 	public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
@@ -39,6 +41,8 @@
 			PageSize = 8;
 			GetTotalResults = ()=> 0;
 		}
+
+		public event EventHandler<EventArgs<bool>> IsLoadingChanged = delegate { };
 
 		public int PageSize
 		{
@@ -176,6 +180,7 @@
 				isLoading = value;
 				NotifyOfPropertyChange("IsLoading");
 				Refresh();
+				IsLoadingChanged(this, new EventArgs<bool>(isLoading));
 			}
 		}
 
