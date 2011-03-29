@@ -8,6 +8,11 @@
 			 d:DesignWidth="400">
 
 	<Grid x:Name="IsBusy">
+		<ToolTipService.ToolTip>
+			<Border>
+				<ItemsControl ItemsSource="{Binding ActiveTasks}" />
+			</Border>
+		</ToolTipService.ToolTip>
 		<TextBlock Text="Working..." />
 	</Grid>
 </UserControl>
