@@ -104,6 +104,11 @@ namespace Raven.Json.Linq
         }
         private List<RavenJToken> _items;
 
+		public override IEnumerable<RavenJToken> Children()
+		{
+			return Items;
+		}
+
         internal new static RavenJArray Load(JsonReader reader)
         {
             if (reader.TokenType != JsonToken.StartArray)

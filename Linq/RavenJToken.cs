@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Newtonsoft.Json;
@@ -30,6 +31,8 @@ namespace Raven.Json.Linq
 			get { throw new InvalidOperationException("Cannot access child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
 			set { throw new InvalidOperationException("Cannot set child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
 		}
+
+    	public abstract IEnumerable<RavenJToken> Children();
 
         internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
         {
