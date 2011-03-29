@@ -46,6 +46,15 @@ namespace Raven.Json.Linq
 			}
 		}
 
+		public RavenJObject(object o)
+		{
+			if (o is KeyValuePair<string, RavenJToken>)
+			{
+				_properties = new CopyOnWriteJDictionary<string>();
+				_properties.Add((KeyValuePair<string, RavenJToken>)o);
+			}
+		}
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenJObject"/> class from another <see cref="RavenJObject"/> object.
         /// </summary>
