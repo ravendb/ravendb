@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Munin.Tests.Bugs
@@ -52,11 +52,11 @@ namespace Raven.Munin.Tests.Bugs
 
 			using (database.BeginTransaction())
 			{
-				Assert.True(table.Put(JToken.FromObject(localKey), localData));
+				Assert.True(table.Put(RavenJToken.FromObject(localKey), localData));
 
 				for (int i = 0; i < 50; i++)
 				{
-					Assert.True(table.Put(JToken.FromObject(localKey + "_" + i), localData));
+					Assert.True(table.Put(RavenJToken.FromObject(localKey + "_" + i), localData));
 				}
 
 				database.Commit();
