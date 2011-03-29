@@ -43,6 +43,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
 #endif
+		
+		private readonly HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory();
 
 		/// <summary>
 		/// Gets the shared operations headers.
@@ -53,6 +55,14 @@ namespace Raven.Client.Document
 #else
 		public System.Collections.Generic.IDictionary<string,string> SharedOperationsHeaders { get; private set; }
 #endif
+
+		///<summary>
+		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
+		///</summary>
+		public HttpJsonRequestFactory JsonRequestFactory
+		{
+			get { return jsonRequestFactory; }
+		}
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -407,7 +417,7 @@ namespace Raven.Client.Document
 			var replicationInformer = new ReplicationInformer(Conventions);
 			databaseCommandsGenerator = () =>
 			{
-				var serverClient = new ServerClient(Url, Conventions, credentials, replicationInformer);
+				var serverClient = new ServerClient(Url, Conventions, credentials, replicationInformer, jsonRequestFactory);
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return serverClient;
 				return serverClient.ForDatabase(DefaultDatabase);
@@ -416,7 +426,7 @@ namespace Raven.Client.Document
 #if !NET_3_5
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory);
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
 				return asyncServerClient.ForDatabase(DefaultDatabase);

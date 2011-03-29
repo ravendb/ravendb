@@ -1,4 +1,6 @@
-﻿namespace Raven.Client.Silverlight.Client
+﻿using Raven.Client.Client.Async;
+
+namespace Raven.Client.Silverlight.Client
 {
 	using System;
 	using System.Collections.Generic;
@@ -94,9 +96,9 @@
 			return ToRequest(url, operationsHeaders, credentials, "GET");
 		}
 
-		public static HttpJsonRequest ToJsonRequest(this string url, object requestor, ICredentials credentials, Document.DocumentConvention convention)
+		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, Document.DocumentConvention convention)
 		{
-			return HttpJsonRequest.CreateHttpJsonRequest(requestor, url, "GET", credentials, convention);
+			return requestor.JsonRequestFactory.CreateHttpJsonRequest(requestor, url, "GET", credentials, convention);
 		}
 
 		static HttpWebRequest WithOperationHeaders(this HttpWebRequest request, IDictionary<string, string> operationsHeaders)

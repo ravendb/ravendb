@@ -29,7 +29,6 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
         public CascadeDelete()
         {
-			HttpJsonRequest.ResetCache(); 
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(CascadeDelete)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
             database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");

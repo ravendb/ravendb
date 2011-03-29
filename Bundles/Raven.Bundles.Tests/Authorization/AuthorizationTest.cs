@@ -38,7 +38,6 @@ namespace Raven.Bundles.Tests.Authorization
 
 		protected AuthorizationTest()
 		{
-			HttpJsonRequest.ResetCache(); 
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
             server = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
 			{

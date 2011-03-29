@@ -37,19 +37,26 @@ namespace Raven.Client.Client.Async
 	{
 		private readonly string url;
 		private readonly ICredentials credentials;
+		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly DocumentConvention convention;
+
+		/// <summary>
+		/// Get the current json request factory
+		/// </summary>
+		public HttpJsonRequestFactory JsonRequestFactory
+		{
+			get { return jsonRequestFactory; }
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
-		/// <param name="url">The URL.</param>
-		/// <param name="convention">The convention.</param>
-		/// <param name="credentials">The credentials.</param>
-		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials)
+		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory)
 		{
 			this.url = url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url;
 			this.convention = convention;
 			this.credentials = credentials;
+			this.jsonRequestFactory = jsonRequestFactory;
 		}
 
 		/// <summary>
@@ -72,7 +79,7 @@ namespace Raven.Client.Client.Async
 			if (databaseUrl.EndsWith("/") == false)
 				databaseUrl += "/";
 			databaseUrl = databaseUrl + "databases/" + database + "/";
-			return new AsyncServerClient(databaseUrl, convention, credentials)
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory)
 			{
 				operationsHeaders = operationsHeaders
 			};
@@ -84,7 +91,7 @@ namespace Raven.Client.Client.Async
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new AsyncServerClient(url, convention, credentialsForSession);
+			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory);
 		}
 
 		/// <summary>
@@ -97,7 +104,7 @@ namespace Raven.Client.Client.Async
 			if (indexOfDatabases == -1)
 				return this;
 
-			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials);
+			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials, jsonRequestFactory);
 		}
 
 		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
@@ -194,7 +201,7 @@ namespace Raven.Client.Client.Async
 		/// <returns></returns>
 		public Task<JsonDocument[]> MultiGetAsync(string[] keys)
 		{
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
 			var array = Encoding.UTF8.GetBytes(new JArray(keys).ToString(Formatting.None));
 			return request.WriteAsync(array)
 				.ContinueWith(writeTask => request.ReadResponseStringAsync())
@@ -275,7 +282,7 @@ namespace Raven.Client.Client.Async
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 
 			return request.ReadResponseStringAsync()
 				.ContinueWith(task =>
@@ -310,7 +317,7 @@ namespace Raven.Client.Client.Async
 					}";
 
 			var metadata = new JObject();
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/linearQuery", "POST", metadata, credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/linearQuery", "POST", metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request
@@ -368,7 +375,7 @@ namespace Raven.Client.Client.Async
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 			if (etag != null)
 				metadata["ETag"] = new JValue(etag.Value.ToString());
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/docs/" + key, method, metadata, credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, method, metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.WriteAsync(Encoding.UTF8.GetBytes(document.ToString()))
@@ -465,7 +472,7 @@ namespace Raven.Client.Client.Async
 							throw;
 					}
 
-					var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
+					var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 					request.AddOperationHeaders(OperationsHeaders);
 
 					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
@@ -538,7 +545,7 @@ namespace Raven.Client.Client.Async
 		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
 		{
 		    var url2 = (url + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url2, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url2, "GET", credentials, convention);
 
 			return request.ReadResponseStringAsync()
 				.ContinueWith(task =>
@@ -589,7 +596,7 @@ namespace Raven.Client.Client.Async
 				Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
 				Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
 
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			var serializer = convention.CreateSerializer();
 
@@ -616,7 +623,7 @@ namespace Raven.Client.Client.Async
 		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas)
 		{
 			var metadata = new JObject();
-			var req = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
+			var req = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
 			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
 			var data = Encoding.UTF8.GetBytes(jArray.ToString(Formatting.None));
 
@@ -763,7 +770,7 @@ namespace Raven.Client.Client.Async
 			if (etag != null)
 				metadata["ETag"] = new JValue(etag.Value.ToString());
 
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url.Static(key), "PUT", metadata, credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url.Static(key), "PUT", metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request
@@ -833,7 +840,7 @@ namespace Raven.Client.Client.Async
 			if (etag != null)
 				metadata["ETag"] = new JValue(etag.Value.ToString());
 
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url.Static(key), "DELETE", metadata, credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url.Static(key), "DELETE", metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseStringAsync();

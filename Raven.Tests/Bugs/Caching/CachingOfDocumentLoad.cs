@@ -11,11 +11,6 @@ namespace Raven.Tests.Bugs.Caching
 {
     public class CachingOfDocumentLoad : RemoteClientTest
     {
-        public CachingOfDocumentLoad()
-        {
-            HttpJsonRequest.ResetCache();
-        }
-
         [Fact]
         public void Can_cache_document_load()
         {
@@ -37,7 +32,7 @@ namespace Raven.Tests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Load<User>("users/1");
-                    Assert.Equal(1, HttpJsonRequest.NumberOfCachedRequests);
+                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
                 }
             }
         }
@@ -64,14 +59,14 @@ namespace Raven.Tests.Bugs.Caching
                 {
                     var user = s.Load<User>("users/1");
                     user.Name = "Rahien";
-                    Assert.Equal(1, HttpJsonRequest.NumberOfCachedRequests);
+					Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
                     s.Load<User>("users/1");
-                    Assert.Equal(1, HttpJsonRequest.NumberOfCachedRequests); // did NOT get from cache
+					Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests); // did NOT get from cache
                 }
             }
         }

@@ -24,7 +24,6 @@ namespace Raven.Tests
 
         protected RavenDbServer GetNewServer()
         {
-			HttpJsonRequest.ResetCache();
         	var ravenDbServer = new RavenDbServer(new RavenConfiguration
         	{
         		Port = 8080,

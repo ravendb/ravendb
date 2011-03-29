@@ -30,7 +30,6 @@ namespace Raven.Bundles.Tests.Replication
 
         public ReplicationBase()
         {
-			HttpJsonRequest.ResetCache();
 			for (int i = 0; i < 15; i++)
             {
                 database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data #" + i);

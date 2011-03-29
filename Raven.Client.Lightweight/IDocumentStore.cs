@@ -33,6 +33,11 @@ namespace Raven.Client
 #endif
 
 		/// <summary>
+		/// Get the <see cref="HttpJsonRequestFactory"/> for this store
+		/// </summary>
+		HttpJsonRequestFactory JsonRequestFactory { get; }
+
+		/// <summary>
 		/// Occurs when an entity is stored inside any session opened from this instance
 		/// </summary>
 		event EventHandler<StoredEntityEventArgs> Stored;
