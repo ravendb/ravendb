@@ -82,7 +82,6 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		[ExpectedException(typeof(WebException))]
 		public IEnumerable<Task> Querying_against_a_nonindexed_field_raises_an_exception()
 		{
 			var dbname = GenerateNewDatabaseName();
@@ -113,6 +112,9 @@ namespace Raven.Tests.Silverlight
 					.QueryAsync("Test", indexQuery, null);
 				yield return (query);
 
+				if(query.Exception != null)
+					Assert.IsInstanceOfType(query.Exception.ExtractSingleInnerException(), typeof(WebException));
+
 				if (query.Result.IsStale)
 				{
 					yield return Delay(100);
@@ -120,6 +122,7 @@ namespace Raven.Tests.Silverlight
 				}
 				yield break;
 			}
+			Assert.Fail("Expected to get an exception");
 		}
 	}
 }
