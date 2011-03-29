@@ -133,7 +133,8 @@ namespace Raven.Json.Utilities
 
 		public class CopyOnWriteDictEnumerator : IEnumerator<KeyValuePair<TKey, RavenJToken>>
 		{
-			private IEnumerator<KeyValuePair<TKey, RavenJToken>> _inheritted, _local, _current;
+			private readonly IEnumerator<KeyValuePair<TKey, RavenJToken>> _inheritted, _local;
+			private IEnumerator<KeyValuePair<TKey, RavenJToken>> _current;
 
 			public CopyOnWriteDictEnumerator(IEnumerator<KeyValuePair<TKey, RavenJToken>> inheritted, IEnumerator<KeyValuePair<TKey, RavenJToken>> local)
 			{
@@ -153,16 +154,22 @@ namespace Raven.Json.Utilities
 				if (_current == null)
 					return false;
 
-				if (!_current.MoveNext())
+				while (true)
 				{
-					if (_current == _inheritted && _local != null)
+					if (!_current.MoveNext())
 					{
-						_current = _local;
-						return _current.MoveNext();
+						if (_current == _inheritted && _local != null)
+						{
+							_current = _local;
+							continue;
+						}
+						_current = null;
+						return false;
 					}
-					return false;
+
+					if (_current.Current.Value != DeletedMarker)
+						return true;
 				}
-				return true;
 			}
 
 			public void Reset()
