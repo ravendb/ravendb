@@ -1,33 +1,30 @@
-﻿using System.IO;
-using System.Threading.Tasks;
-using System.Windows;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Client;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
-using Raven.Database.Json;
-using System.Linq;
-
-namespace Raven.Studio.Features.Database
+﻿namespace Raven.Studio.Features.Database
 {
+	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
+	using System.IO;
 	using System.Linq;
+	using System.Threading.Tasks;
 	using Abstractions.Data;
 	using Caliburn.Micro;
+	using Client;
 	using Collections;
 	using Documents;
 	using Framework;
 	using Messages;
+	using Newtonsoft.Json;
+	using Newtonsoft.Json.Linq;
+	using Raven.Database.Data;
+	using Raven.Database.Indexing;
+	using Raven.Database.Json;
 
 	public class SummaryViewModel : RavenScreen, IDatabaseScreenMenuItem,
-		IHandle<DocumentDeleted>
+									IHandle<DocumentDeleted>,
+									IHandle<StatisticsUpdated>
 	{
-		readonly IServer server;
 		readonly IEventAggregator events;
-
-		public int Index { get { return 10; } }
+		readonly IServer server;
 
 		[ImportingConstructor]
 		public SummaryViewModel(IServer server, IEventAggregator events)
@@ -40,21 +37,29 @@ namespace Raven.Studio.Features.Database
 			DisplayName = "Summary";
 
 			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange(string.Empty); };
+
+			CollectionsStatus = "Retrieving collections.";
+			ShowCreateSampleData = true;
 		}
 
-		public string DatabaseName
-		{
-			get { return server.CurrentDatabase; }
-		}
+		public string DatabaseName { get { return server.CurrentDatabase; } }
 
-		public IServer Server
-		{
-			get { return server; }
-		}
+		public IServer Server { get { return server; } }
 
 		public BindableCollection<DocumentViewModel> RecentDocuments { get; private set; }
 
 		public IEnumerable<Collection> Collections { get; private set; }
+
+		string collectionsStatus;
+		public string CollectionsStatus
+		{
+			get { return collectionsStatus; }
+			set
+			{
+				collectionsStatus = value;
+				NotifyOfPropertyChange(() => CollectionsStatus);
+			}
+		}
 
 		public long LargestCollectionCount
 		{
@@ -66,40 +71,7 @@ namespace Raven.Studio.Features.Database
 			}
 		}
 
-		public void CreateSampleData()
-		{
-			// this code assumes a small enough dataset, and doesn't do any sort
-			// of paging or batching whatsoever.
-
-			using(var sampleData= typeof(SummaryViewModel).Assembly.GetManifestResourceStream("Raven.Studio.SampleData.MvcMusicStore_Dump.json"))
-			using(var streamReader = new StreamReader(sampleData))
-			using(var documentSession = Server.OpenSession())
-			{
-				var musicStoreData = (JObject)JToken.ReadFrom(new JsonTextReader(streamReader));
-				foreach (var index in musicStoreData.Value<JArray>("Indexes"))
-				{
-					var indexName = index.Value<string>("name");
-					documentSession.Advanced.AsyncDatabaseCommands.PutIndexAsync(indexName,
-						index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>()
-						, true)
-						.ContinueOnSuccess(task => { });
-				}
-
-				documentSession.Advanced.AsyncDatabaseCommands.BatchAsync(
-						musicStoreData.Value<JArray>("Docs").OfType<JObject>().Select(doc =>
-						{
-							var metadata = doc.Value<JObject>("@metadata");
-							doc.Remove("@metadata");
-							return new PutCommandData
-							{
-								Document = doc,
-								Metadata = metadata,
-								Key = metadata.Value<string>("@id"),
-							};
-						}).ToArray()
-					).ContinueOnSuccess(task => { }); ;
-			}
-		}
+		public int Index { get { return 10; } }
 
 		public void Handle(DocumentDeleted message)
 		{
@@ -114,56 +86,133 @@ namespace Raven.Studio.Features.Database
 			//    .Apply(x => x.Count--);
 		}
 
+		bool showCreateSampleData;
+
+		public bool ShowCreateSampleData { get { return showCreateSampleData; } set { showCreateSampleData = value; NotifyOfPropertyChange(()=>ShowCreateSampleData); } }
+
+		public void CreateSampleData()
+		{
+			// this code assumes a small enough dataset, and doesn't do any sort
+			// of paging or batching whatsoever.
+			
+			ShowCreateSampleData = false;
+
+			WorkStarted("creating sample data");
+			WorkStarted("creating sample indexes");
+			using (var sampleData = typeof(SummaryViewModel).Assembly.GetManifestResourceStream("Raven.Studio.SampleData.MvcMusicStore_Dump.json"))
+			using (var streamReader = new StreamReader(sampleData))
+			using (var documentSession = Server.OpenSession())
+			{
+				var musicStoreData = (JObject)JToken.ReadFrom(new JsonTextReader(streamReader));
+				foreach (var index in musicStoreData.Value<JArray>("Indexes"))
+				{
+					var indexName = index.Value<string>("name");
+					documentSession.Advanced.AsyncDatabaseCommands
+						.PutIndexAsync(indexName,index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>(), true)
+						.ContinueOnSuccess(task =>
+						                   	{
+												WorkCompleted("creating sample indexes");
+						                   	});
+				}
+
+				documentSession.Advanced.AsyncDatabaseCommands.BatchAsync(
+					musicStoreData.Value<JArray>("Docs").OfType<JObject>().Select(doc =>
+					{
+						var metadata = doc.Value<JObject>("@metadata");
+						doc.Remove("@metadata");
+						return new PutCommandData
+								{
+									Document = doc,
+									Metadata = metadata,
+									Key = metadata.Value<string>("@id"),
+								};
+					}).ToArray()
+					).ContinueOnSuccess(task =>
+					                    	{
+												WorkCompleted("creating sample data");
+					                    	});
+			}
+		}
+
 		public void NavigateToCollection(Collection collection)
 		{
 			events.Publish(new DatabaseScreenRequested(() =>
-			{
-				var vm = IoC.Get<CollectionsViewModel>();
-				vm.ActiveCollection = collection;
-				return vm;
-			}));
+														{
+															var vm = IoC.Get<CollectionsViewModel>();
+															vm.ActiveCollection = collection;
+															return vm;
+														}));
 		}
 
 		protected override void OnActivate()
 		{
+			RetrieveSummary();
+		}
+
+		void RetrieveSummary()
+		{
 			using (var session = server.OpenSession())
 			{
-				WorkStarted("fetching collections");
 				ExecuteCollectionQueryWithRetry(session, 5);
 
 				WorkStarted("fetching recent documents");
 				session.Advanced.AsyncDatabaseCommands
 					.GetDocumentsAsync(0, 12)
-					.ContinueOnSuccess(x =>
-										{
-											RecentDocuments = new BindableCollection<DocumentViewModel>(x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
-											NotifyOfPropertyChange(() => RecentDocuments);
-											WorkCompleted("fetching recent documents");
-										});
+					.ContinueWith(
+						x =>
+						{
+							WorkCompleted("fetching recent documents");
+							RecentDocuments = new BindableCollection<DocumentViewModel>(x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
+							NotifyOfPropertyChange(() => RecentDocuments);
+						},
+						faulted =>
+						{
+							WorkCompleted("fetching recent documents");
+							NotifyError("Unable to retreive recent documents from server.");
+						});
 			}
 		}
 
-		private void ExecuteCollectionQueryWithRetry(IAsyncDocumentSession session, int retry)
+		void ExecuteCollectionQueryWithRetry(IAsyncDocumentSession session, int retry)
 		{
+			WorkStarted("fetching collections");
 			session.Advanced.AsyncDatabaseCommands
 				.GetCollectionsAsync(0, 25)
 				.ContinueWith(task =>
-				{
-					if(task.Exception != null && retry > 0)
 					{
-						TaskEx.Delay(50)
-							.ContinueWith(_ => ExecuteCollectionQueryWithRetry(session, retry - 1));
-						return;
-					}
+						if (task.Exception != null && retry > 0)
+						{
+							WorkCompleted("fetching collections");
+							TaskEx.Delay(50)
+								.ContinueWith(_ => ExecuteCollectionQueryWithRetry(session, retry - 1));
+							return;
+						}
 
-					task.ContinueOnSuccess(x =>
-					{
-						Collections = x.Result;
-						NotifyOfPropertyChange(() => LargestCollectionCount);
-						NotifyOfPropertyChange(() => Collections);
-						WorkCompleted("fetching collections");
+						task.ContinueWith(
+							x =>
+							{
+								WorkCompleted("fetching collections");
+								Collections = x.Result;
+								NotifyOfPropertyChange(() => LargestCollectionCount);
+								NotifyOfPropertyChange(() => Collections);
+								CollectionsStatus = Collections.Any() ? string.Empty : "The database contains no collections.";
+							},
+							faulted =>
+							{
+								WorkCompleted("fetching collections");
+								const string error = "Unable to retreive collections from server.";
+								NotifyError(error);
+								CollectionsStatus = error;
+
+							});
 					});
-				});
+		}
+
+		public void Handle(StatisticsUpdated message)
+		{
+			if (!message.HasDocumentCountChanged) return;
+
+			RetrieveSummary();
 		}
 	}
 }

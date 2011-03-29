@@ -18,6 +18,7 @@
 		public BusyStatusViewModel(IEventAggregator events)
 		{
 			events.Subscribe(this);
+			ActiveTasks = new BindableCollection<string>();
 		}
 
 		public bool IsBusy
@@ -25,16 +26,22 @@
 			get { return count > 0; }
 		}
 
+		public IObservableCollection<string> ActiveTasks {get; private set;}
+
 		public void Handle(WorkStarted message)
 		{
-			if (!string.IsNullOrEmpty(message.Job)) SimpleLogger.Start(message.Job);
+			var job = message.Job;
+			if (!string.IsNullOrEmpty(job)) SimpleLogger.Start(job);
 			count++;
+			ActiveTasks.Add(job ?? "unknown");
 			NotifyOfPropertyChange(() => IsBusy);
 		}
 
 		public void Handle(WorkCompleted message)
 		{
-			if(!string.IsNullOrEmpty(message.Job)) SimpleLogger.End(message.Job);
+			var job = message.Job;
+			if(!string.IsNullOrEmpty(job)) SimpleLogger.End(job);
+			ActiveTasks.Remove(job ?? "unknown");
 			count--;
 			NotifyOfPropertyChange( ()=> IsBusy);
 		}

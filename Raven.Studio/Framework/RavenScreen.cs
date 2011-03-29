@@ -32,5 +32,10 @@
 			Events.Publish(new WorkCompleted(job));
 			IsBusy = false;
 		}
+
+		protected void NotifyError(string error)
+		{
+			Events.Publish(new NotificationRaised(error, NotificationLevel.Error));
+		}
 	}
 }

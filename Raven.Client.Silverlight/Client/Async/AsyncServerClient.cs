@@ -29,6 +29,7 @@ namespace Raven.Client.Client.Async
 	using Http.Json;
 	using Extensions;
 	using Silverlight.Client;
+	using Silverlight.Data;
 
 	/// <summary>
 	/// Access the database commands in async fashion
@@ -194,6 +195,52 @@ namespace Raven.Client.Client.Async
 			return false;
 		}
 
+		private T AttemptToProcessResponse<T>(Func<T> process) where T:class 
+		{
+			try
+			{
+				return process();
+			}
+			catch (AggregateException e)
+			{
+				var webException = e.ExtractSingleInnerException() as WebException;
+				if (webException == null) throw;
+
+				if (HandleException(webException)) return null; 
+				
+				throw; 
+			}
+			catch (WebException e)
+			{
+				if (HandleException(e)) return null;
+
+				throw;
+			}
+		}
+
+		/// <summary>
+		/// Attempts to handle an exception raised when receiving a response from the server
+		/// </summary>
+		/// <param name="e">The exception to handle</param>
+		/// <returns>returns true if the exception is handled, false if it should be thrown</returns>
+		private bool HandleException(WebException e)
+		{
+			var httpWebResponse = e.Response as HttpWebResponse;
+			if (httpWebResponse == null)
+			{
+				return false;
+			}
+			if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
+			{
+				var content = new StreamReader(httpWebResponse.GetResponseStream());
+				var jo = JObject.Load(new JsonTextReader(content));
+				var error = jo.Deserialize<ServerRequestError>(convention);
+
+				throw new Exception(error.Error);
+			}
+			return false;
+		}
+
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
@@ -285,23 +332,23 @@ namespace Raven.Client.Client.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 
 			return request.ReadResponseStringAsync()
-				.ContinueWith(task =>
+				.ContinueWith(task => AttemptToProcessResponse( ()=>
 				{
 					JToken json;
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-						json = (JToken)convention.CreateSerializer().Deserialize(reader);
+						json = (JToken) convention.CreateSerializer().Deserialize(reader);
 
 					return new QueryResult
-					{
-						IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-						IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-						IndexEtag = new Guid(request.ResponseHeaders["ETag"].First()),
-						Results = json["Results"].Children().Cast<JObject>().ToList(),
-						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-						SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-						Includes = json["Includes"].Children().Cast<JObject>().ToList(),
-					};
-				});
+							{
+								IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+								IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
+								IndexEtag = new Guid(request.ResponseHeaders["ETag"].First()),
+								Results = json["Results"].Children().Cast<JObject>().ToList(),
+								TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+								SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+								Includes = json["Includes"].Children().Cast<JObject>().ToList(),
+							};
+				}));
 		}
 
 		/// <summary>

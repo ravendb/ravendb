@@ -3,6 +3,7 @@
 	using System;
 	using System.Windows;
 	using System.Windows.Controls;
+	using Caliburn.Micro;
 	using Framework;
 	using Action = Caliburn.Micro.Action;
 
@@ -66,7 +67,7 @@
 		/// </summary>
 		public FrameworkElement PageContainer
 		{
-			get { return (FrameworkElement) GetValue(PageContainerProperty); }
+			get { return (FrameworkElement)GetValue(PageContainerProperty); }
 			set { SetValue(PageContainerProperty, value); }
 		}
 
@@ -82,6 +83,12 @@
 		static void ItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
 			var pager = (Pager) d;
+			var source = (IBindablePagedQuery) e.NewValue;
+			source.IsLoadingChanged += ( s, args ) =>
+			                           	{
+			                           		var state = args.Value ? "Loading" : "Loaded";
+			                           		Execute.OnUIThread(() => VisualStateManager.GoToState(pager, state, true));
+			                           	};
 			Action.SetTarget(pager.LayoutRoot, e.NewValue);
 		}
 
