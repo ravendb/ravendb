@@ -4,7 +4,9 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:cm="http://www.caliburnproject.org"
 			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-			 xmlns:c="clr-namespace:Raven.Studio.Controls" xmlns:f="clr-namespace:Raven.Studio.Framework" x:Class="Raven.Studio.Shell.ShellView"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 xmlns:f="clr-namespace:Raven.Studio.Framework"
+			 x:Class="Raven.Studio.Shell.ShellView"
 			 mc:Ignorable="d"
 			 UseLayoutRounding="True"
 			 d:DesignHeight="480"
@@ -68,9 +70,11 @@
 					</Border>
 
 					<ContentControl x:Name="Navigation"
+									Visibility="{Binding Server.IsInitialized, Converter={StaticResource visibleWhenTrue}}"
 									Grid.Row="1" />
 
 					<ContentControl x:Name="BusyStatus"
+									Margin="0 6 0 0"
 									HorizontalAlignment="Right"
 									VerticalAlignment="Center"
 									Grid.Row="1" />
@@ -78,11 +82,20 @@
 					<ContentControl x:Name="Notifications"
 									Grid.Row="2" />
 
-					<tk:TransitioningContentControl x:Name="ActiveItem"
-													Grid.Row="3"
-													Transition="LeftTransition"
-													VerticalContentAlignment="Stretch"
-													HorizontalContentAlignment="Stretch" />
+					<Grid Grid.Row="3">
+
+						<Grid Margin="8 8"
+							  VerticalAlignment="Center"
+							  HorizontalAlignment="Center">
+							<TextBlock Text="{Binding Server.Status}"
+									   Style="{StaticResource SectionHeader}" />
+						</Grid>
+
+						<tk:TransitioningContentControl x:Name="ActiveItem"
+														Transition="LeftTransition"
+														VerticalContentAlignment="Stretch"
+														HorizontalContentAlignment="Stretch" />
+					</Grid>
 
 					<Border x:Name="footer"
 							Grid.Row="4"
@@ -102,7 +115,7 @@
 
 				<Grid x:Name="resizeHandles"
 					  Visibility="{Binding ShouldDisplaySystemButtons, Converter={StaticResource visibleWhenTrue}}">
-										
+
 					<Rectangle VerticalAlignment="Top"
 							   HorizontalAlignment="Stretch"
 							   Fill="Transparent"
