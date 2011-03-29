@@ -272,6 +272,7 @@
     <Compile Include="Bugs\TransformResults\StackOverFlowViews.cs" />
     <Compile Include="Bugs\TransformResults\WithGuidId.cs" />
     <Compile Include="Bugs\TransitiveNull.cs" />
+    <Compile Include="Bugs\TranslatingLinqQueriesToIndexes.cs" />
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Bugs\User.cs" />
