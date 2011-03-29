@@ -44,7 +44,7 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "PATCH":
 					var patchRequestJson = context.ReadJsonArray();
-					var patchRequests = patchRequestJson.Cast<JObject>().Select(PatchRequest.FromJson).ToArray();
+					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
 					switch (patchResult)
 					{
