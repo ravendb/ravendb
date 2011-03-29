@@ -5,26 +5,27 @@
 //-----------------------------------------------------------------------
 using System;
 using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Munin
 {
-    public class ModifiedJTokenComparer : JTokenComparer
+    public class ModifiedJTokenComparer : RavenJTokenComparer
     {
-        private readonly Func<JToken, JToken> modifier;
+        private readonly Func<RavenJToken, RavenJToken> modifier;
 
-        public ModifiedJTokenComparer(Func<JToken, JToken> modifier)
+		public ModifiedJTokenComparer(Func<RavenJToken, RavenJToken> modifier)
         {
             this.modifier = modifier;
         }
 
-        public override int Compare(JToken x, JToken y)
+		public override int Compare(RavenJToken x, RavenJToken y)
         {
             var localX = x.Type == JTokenType.Object ? modifier(x) : x;
             var localY = y.Type == JTokenType.Object ? modifier(y) : y;
             return base.Compare(localX, localY);
         }
 
-        public override int GetHashCode(JToken obj)
+		public override int GetHashCode(RavenJToken obj)
         {
             var localObj = obj.Type == JTokenType.Object ? modifier(obj) : obj;
             return base.GetHashCode(localObj);

@@ -13,6 +13,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Munin
 {
@@ -121,7 +122,7 @@ namespace Raven.Munin
 				var cmds = ReadJObject(log);
 				return cmds.Values().Select(cmd => new Command
 				{
-					Key = cmd.Value<JToken>("key"),
+					Key = cmd.Value<RavenJToken>("key"),
 					Position = cmd.Value<long>("position"),
 					Size = cmd.Value<int>("size"),
 					Type = (CommandType)cmd.Value<byte>("type"),
@@ -244,22 +245,21 @@ namespace Raven.Munin
 
 			if (dataSizeInBytes > 0)
 			{
-				WriteTo(log, new JArray(new JObject
-				{
-					{"type", (short) CommandType.Skip},
-					{"size", dataSizeInBytes}
-				}));
+				WriteTo(log, new RavenJArray(new RavenJObject
+				(
+					new KeyValuePair<string, RavenJToken>("type", new RavenJValue((short)CommandType.Skip)),
+					new KeyValuePair<string, RavenJToken>("size", new RavenJValue(dataSizeInBytes))
+				)));
 			}
 
-			var array = new JArray();
+			var array = new RavenJArray();
 			foreach (var command in cmds)
 			{
-				var cmd = new JObject
-				{
-					{"type", (short) command.Type},
-					{"key", command.Key},
-					{"dicId", command.DictionaryId}
-				};
+
+				var cmd = new RavenJObject();
+				cmd.AddValueProperty("type", (short) command.Type);
+				cmd.Properties.Add("key", command.Key);
+				cmd.AddValueProperty("dicId", command.DictionaryId);
 
 				if (command.Type == CommandType.Put)
 				{
@@ -274,19 +274,19 @@ namespace Raven.Munin
 							log.Write(sha, 0, sha.Length);
 						}
 					}
-					cmd.Add("position", command.Position);
-					cmd.Add("size", command.Size);
+					cmd.AddValueProperty("position", command.Position);
+					cmd.AddValueProperty("size", command.Size);
 				}
 
-				array.Add(cmd);
+				array.Items.Add(cmd);
 			}
 
-			if (array.Count == 0 && dataSizeInBytes == 0)
+			if (array.Length == 0 && dataSizeInBytes == 0)
 				return;
 			WriteTo(log, array);
 		}
 
-		private static void WriteTo(Stream log, JToken jToken)
+		private static void WriteTo(Stream log, RavenJToken jToken)
 		{
 			jToken.WriteTo(new BsonWriter(log)
 			{
