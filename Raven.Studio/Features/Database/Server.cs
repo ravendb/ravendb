@@ -227,19 +227,22 @@ namespace Raven.Studio.Features.Database
             {
                 session.Advanced.AsyncDatabaseCommands
                     .GetStatisticsAsync()
-                    .ContinueOnSuccess(x =>
-                                           {
-                                               snapshots[CurrentDatabase] = x.Result;
-                                               ProcessStatistics(x.Result);
-                                           });
+                    .ContinueOnSuccess(x => ProcessStatistics(x.Result));
             }
         }
 
         private void ProcessStatistics(DatabaseStatistics mostRecent)
         {
+			bool docsChanged = false;
+			if(snapshots.ContainsKey(CurrentDatabase))
+			{
+				docsChanged = (snapshots[CurrentDatabase].CountOfDocuments != mostRecent.CountOfDocuments);
+			}
+			
+			snapshots[CurrentDatabase] = mostRecent;
             statistics.Accept(mostRecent);
             Errors = mostRecent.Errors.OrderByDescending(error => error.Timestamp);
-            events.Publish(new StatisticsUpdated(mostRecent));
+            events.Publish(new StatisticsUpdated(mostRecent){HasDocumentCountChanged = docsChanged});
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿namespace Raven.Studio.Features.Database
 {
+	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using System.IO;
@@ -19,7 +20,8 @@
 	using Raven.Database.Json;
 
 	public class SummaryViewModel : RavenScreen, IDatabaseScreenMenuItem,
-	                                IHandle<DocumentDeleted>
+									IHandle<DocumentDeleted>,
+									IHandle<StatisticsUpdated>
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
@@ -50,8 +52,8 @@
 			get
 			{
 				return (Collections == null || !Collections.Any())
-				       	? 0
-				       	: Collections.Max(x => x.Count);
+						? 0
+						: Collections.Max(x => x.Count);
 			}
 		}
 
@@ -75,32 +77,32 @@
 			// this code assumes a small enough dataset, and doesn't do any sort
 			// of paging or batching whatsoever.
 
-			using (var sampleData = typeof (SummaryViewModel).Assembly.GetManifestResourceStream("Raven.Studio.SampleData.MvcMusicStore_Dump.json"))
+			using (var sampleData = typeof(SummaryViewModel).Assembly.GetManifestResourceStream("Raven.Studio.SampleData.MvcMusicStore_Dump.json"))
 			using (var streamReader = new StreamReader(sampleData))
 			using (var documentSession = Server.OpenSession())
 			{
-				var musicStoreData = (JObject) JToken.ReadFrom(new JsonTextReader(streamReader));
+				var musicStoreData = (JObject)JToken.ReadFrom(new JsonTextReader(streamReader));
 				foreach (var index in musicStoreData.Value<JArray>("Indexes"))
 				{
 					var indexName = index.Value<string>("name");
 					documentSession.Advanced.AsyncDatabaseCommands.PutIndexAsync(indexName,
-					                                                             index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>()
-					                                                             , true)
+																				 index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>()
+																				 , true)
 						.ContinueOnSuccess(task => { });
 				}
 
 				documentSession.Advanced.AsyncDatabaseCommands.BatchAsync(
 					musicStoreData.Value<JArray>("Docs").OfType<JObject>().Select(doc =>
-					                                                              	{
-					                                                              		var metadata = doc.Value<JObject>("@metadata");
-					                                                              		doc.Remove("@metadata");
-					                                                              		return new PutCommandData
-					                                                              		       	{
-					                                                              		       		Document = doc,
-					                                                              		       		Metadata = metadata,
-					                                                              		       		Key = metadata.Value<string>("@id"),
-					                                                              		       	};
-					                                                              	}).ToArray()
+																					{
+																						var metadata = doc.Value<JObject>("@metadata");
+																						doc.Remove("@metadata");
+																						return new PutCommandData
+																								{
+																									Document = doc,
+																									Metadata = metadata,
+																									Key = metadata.Value<string>("@id"),
+																								};
+																					}).ToArray()
 					).ContinueOnSuccess(task => { });
 				;
 			}
@@ -109,14 +111,19 @@
 		public void NavigateToCollection(Collection collection)
 		{
 			events.Publish(new DatabaseScreenRequested(() =>
-			                                           	{
-			                                           		var vm = IoC.Get<CollectionsViewModel>();
-			                                           		vm.ActiveCollection = collection;
-			                                           		return vm;
-			                                           	}));
+														{
+															var vm = IoC.Get<CollectionsViewModel>();
+															vm.ActiveCollection = collection;
+															return vm;
+														}));
 		}
 
-		protected override void OnActivate()
+		protected override void OnActivate() 
+		{
+			RetrieveSummary();
+		}
+
+		void RetrieveSummary()
 		{
 			using (var session = server.OpenSession())
 			{
@@ -146,28 +153,35 @@
 			session.Advanced.AsyncDatabaseCommands
 				.GetCollectionsAsync(0, 25)
 				.ContinueWith(task =>
-				              	{
-				              		if (task.Exception != null && retry > 0)
-				              		{
-				              			TaskEx.Delay(50)
-				              				.ContinueWith(_ => ExecuteCollectionQueryWithRetry(session, retry - 1));
-				              			return;
-				              		}
+					{
+						if (task.Exception != null && retry > 0)
+						{
+							TaskEx.Delay(50)
+								.ContinueWith(_ => ExecuteCollectionQueryWithRetry(session, retry - 1));
+							return;
+						}
 
-				              		task.ContinueWith(
-				              			x =>
-				              				{
-				              					WorkCompleted("fetching collections");
-				              					Collections = x.Result;
-				              					NotifyOfPropertyChange(() => LargestCollectionCount);
-				              					NotifyOfPropertyChange(() => Collections);
-				              				},
-				              			faulted =>
-				              				{
-				              					WorkCompleted("fetching collections");
-				              					NotifyError("Unable to retreive collections from server.");
-				              				});
-				              	});
+						task.ContinueWith(
+							x =>
+							{
+								WorkCompleted("fetching collections");
+								Collections = x.Result;
+								NotifyOfPropertyChange(() => LargestCollectionCount);
+								NotifyOfPropertyChange(() => Collections);
+							},
+							faulted =>
+							{
+								WorkCompleted("fetching collections");
+								NotifyError("Unable to retreive collections from server.");
+							});
+					});
+		}
+
+		public void Handle(StatisticsUpdated message)
+		{
+			if (!message.HasDocumentCountChanged) return;
+
+			RetrieveSummary();
 		}
 	}
 }
