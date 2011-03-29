@@ -135,6 +135,7 @@
     <Compile Include="Client\Async\AsyncServerClient.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\RavenUrlExtensions.cs" />
+    <Compile Include="Data\ServerRequestError.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FromMono\TaskExtensions.cs" />
   </ItemGroup>

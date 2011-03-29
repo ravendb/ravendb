@@ -29,6 +29,17 @@ namespace Raven.Client.Extensions
 
 			return e.InnerExceptions[0];
 		}
+
+		/// <summary>
+		/// Extracts a portion of an exception for a user friendly display
+		/// </summary>
+		/// <param name="e">The exception.</param>
+		/// <returns>The primary portion of the exception message.</returns>
+		public static string SimplifyError(this Exception e)
+		{
+			var parts = e.Message.Split(new[] { "Exception:", "\r\n   " }, StringSplitOptions.None);
+			return parts[1];
+		}
 	}
 }
 #endif

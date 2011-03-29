@@ -37,6 +37,7 @@
 			this.query = query;
 			this.transform = transform;
 			PageSize = 8;
+			GetTotalResults = ()=> 0;
 		}
 
 		public int PageSize

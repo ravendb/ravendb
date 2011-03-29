@@ -130,7 +130,7 @@
 					              	{
 										if (x.Exception != null)
 										{
-											QueryResultsStatus = x.Exception.ExtractSingleInnerException().Message;
+											QueryResultsStatus = x.Exception.ExtractSingleInnerException().SimplifyError();
 											return new DocumentViewModel[]{};
 										}
 						
