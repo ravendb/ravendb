@@ -82,7 +82,7 @@ namespace Raven.Json.Utilities
                 value = this[key];
                 return true;
             }
-            catch
+            catch (KeyNotFoundException)
             {
                 value = null;
                 return false;
@@ -107,20 +107,24 @@ namespace Raven.Json.Utilities
             get
             {
                 RavenJToken val;
-                if (_localChanges != null && _localChanges.TryGetValue(key, out val))
-                    return val == DeletedMarker ? null : val;
+				if (_localChanges != null && _localChanges.TryGetValue(key, out val))
+				{
+					if (val == DeletedMarker)
+						throw new KeyNotFoundException(key.ToString());
+					return val;
+				}
 
-                if (_inherittedValues != null && _inherittedValues.TryGetValue(key, out val))
+            	if (_inherittedValues != null && _inherittedValues.TryGetValue(key, out val))
                 {
                     if (val == DeletedMarker)
-                        return null;
+						throw new KeyNotFoundException(key.ToString());
 
                     // Will also perform a copy-on-write clone on object supporting this
                     var safeVal = val.CloneToken();
                     LocalChanges[key] = safeVal;
                     return safeVal;
                 }
-                return null;
+            	throw new KeyNotFoundException(key.ToString());
             }
             set { LocalChanges[key] = value; }
         }

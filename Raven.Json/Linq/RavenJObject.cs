@@ -102,7 +102,9 @@ namespace Raven.Json.Linq
 			get
 			{
 				ValidationUtils.ArgumentNotNull(propertyName, "propertyName");
-				return Properties[propertyName];
+				RavenJToken ret;
+				Properties.TryGetValue(propertyName, out ret);
+				return ret;
 			}
 			set { Properties[propertyName] = value; }
 		}
