@@ -204,31 +204,31 @@ namespace Raven.Client.Client.Async
 			catch (AggregateException e)
 			{
 				var webException = e.ExtractSingleInnerException() as WebException;
-				if (webException != null)
-				{
-					if (HandleException(webException))
-						return null;
-				}
-				throw;
+				if (webException == null) throw;
+
+				if (HandleException(webException)) return null; 
+				
+				throw; 
 			}
 			catch (WebException e)
 			{
-				if (HandleException(e))
-					return null;
+				if (HandleException(e)) return null;
+
 				throw;
 			}
 		}
 
+		/// <summary>
+		/// Attempts to handle an exception raised when receiving a response from the server
+		/// </summary>
+		/// <param name="e">The exception to handle</param>
+		/// <returns>returns true if the exception is handled, false if it should be thrown</returns>
 		private bool HandleException(WebException e)
 		{
 			var httpWebResponse = e.Response as HttpWebResponse;
 			if (httpWebResponse == null)
 			{
 				return false;
-			}
-			if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-			{
-				return true;
 			}
 			if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
 			{
