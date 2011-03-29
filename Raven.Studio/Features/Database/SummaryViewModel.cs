@@ -39,6 +39,7 @@
 			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange(string.Empty); };
 
 			CollectionsStatus = "Retrieving collections.";
+			ShowCreateSampleData = true;
 		}
 
 		public string DatabaseName { get { return server.CurrentDatabase; } }
@@ -85,11 +86,19 @@
 			//    .Apply(x => x.Count--);
 		}
 
+		bool showCreateSampleData;
+
+		public bool ShowCreateSampleData { get { return showCreateSampleData; } set { showCreateSampleData = value; NotifyOfPropertyChange(()=>ShowCreateSampleData); } }
+
 		public void CreateSampleData()
 		{
 			// this code assumes a small enough dataset, and doesn't do any sort
 			// of paging or batching whatsoever.
+			
+			ShowCreateSampleData = false;
 
+			WorkStarted("creating sample data");
+			WorkStarted("creating sample indexes");
 			using (var sampleData = typeof(SummaryViewModel).Assembly.GetManifestResourceStream("Raven.Studio.SampleData.MvcMusicStore_Dump.json"))
 			using (var streamReader = new StreamReader(sampleData))
 			using (var documentSession = Server.OpenSession())
@@ -98,26 +107,30 @@
 				foreach (var index in musicStoreData.Value<JArray>("Indexes"))
 				{
 					var indexName = index.Value<string>("name");
-					documentSession.Advanced.AsyncDatabaseCommands.PutIndexAsync(indexName,
-																				 index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>()
-																				 , true)
-						.ContinueOnSuccess(task => { });
+					documentSession.Advanced.AsyncDatabaseCommands
+						.PutIndexAsync(indexName,index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>(), true)
+						.ContinueOnSuccess(task =>
+						                   	{
+												WorkCompleted("creating sample indexes");
+						                   	});
 				}
 
 				documentSession.Advanced.AsyncDatabaseCommands.BatchAsync(
 					musicStoreData.Value<JArray>("Docs").OfType<JObject>().Select(doc =>
-																					{
-																						var metadata = doc.Value<JObject>("@metadata");
-																						doc.Remove("@metadata");
-																						return new PutCommandData
-																								{
-																									Document = doc,
-																									Metadata = metadata,
-																									Key = metadata.Value<string>("@id"),
-																								};
-																					}).ToArray()
-					).ContinueOnSuccess(task => { });
-				;
+					{
+						var metadata = doc.Value<JObject>("@metadata");
+						doc.Remove("@metadata");
+						return new PutCommandData
+								{
+									Document = doc,
+									Metadata = metadata,
+									Key = metadata.Value<string>("@id"),
+								};
+					}).ToArray()
+					).ContinueOnSuccess(task =>
+					                    	{
+												WorkCompleted("creating sample data");
+					                    	});
 			}
 		}
 

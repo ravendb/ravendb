@@ -98,12 +98,22 @@
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
+
 			<TextBlock Text="The database contains no documents."
 					   Style="{StaticResource Instruction}"
 					   Visibility="{Binding RecentDocuments, Converter={StaticResource visibleWhenEmpty}}" />
-      <Button x:Name="CreateSampleData" 
-             Content="Create sample data"
-					   Visibility="{Binding RecentDocuments, Converter={StaticResource visibleWhenEmpty}}" />
+
+			<Grid Visibility="{Binding RecentDocuments, Converter={StaticResource visibleWhenEmpty}}">
+				<StackPanel Orientation="Horizontal">
+					<ProgressBar IsIndeterminate="True"
+								 Width="24" />
+					<TextBlock Text="Generating Sample Data"
+							   Margin="4 0 0 0" />
+				</StackPanel>
+				<Button x:Name="CreateSampleData"
+						Visibility="{Binding ShowCreateSampleData, Converter={StaticResource visibleWhenTrue}}"
+						Content="Create sample data" />
+			</Grid>
 
 		</StackPanel>
 
@@ -118,8 +128,7 @@
 						  HorizontalAlignment="Left" />
 
 			<TextBlock Text="{Binding CollectionsStatus}"
-					   Style="{StaticResource Instruction}"
-					   Visibility="{Binding Collections, Converter={StaticResource visibleWhenEmpty}}" />
+					   Style="{StaticResource Instruction}" />
 
 		</StackPanel>
 	</Grid>
