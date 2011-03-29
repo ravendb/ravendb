@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Text;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Munin.Tests.Bugs
@@ -21,12 +21,12 @@ namespace Raven.Munin.Tests.Bugs
 
             database.BeginTransaction();
 
-            database.Tables[0].UpdateKey(new JObject { { "id", 1 }, { "name", "ayende" } });
+			database.Tables[0].UpdateKey(new RavenJObject { { "id", 1 }, { "name", "ayende" } });
             database.Commit();
 
             database.BeginTransaction();
 
-            database.Tables[0].UpdateKey(new JObject { { "id", 1 }, { "name", "oren" } });
+			database.Tables[0].UpdateKey(new RavenJObject { { "id", 1 }, { "name", "oren" } });
 
             database.Commit();
             
@@ -49,14 +49,14 @@ namespace Raven.Munin.Tests.Bugs
 			for (int i = 0; i < count; i++)
 			{
 				database.BeginTransaction();
-				database.Tables[0].Put(new JObject { { "id", i } }, value);
+				database.Tables[0].Put(new RavenJObject { { "id", i } }, value);
 				database.Commit();
 			}
 
 
 			for (int i = 0; i < count; i++)
 			{
-				var readResult = database.Tables[0].Read(new JObject {{"id", i}});
+				var readResult = database.Tables[0].Read(new RavenJObject { { "id", i } });
 				Assert.Equal(value, readResult.Data());
 			}
 
@@ -65,7 +65,7 @@ namespace Raven.Munin.Tests.Bugs
 
 			for (int i = 0; i < count; i++)
 			{
-				var readResult = database.Tables[0].Read(new JObject { { "id", i } });
+				var readResult = database.Tables[0].Read(new RavenJObject { { "id", i } });
 				Assert.Equal(value, readResult.Data());
 			}
 		}

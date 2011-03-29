@@ -3,8 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using Newtonsoft.Json.Linq;
+
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Munin.Tests
@@ -20,10 +20,10 @@ namespace Raven.Munin.Tests
         [Fact]
         public void CanAddAndGetDataSameTx()
         {
-            
-            Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            var data = Table.Read(JToken.FromObject("123"));
+			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
+
+			var data = Table.Read(RavenJToken.FromObject("123"));
 
             Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
         }
@@ -47,23 +47,23 @@ namespace Raven.Munin.Tests
         [Fact]
         public void AfterAddInDifferentTxValueDoesNotExists()
         {
-            Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
+			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
             Table.ReadResult data = null;
-            SupressTx(() => data = Table.Read(JToken.FromObject("123")));
+			SupressTx(() => data = Table.Read(RavenJToken.FromObject("123")));
             Assert.Null(data);
         }
 
         [Fact]
         public void AfterCommitValueIsVisibleToAllTx()
         {
-            
 
-            Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
+
+			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
             Commit();
 
-            var data = Table.Read(JToken.FromObject("123"));
+			var data = Table.Read(RavenJToken.FromObject("123"));
 
             Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
         }
@@ -73,28 +73,28 @@ namespace Raven.Munin.Tests
         public void AfterRollbackValueIsGoneToAllTx()
         {
 
-            Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
+			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
             Rollback();
 
-            Assert.Null(Table.Read(JToken.FromObject("123")));
-            Assert.Null(Table.Read(JToken.FromObject("123")));
+			Assert.Null(Table.Read(RavenJToken.FromObject("123")));
+			Assert.Null(Table.Read(RavenJToken.FromObject("123")));
         }
 
         [Fact]
         public void AddReadAndThenAddWillNotCorruptData()
         {
-            
 
-            Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Assert.True(Table.Put(JToken.FromObject("789"), new byte[] { 3, 1, 4, 5 }));
+			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Assert.Equal(new byte[] { 1, 2, 4, 5 }, Table.Read(JToken.FromObject("123")).Data());
+			Assert.True(Table.Put(RavenJToken.FromObject("789"), new byte[] { 3, 1, 4, 5 }));
 
-            Assert.True(Table.Put(JToken.FromObject("456"), new byte[] { 4, 5 }));
+			Assert.Equal(new byte[] { 1, 2, 4, 5 }, Table.Read(RavenJToken.FromObject("123")).Data());
 
-            Assert.Equal(new byte[] { 3, 1, 4, 5 }, Table.Read(JToken.FromObject("789")).Data());
+			Assert.True(Table.Put(RavenJToken.FromObject("456"), new byte[] { 4, 5 }));
+
+			Assert.Equal(new byte[] { 3, 1, 4, 5 }, Table.Read(RavenJToken.FromObject("789")).Data());
         }
     }
 }
