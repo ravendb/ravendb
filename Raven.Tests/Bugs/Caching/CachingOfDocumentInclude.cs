@@ -14,11 +14,6 @@ namespace Raven.Tests.Bugs.Caching
 {
     public class CachingOfDocumentInclude : RemoteClientTest
     {
-        public CachingOfDocumentInclude()
-        {
-            HttpJsonRequest.ResetCache();
-        }
-
         [Fact]
         public void Can_cache_document_with_includes()
         {
@@ -43,7 +38,7 @@ namespace Raven.Tests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, HttpJsonRequest.NumberOfCachedRequests);
+                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
                 }
             }
         }
@@ -72,7 +67,7 @@ namespace Raven.Tests.Bugs.Caching
                 {
                     var user = s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, HttpJsonRequest.NumberOfCachedRequests);
+					Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
                     user.Name = "Foo";
                     s.SaveChanges();
                 }
@@ -82,7 +77,7 @@ namespace Raven.Tests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, HttpJsonRequest.NumberOfCachedRequests); // did NOT increase cache
+					Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests); // did NOT increase cache
                 }
             }
         }
@@ -166,7 +161,7 @@ namespace Raven.Tests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, HttpJsonRequest.NumberOfCachedRequests);
+                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
                     s.Load<User>("users/1").Name = "foo";
                     s.SaveChanges();
                 }
@@ -176,7 +171,7 @@ namespace Raven.Tests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, HttpJsonRequest.NumberOfCachedRequests); // did NOT increase cache
+					Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests); // did NOT increase cache
                 }
             }
         }

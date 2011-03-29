@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Database.Data;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Queries
 {
@@ -11,7 +12,7 @@ namespace Raven.Database.Queries
     {
         public static  QueryResults ExecuteQueryUsingLinearSearch(this DocumentDatabase self,LinearQuery query)
         {
-            var linearQueryRunner = (LinearQueryRunner)self.ExtensionsState.GetOrAdd(typeof(LinearQueryExtensions), o => new LinearQueryRunner(self));
+            var linearQueryRunner = (LinearQueryRunner)self.ExtensionsState.GetOrAddAtomically(typeof(LinearQueryExtensions), o => new LinearQueryRunner(self));
             return linearQueryRunner.ExecuteQueryUsingLinearSearch(query);
         }
     }

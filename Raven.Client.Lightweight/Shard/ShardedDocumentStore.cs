@@ -41,6 +41,14 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
+		/// Get the <see cref="HttpJsonRequestFactory"/> for this store
+		/// </summary>
+		public HttpJsonRequestFactory JsonRequestFactory
+		{
+			get { throw new NotSupportedException("Sharded document store doesn't have a JsonRequestFactory. you need to explicitly use the shard instances to get access to the JsonRequestFactory"); }
+		}
+
+		/// <summary>
 		/// Occurs when an entity is stored inside any session opened from this instance
 		/// </summary>
 		public event EventHandler<StoredEntityEventArgs> Stored;

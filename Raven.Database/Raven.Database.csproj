@@ -361,6 +361,7 @@
     <Compile Include="Server\Responders\LinearQueryResponder.cs" />
     <Compile Include="Server\Responders\Queries.cs" />
     <Compile Include="Server\Responders\RequestResponder.cs" />
+    <Compile Include="Server\Responders\SilverlightEnsuresStartup.cs" />
     <Compile Include="Server\Responders\Static.cs" />
     <Compile Include="Server\Responders\Statics.cs" />
     <Compile Include="Server\Responders\Statistics.cs" />

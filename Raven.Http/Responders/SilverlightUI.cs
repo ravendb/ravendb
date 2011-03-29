@@ -7,13 +7,14 @@ using System.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 using Raven.Http.Plugins;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Http.Responders
 {
 	public class SilverlightUI : AbstractRequestResponder
 	{
-		[Import(AllowDefault = true)]
-		public ISilverlightRequestedAware SilverlightRequestedAware { get; set; }
+		[ImportMany]
+		public IEnumerable<ISilverlightRequestedAware> SilverlightRequestedAware { get; set; }
 
 		public override string UrlPattern
 		{
@@ -27,10 +28,12 @@ namespace Raven.Http.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			ResourceStore.ExternalState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
+			ResourceStore.ExternalState.GetOrAddAtomically("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
 			{
-				if (SilverlightRequestedAware != null)
-					SilverlightRequestedAware.SilverlightWasRequested(ResourceStore);
+				foreach (var silverlightRequestedAware in SilverlightRequestedAware)
+				{
+					silverlightRequestedAware.SilverlightWasRequested(ResourceStore);
+				}
 				return true;
 			});
 

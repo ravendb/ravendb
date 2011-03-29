@@ -14,6 +14,7 @@ using Raven.Database.Json;
 using Raven.Http;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server
 {
@@ -82,7 +83,7 @@ namespace Raven.Database.Server
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
-            database = ResourcesStoresCache.GetOrAdd(tenantId, s =>
+            database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
             {
                 var config = new InMemoryRavenConfiguration
                 {

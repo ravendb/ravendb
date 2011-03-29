@@ -13,7 +13,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Document;
 
 namespace Raven.Client.Client
 {
@@ -26,61 +25,21 @@ namespace Raven.Client.Client
 	/// </summary>
 	public class HttpJsonRequest
 	{
-		/// <summary>
-		/// Occurs when a json request is created
-		/// </summary>
-		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
-
-		/// <summary>
-		/// Creates the HTTP json request.
-		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="url">The URL.</param>
-		/// <param name="method">The method.</param>
-		/// <param name="credentials">The credentials.</param>
-		/// <param name="convention">The document conventions governing this request</param>
-		/// <returns></returns>
-		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
-		{
-			var request = new HttpJsonRequest(url, method, new JObject());
-			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
-			return request;
-		}
-
-		/// <summary>
-		/// Creates the HTTP json request.
-		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="url">The URL.</param>
-		/// <param name="method">The method.</param>
-		/// <param name="metadata">The metadata.</param>
-		/// <param name="credentials">The credentials.</param>
-		/// <param name="convention">The document conventions governing this request</param>
-		/// <returns></returns>
-		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials, DocumentConvention convention)
-		{
-			var request = new HttpJsonRequest(url, method, metadata);
-			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
-			return request;
-		}
-
-		private readonly WebRequest webRequest;
+		internal readonly WebRequest WebRequest;
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
 		/// <value>The response headers.</value>
 		public IDictionary<string, IList<string>> ResponseHeaders { get; set; }
 
-
-
-		private HttpJsonRequest(string url, string method, JObject metadata)
+		internal HttpJsonRequest(string url, string method, JObject metadata)
 		{
-			webRequest = WebRequestCreator.ClientHttp.Create(new Uri(url));
+			WebRequest = WebRequestCreator.ClientHttp.Create(new Uri(url));
 
 			WriteMetadata(metadata);
-			webRequest.Method = method;
+			WebRequest.Method = method;
 			if (method != "GET")
-				webRequest.ContentType = "application/json; charset=utf-8";
+				WebRequest.ContentType = "application/json; charset=utf-8";
 		}
 
 		/// <summary>
@@ -91,14 +50,14 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public Task<string> ReadResponseStringAsync()
 		{
-			return webRequest
+			return WebRequest
 				.GetResponseAsync()
 				.ContinueWith(t => ReadStringInternal(() => t.Result));
 		}
 
 		public Task<byte[]> ReadResponseBytesAsync()
 		{
-			return webRequest
+			return WebRequest
 				.GetResponseAsync()
 				.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes));
 		}
@@ -124,7 +83,7 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public string EndReadResponseString(IAsyncResult result)
 		{
-			return ReadStringInternal(() => webRequest.EndGetResponse(result));
+			return ReadStringInternal(() => WebRequest.EndGetResponse(result));
 		}
 
 		private string ReadStringInternal(Func<WebResponse> getResponse)
@@ -181,7 +140,7 @@ namespace Raven.Client.Client
 		{
 			if (metadata == null || metadata.Count == 0)
 			{
-				webRequest.ContentLength = 0;
+				WebRequest.ContentLength = 0;
 				return;
 			}
 
@@ -206,10 +165,10 @@ namespace Raven.Client.Client
 					case "Content-Length":
 						break;
 					case "Content-Type":
-						webRequest.ContentType = value;
+						WebRequest.ContentType = value;
 						break;
 					default:
-						webRequest.Headers[headerName] = value;
+						WebRequest.Headers[headerName] = value;
 						break;
 				}
 			}
@@ -224,7 +183,7 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public Task WriteAsync(byte[] byteArray)
 		{
-			return webRequest.GetRequestStreamAsync().ContinueWith(t =>
+			return WebRequest.GetRequestStreamAsync().ContinueWith(t =>
 																	   {
 																		   var dataStream = t.Result;
 																		   using (dataStream)
@@ -243,7 +202,7 @@ namespace Raven.Client.Client
 		{
 			foreach (var header in operationsHeaders)
 			{
-				webRequest.Headers[header.Key] = header.Value;
+				WebRequest.Headers[header.Key] = header.Value;
 			}
 			return this;
 		}
@@ -253,7 +212,7 @@ namespace Raven.Client.Client
 		/// </summary>
 		public HttpJsonRequest AddOperationHeader(string key, string value)
 		{
-			webRequest.Headers[key] = value;
+			WebRequest.Headers[key] = value;
 			return this;
 		}
 	}

@@ -10,6 +10,7 @@ using System.IO;
 using System.Reflection;
 using Raven.Bundles.Versioning.Data;
 using Raven.Bundles.Versioning.Triggers;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Xunit;
 using Raven.Server;
@@ -24,7 +25,7 @@ namespace Raven.Bundles.Tests.Versioning
 
         public Versioning()
         {
-            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning)).CodeBase);
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
             database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
             ravenDbServer = new RavenDbServer(

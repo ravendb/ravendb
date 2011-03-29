@@ -24,53 +24,56 @@ namespace Raven.Storage.Esent.SchemaUpdates
 
 		public void Update(Session session, JET_DBID dbid)
 		{
-			Transaction tx;
-			using (tx = new Transaction(session))
+			// those actions are no longer required, and are actually removed on the next version
+			// also, they don't work on non empty tables, so we skip them
+			//using (tx = new Transaction(session))
+			//{
+			//    using (var tbl = new Table(session, dbid, "indexes_stats", OpenTableGrbit.PermitDDL | OpenTableGrbit.DenyRead|OpenTableGrbit.DenyWrite))
+			//    {
+			//        JET_COLUMNID columnid;
+			//        var defaultValue = BitConverter.GetBytes(0);
+			//        Api.JetAddColumn(session, tbl, "reduce_attempts", new JET_COLUMNDEF
+			//        {
+			//            coltyp = JET_coltyp.Long,
+			//            grbit =
+			//                ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
+			//        }, defaultValue, defaultValue.Length, out columnid);
+
+			//        Api.JetAddColumn(session, tbl, "reduce_errors", new JET_COLUMNDEF
+			//        {
+			//            coltyp = JET_coltyp.Long,
+			//            grbit =
+			//                ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
+			//        }, defaultValue, defaultValue.Length, out columnid);
+
+			//        Api.JetAddColumn(session, tbl, "reduce_successes", new JET_COLUMNDEF
+			//        {
+			//            coltyp = JET_coltyp.Long,
+			//            grbit =
+			//                ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
+			//        }, defaultValue, defaultValue.Length, out columnid);
+			//    }
+			//    tx.Commit(CommitTransactionGrbit.LazyFlush);
+			//    tx.Dispose();
+			//    tx = new Transaction(session);
+			//}
+
+			using (var tx = new Transaction(session))
 			{
-				using (var tbl = new Table(session, dbid, "indexes_stats", OpenTableGrbit.PermitDDL | OpenTableGrbit.DenyRead|OpenTableGrbit.DenyWrite))
+				using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
 				{
-					JET_COLUMNID columnid;
-					var defaultValue = BitConverter.GetBytes(0);
-					Api.JetAddColumn(session, tbl, "reduce_attempts", new JET_COLUMNDEF
-					{
-						coltyp = JET_coltyp.Long,
-						grbit =
-							ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
-					}, defaultValue, defaultValue.Length, out columnid);
+					Api.JetMove(session, details, JET_Move.First, MoveGrbit.None);
+					var columnids = Api.GetColumnDictionary(session, details);
 
-					Api.JetAddColumn(session, tbl, "reduce_errors", new JET_COLUMNDEF
+					using (var update = new Update(session, details, JET_prep.Replace))
 					{
-						coltyp = JET_coltyp.Long,
-						grbit =
-							ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
-					}, defaultValue, defaultValue.Length, out columnid);
+						Api.SetColumn(session, details, columnids["schema_version"], "3.3", Encoding.Unicode);
 
-					Api.JetAddColumn(session, tbl, "reduce_successes", new JET_COLUMNDEF
-					{
-						coltyp = JET_coltyp.Long,
-						grbit =
-							ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
-					}, defaultValue, defaultValue.Length, out columnid);
+						update.Save();
+					}
 				}
-				tx.Commit(CommitTransactionGrbit.LazyFlush);
-				tx.Dispose();
-				tx = new Transaction(session);
+				tx.Commit(CommitTransactionGrbit.None);
 			}
-
-			using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
-			{
-				Api.JetMove(session, details, JET_Move.First, MoveGrbit.None);
-				var columnids = Api.GetColumnDictionary(session, details);
-
-				using (var update = new Update(session, details, JET_prep.Replace))
-				{
-					Api.SetColumn(session, details, columnids["schema_version"], "3.3", Encoding.Unicode);
-
-					update.Save();
-				}
-			}
-			tx.Commit(CommitTransactionGrbit.None);
-			tx.Dispose();
 		}
 
 	}

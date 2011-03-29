@@ -27,9 +27,14 @@ namespace Raven.Storage.Esent.SchemaUpdates
 				using ( var tbl = new Table(session, dbid, "indexes_stats",
 					OpenTableGrbit.PermitDDL | OpenTableGrbit.DenyRead | OpenTableGrbit.DenyWrite))
 				{
-					Api.JetDeleteColumn(session, tbl, "reduce_attempts");
-					Api.JetDeleteColumn(session, tbl, "reduce_errors");
-					Api.JetDeleteColumn(session, tbl, "reduce_successes");
+					var columnDictionary = Api.GetColumnDictionary(session, tbl);
+
+					if (columnDictionary.ContainsKey("reduce_attempts"))
+						Api.JetDeleteColumn(session, tbl, "reduce_attempts");
+					if (columnDictionary.ContainsKey("reduce_errors"))
+						Api.JetDeleteColumn(session, tbl, "reduce_errors");
+					if (columnDictionary.ContainsKey("reduce_successes"))
+						Api.JetDeleteColumn(session, tbl, "reduce_successes");
 				}
 
 				CreateIndexesStatsReduce(session, dbid);
