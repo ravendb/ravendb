@@ -39,7 +39,9 @@
 			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange(string.Empty); };
 
 			CollectionsStatus = "Retrieving collections.";
-			ShowCreateSampleData = true;
+			RecentDocumentsStatus = "Retrieving recent documents.";
+			ShowCreateSampleData = false;
+			IsGeneratingSampleData = false;
 		}
 
 		public string DatabaseName { get { return server.CurrentDatabase; } }
@@ -58,6 +60,17 @@
 			{
 				collectionsStatus = value;
 				NotifyOfPropertyChange(() => CollectionsStatus);
+			}
+		}
+
+		string recentDocumentsStatus;
+		public string RecentDocumentsStatus
+		{
+			get { return recentDocumentsStatus; }
+			set
+			{
+				recentDocumentsStatus = value;
+				NotifyOfPropertyChange(() => RecentDocumentsStatus);
 			}
 		}
 
@@ -88,14 +101,19 @@
 
 		bool showCreateSampleData;
 
-		public bool ShowCreateSampleData { get { return showCreateSampleData; } set { showCreateSampleData = value; NotifyOfPropertyChange(()=>ShowCreateSampleData); } }
+		public bool ShowCreateSampleData
+		{
+			get { return showCreateSampleData; }
+			set { showCreateSampleData = value; NotifyOfPropertyChange(() => ShowCreateSampleData); }
+		}
 
 		public void CreateSampleData()
 		{
 			// this code assumes a small enough dataset, and doesn't do any sort
 			// of paging or batching whatsoever.
-			
+
 			ShowCreateSampleData = false;
+			IsGeneratingSampleData = true;
 
 			WorkStarted("creating sample data");
 			WorkStarted("creating sample indexes");
@@ -108,11 +126,11 @@
 				{
 					var indexName = index.Value<string>("name");
 					documentSession.Advanced.AsyncDatabaseCommands
-						.PutIndexAsync(indexName,index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>(), true)
+						.PutIndexAsync(indexName, index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>(), true)
 						.ContinueOnSuccess(task =>
-						                   	{
+											{
 												WorkCompleted("creating sample indexes");
-						                   	});
+											});
 				}
 
 				documentSession.Advanced.AsyncDatabaseCommands.BatchAsync(
@@ -128,10 +146,20 @@
 								};
 					}).ToArray()
 					).ContinueOnSuccess(task =>
-					                    	{
+											{
 												WorkCompleted("creating sample data");
-					                    	});
+												IsGeneratingSampleData = false;
+												RecentDocumentsStatus = "Retrieving sample documents.";
+												RetrieveSummary();
+											});
 			}
+		}
+
+		bool isGeneratingSampleData;
+		public bool IsGeneratingSampleData
+		{
+			get { return isGeneratingSampleData; }
+			set { isGeneratingSampleData = value; NotifyOfPropertyChange(() => IsGeneratingSampleData); }
 		}
 
 		public void NavigateToCollection(Collection collection)
@@ -164,6 +192,11 @@
 							WorkCompleted("fetching recent documents");
 							RecentDocuments = new BindableCollection<DocumentViewModel>(x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
 							NotifyOfPropertyChange(() => RecentDocuments);
+
+							ShowCreateSampleData = !RecentDocuments.Any();
+
+							RecentDocumentsStatus = RecentDocuments.Any() ? string.Empty : "The database contains no documents.";
+
 						},
 						faulted =>
 						{
