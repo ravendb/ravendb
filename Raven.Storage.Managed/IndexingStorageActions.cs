@@ -47,7 +47,7 @@ namespace Raven.Storage.Managed
 
         private RavenJObject GetCurrentIndex()
         {
-            var readResult = storage.IndexingStats.Read(new JObject { { "index", currentIndex.Value } });
+            var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", currentIndex.Value } });
             if (readResult == null)
                 throw new ArgumentException("There is no index with the name: " + currentIndex.Value);
         	var key = (RavenJObject)readResult.Key;
