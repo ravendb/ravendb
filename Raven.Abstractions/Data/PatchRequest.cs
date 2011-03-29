@@ -62,9 +62,12 @@ namespace Raven.Database.Json
 			jObject.Properties.Add("Type", new RavenJValue(Type.ToString()));
         	jObject.Properties.Add("Value", Value);
         	jObject.Properties.Add("Name", new RavenJValue(Name));
-        	jObject.Properties.Add("Position", Position == null ? null : new RavenJValue(Position.Value));
-        	jObject.Properties.Add("Nested", Nested == null ? null : new RavenJArray(Nested.Select(x => x.ToJson())));
-            jObject.Properties.Add("AllPositions", AllPositions == null ? null : new RavenJValue(AllPositions.Value));
+			if (Position != null)
+        		jObject.Properties.Add("Position", new RavenJValue(Position.Value));
+			if (Nested != null)
+        		jObject.Properties.Add("Nested",  new RavenJArray(Nested.Select(x => x.ToJson())));
+			if (AllPositions != null)
+				jObject.Properties.Add("AllPositions", new RavenJValue(AllPositions.Value));
 			if (PrevVal != null)
 				jObject.Properties.Add("PrevVal", PrevVal);
 			return jObject;
