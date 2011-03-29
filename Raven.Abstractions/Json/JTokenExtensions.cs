@@ -5,8 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using System.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Json
 {
@@ -21,37 +21,37 @@ namespace Raven.Abstractions.Json
 			public string Name;
 			public readonly Dictionary<string, PathPart> Items = new Dictionary<string, PathPart>();
 
-			public void ForEach(JToken result, JToken item, Action<PathPart, JToken, JToken> action)
+			public void ForEach(RavenJToken result, RavenJToken item, Action<PathPart, RavenJToken, RavenJToken> action)
 			{
 				if (string.IsNullOrEmpty(FinalName) == false)
 				{
 					action(this, item, result);
 					return;
 				}
-				JToken newResult = GetTheNewResultOrWireTheDefault(result);
+				RavenJToken newResult = GetTheNewResultOrWireTheDefault(result);
 				if (item == null)
 				{
 					foreach (var pathPart in Items)
 						pathPart.Value.ForEach(newResult, null, action);
 					return;
 				}
-				if (item is JArray == false)
+				if (item is RavenJArray == false)
 				{
 					foreach (var pathPart in Items)
 						pathPart.Value.ForEach(newResult, item.SelectToken(pathPart.Key), action);
 				}
 				else
 				{
-					var jArray = newResult as JArray;
+					var jArray = newResult as RavenJArray;
 					if (jArray == null)
 					{
-						jArray = new JArray();
+						jArray = new RavenJArray();
 						result[Name] = jArray;
 					}
-					foreach (var subItem in item)
+					foreach (var subItem in item.Children())
 					{
-						newResult = new JObject();
-						jArray.Add(newResult);
+						newResult = new RavenJObject();
+						jArray.Items.Add(newResult);
 						foreach (var pathPart in Items)
 						{
 							pathPart.Value.ForEach(newResult, subItem.SelectToken(pathPart.Key), action);
@@ -60,12 +60,12 @@ namespace Raven.Abstractions.Json
 				}
 			}
 
-			private JToken GetTheNewResultOrWireTheDefault(JToken result)
+			private RavenJToken GetTheNewResultOrWireTheDefault(RavenJToken result)
 			{
 				var selectToken = result.SelectToken(Name);
 				if (selectToken != null)
 					return selectToken;
-				return result[Name] = new JObject();
+				return result[Name] = new RavenJObject();
 			}
 		}
 
@@ -87,7 +87,7 @@ namespace Raven.Abstractions.Json
 			BuildPathPart(part, pos + 1, pathParts, final);
 		}
 
-		public static JObject SelectTokenWithRavenSyntax(this JToken self, string[] paths)
+		public static RavenJObject SelectTokenWithRavenSyntax(this RavenJToken self, string[] paths)
 		{
 			var parts = new PathPart();
 			foreach (var path in paths)
@@ -95,7 +95,7 @@ namespace Raven.Abstractions.Json
 				var pathParts = path.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 				BuildPathPart(parts, 0, pathParts, path);
 			}
-			var obj = new JObject();
+			var obj = new RavenJObject();
 
 			foreach (var currentPart in parts.Items)
 			{
@@ -108,7 +108,7 @@ namespace Raven.Abstractions.Json
 			return obj;
 		}
 
-		public static IEnumerable<JToken> SelectTokenWithRavenSyntaxReturningFlatStructure(this JToken self, string path)
+		public static IEnumerable<RavenJToken> SelectTokenWithRavenSyntaxReturningFlatStructure(this RavenJToken self, string path)
 		{
 			var pathParts = path.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
 			var result = self.SelectToken(pathParts[0]);
@@ -121,7 +121,7 @@ namespace Raven.Abstractions.Json
 			{
 				yield break;
 			}
-			foreach (var item in result)
+			foreach (var item in result.Children())
 			{
 				foreach (var subItem in item.SelectTokenWithRavenSyntaxReturningFlatStructure(string.Join(",", pathParts.Skip(1).ToArray())))
 				{

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Json;
 using Raven.Http.Exceptions;
 using System.Linq;
 using Raven.Json.Linq;
@@ -81,7 +82,7 @@ namespace Raven.Database.Json
 				return;
 
 			document[patchCmd.Value.Value<string>()] = property.Value;
-			document.Remove(propName);
+			document.Properties.Remove(propName);
 		}
 
 		private void CopyProperty(PatchRequest patchCmd, string propName, JProperty property)
@@ -120,7 +121,7 @@ namespace Raven.Database.Json
 					if (position == null && !allPositionsIsSelected)
 						throw new InvalidOperationException("Cannot modify value from  '" + propName +
 						                                    "' because position element does not exists or not an integer and allPositions is not set");
-					var valueList = new List<JToken>();
+					var valueList = new List<RavenJToken>();
 					if (allPositionsIsSelected)
 					{
 						valueList.AddRange(arrayOrValue);
@@ -134,7 +135,7 @@ namespace Raven.Database.Json
 					{
 						foreach (var cmd in nestedCommands)
 						{
-							new JsonPatcher(value.Value<JObject>()).Apply(cmd);
+							new JsonPatcher(value.Value<RavenJObject>()).Apply(cmd);
 						}
 					}
 					break;
@@ -148,8 +149,8 @@ namespace Raven.Database.Json
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)
 			{
-				property = new JProperty(propName, new JArray());
-				document.Add(property);
+				property = new JProperty(propName, new RavenJArray());
+				document.Properties.Add(property);
 			}
 			var array = GetArray(property, propName);
 
@@ -181,8 +182,8 @@ namespace Raven.Database.Json
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)
 			{
-				property = new JProperty(propName, new JArray());
-				document.Add(property);
+				property = new JProperty(propName, new RavenJArray());
+				document.Properties.Add(property);
 			}
 			var array = property.Value as JArray;
 			if (array == null)
@@ -201,15 +202,15 @@ namespace Raven.Database.Json
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)
 			{
-				property = new JProperty(propName, new JArray());
-				document.Add(property);
+				property = new JProperty(propName, new RavenJArray());
+				document.Properties.Add(property);
 			}
 			var array = GetArray(property, propName);
 
 			array.Add(patchCmd.Value);
 		}
 
-		private JArray GetArray(JProperty property, string propName)
+		private RavenJArray GetArray(JProperty property, string propName)
 		{
 			var array = TryGetArray(property);
 			if(array == null)
@@ -217,15 +218,15 @@ namespace Raven.Database.Json
 			return array;
 		}
 
-		private JArray TryGetArray(JProperty property)
+		private RavenJArray TryGetArray(JProperty property)
 		{
-			var array = property.Value as JArray;
+			var array = property.Value as RavenJArray;
 			if (array == null)
 			{
-				var jObject = property.Value as JObject;
+				var jObject = property.Value as RavenJObject;
 				if (jObject == null || jObject.Property("$values") == null)
 					return null;
-				array = jObject.Value<JArray>("$values");
+				array = jObject.Value<RavenJArray>("$values");
 			}
 			return array;
 		}
@@ -245,7 +246,7 @@ namespace Raven.Database.Json
 			if (property == null)
 			{
 				property = new JProperty(propName);
-				document.Add(property);
+				document.Properties.Add(property);
 			}
 			property.Value = patchCmd.Value;
 		}
@@ -259,7 +260,7 @@ namespace Raven.Database.Json
 			if (property == null)
 			{
 				property = new JProperty(propName, patchCmd.Value);
-				document.Add(property);
+				document.Properties.Add(property);
 				return;
 			}
 			if (property.Value == null || property.Value.Type == JTokenType.Null)
@@ -281,7 +282,7 @@ namespace Raven.Database.Json
 				default:
 					if (property == null)
 						throw new ConcurrencyException();
-					var equalityComparer = new JTokenEqualityComparer();
+					var equalityComparer = new RavenJTokenEqualityComparer();
 					if (equalityComparer.Equals(property.Value, prevVal) == false)
 						throw new ConcurrencyException();
 					break;
