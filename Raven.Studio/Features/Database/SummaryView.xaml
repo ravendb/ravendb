@@ -117,7 +117,7 @@
 						  ItemTemplate="{StaticResource CollectionTemplate}"
 						  HorizontalAlignment="Left" />
 
-			<TextBlock Text="The database contains no collections."
+			<TextBlock Text="{Binding CollectionsStatus}"
 					   Style="{StaticResource Instruction}"
 					   Visibility="{Binding Collections, Converter={StaticResource visibleWhenEmpty}}" />
 

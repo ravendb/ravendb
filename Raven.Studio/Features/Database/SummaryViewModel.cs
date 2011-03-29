@@ -37,6 +37,8 @@
 			DisplayName = "Summary";
 
 			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange(string.Empty); };
+
+			CollectionsStatus = "Retrieving collections.";
 		}
 
 		public string DatabaseName { get { return server.CurrentDatabase; } }
@@ -46,6 +48,17 @@
 		public BindableCollection<DocumentViewModel> RecentDocuments { get; private set; }
 
 		public IEnumerable<Collection> Collections { get; private set; }
+
+		string collectionsStatus;
+		public string CollectionsStatus
+		{
+			get { return collectionsStatus; }
+			set
+			{
+				collectionsStatus = value;
+				NotifyOfPropertyChange(() => CollectionsStatus);
+			}
+		}
 
 		public long LargestCollectionCount
 		{
@@ -118,7 +131,7 @@
 														}));
 		}
 
-		protected override void OnActivate() 
+		protected override void OnActivate()
 		{
 			RetrieveSummary();
 		}
@@ -134,16 +147,16 @@
 					.GetDocumentsAsync(0, 12)
 					.ContinueWith(
 						x =>
-							{
-								WorkCompleted("fetching recent documents");
-								RecentDocuments = new BindableCollection<DocumentViewModel>(x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
-								NotifyOfPropertyChange(() => RecentDocuments);
-							},
+						{
+							WorkCompleted("fetching recent documents");
+							RecentDocuments = new BindableCollection<DocumentViewModel>(x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
+							NotifyOfPropertyChange(() => RecentDocuments);
+						},
 						faulted =>
-							{
-								WorkCompleted("fetching recent documents");
-								NotifyError("Unable to retreive recent documents from server.");
-							});
+						{
+							WorkCompleted("fetching recent documents");
+							NotifyError("Unable to retreive recent documents from server.");
+						});
 			}
 		}
 
@@ -169,11 +182,15 @@
 								Collections = x.Result;
 								NotifyOfPropertyChange(() => LargestCollectionCount);
 								NotifyOfPropertyChange(() => Collections);
+								CollectionsStatus = Collections.Any() ? string.Empty : "The database contains no collections.";
 							},
 							faulted =>
 							{
 								WorkCompleted("fetching collections");
-								NotifyError("Unable to retreive collections from server.");
+								const string error = "Unable to retreive collections from server.";
+								NotifyError(error);
+								CollectionsStatus = error;
+
 							});
 					});
 		}
