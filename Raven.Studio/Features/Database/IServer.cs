@@ -19,7 +19,6 @@ namespace Raven.Studio.Features.Database
 		void OpenDatabase(string name, Action callback);
 		void Connect(Uri serverAddress, Action callback);
 		event EventHandler CurrentDatabaseChanged;
-		event EventHandler Connected;
 	    void CreateDatabase(string databaseName, Action callback);
 	}
 }

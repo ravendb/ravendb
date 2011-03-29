@@ -25,18 +25,16 @@ namespace Raven.Studio.Features.Documents
 			this.server = server;
 			this.events = events;
 			events.Subscribe(this);
+		}
 
+		protected override void OnInitialize()
+		{
+			using (var session = server.OpenSession())
+				Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
+					session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync,
+					jdoc => new DocumentViewModel(jdoc));
 
-			server.Connected += delegate
-			{
-				using (var session = server.OpenSession())
-					Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
-						session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync, 
-						jdoc => new DocumentViewModel(jdoc));
-
-				Documents.PageSize = 25;
-			};
-
+			Documents.PageSize = 25;
 		}
 
 		public BindablePagedQuery<JsonDocument, DocumentViewModel> Documents { get; private set; }
