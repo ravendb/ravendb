@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -8,7 +9,7 @@ using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
-    public class RavenJObject : RavenJToken
+    public class RavenJObject : RavenJToken, IEnumerable<KeyValuePair<string, RavenJToken>>
     {
         /// <summary>
         /// Gets the node type for this <see cref="RavenJToken"/>.
@@ -305,5 +306,23 @@ namespace Raven.Json.Linq
 			}
 			return hashCode;
 		}
-    }
+
+		#region IEnumerable<KeyValuePair<string,RavenJToken>> Members
+
+		public IEnumerator<KeyValuePair<string, RavenJToken>> GetEnumerator()
+		{
+			return Properties.GetEnumerator();
+		}
+
+		#endregion
+
+		#region IEnumerable Members
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
+
+		#endregion
+	}
 }
