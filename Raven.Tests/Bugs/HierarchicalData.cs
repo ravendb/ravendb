@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -43,14 +43,14 @@ from comment in Hierarchy(post, ""Comments"")
 select new { comment.Text }"
 			});
 
-			db.Put("abc", null, JObject.Parse(@"
+			db.Put("abc", null, RavenJObject.Parse(@"
 {
 	'Name': 'Hello Raven',
 	'Comments': [
 		{ 'Author': 'Ayende', 'Text': 'def',	'Comments': [ { 'Author': 'Rahien', 'Text': 'abc' } ] }
 	]
 }
-"), JObject.Parse("{'Raven-Entity-Name': 'Posts'}"), null);
+"), RavenJObject.Parse("{'Raven-Entity-Name': 'Posts'}"), null);
 
 			db.SpinBackgroundWorkers();
 

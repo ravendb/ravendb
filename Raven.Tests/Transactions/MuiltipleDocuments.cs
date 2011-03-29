@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Http;
@@ -32,8 +32,8 @@ namespace Raven.Tests.Transactions
         public void PutTwoDocumentsAndThenCommit()
         {
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende1", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
-            db.Put("ayende2", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+            db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
             db.Commit(transactionInformation.Id);
 
@@ -45,8 +45,8 @@ namespace Raven.Tests.Transactions
 		public void CommittingWillOnlyCommitSingleTransaction()
 		{
 			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Put("ayende1", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
-			db.Put("ayende2", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) });
+			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) });
 
 			db.Commit(transactionInformation.Id);
 
@@ -58,8 +58,8 @@ namespace Raven.Tests.Transactions
 		public void PutTwoDocumentsAndThenCommitReversedOrder()
 		{
 			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Put("ayende2", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
-			db.Put("ayende1", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
 			db.Commit(transactionInformation.Id);
 
@@ -71,10 +71,10 @@ namespace Raven.Tests.Transactions
         public void WhileUpdatingSeveralDocumentsCannotAccessAnyOfThem()
         {
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende1", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             Assert.Null(db.Get("ayende1", null));
             Assert.Null(db.Get("ayende2", null)); 
-            db.Put("ayende2", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             Assert.Null(db.Get("ayende1", null));
             Assert.Null(db.Get("ayende2", null));
             db.Commit(transactionInformation.Id);

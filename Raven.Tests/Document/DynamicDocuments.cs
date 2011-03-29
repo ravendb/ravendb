@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.CSharp.RuntimeBinder;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;

@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -174,7 +174,7 @@ namespace Raven.Tests.Linq
 
 		public static dynamic GetDocumentFromString(string json)
 		{
-			return JsonToExpando.Convert(JObject.Parse(json));
+			return JsonToExpando.Convert(RavenJObject.Parse(json));
 		}
 	}
 }

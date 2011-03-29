@@ -38,8 +38,6 @@ namespace Raven.Munin.Tests
         [Fact]
         public void StoringSameKeyInBothDicWithTwoDifferentValuesAfterCommitAndReopen()
         {
-
-
 			tableOne.Put(RavenJToken.FromObject(1), new byte[] { 1, 2 });
 			tableTwo.Put(RavenJToken.FromObject(1), new byte[] { 2, 3 });
 

@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Threading;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -76,7 +76,7 @@ select new {
 		    };
 		    for (int i = 0; i < values.Length; i++)
 		    {
-		        db.Put("docs/" + i, null, JObject.Parse(values[i]), new JObject(), null);
+		        db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
 		    }
 
 		    var q = GetUnstableQueryResult("blog_id:3");
@@ -120,13 +120,13 @@ select new {
 			};
 			for (int i = 0; i < values.Length; i++)
 			{
-				db.Put("docs/" + i, null, JObject.Parse(values[i]), new JObject(), null);
+				db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
 			}
 
 			GetUnstableQueryResult("blog_id:3");
 		    
 
-			db.Put("docs/0", null, JObject.Parse("{blog_id: 3, comments: [{}]}"), new JObject(), null);
+			db.Put("docs/0", null, RavenJObject.Parse("{blog_id: 3, comments: [{}]}"), new RavenJObject(), null);
 
             var q = GetUnstableQueryResult("blog_id:3");
 		    
@@ -153,7 +153,7 @@ select new {
 			};
 			for (int i = 0; i < values.Length; i++)
 			{
-				db.Put("docs/" + i, null, JObject.Parse(values[i]), new JObject(), null);
+				db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
 			}
 
 			GetUnstableQueryResult("blog_id:3");
@@ -185,12 +185,12 @@ select new {
 			};
 			for (int i = 0; i < values.Length; i++)
 			{
-				db.Put("docs/" + i, null, JObject.Parse(values[i]), new JObject(), null);
+				db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
 			}
 
             GetUnstableQueryResult("blog_id:3");
 		    
-			db.Put("docs/0", null, JObject.Parse("{blog_id: 7, comments: [{}]}"), new JObject(), null);
+			db.Put("docs/0", null, RavenJObject.Parse("{blog_id: 7, comments: [{}]}"), new RavenJObject(), null);
 
             var q = GetUnstableQueryResult("blog_id:3");
             Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""11""}", q.Results[0].ToString(Formatting.None));

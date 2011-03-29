@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using Lucene.Net.Documents;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
@@ -87,7 +87,7 @@ select new {
 
 		private static IEnumerable<DynamicJsonObject> ConvertToExpando(IEnumerable<object> objects)
 		{
-			return objects.Select(obj => new DynamicJsonObject(JObject.FromObject(obj)));
+			return objects.Select(obj => new DynamicJsonObject(RavenJObject.FromObject(obj)));
 		}
 	}
 }

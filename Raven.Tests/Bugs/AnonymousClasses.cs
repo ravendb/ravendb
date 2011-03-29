@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs
 
                     var metadata = s.Advanced.GetMetadataFor(entity);
 
-                    Assert.Null(metadata.Property("Raven-Entity-Name"));
+                    Assert.Null(metadata["Raven-Entity-Name"]);
                 }
             }
         }

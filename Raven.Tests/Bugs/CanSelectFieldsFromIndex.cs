@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Xunit;
@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs
             using(var store = NewDocumentStore())
             {
                 store.DocumentDatabase.Put("ayende", null,
-                                           JObject.Parse(
+                                           RavenJObject.Parse(
                                                @"{
 	'name': 'ayende',
 	'email': 'ayende@ayende.com',
@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs
 		'rampaging rhinos'
 	]
 }"),
-                                           new JObject(), null);
+                                           new RavenJObject(), null);
 
                 store.DatabaseCommands.PutIndex("EmailAndProject",
                                                 new IndexDefinition

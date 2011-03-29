@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Threading;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -74,7 +74,7 @@ select new {
 			};
             for (int i = 0; i < values.Length; i++)
             {
-                db.Put("docs/" + i, null, JObject.Parse(values[i]), new JObject(), null);
+                db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
             }
 
             db.SpinBackgroundWorkers();

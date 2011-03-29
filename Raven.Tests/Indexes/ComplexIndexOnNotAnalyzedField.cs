@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -41,8 +41,8 @@ namespace Raven.Tests.Indexes
 		public void CanQueryOnKey()
 		{
 			db.Put("companies/", null,
-			       JObject.Parse("{'Name':'Hiberanting Rhinos', 'Partners': ['companies/49', 'companies/50']}"), 
-				   JObject.Parse("{'Raven-Entity-Name': 'Companies'}"),
+			       RavenJObject.Parse("{'Name':'Hiberanting Rhinos', 'Partners': ['companies/49', 'companies/50']}"), 
+				   RavenJObject.Parse("{'Raven-Entity-Name': 'Companies'}"),
 			       null);
 
 

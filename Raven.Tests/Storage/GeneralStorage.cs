@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -15,6 +15,7 @@ using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using Xunit;
 using System.Linq;
+using JTokenType = Newtonsoft.Json.Linq.JTokenType;
 
 namespace Raven.Tests.Storage
 {
@@ -39,16 +40,16 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void Can_query_by_id_prefix()
 		{
-			db.Put("abc", null, new JObject { { "a", "b" } }, new JObject(), null);
-			db.Put("Raven/Databases/Hello", null, new JObject {{"a", "b"}}, new JObject(), null);
-			db.Put("Raven/Databases/Northwind", null, new JObject { { "a", "b" } }, new JObject(), null);
-			db.Put("Raven/Databases/Sys", null, new JObject { { "a", "b" } }, new JObject(), null);
-			db.Put("Raven/Databases/Db", null, new JObject { { "a", "b" } }, new JObject(), null);
-			db.Put("Raven/Database", null, new JObject { { "a", "b" } }, new JObject(), null);
+			db.Put("abc", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Put("Raven/Databases/Hello", null, new RavenJObject {{"a", "b"}}, new RavenJObject(), null);
+			db.Put("Raven/Databases/Northwind", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Put("Raven/Databases/Sys", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Put("Raven/Databases/Db", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Put("Raven/Database", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 
 			var dbs = db.GetDocumentsWithIdStartingWith("Raven/Databases/", 0, 10);
 
-			Assert.Equal(4, dbs.Count);
+			Assert.Equal(4, dbs.Length);
 		}
 
         [Fact]
@@ -76,17 +77,17 @@ namespace Raven.Tests.Storage
 
             foreach (var cmdText in cmds)
             {
-                var command = JObject.Parse(cmdText);
+                var command = RavenJObject.Parse(cmdText);
                 var tblId = command.Value<int>("TableId");
 
                 var table = tableStorage.Tables[tblId];
 
                 var txId = new Guid(Convert.FromBase64String(command.Value<string>("TxId")));
 
-                var key = command["Key"] as JObject;
+                var key = command["Key"] as RavenJObject;
                 if (key != null)
                 {
-                    foreach (var property in key.Properties())
+                    foreach (var property in key.Properties)
                     {
                         if(property.Value.Type != JTokenType.String)
                             continue;
@@ -94,7 +95,7 @@ namespace Raven.Tests.Storage
                         if (value.EndsWith("==") == false)
                             continue;
 
-                        key[property.Name] = Convert.FromBase64String(value);
+                        key[property.Key] = Convert.FromBase64String(value);
                     }
                 }
 
@@ -153,14 +154,14 @@ namespace Raven.Tests.Storage
 			{
 				Assert.Equal(0, actions.Documents.GetDocumentsCount());
 
-				actions.Documents.AddDocument("a", null, new JObject(), new JObject());
+				actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject());
 			});
 
 			db.TransactionalStorage.Batch(actions =>
 			{
 				Assert.Equal(1, actions.Documents.GetDocumentsCount());
 
-				JObject metadata;
+				RavenJObject metadata;
 				actions.Documents.DeleteDocument("a", null, out metadata);
 			});
 
@@ -171,7 +172,7 @@ namespace Raven.Tests.Storage
         [Fact]
         public void CanGetDocumentAfterEmptyEtag()
         {
-            db.TransactionalStorage.Batch(actions => actions.Documents.AddDocument("a", null, new JObject(), new JObject()));
+            db.TransactionalStorage.Batch(actions => actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject()));
 
             db.TransactionalStorage.Batch(actions =>
             {
@@ -185,9 +186,9 @@ namespace Raven.Tests.Storage
         {
             db.TransactionalStorage.Batch(actions =>
             {
-                actions.Documents.AddDocument("a", null, new JObject(), new JObject());
-                actions.Documents.AddDocument("b", null, new JObject(), new JObject());
-                actions.Documents.AddDocument("c", null, new JObject(), new JObject());
+                actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject());
+                actions.Documents.AddDocument("b", null, new RavenJObject(), new RavenJObject());
+                actions.Documents.AddDocument("c", null, new RavenJObject(), new RavenJObject());
             });
 
             db.TransactionalStorage.Batch(actions =>
@@ -205,9 +206,9 @@ namespace Raven.Tests.Storage
         {
             db.TransactionalStorage.Batch(actions =>
             {
-                actions.Documents.AddDocument("a", null, new JObject(), new JObject());
-                actions.Documents.AddDocument("b", null, new JObject(), new JObject());
-                actions.Documents.AddDocument("c", null, new JObject(), new JObject());
+                actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject());
+                actions.Documents.AddDocument("b", null, new RavenJObject(), new RavenJObject());
+                actions.Documents.AddDocument("c", null, new RavenJObject(), new RavenJObject());
             });
 
             Guid guid = Guid.Empty;
@@ -215,7 +216,7 @@ namespace Raven.Tests.Storage
             {
                 var doc = actions.Documents.DocumentByKey("a", null);
                 guid = doc.Etag;
-                actions.Documents.AddDocument("a", null, new JObject(), new JObject());
+                actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject());
             });
 
             db.TransactionalStorage.Batch(actions =>
@@ -245,8 +246,8 @@ namespace Raven.Tests.Storage
 							var newId = Interlocked.Increment(ref numberOfDocsAdded);
                             cmds.Add(new PutCommandData
                             {
-                            	Document = new JObject(),
-								Metadata = new JObject(),
+                            	Document = new RavenJObject(),
+								Metadata = new RavenJObject(),
 								Key = newId.ToString()
                             });
                         };
@@ -296,7 +297,7 @@ namespace Raven.Tests.Storage
 			{
 				Assert.Equal(0, actions.Documents.GetDocumentsCount());
 
-				actions.Documents.AddDocument("a", null, new JObject(), new JObject());
+				actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject());
 
 			});
 
@@ -304,7 +305,7 @@ namespace Raven.Tests.Storage
 			{
 				Assert.Equal(1, actions.Documents.GetDocumentsCount());
 
-				actions.Documents.AddDocument("a", null, new JObject(), new JObject());
+				actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject());
 			});
 
 

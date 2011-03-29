@@ -4,19 +4,19 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Json.Linq;
 
 namespace Raven.Tests.Bugs
 {
     public class FailStore : IDocumentStoreListener
     {
-        public void BeforeStore(string key, object entityInstance, JObject metadata)
+        public void BeforeStore(string key, object entityInstance, RavenJObject metadata)
         {
             throw new NotImplementedException();
         }
 
-        public void AfterStore(string key, object entityInstance, JObject metadata)
+		public void AfterStore(string key, object entityInstance, RavenJObject metadata)
         {
             throw new NotImplementedException();
         }

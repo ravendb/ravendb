@@ -14,7 +14,7 @@ using Raven.Tests.Storage;
 using Xunit;
 using Raven.Database;
 using Raven.Database.Extensions;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database.Data;
 
 namespace Raven.Tests.Queries
@@ -57,9 +57,9 @@ namespace Raven.Tests.Queries
                 Category = "Rhinos"
             };
 
-            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
-            db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
-            db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
+            db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+            db.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
+            db.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
 
             var results = db.ExecuteDynamicQuery(null,new IndexQuery()
            {
@@ -93,9 +93,9 @@ namespace Raven.Tests.Queries
                 Category = "Rhinos"
             };
 
-            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
-            db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
-            db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
+            db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+            db.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
+            db.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
 
             int initialIndexCount = db.Statistics.CountOfIndexes;
             db.ExecuteDynamicQuery(null,new IndexQuery()
@@ -165,9 +165,9 @@ namespace Raven.Tests.Queries
                 Category = "Rhinos"
             };
 
-            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
-            db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
-            db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
+            db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+            db.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
+            db.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
 
             QueryResult results = null;
 
@@ -234,9 +234,9 @@ namespace Raven.Tests.Queries
                 },
             };
 
-            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
-            db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
-            db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
+            db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+            db.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
+            db.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
 
             var results = db.ExecuteDynamicQuery(null, new IndexQuery()
             {
@@ -273,9 +273,9 @@ namespace Raven.Tests.Queries
                 User = new User() { Name = "rob" }
             };
 
-            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
-            db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
-            db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
+            db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+            db.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
+            db.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
 
             var results = db.ExecuteDynamicQuery(null, new IndexQuery()
             {
@@ -302,7 +302,7 @@ namespace Raven.Tests.Queries
                 },
             };
 
-            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
+            db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
 
             var results = db.ExecuteDynamicQuery(null, new IndexQuery()
             {

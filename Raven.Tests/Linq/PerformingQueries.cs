@@ -3,10 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -83,7 +82,7 @@ select new { GeoHash = SampleGeoLocation.GeoHash(doc.loc, doc.lang) }
 
 		public static IEnumerable<dynamic> GetDocumentsFromString(string json)
 		{
-			return JArray.Parse(json).Cast<JObject>().Select(JsonToExpando.Convert);
+			return RavenJArray.Parse(json).Cast<RavenJObject>().Select(JsonToExpando.Convert);
 		}
 	}
 }
