@@ -72,6 +72,7 @@
 
 					<ContentControl x:Name="BusyStatus"
 									HorizontalAlignment="Right"
+									VerticalAlignment="Center"
 									Grid.Row="1" />
 
 					<ContentControl x:Name="Notifications"

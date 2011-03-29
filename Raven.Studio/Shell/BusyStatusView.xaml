@@ -7,12 +7,15 @@
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
-	<Grid x:Name="IsBusy">
+	<Grid x:Name="IsBusy"
+		  Margin="0 0 6 0">
 		<ToolTipService.ToolTip>
 			<Border>
 				<ItemsControl ItemsSource="{Binding ActiveTasks}" />
 			</Border>
 		</ToolTipService.ToolTip>
-		<TextBlock Text="Working..." />
+		<ProgressBar IsIndeterminate="True"
+					 Width="24"
+					 Height="24" />
 	</Grid>
 </UserControl>
