@@ -229,5 +229,279 @@ namespace Raven.Json.Linq
 			var p = new RavenJPath(path);
 			return p.Evaluate(this, errorWhenNoMatch);
 		}
+
+		#region Cast to operators
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Boolean"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(bool value)
+		{
+			return new RavenJValue(value);
+		}
+
+#if !PocketPC && !NET20
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="DateTimeOffset"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(DateTimeOffset value)
+		{
+			return new RavenJValue(value);
+		}
+#endif
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{Boolean}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(bool? value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{Int64}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(long value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{DateTime}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(DateTime? value)
+		{
+			return new RavenJValue(value);
+		}
+
+#if !PocketPC && !NET20
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{DateTimeOffset}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(DateTimeOffset? value)
+		{
+			return new RavenJValue(value);
+		}
+#endif
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{Decimal}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(decimal? value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{Double}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(double? value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Int16"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		[CLSCompliant(false)]
+		public static implicit operator RavenJToken(short value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="UInt16"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		[CLSCompliant(false)]
+		public static implicit operator RavenJToken(ushort value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Int32"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(int value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{Int32}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(int? value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="DateTime"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(DateTime value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{Int64}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(long? value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{Single}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(float? value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Decimal"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(decimal value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{Int16}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		[CLSCompliant(false)]
+		public static implicit operator RavenJToken(short? value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{UInt16}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		[CLSCompliant(false)]
+		public static implicit operator RavenJToken(ushort? value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{UInt32}"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		[CLSCompliant(false)]
+		public static implicit operator RavenJToken(uint? value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Nullable{UInt64}"/> to <see cref="JToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		[CLSCompliant(false)]
+		public static implicit operator RavenJToken(ulong? value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Double"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(double value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="Single"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(float value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="String"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(string value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="UInt32"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		[CLSCompliant(false)]
+		public static implicit operator RavenJToken(uint value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="UInt64"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		[CLSCompliant(false)]
+		public static implicit operator RavenJToken(ulong value)
+		{
+			return new RavenJValue(value);
+		}
+
+		/// <summary>
+		/// Performs an implicit conversion from <see cref="T:System.Byte[]"/> to <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
+		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+		public static implicit operator RavenJToken(byte[] value)
+		{
+			return new RavenJValue(value);
+		}
+		#endregion
     }
 }
