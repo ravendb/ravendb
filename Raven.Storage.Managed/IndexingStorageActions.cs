@@ -124,21 +124,21 @@ namespace Raven.Storage.Managed
             }
         }
 
-    	private static void EnsureKeyMatchExpectedSchema(JToken key)
+    	private static void EnsureKeyMatchExpectedSchema(RavenJToken key)
     	{
-    		var jObject = key as JObject;
+    		var jObject = key as RavenJObject;
 			if (jObject == null)
 				return;
 
-    		if (jObject.Property("reduce_attempts") == null)
+    		if (!jObject.Properties.ContainsKey("reduce_attempts"))
     		{
     			jObject["reduce_attempts"] = 0;
     		}
-			if (jObject.Property("reduce_failures") == null)
+			if (!jObject.Properties.ContainsKey("reduce_failures"))
 			{
 				jObject["reduce_failures"] = 0;
 			}
-			if (jObject.Property("reduce_successes") == null)
+			if (!jObject.Properties.ContainsKey("reduce_successes"))
 			{
 				jObject["reduce_successes"] = 0;
 			}
@@ -146,11 +146,11 @@ namespace Raven.Storage.Managed
 
     	public void AddIndex(string name)
         {
-            var readResult = storage.IndexingStats.Read(new JObject {{"index", name}});
+            var readResult = storage.IndexingStats.Read(new RavenJObject {{"index", name}});
             if(readResult != null)
                 throw new ArgumentException("There is already an index with the name: " + name);
 
-            storage.IndexingStats.UpdateKey(new JObject
+            storage.IndexingStats.UpdateKey(new RavenJObject
             {
                 {"index", name},
                 {"attempts", 0},
@@ -166,7 +166,7 @@ namespace Raven.Storage.Managed
 
         public void DeleteIndex(string name)
         {
-            storage.IndexingStats.Remove(new JObject { { "index", name } });
+            storage.IndexingStats.Remove(new RavenJObject { { "index", name } });
         }
 
         public IndexFailureInformation GetFailureRate(string index)

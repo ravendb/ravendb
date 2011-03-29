@@ -126,7 +126,7 @@ namespace Raven.Storage.Managed.Backup
 					Message = newMsg,
 					Timestamp = DateTime.UtcNow
 				});
-				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(backupStatus), jsonDocument.Metadata,
+				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus), jsonDocument.Metadata,
 				             null);
 			}
 			catch (Exception e)
