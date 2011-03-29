@@ -671,43 +671,46 @@ namespace Lucene.Net.Index
 			// IndexInput & bytes with the original one
 			public System.Object Clone()
 			{
-				System.Diagnostics.Debug.Assert(refCount > 0 &&(origNorm == null || origNorm.refCount > 0));
-				
-				Norm clone;
-				try
+				lock (this) //LUCENENET-375
 				{
-					clone = (Norm) base.MemberwiseClone();
-				}
-				catch (System.Exception cnse)
-				{
-					// Cannot happen
-					throw new System.SystemException("unexpected CloneNotSupportedException", cnse);
-				}
-				clone.refCount = 1;
-				
-				if (bytes != null)
-				{
-					System.Diagnostics.Debug.Assert(bytesRef != null);
-					System.Diagnostics.Debug.Assert(origNorm == null);
-					
-					// Clone holds a reference to my bytes:
-					clone.bytesRef.IncRef();
-				}
-				else
-				{
-					System.Diagnostics.Debug.Assert(bytesRef == null);
-					if (origNorm == null)
+					System.Diagnostics.Debug.Assert(refCount > 0 && (origNorm == null || origNorm.refCount > 0));
+
+					Norm clone;
+					try
 					{
-						// I become the origNorm for the clone:
-						clone.origNorm = this;
+						clone = (Norm) base.MemberwiseClone();
 					}
-					clone.origNorm.IncRef();
+					catch (System.Exception cnse)
+					{
+						// Cannot happen
+						throw new System.SystemException("unexpected CloneNotSupportedException", cnse);
+					}
+					clone.refCount = 1;
+
+					if (bytes != null)
+					{
+						System.Diagnostics.Debug.Assert(bytesRef != null);
+						System.Diagnostics.Debug.Assert(origNorm == null);
+
+						// Clone holds a reference to my bytes:
+						clone.bytesRef.IncRef();
+					}
+					else
+					{
+						System.Diagnostics.Debug.Assert(bytesRef == null);
+						if (origNorm == null)
+						{
+							// I become the origNorm for the clone:
+							clone.origNorm = this;
+						}
+						clone.origNorm.IncRef();
+					}
+
+					// Only the origNorm will actually readBytes from in:
+					clone.in_Renamed = null;
+
+					return clone;
 				}
-				
-				// Only the origNorm will actually readBytes from in:
-				clone.in_Renamed = null;
-				
-				return clone;
 			}
 			
 			// Flush all pending changes to the next generation
