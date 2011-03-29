@@ -169,7 +169,12 @@
 
 		public string Status
 		{
-			get { return string.Format("Page {0} of {1}", CurrentPage + 1, NumberOfPages); }
+			get
+			{
+				return (NumberOfPages == 0)
+					? "No results"
+					: string.Format("Page {0} of {1}", CurrentPage + 1, NumberOfPages);
+			}
 		}
 
 		public bool IsLoading
