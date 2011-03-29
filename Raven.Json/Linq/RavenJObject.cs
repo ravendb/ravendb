@@ -25,6 +25,11 @@ namespace Raven.Json.Linq
         }
         private CopyOnWriteJDictionary<string> _properties;
 
+		public override IEnumerable<RavenJToken> Children()
+		{
+			return Properties.Values;
+		}
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenJObject"/> class.
         /// </summary>

@@ -60,6 +60,11 @@ namespace Raven.Json.Linq
             return new RavenJValue(Value, Type);
         }
 
+		public override IEnumerable<RavenJToken> Children()
+		{
+			throw new NotImplementedException();
+		}
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
         /// </summary>
