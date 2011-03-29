@@ -36,12 +36,18 @@
 
 			DisplayName = "Summary";
 
-			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange(string.Empty); };
+			server.CurrentDatabaseChanged += delegate
+			{
+				Collections = new BindableCollection<Collection>();
+				RecentDocuments = new BindableCollection<DocumentViewModel>();
 
-			CollectionsStatus = "Retrieving collections.";
-			RecentDocumentsStatus = "Retrieving recent documents.";
-			ShowCreateSampleData = false;
-			IsGeneratingSampleData = false;
+				CollectionsStatus = "Retrieving collections.";
+				RecentDocumentsStatus = "Retrieving recent documents.";
+				ShowCreateSampleData = false;
+				IsGeneratingSampleData = false;
+
+			    NotifyOfPropertyChange(string.Empty);
+			};			
 		}
 
 		public string DatabaseName { get { return server.CurrentDatabase; } }
@@ -50,7 +56,7 @@
 
 		public BindableCollection<DocumentViewModel> RecentDocuments { get; private set; }
 
-		public IEnumerable<Collection> Collections { get; private set; }
+		public BindableCollection<Collection> Collections { get; private set; }
 
 		string collectionsStatus;
 		public string CollectionsStatus
@@ -225,7 +231,7 @@
 							x =>
 							{
 								WorkCompleted("fetching collections");
-								Collections = x.Result;
+								Collections =  new BindableCollection<Collection>(x.Result);
 								NotifyOfPropertyChange(() => LargestCollectionCount);
 								NotifyOfPropertyChange(() => Collections);
 								CollectionsStatus = Collections.Any() ? string.Empty : "The database contains no collections.";
@@ -236,6 +242,8 @@
 								const string error = "Unable to retreive collections from server.";
 								NotifyError(error);
 								CollectionsStatus = error;
+								NotifyOfPropertyChange(() => LargestCollectionCount);
+								NotifyOfPropertyChange(() => Collections);
 
 							});
 					});
