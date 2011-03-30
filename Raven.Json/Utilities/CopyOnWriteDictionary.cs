@@ -99,10 +99,10 @@ namespace Raven.Json.Utilities
 			value = null;
 			RavenJToken unsafeVal;
 			if (localChanges != null && localChanges.TryGetValue(key, out unsafeVal))
-				return unsafeVal != DeletedMarker;
-
-			if (inherittedValues == null || inherittedValues.TryGetValue(key, out unsafeVal) == false ||
-			    unsafeVal == DeletedMarker)
+			{
+				if (unsafeVal == DeletedMarker) return false;
+			}
+			else if (inherittedValues == null || inherittedValues.TryGetValue(key, out unsafeVal) == false || unsafeVal == DeletedMarker)
 				return false;
 
 			// Will also perform a copy-on-write clone on object supporting this
