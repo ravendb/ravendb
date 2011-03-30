@@ -3,6 +3,7 @@
 	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
+	using System.Diagnostics;
 	using System.Text;
 	using System.Threading.Tasks;
 	using System.Windows;
@@ -21,7 +22,7 @@
 	{
 		readonly TemplateColorProvider colorProvider;
 		readonly IServer server;
-		readonly Dictionary<string, DataTemplate> templates = new Dictionary<string, DataTemplate>();
+		readonly Dictionary<string, DataTemplate> templates = new Dictionary<string, DataTemplate>(StringComparer.InvariantCultureIgnoreCase);
 		readonly List<string> requested = new List<string>();
 
 		public event EventHandler<EventArgs<DataTemplate>> DataTemplateRetrieved = delegate { };
@@ -113,7 +114,11 @@
 		{
 			var key = message.TemplateKey.Replace("Template",string.Empty);
 			var template = Create(message.Xaml ?? GetTemplateXamlFor(key));
-			templates[key] = template;
+		
+			lock (templates)
+			{
+				templates[key] = template;
+			}
 		}
 
 		static string GetDefaultTemplateXaml(Color fill)
