@@ -12,7 +12,6 @@ namespace Raven.Studio.Features.Database
 	using Framework;
 	using Messages;
 	using Raven.Database.Data;
-	using StartUp;
 	using Statistics;
 	using Action = System.Action;
 
@@ -91,7 +90,12 @@ namespace Raven.Studio.Features.Database
 							dbs.AddRange(task.Result);
 							Databases = dbs;
 
-							SelectDatabase(dbs[0], callback);
+							OpenDatabase(dbs[0], () =>
+							{
+								Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
+
+								if (callback != null) callback();
+							});
 						},
 					faulted =>
 						{
@@ -123,6 +127,9 @@ namespace Raven.Studio.Features.Database
 			CurrentDatabase = name;
 			RefreshStatistics(true);
 			RaiseCurrentDatabaseChanged();
+
+			using (var session = OpenSession())
+				session.Advanced.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync();
 
 			callback();
 		}
@@ -190,17 +197,6 @@ namespace Raven.Studio.Features.Database
 				errors = value;
 				NotifyOfPropertyChange(() => Errors);
 			}
-		}
-
-		void SelectDatabase(string name, Action callback)
-		{
-			OpenDatabase(name, () =>
-			                   	{
-			                   		Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
-
-
-			                   		if (callback != null) callback();
-			                   	});
 		}
 
 		void RaiseCurrentDatabaseChanged() { CurrentDatabaseChanged(this, EventArgs.Empty); }
