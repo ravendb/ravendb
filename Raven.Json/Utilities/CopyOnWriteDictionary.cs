@@ -94,21 +94,25 @@ namespace Raven.Json.Utilities
 			return true;
 		}
 
-    	public bool TryGetValue(TKey key, out RavenJToken value)
-        {
-            try
-            {
-                value = this[key];
-                return true;
-            }
-            catch (KeyNotFoundException)
-            {
-                value = null;
-                return false;
-            }
-        }
+		public bool TryGetValue(TKey key, out RavenJToken value)
+		{
+			value = null;
+			RavenJToken unsafeVal;
+			if (localChanges != null && localChanges.TryGetValue(key, out unsafeVal))
+				return unsafeVal != DeletedMarker;
 
-        public ICollection<RavenJToken> Values
+			if (inherittedValues == null || inherittedValues.TryGetValue(key, out unsafeVal) == false ||
+			    unsafeVal == DeletedMarker)
+				return false;
+
+			// Will also perform a copy-on-write clone on object supporting this
+			var safeVal = unsafeVal.CloneToken();
+			LocalChanges[key] = safeVal;
+			value = safeVal;
+			return true;
+		}
+
+    	public ICollection<RavenJToken> Values
         {
             get
             {
@@ -121,32 +125,17 @@ namespace Raven.Json.Utilities
             }
         }
 
-        public RavenJToken this[TKey key]
-        {
-            get
-            {
-                RavenJToken val;
-				if (localChanges != null && localChanges.TryGetValue(key, out val))
-				{
-					if (val == DeletedMarker)
-						throw new KeyNotFoundException(key.ToString());
-					return val;
-				}
-
-            	if (inherittedValues != null && inherittedValues.TryGetValue(key, out val))
-                {
-                    if (val == DeletedMarker)
-						throw new KeyNotFoundException(key.ToString());
-
-                    // Will also perform a copy-on-write clone on object supporting this
-                    var safeVal = val.CloneToken();
-                    LocalChanges[key] = safeVal;
-                    return safeVal;
-                }
-            	throw new KeyNotFoundException(key.ToString());
-            }
-            set { LocalChanges[key] = value; }
-        }
+		public RavenJToken this[TKey key]
+		{
+			get
+			{
+				RavenJToken token;
+				if (TryGetValue(key, out token))
+					return token;
+				throw new KeyNotFoundException(key.ToString());
+			}
+			set { LocalChanges[key] = value; }
+		}
 
         #endregion
 
