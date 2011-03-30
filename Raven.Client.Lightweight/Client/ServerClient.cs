@@ -208,7 +208,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 					Key = key,
 					Etag = new Guid(request.ResponseHeaders["ETag"]),
-					LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture),
+					LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture).ToLocalTime(),
                     Metadata = meta
 				};
 			}
