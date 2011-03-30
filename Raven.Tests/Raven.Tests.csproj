@@ -323,6 +323,7 @@
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="IndexQueryUrl.cs" />
     <Compile Include="Json\CopyOnWrite.cs" />
+    <Compile Include="Json\RavenJObjects.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
     <Compile Include="Linq\SampleGeoLocation.cs" />
