@@ -60,7 +60,8 @@ namespace Raven.Json.Linq
         /// <param name="other">A <see cref="RavenJObject"/> object to copy from.</param>
 		public RavenJObject(RavenJObject other)
         {
-        	properties = other.properties.Clone();
+        	if (other.properties != null)
+        		properties = other.properties.Clone();
         }
 
 		/// <summary>
