@@ -22,9 +22,9 @@ namespace Raven.Json.Linq
 
         public IDictionary<string, RavenJToken> Properties
         {
-            get { return _properties ?? (_properties = new CopyOnWriteJDictionary<string>()); }
+            get { return properties ?? (properties = new CopyOnWriteJDictionary<string>()); }
         }
-        private CopyOnWriteJDictionary<string> _properties;
+        private CopyOnWriteJDictionary<string> properties;
 
 		public override IEnumerable<RavenJToken> Children()
 		{
@@ -40,10 +40,10 @@ namespace Raven.Json.Linq
 
 		public RavenJObject(params KeyValuePair<string, RavenJToken>[] props)
 		{
-			_properties = new CopyOnWriteJDictionary<string>();
+			properties = new CopyOnWriteJDictionary<string>();
 			foreach (var kv in props)
 			{
-				_properties.Add(kv);
+				properties.Add(kv);
 			}
 		}
 
@@ -51,8 +51,8 @@ namespace Raven.Json.Linq
 		{
 			if (o is KeyValuePair<string, RavenJToken>)
 			{
-				_properties = new CopyOnWriteJDictionary<string>();
-				_properties.Add((KeyValuePair<string, RavenJToken>)o);
+				properties = new CopyOnWriteJDictionary<string>();
+				properties.Add((KeyValuePair<string, RavenJToken>)o);
 			}
 		}
 
@@ -62,7 +62,7 @@ namespace Raven.Json.Linq
         /// <param name="other">A <see cref="RavenJObject"/> object to copy from.</param>
         public RavenJObject(RavenJObject other)
         {
-            _properties = (CopyOnWriteJDictionary<string>) other._properties.Clone();
+            properties = (CopyOnWriteJDictionary<string>) other.properties.Clone();
         }
 
 		/// <summary>
@@ -251,9 +251,9 @@ namespace Raven.Json.Linq
 		{
 			writer.WriteStartObject();
 
-			if (_properties != null)
+			if (properties != null)
 			{
-				foreach (var property in _properties)
+				foreach (var property in properties)
 				{
 					writer.WritePropertyName(property.Key);
 					property.Value.WriteTo(writer, converters);
@@ -269,17 +269,17 @@ namespace Raven.Json.Linq
 			if (t == null)
 				return false;
 
-			if (_properties == null || t._properties == null)
+			if (properties == null || t.properties == null)
 			{
-				if (_properties == t._properties)
+				if (properties == t.properties)
 					return true;
 				return false;
 			}
 
 			RavenJToken v1, v2;
-			foreach (var key in _properties.Keys)
+			foreach (var key in properties.Keys)
 			{
-				if (!t._properties.TryGetValue(key, out v2) || !_properties.TryGetValue(key, out v1))
+				if (!t.properties.TryGetValue(key, out v2) || !properties.TryGetValue(key, out v1))
 					return false;
 
 				if (v1 == null || v2 == null)
@@ -299,9 +299,9 @@ namespace Raven.Json.Linq
 		internal override int GetDeepHashCode()
 		{
 			int hashCode = 0;
-			if (_properties != null)
+			if (properties != null)
 			{
-				foreach (RavenJToken item in _properties.Values)
+				foreach (RavenJToken item in properties.Values)
 				{
 					hashCode ^= item.GetDeepHashCode();
 				}
