@@ -283,7 +283,7 @@ namespace Raven.Client.Client.Async
 							DataAsJson = JObject.Parse(responseString),
 							NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 							Key = key,
-							LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture),
+							LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture).ToLocalTime(),
 							Etag = new Guid(request.ResponseHeaders["ETag"]),
 							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 						};

@@ -106,7 +106,13 @@
                                        f:DoubleClickEvent.AttachAction="AddTermToQuery($dataContext)" />
                         </DataTemplate>
                     </ListBox.ItemTemplate>
-                </ListBox>
+					<ListBox.ItemContainerStyle>
+						<Style TargetType="ListBoxItem">
+							<Setter Property="HorizontalContentAlignment"
+									Value="Stretch" />
+						</Style>
+					</ListBox.ItemContainerStyle>
+				</ListBox>
 
             </tk:DockPanel>
 

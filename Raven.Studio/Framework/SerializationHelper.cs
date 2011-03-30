@@ -17,7 +17,7 @@ namespace Raven.Studio.Framework
 					let metadata = doc["@metadata"] as JObject
 					let _ = doc.Remove("@metadata")
 					let key = (metadata != null) ? metadata["@id"].Value<string>() : ""
-					let lastModified = (metadata != null) ? DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture) : DateTime.Now
+					let lastModified = (metadata != null) ? DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture).ToLocalTime() : DateTime.Now
 					let etag = (metadata != null) ? new Guid(metadata["@etag"].Value<string>()) : Guid.Empty
 					let nai = (metadata != null) ? metadata.Value<bool>("Non-Authoritive-Information") : false
 					select new JsonDocument

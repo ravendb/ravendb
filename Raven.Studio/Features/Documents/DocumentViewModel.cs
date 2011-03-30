@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Documents
+﻿using Raven.Abstractions.Data;
+
+namespace Raven.Studio.Features.Documents
 {
     using System;
     using Collections;
@@ -111,7 +113,7 @@
             if (string.IsNullOrEmpty(id))
                 return BuiltinCollectionName.Projection; // meaning that the document is a projection and not a 'real' document
 
-            var entity = metadata.IfPresent<string>("Raven-Entity-Name");
+            var entity = metadata.IfPresent<string>(Constants.RavenEntityName);
 			if (entity != null)
 				entity = entity.ToLower();
             return entity ??

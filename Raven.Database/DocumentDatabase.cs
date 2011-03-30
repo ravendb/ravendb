@@ -31,6 +31,7 @@ using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Http;
 using Raven.Http.Exceptions;
+using Constants = Raven.Abstractions.Data.Constants;
 using Index = Raven.Database.Indexing.Index;
 using Task = Raven.Database.Tasks.Task;
 using TransactionInformation = Raven.Http.TransactionInformation;
@@ -366,7 +367,7 @@ namespace Raven.Database
 				var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
 				if (viewGenerator == null)
 					continue;
-				var entityName = metadata.Value<string>("Raven-Entity-Name");
+				var entityName = metadata.Value<string>(Constants.RavenEntityName);
 				if (viewGenerator.ForEntityName != null &&
 						viewGenerator.ForEntityName != entityName)
 					continue;

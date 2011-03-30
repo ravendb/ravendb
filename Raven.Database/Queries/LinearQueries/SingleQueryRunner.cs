@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -57,7 +58,7 @@ namespace Raven.Database.Queries.LinearQueries
                 if (string.IsNullOrEmpty(viewGenerator.ForEntityName) == false) //optimization
                 {
                     matchingDocs =
-                        matchingDocs.Where(x => x.Item1.Metadata.Value<string>("Raven-Entity-Name") == viewGenerator.ForEntityName);
+                        matchingDocs.Where(x => x.Item1.Metadata.Value<string>(Constants.RavenEntityName) == viewGenerator.ForEntityName);
                 }
 
                 var docs = matchingDocs

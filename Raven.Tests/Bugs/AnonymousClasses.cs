@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Raven.Abstractions.Data;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -40,7 +41,7 @@ namespace Raven.Tests.Bugs
 
                     var metadata = s.Advanced.GetMetadataFor(entity);
 
-                    Assert.Null(metadata.Property("Raven-Entity-Name"));
+					Assert.Null(metadata.Property(Constants.RavenEntityName));
                 }
             }
         }

@@ -23,7 +23,7 @@ namespace Raven.Client.Client
 			        select new JsonDocument
 			        {
 			        	Key = metadata["@id"].Value<string>(),
-			        	LastModified = DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture),
+						LastModified = DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
 			        	Etag = new Guid(metadata["@etag"].Value<string>()),
 			        	NonAuthoritiveInformation = metadata.Value<bool>("Non-Authoritive-Information"),
 			        	Metadata = metadata.FilterHeaders(isServerDocument: false),

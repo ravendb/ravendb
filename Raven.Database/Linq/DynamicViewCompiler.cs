@@ -299,7 +299,7 @@ namespace Raven.Database.Linq
 				//doc["@metadata"]["Raven-Entity-Name"]
 				var metadata = new IndexerExpression(
 					new IndexerExpression(new IdentifierExpression("__document"), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
-					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
+					new List<Expression> { new PrimitiveExpression(Constants.RavenEntityName, Constants.RavenEntityName) }
 					);
 				var whereMethod = new InvocationExpression(new MemberReferenceExpression(mre.TargetObject, "Where"),
 				                                           new List<Expression>
@@ -356,7 +356,7 @@ namespace Raven.Database.Linq
 				//doc["@metadata"]["Raven-Entity-Name"]
 				var metadata = new IndexerExpression(
 					new IndexerExpression(new IdentifierExpression(queryExpression.FromClause.Identifier), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
-					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
+					new List<Expression> { new PrimitiveExpression(Constants.RavenEntityName, Constants.RavenEntityName) }
 					);
 				queryExpression.MiddleClauses.Insert(0, 
 				                                     new QueryExpressionWhereClause
