@@ -10,9 +10,9 @@ namespace Raven.Json.Utilities
     {
         private static readonly RavenJToken DeletedMarker = new RavenJValue(null, JTokenType.Null);
 
-        private IDictionary<TKey, RavenJToken> _localChanges;
-        protected IDictionary<TKey, RavenJToken> LocalChanges { get { return _localChanges ?? (_localChanges = new Dictionary<TKey, RavenJToken>()); } }
-        private CopyOnWriteJDictionary<TKey> _inherittedValues;
+        private IDictionary<TKey, RavenJToken> localChanges;
+        protected IDictionary<TKey, RavenJToken> LocalChanges { get { return localChanges ?? (localChanges = new Dictionary<TKey, RavenJToken>()); } }
+        private CopyOnWriteJDictionary<TKey> inherittedValues;
 
         public CopyOnWriteJDictionary()
         {
@@ -20,12 +20,12 @@ namespace Raven.Json.Utilities
 
         private CopyOnWriteJDictionary(IDictionary<TKey, RavenJToken> props)
         {
-            _localChanges = props;
+            localChanges = props;
         }
 
         private CopyOnWriteJDictionary(CopyOnWriteJDictionary<TKey> previous)
         {
-            _inherittedValues = previous;
+            inherittedValues = previous;
         }
 
         #region Dictionary<TKey,TValue> Members
@@ -37,8 +37,8 @@ namespace Raven.Json.Utilities
 
         public bool ContainsKey(TKey key)
         {
-            return (_inherittedValues != null && _inherittedValues.ContainsKey(key) && _inherittedValues[key] != DeletedMarker) ||
-                (_localChanges != null && _localChanges.ContainsKey(key) && _localChanges[key] != DeletedMarker);
+            return (inherittedValues != null && inherittedValues.ContainsKey(key) && inherittedValues[key] != DeletedMarker) ||
+                (localChanges != null && localChanges.ContainsKey(key) && localChanges[key] != DeletedMarker);
         }
 
         public ICollection<TKey> Keys
@@ -46,21 +46,21 @@ namespace Raven.Json.Utilities
             get
             {
             	ICollection<TKey> ret = new HashSet<TKey>();
-				if (_inherittedValues != null)
+				if (inherittedValues != null)
 				{
-					foreach (var key in _inherittedValues.Keys)
+					foreach (var key in inherittedValues.Keys)
 					{
-						if (_localChanges.ContainsKey(key))
+						if (localChanges.ContainsKey(key))
 							continue;
 						ret.Add(key);
 					}
 				}
 
-				if (_localChanges != null)
+				if (localChanges != null)
 				{
-					foreach (var key in _localChanges.Keys)
+					foreach (var key in localChanges.Keys)
 					{
-						if (_localChanges[key] == DeletedMarker)
+						if (localChanges[key] == DeletedMarker)
 							continue;
 						ret.Add(key);
 					}
@@ -107,14 +107,14 @@ namespace Raven.Json.Utilities
             get
             {
                 RavenJToken val;
-				if (_localChanges != null && _localChanges.TryGetValue(key, out val))
+				if (localChanges != null && localChanges.TryGetValue(key, out val))
 				{
 					if (val == DeletedMarker)
 						throw new KeyNotFoundException(key.ToString());
 					return val;
 				}
 
-            	if (_inherittedValues != null && _inherittedValues.TryGetValue(key, out val))
+            	if (inherittedValues != null && inherittedValues.TryGetValue(key, out val))
                 {
                     if (val == DeletedMarker)
 						throw new KeyNotFoundException(key.ToString());
@@ -198,8 +198,8 @@ namespace Raven.Json.Utilities
 		public IEnumerator<KeyValuePair<TKey, RavenJToken>> GetEnumerator()
 		{
 			return new CopyOnWriteDictEnumerator(
-				_inherittedValues != null ? _inherittedValues.GetEnumerator() : null,
-				_localChanges != null ? _localChanges.GetEnumerator() : null
+				inherittedValues != null ? inherittedValues.GetEnumerator() : null,
+				localChanges != null ? localChanges.GetEnumerator() : null
 				);
 		}
 
@@ -250,20 +250,20 @@ namespace Raven.Json.Utilities
 
         public object Clone()
         {
-            if (_inherittedValues == null)
+            if (inherittedValues == null)
             {
-                _inherittedValues = new CopyOnWriteJDictionary<TKey>(_localChanges);
-                _localChanges = null;
-                return new CopyOnWriteJDictionary<TKey>(_inherittedValues);
+                inherittedValues = new CopyOnWriteJDictionary<TKey>(localChanges);
+                localChanges = null;
+                return new CopyOnWriteJDictionary<TKey>(inherittedValues);
             }
-            if (_localChanges == null)
+            if (localChanges == null)
             {
-                return new CopyOnWriteJDictionary<TKey>(_inherittedValues);
+                return new CopyOnWriteJDictionary<TKey>(inherittedValues);
             }
-            _inherittedValues = new CopyOnWriteJDictionary<TKey>(
-                new CopyOnWriteJDictionary<TKey>(_inherittedValues) { _localChanges = _localChanges });
-            _localChanges = null;
-            return new CopyOnWriteJDictionary<TKey>(_inherittedValues);
+            inherittedValues = new CopyOnWriteJDictionary<TKey>(
+                new CopyOnWriteJDictionary<TKey>(inherittedValues) { localChanges = localChanges });
+            localChanges = null;
+            return new CopyOnWriteJDictionary<TKey>(inherittedValues);
         }
 
         #endregion
