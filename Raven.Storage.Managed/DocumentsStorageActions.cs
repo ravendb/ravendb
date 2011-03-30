@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Impl;
@@ -233,7 +234,7 @@ namespace Raven.Storage.Managed
                 {"etag", newEtag.ToByteArray()},
                 {"modified", DateTime.UtcNow},
                 {"id", GetNextDocumentId()},
-                {"entityName", metadata.Value<string>("Raven-Entity-Name")}
+                {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
             },ms.ToArray());
 
             return newEtag;

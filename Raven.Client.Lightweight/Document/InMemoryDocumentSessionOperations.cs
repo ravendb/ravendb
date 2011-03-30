@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Transactions;
 #endif
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -31,7 +32,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public abstract class InMemoryDocumentSessionOperations : IDisposable
 	{
-		private const string RavenEntityName = "Raven-Entity-Name";
 		/// <summary>
 		/// The entities waiting to be deleted
 		/// </summary>
@@ -518,7 +518,7 @@ more responsive application.
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
 			var metadata = new JObject();
 			if(tag != null)
-				metadata.Add(new JProperty(RavenEntityName, new JValue(tag)));
+				metadata.Add(new JProperty(Constants.RavenEntityName, new JValue(tag)));
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
 				Key = id,
