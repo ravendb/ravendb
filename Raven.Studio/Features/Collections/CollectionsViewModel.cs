@@ -35,6 +35,8 @@
 
 			server.CurrentDatabaseChanged += delegate
 			{
+				Status = "Retrieving collections";
+
 				Collections = new BindableCollection<Collection>();
 				ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
 
@@ -113,7 +115,6 @@
 		protected override void OnActivate()
 		{
 			WorkStarted("fetching collections");
-			Status = "Retrieving collections";
 
 			var currentActiveCollection = ActiveCollection;
 			using (var session = server.OpenSession())
