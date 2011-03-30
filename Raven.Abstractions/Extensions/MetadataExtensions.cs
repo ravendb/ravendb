@@ -129,9 +129,9 @@ namespace Raven.Database.Data
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-      public static JObject FilterHeaders(this IDictionary<string,IList<string>> self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this IDictionary<string, IList<string>> self, bool isServerDocument)
           {
-            var metadata = new JObject();
+			  var metadata = new RavenJObject();
             foreach (var header in self)
             {
                 if (HeadersToIgnoreClient.Contains(header.Key))
@@ -143,7 +143,7 @@ namespace Raven.Database.Data
 				if (values.Count == 1)
 					metadata.Add(headerName, GetValue(values[0]));
 				else
-					metadata.Add(headerName, new JArray(values.Select(GetValue)));
+					metadata.Add(headerName, new RavenJArray(values.Select(GetValue)));
             }
             return metadata;
         }

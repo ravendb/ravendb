@@ -24,6 +24,12 @@ namespace Raven.Json.Linq
         {
             get { return properties ?? (properties = new CopyOnWriteJDictionary<string>()); }
         }
+
+    	public int Count
+    	{
+			get { return Properties.Count; }
+    	}
+
         private CopyOnWriteJDictionary<string> properties;
 
 		public override IEnumerable<RavenJToken> Children()
