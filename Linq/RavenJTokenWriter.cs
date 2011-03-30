@@ -12,7 +12,7 @@ namespace Raven.Json.Linq
     {
         private RavenJToken _token;
         private RavenJValue _value;
-        private Stack<RavenJToken> _tokenStack = new Stack<RavenJToken>();
+        private readonly Stack<RavenJToken> _tokenStack = new Stack<RavenJToken>();
 
         protected RavenJToken CurrentToken { get { return (_tokenStack.Count == 0) ? null : _tokenStack.Peek(); } }
 
@@ -143,7 +143,7 @@ namespace Raven.Json.Linq
         public override void WriteNull()
         {
             base.WriteNull();
-            AddValue(null, JsonToken.Null);
+            AddValue(new RavenJValue(null, JTokenType.Null), JsonToken.Null);
         }
 
         /// <summary>
@@ -152,7 +152,7 @@ namespace Raven.Json.Linq
         public override void WriteUndefined()
         {
             base.WriteUndefined();
-            AddValue(null, JsonToken.Undefined);
+			AddValue(new RavenJValue(null, JTokenType.Null), JsonToken.Undefined);
         }
 
         /// <summary>
