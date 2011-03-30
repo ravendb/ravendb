@@ -7,7 +7,10 @@ using System.Linq;
 
 namespace Raven.Json.Utilities
 {
-    public class CopyOnWriteJDictionary<TKey> : IDictionary<TKey, RavenJToken>, ICloneable
+    public class CopyOnWriteJDictionary<TKey> : IDictionary<TKey, RavenJToken>
+#if !SILVERLIGHT
+		, ICloneable
+#endif
     {
         private static readonly RavenJToken DeletedMarker = new RavenJValue(null, JTokenType.Null);
     	private int deleteCount;
