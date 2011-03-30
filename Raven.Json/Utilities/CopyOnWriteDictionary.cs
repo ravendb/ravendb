@@ -51,10 +51,11 @@ namespace Raven.Json.Utilities
     	public bool ContainsKey(TKey key)
     	{
     		RavenJToken token;
-    		if (localChanges != null)
+    		if (localChanges != null && localChanges.TryGetValue(key, out token))
     		{
-    			if (localChanges.TryGetValue(key, out token) && token == DeletedMarker)
+    			if (token == DeletedMarker)
     				return false;
+    			return true;
     		}
     		return (inherittedValues != null && inherittedValues.TryGetValue(key, out token) && token != DeletedMarker);
     	}
