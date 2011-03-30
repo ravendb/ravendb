@@ -319,9 +319,14 @@ namespace Raven.Json.Linq
 			return _value == null ? 0 : _value.GetHashCode();
 		}
 
-		public int CompareTo(object obj)
+		int IComparable.CompareTo(object obj)
 		{
-			throw new NotImplementedException();
+			if (obj == null)
+				return 1;
+
+			var otherValue = (obj is RavenJValue) ? ((RavenJValue)obj).Value : obj;
+
+			return Compare(_valueType, _value, otherValue);
 		}
 
 		public bool Equals(RavenJValue other)
