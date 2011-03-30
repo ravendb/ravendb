@@ -11,6 +11,7 @@ namespace Raven.Studio.Features.Database
 	using Client.Extensions;
 	using Framework;
 	using Messages;
+	using Newtonsoft.Json.Linq;
 	using Raven.Database.Data;
 	using Statistics;
 	using Action = System.Action;
@@ -76,35 +77,48 @@ namespace Raven.Studio.Features.Database
 			Store = new DocumentStore {Url = Address};
 			Store.Initialize();
 
-			Store.OpenAsyncSession().Advanced.AsyncDatabaseCommands
-				.GetDatabaseNamesAsync()
-				.ContinueWith(
-					task =>
-						{
-							IsInitialized = true;
-							Status = "Connected";
-							var dbs = new List<string>
-							          	{
-							          		DefaultDatabaseName
-							          	};
-							dbs.AddRange(task.Result);
-							Databases = dbs;
+			var securityCheckId = "forceAuth_" + Guid.NewGuid();
 
-							OpenDatabase(dbs[0], () =>
-							{
-								Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
+			using(var session = Store.OpenAsyncSession())
+				session.Advanced.AsyncDatabaseCommands
+					.PutAsync(securityCheckId, null, new JObject(), null )
+					.ContinueWith( _=>
+					{
+						session.Advanced.AsyncDatabaseCommands
+						.DeleteDocumentAsync(securityCheckId);
+					})
+					.ContinueWith( _=>
+					{
+						session.Advanced.AsyncDatabaseCommands
+						.GetDatabaseNamesAsync()
+						.ContinueWith(
+							task =>
+								{
+									IsInitialized = true;
+									Status = "Connected";
+									var dbs = new List<string>
+							          			{
+							          				DefaultDatabaseName
+							          			};
+									dbs.AddRange(task.Result);
+									Databases = dbs;
 
-								if (callback != null) callback();
-							});
-						},
-					faulted =>
-						{
-							var error = "Unable to connect to " + Address;
-							Status = error;
-							events.Publish(new NotificationRaised(error, NotificationLevel.Error));
-							IsInitialized = false;
-							callback();
-						});
+									OpenDatabase(dbs[0], () =>
+									{
+										Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
+
+										if (callback != null) callback();
+									});
+								},
+							faulted =>
+								{
+									var error = "Unable to connect to " + Address;
+									Status = error;
+									events.Publish(new NotificationRaised(error, NotificationLevel.Error));
+									IsInitialized = false;
+									callback();
+								});
+				});
 		}
 
 		public string CurrentDatabase
