@@ -1,5 +1,6 @@
 ﻿namespace Raven.Studio.Features.Documents
 {
+	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using System.Text;
@@ -11,6 +12,7 @@
 	using Database;
 	using Framework;
 	using Messages;
+	using Raven.Database.Data;
 
 	[Export(typeof (IDocumentTemplateProvider))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
@@ -20,6 +22,9 @@
 		readonly TemplateColorProvider colorProvider;
 		readonly IServer server;
 		readonly Dictionary<string, DataTemplate> templates = new Dictionary<string, DataTemplate>();
+		readonly List<string> requested = new List<string>();
+
+		public event EventHandler<EventArgs<DataTemplate>> DataTemplateRetrieved = delegate { };
 
 		[ImportingConstructor]
 		public DocumentTemplateProvider(IServer server, TemplateColorProvider colorProvider, IEventAggregator events)
@@ -41,34 +46,43 @@
 		{
 			var tcs = new TaskCompletionSource<DataTemplate>();
 
+			// first, check the cache 
 			if (templates.ContainsKey(key))
 			{
 				tcs.TrySetResult(templates[key]);
+				return tcs.Task;
 			}
-			else
-			{
-				using (var session = server.OpenSession())
-				{
-					session.Advanced.AsyncDatabaseCommands
-						.GetAttachmentAsync(key + "Template")
-						.ContinueWith(get =>
-						              	{
-						              		if (get.Result == null)
-						              		{
-						              			ApplyDefaultTemplate(key, tcs);
-						              		}
-						              		else
-						              		{
-						              			var encoding = new UTF8Encoding();
-						              			var bytes = get.Result.Data;
 
-						              			var xaml = encoding.GetString(bytes, 0, bytes.Length);
-						              			var template = Create(xaml);
-						              			templates[key] = template;
-						              			tcs.TrySetResult(template);
-						              		}
-						              	});
+			// second, if we've already asked for it, just wait
+			lock (requested)
+			{
+				if (requested.Contains(key))
+				{
+					DataTemplateRetrieved += (s,e)=> tcs.TrySetResult(e.Value);
+					return tcs.Task;
 				}
+				
+				requested.Add(key);
+			}
+
+			// if we don't have it and we're not waiting for it, let's request it from the server
+			using (var session = server.OpenSession())
+			{
+				session.Advanced.AsyncDatabaseCommands
+					.GetAttachmentAsync(key + "Template")
+					.ContinueWith(get =>
+					{
+						var template = GenerateTemplateFrom(get.Result,key);
+						lock (templates)
+						{
+							if (!templates.ContainsKey(key)) templates[key] = template;
+						}
+
+						// let those waiting know we've go it now 
+						DataTemplateRetrieved(this,new EventArgs<DataTemplate>(template));
+
+						tcs.TrySetResult(template);
+					});
 			}
 
 			return tcs.Task;
@@ -79,7 +93,23 @@
 			return templates.ContainsKey(key) ? (templates[key]) : null;
 		}
 
-		public void Handle(CollectionTemplateUpdated message)
+		DataTemplate GenerateTemplateFrom(Attachment attachment, string key)
+		{
+			string xaml;
+			if (attachment == null)
+			{
+				xaml = GetTemplateXamlFor(key);
+			}
+			else
+			{
+				var encoding = new UTF8Encoding();
+				var bytes = attachment.Data;
+				xaml = encoding.GetString(bytes, 0, bytes.Length);
+			}
+			return Create(xaml);
+		}
+
+		void IHandle<CollectionTemplateUpdated>.Handle(CollectionTemplateUpdated message)
 		{
 			var key = message.TemplateKey.Replace("Template",string.Empty);
 			var template = Create(message.Xaml ?? GetTemplateXamlFor(key));
@@ -132,16 +162,7 @@
 			</Grid>";
 		}
 
-		void ApplyDefaultTemplate(string key, TaskCompletionSource<DataTemplate> tcs)
-		{
-			var templateXaml = GetTemplateXamlFor(key);
-
-			var defaultTemplate = Create(templateXaml);
-			templates[key] = defaultTemplate;
-			tcs.TrySetResult(defaultTemplate);
-		}
-
-		public static DataTemplate Create(string innerXaml)
+		static DataTemplate Create(string innerXaml)
 		{
 			DataTemplate template = null;
 			Execute.OnUIThread(() =>
