@@ -9,10 +9,13 @@
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
 			 xmlns:f="clr-namespace:Raven.Studio.Framework"
 			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
-			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions" xmlns:docs="clr-namespace:Raven.Studio.Features.Documents" x:Class="Raven.Studio.Features.Documents.BrowseDocumentsView"
+			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+			 xmlns:docs="clr-namespace:Raven.Studio.Features.Documents"
+			 x:Class="Raven.Studio.Features.Documents.BrowseDocumentsView"
 			 mc:Ignorable="d"
 			 d:DesignWidth="640"
-			 d:DesignHeight="480" d:DataContext="{d:DesignData /SampleData/BrowseDocumentsViewModelSampleData.xaml}">
+			 d:DesignHeight="480"
+			 d:DataContext="{d:DesignData /SampleData/BrowseDocumentsViewModelSampleData.xaml}">
 
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>
@@ -67,10 +70,10 @@
 
 			<Grid>
 				<ItemsControl x:Name="DocumentPageContainer"
-						 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-						 BorderThickness="0"
-						 ItemsPanel="{StaticResource FluidWrapPanel}"
-						 ItemsSource="{Binding Documents}">
+							  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+							  BorderThickness="0"
+							  ItemsPanel="{StaticResource FluidWrapPanel}"
+							  ItemsSource="{Binding Documents}">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
 							<ContentControl cm:View.Model="{Binding}" />
@@ -79,8 +82,7 @@
 				</ItemsControl>
 
 				<TextBlock Style="{StaticResource Instruction}"
-						   Text="The database contains no documents."
-						   Visibility="{Binding HasDocuments, Converter={StaticResource visibleWhenFalse}}"
+						   Text="{Binding Status}"
 						   d:IsHidden="True"
 						   d:IsLocked="True" />
 			</Grid>
