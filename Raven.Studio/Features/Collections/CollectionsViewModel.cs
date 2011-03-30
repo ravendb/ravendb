@@ -32,7 +32,14 @@
 			events.Subscribe(this);
 
 			this.server = server;
-			ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
+
+			server.CurrentDatabaseChanged += delegate
+			{
+				Collections = new BindableCollection<Collection>();
+				ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
+
+				NotifyOfPropertyChange(string.Empty);
+			};	
 		}
 
 		public IEnumerable<Collection> Collections { get; private set; }
