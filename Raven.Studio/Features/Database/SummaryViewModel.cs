@@ -207,7 +207,7 @@
 						faulted =>
 						{
 							WorkCompleted("fetching recent documents");
-							NotifyError("Unable to retreive recent documents from server.");
+							NotifyError("Unable to retrieve recent documents from server.");
 						});
 			}
 		}
@@ -239,7 +239,7 @@
 							faulted =>
 							{
 								WorkCompleted("fetching collections");
-								const string error = "Unable to retreive collections from server.";
+								const string error = "Unable to retrieve collections from server.";
 								NotifyError(error);
 								CollectionsStatus = error;
 								NotifyOfPropertyChange(() => LargestCollectionCount);

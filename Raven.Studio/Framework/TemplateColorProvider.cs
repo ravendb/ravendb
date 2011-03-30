@@ -23,6 +23,7 @@
 
 		public Color ColorFrom(string key)
 		{
+			lock (colors)
 			if (!colors.ContainsKey(key))
 			{
 				var s = 1.0;
@@ -33,11 +34,13 @@
 
 				Debug.WriteLine("create color for " + key + " h: " + h);
 			}
+
 			return colors[key];
 		}
 
 		double BaseHueFor(string key)
 		{
+			lock (baseHues)
 			if (!baseHues.ContainsKey(key))
 			{
 				var index = baseHues.Count + 1;
