@@ -7,6 +7,7 @@
 	using System.Threading.Tasks;
 	using Abstractions.Data;
 	using Caliburn.Micro;
+	using Client.Extensions;
 	using Database;
 	using Documents;
 	using Framework;
@@ -36,6 +37,13 @@
 
 		public IEnumerable<Collection> Collections { get; private set; }
 		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments { get; private set; }
+
+		string status;
+		public string Status
+		{
+			get { return status; }
+			set { status = value; NotifyOfPropertyChange(() => Status); }
+		}
 
 		public Collection ActiveCollection
 		{
@@ -97,24 +105,35 @@
 
 		protected override void OnActivate()
 		{
-			WorkStarted();
+			WorkStarted("fetching collections");
+			Status = "Retrieving collections";
 
 			var currentActiveCollection = ActiveCollection;
 			using (var session = server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 25)
-					.ContinueOnSuccess(x =>
-										{
-											Collections = x.Result;
-											NotifyOfPropertyChange(() => LargestCollectionCount);
-											NotifyOfPropertyChange(() => Collections);
+					.ContinueWith(
+					x =>
+					{
+						WorkCompleted("fetching collections");
 
-											ActiveCollection = currentActiveCollection ?? Collections.FirstOrDefault();
-											NotifyOfPropertyChange(() => HasCollections);
+						Collections = x.Result;
+						NotifyOfPropertyChange(() => LargestCollectionCount);
+						NotifyOfPropertyChange(() => Collections);
 
-											WorkCompleted();
-										});
+						ActiveCollection = currentActiveCollection ?? Collections.FirstOrDefault();
+						NotifyOfPropertyChange(() => HasCollections);
+
+						Status = Collections.Any() ? string.Empty : "The database contains no collections.";
+					},
+					faulted =>
+					{
+						WorkCompleted("fetching collections");
+						var error = "Unable to retrieve collections from server.";
+						Status = error;
+						NotifyError(error);
+					});
 			}
 		}
 

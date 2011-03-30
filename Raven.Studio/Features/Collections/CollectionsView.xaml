@@ -126,7 +126,7 @@
 			         ItemContainerStyle="{StaticResource CollectionListBoxItemStyle}" />
 
 			<TextBlock Grid.Row="1"
-			           Text="The database contains no collections."
+			           Text="{Binding Status}"
 			           Style="{StaticResource Instruction}"
 			           Visibility="{Binding Collections, Converter={StaticResource visibleWhenEmpty}}"
 			           d:IsLocked="True" />

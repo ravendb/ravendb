@@ -2,6 +2,7 @@
 namespace Raven.Client.Extensions
 {
 	using System;
+	using System.Linq;
 
 	///<summary>
 	/// Extension methods to handle common scenarios
@@ -38,7 +39,7 @@ namespace Raven.Client.Extensions
 		public static string SimplifyError(this Exception e)
 		{
 			var parts = e.Message.Split(new[] { "Exception:", "\r\n   " }, StringSplitOptions.None);
-			return parts[1];
+			return parts.First(x => !x.Contains("Exception:"));
 		}
 	}
 }
