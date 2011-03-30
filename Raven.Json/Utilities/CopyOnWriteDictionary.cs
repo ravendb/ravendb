@@ -82,13 +82,19 @@ namespace Raven.Json.Utilities
             }
         }
 
-        public bool Remove(TKey key)
-        {
-            LocalChanges[key] = DeletedMarker;
-            return true;
-        }
+		public bool Remove(TKey key)
+		{
+			RavenJToken token;
+			if (LocalChanges.TryGetValue(key, out token) == false || token == DeletedMarker)
+				return false;
+			if (inherittedValues == null || inherittedValues.TryGetValue(key, out token) == false || token == DeletedMarker)
+				return false;
 
-        public bool TryGetValue(TKey key, out RavenJToken value)
+			LocalChanges[key] = DeletedMarker;
+			return true;
+		}
+
+    	public bool TryGetValue(TKey key, out RavenJToken value)
         {
             try
             {
