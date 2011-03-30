@@ -88,28 +88,30 @@
 
 		static string GetDefaultTemplateXaml(Color fill)
 		{
-			return
-				@"<Grid Margin=""0""
-				      Width=""120""
-				      Height=""60"">
-				<Rectangle Fill=""#FFF4F4F5"" />
-				<Rectangle Fill=""" +
-				fill +
-				@"""
-						   HorizontalAlignment=""Left""
-						   Width=""10"" />
-				<Grid Margin=""14,0,0,0"">
-					<StackPanel Orientation=""Vertical"">
-						<TextBlock Text=""{Binding CollectionType}""
-								   TextTrimming=""WordEllipsis""
-								   HorizontalAlignment=""Left"" />
-						<TextBlock Text=""{Binding DisplayId}""
-								   FontSize=""13.333""
-								   TextTrimming=""WordEllipsis""
-								   HorizontalAlignment=""Left"" />
-					</StackPanel>
-				</Grid>
-			</Grid>";
+			return @"
+<Grid xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+	  xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"" 
+	  Margin=""0""
+	  Width=""120""
+	  Height=""60"">
+	<Rectangle Fill=""#FFF4F4F5"" />
+	<Rectangle Fill=""" +
+	fill +
+	@"""
+			   HorizontalAlignment=""Left""
+			   Width=""10"" />
+	<Grid Margin=""14,0,0,0"">
+		<StackPanel Orientation=""Vertical"">
+			<TextBlock Text=""{Binding CollectionType}""
+					   TextTrimming=""WordEllipsis""
+					   HorizontalAlignment=""Left"" />
+			<TextBlock Text=""{Binding DisplayId}""
+					   FontSize=""13.333""
+					   TextTrimming=""WordEllipsis""
+					   HorizontalAlignment=""Left"" />
+		</StackPanel>
+	</Grid>
+</Grid>";
 		}
 
 		static string GetProjectionTemplateXaml()
