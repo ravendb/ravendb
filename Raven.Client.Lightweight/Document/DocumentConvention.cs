@@ -42,8 +42,7 @@ namespace Raven.Client.Document
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
-			FindClrType = (id, doc, metadata) => metadata.Value<string>(Raven.Abstractions.Data.Constants.RavenClrType);
-			FindIdentityPropertyNameFromEntityName = entityName => "Id";
+			GetIdentityPropertyNameFromEntityName = entityName => "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";
 			JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)
@@ -194,7 +193,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Get or sets the function to get the identity property name from the entity name
 		/// </summary>
-		public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
+		public Func<string, string> GetIdentityPropertyNameFromEntityName { get; set; }
 
 		/// <summary>
 		/// Gets or sets the document key generator.

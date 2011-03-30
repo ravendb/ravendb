@@ -6,6 +6,7 @@ using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
+using System.Linq;
 
 namespace Raven.Json.Linq
 {
@@ -57,15 +58,15 @@ namespace Raven.Json.Linq
         /// Initializes a new instance of the <see cref="RavenJObject"/> class from another <see cref="RavenJObject"/> object.
         /// </summary>
         /// <param name="other">A <see cref="RavenJObject"/> object to copy from.</param>
-        public RavenJObject(RavenJObject other)
+		public RavenJObject(RavenJObject other)
         {
-            properties = (CopyOnWriteJDictionary<string>) other.properties.Clone();
+        	properties = other.properties.Clone();
         }
 
 		/// <summary>
-		/// Gets the <see cref="JToken"/> with the specified key.
+		/// Gets the <see cref="RavenJToken"/> with the specified key.
 		/// </summary>
-		/// <value>The <see cref="JToken"/> with the specified key.</value>
+		/// <value>The <see cref="RavenJToken"/> with the specified key.</value>
 		public override RavenJToken this[object key]
 		{
 			get
@@ -310,10 +311,12 @@ namespace Raven.Json.Linq
 
 		public IEnumerator<KeyValuePair<string, RavenJToken>> GetEnumerator()
 		{
-			return Properties.GetEnumerator();
+			if (properties == null)
+				return Enumerable.Empty<KeyValuePair<string, RavenJToken>>().GetEnumerator();
+			return properties.Clone().GetEnumerator();
 		}
 
-		#endregion
+    	#endregion
 
 		#region IEnumerable Members
 
@@ -327,6 +330,16 @@ namespace Raven.Json.Linq
 		public void Add(string propName, RavenJToken token)
 		{
 			Properties.Add(propName, token);
+		}
+
+		public bool Remove(string propName)
+		{
+			return Properties.Remove(propName);
+		}
+
+		public bool ContainsKey(string key)
+		{
+			return Properties.ContainsKey(key);
 		}
 	}
 }
