@@ -40,6 +40,7 @@ namespace Raven.Studio.Features.Documents
 			Id = "";
 			document = new JsonDocument();
 			JsonData = InitialJsonData();
+			JsonMetadata = "{}";
 			events.Subscribe(this);
 		    this.keys = keys;
 
