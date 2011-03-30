@@ -113,7 +113,10 @@ namespace Raven.Tests.Silverlight
 				yield return (query);
 
 				if(query.Exception != null)
+				{
 					Assert.IsInstanceOfType(query.Exception.ExtractSingleInnerException(), typeof(WebException));
+					yield break;
+				}
 
 				if (query.Result.IsStale)
 				{
