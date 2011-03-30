@@ -3,13 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Json.Utilities
 {
     public class CopyOnWriteJDictionary<TKey> : IDictionary<TKey, RavenJToken>, ICloneable
     {
         private static readonly RavenJToken DeletedMarker = new RavenJValue(null, JTokenType.Null);
-
+    	private int deleteCount;
         private IDictionary<TKey, RavenJToken> localChanges;
 
 		protected IDictionary<TKey, RavenJToken> LocalChanges
@@ -40,19 +41,23 @@ namespace Raven.Json.Utilities
 
         public void Add(TKey key, RavenJToken value)
         {
-            LocalChanges.Add(key, value);
+        	RavenJToken token;
+        	if (LocalChanges.TryGetValue(key, out token) && token == DeletedMarker)
+        		deleteCount -= 1;
+
+        	LocalChanges.Add(key, value);
         }
 
-        public bool ContainsKey(TKey key)
-        {
-        	RavenJToken token;
-			if(localChanges != null)
-			{
-				if(localChanges.TryGetValue(key, out token) && token == DeletedMarker)
-					return false;
-			}
-        	return (inherittedValues != null && inherittedValues.TryGetValue(key, out token) && token != DeletedMarker);
-        }
+    	public bool ContainsKey(TKey key)
+    	{
+    		RavenJToken token;
+    		if (localChanges != null)
+    		{
+    			if (localChanges.TryGetValue(key, out token) && token == DeletedMarker)
+    				return false;
+    		}
+    		return (inherittedValues != null && inherittedValues.TryGetValue(key, out token) && token != DeletedMarker);
+    	}
 
     	public ICollection<TKey> Keys
         {
@@ -87,14 +92,16 @@ namespace Raven.Json.Utilities
 			RavenJToken token;
 			if (LocalChanges.TryGetValue(key, out token) == false || token == DeletedMarker)
 				return false;
+
 			if (inherittedValues == null || inherittedValues.TryGetValue(key, out token) == false || token == DeletedMarker)
 				return false;
 
+			deleteCount += 1;
 			LocalChanges[key] = DeletedMarker;
 			return true;
 		}
 
-		public bool TryGetValue(TKey key, out RavenJToken value)
+    	public bool TryGetValue(TKey key, out RavenJToken value)
 		{
 			value = null;
 			RavenJToken unsafeVal;
@@ -125,91 +132,31 @@ namespace Raven.Json.Utilities
             }
         }
 
-		public RavenJToken this[TKey key]
-		{
-			get
-			{
-				RavenJToken token;
+        public RavenJToken this[TKey key]
+        {
+            get
+            {
+            	RavenJToken token;
 				if (TryGetValue(key, out token))
 					return token;
-				throw new KeyNotFoundException(key.ToString());
-			}
-			set { LocalChanges[key] = value; }
-		}
+            	throw new KeyNotFoundException(key.ToString());
+            }
+        	set
+        	{
+				RavenJToken token;
+				if (LocalChanges.TryGetValue(key, out token) && token == DeletedMarker)
+					deleteCount -= 1;
+				
+				LocalChanges[key] = value;
+        	}
+        }
 
         #endregion
 
-		public class CopyOnWriteDictEnumerator : IEnumerator<KeyValuePair<TKey, RavenJToken>>
-		{
-			private readonly IEnumerator<KeyValuePair<TKey, RavenJToken>> _inheritted, _local;
-			private IEnumerator<KeyValuePair<TKey, RavenJToken>> _current;
-
-			public CopyOnWriteDictEnumerator(IEnumerator<KeyValuePair<TKey, RavenJToken>> inheritted, IEnumerator<KeyValuePair<TKey, RavenJToken>> local)
-			{
-				_inheritted = inheritted;
-				_local = local;
-				_current = _inheritted ?? _local;
-			}
-
-			public void Dispose()
-			{
-				if (_inheritted != null) _inheritted.Dispose();
-				if (_local != null) _local.Dispose();
-			}
-
-			public bool MoveNext()
-			{
-				if (_current == null)
-					return false;
-
-				while (true)
-				{
-					if (!_current.MoveNext())
-					{
-						if (_current == _inheritted && _local != null)
-						{
-							_current = _local;
-							continue;
-						}
-						_current = null;
-						return false;
-					}
-
-					if (_current.Current.Value != DeletedMarker)
-						return true;
-				}
-			}
-
-			public void Reset()
-			{
-				if (_inheritted != null) _inheritted.Reset();
-				if (_local != null) _local.Reset();
-				_current = _inheritted ?? _local;
-			}
-
-			public KeyValuePair<TKey, RavenJToken> Current
-			{
-				get
-				{
-					if (_current == null)
-						throw new InvalidOperationException();
-					return _current.Current;
-				}
-			}
-
-			object IEnumerator.Current
-			{
-				get { return Current; }
-			}
-		}
-
-		public IEnumerator<KeyValuePair<TKey, RavenJToken>> GetEnumerator()
-		{
-			return new CopyOnWriteDictEnumerator(
-				inherittedValues != null ? inherittedValues.GetEnumerator() : null,
-				localChanges != null ? localChanges.GetEnumerator() : null
-				);
-		}
+        public IEnumerator<KeyValuePair<TKey, RavenJToken>> GetEnumerator()
+        {
+        	return Keys.Select(key => new KeyValuePair<TKey, RavenJToken>(key, this[key])).GetEnumerator();
+        }
 
     	IEnumerator IEnumerable.GetEnumerator()
         {
@@ -221,19 +168,20 @@ namespace Raven.Json.Utilities
             Add(item.Key, item.Value);
         }
 
-		#region Other not important operations
-
-		public void Clear()
+        public void Clear()
         {
-            throw new NotImplementedException();
+        	foreach (var key in Keys.ToArray()) // clone the values for the iteration
+        	{
+        		Remove(key);
+        	}
         }
 
-        public bool Contains(KeyValuePair<TKey, RavenJToken> item)
+    	public bool Contains(KeyValuePair<TKey, RavenJToken> item)
         {
-            throw new NotImplementedException();
-        }
+			throw new NotImplementedException();
+		}
 
-        public void CopyTo(KeyValuePair<TKey, RavenJToken>[] array, int arrayIndex)
+    	public void CopyTo(KeyValuePair<TKey, RavenJToken>[] array, int arrayIndex)
         {
             throw new NotImplementedException();
         }
@@ -245,14 +193,13 @@ namespace Raven.Json.Utilities
 
         public int Count
         {
-            get { throw new NotImplementedException(); }
+            get { return LocalChanges.Count - deleteCount + (inherittedValues != null ? inherittedValues.Count : 0); }
         }
 
         public bool IsReadOnly
         {
-            get { throw new NotImplementedException(); }
+            get { return false; }
         }
-        #endregion
 
         #region ICloneable Members
 
