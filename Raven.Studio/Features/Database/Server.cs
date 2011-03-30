@@ -162,6 +162,7 @@ namespace Raven.Studio.Features.Database
 				                   		if (callback != null) callback();
 				                   		databases = databases.Union(new[] {databaseName});
 				                   		NotifyOfPropertyChange(() => Databases);
+										CurrentDatabase  = databaseName;
 				                   	});
 		}
 
