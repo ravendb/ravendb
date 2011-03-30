@@ -131,7 +131,7 @@
 
         private void SetDefaultXaml()
         {
-            Xaml = templateProvider.GetTemplateXamlFor(TemplateKey.Replace("Template", string.Empty));
+            Xaml = templateProvider.GetDefaultTemplateXamlFor(TemplateKey.Replace("Template", string.Empty));
         }
 
         private void Reset()

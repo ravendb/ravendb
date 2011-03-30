@@ -2,12 +2,9 @@ namespace Raven.Studio.Features.Database
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Collections;
 	using Documents;
 	using Framework;
-	using Indexes;
 	using Messages;
-	using Query;
 	using System.Linq;
 
 	[Export(typeof (DatabaseViewModel))]
