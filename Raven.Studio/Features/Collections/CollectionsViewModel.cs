@@ -90,7 +90,7 @@
 
 		Task<DocumentViewModel[]> GetDocumentsForActiveCollectionQuery(int start, int pageSize)
 		{
-			WorkStarted();
+			WorkStarted("retrieving documents for collection.");
 
 			using (var session = server.OpenSession())
 			{
@@ -99,9 +99,9 @@
 					.QueryAsync("Raven/DocumentsByEntityName", query, new string[] { })
 					.ContinueWith(x =>
 									{
-										if (x.IsFaulted) throw new NotImplementedException("TODO");
+										WorkCompleted("retrieving documents for collection.");
 
-										WorkCompleted();
+										if (x.IsFaulted) throw new NotImplementedException("TODO");
 
 										return x.Result.Results
 											.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
