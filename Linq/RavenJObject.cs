@@ -38,21 +38,12 @@ namespace Raven.Json.Linq
         {
         }
 
-		public RavenJObject(params KeyValuePair<string, RavenJToken>[] props)
+		public RavenJObject(IEnumerable<KeyValuePair<string, RavenJToken>> props)
 		{
 			properties = new CopyOnWriteJDictionary<string>();
 			foreach (var kv in props)
 			{
 				properties.Add(kv);
-			}
-		}
-
-		public RavenJObject(object o)
-		{
-			if (o is KeyValuePair<string, RavenJToken>)
-			{
-				properties = new CopyOnWriteJDictionary<string>();
-				properties.Add((KeyValuePair<string, RavenJToken>)o);
 			}
 		}
 
