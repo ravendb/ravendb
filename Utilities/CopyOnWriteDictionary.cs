@@ -64,6 +64,9 @@ namespace Raven.Json.Utilities
         {
             get
             {
+				if (localChanges == null)
+					return inherittedValues != null ? inherittedValues.Keys : new HashSet<TKey>();
+
             	ICollection<TKey> ret = new HashSet<TKey>();
 				if (inherittedValues != null)
 				{
