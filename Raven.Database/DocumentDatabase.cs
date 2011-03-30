@@ -684,15 +684,17 @@ namespace Raven.Database
 						break;
 					case ReadVetoResult.ReadAllow.Deny:
 						attachment.Data = new byte[0];
-						attachment.Metadata = new RavenJObject();
-						attachment.Metadata.Properties.Add("Raven-Read-Veto",
-						                                   new RavenJObject(
-						                                   	new KeyValuePair<string, RavenJToken>("Reason",
-						                                   	                                      new RavenJValue(readVetoResult.Reason)),
-						                                   	new KeyValuePair<string, RavenJToken>("Trigger",
-						                                   	                                      new RavenJValue(
-						                                   	                                      	attachmentReadTrigger.ToString()))
-						                                   	));
+						attachment.Metadata = new RavenJObject
+						                      	{
+						                      		{
+						                      			"Raven-Read-Veto",
+						                      			new RavenJObject
+						                      				{
+						                      					{"Reason", readVetoResult.Reason},
+						                      					{"Trigger", attachmentReadTrigger.ToString()}
+						                      				}
+						                      			}
+						                      	};
 						foundResult = true;
 						break;
 					case ReadVetoResult.ReadAllow.Ignore:
@@ -839,12 +841,10 @@ namespace Raven.Database
 				IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
 					.Select(
 						indexName => new RavenJObject
-						(
-							new KeyValuePair<string, RavenJToken>("name", new RavenJValue(indexName)),
-							new KeyValuePair<string, RavenJToken>("definition", RavenJObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName)))
-						)
-						)
-				);
+							{
+								{"name", new RavenJValue(indexName) },
+								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName))}
+							}));
 		}
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)

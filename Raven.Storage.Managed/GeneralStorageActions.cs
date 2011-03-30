@@ -21,14 +21,10 @@ namespace Raven.Storage.Managed
 
         public long GetNextIdentityValue(string name)
         {
-            var result = storage.Identity.Read(new RavenJObject(new KeyValuePair<string, RavenJToken>("name", name)));
+        	var result = storage.Identity.Read(new RavenJObject {{"name", name}});
             if(result == null)
             {
-				storage.Identity.UpdateKey(new RavenJObject
-				(
-				new KeyValuePair<string, RavenJToken>("name", name),
-				new KeyValuePair<string, RavenJToken>("id", 1)
-				));
+            	storage.Identity.UpdateKey(new RavenJObject {{"name", name}, {"id", 1}});
                 return 1;
             }
             var val = result.Key.Value<int>("id") + 1;

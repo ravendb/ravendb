@@ -50,7 +50,7 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId)
         {
-			var results = storage.Documents["ById"].SkipTo(new RavenJObject(new KeyValuePair<string, RavenJToken>("id", startId)))
+			var results = storage.Documents["ById"].SkipTo(new RavenJObject{{"id", startId}})
                 .TakeWhile(x=>x.Value<int>("id") <= endId);
 
             foreach (var result in results)
@@ -70,13 +70,13 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
         {
-            return storage.Documents["ByEtag"].SkipAfter(new RavenJObject(new KeyValuePair<string, RavenJToken>("etag", etag.ToByteArray())))
+            return storage.Documents["ByEtag"].SkipAfter(new RavenJObject{{"etag", etag.ToByteArray()}})
                 .Select(result => DocumentByKey(result.Value<string>("key"), null));
         }
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start)
 		{
-			return storage.Documents["ByKey"].SkipAfter(new RavenJObject(new KeyValuePair<string, RavenJToken>("key", idPrefix )))
+			return storage.Documents["ByKey"].SkipAfter(new RavenJObject{{"key", idPrefix }})
 				.Skip(start)
 				.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix))
 				.Select(result => DocumentByKey(result.Value<string>("key"), null));
@@ -112,7 +112,7 @@ namespace Raven.Storage.Managed
 			RavenJObject metadata = null;
 
 			var resultInTx =
-				storage.DocumentsModifiedByTransactions.Read(new RavenJObject(new KeyValuePair<string, RavenJToken>("key", key)));
+				storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
     		if (transactionInformation != null && resultInTx != null)
     		{
     			if(new Guid(resultInTx.Key.Value<byte[]>("txId")) == transactionInformation.Id)
@@ -136,7 +136,7 @@ namespace Raven.Storage.Managed
     			}
     		}
 
-			var readResult = storage.Documents.Read(new RavenJObject(new KeyValuePair<string, RavenJToken>("key", key)));
+			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
     		if (readResult == null)
     			return null;
 
@@ -198,13 +198,13 @@ namespace Raven.Storage.Managed
             AssertValidEtag(key, etag, "DELETE", null);
 
             metadata = null;
-			var readResult = storage.Documents.Read(new RavenJObject (new KeyValuePair<string, RavenJToken>("key", key)));
+			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
             if (readResult == null)
                 return false;
 
             metadata = readResult.Data().ToJObject();
 
-    		storage.Documents.Remove(new RavenJObject(new KeyValuePair<string, RavenJToken>("key", key)));
+			storage.Documents.Remove(new RavenJObject { { "key", key } });
 
             return true;
         }
@@ -249,7 +249,7 @@ namespace Raven.Storage.Managed
 
         private void AssertValidEtag(string key, Guid? etag, string op, TransactionInformation transactionInformation)
         {
-        	var readResult = storage.Documents.Read(new RavenJObject(new KeyValuePair<string, RavenJToken>("key", key)));
+			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
 
             if (readResult != null)
             {
@@ -273,7 +273,7 @@ namespace Raven.Storage.Managed
             {
             	readResult =
             		storage.DocumentsModifiedByTransactions.Read(
-            			new RavenJObject(new KeyValuePair<string, RavenJToken>("key", key)));
+						new RavenJObject { { "key", key } });
                 StorageHelper.AssertNotModifiedByAnotherTransaction(storage, transactionStorageActions, key, readResult, transactionInformation);
 
             }

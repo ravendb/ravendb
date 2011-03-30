@@ -274,7 +274,7 @@ namespace Raven.Database.Indexing
 						{
 						    return g.First();
 						}
-					    return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray(g.Select(x => x.Value)));
+						return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray(g.Select(x => x.Value)));
 					})
 				);
 		}

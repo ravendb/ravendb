@@ -18,7 +18,7 @@ namespace Raven.Storage.Managed.Impl
 
 		public Tuple<RavenJObject, RavenJObject> GetCachedDocument(string key, Guid etag)
 		{
-			var cachedDocument = (Tuple<JObject, JObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
+			var cachedDocument = (Tuple<RavenJObject, RavenJObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
 			if (cachedDocument != null)
 				return Tuple.Create(new RavenJObject(cachedDocument.Item1), new RavenJObject(cachedDocument.Item2));
 			return null;
@@ -49,7 +49,7 @@ namespace Raven.Storage.Managed.Impl
             });
 
             DocumentsModifiedByTransactions =
-                Add(new Table(x => new RavenJObject(new KeyValuePair<string, RavenJToken>("key", x.Value<string>("key"))),
+                Add(new Table(x => new RavenJObject{{"key", x.Value<string>("key")}},
                               "DocumentsModifiedByTransactions")
                 {
                     {"ByTxId", x => new ComparableByteArray(x.Value<byte[]>("txId"))}
@@ -69,19 +69,19 @@ namespace Raven.Storage.Managed.Impl
             });
 
             Queues = Add(new Table(x => new RavenJObject
-            (
-                new KeyValuePair<string, RavenJToken>("name", new RavenJValue(x.Value<string>("name"))),
-                new KeyValuePair<string, RavenJToken>("id", new RavenJValue(x.Value<byte[]>("id")))
-            ), "Queues")
+            {
+                {"name", x.Value<string>("name")},
+                {"id", x.Value<byte[]>("id")}
+            }, "Queues")
             {
                 {"ByName", x => x.Value<string>("name")}
             });
 
             Tasks = Add(new Table(x => new RavenJObject
-            (
-                new KeyValuePair<string, RavenJToken>("index", new RavenJValue(x.Value<string>("index"))),
-                new KeyValuePair<string, RavenJToken>("id", new RavenJValue(x.Value<byte[]>("id")))
-            ), "Tasks")
+            {
+                {"index", x.Value<string>("index")},
+                {"id", x.Value<byte[]>("id")}
+            }, "Tasks")
             {
                 {"ByIndexAndTime", x => Tuple.Create(x.Value<string>("index"), x.Value<DateTime>("time"))},
                 {"ByIndexAndType", x => Tuple.Create(x.Value<string>("index"), x.Value<string>("type"))}

@@ -46,10 +46,10 @@ namespace Raven.Storage.Managed
     	public IEnumerable<RavenJObject> GetMappedResults(GetMappedResultsParams getMappedResultsParams)
         {
             return storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject
-            (
-                new KeyValuePair<string, RavenJToken>("view", new RavenJValue(getMappedResultsParams.View)),
-                new KeyValuePair<string, RavenJToken>("reduceKey", new RavenJValue(getMappedResultsParams.ReduceKey))
-            )).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), getMappedResultsParams.View) &&
+            {
+                {"view", getMappedResultsParams.View},
+                {"reduceKey", getMappedResultsParams.ReduceKey}
+		}).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), getMappedResultsParams.View) &&
                               StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("reduceKey"), getMappedResultsParams.ReduceKey))
                 .Select(x =>
                 {
@@ -64,10 +64,10 @@ namespace Raven.Storage.Managed
         public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
         {
             foreach (var key in storage.MappedResults["ByViewAndDocumentId"].SkipTo(new RavenJObject
-            (
-                new KeyValuePair<string, RavenJToken>("view", new RavenJValue(view)),
-                new KeyValuePair<string, RavenJToken>("docId", new RavenJValue(documentId))
-            )).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view) &&
+            {
+                {"view", view},
+                {"docId", documentId}
+            }).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view) &&
                               StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("docId"), documentId)))
             {
                 storage.MappedResults.Remove(key);
@@ -77,10 +77,8 @@ namespace Raven.Storage.Managed
 
         public void DeleteMappedResultsForView(string view)
         {
-            foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject
-            (
-                new KeyValuePair<string, RavenJToken>("view", new RavenJValue(view))
-            )).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view)))
+            foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject{{"view", view}})
+            .TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view)))
             {
                 storage.MappedResults.Remove(key);
             }

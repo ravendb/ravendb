@@ -245,11 +245,7 @@ namespace Raven.Munin
 
 			if (dataSizeInBytes > 0)
 			{
-				WriteTo(log, new RavenJArray(new RavenJObject
-				(
-					new KeyValuePair<string, RavenJToken>("type", new RavenJValue((short)CommandType.Skip)),
-					new KeyValuePair<string, RavenJToken>("size", new RavenJValue(dataSizeInBytes))
-				)));
+				WriteTo(log, new RavenJArray(new RavenJObject {{"type", (short) CommandType.Skip}, {"size", dataSizeInBytes}}));
 			}
 
 			var array = new RavenJArray();
