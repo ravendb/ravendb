@@ -3,7 +3,6 @@
 	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
-	using System.Diagnostics;
 	using System.Text;
 	using System.Threading.Tasks;
 	using System.Windows;
@@ -23,6 +22,7 @@
 		readonly TemplateColorProvider colorProvider;
 		readonly IServer server;
 		readonly Dictionary<string, DataTemplate> templates = new Dictionary<string, DataTemplate>(StringComparer.InvariantCultureIgnoreCase);
+		readonly Dictionary<string, DataTemplate> defaults = new Dictionary<string, DataTemplate>(StringComparer.InvariantCultureIgnoreCase);
 		readonly List<string> requested = new List<string>();
 
 		public event EventHandler<EventArgs<DataTemplate>> DataTemplateRetrieved = delegate { };
@@ -36,7 +36,7 @@
 			events.Subscribe(this);
 		}
 
-		public string GetTemplateXamlFor(string key)
+		public string GetDefaultTemplateXamlFor(string key)
 		{
 			return (key == "projection")
 								? GetProjectionTemplateXaml()
@@ -94,12 +94,25 @@
 			return templates.ContainsKey(key) ? (templates[key]) : null;
 		}
 
+		public DataTemplate GetDefaultTemplate(string key)
+		{
+			lock (defaults)
+			{
+				if (!defaults.ContainsKey(key))
+				{
+					defaults[key] = Create( GetDefaultTemplateXamlFor(key) );
+				}
+			}
+
+			return defaults[key];
+		}
+
 		DataTemplate GenerateTemplateFrom(Attachment attachment, string key)
 		{
 			string xaml;
 			if (attachment == null)
 			{
-				xaml = GetTemplateXamlFor(key);
+				xaml = GetDefaultTemplateXamlFor(key);
 			}
 			else
 			{
@@ -113,7 +126,7 @@
 		void IHandle<CollectionTemplateUpdated>.Handle(CollectionTemplateUpdated message)
 		{
 			var key = message.TemplateKey.Replace("Template",string.Empty);
-			var template = Create(message.Xaml ?? GetTemplateXamlFor(key));
+			var template = Create(message.Xaml ?? GetDefaultTemplateXamlFor(key));
 		
 			lock (templates)
 			{
@@ -167,7 +180,7 @@
 			</Grid>";
 		}
 
-		static DataTemplate Create(string innerXaml)
+		public static DataTemplate Create(string innerXaml)
 		{
 			DataTemplate template = null;
 			Execute.OnUIThread(() =>
@@ -185,8 +198,9 @@
 
 	public interface IDocumentTemplateProvider
 	{
-		string GetTemplateXamlFor(string key);
+		string GetDefaultTemplateXamlFor(string key);
 		Task<DataTemplate> GetTemplateFor(string key);
 		DataTemplate RetrieveFromCache(string key);
+		DataTemplate GetDefaultTemplate(string key);
 	}
 }
