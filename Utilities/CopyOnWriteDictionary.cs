@@ -8,9 +8,6 @@ using System.Linq;
 namespace Raven.Json.Utilities
 {
     public class CopyOnWriteJDictionary<TKey> : IDictionary<TKey, RavenJToken>
-#if !SILVERLIGHT
-		, ICloneable
-#endif
     {
         private static readonly RavenJToken DeletedMarker = new RavenJValue(null, JTokenType.Null);
     	private int deleteCount;
@@ -204,9 +201,7 @@ namespace Raven.Json.Utilities
             get { return false; }
         }
 
-        #region ICloneable Members
-
-        public object Clone()
+        public CopyOnWriteJDictionary<TKey> Clone()
         {
             if (inherittedValues == null)
             {
@@ -223,7 +218,5 @@ namespace Raven.Json.Utilities
             localChanges = null;
             return new CopyOnWriteJDictionary<TKey>(inherittedValues);
         }
-
-        #endregion
     }
 }
