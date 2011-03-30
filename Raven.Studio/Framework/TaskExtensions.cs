@@ -74,13 +74,18 @@
 
 		static void NotifyUserOfError(Task child)
 		{
-			Execute.OnUIThread(()=> IoC
-			        .Get<IWindowManager>()
-			        .ShowDialog(new ErrorViewModel
-			                    	{
-			                    		Message = "Unable to connect to server!", 
-										Details = GetErrorDetails(child.Exception)
-			                    	}));
+			Execute.OnUIThread(()=>
+			{
+				if (ErrorViewModel.ErrorAlreadyShown)
+					return;
+				
+				IoC.Get<IWindowManager>()
+						.ShowDialog(new ErrorViewModel
+						{
+							Message = "Unable to connect to server!",
+							Details = GetErrorDetails(child.Exception)
+						});
+			});
 		}
 
 		static string GetErrorDetails(AggregateException x)
