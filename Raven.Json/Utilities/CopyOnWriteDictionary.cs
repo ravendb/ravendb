@@ -35,13 +35,14 @@ namespace Raven.Json.Utilities
             LocalChanges.Add(key, value);
         }
 
-        public bool ContainsKey(TKey key)
-        {
-            return (inherittedValues != null && inherittedValues.ContainsKey(key) && inherittedValues[key] != DeletedMarker) ||
-                (localChanges != null && localChanges.ContainsKey(key) && localChanges[key] != DeletedMarker);
-        }
+		public bool ContainsKey(TKey key)
+		{
+			RavenJToken token;
+			return (inherittedValues != null && inherittedValues.TryGetValue(key, out token) && token != DeletedMarker) ||
+			       (localChanges != null && localChanges.TryGetValue(key, out token) && token != DeletedMarker);
+		}
 
-        public ICollection<TKey> Keys
+    	public ICollection<TKey> Keys
         {
             get
             {
