@@ -11,7 +11,15 @@ namespace Raven.Json.Utilities
         private static readonly RavenJToken DeletedMarker = new RavenJValue(null, JTokenType.Null);
 
         private IDictionary<TKey, RavenJToken> localChanges;
-        protected IDictionary<TKey, RavenJToken> LocalChanges { get { return localChanges ?? (localChanges = new Dictionary<TKey, RavenJToken>()); } }
+
+		protected IDictionary<TKey, RavenJToken> LocalChanges
+		{
+			get
+			{
+				return localChanges ?? (localChanges = new Dictionary<TKey, RavenJToken>());
+			}
+		}
+
         private CopyOnWriteJDictionary<TKey> inherittedValues;
 
         public CopyOnWriteJDictionary()
@@ -35,12 +43,16 @@ namespace Raven.Json.Utilities
             LocalChanges.Add(key, value);
         }
 
-		public bool ContainsKey(TKey key)
-		{
-			RavenJToken token;
-			return (inherittedValues != null && inherittedValues.TryGetValue(key, out token) && token != DeletedMarker) ||
-			       (localChanges != null && localChanges.TryGetValue(key, out token) && token != DeletedMarker);
-		}
+        public bool ContainsKey(TKey key)
+        {
+        	RavenJToken token;
+			if(localChanges != null)
+			{
+				if(localChanges.TryGetValue(key, out token) && token == DeletedMarker)
+					return false;
+			}
+        	return (inherittedValues != null && inherittedValues.TryGetValue(key, out token) && token != DeletedMarker);
+        }
 
     	public ICollection<TKey> Keys
         {
