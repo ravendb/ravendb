@@ -43,7 +43,7 @@ namespace Raven.Database.Json
         }
 
 		/// <summary>
-		/// Convert a byte array to a JObject
+		/// Convert a byte array to a RavenJObject
 		/// </summary>
 		public static RavenJObject ToJObject(this byte [] self)
 		{
@@ -54,7 +54,7 @@ namespace Raven.Database.Json
 		}
 
         /// <summary>
-        /// Convert a byte array to a JObject
+        /// Convert a byte array to a RavenJObject
         /// </summary>
         public static RavenJObject ToJObject(this Stream self)
         {
@@ -65,7 +65,7 @@ namespace Raven.Database.Json
         }
 
 		/// <summary>
-		/// Convert a JToken to a byte array
+		/// Convert a RavenJToken to a byte array
 		/// </summary>
 		public static byte[] ToBytes(this RavenJToken self)
 		{

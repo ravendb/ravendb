@@ -15,7 +15,6 @@ using System.Net.Sockets;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -222,8 +221,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
 					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-					var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
-					var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+					var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
+					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 					throw new ConflictException("Conflict detected on " + key +
 												", conflict must be resolved before the document will be accessible")
@@ -408,8 +407,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw;
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
-					var conflictsDoc = JObject.Load(new BsonReader(httpWebResponse.GetResponseStreamWithHttpDecompression()));
-					var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+					var conflictsDoc = RavenJObject.Load(new BsonReader(httpWebResponse.GetResponseStreamWithHttpDecompression()));
+					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 					throw new ConflictException("Conflict detected on " + key +
 												", conflict must be resolved before the attachment will be accessible")
@@ -477,7 +476,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			var responseString = httpJsonRequest.ReadResponseString();
-			return JArray.Parse(responseString).Select(x => x.Value<string>()).ToArray();
+			return RavenJArray.Parse(responseString).Select(x => x.Value<string>()).ToArray();
 		}
 
 		/// <summary>
@@ -508,9 +507,9 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					return null;
 				throw;
 			}
-			var indexDefResultAsJson = JObject.Load(new JsonTextReader(new StringReader(indexDefAsString)));
+			var indexDefResultAsJson = RavenJObject.Load(new JsonTextReader(new StringReader(indexDefAsString)));
 			return convention.CreateSerializer().Deserialize<IndexDefinition>(
-				new JTokenReader(indexDefResultAsJson["Index"])
+				new RavenJTokenReader(indexDefResultAsJson["Index"])
 				);
 		}
 
@@ -726,7 +725,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			}
 
 			request.AddOperationHeaders(OperationsHeaders);
-			var result = JObject.Parse(request.ReadResponseString());
+			var result = RavenJObject.Parse(request.ReadResponseString());
 
 			return new MultiLoadResult
 			{
@@ -972,7 +971,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "PATCH", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
-				request.Write(new JArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented));
+				request.Write(new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented));
 				try
 				{
 					request.ReadResponseString();

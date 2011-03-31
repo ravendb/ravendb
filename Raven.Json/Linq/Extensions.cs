@@ -41,6 +41,69 @@ namespace Raven.Json.Linq
 			return token.Convert<RavenJToken, U>();
 		}
 
+		/// <summary>
+		/// Returns a collection of converted child values of every object in the source collection.
+		/// </summary>
+		/// <typeparam name="U">The type to convert the values to.</typeparam>
+		/// <param name="source">An <see cref="IEnumerable{T}"/> of <see cref="RavenJToken"/> that contains the source collection.</param>
+		/// <returns>An <see cref="IEnumerable{T}"/> that contains the converted values of every node in the source collection.</returns>
+		public static IEnumerable<U> Values<U>(this IEnumerable<RavenJToken> source)
+		{
+			return Values<RavenJToken, U>(source, null);
+		}
+
+		/// <summary>
+		/// Returns a collection of child values of every object in the source collection with the given key.
+		/// </summary>
+		/// <param name="source">An <see cref="IEnumerable{T}"/> of <see cref="RavenJToken"/> that contains the source collection.</param>
+		/// <param name="key">The token key.</param>
+		/// <returns>An <see cref="IEnumerable{T}"/> of <see cref="RavenJToken"/> that contains the values of every node in the source collection with the given key.</returns>
+		public static IEnumerable<RavenJToken> Values(this IEnumerable<RavenJToken> source, object key)
+		{
+			return Values<RavenJToken, RavenJToken>(source, key);
+		}
+
+		/// <summary>
+		/// Returns a collection of child values of every object in the source collection.
+		/// </summary>
+		/// <param name="source">An <see cref="IEnumerable{T}"/> of <see cref="RavenJToken"/> that contains the source collection.</param>
+		/// <returns>An <see cref="IEnumerable{T}"/> of <see cref="RavenJToken"/> that contains the values of every node in the source collection.</returns>
+		public static IEnumerable<RavenJToken> Values(this IEnumerable<RavenJToken> source)
+		{
+			return source.Values(null);
+		}
+
+		internal static IEnumerable<U> Values<T, U>(this IEnumerable<T> source, object key) where T : RavenJToken
+		{
+			ValidationUtils.ArgumentNotNull(source, "source");
+
+			foreach (RavenJToken token in source)
+			{
+				if (key == null)
+				{
+					if (token is RavenJValue)
+					{
+						yield return Convert<RavenJValue, U>((RavenJValue) token);
+					}
+					else
+					{
+						foreach (RavenJToken t in token.Children())
+						{
+							yield return t.Convert<RavenJToken, U>();
+						}
+					}
+				}
+				else
+				{
+					RavenJToken value = token[key];
+					if (value != null)
+						yield return value.Convert<RavenJToken, U>();
+				}
+			}
+
+			yield break;
+		}
+
 		internal static U Convert<T, U>(this T token) where T : RavenJToken
 		{
 			bool cast = typeof(RavenJToken).IsAssignableFrom(typeof(U));

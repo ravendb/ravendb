@@ -320,7 +320,7 @@ namespace Raven.Client.Client.Async
 		public Task<JsonDocument[]> MultiGetAsync(string[] keys)
 		{
 			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
-			var array = Encoding.UTF8.GetBytes(new JArray(keys).ToString(Formatting.None));
+			var array = Encoding.UTF8.GetBytes(new RavenJArray(keys).ToString(Formatting.None));
 			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, array, null)
 				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null))
 				.Unwrap()

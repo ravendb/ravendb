@@ -56,8 +56,8 @@ namespace Raven.Database.Commercial
 					licenseValidator.ExpirationDate.ToShortDateString());
 			}
 			docDb.Put("Raven/WarningMessages", null,
-						 JObject.FromObject(messagesHolder), 
-						 new JObject(), null);
+						 RavenJObject.FromObject(messagesHolder), 
+						 new RavenJObject(), null);
 		}
 	}
 }

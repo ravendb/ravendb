@@ -103,7 +103,7 @@ namespace Raven.Database.Data
 		/// </summary>
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
-		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
 		public static RavenJObject FilterHeaders(this RavenJObject self, bool isServerDocument)
 		{
 			if (self == null)
@@ -128,7 +128,7 @@ namespace Raven.Database.Data
 		/// </summary>
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
-		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
 		public static RavenJObject FilterHeaders(this IDictionary<string, IList<string>> self, bool isServerDocument)
           {
 			  var metadata = new RavenJObject();
@@ -153,7 +153,7 @@ namespace Raven.Database.Data
         /// </summary>
         /// <param name="self">The self.</param>
         /// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
-        /// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+        /// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
         public static RavenJObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
         {
             var metadata = new RavenJObject();
