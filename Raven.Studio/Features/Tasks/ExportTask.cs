@@ -33,6 +33,10 @@
 		}
 
 		public IObservableCollection<string> Console { get; private set; }
+		public void ClearConsole()
+		{
+			Console.Clear();
+		}
 
 		public bool ExportIndexesOnly
 		{
@@ -57,6 +61,8 @@
 
 		IEnumerable<Task> ExportData(SaveFileDialog saveFile, bool indexesOnly)
 		{
+			Console.Add("Exporting to {0}",saveFile.SafeFileName);
+
 			var stream = saveFile.OpenFile();
 			var jsonRequestFactory = new HttpJsonRequestFactory();
 			var baseUrl = server.CurrentDatabaseAddress;
@@ -68,6 +74,8 @@
 			                 	{
 			                 		Formatting = Formatting.Indented
 			                 	};
+
+			Console.Add("Begin reading indexes");
 
 			jsonWriter.WriteStartObject();
 			jsonWriter.WritePropertyName("Indexes");
@@ -106,8 +114,14 @@
 			jsonWriter.WritePropertyName("Docs");
 			jsonWriter.WriteStartArray();
 
-			if (!indexesOnly)
+			if (indexesOnly)
 			{
+				Console.Add("Documents will not be exported.");
+			} 
+			else 
+			{
+				Console.Add("Begin reading documents.");
+
 				var lastEtag = Guid.Empty;
 				totalCount = 0;
 				completed = false;
