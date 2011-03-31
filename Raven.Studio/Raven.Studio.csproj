@@ -88,9 +88,6 @@
     <Reference Include="Raven.Studio.Controls.SyntaxHighlighting">
       <HintPath>..\SharedLibs\Silverlight\Raven.Studio.Controls.SyntaxHighlighting.dll</HintPath>
     </Reference>
-    <Reference Include="SharpZipLib.Silverlight4">
-      <HintPath>..\SharedLibs\Silverlight\SharpZipLib.Silverlight4.dll</HintPath>
-    </Reference>
     <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.ComponentModel.Composition.Initialization, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.ComponentModel.DataAnnotations, Version=2.0.5.0, Culture=neutral, PublicKeyToken=ddd0da4d3e678217" />
@@ -164,7 +161,6 @@
     <Compile Include="Framework\KeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyCombination.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
-    <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
     <Compile Include="Framework\SimpleLogger.cs" />
     <Compile Include="Messages\CollectionTemplateUpdated.cs" />

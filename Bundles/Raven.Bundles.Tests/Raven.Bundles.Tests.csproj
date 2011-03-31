@@ -136,6 +136,10 @@
       <Project>{3A852FD2-E0F9-449C-8F66-0C6A180D030A}</Project>
       <Name>Raven.Client.Authorization</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.Versioning\Raven.Client.Versioning.csproj">
+      <Project>{ADC25452-35F2-488E-9F2F-40C76F4927DB}</Project>
+      <Name>Raven.Client.Versioning</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
