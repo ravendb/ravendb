@@ -127,37 +127,48 @@
 			using (var streamReader = new StreamReader(sampleData))
 			using (var documentSession = Server.OpenSession())
 			{
-				var musicStoreData = (JObject)JToken.ReadFrom(new JsonTextReader(streamReader));
-				foreach (var index in musicStoreData.Value<JArray>("Indexes"))
-				{
-					var indexName = index.Value<string>("name");
-					documentSession.Advanced.AsyncDatabaseCommands
-						.PutIndexAsync(indexName, index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>(), true)
-						.ContinueOnSuccess(task =>
-											{
-												WorkCompleted("creating sample indexes");
-											});
-				}
 
-				documentSession.Advanced.AsyncDatabaseCommands.BatchAsync(
-					musicStoreData.Value<JArray>("Docs").OfType<JObject>().Select(doc =>
+				var securityCheckId = "forceAuth_" + Guid.NewGuid();
+				documentSession.Advanced.AsyncDatabaseCommands.PutAsync(securityCheckId, null, new JObject(), null)
+					.ContinueWith(putTask =>
 					{
-						var metadata = doc.Value<JObject>("@metadata");
-						doc.Remove("@metadata");
-						return new PutCommandData
+						if (putTask.Exception != null)
+							return putTask;
+						return documentSession.Advanced.AsyncDatabaseCommands
+							.DeleteDocumentAsync(securityCheckId);
+					})
+					.Unwrap()
+					.ContinueOnSuccess(_ =>
+					{
+						var musicStoreData = (JObject)JToken.ReadFrom(new JsonTextReader(streamReader));
+						foreach (var index in musicStoreData.Value<JArray>("Indexes"))
+						{
+							var indexName = index.Value<string>("name");
+							documentSession.Advanced.AsyncDatabaseCommands
+								.PutIndexAsync(indexName, index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>(), true)
+								.ContinueOnSuccess(task => WorkCompleted("creating sample indexes"));
+						}
+
+						documentSession.Advanced.AsyncDatabaseCommands.BatchAsync(
+							musicStoreData.Value<JArray>("Docs").OfType<JObject>().Select(doc =>
+							{
+								var metadata = doc.Value<JObject>("@metadata");
+								doc.Remove("@metadata");
+								return new PutCommandData
 								{
 									Document = doc,
 									Metadata = metadata,
 									Key = metadata.Value<string>("@id"),
 								};
-					}).ToArray()
-					).ContinueOnSuccess(task =>
-											{
-												WorkCompleted("creating sample data");
-												IsGeneratingSampleData = false;
-												RecentDocumentsStatus = "Retrieving sample documents.";
-												RetrieveSummary();
-											});
+							}).ToArray()
+							).ContinueOnSuccess(task =>
+							{
+								WorkCompleted("creating sample data");
+								IsGeneratingSampleData = false;
+								RecentDocumentsStatus = "Retrieving sample documents.";
+								RetrieveSummary();
+							});
+					});
 			}
 		}
 

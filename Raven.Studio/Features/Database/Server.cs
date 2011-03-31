@@ -78,48 +78,37 @@ namespace Raven.Studio.Features.Database
 			Store = new DocumentStore { Url = Address };
 			Store.Initialize();
 
-			var securityCheckId = "forceAuth_" + Guid.NewGuid();
 
 			using (var session = Store.OpenAsyncSession())
 				session.Advanced.AsyncDatabaseCommands
-					.PutAsync(securityCheckId, null, new JObject(), null)
-					.ContinueWith(_ =>
-					{
-						session.Advanced.AsyncDatabaseCommands
-						.DeleteDocumentAsync(securityCheckId);
-					})
-					.ContinueWith(_ =>
-					{
-						session.Advanced.AsyncDatabaseCommands
-						.GetDatabaseNamesAsync()
-						.ContinueWith(
-							task =>
+					.GetDatabaseNamesAsync()
+					.ContinueWith(
+						task =>
+						{
+							IsInitialized = true;
+							Status = "Connected";
+							var dbs = new List<string>
 							{
-								IsInitialized = true;
-								Status = "Connected";
-								var dbs = new List<string>
-							          			{
-							          				DefaultDatabaseName
-							          			};
-								dbs.AddRange(task.Result);
-								Databases = dbs;
+								DefaultDatabaseName
+							};
+							dbs.AddRange(task.Result);
+							Databases = dbs;
 
-								OpenDatabase(dbs[0], () =>
-								{
-									Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
-
-									if (callback != null) callback();
-								});
-							},
-							faulted =>
+							OpenDatabase(dbs[0], () =>
 							{
-								var error = "Unable to connect to " + Address;
-								Status = error;
-								events.Publish(new NotificationRaised(error, NotificationLevel.Error));
-								IsInitialized = false;
-								callback();
+								Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
+
+								if (callback != null) callback();
 							});
-					});
+						},
+						faulted =>
+						{
+							var error = "Unable to connect to " + Address;
+							Status = error;
+							events.Publish(new NotificationRaised(error, NotificationLevel.Error));
+							IsInitialized = false;
+							callback();
+						});
 		}
 
 		public string CurrentDatabase
