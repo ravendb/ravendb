@@ -38,8 +38,8 @@ namespace Raven.Client.Extensions
 		/// <returns>The primary portion of the exception message.</returns>
 		public static string SimplifyError(this Exception e)
 		{
-			var parts = e.Message.Split(new[] { "Exception:", "\r\n   " }, StringSplitOptions.None);
-			return parts.First(x => !x.Contains("Exception:"));
+			var parts = e.Message.Split(new[] {  "\r\n   " }, StringSplitOptions.None);
+			return parts.First();
 		}
 	}
 }
