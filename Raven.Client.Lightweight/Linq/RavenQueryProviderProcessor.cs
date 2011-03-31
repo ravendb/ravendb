@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -431,8 +432,40 @@ namespace Raven.Client.Linq
 				return;
 			}
 
+			if (expression.Method.DeclaringType == typeof(LinqExtensions))
+			{
+				VisitLinqExtensionsMethodCall(expression);
+				return;
+			}
+
 			throw new NotSupportedException("Method not supported: " + expression.Method.DeclaringType.Name + "." +
 				expression.Method.Name);
+		}
+
+		private void VisitLinqExtensionsMethodCall(MethodCallExpression expression)
+		{
+			switch (expression.Method.Name)
+			{
+			case "In":
+				{
+					var memberInfo = GetMember(expression.Arguments[0]);
+					var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
+
+					var array = objects as object[];
+					if (array != null)
+						luceneQuery.WhereContains(memberInfo.Path, array);
+					else
+					{
+						luceneQuery.WhereContains(memberInfo.Path, ((IEnumerable) objects).Cast<object>());
+					}
+
+					break;
+				}
+			default:
+				{
+					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+				}
+			}
 		}
 
 		private void VisitEnumerableMethodCall(MethodCallExpression expression)
@@ -781,6 +814,16 @@ namespace Raven.Client.Linq
 			if (expression.NodeType == ExpressionType.Convert)
 			{
 				value = Expression.Lambda(((UnaryExpression) expression).Operand).Compile().DynamicInvoke();
+				return true;
+			}
+			if (expression.NodeType == ExpressionType.NewArrayInit)
+			{
+				var expressions = ((NewArrayExpression)expression).Expressions;
+				var values = new object[expressions.Count];
+				value = null;
+				if (expressions.Where((t, i) => !GetValueFromExpressionWithoutConversion(t, out values[i])).Any())
+					return false;
+				value = values;
 				return true;
 			}
 			value = null;
