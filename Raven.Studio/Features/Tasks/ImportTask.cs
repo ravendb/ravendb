@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Tasks
+﻿using Ionic.Zlib;
+
+namespace Raven.Studio.Features.Tasks
 {
 	using System;
 	using System.Collections.Generic;
@@ -11,7 +13,6 @@
 	using Caliburn.Micro;
 	using Database;
 	using Framework;
-	using ICSharpCode.SharpZipLib.GZip;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database.Data;
@@ -52,7 +53,7 @@
 
 			try
 			{
-				var streamReader = new StreamReader(new GZipInputStream(stream));
+				var streamReader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
 
 				jsonReader = new JsonTextReader(streamReader);
 
