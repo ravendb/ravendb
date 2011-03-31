@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Impl;
@@ -26,9 +27,9 @@ namespace Raven.Storage.Managed
     {
         private readonly TableStorage storage;
         private readonly IUuidGenerator generator;
-        private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
+		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 
-        public TransactionStorageActions(TableStorage storage, IUuidGenerator generator, IEnumerable<AbstractDocumentCodec> documentCodecs)
+		public TransactionStorageActions(TableStorage storage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
         {
             this.storage = storage;
             this.generator = generator;
@@ -63,7 +64,7 @@ namespace Raven.Storage.Managed
             var ms = new MemoryStream();
 
             metadata.WriteTo(ms);
-            var dataBytes = documentCodecs.Aggregate(data.ToBytes(), (bytes, codec) => codec.Encode(key, data, metadata, bytes));
+            var dataBytes = documentCodecs.Aggregate(data.ToBytes(), (bytes, codec) => codec.Value.Encode(key, data, metadata, bytes));
             ms.Write(dataBytes, 0, dataBytes.Length);
 
             var newEtag = generator.CreateSequentialUuid();

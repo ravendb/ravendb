@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -39,7 +40,7 @@ namespace Raven.Database.Queries.LinearQueries
             var viewGenerator = queryCache.GetOrAddAtomically(query.Query,
                                                     s =>
                                                     new DynamicViewCompiler("query", new IndexDefinition { Map = query.Query, },
-                                                                            new AbstractDynamicCompilationExtension[0], basePath)
+																			new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath)
                                                     {
                                                         RequiresSelectNewAnonymousType = false
                                                     }.GenerateInstance());

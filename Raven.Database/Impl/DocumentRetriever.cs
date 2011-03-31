@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
@@ -26,7 +27,7 @@ namespace Raven.Database.Impl
 		private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly IStorageActionsAccessor actions;
-		private readonly IEnumerable<AbstractReadTrigger> triggers;
+		private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
 
 		private static readonly ThreadLocal<bool> disableReadTriggers = new ThreadLocal<bool>(() => false);
 
@@ -37,7 +38,7 @@ namespace Raven.Database.Impl
 			return new DisposableAction(() => disableReadTriggers.Value = old);
 		}
 
-		public DocumentRetriever(IStorageActionsAccessor actions, IEnumerable<AbstractReadTrigger> triggers)
+		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers)
 		{
 			this.actions = actions;
 			this.triggers = triggers;
@@ -67,7 +68,7 @@ namespace Raven.Database.Impl
 
 			foreach (var readTrigger in triggers)
 			{
-				readTrigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation, transactionInformation);
+				readTrigger.Value.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation, transactionInformation);
 			}
 			return resultingDocument;
 		}
@@ -174,7 +175,7 @@ namespace Raven.Database.Impl
 				return document;
 			foreach (var readTrigger in triggers)
 			{
-				var readVetoResult = readTrigger.AllowRead(document.Key, document.Metadata, operation, transactionInformation);
+				var readVetoResult = readTrigger.Value.AllowRead(document.Key, document.Metadata, operation, transactionInformation);
 				switch (readVetoResult.Veto)
 				{
 					case ReadVetoResult.ReadAllow.Allow:

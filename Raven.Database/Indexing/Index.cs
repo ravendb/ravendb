@@ -19,6 +19,7 @@ using Lucene.Net.Store;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -74,7 +75,7 @@ namespace Raven.Database.Indexing
 		}
 
 		[ImportMany]
-		public IEnumerable<AbstractAnalyzerGenerator> AnalyzerGenerators { get; set; }
+		public OrderedPartCollection<AbstractAnalyzerGenerator> AnalyzerGenerators { get; set; }
 
 		internal CurrentIndexSearcher Searcher
 		{
@@ -356,7 +357,7 @@ namespace Raven.Database.Indexing
 			                                                    (currentAnalyzer, generator) =>
 			                                                    {
 			                                                    	Analyzer generateAnalyzer =
-			                                                    		generator.GenerateAnalyzerForIndexing(name, luceneDoc,
+			                                                    		generator.Value.GenerateAnalyzerForIndexing(name, luceneDoc,
 			                                                    		                                      currentAnalyzer);
 			                                                    	if (generateAnalyzer != currentAnalyzer &&
 			                                                    	    currentAnalyzer != analyzer)

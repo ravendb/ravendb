@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using log4net;
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Plugins;
@@ -25,8 +26,8 @@ namespace Raven.Database.Indexing
 		private readonly ILog log = LogManager.GetLogger(typeof(WorkContext));
 		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
 		private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
-		public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
-		public IEnumerable<AbstractReadTrigger> ReadTriggers { get; set; }
+		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
+		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 		public bool DoWork
 		{
 			get { return doWork; }

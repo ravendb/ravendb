@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.MEF;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -34,7 +35,7 @@ namespace Raven.Tests.Linq
 {'type':'page', title: 'there', content: 'foobar 2', size: 3, '@metadata': {'@id': 2} },
 {'type':'revision', size: 4, _id: 3}
 ]");
-			var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0], ".");
+			var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query },  ".");
 			var compiledQuery = transformer.GenerateInstance();
 			var actual = compiledQuery.MapDefinition(documents)
 				.Cast<object>().ToArray();
@@ -62,8 +63,8 @@ from doc in docs
 select new { GeoHash = SampleGeoLocation.GeoHash(doc.loc, doc.lang) }
 "
 			},
-			                                          new AbstractDynamicCompilationExtension[]
-			                                          {
+													  new OrderedPartCollection<AbstractDynamicCompilationExtension>
+													  {
 			                                          	new SampleDynamicCompilationExtension()
 			                                          }, ".");
 			var compiledQuery = transformer.GenerateInstance();

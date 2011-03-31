@@ -17,6 +17,7 @@ using log4net;
 using Lucene.Net.Util;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.MEF;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -41,28 +42,28 @@ namespace Raven.Database
 	public class DocumentDatabase : IResourceStore, IUuidGenerator
 	{
 		[ImportMany]
-		public IEnumerable<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
+		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
+		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
+		public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractPutTrigger> PutTriggers { get; set; }
+		public OrderedPartCollection<AbstractPutTrigger> PutTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractDeleteTrigger> DeleteTriggers { get; set; }
+		public OrderedPartCollection<AbstractDeleteTrigger> DeleteTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
+		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractReadTrigger> ReadTriggers { get; set; }
+		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 
 		[ImportMany]
-		public AbstractDynamicCompilationExtension[] Extensions { get; set; }
+		public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
 
 		private readonly WorkContext workContext;
 
@@ -686,10 +687,11 @@ namespace Raven.Database
 				return attachment;
 
 			var foundResult = false;
-			foreach (var attachmentReadTrigger in AttachmentReadTriggers)
+			foreach (var attachmentReadTriggerLazy in AttachmentReadTriggers)
 			{
 				if (foundResult)
 					break;
+				var attachmentReadTrigger = attachmentReadTriggerLazy.Value;
 				var readVetoResult = attachmentReadTrigger.AllowRead(name, attachment.Data, attachment.Metadata,
 																	 ReadOperation.Load);
 				switch (readVetoResult.Veto)
@@ -724,7 +726,7 @@ namespace Raven.Database
 
 			foreach (var attachmentReadTrigger in AttachmentReadTriggers)
 			{
-				attachment.Data = attachmentReadTrigger.OnRead(name, attachment.Data, attachment.Metadata, ReadOperation.Load);
+				attachment.Data = attachmentReadTrigger.Value.OnRead(name, attachment.Data, attachment.Metadata, ReadOperation.Load);
 			}
 		}
 

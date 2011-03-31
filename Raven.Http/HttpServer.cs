@@ -17,6 +17,7 @@ using System.Threading;
 using log4net;
 using Newtonsoft.Json;
 using System.Linq;
+using Raven.Abstractions.MEF;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
 using Raven.Http.Extensions;
@@ -40,7 +41,7 @@ namespace Raven.Http
 
 
         [ImportMany]
-        public IEnumerable<AbstractRequestResponder> RequestResponders { get; set; }
+		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
         public IRaveHttpnConfiguration Configuration
         {
@@ -73,7 +74,7 @@ namespace Raven.Http
 
             foreach (var requestResponder in RequestResponders)
             {
-                requestResponder.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value);
+                requestResponder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value);
             }
         }
 
@@ -315,8 +316,9 @@ namespace Raven.Http
 
                 AddAccessControlAllowOriginHeader(ctx);
 
-                foreach (var requestResponder in RequestResponders)
+                foreach (var requestResponderLazy in RequestResponders)
                 {
+                	var requestResponder = requestResponderLazy.Value;
                     if (requestResponder.WillRespond(ctx))
                     {
                         requestResponder.Respond(ctx);

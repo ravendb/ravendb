@@ -9,6 +9,7 @@ using System.IO;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Impl;
@@ -28,9 +29,9 @@ namespace Raven.Storage.Managed
         private readonly TableStorage storage;
         private readonly ITransactionStorageActions transactionStorageActions;
         private readonly IUuidGenerator generator;
-        private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
+		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 
-        public DocumentsStorageActions(TableStorage storage, ITransactionStorageActions transactionStorageActions, IUuidGenerator generator, IEnumerable<AbstractDocumentCodec> documentCodecs)
+		public DocumentsStorageActions(TableStorage storage, ITransactionStorageActions transactionStorageActions, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
         {
             this.storage = storage;
             this.transactionStorageActions = transactionStorageActions;
@@ -185,7 +186,7 @@ namespace Raven.Storage.Managed
 				var dataBuffer = new byte[memoryStream.Length - memoryStream.Position];
 				Buffer.BlockCopy(buffer, (int)memoryStream.Position, dataBuffer, 0,
     			                 dataBuffer.Length);
-    			documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(metadata.Key, metadataCopy, bytes));
+    			documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Value.Decode(metadata.Key, metadataCopy, bytes));
 				memoryStream = new MemoryStream(dataBuffer);
     		}
 
@@ -223,7 +224,7 @@ namespace Raven.Storage.Managed
 
             metadata.WriteTo(ms);
 
-            var bytes = documentCodecs.Aggregate(data.ToBytes(), (current, codec) => codec.Encode(key, data, metadata, current));
+            var bytes = documentCodecs.Aggregate(data.ToBytes(), (current, codec) => codec.Value.Encode(key, data, metadata, current));
 
             ms.Write(bytes, 0, bytes.Length);
 

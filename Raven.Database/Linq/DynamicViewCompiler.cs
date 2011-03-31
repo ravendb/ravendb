@@ -11,6 +11,7 @@ using System.Web;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.MEF;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -27,7 +28,7 @@ namespace Raven.Database.Linq
 	public class DynamicViewCompiler
 	{
 		private readonly IndexDefinition indexDefinition;
-		private readonly AbstractDynamicCompilationExtension[] extensions;
+		private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 		private readonly string basePath;
 		private const string mapReduceTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
 
@@ -36,7 +37,11 @@ namespace Raven.Database.Linq
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForMap = new CaptureQueryParameterNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForReduce = new CaptureQueryParameterNamesVisitor();
 
-		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, AbstractDynamicCompilationExtension[] extensions, string basePath)
+		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, string basePath)
+			:this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath)
+		{}
+
+		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
 		{
 			this.indexDefinition = indexDefinition;
 			this.extensions = extensions;

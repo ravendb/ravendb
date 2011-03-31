@@ -13,6 +13,7 @@ using System.Security.Cryptography;
 using System.Text;
 using log4net;
 using Newtonsoft.Json;
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -34,14 +35,14 @@ namespace Raven.Database.Storage
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
         private readonly InMemoryRavenConfiguration configuration;
-	    private readonly AbstractDynamicCompilationExtension[] extensions;
+		private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
 		public IndexDefinitionStorage(
             InMemoryRavenConfiguration configuration,
 			ITransactionalStorage  transactionalStorage,
 			string path, 
-			IEnumerable<AbstractViewGenerator> compiledGenerators, 
-			AbstractDynamicCompilationExtension[] extensions)
+			IEnumerable<AbstractViewGenerator> compiledGenerators,
+			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
 		    this.configuration = configuration;
 		    this.extensions = extensions;// this is used later in the ctor, so it must appears first

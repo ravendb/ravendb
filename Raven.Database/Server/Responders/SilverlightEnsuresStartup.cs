@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.MEF;
+using Raven.Database.Impl;
 using Raven.Http.Abstractions;
 using Raven.Http.Plugins;
 using Raven.Http.Extensions;
@@ -11,7 +13,7 @@ namespace Raven.Database.Server.Responders
 	public class SilverlightEnsuresStartup : RequestResponder
 	{
 		[ImportMany]
-		public IEnumerable<ISilverlightRequestedAware> SilverlightRequestedAware { get; set; }
+		public OrderedPartCollection<ISilverlightRequestedAware> SilverlightRequestedAware { get; set; }
 
 
 		public override string UrlPattern
@@ -30,7 +32,7 @@ namespace Raven.Database.Server.Responders
 			{
 				foreach (var silverlightRequestedAware in SilverlightRequestedAware)
 				{
-					silverlightRequestedAware.SilverlightWasRequested(ResourceStore);
+					silverlightRequestedAware.Value.SilverlightWasRequested(ResourceStore);
 				}
 				return true;
 			});

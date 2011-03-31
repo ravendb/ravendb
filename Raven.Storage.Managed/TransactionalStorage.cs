@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Impl;
@@ -36,7 +37,7 @@ namespace Raven.Storage.Managed
         private IUuidGenerator uuidGenerator;
 
         [ImportMany]
-        public IEnumerable<AbstractDocumentCodec> DocumentCodecs { get; set; }
+		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
         public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
         {
