@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Linq;
 
 namespace Raven.Abstractions.MEF
 {
@@ -73,6 +74,30 @@ namespace Raven.Abstractions.MEF
 			add { inner.CollectionChanged += value; }
 			remove { inner.CollectionChanged -= value; }
 		}
+
+		public IEnumerable<TResult> OfType<TResult>()
+		{
+			return this.Select(x => x.Value).OfType<TResult>();			
+		}
+
+		public IEnumerable<TResult> Select<TResult>(Func<T, TResult> func)
+		{
+			return this.Select(x => func(x.Value));
+		}
+
+		public TAccumulate Aggregate<TAccumulate>(TAccumulate seed, Func<TAccumulate, T, TAccumulate> func)
+		{
+			return this.Aggregate(seed, (accumulate, lazy) => func(accumulate,lazy.Value));
+		}
+
+		public void Apply(Action<T> action)
+		{
+			foreach (var item in inner)
+			{
+				action(item.Value);
+			}
+		}
+
 	}
 #endif
 }

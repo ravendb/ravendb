@@ -112,9 +112,9 @@ namespace Raven.Database.Data
 				.Append("&start=").Append(Start)
 				.Append("&pageSize=").Append(PageSize)
 				.Append("&aggregation=").Append(AggregationOperation);
-			FieldsToFetch.Apply(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
-			GroupBy.Apply(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
-			SortedFields.Apply(field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
+			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
+			GroupBy.ApplyIfNotNull(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
+			SortedFields.ApplyIfNotNull(field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
 			
 			if (Cutoff != null)
 			{
@@ -144,7 +144,7 @@ namespace Raven.Database.Data
 
 	internal static class EnumerableExtension
 	{
-		public static void Apply<T>(this IEnumerable<T> self, Action<T> action)
+		public static void ApplyIfNotNull<T>(this IEnumerable<T> self, Action<T> action)
 		{
 			if (self == null)
 				return;

@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Tasks
+﻿using Ionic.Zlib;
+
+namespace Raven.Studio.Features.Tasks
 {
 	using System;
 	using System.Collections.Generic;
@@ -65,8 +67,7 @@
 			var credentials = new NetworkCredential();
 			var convention = new DocumentConvention();
 
-			//var streamWriter = new StreamWriter(new GZipOutputStream(stream));
-			var streamWriter = new StreamWriter(stream);
+			var streamWriter = new StreamWriter(new GZipStream(stream,CompressionMode.Compress));
 			var jsonWriter = new JsonTextWriter(streamWriter)
 			                 	{
 			                 		Formatting = Formatting.Indented
@@ -172,9 +173,7 @@
 
 			try
 			{
-				//var streamReader = new StreamReader(new GZipInputStream(stream));
-
-				var streamReader = new StreamReader(stream);
+				var streamReader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
 
 				jsonReader = new JsonTextReader(streamReader);
 
