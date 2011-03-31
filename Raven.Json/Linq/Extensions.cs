@@ -48,6 +48,18 @@ namespace Raven.Json.Linq
 			return Convert<T, U>(token, cast);
 		}
 
+		internal static IEnumerable<U> Convert<T, U>(this IEnumerable<T> source) where T : RavenJToken
+		{
+			ValidationUtils.ArgumentNotNull(source, "source");
+
+			bool cast = typeof(RavenJToken).IsAssignableFrom(typeof(U));
+
+			foreach (RavenJToken token in source)
+			{
+				yield return Convert<RavenJToken, U>(token, cast);
+			}
+		}
+
 		internal static U Convert<T, U>(this T token, bool cast) where T : RavenJToken
 		{
 			if (cast)
