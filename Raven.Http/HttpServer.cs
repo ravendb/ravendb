@@ -25,7 +25,50 @@ using Formatting = Newtonsoft.Json.Formatting;
 
 namespace Raven.Http
 {
-    public abstract class HttpServer : IDisposable
+	public class LogHttpRequestStatsParams
+	{
+		private Stopwatch sw;
+		private NameValueCollection headers;
+		private string httpMethod;
+		private int responseStatusCode;
+		private string requestUri;
+
+		public LogHttpRequestStatsParams(Stopwatch sw, NameValueCollection headers, string httpMethod, int responseStatusCode, string requestUri)
+		{
+			this.sw = sw;
+			this.headers = headers;
+			this.httpMethod = httpMethod;
+			this.responseStatusCode = responseStatusCode;
+			this.requestUri = requestUri;
+		}
+
+		public Stopwatch Sw
+		{
+			get { return sw; }
+		}
+
+		public NameValueCollection Headers
+		{
+			get { return headers; }
+		}
+
+		public string HttpMethod
+		{
+			get { return httpMethod; }
+		}
+
+		public int ResponseStatusCode
+		{
+			get { return responseStatusCode; }
+		}
+
+		public string RequestUri
+		{
+			get { return requestUri; }
+		}
+	}
+
+	public abstract class HttpServer : IDisposable
     {
         protected readonly IResourceStore DefaultResourceStore;
         protected readonly IRaveHttpnConfiguration DefaultConfiguration;
@@ -195,30 +238,60 @@ namespace Raven.Http
             }
             finally
             {
-                ctx.FinalizeResonse();
-				sw.Stop();
-                
-                LogHttpRequestStats(ctx, sw, ravenUiRequest);
+            	try
+            	{
+            		FinalizeRequestProcessing(ctx, sw, ravenUiRequest);
+            	}
+            	catch (Exception e)
+            	{
+            		logger.Error("Could not finalize request properly", e);
+            	}
             }
         }
 
-    	private void LogHttpRequestStats(IHttpContext ctx, Stopwatch sw, bool ravenUiRequest)
-    	{
-    		if (ravenUiRequest) 
+		private void FinalizeRequestProcessing(IHttpContext ctx, Stopwatch sw, bool ravenUiRequest)
+		{
+			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
+			try
+			{
+				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
+					sw, 
+					ctx.Request.Headers, 
+					ctx.Request.HttpMethod, 
+					ctx.Response.StatusCode, 
+					ctx.Request.Url.PathAndQuery);
+			}
+			catch (Exception e)
+			{
+				logger.Warn("Could not gather information to log request stats", e);
+			}
+
+			ctx.FinalizeResonse();
+			sw.Stop();
+
+			if (ravenUiRequest || logHttpRequestStatsParam == null) 
 				return;
+
+			LogHttpRequestStats(logHttpRequestStatsParam);
+			ctx.OutputSavedLogItems(logger);
+		}
+
+		private void LogHttpRequestStats(LogHttpRequestStatsParams logHttpRequestStatsParams)
+    	{
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
-    		if (ctx.Request.Headers["Raven-Timer-Request"] == "true" && sw.ElapsedMilliseconds <= 25) 
+    		if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && logHttpRequestStatsParams.Sw.ElapsedMilliseconds <= 25) 
 				return;
 
     		var curReq = Interlocked.Increment(ref reqNum);
     		logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
-    		                   curReq, ctx.Request.HttpMethod, sw.ElapsedMilliseconds, ctx.Response.StatusCode,
-    		                   ctx.Request.Url.PathAndQuery,
+    		                   curReq, 
+							   logHttpRequestStatsParams.HttpMethod, 
+							   logHttpRequestStatsParams.Sw.ElapsedMilliseconds, 
+							   logHttpRequestStatsParams.ResponseStatusCode,
+    		                   logHttpRequestStatsParams.RequestUri,
     		                   currentTenantId.Value);
-
-    		ctx.OutputSavedLogItems(logger);
     	}
 
     	private void HandleException(IHttpContext ctx, Exception e)
