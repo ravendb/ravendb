@@ -92,17 +92,17 @@ namespace Raven.Munin
 		{
 			try
 			{
-				var versionInfo = (JObject)JToken.ReadFrom(new BsonReader(log));
+				var versionInfo = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(log));
 
 				if (versionInfo.Value<int>("Version") != version)
 					throw new InvalidOperationException("Invalid Munin file version!");
 
-				var tableNames = versionInfo.Value<JArray>("Tables");
+				var tableNames = versionInfo.Value<RavenJArray>("Tables");
 
-				if (tableNames.Count != tables.Count)
+				if (tableNames.Length != tables.Count)
 					throw new InvalidOperationException("Different number of tables stored in the Munin file");
 
-				for (int i = 0; i < tableNames.Count; i++)
+				for (int i = 0; i < tableNames.Length; i++)
 				{
 					if (tableNames[i].Value<string>() != tables[i].Name)
 						throw new InvalidOperationException("Table at position " + i + " is expected to be " + tables[i].Name + " but was actually " + tableNames[i]);
