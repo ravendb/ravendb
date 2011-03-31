@@ -525,13 +525,15 @@ namespace Raven.Client.Client.Async
 					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
 					return request
 						.WriteAsync(Encoding.UTF8.GetBytes(serializeObject))
-						.ContinueWith(writeTask => request.ReadResponseStringAsync()
-													.ContinueWith(readStrTask =>
-													{
-														//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctr is private!
-														var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result);
-														return obj.Index;
-													})).Unwrap();
+						.ContinueWith(writeTask => AttemptToProcessResponse( ()=> request
+							.ReadResponseStringAsync()
+							.ContinueWith(readStrTask => AttemptToProcessResponse( ()=>
+								{
+									//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctr is private!
+									var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result);
+									return obj.Index;
+								})))
+					).Unwrap();
 				}).Unwrap();
 		}
 
@@ -554,11 +556,21 @@ namespace Raven.Client.Client.Async
 				.GetResponseAsync();
 		}
 
-		private static bool ShouldThrowForPutIndexAsync(WebException e)
+		private bool ShouldThrowForPutIndexAsync(WebException e)
 		{
 			if (e == null) return true;
 			var response = e.Response as HttpWebResponse;
-			return (response == null || response.StatusCode != HttpStatusCode.NotFound);
+			if(response == null ) return false;
+			
+			if (response.StatusCode == HttpStatusCode.InternalServerError || response.StatusCode == HttpStatusCode.NotFound)
+			{
+				var content = new StreamReader(response.GetResponseStream());
+				var jo = JObject.Load(new JsonTextReader(content));
+				var error = jo.Deserialize<ServerRequestError>(convention);
+
+				throw new WebException(error.Error);
+			}
+			return false;
 		}
 
 
