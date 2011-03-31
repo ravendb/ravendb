@@ -14,14 +14,11 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using ICSharpCode.SharpZipLib.Zip;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Server;
-using Raven.Database.Server.Responders;
 using Raven.Http;
 using Raven.Http.Extensions;
+using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
 
@@ -251,9 +248,9 @@ namespace Raven.Scenarios
 				return;
 			}
 			var rr = new StringReader(actual.Item1);
-			var actualResponse = JToken.ReadFrom(new JsonTextReader(rr));
+			var actualResponse = RavenJToken.ReadFrom(new JsonTextReader(rr));
 			var remainingText = sr.ReadToEnd();
-			var expectedResponse = JToken.ReadFrom(new JsonTextReader(new StringReader(remainingText)));
+			var expectedResponse = RavenJToken.ReadFrom(new JsonTextReader(new StringReader(remainingText)));
 			if (AreEquals(expectedResponse, actualResponse) == false)
 			{
 				var outputName = Path.GetFileNameWithoutExtension(file) + " request #" + responseNumber + ".txt";
@@ -272,22 +269,22 @@ namespace Raven.Scenarios
 			}
 		}
 
-		private static bool AreEquals(JToken expectedResponse, JToken actualResponse)
+		private static bool AreEquals(RavenJToken expectedResponse, RavenJToken actualResponse)
 		{
-			if (expectedResponse is JValue)
-				return new JTokenEqualityComparer().Equals(expectedResponse,actualResponse);
-			if(expectedResponse is JArray)
+			if (expectedResponse is RavenJValue)
+				return new RavenJTokenEqualityComparer().Equals(expectedResponse,actualResponse);
+			if(expectedResponse is RavenJArray)
 			{
-				var expectedArray = (JArray) expectedResponse;
-				var actualArray = (JArray)actualResponse;
-				if (expectedArray.Count != actualArray.Count)
+				var expectedArray = (RavenJArray) expectedResponse;
+				var actualArray = (RavenJArray)actualResponse;
+				if (expectedArray.Length != actualArray.Length)
 				{
 					return false;
 				}
 				return !expectedArray.Where((t, i) => AreEquals(t, actualArray[i]) == false).Any();
 			}
-			var expectedObject = (JObject)expectedResponse;
-			var actualObject = (JObject) actualResponse;
+			var expectedObject = (RavenJObject)expectedResponse;
+			var actualObject = (RavenJObject) actualResponse;
 			foreach (var prop in expectedObject)
 			{
 				if (AreEquals(prop.Value, actualObject[prop.Key]) == false)

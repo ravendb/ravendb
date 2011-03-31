@@ -11,7 +11,7 @@ using Raven.Json.Linq;
 namespace Raven.Abstractions.Json
 {
 	/// <summary>
-	/// Extensions for JToken
+	/// Extensions for RavenJToken
 	/// </summary>
 	public static class JTokenExtensions
 	{

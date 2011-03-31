@@ -80,7 +80,7 @@ namespace Raven.Database.Json
 		}
 
         /// <summary>
-        /// Convert a JToken to a byte array
+        /// Convert a RavenJToken to a byte array
         /// </summary>
         public static void WriteTo(this RavenJToken self, Stream stream)
         {

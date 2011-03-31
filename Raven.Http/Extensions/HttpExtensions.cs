@@ -14,7 +14,6 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Json;
-using Raven.Database.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
 using Raven.Http.Json;
@@ -57,11 +56,11 @@ namespace Raven.Http.Extensions
 				}.Deserialize(jsonReader, typeof(T));
 		}
 
-		public static JArray ReadJsonArray(this IHttpContext context)
+		public static RavenJArray ReadJsonArray(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
 			using (var jsonReader = new JsonTextReader(streamReader))
-				return JArray.Load(jsonReader);
+				return RavenJArray.Load(jsonReader);
 		}
 
 		public static RavenJArray ReadBsonArray(this IHttpContext context)
@@ -81,13 +80,13 @@ namespace Raven.Http.Extensions
 
 		public static void WriteJson(this IHttpContext context, object obj)
 		{
-			WriteJson(context, JToken.FromObject(obj, new JsonSerializer
+			WriteJson(context, RavenJToken.FromObject(obj, new JsonSerializer
 			{
 				Converters = {new JsonToJsonConverter(), new JsonEnumConverter()},
 			}));
 		}
 
-		public static void WriteJson(this IHttpContext context, JToken obj)
+		public static void WriteJson(this IHttpContext context, RavenJToken obj)
 		{
 			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
 			var jsonp = context.Request.QueryString["jsonp"];

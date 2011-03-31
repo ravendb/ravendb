@@ -503,7 +503,7 @@ namespace Raven.Tests.Document
 				var company = new Company { Name = "Company" };
 				session.Store(company);
 				session.SaveChanges();
-				Newtonsoft.Json.Linq.JToken t;
+				RavenJToken t;
 				var metadataFromServer = session.Advanced.GetMetadataFor(session.Load<Company>(company.Id));
 				var users = metadataFromServer["Raven-Allowed-Users"].Children().OfType<RavenJValue>().Select(x => (string)x.Value).ToArray();
 				Assert.Equal(new[]{"ayende","oren","rob"}, users);

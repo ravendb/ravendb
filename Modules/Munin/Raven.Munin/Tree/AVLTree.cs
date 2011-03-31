@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Munin.Tree
 {
@@ -21,12 +21,12 @@ namespace Raven.Munin.Tree
             return string.Format("Key: {0}, Value: {1}, Count: {2}", theKey, theValue, Count);
         }
 
-        public JObject ToJObject()
+        public RavenJObject ToJObject()
         {
-            return new JObject
+            return new RavenJObject
             {
-                {"key", JToken.FromObject(theKey)},
-                {"value", JToken.FromObject(theValue)},
+                {"key", RavenJToken.FromObject(theKey)},
+                {"value", RavenJToken.FromObject(theValue)},
                 {"left", Left.ToJObject()},
                 {"right", Right.ToJObject()}
             };
