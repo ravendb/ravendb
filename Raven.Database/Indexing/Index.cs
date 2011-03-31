@@ -283,10 +283,10 @@ namespace Raven.Database.Indexing
 		{
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
 			{
-				var val = JsonConvert.DeserializeObject(fld.StringValue());
-				return new KeyValuePair<string, RavenJToken>(fld.Name(), new RavenJValue(val));
+				var val = JsonConvert.DeserializeObject(fld.StringValue()) as RavenJObject;
+				return new KeyValuePair<string, RavenJToken>(fld.Name(), val);
 			}
-			return new KeyValuePair<string, RavenJToken>(fld.Name(), new RavenJValue(fld.StringValue()));
+			return new KeyValuePair<string, RavenJToken>(fld.Name(), fld.StringValue());
 		}
 
 		IndexWriter indexWriter;
