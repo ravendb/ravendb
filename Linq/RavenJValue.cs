@@ -49,7 +49,7 @@ namespace Raven.Json.Linq
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenJValue"/> class from another <see cref="RavenJValue"/> object.
         /// </summary>
-        /// <param name="other">A <see cref="JValue"/> object to copy from.</param>
+        /// <param name="other">A <see cref="RavenJValue"/> object to copy from.</param>
         public RavenJValue(RavenJValue other)
             : this(other.Value, other.Type)
         {
