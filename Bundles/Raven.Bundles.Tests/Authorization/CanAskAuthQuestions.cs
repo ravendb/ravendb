@@ -43,7 +43,7 @@ namespace Raven.Bundles.Tests.Authorization
 
 			using (var s = store.OpenSession())
 			{
-				var isOperationAllowedOnDocument = s.IsOperationAllowedOnDocument(UserId, "Company/Bid", "companies/1");
+				var isOperationAllowedOnDocument = s.Advanced.IsOperationAllowedOnDocument(UserId, "Company/Bid", "companies/1");
 				Assert.False(isOperationAllowedOnDocument.IsAllowed);
 				Assert.Equal("Could not find any permissions for operation: Company/Bid on companies/1 for user Authorization/Users/Ayende.\r\nOnly the following may perform operation Company/Bid on companies/1:\r\n\tOperation: Company/Bid, User: , Role: Admins, Allow: True, Priority: 0\r\n",
 					isOperationAllowedOnDocument.Reasons[0]);
@@ -58,7 +58,7 @@ namespace Raven.Bundles.Tests.Authorization
 
 			using (var s = store.OpenSession())
 			{
-				var isOperationAllowedOnDocument = s.IsOperationAllowedOnDocument(UserId, "Company/Bid", "companies/1");
+				var isOperationAllowedOnDocument = s.Advanced.IsOperationAllowedOnDocument(UserId, "Company/Bid", "companies/1");
 				Assert.True(isOperationAllowedOnDocument.IsAllowed);
 				Assert.Equal(new[] { "Operation: Company/Bid, User: , Role: Admins, Allow: True, Priority: 0" }, isOperationAllowedOnDocument.Reasons.ToArray());
 			}
