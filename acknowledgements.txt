@@ -4,3 +4,4 @@ The Raven Datbase is making use of the following OSS projects:
 * ICSharpCode.NRefactory from the SharpDevelop project (http://sharpdevelop.net)
 * Newtonsoft.Json from James Newton-King (http://james.newtonking.com/pages/json-net.aspx)
 * Mono Project - more specifically, parts of the Mono BCL implementations (http://mono-project.com)
+* DotNetZip from http://dotnetzip.codeplex.com
