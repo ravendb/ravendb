@@ -15,7 +15,6 @@
 	using Client.Silverlight.Client;
 	using Database;
 	using Framework;
-	using ICSharpCode.SharpZipLib.GZip;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database.Data;
@@ -66,7 +65,8 @@
 			var credentials = new NetworkCredential();
 			var convention = new DocumentConvention();
 
-			var streamWriter = new StreamWriter(new GZipOutputStream(stream));
+			//var streamWriter = new StreamWriter(new GZipOutputStream(stream));
+			var streamWriter = new StreamWriter(stream);
 			var jsonWriter = new JsonTextWriter(streamWriter)
 			                 	{
 			                 		Formatting = Formatting.Indented
@@ -172,7 +172,9 @@
 
 			try
 			{
-				var streamReader = new StreamReader(new GZipInputStream(stream));
+				//var streamReader = new StreamReader(new GZipInputStream(stream));
+
+				var streamReader = new StreamReader(stream);
 
 				jsonReader = new JsonTextReader(streamReader);
 
