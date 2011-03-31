@@ -4,6 +4,7 @@ namespace Raven.Studio.Features.Database
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using System.Linq;
+	using System.Windows.Browser;
 	using System.Windows.Threading;
 	using Caliburn.Micro;
 	using Client;
@@ -193,7 +194,12 @@ namespace Raven.Studio.Features.Database
 		public string Address { get; private set; }
 		public string CurrentDatabaseAddress
 		{
-			get { return Address + "/databases/" + CurrentDatabase; }
+			get
+			{
+				return (CurrentDatabase == "Default Database")
+					? Address
+					: Address + "/databases/" + HttpUtility.UrlEncode(CurrentDatabase);
+			}
 		}
 
 		public string Name { get; private set; }
