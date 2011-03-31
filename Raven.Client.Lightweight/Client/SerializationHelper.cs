@@ -13,8 +13,14 @@ using Raven.Database.Data;
 
 namespace Raven.Client.Client
 {
-	internal static class SerializationHelper
+	///<summary>
+	/// Helper method to do serialization from JObject to JsonDocument
+	///</summary>
+	public static class SerializationHelper
 	{
+		///<summary>
+		/// Translate a collection of JObject to JsonDocuments
+		///</summary>
 		public static IEnumerable<JsonDocument> JObjectsToJsonDocuments(IEnumerable<JObject> responses)
 		{
 			return (from doc in responses
@@ -31,11 +37,17 @@ namespace Raven.Client.Client
 			        });
 		}
 
+		///<summary>
+		/// Translate a collection of JObject to JsonDocuments
+		///</summary>
 		public static IEnumerable<JsonDocument> ToJsonDocuments(this IEnumerable<JObject> responses)
 		{
 			return JObjectsToJsonDocuments(responses);
 		}
 
+		///<summary>
+		/// Translate a collection of JObject to JsonDocuments
+		///</summary>
 		public static JsonDocument ToJsonDocument(this JObject response)
 		{
 			return JObjectsToJsonDocuments(new[] { response }).First();

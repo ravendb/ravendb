@@ -1,3 +1,5 @@
+using Raven.Client.Client;
+
 namespace Raven.Studio.Features.Indexes
 {
 	using System;

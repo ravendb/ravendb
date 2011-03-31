@@ -93,6 +93,17 @@ namespace Raven.Client.Client
 		}
 
 		/// <summary>
+		/// Gets documents for the specified key prefix
+		/// </summary>
+		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize)
+		{
+			EnsureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
+
+			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, start, pageSize));
+
+		}
+
+		/// <summary>
 		/// Execute a GET request against the provided url
 		/// and return the result as a string
 		/// </summary>
@@ -186,8 +197,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			try
 			{
                 var requestString = request.ReadResponseString();
-                JObject meta = null;
-                JObject jsonData = null;
+                JObject meta;
+                JObject jsonData;
                 try
                 {
                     jsonData = JObject.Parse(requestString);
@@ -252,6 +263,30 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
 			return ExecuteWithReplication("PUT", u => DirectPut(metadata, key, etag, document, u));
+		}
+
+		private JsonDocument[] DirectStartsWith(string operationUrl, string keyPrefix, int start, int pageSize)
+		{
+			var metadata = new JObject();
+			AddTransactionInformation(metadata);
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", operationUrl, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			string readResponseString;
+			try
+			{
+				readResponseString = request.ReadResponseString();
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					throw;
+				throw ThrowConcurrencyException(e);
+			}
+			return SerializationHelper.JObjectsToJsonDocuments(JArray.Parse(readResponseString).OfType<JObject>()).ToArray();
 		}
 
 		private PutResult DirectPut(JObject metadata, string key, Guid? etag, JObject document, string operationUrl)

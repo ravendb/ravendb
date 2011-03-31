@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Query
+﻿using Raven.Client.Client;
+
+namespace Raven.Studio.Features.Query
 {
 	using System;
 	using System.Collections.Generic;

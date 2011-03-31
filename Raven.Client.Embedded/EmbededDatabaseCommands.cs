@@ -84,6 +84,15 @@ namespace Raven.Client.Client
 		public NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
+		/// Gets documents for the specified key prefix
+		/// </summary>
+		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize)
+		{
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, start, pageSize);
+			return SerializationHelper.JObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<JObject>()).ToArray();
+		}
+
+		/// <summary>
 		/// Gets the document for the specified key.
 		/// </summary>
 		/// <param name="key">The key.</param>

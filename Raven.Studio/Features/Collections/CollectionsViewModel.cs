@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Collections
+﻿using Raven.Client.Client;
+
+namespace Raven.Studio.Features.Collections
 {
 	using System;
 	using System.Collections.Generic;
