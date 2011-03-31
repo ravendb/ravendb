@@ -1,13 +1,29 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
+using System.Collections;
 
 namespace Raven.Json.Linq
 {
 	public class RavenJTokenReader : JsonReader
 	{
 		private readonly RavenJToken _root;
+		private IEnumerator<ReadState> enumerator;
+
+		private class ReadState
+		{
+			public ReadState(JsonToken type, object val = null)
+			{
+				TokenType = type;
+				Value = val;
+			}
+			public JsonToken TokenType { get; private set; }
+			public object Value { get; private set; }
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJTokenReader"/> class.
@@ -20,75 +36,70 @@ namespace Raven.Json.Linq
 
 		public override bool Read()
 		{
-			return ReadRavenJToken(_root);
-		}
+			if (CurrentState == State.Start)
+				enumerator = ReadRavenJToken(_root).GetEnumerator();
 
-		private bool ReadRavenJToken(RavenJToken token)
-		{
-			if (token is RavenJValue)
-			{
-				SetToken(token);
-			}
-			else if (token is RavenJArray)
-			{
-				SetToken(JsonToken.StartArray);
-				if (((RavenJArray)token).Length > 0) // to prevent object creation if inner array is null
-				{
-					foreach (var item in ((RavenJArray) token).Items)
-					{
-						if (!ReadRavenJToken(item))
-							return false;
-					}
-				}
-				SetToken(JsonToken.EndObject);
-			}
-			else if (token is RavenJObject)
-			{
-				SetToken(JsonToken.StartObject);
+			if (!enumerator.MoveNext())
+				return false;
 
-				foreach (var prop in ((RavenJObject)token).Properties)
-				{
-					SetToken(JsonToken.PropertyName, prop.Key);
-					if (!ReadRavenJToken(prop.Value))
-						return false;
-				}
-
-				SetToken(JsonToken.EndObject);
-			}
+			SetToken(enumerator.Current.TokenType, enumerator.Current.Value);
 			return true;
 		}
 
-		private void SetToken(RavenJToken token)
+		private static IEnumerable<ReadState> ReadRavenJToken(RavenJToken token)
+		{
+			if (token is RavenJValue)
+			{
+				yield return new ReadState(GetJsonTokenType(token), ((RavenJValue)token).Value);
+			}
+			else if (token is RavenJArray)
+			{
+				yield return new ReadState(JsonToken.StartArray);
+				if (((RavenJArray)token).Length > 0) // to prevent object creation if inner array is null
+				{
+					foreach (var item in ((RavenJArray)token).Items)
+						foreach (var i in ReadRavenJToken(item))
+							yield return i;
+				}
+				yield return new ReadState(JsonToken.EndArray);
+			}
+			else if (token is RavenJObject)
+			{
+				yield return new ReadState(JsonToken.StartObject);
+
+				foreach (var prop in ((RavenJObject)token).Properties)
+				{
+					yield return new ReadState(JsonToken.PropertyName, prop.Key);
+					foreach (var item in ReadRavenJToken(prop.Value))
+						yield return item;
+				}
+
+				yield return new ReadState(JsonToken.EndObject);
+			}
+		}
+
+		private static JsonToken GetJsonTokenType(RavenJToken token)
 		{
 			switch (token.Type)
 			{
 				case JTokenType.Integer:
-					SetToken(JsonToken.Integer, ((RavenJValue)token).Value);
-					break;
+					return JsonToken.Integer;
 				case JTokenType.Float:
-					SetToken(JsonToken.Float, ((RavenJValue)token).Value);
-					break;
+					return JsonToken.Float;
 				case JTokenType.String:
-					SetToken(JsonToken.String, ((RavenJValue)token).Value);
-					break;
+					return JsonToken.String;
 				case JTokenType.Boolean:
-					SetToken(JsonToken.Boolean, ((RavenJValue)token).Value);
-					break;
+					return JsonToken.Boolean;
 				case JTokenType.Null:
-					SetToken(JsonToken.Null, ((RavenJValue)token).Value);
-					break;
+					return JsonToken.Null;
 				case JTokenType.Undefined:
-					SetToken(JsonToken.Undefined, ((RavenJValue)token).Value);
-					break;
+					return JsonToken.Undefined;
 				case JTokenType.Date:
-					SetToken(JsonToken.Date, ((RavenJValue)token).Value);
-					break;
+					return JsonToken.Date;
 				case JTokenType.Raw:
-					SetToken(JsonToken.Raw, ((RavenJValue)token).Value);
-					break;
+					return JsonToken.Raw;
 				case JTokenType.Bytes:
-					SetToken(JsonToken.Bytes, ((RavenJValue)token).Value);
-					break;
+					return JsonToken.Bytes;
 				default:
 					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("Type", token.Type, "Unexpected JTokenType.");
 			}
@@ -96,17 +107,61 @@ namespace Raven.Json.Linq
 
 		public override byte[] ReadAsBytes()
 		{
-			throw new NotImplementedException();
+			Read();
+
+			// attempt to convert possible base 64 string to bytes
+			if (TokenType == JsonToken.String)
+			{
+				var s = (string) Value;
+				var data = (s.Length == 0) ? new byte[0] : Convert.FromBase64String(s);
+				SetToken(JsonToken.Bytes, data);
+			}
+
+			if (TokenType == JsonToken.Null)
+				return null;
+			if (TokenType == JsonToken.Bytes)
+				return (byte[]) Value;
+
+			throw new JsonReaderException(
+				"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 		}
 
 		public override decimal? ReadAsDecimal()
 		{
-			throw new NotImplementedException();
+			Read();
+
+			if (TokenType == JsonToken.Null)
+				return null;
+			if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
+			{
+				SetToken(JsonToken.Float, Convert.ToDecimal(Value, CultureInfo.InvariantCulture));
+				return (decimal) Value;
+			}
+
+			throw new JsonReaderException(
+				"Error reading decimal. Expected a number but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 		}
 
+#if !NET20
+		/// <summary>
+		/// Reads the next JSON token from the stream as a <see cref="Nullable{DateTimeOffset}"/>.
+		/// </summary>
+		/// <returns>A <see cref="Nullable{DateTimeOffset}"/>.</returns>
 		public override DateTimeOffset? ReadAsDateTimeOffset()
 		{
-			throw new NotImplementedException();
+			Read();
+
+			if (TokenType == JsonToken.Null)
+				return null;
+			if (TokenType == JsonToken.Date)
+			{
+				SetToken(JsonToken.Date, new DateTimeOffset((DateTime) Value));
+				return (DateTimeOffset) Value;
+			}
+
+			throw new JsonReaderException(
+				"Error reading date. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 		}
+#endif
 	}
 }
