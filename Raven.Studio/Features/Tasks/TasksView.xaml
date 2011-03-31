@@ -9,8 +9,8 @@
 			 xmlns:input="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input"
 			 xmlns:f="clr-namespace:Raven.Studio.Framework"
 			 mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
+			 d:DesignHeight="600"
+			 d:DesignWidth="800">
 
 	<tk:DockPanel x:Name="LayoutRoot"
 				  Background="{StaticResource DefaultScreenBackground}">
@@ -22,19 +22,14 @@
 		<tk:DockPanel tk:DockPanel.Dock="Left"
 					  Width="180"
 					  Margin="0 0 8 0">
-			<StackPanel>
-				<Button x:Name="ExportData"
-						Content="Export" />
-				<Button x:Name="ImportData"
-						Content="Import" />
-			</StackPanel>
+			<ListBox ItemsSource="{Binding AvailableTasks}"
+					 SelectedItem="{Binding SelectedTask, Mode=TwoWay}" />
 
 		</tk:DockPanel>
 
 		<Grid tk:DockPanel.Dock="Top">
 
-			<TextBlock Style="{StaticResource Instruction}"
-					   Text="do something" />
+			<ContentControl x:Name="ActiveItem" />
 
 		</Grid>
 

@@ -157,12 +157,17 @@
     <Compile Include="Features\Statistics\IndexesViewModel.cs" />
     <Compile Include="Features\Statistics\Statistic.cs" />
     <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
+    <Compile Include="Features\Tasks\ExportTask.cs" />
+    <Compile Include="Features\Tasks\ImportTask.cs" />
+    <Compile Include="Features\Tasks\InvalidDataException.cs" />
+    <Compile Include="Features\Tasks\Stopwatch.cs" />
     <Compile Include="Features\Tasks\TasksViewModel.cs" />
     <Compile Include="Framework\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
     <Compile Include="Framework\IKeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyCombination.cs" />
+    <Compile Include="Framework\ListExtensions.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
@@ -353,6 +358,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Indexes\BrowseIndexesView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Tasks\ExportTaskView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Tasks\ImportTaskView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
