@@ -10,23 +10,97 @@
 		<ResourceDictionary Source="Fonts.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
-    <Style x:Key="Grouping"
-           TargetType="Border">
-        <Setter Property="BorderBrush"
-                Value="{StaticResource DividerBrush}" />
-        <Setter Property="BorderThickness"
-                Value="1,0,0,0" />
-        <Setter Property="CornerRadius"
-                Value="5" />
-        <Setter Property="Padding"
-                Value="6 0 0 0" />
-        <Setter Property="VerticalAlignment"
-                Value="Top" />
-        <Setter Property="HorizontalAlignment"
-                Value="Left" />
-    </Style>
-    
-    <Style x:Key="howLongSinceStyle"
+	<Style TargetType="ListBoxItem"
+		   x:Key="DatabaseMenuListBoxItem">
+		<Setter Property="Padding"
+				Value="6,6,3,6" />
+		<Setter Property="HorizontalContentAlignment"
+				Value="Left" />
+		<Setter Property="VerticalContentAlignment"
+				Value="Top" />
+		<Setter Property="Background"
+				Value="Transparent" />
+		<Setter Property="BorderThickness"
+				Value="1" />
+		<Setter Property="TabNavigation"
+				Value="Local" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ListBoxItem">
+					<Grid Background="{TemplateBinding Background}">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualState x:Name="Normal" />
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="fillColor"
+														 Storyboard.TargetProperty="Opacity"
+														 Duration="0"
+														 To=".35" />
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Disabled">
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="contentPresenter"
+														 Storyboard.TargetProperty="Opacity"
+														 Duration="0"
+														 To=".55" />
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="SelectionStates">
+								<VisualState x:Name="Unselected" />
+								<VisualState x:Name="Selected">
+									<Storyboard>
+										<DoubleAnimation Duration="0" To="1" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="selectedVisual" d:IsOptimized="True"/>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="SelectedUnfocused">
+									<Storyboard>
+										<DoubleAnimation Duration="0" To="1" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="selectedVisual" d:IsOptimized="True"/>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="FocusStates">
+								<VisualState x:Name="Focused"/>
+								<VisualState x:Name="Unfocused" />
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<Rectangle x:Name="fillColor"
+								   Opacity="0"
+								   Fill="#FFFFDDE9"
+								   IsHitTestVisible="False"
+								   RadiusX="3"
+								   RadiusY="3" />
+						<ContentPresenter x:Name="contentPresenter"
+										  Content="{TemplateBinding Content}"
+										  ContentTemplate="{TemplateBinding ContentTemplate}"
+										  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+										  Margin="{TemplateBinding Padding}" />
+						<Border x:Name="selectedVisual" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0" CornerRadius="5" Opacity="0"/>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="Grouping"
+		   TargetType="Border">
+		<Setter Property="BorderBrush"
+				Value="{StaticResource DividerBrush}" />
+		<Setter Property="BorderThickness"
+				Value="1,0,0,0" />
+		<Setter Property="CornerRadius"
+				Value="5" />
+		<Setter Property="Padding"
+				Value="6 0 0 0" />
+		<Setter Property="VerticalAlignment"
+				Value="Top" />
+		<Setter Property="HorizontalAlignment"
+				Value="Left" />
+	</Style>
+
+	<Style x:Key="howLongSinceStyle"
 		   TargetType="TextBlock">
 		<Setter Property="Foreground"
 				Value="{StaticResource AccentTextBrush}" />

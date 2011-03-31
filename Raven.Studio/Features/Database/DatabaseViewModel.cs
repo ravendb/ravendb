@@ -29,7 +29,7 @@ namespace Raven.Studio.Features.Database
 
 			Items = screens.OrderBy(x => x.Metadata.Index).Select(x => x.Metadata.DisplayName).ToList();
 
-			ActivateItem(screens.Select(x => x.Value).First());
+			SelectedItem = screens.Select(x => x.Metadata.DisplayName).First();
 
 			events.Subscribe(this);
 		}
