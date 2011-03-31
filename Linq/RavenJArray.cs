@@ -46,6 +46,12 @@ namespace Raven.Json.Linq
 			}
 		}
 
+		public RavenJArray(IEnumerable<RavenJToken> content)
+		{
+			_items = new List<RavenJToken>();
+			_items.AddRange(content);
+		}
+
     	/// <summary>
         /// Gets the node type for this <see cref="RavenJToken"/>.
         /// </summary>
@@ -82,7 +88,7 @@ namespace Raven.Json.Linq
 		}
 
 		/// <summary>
-		/// Gets or sets the <see cref="Newtonsoft.Json.Linq.JToken"/> at the specified index.
+		/// Gets or sets the <see cref="RavenJToken"/> at the specified index.
 		/// </summary>
 		/// <value></value>
 		public RavenJToken this[int index]
@@ -109,7 +115,7 @@ namespace Raven.Json.Linq
 			return Items;
 		}
 
-        internal new static RavenJArray Load(JsonReader reader)
+        public new static RavenJArray Load(JsonReader reader)
         {
             if (reader.TokenType != JsonToken.StartArray)
                 throw new Exception(
