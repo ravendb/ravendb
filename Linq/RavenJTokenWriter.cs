@@ -68,6 +68,8 @@ namespace Raven.Json.Linq
                     _tempPropName = null;
                     break;
                 case JTokenType.Array:
+					if (!string.IsNullOrEmpty(_tempPropName))
+						throw new JsonWriterException("Unexpected property token");
                     ((RavenJArray)CurrentToken).Items.Add(token);
                     break;
                 default:
@@ -128,6 +130,8 @@ namespace Raven.Json.Linq
                         _tempPropName = null;
                         break;
                     case JTokenType.Array:
+						if (!string.IsNullOrEmpty(_tempPropName))
+							throw new JsonWriterException("Unexpected property token");
                         ((RavenJArray)CurrentToken).Items.Add(value);
                         break;
                     default:
