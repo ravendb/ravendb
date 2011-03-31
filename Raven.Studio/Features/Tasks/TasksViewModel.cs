@@ -262,7 +262,7 @@
 			var sw = Stopwatch.StartNew();
 			long size = 0;
 
-			var commands = from doc in batch
+			var commands = (from doc in batch
 			               let metadata = doc.Value<JObject>("@metadata")
 			               let removal = doc.Remove("@metadata")
 			               select new PutCommandData
@@ -270,7 +270,7 @@
 			                      		Metadata = metadata,
 			                      		Document = doc,
 			                      		Key = metadata.Value<string>("@id"),
-			                      	};
+			                      	}).ToArray();
 			batch.Clear();
 
 			//TODO: all of this is just to get the size; I suspect there is a Better Way
@@ -291,7 +291,7 @@
 			                  batch.Count, Math.Round((double) size/1024, 2), sw.ElapsedMilliseconds);
 
 			return server.OpenSession().Advanced.AsyncDatabaseCommands
-				.BatchAsync(commands.ToArray());
+				.BatchAsync(commands);
 		}
 	}
 
