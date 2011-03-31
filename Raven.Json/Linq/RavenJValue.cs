@@ -62,7 +62,7 @@ namespace Raven.Json.Linq
 
 		public override IEnumerable<RavenJToken> Children()
 		{
-			throw new NotImplementedException();
+			throw new NotImplementedException("RavenJValue doesn't have any children");
 		}
 
         /// <summary>
@@ -183,7 +183,7 @@ namespace Raven.Json.Linq
             }
         }
 
-        internal new static RavenJValue Load(JsonReader reader)
+        public new static RavenJValue Load(JsonReader reader)
         {
             RavenJValue v;
             switch (reader.TokenType)
