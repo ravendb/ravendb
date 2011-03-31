@@ -365,7 +365,7 @@ namespace Ionic.Zlib
                 }
             } while (!done);
             byte[] a = list.ToArray();
-            return GZipStream.iso8859dash1.GetString(a, 0, a.Length);
+            return GZipStream.DefaultEncoding.GetString(a, 0, a.Length);
         }
 
 

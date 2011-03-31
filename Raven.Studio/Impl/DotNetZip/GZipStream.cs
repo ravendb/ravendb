@@ -837,13 +837,13 @@ namespace Ionic.Zlib
 
 
         internal static readonly System.DateTime _unixEpoch = new System.DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        internal static readonly System.Text.Encoding iso8859dash1 = System.Text.Encoding.GetEncoding("iso-8859-1");
+    	internal static readonly System.Text.Encoding DefaultEncoding = System.Text.Encoding.UTF8;
 
 
         private int EmitHeader()
         {
-            byte[] commentBytes = (Comment == null) ? null : iso8859dash1.GetBytes(Comment);
-            byte[] filenameBytes = (FileName == null) ? null : iso8859dash1.GetBytes(FileName);
+            byte[] commentBytes = (Comment == null) ? null : DefaultEncoding.GetBytes(Comment);
+            byte[] filenameBytes = (FileName == null) ? null : DefaultEncoding.GetBytes(FileName);
 
             int cbLength = (Comment == null) ? 0 : commentBytes.Length + 1;
             int fnLength = (FileName == null) ? 0 : filenameBytes.Length + 1;
