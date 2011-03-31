@@ -61,6 +61,8 @@
 
             NumberOfPages = 0;
             CurrentPage = 0;
+
+			NotifyOfPropertyChange("HasResults");
         }
 
 		public void AdjustResultsForPageSize()
@@ -95,6 +97,7 @@
 		void AdjustNumberOfPages()
 		{
 			var total = GetTotalResults();
+			if(PageSize == 0 ) return;
 			NumberOfPages = Convert.ToInt32(total / PageSize + (total % PageSize == 0 ? 0 : 1));
 		}
 

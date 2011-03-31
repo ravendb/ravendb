@@ -7,6 +7,7 @@
 			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
 			 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+			 xmlns:w="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
@@ -23,177 +24,199 @@
 		<Grid Background="{StaticResource DefaultScreenBackground}"
 			  Margin="4,0,0,0">
 			<Grid.RowDefinitions>
-				<RowDefinition Height="*" />
 				<RowDefinition Height="Auto" />
+				<RowDefinition Height="6" />
+				<RowDefinition Height="*" />
 				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
 
-			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition MinWidth="300" />
-					<ColumnDefinition Width="Auto" />
-				</Grid.ColumnDefinitions>
-
+			<ScrollViewer BorderThickness="0"
+						  VerticalScrollBarVisibility="Auto"
+						  HorizontalScrollBarVisibility="Auto">
 				<Grid>
 					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="60" />
-						<ColumnDefinition Width="*" />
+						<ColumnDefinition MinWidth="300" />
+						<ColumnDefinition Width="Auto" />
 					</Grid.ColumnDefinitions>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto" />
-						<RowDefinition Height="Auto" />
-						<RowDefinition Height="Auto" />
-						<RowDefinition Height="Auto" />
-						<RowDefinition Height="*" />
-						<RowDefinition Height="*" />
-						<RowDefinition Height="Auto" />
-					</Grid.RowDefinitions>
 
-					<c:Label Content="name" />
-					<TextBox Grid.Column="1"
-							 Text="{Binding Name, Mode=TwoWay}"
-							 Margin="0 0 0 8" />
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="60" />
+							<ColumnDefinition Width="*" />
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="*" />
+							<RowDefinition Height="*" />
+							<RowDefinition Height="Auto" />
+						</Grid.RowDefinitions>
 
-					<c:Label Content="map"
-							 Grid.Row="1" />
-					<Editors:LinqEditor Grid.Row="1"
-										Grid.Column="1"
-										Text="{Binding Map, Mode=TwoWay}"
-										Margin="0 0 0 8" />
+						<c:Label Content="name" />
+						<TextBox Grid.Column="1"
+								 Text="{Binding Name, Mode=TwoWay}"
+								 Margin="0 0 0 8" />
 
-					<c:Label Content="reduce"
-							 Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}"
-							 Grid.Row="2" />
-					<Grid Grid.Row="2"
-						  Grid.Column="1"
-						  Margin="0 0 0 8">
-						<Button x:Name="AddReduce"
+						<c:Label Content="map"
+								 Grid.Row="1" />
+						<Editors:LinqEditor Grid.Row="1"
+											Grid.Column="1"
+											Text="{Binding Map, Mode=TwoWay}"
+											Margin="0 0 0 8" />
+
+						<c:Label Content="reduce"
+								 Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}"
+								 Grid.Row="2" />
+						<Grid Grid.Row="2"
+							  Grid.Column="1"
+							  Margin="0 0 0 8">
+							<Button x:Name="AddReduce"
+									VerticalAlignment="Top"
+									HorizontalAlignment="Left"
+									Content="reduce" />
+							<Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}"
+												Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}" />
+						</Grid>
+
+						<c:Label Content="transform"
+								 Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
+								 Grid.Row="3" />
+						<Grid Grid.Row="3"
+							  Grid.Column="1"
+							  Margin="0 0 0 8">
+							<Button x:Name="AddTransformResults"
+									VerticalAlignment="Top"
+									HorizontalAlignment="Left"
+									Content="transform results" />
+							<Editors:LinqEditor Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
+												Text="{Binding TransformResults, Mode=TwoWay}" />
+						</Grid>
+
+						<Button x:Name="AddField"
+								Grid.Row="4"
+								ToolTipService.ToolTip="Customize this index."
+								Content="+"
+								HorizontalAlignment="Right"
 								VerticalAlignment="Top"
-								HorizontalAlignment="Left"
-								Content="reduce" />
-						<Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}"
-											Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}" />
+								Margin="0,0,4,0" />
+
+						<ItemsControl Grid.Column="1"
+									  Grid.Row="4"
+									  ItemsSource="{Binding Fields}">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<Border d:DesignWidth="420"
+											d:DesignHeight="120"
+											BorderBrush="{StaticResource DividerBrush}"
+											BorderThickness="1,0,0,0"
+											CornerRadius="5"
+											Margin="0,0,0,6"
+											VerticalAlignment="Top"
+											HorizontalAlignment="Left">
+										<Grid Margin="4,4,0,4">
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition Width="Auto" />
+												<ColumnDefinition Width="Auto" />
+												<ColumnDefinition Width="Auto" />
+												<ColumnDefinition Width="Auto" />
+												<ColumnDefinition Width="*" />
+											</Grid.ColumnDefinitions>
+											<Grid.RowDefinitions>
+												<RowDefinition Height="Auto" />
+												<RowDefinition Height="4" />
+												<RowDefinition Height="Auto" />
+												<RowDefinition Height="4" />
+												<RowDefinition Height="Auto" />
+											</Grid.RowDefinitions>
+
+											<c:Label Content="field" />
+											<TextBox Text="{Binding Name, Mode=TwoWay}"
+													 Grid.Column="1"
+													 Grid.ColumnSpan="3" />
+											<Button Content="-"
+													cm:Message.Attach="RemoveField($dataContext)"
+													HorizontalAlignment="Left"
+													Grid.Column="4" />
+
+											<c:Label Content="storage"
+													 Grid.Row="2" />
+											<ComboBox ItemsSource="{Binding Storage, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+													  SelectedIndex="{Binding Storage, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+													  Grid.Row="2"
+													  Grid.Column="1"
+													  MinWidth="80" />
+
+											<c:Label Content="indexing"
+													 Grid.Row="2"
+													 Grid.Column="2"
+													 Margin="8,0,4,0" />
+											<ComboBox ItemsSource="{Binding Indexing, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+													  SelectedIndex="{Binding Indexing, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+													  Grid.Row="2"
+													  Grid.Column="3" />
+
+											<c:Label Content="sort"
+													 Grid.Row="4" />
+											<ComboBox ItemsSource="{Binding Sort, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+													  SelectedIndex="{Binding Sort, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+													  Grid.Row="4"
+													  Grid.Column="1" />
+
+											<c:Label Content="analyzer"
+													 Grid.Row="4"
+													 Grid.Column="2"
+													 Margin="8,0,4,0" />
+											<TextBox Text="{Binding Analyzer}"
+													 Grid.Row="4"
+													 Grid.Column="3"
+													 MinWidth="160" />
+										</Grid>
+									</Border>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
 					</Grid>
 
-					<c:Label Content="transform"
-							 Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
-							 Grid.Row="3" />
-					<Grid Grid.Row="3"
-						  Grid.Column="1"
-						  Margin="0 0 0 8">
-						<Button x:Name="AddTransformResults"
-								VerticalAlignment="Top"
-								HorizontalAlignment="Left"
-								Content="transform results" />
-						<Editors:LinqEditor Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
-											Text="{Binding TransformResults, Mode=TwoWay}" />
-					</Grid>
-
-					<Button x:Name="AddField"
-							Grid.Row="4"
-							ToolTipService.ToolTip="Customize this index."
-							Content="+"
-							HorizontalAlignment="Right"
-							VerticalAlignment="Top"
-							Margin="0,0,4,0" />
-
-					<ItemsControl Grid.Column="1"
-								  Grid.Row="4"
-								  ItemsSource="{Binding Fields}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<Border d:DesignWidth="420"
-										d:DesignHeight="120"
-										BorderBrush="{StaticResource DividerBrush}"
-										BorderThickness="1,0,0,0"
-										CornerRadius="5"
-										Margin="0,0,0,6"
-										VerticalAlignment="Top"
-										HorizontalAlignment="Left">
-									<Grid Margin="4,4,0,4">
-										<Grid.ColumnDefinitions>
-											<ColumnDefinition Width="Auto" />
-											<ColumnDefinition Width="Auto" />
-											<ColumnDefinition Width="Auto" />
-											<ColumnDefinition Width="Auto" />
-											<ColumnDefinition Width="*" />
-										</Grid.ColumnDefinitions>
-										<Grid.RowDefinitions>
-											<RowDefinition Height="Auto" />
-											<RowDefinition Height="4" />
-											<RowDefinition Height="Auto" />
-											<RowDefinition Height="4" />
-											<RowDefinition Height="Auto" />
-										</Grid.RowDefinitions>
-
-										<c:Label Content="field" />
-										<TextBox Text="{Binding Name, Mode=TwoWay}"
-												 Grid.Column="1"
-												 Grid.ColumnSpan="3" />
-										<Button Content="-"
-												cm:Message.Attach="RemoveField($dataContext)"
-												HorizontalAlignment="Left"
-												Grid.Column="4" />
-
-										<c:Label Content="storage"
-												 Grid.Row="2" />
-										<ComboBox ItemsSource="{Binding Storage, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
-												  SelectedIndex="{Binding Storage, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
-												  Grid.Row="2"
-												  Grid.Column="1"
-												  MinWidth="80" />
-
-										<c:Label Content="indexing"
-												 Grid.Row="2"
-												 Grid.Column="2"
-												 Margin="8,0,4,0" />
-										<ComboBox ItemsSource="{Binding Indexing, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
-												  SelectedIndex="{Binding Indexing, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
-												  Grid.Row="2"
-												  Grid.Column="3" />
-
-										<c:Label Content="sort"
-												 Grid.Row="4" />
-										<ComboBox ItemsSource="{Binding Sort, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
-												  SelectedIndex="{Binding Sort, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
-												  Grid.Row="4"
-												  Grid.Column="1" />
-
-										<c:Label Content="analyzer"
-												 Grid.Row="4"
-												 Grid.Column="2"
-												 Margin="8,0,4,0" />
-										<TextBox Text="{Binding Analyzer}"
-												 Grid.Row="4"
-												 Grid.Column="3"
-												 MinWidth="160" />
-									</Grid>
-								</Border>
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
+					<StackPanel Grid.Column="1"
+								Margin="8 0 0 0"
+								MaxWidth="260"
+								Visibility="{Binding RelatedErrors, Converter={StaticResource hiddenWhenEmpty}}">
+						<c:Label Content="errors"
+								 HorizontalAlignment="Left" />
+						<ItemsControl ItemsSource="{Binding RelatedErrors}">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<ContentControl cm:View.Model="{Binding}" />
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</StackPanel>
 				</Grid>
+			</ScrollViewer>
 
-				<StackPanel Grid.Column="1"
-				            Margin="8 0 0 0"
-				            MaxWidth="260"
-				            Visibility="{Binding RelatedErrors, Converter={StaticResource hiddenWhenEmpty}}">
-					<c:Label Content="errors"
-					         HorizontalAlignment="Left" />
-					<ItemsControl ItemsSource="{Binding RelatedErrors}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<ContentControl cm:View.Model="{Binding}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</StackPanel>
-			</Grid>
+			<w:GridSplitter Grid.Row="1"
+							Height="6"
+							Background="{x:Null}"
+							HorizontalAlignment="Stretch" />
+
+			<ScrollViewer Grid.Row="2"
+			              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+			              ScrollViewer.VerticalScrollBarVisibility="Auto"
+			              BorderThickness="0"
+			              VerticalAlignment="Stretch">
+				<TextBlock TextWrapping="Wrap"
+				           Text="{Binding Status}"
+				           Foreground="DarkRed"
+				           HorizontalAlignment="Right"
+				           FontSize="16"
+				           Margin="0,0,0,4" />
+			</ScrollViewer>
 
 			<tk:DockPanel x:Name="query"
-						  Grid.Row="1"
-						  Margin="60 0 0 0"
-						  HorizontalAlignment="Left">
+						  Grid.Row="2"
+						  Margin="60 0 0 0">
 
 				<TextBlock tk:DockPanel.Dock="Top"
 						   Margin="0 0 0 8"
@@ -214,24 +237,27 @@
 				</ItemsControl>
 			</tk:DockPanel>
 
-			<StackPanel Grid.Row="2"
+			<StackPanel Grid.Row="3"
 						Margin="0,0,0,10"
-						Orientation="Horizontal"
-						HorizontalAlignment="Right"
-						d:LayoutOverrides="GridBox">
-				<Button x:Name="Save"
-						ToolTipService.ToolTip="Save Index">
-					<Image Source="../../../Resources/Images/save-small.png"
-						   Stretch="None" />
-				</Button>
-				<Button x:Name="Remove"
-						ToolTipService.ToolTip="Delete Index">
-					<Image Source="../../../Resources/Images/delete-small.png"
-						   Stretch="None" />
-				</Button>
-				<Button x:Name="QueryAgainstIndex"
-						IsEnabled="{Binding IsDirty, Converter={StaticResource booleanToOpposite}}"
-						Content="View Query Results" />
+						d:LayoutOverrides="Height">
+
+				<StackPanel Orientation="Horizontal"
+							d:LayoutOverrides="Width, GridBox"
+							HorizontalAlignment="Right">
+					<Button x:Name="Save"
+							ToolTipService.ToolTip="Save Index">
+						<Image Source="../../../Resources/Images/save-small.png"
+							   Stretch="None" />
+					</Button>
+					<Button x:Name="Remove"
+							ToolTipService.ToolTip="Delete Index">
+						<Image Source="../../../Resources/Images/delete-small.png"
+							   Stretch="None" />
+					</Button>
+					<Button x:Name="QueryAgainstIndex"
+							IsEnabled="{Binding IsDirty, Converter={StaticResource booleanToOpposite}}"
+							Content="View Query Results" />
+				</StackPanel>
 			</StackPanel>
 		</Grid>
 	</tk:BusyIndicator>

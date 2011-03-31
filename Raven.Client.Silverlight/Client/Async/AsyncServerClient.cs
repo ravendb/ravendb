@@ -525,13 +525,15 @@ namespace Raven.Client.Client.Async
 					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
 					return request
 						.WriteAsync(Encoding.UTF8.GetBytes(serializeObject))
-						.ContinueWith(writeTask => request.ReadResponseStringAsync()
-													.ContinueWith(readStrTask =>
-													{
-														//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctr is private!
-														var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result);
-														return obj.Index;
-													})).Unwrap();
+						.ContinueWith(writeTask => AttemptToProcessResponse( ()=> request
+							.ReadResponseStringAsync()
+							.ContinueWith(readStrTask => AttemptToProcessResponse( ()=>
+								{
+									//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctr is private!
+									var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result);
+									return obj.Index;
+								})))
+					).Unwrap();
 				}).Unwrap();
 		}
 

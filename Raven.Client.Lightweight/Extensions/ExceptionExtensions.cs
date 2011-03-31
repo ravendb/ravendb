@@ -39,7 +39,11 @@ namespace Raven.Client.Extensions
 		public static string SimplifyError(this Exception e)
 		{
 			var parts = e.Message.Split(new[] {  "\r\n   " }, StringSplitOptions.None);
-			return parts.First();
+			var firstLine = parts.First();
+			var index = firstLine.IndexOf(':');
+			return index > 0
+				? firstLine.Remove(0,index + 2)
+				: firstLine;
 		}
 	}
 }

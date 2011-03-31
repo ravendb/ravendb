@@ -7,6 +7,7 @@ namespace Raven.Studio.Features.Indexes
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
+	using Client.Extensions;
 	using Database;
 	using Documents;
 	using Framework;
@@ -49,8 +50,19 @@ namespace Raven.Studio.Features.Indexes
 				(start, size) => { throw new Exception("Replace this when executing the query."); });
 
 			RelatedErrors = (from error in this.server.Errors
-							where error.Index == index.Name
-							select error).ToList();
+							 where error.Index == index.Name
+							 select error).ToList();
+		}
+
+		string status;
+		public string Status
+		{
+			get { return status; }
+			set
+			{
+				status = value;
+				NotifyOfPropertyChange(() => Status);
+			}
 		}
 
 		public IEnumerable<ServerError> RelatedErrors { get; private set; }
@@ -147,6 +159,7 @@ namespace Raven.Studio.Features.Indexes
 
 		public void Save()
 		{
+			Status = string.Empty;
 			WorkStarted("saving index " + Name);
 			SaveFields();
 
@@ -157,12 +170,20 @@ namespace Raven.Studio.Features.Indexes
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.PutIndexAsync(Name, index, true)
-					.ContinueOnSuccess(task =>
-										{
-											IsDirty = false;
-											WorkCompleted("saving index " + Name);
-											Events.Publish(new IndexUpdated { Index = this });
-										});
+					.ContinueWith(
+					task =>
+					{
+						IsDirty = false;
+						WorkCompleted("saving index " + Name);
+						Events.Publish(new IndexUpdated { Index = this });
+					},
+					faulted =>
+					{
+						WorkCompleted("saving index " + Name);
+						var error = faulted.Exception.ExtractSingleInnerException().SimplifyError();
+						Status = error;
+						NotifyError("An error occured while attempting to save " + Name);
+					});
 			}
 		}
 
@@ -200,6 +221,9 @@ namespace Raven.Studio.Features.Indexes
 
 		void SaveFields()
 		{
+			QueryResults.ClearResults();
+			QueryResultsStatus = string.Empty;
+
 			index.Indexes.Clear();
 			index.Stores.Clear();
 			index.SortOptions.Clear();
@@ -235,6 +259,25 @@ namespace Raven.Studio.Features.Indexes
 			QueryResults.LoadPage();
 		}
 
+		string queryResultsStatus;
+		public string QueryResultsStatus
+		{
+			get { return queryResultsStatus; }
+			set
+			{
+				queryResultsStatus = value;
+				NotifyOfPropertyChange(() => QueryResultsStatus);
+			}
+		}
+
+		static string DetermineResultsStatus(QueryResult result)
+		{
+			//TODO: give the user some info about skipped results, etc?
+			if (result.TotalResults == 0) return "No documents matched the query.";
+			if (result.TotalResults == 1) return "1 document found.";
+			return string.Format("{0} documents found.", result.TotalResults);
+		}
+
 		Task<DocumentViewModel[]> BuildQuery(int start, int pageSize)
 		{
 			using (var session = server.OpenSession())
@@ -251,6 +294,8 @@ namespace Raven.Studio.Features.Indexes
 					.ContinueWith(x =>
 									{
 										QueryResults.GetTotalResults = () => x.Result.TotalResults;
+
+										QueryResultsStatus = DetermineResultsStatus(x.Result);
 
 										return x.Result.Results
 											.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
