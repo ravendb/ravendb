@@ -12,7 +12,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Munin
@@ -81,10 +80,10 @@ namespace Raven.Munin
 
 		private void WriteFileHeader(Stream log)
 		{
-			new JObject
+			new RavenJObject
 			{
 				{"Version", version},
-				{"Tables", new JArray(Tables.Select(x=>x.Name).ToArray())}
+				{"Tables", new RavenJArray(Tables.Select(x=>x.Name).ToArray())}
 			}.WriteTo(new BsonWriter(log));
 		}
 
@@ -120,7 +119,7 @@ namespace Raven.Munin
 			try
 			{
 				var cmds = ReadJObject(log);
-				return cmds.Values().Select(cmd => new Command
+				return cmds.Children().Values().Select(cmd => new Command
 				{
 					Key = cmd.Value<RavenJToken>("key"),
 					Position = cmd.Value<long>("position"),
@@ -136,9 +135,9 @@ namespace Raven.Munin
 			}
 		}
 
-		private static JObject ReadJObject(Stream log)
+		private static RavenJObject ReadJObject(Stream log)
 		{
-			return JObject.Load(new BsonReader(log)
+			return RavenJObject.Load(new BsonReader(log)
 			{
 				DateTimeKindHandling = DateTimeKind.Utc,
 			});
