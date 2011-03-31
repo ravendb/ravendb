@@ -4,8 +4,7 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-			 xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
-			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:Tasks="clr-namespace:Raven.Studio.Features.Tasks"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
@@ -36,37 +35,8 @@
 			</StackPanel>
 		</tk:DockPanel>
 
-		<tk:DockPanel Grid.Column="1"
-					  Margin="6,0,6,6">
-			<TextBlock Text="Output"
-					   tk:DockPanel.Dock="Top"
-					   Style="{StaticResource PanelTitle}" />
-			<Border BorderBrush="{StaticResource LightGradient}"
-					BorderThickness="1"
-					CornerRadius="5">
-				<ScrollViewer BorderThickness="0"
-							  ScrollViewer.VerticalScrollBarVisibility="Auto"
-							  ScrollViewer.HorizontalScrollBarVisibility="Auto">
-					<ItemsControl ItemsSource="{Binding Console}">
-						<ti:ContextMenuService.ContextMenu>
-							<ti:ContextMenu>
-								<ti:MenuItem Header="Clear Console"
-											 cm:Message.Attach="Click=ClearConsole" />
-							</ti:ContextMenu>
-						</ti:ContextMenuService.ContextMenu>
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<Border Margin="0 0 0 4"
-										d:DesignWidth="180"
-										Style="{StaticResource Grouping}">
-									<ContentPresenter Content="{Binding}" />
-								</Border>
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</ScrollViewer>
-			</Border>
-		</tk:DockPanel>
+		<Tasks:ConsoleOutput Grid.Column="1"
+							 Margin="6,0,6,6" />
 	</Grid>
 
 </UserControl>
