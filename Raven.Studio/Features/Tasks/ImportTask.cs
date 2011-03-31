@@ -31,6 +31,11 @@
 
 		public IObservableCollection<string> Console { get; private set; }
 
+		public void ClearConsole()
+		{
+			Console.Clear();
+		}
+
 		public void ImportData()
 		{
 			var openFile = new OpenFileDialog();
