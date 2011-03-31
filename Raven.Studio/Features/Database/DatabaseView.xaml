@@ -8,7 +8,7 @@
 			 mc:Ignorable="d"
 			 d:DesignWidth="640"
 			 d:DesignHeight="480"
-			 Margin="5">
+			 Margin="5" d:DataContext="{d:DesignData /SampleData/DatabaseViewModelSampleData.xaml}">
 
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.ColumnDefinitions>

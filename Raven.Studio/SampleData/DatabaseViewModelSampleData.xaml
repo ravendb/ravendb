@@ -1,0 +1,14 @@
+﻿<Raven_Studio_Features_Database:DatabaseViewModel xmlns:Raven_Studio_Features_Database="clr-namespace:Raven.Studio.Features.Database" xmlns:System="clr-namespace:System;assembly=mscorlib" DisplayName="Dis etiam" IsNotifying="True" IsInitialized="False" IsActive="True" SelectedItem="Nam arcu adipiscing elementum sed">
+	<Raven_Studio_Features_Database:DatabaseViewModel.Items>
+		<System:String>Default Database</System:String>
+		<System:String>Nothwind</System:String>
+		<System:String>Adventure Works</System:String>
+		<System:String>SalesNA</System:String>
+		<System:String>Class maecenas parturient aliquet</System:String>
+		<System:String>Curae donec blandit curabitur commodo</System:String>
+		<System:String>Conubia phasellus</System:String>
+		<System:String>Amet auctor vestibulum</System:String>
+		<System:String>Cubilia ante consequat</System:String>
+		<System:String>Vestibulum convallis dignissim</System:String>
+	</Raven_Studio_Features_Database:DatabaseViewModel.Items>
+</Raven_Studio_Features_Database:DatabaseViewModel>
