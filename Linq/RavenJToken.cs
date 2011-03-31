@@ -23,9 +23,9 @@ namespace Raven.Json.Linq
         public abstract RavenJToken CloneToken();
 
 		/// <summary>
-		/// Gets the <see cref="JToken"/> with the specified key.
+		/// Gets the <see cref="RavenJToken"/> with the specified key.
 		/// </summary>
-		/// <value>The <see cref="JToken"/> with the specified key.</value>
+		/// <value>The <see cref="RavenJToken"/> with the specified key.</value>
 		public virtual RavenJToken this[object key]
 		{
 			get { throw new InvalidOperationException("Cannot access child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
@@ -110,7 +110,7 @@ namespace Raven.Json.Linq
 		/// <summary>
 		/// Creates a <see cref="RavenJToken"/> from a <see cref="JsonReader"/>.
 		/// </summary>
-		/// <param name="reader">An <see cref="JsonReader"/> positioned at the token to read into this <see cref="JToken"/>.</param>
+		/// <param name="reader">An <see cref="JsonReader"/> positioned at the token to read into this <see cref="RavenJToken"/>.</param>
 		/// <returns>
 		/// An <see cref="RavenJToken"/> that contains the token and its descendant tokens
 		/// that were read from the reader. The runtime type of the token is determined
@@ -123,7 +123,7 @@ namespace Raven.Json.Linq
 			if (reader.TokenType == JsonToken.None)
 			{
 				if (!reader.Read())
-					throw new Exception("Error reading JToken from JsonReader.");
+					throw new Exception("Error reading RavenJToken from JsonReader.");
 			}
 
 			switch (reader.TokenType)
@@ -144,7 +144,7 @@ namespace Raven.Json.Linq
 			}
 
 			// TODO: loading constructor and parameters?
-			throw new Exception("Error reading JToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+			throw new Exception("Error reading RavenJToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
 		}
 
 		/// <summary>
@@ -160,11 +160,11 @@ namespace Raven.Json.Linq
 		}
 
 		/// <summary>
-		/// Creates a <see cref="JToken"/> from a <see cref="JsonReader"/>.
+		/// Creates a <see cref="RavenJToken"/> from a <see cref="JsonReader"/>.
 		/// </summary>
-		/// <param name="reader">An <see cref="JsonReader"/> positioned at the token to read into this <see cref="JToken"/>.</param>
+		/// <param name="reader">An <see cref="JsonReader"/> positioned at the token to read into this <see cref="RavenJToken"/>.</param>
 		/// <returns>
-		/// An <see cref="JToken"/> that contains the token and its descendant tokens
+		/// An <see cref="RavenJToken"/> that contains the token and its descendant tokens
 		/// that were read from the reader. The runtime type of the token is determined
 		/// by the token type of the first token encountered in the reader.
 		/// </returns>
@@ -187,8 +187,8 @@ namespace Raven.Json.Linq
 		/// <summary>
 		/// Compares the values of two tokens, including the values of all descendant tokens.
 		/// </summary>
-		/// <param name="t1">The first <see cref="JToken"/> to compare.</param>
-		/// <param name="t2">The second <see cref="JToken"/> to compare.</param>
+		/// <param name="t1">The first <see cref="RavenJToken"/> to compare.</param>
+		/// <param name="t2">The second <see cref="RavenJToken"/> to compare.</param>
 		/// <returns>true if the tokens are equal; otherwise false.</returns>
 		public static bool DeepEquals(RavenJToken t1, RavenJToken t2)
 		{
@@ -202,12 +202,12 @@ namespace Raven.Json.Linq
 		/// Selects the token that matches the object path.
 		/// </summary>
 		/// <param name="path">
-		/// The object path from the current <see cref="JToken"/> to the <see cref="JToken"/>
+		/// The object path from the current <see cref="RavenJToken"/> to the <see cref="RavenJToken"/>
 		/// to be returned. This must be a string of property names or array indexes separated
 		/// by periods, such as <code>Tables[0].DefaultView[0].Price</code> in C# or
 		/// <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
 		/// </param>
-		/// <returns>The <see cref="JToken"/> that matches the object path or a null reference if no matching token is found.</returns>
+		/// <returns>The <see cref="RavenJToken"/> that matches the object path or a null reference if no matching token is found.</returns>
 		public RavenJToken SelectToken(string path)
 		{
 			return SelectToken(path, false);
@@ -217,17 +217,29 @@ namespace Raven.Json.Linq
 		/// Selects the token that matches the object path.
 		/// </summary>
 		/// <param name="path">
-		/// The object path from the current <see cref="JToken"/> to the <see cref="JToken"/>
+		/// The object path from the current <see cref="RavenJToken"/> to the <see cref="RavenJToken"/>
 		/// to be returned. This must be a string of property names or array indexes separated
 		/// by periods, such as <code>Tables[0].DefaultView[0].Price</code> in C# or
 		/// <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
 		/// </param>
 		/// <param name="errorWhenNoMatch">A flag to indicate whether an error should be thrown if no token is found.</param>
-		/// <returns>The <see cref="JToken"/> that matches the object path.</returns>
+		/// <returns>The <see cref="RavenJToken"/> that matches the object path.</returns>
 		public RavenJToken SelectToken(string path, bool errorWhenNoMatch)
 		{
 			var p = new RavenJPath(path);
 			return p.Evaluate(this, errorWhenNoMatch);
+		}
+
+		/// <summary>
+		/// Returns a collection of the child values of this token, in document order.
+		/// </summary>
+		/// <typeparam name="T">The type to convert the values to.</typeparam>
+		/// <returns>
+		/// A <see cref="IEnumerable{T}"/> containing the child values of this <see cref="JToken"/>, in document order.
+		/// </returns>
+		public IEnumerable<T> Values<T>()
+		{
+			return Children().Convert<RavenJToken, T>();
 		}
 
 		#region Cast to operators
@@ -431,7 +443,7 @@ namespace Raven.Json.Linq
 		}
 
 		/// <summary>
-		/// Performs an implicit conversion from <see cref="Nullable{UInt64}"/> to <see cref="JToken"/>.
+		/// Performs an implicit conversion from <see cref="Nullable{UInt64}"/> to <see cref="RavenJToken"/>.
 		/// </summary>
 		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
 		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
