@@ -28,9 +28,15 @@ namespace Raven.Studio.Features.Tasks
 		{
 			this.server = server;
 			Console = new BindableCollection<string>();
+			server.CurrentDatabaseChanged += delegate { ClearConsole(); };
 		}
 
 		public IObservableCollection<string> Console { get; private set; }
+
+		public void ClearConsole()
+		{
+			Console.Clear();
+		}
 
 		public void ImportData()
 		{
@@ -39,12 +45,22 @@ namespace Raven.Studio.Features.Tasks
 
 			if (!dialogResult.HasValue || !dialogResult.Value) return;
 
-			var tasks = (IEnumerable<Task>) ImportData(openFile).GetEnumerator();
-			tasks.ExecuteInSequence(null);
+			try
+			{
+				var tasks = (IEnumerable<Task>)ImportData(openFile).GetEnumerator();
+				tasks.ExecuteInSequence(null);
+			}
+			catch (InvalidDataException e)
+			{
+				Console.Add("The import file was not formatted correctly:\n\t{0}", e.Message);
+				Console.Add("Import terminated.");
+			}
 		}
 
 		IEnumerable<Task> ImportData(OpenFileDialog openFile)
 		{
+			Console.Add("Importing from {0}", openFile.File.Name);
+
 			var sw = Stopwatch.StartNew();
 
 			var stream = openFile.File.OpenRead();
@@ -61,6 +77,8 @@ namespace Raven.Studio.Features.Tasks
 			}
 			catch (Exception)
 			{
+				Console.Add("Import file did not use GZip compression, attempting to read as uncompressed.");
+
 				stream.Seek(0, SeekOrigin.Begin);
 
 				var streamReader = new StreamReader(stream);
@@ -77,6 +95,8 @@ namespace Raven.Studio.Features.Tasks
 			if (jsonReader.Read() == false)
 				yield break;
 
+			Console.Add("Begin reading indexes");
+
 			if (jsonReader.TokenType != JsonToken.PropertyName)
 				throw new InvalidDataException("PropertyName was expected");
 
@@ -90,6 +110,7 @@ namespace Raven.Studio.Features.Tasks
 				throw new InvalidDataException("StartArray was expected");
 
 			// import Indexes
+			var totalIndexes = 0;
 			using (var session = server.OpenSession())
 				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 				{
@@ -100,9 +121,17 @@ namespace Raven.Studio.Features.Tasks
 
 					var index = JsonConvert.DeserializeObject<IndexDefinition>(json.Value<JObject>("definition").ToString());
 
+					totalIndexes++;
+
+					Console.Add("Importing index: {0}", indexName);
+
 					yield return session.Advanced.AsyncDatabaseCommands
 						.PutIndexAsync(indexName, index, overwrite: true);
 				}
+
+			Console.Add("Imported {0:#,#} indexes", totalIndexes);
+
+			Console.Add("Begin reading documents");
 
 			// should read documents now
 			if (jsonReader.Read() == false)
@@ -126,7 +155,7 @@ namespace Raven.Studio.Features.Tasks
 			{
 				totalCount += 1;
 				var document = JToken.ReadFrom(jsonReader);
-				batch.Add((JObject) document);
+				batch.Add((JObject)document);
 				if (batch.Count >= 128)
 					yield return FlushBatch(batch);
 			}
@@ -134,8 +163,6 @@ namespace Raven.Studio.Features.Tasks
 			yield return FlushBatch(batch);
 
 			Console.Add("Imported {0:#,#} documents in {1:#,#} ms", totalCount, sw.ElapsedMilliseconds);
-
-			//Execute.OnUIThread(() => { stream.Dispose(); });
 		}
 
 		Task FlushBatch(List<JObject> batch)
@@ -144,15 +171,15 @@ namespace Raven.Studio.Features.Tasks
 			long size = 0;
 
 			var commands = (from doc in batch
-			                let metadata = doc.Value<JObject>("@metadata")
-			                let removal = doc.Remove("@metadata")
-			                select new PutCommandData
-			                       	{
-			                       		Metadata = metadata,
-			                       		Document = doc,
-			                       		Key = metadata.Value<string>("@id"),
-			                       	}).ToArray();
-			batch.Clear();
+							let metadata = doc.Value<JObject>("@metadata")
+							let removal = doc.Remove("@metadata")
+							select new PutCommandData
+									{
+										Metadata = metadata,
+										Document = doc,
+										Key = metadata.Value<string>("@id"),
+									}).ToArray();
+
 
 			//TODO: all of this is just to get the size; I suspect there is a Better Way
 			using (var stream = new MemoryStream())
@@ -169,7 +196,8 @@ namespace Raven.Studio.Features.Tasks
 			}
 
 			Console.Add("Wrote {0} documents [{1:#,#} kb] in {2:#,#} ms",
-			            batch.Count, Math.Round((double) size/1024, 2), sw.ElapsedMilliseconds);
+						batch.Count, Math.Round((double)size / 1024, 2), sw.ElapsedMilliseconds);
+			batch.Clear();
 
 			return server.OpenSession().Advanced.AsyncDatabaseCommands
 				.BatchAsync(commands);

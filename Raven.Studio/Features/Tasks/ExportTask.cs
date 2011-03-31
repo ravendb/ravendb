@@ -31,9 +31,15 @@ namespace Raven.Studio.Features.Tasks
 			this.server = server;
 
 			Console = new BindableCollection<string>();
+			server.CurrentDatabaseChanged += delegate { ClearConsole(); };
 		}
 
 		public IObservableCollection<string> Console { get; private set; }
+
+		public void ClearConsole()
+		{
+			Console.Clear();
+		}
 
 		public bool ExportIndexesOnly
 		{
@@ -58,6 +64,8 @@ namespace Raven.Studio.Features.Tasks
 
 		IEnumerable<Task> ExportData(SaveFileDialog saveFile, bool indexesOnly)
 		{
+			Console.Add("Exporting to {0}",saveFile.SafeFileName);
+
 			var stream = saveFile.OpenFile();
 			var jsonRequestFactory = new HttpJsonRequestFactory();
 			var baseUrl = server.CurrentDatabaseAddress;
@@ -69,6 +77,8 @@ namespace Raven.Studio.Features.Tasks
 			                 	{
 			                 		Formatting = Formatting.Indented
 			                 	};
+
+			Console.Add("Begin reading indexes");
 
 			jsonWriter.WriteStartObject();
 			jsonWriter.WritePropertyName("Indexes");
@@ -107,8 +117,14 @@ namespace Raven.Studio.Features.Tasks
 			jsonWriter.WritePropertyName("Docs");
 			jsonWriter.WriteStartArray();
 
-			if (!indexesOnly)
+			if (indexesOnly)
 			{
+				Console.Add("Documents will not be exported.");
+			} 
+			else 
+			{
+				Console.Add("Begin reading documents.");
+
 				var lastEtag = Guid.Empty;
 				totalCount = 0;
 				completed = false;

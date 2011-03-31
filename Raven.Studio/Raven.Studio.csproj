@@ -154,6 +154,9 @@
     <Compile Include="Features\Statistics\IndexesViewModel.cs" />
     <Compile Include="Features\Statistics\Statistic.cs" />
     <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
+    <Compile Include="Features\Tasks\ConsoleOutput.xaml.cs">
+      <DependentUpon>ConsoleOutput.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Tasks\ExportTask.cs" />
     <Compile Include="Features\Tasks\ImportTask.cs" />
     <Compile Include="Features\Tasks\InvalidDataException.cs" />
@@ -367,6 +370,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Indexes\BrowseIndexesView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Tasks\ConsoleOutput.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

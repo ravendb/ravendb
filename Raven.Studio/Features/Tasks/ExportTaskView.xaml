@@ -3,19 +3,40 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+			 xmlns:Tasks="clr-namespace:Raven.Studio.Features.Tasks"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
-	<StackPanel x:Name="LayoutRoot"
-				Background="{StaticResource DefaultScreenBackground}">
-		<TextBlock Text="Export"
-				   Style="{StaticResource PanelTitle}" />
-		<StackPanel Orientation="Horizontal">
-			<CheckBox IsChecked="{Binding ExportIndexesOnly, Mode=TwoWay}"
-					  Content="Export Documents?" />
-			<Button x:Name="ExportData"
-					Content="Export" />
-		</StackPanel>
-	</StackPanel>
+	<Grid Background="{StaticResource DefaultScreenBackground}">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition />
+			<ColumnDefinition />
+		</Grid.ColumnDefinitions>
+
+		<tk:DockPanel>
+			<TextBlock Text="Export Database"
+					   tk:DockPanel.Dock="Top"
+					   Style="{StaticResource PanelTitle}" />
+			<StackPanel>
+				<TextBlock Text="Export your database to a dump file. By default, both indexes and documents are exported. You can optionally chose to export just the indexes."
+						   Style="{StaticResource Instruction}" />
+
+				<StackPanel Margin="0 6 0 0">
+					<CheckBox IsChecked="{Binding ExportIndexesOnly, Mode=TwoWay}"
+							  Content="Exclude Documents from Export" />
+					<Button x:Name="ExportData"
+							Margin="0 6 0 0"
+							Content="Begin Export"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Top" />
+				</StackPanel>
+			</StackPanel>
+		</tk:DockPanel>
+
+		<Tasks:ConsoleOutput Grid.Column="1"
+							 Margin="6,0,6,6" />
+	</Grid>
+
 </UserControl>
