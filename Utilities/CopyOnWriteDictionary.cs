@@ -11,7 +11,9 @@ namespace Raven.Json.Utilities
     {
         private static readonly RavenJToken DeletedMarker = new RavenJValue(null, JTokenType.Null);
     	private int deleteCount;
-        private IDictionary<TKey, RavenJToken> localChanges;
+
+		private CopyOnWriteJDictionary<TKey> inherittedValues;
+		private IDictionary<TKey, RavenJToken> localChanges;
 
 		protected IDictionary<TKey, RavenJToken> LocalChanges
 		{
@@ -20,8 +22,6 @@ namespace Raven.Json.Utilities
 				return localChanges ?? (localChanges = new Dictionary<TKey, RavenJToken>());
 			}
 		}
-
-        private CopyOnWriteJDictionary<TKey> inherittedValues;
 
         public CopyOnWriteJDictionary()
         {
