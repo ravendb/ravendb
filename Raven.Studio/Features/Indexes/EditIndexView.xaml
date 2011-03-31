@@ -175,11 +175,11 @@
 				</Grid>
 
 				<StackPanel Grid.Column="1"
-				            Margin="8 0 0 0"
-				            MaxWidth="260"
-				            Visibility="{Binding RelatedErrors, Converter={StaticResource hiddenWhenEmpty}}">
+							Margin="8 0 0 0"
+							MaxWidth="260"
+							Visibility="{Binding RelatedErrors, Converter={StaticResource hiddenWhenEmpty}}">
 					<c:Label Content="errors"
-					         HorizontalAlignment="Left" />
+							 HorizontalAlignment="Left" />
 					<ItemsControl ItemsSource="{Binding RelatedErrors}">
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
@@ -213,25 +213,34 @@
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>
 			</tk:DockPanel>
+			<StackPanel Margin="0,0,0,10"
+						Grid.Row="2"
+						d:LayoutOverrides="Height">
 
-			<StackPanel Grid.Row="2"
-						Margin="0,0,0,10"
-						Orientation="Horizontal"
-						HorizontalAlignment="Right"
-						d:LayoutOverrides="GridBox">
-				<Button x:Name="Save"
-						ToolTipService.ToolTip="Save Index">
-					<Image Source="../../../Resources/Images/save-small.png"
-						   Stretch="None" />
-				</Button>
-				<Button x:Name="Remove"
-						ToolTipService.ToolTip="Delete Index">
-					<Image Source="../../../Resources/Images/delete-small.png"
-						   Stretch="None" />
-				</Button>
-				<Button x:Name="QueryAgainstIndex"
-						IsEnabled="{Binding IsDirty, Converter={StaticResource booleanToOpposite}}"
-						Content="View Query Results" />
+				<TextBlock TextWrapping="Wrap"
+						   Text="{Binding Status}"
+						   Foreground="DarkRed"
+						   HorizontalAlignment="Right"
+						   FontSize="18.667"
+						   Margin="0,0,0,4" />
+
+				<StackPanel Orientation="Horizontal"
+							d:LayoutOverrides="Width, GridBox"
+							HorizontalAlignment="Right">
+					<Button x:Name="Save"
+							ToolTipService.ToolTip="Save Index">
+						<Image Source="../../../Resources/Images/save-small.png"
+							   Stretch="None" />
+					</Button>
+					<Button x:Name="Remove"
+							ToolTipService.ToolTip="Delete Index">
+						<Image Source="../../../Resources/Images/delete-small.png"
+							   Stretch="None" />
+					</Button>
+					<Button x:Name="QueryAgainstIndex"
+							IsEnabled="{Binding IsDirty, Converter={StaticResource booleanToOpposite}}"
+							Content="View Query Results" />
+				</StackPanel>
 			</StackPanel>
 		</Grid>
 	</tk:BusyIndicator>

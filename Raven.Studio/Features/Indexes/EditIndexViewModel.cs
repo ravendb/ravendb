@@ -7,6 +7,7 @@ namespace Raven.Studio.Features.Indexes
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
+	using Client.Extensions;
 	using Database;
 	using Documents;
 	using Framework;
@@ -49,8 +50,19 @@ namespace Raven.Studio.Features.Indexes
 				(start, size) => { throw new Exception("Replace this when executing the query."); });
 
 			RelatedErrors = (from error in this.server.Errors
-							where error.Index == index.Name
-							select error).ToList();
+							 where error.Index == index.Name
+							 select error).ToList();
+		}
+
+		string status;
+		public string Status
+		{
+			get { return status; }
+			set
+			{
+				status = value;
+				NotifyOfPropertyChange(() => Status);
+			}
 		}
 
 		public IEnumerable<ServerError> RelatedErrors { get; private set; }
@@ -147,6 +159,7 @@ namespace Raven.Studio.Features.Indexes
 
 		public void Save()
 		{
+			Status = string.Empty;
 			WorkStarted("saving index " + Name);
 			SaveFields();
 
@@ -157,12 +170,20 @@ namespace Raven.Studio.Features.Indexes
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.PutIndexAsync(Name, index, true)
-					.ContinueOnSuccess(task =>
-										{
-											IsDirty = false;
-											WorkCompleted("saving index " + Name);
-											Events.Publish(new IndexUpdated { Index = this });
-										});
+					.ContinueWith(
+					task =>
+					{
+						IsDirty = false;
+						WorkCompleted("saving index " + Name);
+						Events.Publish(new IndexUpdated { Index = this });
+					},
+					faulted =>
+					{
+						WorkCompleted("saving index " + Name);
+						var error = faulted.Exception.ExtractSingleInnerException().SimplifyError();
+						Status = error;
+						NotifyError(error);
+					});
 			}
 		}
 
