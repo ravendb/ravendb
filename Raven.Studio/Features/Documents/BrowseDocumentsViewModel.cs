@@ -11,14 +11,13 @@ namespace Raven.Studio.Features.Documents
 	using Raven.Database;
 
 	[Export]
+	[ExportDatabaseScreen("Documents", Index = 40)]
 	public class BrowseDocumentsViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
 		string status;
-
-		public int Index { get { return 40; } }
 
 		[ImportingConstructor]
 		public BrowseDocumentsViewModel(IServer server, IEventAggregator events)
@@ -31,16 +30,26 @@ namespace Raven.Studio.Features.Documents
 
 			server.CurrentDatabaseChanged += delegate
 			{
-				Status = "Retrieving documents.";
-
-				Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
-					GetDocumentsQuery,
-					jdoc => new DocumentViewModel(jdoc));
-					    
-				Documents.PageSize = 25;
-
-				NotifyOfPropertyChange("");
+				Initialize();
 			};
+		}
+
+		void Initialize() 
+		{
+			Status = "Retrieving documents.";
+
+			Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
+				GetDocumentsQuery,
+				jdoc => new DocumentViewModel(jdoc));
+					    
+			Documents.PageSize = 25;
+
+			NotifyOfPropertyChange("");
+		}
+
+		protected override void OnInitialize()
+		{
+			Initialize();
 		}
 
 		public string Status

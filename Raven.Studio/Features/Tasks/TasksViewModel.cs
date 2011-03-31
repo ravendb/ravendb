@@ -6,14 +6,16 @@
 	using System.Linq;
 	using Caliburn.Micro;
 	using Database;
+	using Framework;
 
+	[ExportDatabaseScreen("Tasks",Index = 60)]
 	public class TasksViewModel : Conductor<ITask>, IDatabaseScreenMenuItem
 	{
-		readonly IEnumerable<Lazy<ITask, ITaskMetadata>> tasks;
+		readonly IEnumerable<Lazy<ITask, IMenuItemMetadata>> tasks;
 		string selectedTask;
 
 		[ImportingConstructor]
-		public TasksViewModel([ImportMany] IEnumerable<Lazy<ITask, ITaskMetadata>> tasks)
+		public TasksViewModel([ImportMany] IEnumerable<Lazy<ITask, IMenuItemMetadata>> tasks)
 		{
 			DisplayName = "Tasks";
 
@@ -34,8 +36,6 @@
 				ActivateItem(tasks.First(x => x.Metadata.DisplayName == selectedTask).Value);
 			}
 		}
-
-		public int Index { get { return 60; } }
 	}
 
 	[MetadataAttribute]
@@ -45,14 +45,10 @@
 		public ExportTaskAttribute(string displayName) : base(typeof (ITask)) { DisplayName = displayName; }
 
 		public string DisplayName { get; private set; }
+		public int Index { get; set; }
 	}
 
 	public interface ITask
 	{
-	}
-
-	public interface ITaskMetadata
-	{
-		string DisplayName { get; }
 	}
 }

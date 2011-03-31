@@ -14,6 +14,7 @@ namespace Raven.Studio.Features.Query
 	using Raven.Database.Data;
 	using Raven.Client.Extensions;
 
+	[ExportDatabaseScreen("Query", Index = 50)]
 	public class QueryViewModel : Screen, IDatabaseScreenMenuItem
 	{
 		readonly List<string> dynamicIndex = new List<string>();
@@ -40,7 +41,7 @@ namespace Raven.Studio.Features.Query
 				new BindablePagedQuery<DocumentViewModel>(
 					(start, size) => { throw new Exception("Replace this when executing the query."); });
 
-			ShouldShowDynamicIndexes = true;
+			shouldShowDynamicIndexes = true;
 		}
 
 		public IObservableCollection<string> Indexes { get; private set; }
@@ -101,11 +102,6 @@ namespace Raven.Studio.Features.Query
 		public bool CanExecute
 		{
 			get { return !string.IsNullOrEmpty(CurrentIndex); }
-		}
-
-		public int Index
-		{
-			get { return 50; }
 		}
 
 		public void Execute()

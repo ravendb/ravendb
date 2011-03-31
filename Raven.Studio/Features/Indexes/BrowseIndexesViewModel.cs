@@ -8,14 +8,13 @@
 	using Raven.Database.Indexing;
 
 	[Export]
+	[ExportDatabaseScreen("Indexes", Index = 30)]
 	public class BrowseIndexesViewModel : RavenScreen, IDatabaseScreenMenuItem,
 										  IHandle<IndexUpdated>
 	{
 		readonly IServer server;
 		IndexDefinition activeIndex;
 		object activeItem;
-
-		public int Index { get { return 30; } }
 
 		[ImportingConstructor]
 		public BrowseIndexesViewModel(IServer server, IEventAggregator events)

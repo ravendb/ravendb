@@ -32,17 +32,9 @@
 			</Grid>
 		</Border>
 
-		<ItemsControl x:Name="Items"
-					  tk:DockPanel.Dock="Left">
-			<ItemsControl.ItemTemplate>
-				<DataTemplate>
-					<HyperlinkButton Content="{Binding DisplayName}"
-									 cm:Message.Attach="Show($dataContext)"
-									 FontSize="18.667" />
-				</DataTemplate>
-			</ItemsControl.ItemTemplate>
-
-		</ItemsControl>
+		<ListBox ItemsSource="{Binding Items}"
+				 SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+				 tk:DockPanel.Dock="Left" />
 
 		<ContentControl x:Name="ActiveItem"
 						Margin="12 0 0 0"

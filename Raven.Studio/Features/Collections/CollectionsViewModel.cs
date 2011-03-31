@@ -9,7 +9,6 @@ namespace Raven.Studio.Features.Collections
 	using System.Threading.Tasks;
 	using Abstractions.Data;
 	using Caliburn.Micro;
-	using Client.Extensions;
 	using Database;
 	using Documents;
 	using Framework;
@@ -17,13 +16,12 @@ namespace Raven.Studio.Features.Collections
 	using Raven.Database.Data;
 
 	[Export(typeof(CollectionsViewModel))]
+	[ExportDatabaseScreen("Collections", Index = 20)]
 	public class CollectionsViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
 		Collection activeCollection;
-
-		public int Index { get { return 20; } }
 
 		[ImportingConstructor]
 		public CollectionsViewModel(IServer server, IEventAggregator events)
@@ -37,13 +35,22 @@ namespace Raven.Studio.Features.Collections
 
 			server.CurrentDatabaseChanged += delegate
 			{
-				Status = "Retrieving collections";
-
-				Collections = new BindableCollection<Collection>();
-				ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
-
-				NotifyOfPropertyChange(string.Empty);
+				Initialize();
 			};	
+		}
+
+		void Initialize() {
+			Status = "Retrieving collections";
+
+			Collections = new BindableCollection<Collection>();
+			ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
+
+			NotifyOfPropertyChange(string.Empty);
+		}
+
+		protected override void OnInitialize()
+		{
+			Initialize();
 		}
 
 		public IEnumerable<Collection> Collections { get; private set; }

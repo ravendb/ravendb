@@ -19,6 +19,7 @@
 	using Raven.Database.Indexing;
 	using Raven.Database.Json;
 
+	[ExportDatabaseScreen("Summary", Index = 10)]
 	public class SummaryViewModel : RavenScreen, IDatabaseScreenMenuItem,
 									IHandle<DocumentDeleted>,
 									IHandle<StatisticsUpdated>
@@ -89,8 +90,6 @@
 						: Collections.Max(x => x.Count);
 			}
 		}
-
-		public int Index { get { return 10; } }
 
 		public void Handle(DocumentDeleted message)
 		{
