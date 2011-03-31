@@ -556,21 +556,11 @@ namespace Raven.Client.Client.Async
 				.GetResponseAsync();
 		}
 
-		private bool ShouldThrowForPutIndexAsync(WebException e)
+		private static bool ShouldThrowForPutIndexAsync(WebException e)
 		{
 			if (e == null) return true;
 			var response = e.Response as HttpWebResponse;
-			if(response == null ) return false;
-			
-			if (response.StatusCode == HttpStatusCode.InternalServerError || response.StatusCode == HttpStatusCode.NotFound)
-			{
-				var content = new StreamReader(response.GetResponseStream());
-				var jo = JObject.Load(new JsonTextReader(content));
-				var error = jo.Deserialize<ServerRequestError>(convention);
-
-				throw new WebException(error.Error);
-			}
-			return false;
+			return (response == null || response.StatusCode != HttpStatusCode.NotFound);
 		}
 
 
