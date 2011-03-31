@@ -1,0 +1,42 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Tasks.TasksView"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:r="clr-namespace:Raven.Studio.Controls"
+			 xmlns:input="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input"
+			 xmlns:f="clr-namespace:Raven.Studio.Framework"
+			 mc:Ignorable="d"
+			 d:DesignHeight="300"
+			 d:DesignWidth="400">
+
+	<tk:DockPanel x:Name="LayoutRoot"
+				  Background="{StaticResource DefaultScreenBackground}">
+
+		<TextBlock Text="Tasks"
+				   tk:DockPanel.Dock="Top"
+				   Style="{StaticResource Header}" />
+
+		<tk:DockPanel tk:DockPanel.Dock="Left"
+					  Width="180"
+					  Margin="0 0 8 0">
+			<StackPanel>
+				<Button x:Name="ExportData"
+						Content="Export" />
+				<Button x:Name="ImportData"
+						Content="Import" />
+			</StackPanel>
+
+		</tk:DockPanel>
+
+		<Grid tk:DockPanel.Dock="Top">
+
+			<TextBlock Style="{StaticResource Instruction}"
+					   Text="do something" />
+
+		</Grid>
+
+	</tk:DockPanel>
+</UserControl>

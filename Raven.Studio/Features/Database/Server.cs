@@ -16,7 +16,7 @@ namespace Raven.Studio.Features.Database
 	using Statistics;
 	using Action = System.Action;
 
-	[Export(typeof (IServer))]
+	[Export(typeof(IServer))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class Server : PropertyChangedBase, IServer, IHandle<StatisticsUpdateRequested>
 	{
@@ -44,12 +44,12 @@ namespace Raven.Studio.Features.Database
 			this.events = events;
 			this.statistics = statistics;
 
-			timer = new DispatcherTimer {Interval = updateFrequency};
+			timer = new DispatcherTimer { Interval = updateFrequency };
 			timer.Tick += delegate { RetrieveStatisticsForCurrentDatabase(); };
 			events.Subscribe(this);
 
 			Status = "Initalizing";
-			Databases = new string[]{};
+			Databases = new string[] { };
 		}
 
 		public bool HasCurrentDatabase { get { return !string.IsNullOrEmpty(CurrentDatabase); } }
@@ -74,51 +74,51 @@ namespace Raven.Studio.Features.Database
 			Address = serverAddress.OriginalString;
 			Name = serverAddress.OriginalString;
 
-			Store = new DocumentStore {Url = Address};
+			Store = new DocumentStore { Url = Address };
 			Store.Initialize();
 
 			var securityCheckId = "forceAuth_" + Guid.NewGuid();
 
-			using(var session = Store.OpenAsyncSession())
+			using (var session = Store.OpenAsyncSession())
 				session.Advanced.AsyncDatabaseCommands
-					.PutAsync(securityCheckId, null, new JObject(), null )
-					.ContinueWith( _=>
+					.PutAsync(securityCheckId, null, new JObject(), null)
+					.ContinueWith(_ =>
 					{
 						session.Advanced.AsyncDatabaseCommands
 						.DeleteDocumentAsync(securityCheckId);
 					})
-					.ContinueWith( _=>
+					.ContinueWith(_ =>
 					{
 						session.Advanced.AsyncDatabaseCommands
 						.GetDatabaseNamesAsync()
 						.ContinueWith(
 							task =>
-								{
-									IsInitialized = true;
-									Status = "Connected";
-									var dbs = new List<string>
+							{
+								IsInitialized = true;
+								Status = "Connected";
+								var dbs = new List<string>
 							          			{
 							          				DefaultDatabaseName
 							          			};
-									dbs.AddRange(task.Result);
-									Databases = dbs;
+								dbs.AddRange(task.Result);
+								Databases = dbs;
 
-									OpenDatabase(dbs[0], () =>
-									{
-										Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
-
-										if (callback != null) callback();
-									});
-								},
-							faulted =>
+								OpenDatabase(dbs[0], () =>
 								{
-									var error = "Unable to connect to " + Address;
-									Status = error;
-									events.Publish(new NotificationRaised(error, NotificationLevel.Error));
-									IsInitialized = false;
-									callback();
+									Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
+
+									if (callback != null) callback();
 								});
-				});
+							},
+							faulted =>
+							{
+								var error = "Unable to connect to " + Address;
+								Status = error;
+								events.Publish(new NotificationRaised(error, NotificationLevel.Error));
+								IsInitialized = false;
+								callback();
+							});
+					});
 		}
 
 		public string CurrentDatabase
@@ -163,21 +163,21 @@ namespace Raven.Studio.Features.Database
 			Store.AsyncDatabaseCommands
 				.EnsureDatabaseExistsAsync(databaseName)
 				.ContinueWith(task =>
-				              	{
-				              		if (task.Exception != null)
-				              			return task;
+								{
+									if (task.Exception != null)
+										return task;
 
-				              		return Store.AsyncDatabaseCommands
-				              			.ForDatabase(databaseName)
-				              			.EnsureSilverlightStartUpAsync();
-				              	})
+									return Store.AsyncDatabaseCommands
+										.ForDatabase(databaseName)
+										.EnsureSilverlightStartUpAsync();
+								})
 				.ContinueOnSuccess(create =>
-				                   	{
-				                   		if (callback != null) callback();
-				                   		databases = databases.Union(new[] {databaseName});
-				                   		NotifyOfPropertyChange(() => Databases);
-										CurrentDatabase  = databaseName;
-				                   	});
+									{
+										if (callback != null) callback();
+										databases = databases.Union(new[] { databaseName });
+										NotifyOfPropertyChange(() => Databases);
+										CurrentDatabase = databaseName;
+									});
 		}
 
 		public bool IsInitialized
@@ -191,13 +191,18 @@ namespace Raven.Studio.Features.Database
 		}
 
 		public string Address { get; private set; }
+		public string CurrentDatabaseAddress
+		{
+			get { return Address + "/databases/" + CurrentDatabase; }
+		}
+
 		public string Name { get; private set; }
 
 		public IAsyncDocumentSession OpenSession()
 		{
 			return (CurrentDatabase == DefaultDatabaseName)
-			       	? Store.OpenAsyncSession()
-			       	: Store.OpenAsyncSession(CurrentDatabase);
+					? Store.OpenAsyncSession()
+					: Store.OpenAsyncSession(CurrentDatabase);
 		}
 
 		public IStatisticsSet Statistics { get { return statistics; } }
@@ -251,7 +256,7 @@ namespace Raven.Studio.Features.Database
 			snapshots[CurrentDatabase] = mostRecent;
 			statistics.Accept(mostRecent);
 			Errors = mostRecent.Errors.OrderByDescending(error => error.Timestamp);
-			events.Publish(new StatisticsUpdated(mostRecent) {HasDocumentCountChanged = docsChanged});
+			events.Publish(new StatisticsUpdated(mostRecent) { HasDocumentCountChanged = docsChanged });
 		}
 	}
 }
