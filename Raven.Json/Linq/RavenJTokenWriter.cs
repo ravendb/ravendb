@@ -74,7 +74,7 @@ namespace Raven.Json.Linq
                     throw new JsonWriterException("Unexpected token: " + CurrentToken.Type);
             }
 
-            _tokenStack.Push(_token);
+            _tokenStack.Push(token);
         }
 
         private void RemoveParent()

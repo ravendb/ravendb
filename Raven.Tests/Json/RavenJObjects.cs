@@ -27,6 +27,20 @@ namespace Raven.Tests.Json
 			Assert.Null(o["foo"]);
 		}
 
+		[Fact]
+		public void CanSerializeNestedObjectsCorrectly()
+		{
+			var blogOne = new Blog
+			{
+				Title = "one",
+				Category = "Ravens",
+				Tags = new Tag[]{
+                     new Tag(){ Name = "birds" }
+                },
+			};
+			var o = RavenJObject.FromObject(blogOne);
+		}
+
 		public class Blog
 		{
 			public User User
