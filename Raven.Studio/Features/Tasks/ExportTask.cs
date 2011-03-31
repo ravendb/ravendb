@@ -30,6 +30,7 @@
 			this.server = server;
 
 			Console = new BindableCollection<string>();
+			server.CurrentDatabaseChanged += delegate { ClearConsole(); };
 		}
 
 		public IObservableCollection<string> Console { get; private set; }

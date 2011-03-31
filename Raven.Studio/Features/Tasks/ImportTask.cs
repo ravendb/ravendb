@@ -27,6 +27,7 @@
 		{
 			this.server = server;
 			Console = new BindableCollection<string>();
+			server.CurrentDatabaseChanged += delegate { ClearConsole(); };
 		}
 
 		public IObservableCollection<string> Console { get; private set; }
@@ -76,7 +77,7 @@
 			catch (Exception)
 			{
 				Console.Add("Import file did not use GZip compression, attempting to read as uncompressed.");
-				
+
 				stream.Seek(0, SeekOrigin.Begin);
 
 				var streamReader = new StreamReader(stream);
@@ -118,9 +119,9 @@
 						continue;
 
 					var index = JsonConvert.DeserializeObject<IndexDefinition>(json.Value<JObject>("definition").ToString());
-					
+
 					totalIndexes++;
-					
+
 					Console.Add("Importing index: {0}", indexName);
 
 					yield return session.Advanced.AsyncDatabaseCommands
