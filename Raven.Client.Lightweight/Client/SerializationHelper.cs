@@ -26,10 +26,10 @@ namespace Raven.Client.Client
 			return (from doc in responses
 					let metadata = doc["@metadata"] as JObject
 					let _ = doc.Remove("@metadata")
-					let key = (metadata != null) ? metadata["@id"].Value<string>() : ""
-					let lastModified = (metadata != null) ? DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture).ToLocalTime() : DateTime.Now
-					let etag = (metadata != null) ? new Guid(metadata["@etag"].Value<string>()) : Guid.Empty
-					let nai = (metadata != null) ? metadata.Value<bool>("Non-Authoritive-Information") : false
+					let key = Extract(metadata, "@id", string.Empty)
+					let lastModified = Extract(metadata, "Last-Modified", DateTime.Now, (string d) => ConvertToUtcDate(d))
+					let etag = Extract(metadata, "@etag", Guid.Empty)
+					let nai = Extract(metadata, "Non-Authoritive-Information", false)
 					select new JsonDocument
 					{
 						Key = key,
@@ -38,7 +38,7 @@ namespace Raven.Client.Client
 						NonAuthoritiveInformation = nai,
 						Metadata = metadata.FilterHeaders(isServerDocument: false),
 						DataAsJson = doc,
-					});
+					}).ToList();
 		}
 
 		///<summary>
@@ -55,6 +55,26 @@ namespace Raven.Client.Client
 		public static JsonDocument ToJsonDocument(this JObject response)
 		{
 			return JObjectsToJsonDocuments(new[] { response }).First();
+		}
+
+		static DateTime ConvertToUtcDate(string date)
+		{
+			return DateTime.SpecifyKind( DateTime.ParseExact(date, "r", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), DateTimeKind.Utc);
+		}
+
+		static T Extract<T>(IDictionary<string, JToken> metadata, string key, T defaultValue = default(T))
+		{
+			return Extract<T, T>(metadata, key, defaultValue, t => t);
+		}
+
+		static TResult Extract<T, TResult>(IDictionary<string, JToken> metadata, string key, TResult defaultValue, Func<T, TResult> convert)
+		{
+			if (metadata == null) return defaultValue;
+			if (!metadata.ContainsKey(key)) return defaultValue;
+
+			var value = metadata[key].Value<T>();
+
+			return convert(value);
 		}
 	}
 }

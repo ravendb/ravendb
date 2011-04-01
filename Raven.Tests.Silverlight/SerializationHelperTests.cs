@@ -1,0 +1,78 @@
+﻿namespace Raven.Tests.Silverlight
+{
+	using System;
+	using System.Collections.Generic;
+	using System.Linq;
+	using System.Threading.Tasks;
+	using Client.Client;
+	using Microsoft.Silverlight.Testing;
+	using Microsoft.VisualStudio.TestTools.UnitTesting;
+	using Newtonsoft.Json.Linq;
+
+	public class SerializationHelperTests : RavenTestBase
+	{
+		[Asynchronous]
+		public IEnumerable<Task> Handles_conversion_when_there_is_no_metadata()
+		{
+			var input = new List<JObject> {new JObject()};
+			var output = SerializationHelper.JObjectsToJsonDocuments(input);
+
+			Assert.AreEqual(1, output.Count());
+
+			yield break;
+		}
+
+		[TestMethod]
+		public void Extracts_key_from_metadata()
+		{
+			var doc = new JObject();
+			doc["@metadata"] = new JObject();
+			doc["@metadata"]["@id"] = "some_key";
+
+			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+
+			Assert.AreEqual("some_key", output.First().Key);
+		}
+
+		[TestMethod]
+		public void Assumes_empty_string_if_key_is_not_in_metadata()
+		{
+			var doc = new JObject();
+			doc["@metadata"] = new JObject();
+
+			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+
+			Assert.AreEqual(string.Empty, output.First().Key);
+		}
+
+		[TestMethod]
+		public void Extracts_last_modified_date_from_metadata()
+		{
+			var april_fools = new DateTime(2011,4,1,4,20,0,DateTimeKind.Utc);
+
+			var doc = new JObject();
+			doc["@metadata"] = new JObject();
+			doc["@metadata"]["Last-Modified"] = april_fools.ToString("r");
+
+			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+
+			Assert.AreEqual(april_fools, output.First().LastModified);
+		}
+
+		[TestMethod]
+		public void Assumes_now_if_last_modified_date_is_not_in_metadata()
+		{
+			var doc = new JObject();
+			doc["@metadata"] = new JObject();
+			
+			var now = DateTime.Now;
+
+			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+
+			var last_modified = output.First().LastModified;
+			var delta = Math.Abs( (last_modified - now).Seconds );
+
+			Assert.IsTrue(delta < 1);
+		}
+	}
+}
