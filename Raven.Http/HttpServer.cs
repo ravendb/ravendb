@@ -25,49 +25,6 @@ using Formatting = Newtonsoft.Json.Formatting;
 
 namespace Raven.Http
 {
-	public class LogHttpRequestStatsParams
-	{
-		private Stopwatch sw;
-		private NameValueCollection headers;
-		private string httpMethod;
-		private int responseStatusCode;
-		private string requestUri;
-
-		public LogHttpRequestStatsParams(Stopwatch sw, NameValueCollection headers, string httpMethod, int responseStatusCode, string requestUri)
-		{
-			this.sw = sw;
-			this.headers = headers;
-			this.httpMethod = httpMethod;
-			this.responseStatusCode = responseStatusCode;
-			this.requestUri = requestUri;
-		}
-
-		public Stopwatch Sw
-		{
-			get { return sw; }
-		}
-
-		public NameValueCollection Headers
-		{
-			get { return headers; }
-		}
-
-		public string HttpMethod
-		{
-			get { return httpMethod; }
-		}
-
-		public int ResponseStatusCode
-		{
-			get { return responseStatusCode; }
-		}
-
-		public string RequestUri
-		{
-			get { return requestUri; }
-		}
-	}
-
 	public abstract class HttpServer : IDisposable
     {
         protected readonly IResourceStore DefaultResourceStore;
@@ -281,14 +238,14 @@ namespace Raven.Http
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
-    		if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && logHttpRequestStatsParams.Sw.ElapsedMilliseconds <= 25) 
+    		if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25) 
 				return;
 
     		var curReq = Interlocked.Increment(ref reqNum);
     		logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
     		                   curReq, 
 							   logHttpRequestStatsParams.HttpMethod, 
-							   logHttpRequestStatsParams.Sw.ElapsedMilliseconds, 
+							   logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds, 
 							   logHttpRequestStatsParams.ResponseStatusCode,
     		                   logHttpRequestStatsParams.RequestUri,
     		                   currentTenantId.Value);
