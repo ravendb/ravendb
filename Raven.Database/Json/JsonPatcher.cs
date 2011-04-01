@@ -92,7 +92,7 @@ namespace Raven.Database.Json
 			document[patchCmd.Value.Value<string>()] = property;
 		}
 
-		private static void ModifyValue(PatchRequest patchCmd, string propName, RavenJToken property)
+		private void ModifyValue(PatchRequest patchCmd, string propName, RavenJToken property)
 		{
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)
@@ -230,7 +230,7 @@ namespace Raven.Database.Json
 		}
 
 
-		private static void RemoveProperty(PatchRequest patchCmd, string propName, RavenJToken token)
+		private void RemoveProperty(PatchRequest patchCmd, string propName, RavenJToken token)
 		{
 			EnsurePreviousValueMatchCurrentValue(patchCmd, token);
 			var o = token as RavenJObject;
@@ -269,7 +269,7 @@ namespace Raven.Database.Json
 			else
 				val.Value = RavenJToken.FromObject(val.Value<int>() + valToSet.Value<int>()).Value<int>();
 		}
-		private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
+		private void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
 		{
 			var prevVal = patchCmd.PrevVal;
 			if (prevVal == null)
