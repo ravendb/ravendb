@@ -1,4 +1,4 @@
-﻿namespace Raven.Studio.Framework
+﻿namespace Raven.Studio.Framework.Extensions
 {
 	using Caliburn.Micro;
 	using Messages;

@@ -1,6 +1,4 @@
-﻿using Ionic.Zlib;
-
-namespace Raven.Studio.Features.Tasks
+﻿namespace Raven.Studio.Features.Tasks
 {
 	using System;
 	using System.Collections.Generic;
@@ -14,7 +12,8 @@ namespace Raven.Studio.Features.Tasks
 	using Client.Document;
 	using Client.Silverlight.Client;
 	using Database;
-	using Framework;
+	using Ionic.Zlib;
+	using Framework.Extensions;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 

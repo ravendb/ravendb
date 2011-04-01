@@ -1,6 +1,4 @@
-﻿using Ionic.Zlib;
-
-namespace Raven.Studio.Features.Tasks
+﻿namespace Raven.Studio.Features.Tasks
 {
 	using System;
 	using System.Collections.Generic;
@@ -12,7 +10,8 @@ namespace Raven.Studio.Features.Tasks
 	using System.Windows.Controls;
 	using Caliburn.Micro;
 	using Database;
-	using Framework;
+	using Ionic.Zlib;
+	using Framework.Extensions;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database.Data;

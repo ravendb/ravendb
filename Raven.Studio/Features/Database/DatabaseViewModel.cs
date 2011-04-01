@@ -6,6 +6,7 @@ namespace Raven.Studio.Features.Database
 	using Caliburn.Micro;
 	using Documents;
 	using Framework;
+	using Framework.Extensions;
 	using Messages;
 	using System.Linq;
 
