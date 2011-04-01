@@ -94,10 +94,13 @@ namespace Raven.Json.Utilities
 		public bool Remove(TKey key)
 		{
 			RavenJToken token;
-			if (LocalChanges.TryGetValue(key, out token) == false || token == DeletedMarker)
-				return false;
+			if (!LocalChanges.TryGetValue(key, out token))
+			{
+				if (inherittedValues == null || !inherittedValues.TryGetValue(key, out token))
+					return false;
+			}
 
-			if (inherittedValues == null || inherittedValues.TryGetValue(key, out token) == false || token == DeletedMarker)
+			if (token == DeletedMarker)
 				return false;
 
 			deleteCount += 1;
