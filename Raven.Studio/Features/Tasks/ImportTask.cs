@@ -13,6 +13,7 @@
 	using Database;
 	using Ionic.Zlib;
 	using Framework.Extensions;
+	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database.Data;
@@ -29,21 +30,42 @@
 
 		public void ImportData()
 		{
+			WorkStarted("importing database");
+			Status = string.Empty;
+
 			var openFile = new OpenFileDialog();
 			var dialogResult = openFile.ShowDialog();
 
 			if (!dialogResult.HasValue || !dialogResult.Value) return;
 
-			try
-			{
-				var tasks = (IEnumerable<Task>)ImportData(openFile).GetEnumerator();
-				tasks.ExecuteInSequence(null);
-			}
-			catch (InvalidDataException e)
+			var tasks = (IEnumerable<Task>)ImportData(openFile).GetEnumerator();
+			tasks.ExecuteInSequence(OnTaskFinished, OnException);
+		}
+
+		void OnTaskFinished(bool success)
+		{
+			WorkCompleted("importing database");
+
+			Status = success ? "Import Complete" : "Import Failed!";
+
+			if (!success) return;
+
+			Events.Publish(new NotificationRaised("Import Completed", NotificationLevel.Info));
+		}
+
+		void OnException(Exception e)
+		{
+			if (e is InvalidDataException)
 			{
 				Output("The import file was not formatted correctly:\n\t{0}", e.Message);
 				Output("Import terminated.");
 			}
+			else
+			{
+				Output("The export failed with the following exception: {0}", e.Message);
+			}
+
+			NotifyError("Database Import Failed");
 		}
 
 		IEnumerable<Task> ImportData(OpenFileDialog openFile)

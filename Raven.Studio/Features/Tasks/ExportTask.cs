@@ -51,22 +51,23 @@
 			WorkStarted("exporting database");
 	
 			var tasks = (IEnumerable<Task>)ExportData(saveFile, ExportIndexesOnly).GetEnumerator();
-			tasks.ExecuteInSequence(AfterExport, HandleExportException);
+			tasks.ExecuteInSequence(OnTaskFinished, OnException);
 		}
 
-		void AfterExport(bool success)
+		void OnTaskFinished(bool success)
 		{
 			WorkCompleted("exporting database");
+
+			Status = success ? "Export Complete" : "Export Failed!";
 
 			if(success)
 				Events.Publish(new NotificationRaised("Export Completed", NotificationLevel.Info));
 		}
 
-		void HandleExportException(Exception e)
+		void OnException(Exception e)
 		{
 			Output("The export failed with the following exception: {0}", e.Message);
 			NotifyError("Database Export Failed");
-			Status = "Export Failed";
 		}
 
 		IEnumerable<Task> ExportData(SaveFileDialog saveFile, bool indexesOnly)
@@ -172,7 +173,6 @@
 									stream.Dispose();
 								});
 			Output("Export complete");
-			Status = "Export Completed";
 		}
 	}
 }
