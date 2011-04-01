@@ -216,6 +216,25 @@ namespace Raven.Client.Document
 			ApplyForAll(query => query.WhereContains(fieldName, value));
 			return this;
 		}
+
+		/// <summary>
+		/// 	Matches substrings of the field
+		/// </summary>
+		public IDocumentQuery<T> WhereContains(string fieldName, params object[] values)
+		{
+			ApplyForAll(query => query.WhereContains(fieldName, values));
+			return this;
+		}
+
+		/// <summary>
+		/// 	Matches substrings of the field
+		/// </summary>
+		public IDocumentQuery<T> WhereContains(string fieldName, IEnumerable<object> values)
+		{
+			ApplyForAll(query => query.WhereContains(fieldName, values));
+			return this;
+		}
+
 		/// <summary>
 		/// Matches fields which starts with the specified value.
 		/// </summary>

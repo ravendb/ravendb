@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using Raven.Abstractions.Data;
@@ -266,6 +267,24 @@ namespace Raven.Client.Document
             WhereContains(fieldName, value);
             return this;
         }
+
+		/// <summary>
+		/// 	Matches substrings of the field
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, params object[] values)
+		{
+			WhereContains(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// 	Matches substrings of the field
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, IEnumerable<object> values)
+		{
+			WhereContains(fieldName, values);
+			return this;
+		}
 
         /// <summary>
         /// Matches fields which starts with the specified value.

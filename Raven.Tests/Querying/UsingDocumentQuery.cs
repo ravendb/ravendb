@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Xunit;
@@ -37,6 +38,50 @@ namespace Raven.Tests.Querying
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
 				.WhereContains("Name", "ayende");
 			Assert.Equal("Name:ayende", q.ToString());
+		}
+
+		[Fact]
+		public void CanUnderstandParamArrayContains()
+		{
+			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
+				.WhereContains("Name", "ryan", "heath");
+			Assert.Equal("(Name:ryan OR Name:heath)", q.ToString());
+		}
+
+		[Fact]
+		public void CanUnderstandArrayContains()
+		{
+			var array = new[] {"ryan", "heath"};
+			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
+				.WhereContains("Name", array);
+			Assert.Equal("(Name:ryan OR Name:heath)", q.ToString());
+		}
+
+		[Fact]
+		public void CanUnderstandArrayContainsWithOneElement()
+		{
+			var array = new[] { "ryan"};
+			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
+				.WhereContains("Name", array);
+			Assert.Equal("(Name:ryan)", q.ToString());
+		}
+
+		[Fact]
+		public void CanUnderstandArrayContainsWithZeroElements()
+		{
+			var array = new string[0];
+			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
+				.WhereContains("Name", array);
+			Assert.Equal("", q.ToString());
+		}
+
+		[Fact]
+		public void CanUnderstandEnumerableContains()
+		{
+			IEnumerable<string> list = new[] { "ryan", "heath" };
+			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
+				.WhereContains("Name", list);
+			Assert.Equal("(Name:ryan OR Name:heath)", q.ToString());
 		}
 
 		[Fact]
