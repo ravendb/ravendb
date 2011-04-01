@@ -186,16 +186,19 @@ namespace Raven.Database.Impl
 					case ReadVetoResult.ReadAllow.Allow:
 						break;
 					case ReadVetoResult.ReadAllow.Deny:
-						var o = new RavenJObject();
-						o.AddValueProperty("Reason", readVetoResult.Reason);
-						o.AddValueProperty("Trigger", readTrigger.ToString());
-
-						var metadata = new RavenJObject();
-						o.Properties.Add("Raven-Read-Veto", o);
 						return new T
-						{
-							Metadata = metadata
-						};
+						       	{
+						       		Metadata = new RavenJObject
+						       		           	{
+						       		           		{
+						       		           			"Raven-Read-Veto", new RavenJObject
+						       		           			                   	{
+						       		           			                   		{"Reason", readVetoResult.Reason},
+						       		           			                   		{"Trigger", readTrigger.ToString()}
+						       		           			                   	}
+						       		           			}
+						       		           	}
+						       	};
 					case ReadVetoResult.ReadAllow.Ignore:
 						return null;
 					default:
