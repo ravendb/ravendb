@@ -417,7 +417,7 @@ namespace Raven.Http
                 currentDatabase.Value = DefaultResourceStore;
                 currentConfiguration.Value = DefaultConfiguration;
             }
-            return true;
+            return false;
         }
 
         protected virtual void OnDispatchingRequest(IHttpContext ctx){}
