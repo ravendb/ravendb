@@ -410,7 +410,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Server\WebUI\Raven.Studio.xap" />
     <Content Include="Server\WebUI\studio.html" />
     <Content Include="Server\WebUI\raven-data.ico" />
     <Content Include="Server\WebUI\css\Pager.css" />
