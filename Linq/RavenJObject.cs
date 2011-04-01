@@ -342,5 +342,10 @@ namespace Raven.Json.Linq
 		{
 			return Properties.ContainsKey(key);
 		}
-	}
+
+    	public bool TryGetValue(string name, out RavenJToken value)
+    	{
+			return Properties.TryGetValue(name, out value);	
+    	}
+    }
 }
