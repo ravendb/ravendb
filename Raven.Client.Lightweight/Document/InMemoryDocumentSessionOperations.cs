@@ -18,13 +18,12 @@ using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Json.Linq;
 
 #if !NET_3_5
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Database.Linq;
-using Raven.Json.Linq;
-
 #endif
 
 namespace Raven.Client.Document
