@@ -3,6 +3,7 @@
 	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
+	using System.Diagnostics;
 	using System.IO;
 	using System.Linq;
 	using System.Text;
@@ -18,23 +19,12 @@
 	using Raven.Database.Indexing;
 
 	[ExportTask("Import Database")]
-	public class ImportTask : Screen, ITask
+	public class ImportTask : ConsoleOutputTask, ITask
 	{
-		readonly IServer server;
-
 		[ImportingConstructor]
 		public ImportTask(IServer server)
+			: base(server)
 		{
-			this.server = server;
-			Console = new BindableCollection<string>();
-			server.CurrentDatabaseChanged += delegate { ClearConsole(); };
-		}
-
-		public IObservableCollection<string> Console { get; private set; }
-
-		public void ClearConsole()
-		{
-			Console.Clear();
 		}
 
 		public void ImportData()

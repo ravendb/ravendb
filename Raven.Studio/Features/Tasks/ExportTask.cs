@@ -18,26 +18,13 @@
 	using Newtonsoft.Json.Linq;
 
 	[ExportTask("Export Database")]
-	public class ExportTask : Screen, ITask
+	public class ExportTask : ConsoleOutputTask, ITask
 	{
-		readonly IServer server;
-
 		bool exportIndexesOnly;
 
 		[ImportingConstructor]
-		public ExportTask(IServer server)
+		public ExportTask(IServer server):base(server)
 		{
-			this.server = server;
-
-			Console = new BindableCollection<string>();
-			server.CurrentDatabaseChanged += delegate { ClearConsole(); };
-		}
-
-		public IObservableCollection<string> Console { get; private set; }
-
-		public void ClearConsole()
-		{
-			Console.Clear();
 		}
 
 		public bool ExportIndexesOnly
