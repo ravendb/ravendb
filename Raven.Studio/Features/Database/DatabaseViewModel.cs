@@ -16,7 +16,7 @@ namespace Raven.Studio.Features.Database
 		IHandle<DocumentDeleted>
 	{
 		readonly IEventAggregator events;
-		readonly IEnumerable<Lazy<IDatabaseScreenMenuItem, IMenuItemMetadata>> screens;
+		readonly IList<Lazy<IDatabaseScreenMenuItem, IMenuItemMetadata>> screens;
 		readonly IServer server;
 
 		[ImportingConstructor]
@@ -24,12 +24,12 @@ namespace Raven.Studio.Features.Database
 		{
 			this.server = server;
 			this.events = events;
-			this.screens = screens;
+			this.screens = screens.OrderBy(x => x.Metadata.Index).ToList();
 			DisplayName = "DATABASE";
 
-			Items = screens.OrderBy(x => x.Metadata.Index).Select(x => x.Metadata.DisplayName).ToList();
+			Items = this.screens.Select(x => x.Metadata.DisplayName).ToList();
 
-			SelectedItem = screens.Select(x => x.Metadata.DisplayName).First();
+			SelectedItem = this.screens.Select(x => x.Metadata.DisplayName).First();
 
 			events.Subscribe(this);
 		}
