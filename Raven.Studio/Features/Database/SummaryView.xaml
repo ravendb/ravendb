@@ -112,7 +112,7 @@
 							   Margin="4 0 0 0" />
 				</StackPanel>
 
-				<Button x:Name="CreateSampleData"
+                <Button x:Name="BeginCreateSampleData"
 						Visibility="{Binding ShowCreateSampleData, Converter={StaticResource visibleWhenTrue}}"
 						Content="Create sample data" />
 			</Grid>
