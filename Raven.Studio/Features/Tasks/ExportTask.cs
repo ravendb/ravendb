@@ -14,6 +14,7 @@
 	using Database;
 	using Ionic.Zlib;
 	using Framework.Extensions;
+	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 
@@ -23,7 +24,8 @@
 		bool exportIndexesOnly;
 
 		[ImportingConstructor]
-		public ExportTask(IServer server):base(server)
+		public ExportTask(IServer server, IEventAggregator events)
+			: base(server, events)
 		{
 		}
 
@@ -39,18 +41,38 @@
 
 		public void ExportData()
 		{
+			Status = string.Empty;
+
 			var saveFile = new SaveFileDialog();
 			var dialogResult = saveFile.ShowDialog();
 
 			if (!dialogResult.HasValue || !dialogResult.Value) return;
 
-			var tasks = (IEnumerable<Task>) ExportData(saveFile, ExportIndexesOnly).GetEnumerator();
-			tasks.ExecuteInSequence(null);
+			WorkStarted("exporting database");
+	
+			var tasks = (IEnumerable<Task>)ExportData(saveFile, ExportIndexesOnly).GetEnumerator();
+			tasks.ExecuteInSequence(AfterExport, HandleExportException);
+		}
+
+		void AfterExport(bool success)
+		{
+			WorkCompleted("exporting database");
+
+			if(success)
+				Events.Publish(new NotificationRaised("Export Completed", NotificationLevel.Info));
+		}
+
+		void HandleExportException(Exception e)
+		{
+			Output("The export failed with the following exception: {0}", e.Message);
+			NotifyError("Database Export Failed");
+			Status = "Export Failed";
 		}
 
 		IEnumerable<Task> ExportData(SaveFileDialog saveFile, bool indexesOnly)
 		{
-			Console.Add("Exporting to {0}",saveFile.SafeFileName);
+			Output("Exporting to {0}", saveFile.SafeFileName);
+			Output("- Indexes only, documents will be excluded");
 
 			var stream = saveFile.OpenFile();
 			var jsonRequestFactory = new HttpJsonRequestFactory();
@@ -60,11 +82,11 @@
 
 			var streamWriter = new StreamWriter(new GZipStream(stream, CompressionMode.Compress));
 			var jsonWriter = new JsonTextWriter(streamWriter)
-			                 	{
-			                 		Formatting = Formatting.Indented
-			                 	};
+								{
+									Formatting = Formatting.Indented
+								};
 
-			Console.Add("Begin reading indexes");
+			Output("Begin reading indexes");
 
 			jsonWriter.WriteStartObject();
 			jsonWriter.WritePropertyName("Indexes");
@@ -85,13 +107,13 @@
 				var array = JArray.Parse(documents);
 				if (array.Count == 0)
 				{
-					Console.Add("Done with reading indexes, total: {0}", totalCount);
+					Output("Done with reading indexes, total: {0}", totalCount);
 					completed = true;
 				}
 				else
 				{
 					totalCount += array.Count;
-					Console.Add("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Count, totalCount);
+					Output("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Count, totalCount);
 					foreach (JToken item in array)
 					{
 						item.WriteTo(jsonWriter);
@@ -105,11 +127,11 @@
 
 			if (indexesOnly)
 			{
-				Console.Add("Documents will not be exported.");
-			} 
-			else 
+				Output("Skipping documents");
+			}
+			else
 			{
-				Console.Add("Begin reading documents.");
+				Output("Begin reading documents");
 
 				var lastEtag = Guid.Empty;
 				totalCount = 0;
@@ -124,14 +146,14 @@
 					var array = JArray.Parse(response.Result);
 					if (array.Count == 0)
 					{
-						Console.Add("Done with reading documents, total: {0}", totalCount);
+						Output("Done with reading documents, total: {0}", totalCount);
 						completed = true;
 					}
 					else
 					{
 						totalCount += array.Count;
-						Console.Add("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
-						            totalCount);
+						Output("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
+									totalCount);
 						foreach (JToken item in array)
 						{
 							item.WriteTo(jsonWriter);
@@ -142,13 +164,15 @@
 			}
 
 			Execute.OnUIThread(() =>
-			                   	{
-			                   		jsonWriter.WriteEndArray();
-			                   		jsonWriter.WriteEndObject();
-			                   		streamWriter.Flush();
-			                   		streamWriter.Dispose();
-			                   		stream.Dispose();
-			                   	});
+								{
+									jsonWriter.WriteEndArray();
+									jsonWriter.WriteEndObject();
+									streamWriter.Flush();
+									streamWriter.Dispose();
+									stream.Dispose();
+								});
+			Output("Export complete");
+			Status = "Export Completed";
 		}
 	}
 }

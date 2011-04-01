@@ -22,8 +22,8 @@
 	public class ImportTask : ConsoleOutputTask, ITask
 	{
 		[ImportingConstructor]
-		public ImportTask(IServer server)
-			: base(server)
+		public ImportTask(IServer server, IEventAggregator events)
+			: base(server, events)
 		{
 		}
 
@@ -41,14 +41,14 @@
 			}
 			catch (InvalidDataException e)
 			{
-				Console.Add("The import file was not formatted correctly:\n\t{0}", e.Message);
-				Console.Add("Import terminated.");
+				Output("The import file was not formatted correctly:\n\t{0}", e.Message);
+				Output("Import terminated.");
 			}
 		}
 
 		IEnumerable<Task> ImportData(OpenFileDialog openFile)
 		{
-			Console.Add("Importing from {0}", openFile.File.Name);
+			Output("Importing from {0}", openFile.File.Name);
 
 			var sw = Stopwatch.StartNew();
 
@@ -66,7 +66,7 @@
 			}
 			catch (Exception)
 			{
-				Console.Add("Import file did not use GZip compression, attempting to read as uncompressed.");
+				Output("Import file did not use GZip compression, attempting to read as uncompressed.");
 
 				stream.Seek(0, SeekOrigin.Begin);
 
@@ -84,7 +84,7 @@
 			if (jsonReader.Read() == false)
 				yield break;
 
-			Console.Add("Begin reading indexes");
+			Output("Begin reading indexes");
 
 			if (jsonReader.TokenType != JsonToken.PropertyName)
 				throw new InvalidDataException("PropertyName was expected");
@@ -112,15 +112,15 @@
 
 					totalIndexes++;
 
-					Console.Add("Importing index: {0}", indexName);
+					Output("Importing index: {0}", indexName);
 
 					yield return session.Advanced.AsyncDatabaseCommands
 						.PutIndexAsync(indexName, index, overwrite: true);
 				}
 
-			Console.Add("Imported {0:#,#} indexes", totalIndexes);
+			Output("Imported {0:#,#} indexes", totalIndexes);
 
-			Console.Add("Begin reading documents");
+			Output("Begin reading documents");
 
 			// should read documents now
 			if (jsonReader.Read() == false)
@@ -151,7 +151,7 @@
 
 			yield return FlushBatch(batch);
 
-			Console.Add("Imported {0:#,#} documents in {1:#,#} ms", totalCount, sw.ElapsedMilliseconds);
+			Output("Imported {0:#,#} documents in {1:#,#} ms", totalCount, sw.ElapsedMilliseconds);
 		}
 
 		Task FlushBatch(List<JObject> batch)
@@ -184,7 +184,7 @@
 				}
 			}
 
-			Console.Add("Wrote {0} documents [{1:#,#} kb] in {2:#,#} ms",
+			Output("Wrote {0} documents [{1:#,#} kb] in {2:#,#} ms",
 						batch.Count, Math.Round((double)size / 1024, 2), sw.ElapsedMilliseconds);
 			batch.Clear();
 

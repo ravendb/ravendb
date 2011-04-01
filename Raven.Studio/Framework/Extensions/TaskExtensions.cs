@@ -120,25 +120,37 @@
 			       	: single.Message;
 		}
 
-		public static void ExecuteInSequence(this IEnumerable<Task> tasks, System.Action callback)
+		public static void ExecuteInSequence(this IEnumerable<Task> tasks, Action<bool> callback, Action<Exception> handleException = null)
 		{
 			var enumerator = tasks.GetEnumerator();
-			ExecuteNextTask(enumerator, callback);
+			ExecuteNextTask(enumerator, callback, handleException);
 		}
 
-		static void ExecuteNextTask(IEnumerator<Task> enumerator, System.Action callback)
+		static void ExecuteNextTask(IEnumerator<Task> enumerator, Action<bool> callback, Action<Exception> handleException)
 		{
-			bool moveNextSucceeded = enumerator.MoveNext();
-
-			if (!moveNextSucceeded)
+			try
 			{
-				if (callback != null) callback();
-				return;
-			}
+				bool moveNextSucceeded = enumerator.MoveNext();
 
-			enumerator
-				.Current
-				.ContinueWith(x => ExecuteNextTask(enumerator, callback));
+				if (!moveNextSucceeded)
+				{
+					if (callback != null) callback(true);
+					return;
+				}
+			
+				enumerator
+					.Current
+					.ContinueWith(x => ExecuteNextTask(enumerator, callback, handleException));
+			}
+			catch (Exception e)
+			{
+				if(handleException != null)
+				{
+					handleException(e);
+					if (callback != null) callback(false);
+				}
+				else throw;
+			}
 		}
 	}
 }
