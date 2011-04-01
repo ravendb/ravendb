@@ -117,7 +117,17 @@ namespace Raven.Json.Linq
 
         internal void AddValue(RavenJValue value, JsonToken token)
         {
-            if (_tokenStack.Count == 0)
+			switch (token)
+			{
+				case JsonToken.Null:
+					value = new RavenJValue(null, JTokenType.Null);
+					break;
+				case JsonToken.Undefined:
+					value = new RavenJValue(null, JTokenType.Undefined);
+					break;
+			}
+
+        	if (_tokenStack.Count == 0)
                 _value = value;
             else
             {
@@ -140,7 +150,7 @@ namespace Raven.Json.Linq
             }
         }
 
-        #region WriteValue methods
+    	#region WriteValue methods
         /// <summary>
         /// Writes a null value.
         /// </summary>
