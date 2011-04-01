@@ -25,24 +25,19 @@
 			if (IsolatedStorageSettings.ApplicationSettings.TryGetValue(uriLookup, out uri))
 				return uri;
 
-			if (Application.Current.IsRunningOutOfBrowser)
-			{
-#if DEBUG
-				uri = "http://localhost:8080";
-#endif
-			}
-			else if (HtmlPage.Document.DocumentUri.Scheme == "file")
+			 if (HtmlPage.Document.DocumentUri.Scheme == "file")
 			{
 				uri = "http://localhost:8080";
 			} 
-			else 
-			{
-				uri = string.Format("{0}://{1}:{2}",
+			else
+			 {
+			 	uri = string.Format("{0}://{1}:{2}/{3}",
 				                    HtmlPage.Document.DocumentUri.Scheme,
 				                    HtmlPage.Document.DocumentUri.Host,
-				                    HtmlPage.Document.DocumentUri.Port
+				                    HtmlPage.Document.DocumentUri.Port,
+									HtmlPage.Document.DocumentUri.LocalPath.Replace("/raven/studio.html", "")
 					);
-			}
+			 }
 
 #if !DEBUG
             IsolatedStorageSettings.ApplicationSettings[uriLookup] = uri;
