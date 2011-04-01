@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Framework
+﻿using System.Reflection;
+
+namespace Raven.Studio.Framework
 {
 	using System;
 	using System.Collections.Generic;
@@ -48,11 +50,24 @@
 			{
 				if (child.IsFaulted)
 				{
-					NotifyUserOfError(child);
+					NotifyUserOfError(child, onSuccess.Method);
 				}
 				else
 				{
+					HideErrorOnSuccess(onSuccess.Method);
 					onSuccess(child);
+				}
+			});
+		}
+
+		private static void HideErrorOnSuccess(MethodInfo source)
+		{
+			Execute.OnUIThread(() =>
+			{
+				if (ErrorViewModel.Current != null && 
+				    ErrorViewModel.Current.CurrentErrorSource == source)
+				{
+					ErrorViewModel.Current.TryClose();
 				}
 			});
 		}
@@ -63,25 +78,27 @@
 			                  	{
 									if (child.IsFaulted)
 									{
-										NotifyUserOfError(child);
+										NotifyUserOfError(child, onSuccess.Method);
 									}
 									else
 									{
+										HideErrorOnSuccess(onSuccess.Method); 
 										onSuccess(child);
 									}
 			                  	});
 		}
 
-		static void NotifyUserOfError(Task child)
+		static void NotifyUserOfError(Task child, MethodInfo errorSource)
 		{
 			Execute.OnUIThread(()=>
 			{
-				if (ErrorViewModel.ErrorAlreadyShown)
+				if (ErrorViewModel.Current != null)
 					return;
 				
 				IoC.Get<IWindowManager>()
 						.ShowDialog(new ErrorViewModel
 						{
+							CurrentErrorSource = errorSource,
 							Message = "Unable to connect to server!",
 							Details = GetErrorDetails(child.Exception)
 						});
