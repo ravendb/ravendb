@@ -5,12 +5,13 @@
 //-----------------------------------------------------------------------
 using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
     public class RemoveConflictOnAttachmentPutTrigger : AbstractAttachmentPutTrigger
     {
-        public override void OnPut(string key, byte[] data, JObject metadata)
+		public override void OnPut(string key, byte[] data, RavenJObject metadata)
         {
             if (ReplicationContext.IsInReplicationContext)
                 return;

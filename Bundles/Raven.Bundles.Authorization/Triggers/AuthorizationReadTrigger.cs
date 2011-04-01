@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Authorization.Triggers
 {
@@ -22,7 +23,7 @@ namespace Raven.Bundles.Authorization.Triggers
 			AuthorizationDecisions = new AuthorizationDecisions(Database);	
 		}
 
-		public override ReadVetoResult AllowRead(string key,  JObject metadata, ReadOperation readOperation,
+		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation readOperation,
 		                                         TransactionInformation transactionInformation)
 		{
 			if (AuthorizationContext.IsInAuthorizationContext)

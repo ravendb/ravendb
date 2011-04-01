@@ -15,6 +15,7 @@ using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
 using System.Linq;
@@ -73,7 +74,7 @@ namespace Raven.Bundles.Tests.Expiration
             using (var session = documentStore.OpenSession())
             {
                 session.Store(company);
-                session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new JValue(expiry);
+                session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry);
                 session.SaveChanges();
             }
 
@@ -94,7 +95,7 @@ namespace Raven.Bundles.Tests.Expiration
             using (var session = documentStore.OpenSession())
             {
                 session.Store(company);
-                session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new JValue(expiry);
+                session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry);
                 session.SaveChanges();
             }
             ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
@@ -118,7 +119,7 @@ namespace Raven.Bundles.Tests.Expiration
             using (var session = documentStore.OpenSession())
             {
                 session.Store(company);
-                session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new JValue(expiry);
+                session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry);
                 session.SaveChanges();
 
                 session.Advanced.LuceneQuery<Company>("Raven/DocumentsByExpirationDate")

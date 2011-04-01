@@ -7,12 +7,13 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
     public class RemoveConflictOnPutTrigger : AbstractPutTrigger
     {
-        public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             if (ReplicationContext.IsInReplicationContext)
                 return;
