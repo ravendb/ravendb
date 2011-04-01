@@ -132,6 +132,48 @@
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>WhereEqualsParams.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Json\Linq\Extensions.cs">
+      <Link>Raven.Json\Linq\Extensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Linq\RavenJArray.cs">
+      <Link>Raven.Json\Linq\RavenJArray.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Linq\RavenJObject.cs">
+      <Link>Raven.Json\Linq\RavenJObject.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Linq\RavenJPath.cs">
+      <Link>Raven.Json\Linq\RavenJPath.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Linq\RavenJToken.cs">
+      <Link>Raven.Json\Linq\RavenJToken.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Linq\RavenJTokenEqualityComparer.cs">
+      <Link>Raven.Json\Linq\RavenJTokenEqualityComparer.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Linq\RavenJTokenReader.cs">
+      <Link>Raven.Json\Linq\RavenJTokenReader.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Linq\RavenJTokenWriter.cs">
+      <Link>Raven.Json\Linq\RavenJTokenWriter.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Linq\RavenJValue.cs">
+      <Link>Raven.Json\Linq\RavenJValue.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Utilities\CopyOnWriteDictionary.cs">
+      <Link>Raven.Json\Utilities\CopyOnWriteDictionary.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Utilities\MathUtils.cs">
+      <Link>Raven.Json\Utilities\MathUtils.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Utilities\MiscellaneousUtils.cs">
+      <Link>Raven.Json\Utilities\MiscellaneousUtils.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Utilities\StringUtils.cs">
+      <Link>Raven.Json\Utilities\StringUtils.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Json\Utilities\ValidationUtils.cs">
+      <Link>Raven.Json\Utilities\ValidationUtils.cs</Link>
+    </Compile>
     <Compile Include="Client\Async\AsyncServerClient.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\HttpJsonRequestFactory.cs" />

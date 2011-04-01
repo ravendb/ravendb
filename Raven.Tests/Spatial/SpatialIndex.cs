@@ -12,7 +12,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Threading;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -67,8 +67,8 @@ namespace Raven.Tests.Spatial
 			for (int i = 0; i < events.Length; i++)
 			{				
 				db.Put("Events/" + (i + 1), null,
-					JObject.FromObject(events[i]),
-					JObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+					RavenJObject.FromObject(events[i]),
+					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
 			}
 
 			const double lat = 38.96939, lng = -77.386398;

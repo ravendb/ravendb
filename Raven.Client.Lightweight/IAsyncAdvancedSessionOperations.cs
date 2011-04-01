@@ -9,9 +9,6 @@ using Raven.Client.Client.Async;
 
 namespace Raven.Client
 {
-	using System.Threading.Tasks;
-	using Database.Data;
-
 	/// <summary>
     /// Advanced async session operations
     /// </summary>

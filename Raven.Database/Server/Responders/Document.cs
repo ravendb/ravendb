@@ -8,9 +8,9 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using System.Linq;
-using Raven.Http;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -44,7 +44,7 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "PATCH":
 					var patchRequestJson = context.ReadJsonArray();
-					var patchRequests = patchRequestJson.Cast<JObject>().Select(PatchRequest.FromJson).ToArray();
+					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
 					switch (patchResult)
 					{
@@ -107,7 +107,7 @@ namespace Raven.Database.Server.Responders
 			{
 				context.SetStatusToNonAuthoritiveInformation();
 			}
-			doc.Metadata["Last-Modified"] = doc.LastModified.ToString("r");
+			((RavenJValue)doc.Metadata["Last-Modified"]).Value = doc.LastModified.ToString("r");
 			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
 		}
 

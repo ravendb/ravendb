@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using Xunit;
@@ -20,7 +20,7 @@ namespace Raven.Tests.ManagedStorage.Bugs
             var tableStorage = new TableStorage(memoryPersistentSource);
             tableStorage.Initialze();
             tableStorage.BeginTransaction();
-            tableStorage.Documents.Put(new JObject
+            tableStorage.Documents.Put(new RavenJObject
             {
                 {"key", "1"},
                 {"etag", Guid.NewGuid().ToByteArray()},
@@ -29,7 +29,7 @@ namespace Raven.Tests.ManagedStorage.Bugs
                 {"entityName", "test"}
             }, new byte[512] );
 
-            tableStorage.Documents.Put(new JObject
+            tableStorage.Documents.Put(new RavenJObject
             {
                 {"key", "2"},
                 {"etag", Guid.NewGuid().ToByteArray()},
@@ -40,7 +40,7 @@ namespace Raven.Tests.ManagedStorage.Bugs
             tableStorage.Commit();
 
             tableStorage.BeginTransaction();
-            tableStorage.Documents.Remove(new JObject { { "key", "1" } });
+            tableStorage.Documents.Remove(new RavenJObject { { "key", "1" } });
             tableStorage.Commit();
 
             tableStorage.Compact();

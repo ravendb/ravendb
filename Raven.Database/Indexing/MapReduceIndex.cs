@@ -6,27 +6,23 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Linq;
-using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
-using Raven.Http.Extensions;
 using Raven.Http.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -101,11 +97,11 @@ namespace Raven.Database.Indexing
 			logIndexing.DebugFormat("Mapped {0} documents for {1}", count, name);
 		}
 
-		private static JObject GetMapedData(object doc)
+		private static RavenJObject GetMapedData(object doc)
 		{
 			if (doc is DynamicJsonObject)
 				return ((DynamicJsonObject)doc).Inner;
-			return JObject.FromObject(doc, new JsonSerializer
+			return RavenJObject.FromObject(doc, new JsonSerializer
 			{
 				Converters =
 			                               	{
@@ -148,7 +144,7 @@ namespace Raven.Database.Indexing
 			var dynamicJsonObject = reduceValue as DynamicJsonObject;
 			if (dynamicJsonObject != null)
 				return dynamicJsonObject.Inner.ToString(Formatting.None);
-			return JToken.FromObject(reduceValue).ToString(Formatting.None);
+			return RavenJToken.FromObject(reduceValue).ToString(Formatting.None);
 		}
 
 

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
@@ -19,8 +18,8 @@ using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
-using Raven.Database.Extensions;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client
 {
@@ -111,7 +110,7 @@ namespace Raven.Client.Client
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
+		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database.Put(key, etag, document, metadata, RavenTransactionAccessor.GetTransactionInformation());
@@ -135,14 +134,14 @@ namespace Raven.Client.Client
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata)
+		public void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			// we filter out content length, because getting it wrong will cause errors 
 			// in the server side when serving the wrong value for this header.
 			// worse, if we are using http compression, this value is known to be wrong
 			// instead, we rely on the actual size of the data provided for us
-			metadata.Remove("Content-Length");
+			metadata.Properties.Remove("Content-Length");
 			database.PutStatic(key, etag, data, metadata);
 		}
 
@@ -360,7 +359,9 @@ namespace Raven.Client.Client
 		public void StoreRecoveryInformation(Guid resourceManagerId,Guid txId, byte[] recoveryInformation)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, new JObject(new JProperty("Resource-Manager-Id", resourceManagerId.ToString())));
+			var jObject = new RavenJObject();
+			jObject.AddValueProperty("Resource-Manager-Id", resourceManagerId.ToString());
+			database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, jObject);
 		}
 
 		/// <summary>

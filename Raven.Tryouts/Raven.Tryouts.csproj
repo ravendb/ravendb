@@ -54,7 +54,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
@@ -89,6 +89,7 @@
     <Reference Include="xunit, Version=1.6.1.1521, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Json\PerfTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Stress\StressTester.cs" />
@@ -113,6 +114,10 @@
     <ProjectReference Include="..\Raven.Http\Raven.Http.csproj">
       <Project>{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}</Project>
       <Name>Raven.Http</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Scenarios\Raven.Scenarios.csproj">
       <Project>{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}</Project>
@@ -147,11 +152,6 @@
       <ProductName>Windows Installer 3.1</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Raven.Database\RavenDB.snk">
-      <Link>RavenDB.snk</Link>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Stress\Data\data_100KB.txt">

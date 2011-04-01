@@ -1,6 +1,7 @@
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Json
 {
@@ -13,7 +14,7 @@ namespace Raven.Abstractions.Json
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             var dts = (DateTimeOffset) value;
-            new JObject
+            new RavenJObject
             {
                 {"DateTime", dts.DateTime},
                 {"Offset", dts.Offset.TotalMilliseconds}
@@ -29,7 +30,7 @@ namespace Raven.Abstractions.Json
         /// </returns>
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            var jObject = JObject.Load(reader);
+            var jObject = RavenJObject.Load(reader);
             var dateTime = jObject.Value<DateTime>("DateTime");
             return new DateTimeOffset(
                 dateTime.Year,dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Millisecond, dateTime.Second, dateTime.Millisecond,

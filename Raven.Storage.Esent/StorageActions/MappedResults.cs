@@ -7,17 +7,16 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using Newtonsoft.Json.Linq;
-using Raven.Database;
 using Raven.Database.Json;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IMappedResultsStorageAction
 	{
-		public void PutMappedResult(string view, string docId, string reduceKey, JObject data, byte[] viewAndReduceKeyHashed)
+		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data, byte[] viewAndReduceKeyHashed)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_pk");
 			Api.MakeKey(session, MappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -40,7 +39,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-        public IEnumerable<JObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
+        public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
 		{
             Api.JetSetCurrentIndex(session, MappedResults, "by_reduce_key_and_view_hashed");
         	foreach (var item in getMappedResultsParams)

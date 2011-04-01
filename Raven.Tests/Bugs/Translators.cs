@@ -7,7 +7,7 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using Microsoft.CSharp.RuntimeBinder;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
@@ -126,7 +126,7 @@ namespace Raven.Tests.Bugs
 
                 using (var s = ds.OpenSession())
                 {
-                    var first = s.Query<JObject>("Users").Customize(x=>x.WaitForNonStaleResults())
+                    var first = s.Query<RavenJObject>("Users").Customize(x=>x.WaitForNonStaleResults())
                         .First();
 
                     Assert.Equal("AYENDE", first.Value<string>("Name"));
@@ -161,7 +161,7 @@ select new { Name = user.Name, Partner = partner.Name }"
 
                 using (var s = ds.OpenSession())
                 {
-                    var first = s.Advanced.LuceneQuery<JObject>("Users")
+                    var first = s.Advanced.LuceneQuery<RavenJObject>("Users")
                         .WaitForNonStaleResults()
                         .WhereEquals("Name", "Oren", true)
                         .First();

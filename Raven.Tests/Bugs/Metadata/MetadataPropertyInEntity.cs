@@ -3,9 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using Newtonsoft.Json.Linq;
+
 using Raven.Client;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata
@@ -48,7 +48,7 @@ namespace Raven.Tests.Bugs.Metadata
                     {
                         if (entity is Account == false)
                             return;
-                        document.Remove("Revision");
+                        document.Properties.Remove("Revision");
                     };
 
                     var account = session.Load<Account>("accounts/1");
@@ -92,17 +92,17 @@ namespace Raven.Tests.Bugs.Metadata
             /// <summary>
             /// Called when converting an entity to a document and metadata
             /// </summary>
-            public void EntityToDocument(object entity, JObject document, JObject metadata)
+            public void EntityToDocument(object entity, RavenJObject document, RavenJObject metadata)
             {
                 if (entity is Account == false)
                     return;
-                document.Remove("Revision");
+                document.Properties.Remove("Revision");
             }
 
             /// <summary>
             /// Called when converting a document and metadata to an entity
             /// </summary>
-            public void DocumentToEntity(object entity, JObject document, JObject metadata)
+            public void DocumentToEntity(object entity, RavenJObject document, RavenJObject metadata)
             {
                 if (entity is Account == false)
                     return;

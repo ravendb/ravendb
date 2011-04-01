@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.IO;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.ManagedStorage
@@ -40,11 +40,11 @@ namespace Raven.Tests.ManagedStorage
 			long lengthAfterFirstTransaction;
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 
 				lengthAfterFirstTransaction = new FileInfo(fileName).Length;
 
-                tx.Batch(mutator => mutator.Documents.AddDocument("Oren", null, JObject.FromObject(new { Name = "Eini" }), new JObject()));
+                tx.Batch(mutator => mutator.Documents.AddDocument("Oren", null, RavenJObject.FromObject(new { Name = "Eini" }), new RavenJObject()));
 
 			}
 

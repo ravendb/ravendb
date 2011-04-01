@@ -4,6 +4,7 @@
 	{
 		static void Main()
 		{
+            Json.PerfTest.RunPerfTest();
 		}
 	}
 }

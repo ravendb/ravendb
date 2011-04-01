@@ -1,6 +1,6 @@
 using System.Dynamic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Client;
 using Raven.Client.Client;
 using Raven.Database.Linq;
@@ -26,10 +26,10 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					session.Store(expando);
 
-					JObject metadata =
+					RavenJObject metadata =
 						session.Advanced.GetMetadataFor((ExpandoObject)expando);
 
-					metadata[PropertyName] = JToken.FromObject(true);
+					metadata[PropertyName] = RavenJToken.FromObject(true);
 
 					session.SaveChanges();
 				}
@@ -39,9 +39,9 @@ namespace Raven.Tests.Bugs.Queries
 					var loaded =
 						session.Load<dynamic>((string)expando.Id);
 
-					JObject metadata =
+					RavenJObject metadata =
 						session.Advanced.GetMetadataFor((DynamicJsonObject)loaded);
-					JToken token = metadata[PropertyName];
+					RavenJToken token = metadata[PropertyName];
 
 					Assert.NotNull(token);
 					Assert.True(token.Value<bool>());
@@ -63,10 +63,10 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					session.Store(expando);
 
-					JObject metadata =
+					RavenJObject metadata =
 						session.Advanced.GetMetadataFor((ExpandoObject)expando);
 
-					metadata[PropertyName] = JToken.FromObject(true);
+					metadata[PropertyName] = RavenJToken.FromObject(true);
 
 					session.SaveChanges();
 				}
@@ -97,10 +97,10 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					session.Store(expando);
 
-					JObject metadata =
+					RavenJObject metadata =
 						session.Advanced.GetMetadataFor((ExpandoObject)expando);
 
-					metadata[PropertyName] = JToken.FromObject(true);
+					metadata[PropertyName] = RavenJToken.FromObject(true);
 
 					session.SaveChanges();
 				}

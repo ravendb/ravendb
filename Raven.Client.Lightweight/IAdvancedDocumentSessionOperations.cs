@@ -4,10 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Http.Exceptions;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
@@ -114,7 +114,7 @@ namespace Raven.Client
         /// </summary>
         /// <param name="instance">The instance.</param>
         /// <returns></returns>
-        JObject GetMetadataFor<T>(T instance);
+        RavenJObject GetMetadataFor<T>(T instance);
 
         /// <summary>
         /// Gets the document id for the specified entity.

@@ -3,17 +3,16 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
-using Raven.Database;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Tests.Triggers
 {
 	public class VetoCapitalNamesPutTrigger : AbstractPutTrigger
 	{
-        public override VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+        public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			var name = document["name"];
 			if(name != null && name.Value<string>().Any(char.IsUpper))

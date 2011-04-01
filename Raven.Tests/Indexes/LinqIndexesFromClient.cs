@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
@@ -59,7 +59,7 @@ namespace Raven.Tests.Indexes
 
         public static dynamic GetDocumentFromString(string json)
         {
-            return JsonToExpando.Convert(JObject.Parse(json));
+            return JsonToExpando.Convert(RavenJObject.Parse(json));
         }
 
 		[Fact]

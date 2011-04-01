@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Munin.Tree;
 
 namespace Raven.Munin
@@ -15,16 +15,16 @@ namespace Raven.Munin
     {
         private readonly string indexDef;
         private IPersistentSource persistentSource;
-        private readonly Func<JToken, IComparable> transform;
+		private readonly Func<RavenJToken, IComparable> transform;
 
-        public SecondaryIndex(Func<JToken, IComparable> transform, string indexDef)
+		public SecondaryIndex(Func<RavenJToken, IComparable> transform, string indexDef)
         {
             this.transform = transform;
             this.indexDef = indexDef;
             IndexId = -1;
         }
 
-        private IBinarySearchTree<IComparable, IBinarySearchTree<JToken, JToken>> Index
+		private IBinarySearchTree<IComparable, IBinarySearchTree<RavenJToken, RavenJToken>> Index
         {
             get { return persistentSource.DictionariesStates[DictionaryId].SecondaryIndicesState[IndexId]; }
             set { persistentSource.DictionariesStates[DictionaryId].SecondaryIndicesState[IndexId] = value; }
@@ -49,16 +49,16 @@ namespace Raven.Munin
         }
         // This is called only from inside persistenceStore.Write
 
-        public void Add(JToken key)
+		public void Add(RavenJToken key)
         {
             IComparable actualKey = transform(key);
             Index = Index.AddOrUpdate(actualKey,
-                new EmptyAVLTree<JToken, JToken>(JTokenComparer.Instance, JTokenCloner.Clone, JTokenCloner.Clone).Add(key, key),
+				new EmptyAVLTree<RavenJToken, RavenJToken>(RavenJTokenComparer.Instance, RavenJTokenCloner.Clone, RavenJTokenCloner.Clone).Add(key, key),
                 (comparable, tree) => tree.Add(key, key));
         }
 
         // This is called only from inside persistenceStore.Write
-        public void Remove(JToken key)
+		public void Remove(RavenJToken key)
         {
             IComparable actualKey = transform(key);
             var result = Index.Search(actualKey);
@@ -67,11 +67,11 @@ namespace Raven.Munin
                 return;
             }
             bool removed;
-            JToken _;
+			RavenJToken _;
             var removedResult = result.Value.TryRemove(key, out removed, out _);
             if (removedResult.IsEmpty)
             {
-                IBinarySearchTree<JToken, JToken> ignored;
+				IBinarySearchTree<RavenJToken, RavenJToken> ignored;
                 Index = Index.TryRemove(actualKey, out removed, out ignored);
             }
             else
@@ -81,12 +81,12 @@ namespace Raven.Munin
         }
 
 
-        public IEnumerable<JToken> SkipFromEnd(int start)
+		public IEnumerable<RavenJToken> SkipFromEnd(int start)
         {
             return persistentSource.Read(() => Index.ValuesInReverseOrder.Skip(start).Select(item => item.Key));
         }
 
-        public IEnumerable<JToken> SkipAfter(JToken key)
+		public IEnumerable<RavenJToken> SkipAfter(RavenJToken key)
         {
             return
                 persistentSource.Read(
@@ -94,7 +94,7 @@ namespace Raven.Munin
                     Index.GreaterThan(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInOrder));
         }
 
-        public IEnumerable<JToken> SkipTo(JToken key)
+		public IEnumerable<RavenJToken> SkipTo(RavenJToken key)
         {
             return
                 persistentSource.Read(
@@ -103,7 +103,7 @@ namespace Raven.Munin
                         binarySearchTree => binarySearchTree.ValuesInOrder));
         }
 
-        public JToken LastOrDefault()
+		public RavenJToken LastOrDefault()
         {
             return persistentSource.Read(()=>
             {
@@ -116,7 +116,7 @@ namespace Raven.Munin
             });
         }
 
-        public JToken FirstOrDefault()
+		public RavenJToken FirstOrDefault()
         {
             return persistentSource.Read(() =>
             {

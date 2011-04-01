@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
@@ -38,7 +38,7 @@ namespace Raven.Tests.Storage
 		{
             db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 
-			db.Put("ayende", null, new JObject(), new JObject(), null);
+			db.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);
 
             db.TransactionalStorage.Batch(accessor => Assert.True(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 		}
@@ -50,7 +50,7 @@ namespace Raven.Tests.Storage
 
             db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 
-			db.Put("ayende", null, new JObject(), new JObject(), null);
+			db.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);
 
 			for (int i = 0; i < 50; i++)
 			{

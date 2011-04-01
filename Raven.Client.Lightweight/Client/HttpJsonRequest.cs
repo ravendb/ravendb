@@ -12,6 +12,7 @@ using System.Runtime.Caching;
 using System.Text;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client
 {
@@ -26,7 +27,24 @@ namespace Raven.Client.Client
 		private byte[] bytesForNextWrite;
 
 
-		internal readonly WebRequest WebRequest;
+		/// <summary>
+		/// Creates the HTTP json request.
+		/// </summary>
+		/// <param name="self">The self.</param>
+		/// <param name="url">The URL.</param>
+		/// <param name="method">The method.</param>
+		/// <param name="metadata">The metadata.</param>
+		/// <param name="credentials">The credentials.</param>
+		/// <param name="convention">The document conventions governing this request</param>
+		/// <returns></returns>
+		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
+		{
+			var request = new HttpJsonRequest(url, method, metadata, credentials, convention.ShouldCacheRequest(url));
+			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
+			return request;
+		}
+
+		private readonly WebRequest webRequest;
 		// temporary create a strong reference to the cached data for this request
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
@@ -39,13 +57,18 @@ namespace Raven.Client.Client
 		/// <value>The response headers.</value>
 		public NameValueCollection ResponseHeaders { get; set; }
 
-		internal HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials, HttpJsonRequestFactory factory)
+		private HttpJsonRequest(string url, string method, ICredentials credentials, bool cacheRequest)
+			: this(url, method, new RavenJObject(), credentials,cacheRequest)
 		{
-			this.Url = url;
-			this.factory = factory;
-			this.Method = method;
-			WebRequest = WebRequest.Create(url);
-			WebRequest.Credentials = credentials;
+		}
+
+		private HttpJsonRequest(string url, string method, RavenJObject metadata, ICredentials credentials, bool cacheRequest)
+		{
+			this.url = url;
+			this.method = method;
+			this.cacheRequest = cacheRequest;
+			webRequest = WebRequest.Create(url);
+			webRequest.Credentials = credentials;
 			WriteMetadata(metadata);
 			WebRequest.Method = method;
 			WebRequest.Headers["Accept-Encoding"] = "deflate,gzip";
@@ -127,15 +150,15 @@ namespace Raven.Client.Client
 		/// <value>The response status code.</value>
 		public HttpStatusCode ResponseStatusCode { get; set; }
 
-		private void WriteMetadata(JObject metadata)
+		private void WriteMetadata(RavenJObject metadata)
 		{
-			if (metadata == null || metadata.Count == 0)
+			if (metadata == null || metadata.Properties.Count == 0)
 			{
 				WebRequest.ContentLength = 0;
 				return;
 			}
 
-			foreach (var prop in metadata)
+			foreach (var prop in metadata.Properties)
 			{
 				if (prop.Value == null)
 					continue;

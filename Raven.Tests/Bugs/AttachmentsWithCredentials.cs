@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
@@ -47,7 +47,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanPutAndGetAttachmentWithAccessModeNone()
         {
-            store.DatabaseCommands.PutAttachment("ayende", null, new byte[] {1, 2, 3, 4}, new JObject());
+            store.DatabaseCommands.PutAttachment("ayende", null, new byte[] {1, 2, 3, 4}, new RavenJObject());
 
             Assert.Equal(new byte[] {1, 2, 3, 4}, store.DatabaseCommands.GetAttachment("ayende").Data);
         }
@@ -55,7 +55,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanDeleteAttachmentWithAccessModeNone()
         {
-            store.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 1, 2, 3, 4 }, new JObject());
+            store.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 1, 2, 3, 4 }, new RavenJObject());
 
             Assert.Equal(new byte[] { 1, 2, 3, 4 }, store.DatabaseCommands.GetAttachment("ayende").Data);
 

@@ -4,17 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Munin
 {
-    public class JTokenComparer : ICompererAndEquality<JToken>
+	public class RavenJTokenComparer : IComparerAndEquality<RavenJToken>
     {
-        public static JTokenComparer Instance = new JTokenComparer();
+        public static RavenJTokenComparer Instance = new RavenJTokenComparer();
 
-        public virtual int Compare(JToken x, JToken y)
+		public virtual int Compare(RavenJToken x, RavenJToken y)
         {
             // null handling
             if (x == null && y == null)
@@ -36,12 +36,12 @@ namespace Raven.Munin
                 case JTokenType.Object:
                     // that here we only compare _x_ properties, that is intentional and allows to create partial searches
                     // we compare based on _y_ properties order, because that is more stable in our usage
-                    var xObj = (JObject)x;
-                    var yObj = (JObject)y;
-                    foreach (var prop in yObj)
+					var xObj = (RavenJObject)x;
+					var yObj = (RavenJObject)y;
+                    foreach (var prop in yObj.Properties)
                     {
-                        JToken value;
-                        if (xObj.TryGetValue(prop.Key, out value) == false)
+                        RavenJToken value;
+                        if (xObj.Properties.TryGetValue(prop.Key, out value) == false)
                             continue;
                         var compare = Compare(value, prop.Value);
                         if (compare != 0)
@@ -49,24 +49,24 @@ namespace Raven.Munin
                     }
                     return 0;
                 case JTokenType.Array:
-                    var xArray = (JArray)x;
-                    var yArray = (JArray)y;
+                    var xArray = (RavenJArray)x;
+                    var yArray = (RavenJArray)y;
 
-                    for (int i = 0; i < xArray.Count && i < yArray.Count; i++)
+                    for (int i = 0; i < xArray.Length && i < yArray.Length; i++)
                     {
                         var compare = Compare(xArray[i], yArray[i]);
                         if (compare == 0)
                             continue;
                         return compare;
                     }
-                    return xArray.Count - yArray.Count;
-                case JTokenType.Property:
-                    var xProp = ((JProperty)x);
-                    var yProp = ((JProperty)y);
-                    var compareTo = xProp.Name.CompareTo(yProp.Name);
-                    if (compareTo != 0)
-                        return compareTo;
-                    return Compare(xProp.Value, yProp.Value);
+                    return xArray.Length - yArray.Length;
+				//case JTokenType.Property:
+				//    var xProp = ((JProperty)x);
+				//    var yProp = ((JProperty)y);
+				//    var compareTo = xProp.Name.CompareTo(yProp.Name);
+				//    if (compareTo != 0)
+				//        return compareTo;
+				//    return Compare(xProp.Value, yProp.Value);
                 case JTokenType.Integer:
                     return x.Value<long>().CompareTo(y.Value<long>());
                 case JTokenType.Float:
@@ -95,12 +95,12 @@ namespace Raven.Munin
             }
         }
 
-        public bool Equals(JToken x, JToken y)
+		public bool Equals(RavenJToken x, RavenJToken y)
         {
             return Compare(x, y) == 0;
         }
 
-        public virtual int GetHashCode(JToken obj)
+		public virtual int GetHashCode(RavenJToken obj)
         {
             switch (obj.Type)
             {
@@ -111,18 +111,19 @@ namespace Raven.Munin
                 case JTokenType.Bytes:
                     return obj.Value<byte[]>().Aggregate(0, (current, val) => (current * 397) ^ val);
                 case JTokenType.Array:
+					return ((RavenJArray)obj).Aggregate(0, (current, val) => (current * 397) ^ GetHashCode(val));
                 case JTokenType.Object:
-                    return obj.Aggregate(0, (current, val) => (current * 397) ^ GetHashCode(val));
-                case JTokenType.Property:
-                    var prop = ((JProperty)obj);
-                    return (prop.Name.GetHashCode() * 397) ^ GetHashCode(prop.Value);
+                    return ((RavenJObject)obj).Properties.Aggregate(0, (current, val) => (current * 397) ^ ((val.Key.GetHashCode() * 397) ^ GetHashCode(val.Value)));
+				//case JTokenType.Property:
+				//    var prop = ((JProperty)obj);
+				//    return (prop.Name.GetHashCode() * 397) ^ GetHashCode(prop.Value);
                 case JTokenType.Integer:
                 case JTokenType.Float:
                 case JTokenType.Boolean:
                 case JTokenType.Date:
-                    return ((JValue)obj).Value.GetHashCode();
+                    return ((RavenJValue)obj).Value.GetHashCode();
                 case JTokenType.String:
-                    var jStr = ((JValue)obj);
+                    var jStr = ((RavenJValue)obj);
                     if (jStr.Value == null)
                         return 0;
                     return StringComparer.InvariantCultureIgnoreCase.GetHashCode(jStr.Value<string>());

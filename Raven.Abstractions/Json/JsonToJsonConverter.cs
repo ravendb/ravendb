@@ -1,8 +1,8 @@
 ﻿#if !NET_3_5
 using System;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Json
 {
@@ -12,8 +12,8 @@ namespace Raven.Database.Json
 		{
 			if(value is DynamicNullObject)
 				writer.WriteNull();
-			else if (value is JObject)
-				((JObject)value).WriteTo(writer);
+			else if (value is RavenJObject)
+				((RavenJObject)value).WriteTo(writer);
 			else
 				((DynamicJsonObject)value).Inner.WriteTo(writer);
 		}
@@ -25,7 +25,7 @@ namespace Raven.Database.Json
 
 		public override bool CanConvert(Type objectType)
 		{
-			return objectType == typeof(JObject) || objectType == typeof(DynamicJsonObject) || objectType == typeof(DynamicNullObject);
+			return objectType == typeof(RavenJObject) || objectType == typeof(DynamicJsonObject) || objectType == typeof(DynamicNullObject);
 		}
 	}
 }

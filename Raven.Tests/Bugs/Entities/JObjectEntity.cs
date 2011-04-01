@@ -1,4 +1,4 @@
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Xunit;
 using System.Linq;
 
@@ -13,13 +13,13 @@ namespace Raven.Tests.Bugs.Entities
 			{
 				using(var s = store.OpenSession())
 				{
-					s.Store(JObject.FromObject(new {Name = "Ayende"}));
+					s.Store(RavenJObject.FromObject(new {Name = "Ayende"}));
 					s.SaveChanges();
 				}
 
 				using(var s = store.OpenSession())
 				{
-					var jObject = s.Advanced.LuceneQuery<JObject>().First();
+					var jObject = s.Advanced.LuceneQuery<RavenJObject>().First();
 					Assert.Equal("Ayende", jObject.Value<string>("Name"));
 				}
 			}

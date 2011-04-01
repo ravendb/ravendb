@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
@@ -40,7 +40,7 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void WillGetStaleResultWhenThereArePendingTasks()
         {
-            db.Put("a", null, new JObject(), new JObject(), null);
+            db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 
             Assert.True(db.Query("Raven/DocumentsByEntityName", new IndexQuery
             {
@@ -53,7 +53,7 @@ namespace Raven.Tests.Indexes
         public void WillGetNonStaleResultWhenAskingWithCutoffDate()
         {
 			db.SpinBackgroundWorkers();
-            db.Put("a", null, new JObject(), new JObject(), null);
+            db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 
         	for (int i = 0; i < 50; i++)
         	{
@@ -75,7 +75,7 @@ namespace Raven.Tests.Indexes
 
 			db.StopBackgroundWokers();
 
-			db.Put("a", null, new JObject(), new JObject(), null);
+			db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 
 
 			Assert.True(db.Query("Raven/DocumentsByEntityName", new IndexQuery

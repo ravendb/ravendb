@@ -15,7 +15,6 @@ using System.Net.Sockets;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -27,6 +26,7 @@ using Raven.Database.Json;
 using Raven.Http.Exceptions;
 using Raven.Http.Extensions;
 using Raven.Http.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client
 {
@@ -116,7 +116,7 @@ namespace Raven.Client.Client
 			EnsureIsNotNullOrEmpty(requestUrl, "url");
 			return ExecuteWithReplication("GET", serverUrl =>
 			{
-				var metadata = new JObject();
+				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, serverUrl + requestUrl, "GET", metadata, credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
@@ -190,18 +190,18 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <returns></returns>
 		public JsonDocument DirectGet(string serverUrl, string key)
 		{
-			var metadata = new JObject();
+			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, serverUrl + "/docs/" + key, "GET", metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			try
 			{
                 var requestString = request.ReadResponseString();
-                JObject meta;
-                JObject jsonData;
+                RavenJObject meta = null;
+                RavenJObject jsonData = null;
                 try
                 {
-                    jsonData = JObject.Parse(requestString);
+                    jsonData = RavenJObject.Parse(requestString);
                     meta = request.ResponseHeaders.FilterHeaders(isServerDocument: false);
                 }
                 catch (JsonReaderException jre)
@@ -233,8 +233,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
 					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-					var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
-					var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+					var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
+					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 					throw new ConflictException("Conflict detected on " + key +
 												", conflict must be resolved before the document will be accessible")
@@ -260,7 +260,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
+		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata)
 		{
 			return ExecuteWithReplication("PUT", u => DirectPut(metadata, key, etag, document, u));
 		}
@@ -290,13 +290,14 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		}
 
 		private PutResult DirectPut(JObject metadata, string key, Guid? etag, JObject document, string operationUrl)
+		private PutResult DirectPut(RavenJObject metadata, string key, Guid? etag, RavenJObject document, string operationUrl)
 		{
 			if (metadata == null)
-				metadata = new JObject();
+				metadata = new RavenJObject();
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 			AddTransactionInformation(metadata);
 			if (etag != null)
-				metadata["ETag"] = new JValue(etag.Value.ToString());
+				metadata["ETag"] = new RavenJValue(etag.Value.ToString());
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, method, metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			request.Write(document.ToString());
@@ -317,14 +318,14 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return JsonConvert.DeserializeObject<PutResult>(readResponseString, new JsonEnumConverter());
 		}
 
-		private static void AddTransactionInformation(JObject metadata)
+		private static void AddTransactionInformation(RavenJObject metadata)
 		{
 			var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
 			if (transactionInformation == null)
 				return;
 
 			string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
-			metadata["Raven-Transaction-Information"] = new JValue(txInfo);
+			metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
 		}
 
 		/// <summary>
@@ -349,18 +350,18 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata)
+		public void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata)
 		{
 			var webRequest = WebRequest.Create(url + "/static/" + key);
 			webRequest.Method = "PUT";
 			webRequest.Credentials = credentials;
-			foreach (var header in metadata.Properties())
+			foreach (var header in metadata.Properties)
 			{
-				if (header.Name.StartsWith("@"))
+				if (header.Key.StartsWith("@"))
 					continue;
 
 				//need to handle some headers differently, see http://msdn.microsoft.com/en-us/library/system.net.webheadercollection.aspx
-				string matchString = header.Name;
+				string matchString = header.Key;
 				string formattedHeaderValue = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
 
 				//Just let an exceptions (from Parse(..) functions) bubble-up, so that the user can see they've provided an invalid value
@@ -375,7 +376,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				else if (matchString == "Content-Type")
 					webRequest.ContentType = formattedHeaderValue;                
 				else
-					webRequest.Headers[header.Name] = formattedHeaderValue;
+					webRequest.Headers[header.Key] = formattedHeaderValue;
 			}
 			if (etag != null)
 			{
@@ -443,8 +444,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw;
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
-					var conflictsDoc = JObject.Load(new BsonReader(httpWebResponse.GetResponseStreamWithHttpDecompression()));
-					var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+					var conflictsDoc = RavenJObject.Load(new BsonReader(httpWebResponse.GetResponseStreamWithHttpDecompression()));
+					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 					throw new ConflictException("Conflict detected on " + key +
 												", conflict must be resolved before the attachment will be accessible")
@@ -512,7 +513,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			var responseString = httpJsonRequest.ReadResponseString();
-			return JArray.Parse(responseString).Select(x => x.Value<string>()).ToArray();
+			return RavenJArray.Parse(responseString).Select(x => x.Value<string>()).ToArray();
 		}
 
 		/// <summary>
@@ -543,17 +544,17 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					return null;
 				throw;
 			}
-			var indexDefResultAsJson = JObject.Load(new JsonTextReader(new StringReader(indexDefAsString)));
+			var indexDefResultAsJson = RavenJObject.Load(new JsonTextReader(new StringReader(indexDefAsString)));
 			return convention.CreateSerializer().Deserialize<IndexDefinition>(
-				new JTokenReader(indexDefResultAsJson["Index"])
+				new RavenJTokenReader(indexDefResultAsJson["Index"])
 				);
 		}
 
 		private void DirectDelete(string key, Guid? etag, string operationUrl)
 		{
-			var metadata = new JObject();
+			var metadata = new RavenJObject();
 			if (etag != null)
-				metadata.Add("ETag", new JValue(etag.Value.ToString()));
+				metadata.Properties.Add("ETag", new RavenJValue(etag.Value.ToString()));
 			AddTransactionInformation(metadata);
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
@@ -683,11 +684,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			var serializer = convention.CreateSerializer();
-			JToken json;
+			RavenJToken json;
 			try
 			{
 				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-					json = (JToken)serializer.Deserialize(reader);
+					json = (RavenJToken)serializer.Deserialize(reader);
 			}
 			catch (WebException e)
 			{
@@ -701,8 +702,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 				IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
-				Results = json["Results"].Children().Cast<JObject>().ToList(),
-				Includes = json["Includes"].Children().Cast<JObject>().ToList(),
+				Results = json["Results"].Children().Cast<RavenJObject>().ToList(),
+				Includes = json["Includes"].Children().Cast<RavenJObject>().ToList(),
 				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 				IndexName = json.Value<string>("IndexName"),
 				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
@@ -757,16 +758,16 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			else
 			{
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
-				request.Write(new JArray(ids).ToString(Formatting.None));
+				request.Write(new RavenJArray(ids).ToString(Formatting.None));
 			}
 
 			request.AddOperationHeaders(OperationsHeaders);
-			var result = JObject.Parse(request.ReadResponseString());
+			var result = RavenJObject.Parse(request.ReadResponseString());
 
 			return new MultiLoadResult
 			{
-				Includes = result.Value<JArray>("Includes").Cast<JObject>().ToList(),
-				Results = result.Value<JArray>("Results").Cast<JObject>().ToList()
+				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
+				Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
 			};
 		}
 
@@ -782,11 +783,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private BatchResult[] DirectBatch(IEnumerable<ICommandData> commandDatas, string operationUrl)
 		{
-			var metadata = new JObject();
+			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var req = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/bulk_docs", "POST", metadata, credentials, convention);
 			req.AddOperationHeaders(OperationsHeaders);
-			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
+			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 			req.Write(jArray.ToString(Formatting.None));
 
 			string response;
@@ -1007,7 +1008,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "PATCH", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
-				request.Write(new JArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented));
+				request.Write(new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented));
 				try
 				{
 					request.ReadResponseString();
@@ -1045,11 +1046,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			var serializer = convention.CreateSerializer();
-			JToken json;
+			RavenJToken json;
 			try
 			{
 				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-					json = (JToken)serializer.Deserialize(reader);
+					json = (RavenJToken)serializer.Deserialize(reader);
 			}
 			catch (WebException e)
 			{
@@ -1082,11 +1083,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			var serializer = convention.CreateSerializer();
-			JToken json;
+			RavenJToken json;
 			try
 			{
 				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-					json = (JToken)serializer.Deserialize(reader);
+					json = (RavenJToken)serializer.Deserialize(reader);
 			}
 			catch (WebException e)
 			{
@@ -1095,7 +1096,6 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw new InvalidOperationException("could not execute suggestions at this time");
 				throw;
 			}
-
 			return json.Values<string>();
 		}
 

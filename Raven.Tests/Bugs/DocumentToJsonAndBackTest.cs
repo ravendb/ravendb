@@ -6,7 +6,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Linq;
@@ -31,7 +31,7 @@ namespace Raven.Tests.Bugs
 		{
 			var conventions = new DocumentConvention();
 
-			var jObject = JObject.FromObject(page, conventions.CreateSerializer());
+			var jObject = RavenJObject.FromObject(page, conventions.CreateSerializer());
 
 			dynamic dynamicObject = new DynamicJsonObject(jObject);
 			Assert.NotNull(dynamicObject.CoAuthors as IEnumerable);
@@ -43,7 +43,7 @@ namespace Raven.Tests.Bugs
 		public void ListOnDynamicJsonObjectFromJsonIsAnArray()
 		{
 			var conventions = new DocumentConvention();
-			var jObject = JObject.FromObject(page,
+			var jObject = RavenJObject.FromObject(page,
 											 conventions.CreateSerializer());
 
 			dynamic dynamicObject = new DynamicJsonObject(jObject);
@@ -92,10 +92,8 @@ namespace Raven.Tests.Bugs
 				GenerateInstance();
 
 			var conventions = new DocumentConvention();
-			var o = JObject.FromObject(page,conventions.CreateSerializer());
-			o["@metadata"] = new JObject(
-				new JProperty("Raven-Entity-Name", "Pages")
-				);
+			var o = RavenJObject.FromObject(page,conventions.CreateSerializer());
+			o["@metadata"] = new RavenJObject {{"Raven-Entity-Name", "Pages"}};
 			dynamic dynamicObject = new DynamicJsonObject(o);
 
 			var result = mapInstance.MapDefinition(new[] { dynamicObject }).ToList<object>();

@@ -6,10 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -27,11 +27,11 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			JArray itemsToLoad;
+			RavenJArray itemsToLoad;
 			if(context.Request.HttpMethod == "POST")
 				itemsToLoad = context.ReadJsonArray();
 			else
-				itemsToLoad = new JArray(context.Request.QueryString.GetValues("id"));
+				itemsToLoad = new RavenJArray(context.Request.QueryString.GetValues("id"));
 			var result = new MultiLoadResult();
 			var loadedIds = new HashSet<string>();
 			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
@@ -44,7 +44,7 @@ namespace Raven.Database.Server.Responders
                     includedEtags.AddRange(etag.ToByteArray());
 				    result.Includes.Add(includedDoc);
 				}, includes, loadedIds);
-				foreach (JToken item in itemsToLoad)
+				foreach (RavenJToken item in itemsToLoad)
 				{
 					var value = item.Value<string>();
 					if(loadedIds.Add(value)==false)

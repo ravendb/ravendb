@@ -10,11 +10,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.Caching;
 using System.Security.Cryptography;
 using System.Threading;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Munin.Tree;
 
 namespace Raven.Munin
@@ -24,7 +23,7 @@ namespace Raven.Munin
         private ThreadLocal<Guid> txId;
         public string Name { get; set; }
 
-        public IEnumerable<JToken> Keys
+        public IEnumerable<RavenJToken> Keys
         {
             get
             {
@@ -32,24 +31,24 @@ namespace Raven.Munin
             }
         }
 
-        private IBinarySearchTree<JToken, PositionInFile> KeyToFilePos
+        private IBinarySearchTree<RavenJToken, PositionInFile> KeyToFilePos
         {
             get { return parent.DictionaryStates[TableId].KeyToFilePositionInFiles; }
             set { parent.DictionaryStates[TableId].KeyToFilePositionInFiles = value; }
         }
 
 
-        private readonly ConcurrentDictionary<JToken, Guid> keysModifiedInTx;
+        private readonly ConcurrentDictionary<RavenJToken, Guid> keysModifiedInTx;
 
         private readonly ConcurrentDictionary<Guid, List<Command>> operationsInTransactions = new ConcurrentDictionary<Guid, List<Command>>();
 
         private IPersistentSource persistentSource;
-        private readonly ICompererAndEquality<JToken> comparer;
+        private readonly IComparerAndEquality<RavenJToken> comparer;
 
         private Database parent;
         public int TableId { get; set; }
 
-        public void Add(string name, Expression<Func<JToken, IComparable>> func)
+        public void Add(string name, Expression<Func<RavenJToken, IComparable>> func)
         {
             var secondaryIndex = new SecondaryIndex(func.Compile(), func.ToString())
             {
@@ -58,18 +57,19 @@ namespace Raven.Munin
             SecondaryIndices.Add(secondaryIndex);
         }
 
-        public Table(string name) : this(JTokenComparer.Instance, name)
+        public Table(string name) : this(RavenJTokenComparer.Instance, name)
         {
         }
 
-        public Table(Func<JToken, JToken> clusteredIndexeExtractor, string name): this(new ModifiedJTokenComparer(clusteredIndexeExtractor), name)
+		public Table(Func<RavenJToken, RavenJToken> clusteredIndexeExtractor, string name)
+			: this(new ModifiedJTokenComparer(clusteredIndexeExtractor), name)
         {
             
         }
 
-        private Table(ICompererAndEquality<JToken> comparer, string name)
+        private Table(IComparerAndEquality<RavenJToken> comparer, string name)
         {
-            keysModifiedInTx = new ConcurrentDictionary<JToken, Guid>(comparer);
+			keysModifiedInTx = new ConcurrentDictionary<RavenJToken, Guid>(comparer);
             this.comparer = comparer;
             Name = name;
             SecondaryIndices = new List<SecondaryIndex>();
@@ -114,13 +114,13 @@ namespace Raven.Munin
             }
         }
 
-        public ReadResult Read(JToken key)
+        public ReadResult Read(RavenJToken key)
         {
             return Read(key, txId.Value);
         }
 
 
-        public bool UpdateKey(JToken key)
+		public bool UpdateKey(RavenJToken key)
         {
             return UpdateKey(key, txId.Value);
         }
@@ -130,17 +130,17 @@ namespace Raven.Munin
             get { return SecondaryIndices.First(x=>x.Name == indexName); }
         }
 
-        public bool Remove(JToken key)
+        public bool Remove(RavenJToken key)
         {
             return Remove(key, txId.Value);
         }
 
-        public bool Put(JToken key, byte[] value)
+        public bool Put(RavenJToken key, byte[] value)
         {
             return Put(key, value, txId.Value);
         }
 
-        public bool Put(JToken key, byte[] value, Guid transactionId)
+        public bool Put(RavenJToken key, byte[] value, Guid transactionId)
         {
             Guid existing;
             if (keysModifiedInTx.TryGetValue(key, out existing) && existing != transactionId)
@@ -161,7 +161,7 @@ namespace Raven.Munin
             return true;
         }
 
-        internal bool UpdateKey(JToken key, Guid txId)
+		internal bool UpdateKey(RavenJToken key, Guid txId)
         {
             Guid existing;
             if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
@@ -169,8 +169,8 @@ namespace Raven.Munin
 
             var readResult = Read(key, txId);
 
-            if (readResult != null && 
-                new JTokenEqualityComparer().Equals(key, readResult.Key))
+            if (readResult != null &&
+				new RavenJTokenEqualityComparer().Equals(key, readResult.Key))
                 return true; // no need to do anything, user wrote the same data as is already in, hence, no op
 
             operationsInTransactions.GetOrAdd(txId, new List<Command>())
@@ -189,7 +189,7 @@ namespace Raven.Munin
             return true;
         }
 
-        internal ReadResult Read(JToken key, Guid txId)
+		internal ReadResult Read(RavenJToken key, Guid txId)
         {
             byte[] readData = null;
 
@@ -243,7 +243,7 @@ namespace Raven.Munin
             return ReadData(command.Position, command.Size, command.Key);
         }
 
-        private byte[] ReadData(long pos, int size, JToken key)
+		private byte[] ReadData(long pos, int size, RavenJToken key)
         {
             if (pos == -1)
                 return null;
@@ -254,7 +254,7 @@ namespace Raven.Munin
             });
         }
 
-        private byte[] ReadDataNoCaching(Stream log, long pos, int size, JToken key)
+		private byte[] ReadDataNoCaching(Stream log, long pos, int size, RavenJToken key)
         {
             log.Position = pos;
             var binaryReader = new BinaryReader(log);
@@ -311,7 +311,7 @@ namespace Raven.Munin
             }
         }
 
-        public bool Remove(JToken key, Guid transactionId)
+		public bool Remove(RavenJToken key, Guid transactionId)
         {
             Guid existing;
             if (keysModifiedInTx.TryGetValue(key, out existing) && existing != transactionId)
@@ -331,7 +331,7 @@ namespace Raven.Munin
             return true;
         }
 
-        private void AddInteral(JToken key, PositionInFile position)
+		private void AddInteral(RavenJToken key, PositionInFile position)
         {
             KeyToFilePos = KeyToFilePos.AddOrUpdate(key, position, (token, oldPos) =>
             {
@@ -348,7 +348,7 @@ namespace Raven.Munin
             }
         }
 
-        private void RemoveInternal(JToken key)
+		private void RemoveInternal(RavenJToken key)
         {
             PositionInFile removedValue;
             bool removed;
@@ -379,7 +379,7 @@ namespace Raven.Munin
         {
             public int Size { get; set; }
             public long Position { get; set; }
-            public JToken Key { get; set; }
+			public RavenJToken Key { get; set; }
             public Func<byte[]> Data { get; set; }
         }
 
@@ -417,12 +417,12 @@ namespace Raven.Munin
             int index = 0;
             foreach (var secondaryIndex in SecondaryIndices)
             {
-                persistentSource.DictionariesStates[TableId].SecondaryIndicesState.Add(new EmptyAVLTree<IComparable, IBinarySearchTree<JToken, JToken>>(Comparer<IComparable>.Default,x=>x, x=>x));
+				persistentSource.DictionariesStates[TableId].SecondaryIndicesState.Add(new EmptyAVLTree<IComparable, IBinarySearchTree<RavenJToken, RavenJToken>>(Comparer<IComparable>.Default, x => x, x => x));
                 secondaryIndex.Initialize(persistentSource, TableId, index++);
             }
         }
 
-    	public bool UpdateKey(JToken key, long position, int size)
+		public bool UpdateKey(RavenJToken key, long position, int size)
     	{
 			Guid existing;
 			if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId.Value)

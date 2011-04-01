@@ -4,14 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
 using log4net;
-using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
-using Raven.Database;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
 using Raven.Database.Extensions;
@@ -22,7 +19,7 @@ namespace Raven.Storage.Managed
     {
         private readonly TableStorage storage;
         private readonly IUuidGenerator generator;
-        private ILog logger = LogManager.GetLogger(typeof(TasksStorageActions));
+        private readonly ILog logger = LogManager.GetLogger(typeof(TasksStorageActions));
 
         public TasksStorageActions(TableStorage storage, IUuidGenerator generator)
         {
@@ -32,7 +29,7 @@ namespace Raven.Storage.Managed
 
         public void AddTask(Task task, DateTime addedAt)
         {
-            storage.Tasks.Put(new JObject
+            storage.Tasks.Put(new RavenJObject
             {
                 {"index", task.Index},
                 {"id", generator.CreateSequentialUuid().ToByteArray()},
@@ -80,7 +77,7 @@ namespace Raven.Storage.Managed
             if (task.SupportsMerging == false)
                 return;
 
-            var keyForTaskToTryMergings = storage.Tasks["ByIndexAndType"].SkipTo(new JObject
+            var keyForTaskToTryMergings = storage.Tasks["ByIndexAndType"].SkipTo(new RavenJObject
             {
                 {"index", task.Index},
                 {"type", task.Type},

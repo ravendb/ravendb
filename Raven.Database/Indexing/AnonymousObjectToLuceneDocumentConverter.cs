@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -31,25 +32,25 @@ namespace Raven.Database.Indexing
 			        select field);
 		}
 
-        public static IEnumerable<AbstractField> Index(JObject document, IndexDefinition indexDefinition, Field.Store defaultStorage)
+        public static IEnumerable<AbstractField> Index(RavenJObject document, IndexDefinition indexDefinition, Field.Store defaultStorage)
         {
-        	return (from property in document.Cast<JProperty>()
-        	        let name = property.Name
+        	return (from property in document.Properties
+        	        let name = property.Key
 					where name != Constants.DocumentIdFieldName
-        	        let value = GetPropertyValue(property)
+        	        let value = GetPropertyValue(property.Value)
         	        from field in CreateFields(name, value, indexDefinition, defaultStorage)
         	        select field);
         }
 
-        private static object GetPropertyValue(JProperty property)
+        private static object GetPropertyValue(RavenJToken property)
         {
-            switch (property.Value.Type)
+            switch (property.Type)
             {
                 case JTokenType.Array:
                 case JTokenType.Object:
-                    return property.Value.ToString(Formatting.None);
+                    return property.ToString(Formatting.None);
                 default:
-                    return property.Value.Value<object>();
+                    return property.Value<object>();
             }
         }
 
@@ -164,7 +165,7 @@ namespace Raven.Database.Indexing
 			else 
 			{
 				yield return new Field(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-				yield return new Field(name, JToken.FromObject(value).ToString(), indexDefinition.GetStorage(name, defaultStorage),
+				yield return new Field(name, RavenJToken.FromObject(value).ToString(), indexDefinition.GetStorage(name, defaultStorage),
                                        indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 			}
 
@@ -213,7 +214,7 @@ namespace Raven.Database.Indexing
             if (itemsToIndex is string)
                 return false;
 
-            if (itemsToIndex is JObject)
+            if (itemsToIndex is RavenJObject)
                 return false;
 
             if (itemsToIndex is IDictionary)

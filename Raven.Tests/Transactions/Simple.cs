@@ -4,8 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Http;
@@ -33,7 +32,7 @@ namespace Raven.Tests.Transactions
         public void PutNewDocInTxCommitAndThenGetIt()
         {
             var transactionInformation = new TransactionInformation{Id = Guid.NewGuid(),Timeout = TimeSpan.FromMinutes(1)};
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
             db.Commit(transactionInformation.Id);
 
@@ -44,7 +43,7 @@ namespace Raven.Tests.Transactions
         public void PutNewDocInTxAndThenGetItBeforeCommitReturnsNull()
         {
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
             Assert.Null(db.Get("ayende", null));
         }
@@ -54,7 +53,7 @@ namespace Raven.Tests.Transactions
         public void PutNewDocInTxAndThenGetItBeforeCommitInSameTransactionReturnsNonNull()
         {
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
             Assert.NotNull(db.Get("ayende", transactionInformation));
         }
@@ -62,9 +61,9 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void UpdateDocInTxCommitAndThenGetIt()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
             db.Commit(transactionInformation.Id);
 
@@ -76,9 +75,9 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void UpdateDocInTxAndThenGetItBeforeCommit()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
             Assert.NotNull(db.Get("ayende", null));
             Assert.Equal("oren", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
@@ -87,9 +86,9 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void UpdateDocInTxAndThenGetItBeforeCommitInSameTx()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
             Assert.NotNull(db.Get("ayende", transactionInformation));
             Assert.Equal("rahien", db.Get("ayende", transactionInformation).ToJson()["ayende"].Value<string>());
@@ -99,11 +98,11 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void SeveralUdpatesInTheSameTransaction()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien1'}"), new JObject(), transactionInformation);
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien2'}"), new JObject(), transactionInformation);
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien3'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien1'}"), new RavenJObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien2'}"), new RavenJObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien3'}"), new RavenJObject(), transactionInformation);
 
             Assert.Equal("oren", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
             Assert.Equal("rahien3", db.Get("ayende", transactionInformation).ToJson()["ayende"].Value<string>());

@@ -8,11 +8,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using log4net;
-using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Backup;
 using Raven.Database.Json;
 using Raven.Database.Extensions;
+using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
@@ -94,7 +94,7 @@ namespace Raven.Storage.Managed.Backup
 				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				backupStatus.IsRunning = false;
 				backupStatus.Completed = DateTime.UtcNow;
-				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(backupStatus),
+				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
 				             jsonDocument.Metadata,
 				             null);
 			}
@@ -126,7 +126,7 @@ namespace Raven.Storage.Managed.Backup
 					Message = newMsg,
 					Timestamp = DateTime.UtcNow
 				});
-				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(backupStatus), jsonDocument.Metadata,
+				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus), jsonDocument.Metadata,
 				             null);
 			}
 			catch (Exception e)

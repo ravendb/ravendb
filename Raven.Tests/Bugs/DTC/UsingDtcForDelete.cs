@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Transactions;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Client.Document;
 using Xunit;
 using TransactionInformation = Raven.Http.TransactionInformation;
@@ -24,8 +24,8 @@ namespace Raven.Tests.Bugs.DTC
 					Id = Guid.NewGuid()
 				};
 
-				store.DocumentDatabase.Put(documentKey, null, new JObject(),
-				                     JObject.Parse(
+				store.DocumentDatabase.Put(documentKey, null, new RavenJObject(),
+				                     RavenJObject.Parse(
 				                     	@"{
   ""Raven-Entity-Name"": ""MySagaDatas"",
   ""Raven-Clr-Type"": ""TestNServiceBusSagaWithRavenDb.MySagaData, TestNServiceBusSagaWithRavenDb"",

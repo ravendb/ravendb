@@ -4,14 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins.Builtins
 {
     public class FilterRavenInternalDocumentsReadTrigger : AbstractReadTrigger
     {
-        public override ReadVetoResult AllowRead(string key, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+        public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
         {
             if(key == null)
                 return ReadVetoResult.Allowed;

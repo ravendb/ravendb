@@ -3,14 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Data
 {
 	public class IndexQueryResult
 	{
 		public string Key { get; set; }
-		public JObject Projection { get; set; }
+		public RavenJObject Projection { get; set; }
 
 		public bool Equals(IndexQueryResult other)
 		{

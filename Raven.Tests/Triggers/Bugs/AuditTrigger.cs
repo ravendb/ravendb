@@ -2,12 +2,13 @@
 using Raven.Database.Plugins;
 using Raven.Http;
 using Raven.Database.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Tests.Triggers.Bugs
 {
     public class AuditTrigger : AbstractPutTrigger
     {
-        public override void OnPut(string key, Newtonsoft.Json.Linq.JObject document, Newtonsoft.Json.Linq.JObject metadata, Raven.Http.TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, Raven.Http.TransactionInformation transactionInformation)
         {
             if (AuditContext.IsInAuditContext)
                 return;
