@@ -168,7 +168,7 @@ namespace Raven.Database.Indexing
 			}
 			if (stringValue == Constants.NullValue)
 				stringValue = null;
-			return new JProperty(fld.Name(), stringValue);
+			return new KeyValuePair<string, RavenJToken>(fld.Name(), stringValue);
 		}
 
 		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, bool> action)
@@ -456,7 +456,7 @@ namespace Raven.Database.Indexing
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
-			readonly HashSet<JObject> alreadyReturned;
+			readonly HashSet<RavenJObject> alreadyReturned;
 			private readonly FieldsToFetch fieldsToFetch;
 
 			public IndexQueryOperation(
@@ -471,7 +471,7 @@ namespace Raven.Database.Indexing
 				this.fieldsToFetch = fieldsToFetch;
 
 				if (fieldsToFetch.IsDistinctQuery)
-					alreadyReturned = new HashSet<JObject>(new JTokenEqualityComparer());
+					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
 				
 			}
 

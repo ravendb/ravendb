@@ -267,7 +267,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private JsonDocument[] DirectStartsWith(string operationUrl, string keyPrefix, int start, int pageSize)
 		{
-			var metadata = new JObject();
+			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", operationUrl, Uri.EscapeDataString(keyPrefix), start, pageSize);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", metadata, credentials, convention);
@@ -286,10 +286,9 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw;
 				throw ThrowConcurrencyException(e);
 			}
-			return SerializationHelper.JObjectsToJsonDocuments(JArray.Parse(readResponseString).OfType<JObject>()).ToArray();
+			return SerializationHelper.RavenJObjectsToJsonDocuments(RavenJArray.Parse(readResponseString).OfType<RavenJObject>()).ToArray();
 		}
 
-		private PutResult DirectPut(JObject metadata, string key, Guid? etag, JObject document, string operationUrl)
 		private PutResult DirectPut(RavenJObject metadata, string key, Guid? etag, RavenJObject document, string operationUrl)
 		{
 			if (metadata == null)

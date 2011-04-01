@@ -88,7 +88,7 @@ namespace Raven.Client.Client
 		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize)
 		{
 			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, start, pageSize);
-			return SerializationHelper.JObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<JObject>()).ToArray();
+			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
 		}
 
 		/// <summary>

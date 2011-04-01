@@ -5,6 +5,7 @@ using System.Runtime.Caching;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client
 {
@@ -29,7 +30,7 @@ namespace Raven.Client.Client
 		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials,
 													 DocumentConvention convention)
 		{
-			return CreateHttpJsonRequest(self, url, method, new JObject(), credentials, convention);
+			return CreateHttpJsonRequest(self, url, method, new RavenJObject(), credentials, convention);
 		}
 
 		/// <summary>
@@ -42,7 +43,7 @@ namespace Raven.Client.Client
 		/// <param name="credentials">The credentials.</param>
 		/// <param name="convention">The document conventions governing this request</param>
 		/// <returns></returns>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata,
+		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, RavenJObject metadata,
 													 ICredentials credentials, DocumentConvention convention)
 		{
 			var request = new HttpJsonRequest(url, method, metadata, credentials, this);

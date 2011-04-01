@@ -22,7 +22,7 @@ namespace Raven.Database
 		public JsonDocument()
 		{
 			DataAsJson = new RavenJObject();
-			Metadata = new JObject();
+			Metadata = new RavenJObject();
 		}
 		/// <summary>
 		/// 	Gets or sets the document data as json.

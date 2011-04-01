@@ -16,7 +16,7 @@ namespace Raven.Database.Data
 		{
 			if (ReferenceEquals(null, other)) return false;
 			if (ReferenceEquals(this, other)) return true;
-			return Equals(other.Key, Key) && new JTokenEqualityComparer().Equals(other.Projection, Projection);
+			return Equals(other.Key, Key) && new RavenJTokenEqualityComparer().Equals(other.Projection, Projection);
 		}
 
 		public override bool Equals(object obj)
@@ -30,7 +30,7 @@ namespace Raven.Database.Data
 		{
 			unchecked
 			{
-				return ((Key != null ? Key.GetHashCode() : 0)*397) ^ (Projection != null ? new JTokenEqualityComparer().GetHashCode(Projection) : 0);
+				return ((Key != null ? Key.GetHashCode() : 0)*397) ^ (Projection != null ? new RavenJTokenEqualityComparer().GetHashCode(Projection) : 0);
 			}
 		}
 	}

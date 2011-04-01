@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -23,9 +24,9 @@ namespace Raven.Storage.Managed
     {
         private readonly TableStorage storage;
         private readonly IUuidGenerator generator;
-        private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
+		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 
-        public TransactionStorageActions(TableStorage storage, IUuidGenerator generator, IEnumerable<AbstractDocumentCodec> documentCodecs)
+		public TransactionStorageActions(TableStorage storage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
         {
             this.storage = storage;
             this.generator = generator;
