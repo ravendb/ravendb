@@ -705,12 +705,13 @@ If you really want to do in memory filtering on the data returned from the query
 
 			OpenSubclause();
 
-			WhereContains(fieldName, values.First());
+			WhereContains(fieldName, values[0]);
 
-			foreach(var value in values.Skip(1))
+
+			for (var i = 1; i < values.Length; i++)
 			{
 				OrElse();
-				WhereContains(fieldName, value);
+				WhereContains(fieldName, values[i]);
 			}
 
 			CloseSubclause();
