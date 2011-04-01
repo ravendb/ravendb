@@ -63,6 +63,10 @@
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator\Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator.csproj">
       <Project>{B09A78D9-B609-459F-9AE1-319799330C6B}</Project>
       <Name>Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator</Name>
