@@ -28,8 +28,8 @@ namespace Raven.Client.Client
 					let _ = doc.Remove("@metadata")
 					let key = Extract(metadata, "@id", string.Empty)
 					let lastModified = Extract(metadata, "Last-Modified", DateTime.Now, (string d) => ConvertToUtcDate(d))
-					let etag = Extract(metadata, "@etag", Guid.Empty)
-					let nai = Extract(metadata, "Non-Authoritive-Information", false)
+					let etag = Extract(metadata, "@etag", Guid.Empty, (string g) => Guid.Parse(g))
+					let nai = Extract(metadata, "Non-Authoritive-Information", false, (string b) => Convert.ToBoolean(b))
 					select new JsonDocument
 					{
 						Key = key,
