@@ -397,7 +397,15 @@ namespace Raven.Http
                 if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
                 {
                     databaseLastRecentlyUsed.AddOrUpdate(tenantId, DateTime.Now, (s, time) => DateTime.Now);
-                    ctx.AdjustUrl(match.Value);
+
+					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false)
+					{
+						ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
+					}
+                	else
+					{
+						ctx.AdjustUrl(match.Value);
+					}
                     currentTenantId.Value = tenantId;
                     currentDatabase.Value = resourceStore;
                     currentConfiguration.Value = resourceStore.Configuration;
