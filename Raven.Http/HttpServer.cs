@@ -398,7 +398,7 @@ namespace Raven.Http
                 {
                     databaseLastRecentlyUsed.AddOrUpdate(tenantId, DateTime.Now, (s, time) => DateTime.Now);
 
-					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false)
+					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
 					{
 						ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
 					}
