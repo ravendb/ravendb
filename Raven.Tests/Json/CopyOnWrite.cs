@@ -31,7 +31,7 @@ namespace Raven.Tests.Json
             f.Properties["2"] = f2;
             f1 = (RavenJObject) f.CloneToken();
             f.Properties.Remove("2");
-            Assert.Null(f.Properties["2"]);
+        	Assert.Throws(typeof (KeyNotFoundException), () => f.Properties["2"]);
             Assert.NotNull(f1.Properties["2"]);
         }
     }
