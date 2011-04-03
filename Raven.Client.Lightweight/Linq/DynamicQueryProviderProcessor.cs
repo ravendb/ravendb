@@ -53,7 +53,7 @@ namespace Raven.Client.Linq
 			var info = new ExpressionInfo(path, memberExpression.Member.GetMemberType(), memberExpression.Expression is MemberExpression);
 
 			return new ExpressionInfo(
-				CurrentPath + info.Path,
+				queryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, CurrentPath, info.Path), 
 				info.Type,
 				memberExpression.Expression is MemberExpression);
 		}

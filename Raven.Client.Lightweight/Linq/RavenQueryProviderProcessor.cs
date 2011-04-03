@@ -21,7 +21,10 @@ namespace Raven.Client.Linq
 	public class RavenQueryProviderProcessor<T>
 	{
 		private readonly Action<IDocumentQueryCustomization> customizeQuery;
-		private readonly IDocumentQueryGenerator queryGenerator;
+		/// <summary>
+		/// The query generator
+		/// </summary>
+		protected readonly IDocumentQueryGenerator queryGenerator;
 		private readonly Action<QueryResult> afterQueryExecuted;
 		private bool chainedWhere;
 		private int insideWhere;
@@ -31,7 +34,10 @@ namespace Raven.Client.Linq
 		private Type newExpressionType;
 		private string currentPath = string.Empty;
 		private int subClauseDepth;
-		private readonly string indexName;
+		/// <summary>
+		/// The index name
+		/// </summary>
+		protected readonly string indexName;
 
 		/// <summary>
 		/// Gets the current path in the case of expressions within collections
@@ -265,7 +271,9 @@ namespace Raven.Client.Linq
 			var path = memberExpression.ToString();
 			path = path.Substring(path.LastIndexOf('.') + 1);
 
-			return new ExpressionInfo(path, memberExpression.Member.GetMemberType(), memberExpression.Expression is MemberExpression);
+			return new ExpressionInfo(
+				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path), 
+				memberExpression.Member.GetMemberType(), memberExpression.Expression is MemberExpression);
 		}
 
 		/// <summary>
