@@ -38,6 +38,9 @@
     <Reference Include="log4net">
       <HintPath>..\..\SharedLibs\log4net.dll</HintPath>
     </Reference>
+    <Reference Include="MissingBitsFromClientProfile">
+      <HintPath>..\..\SharedLibs\MissingBitsFromClientProfile.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
