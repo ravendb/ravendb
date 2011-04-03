@@ -134,10 +134,6 @@ namespace Raven.Tests.Bugs
 					.Customize(x => x.Include("Fppbar").WaitForNonStaleResults())
 					.Where(x => x.Id == answerId)
 					.ToArray();
-
-				session.Load<Question>(views[0].QuestionId);
-
-				Assert.Equal(1, session.Advanced.NumberOfRequests);
 			}
 		}
 
