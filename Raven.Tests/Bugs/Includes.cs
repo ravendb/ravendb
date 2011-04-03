@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
+using LiveProjectionsBug;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
@@ -117,6 +118,44 @@ namespace Raven.Tests.Bugs
 				Assert.Equal(1, session.Advanced.NumberOfRequests);
 
 				var customer = session.Load<Customer>(orders[0].Customer.Id);
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
+			}
+		}
+
+		[Fact]
+		public void IncludeMissingProperty()
+		{
+			new Answers_ByAnswerEntity().Execute(store);
+			var answerId = ComplexValuesFromTransformResults.CreateEntities(store);
+			using (var session = store.OpenSession())
+			{
+				var views = session
+					.Query<Answer, Answers_ByAnswerEntity>()
+					.Customize(x => x.Include("Fppbar").WaitForNonStaleResults())
+					.Where(x => x.Id == answerId)
+					.ToArray();
+
+				session.Load<Question>(views[0].QuestionId);
+
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
+			}
+		}
+
+		[Fact]
+		public void IncludeOnMapReduce()
+		{
+			new Votes_ByAnswerEntity().Execute(store);
+			var answerId = ComplexValuesFromTransformResults.CreateEntities(store);
+			using (var session = store.OpenSession())
+			{
+				var vote = session
+					.Query<AnswerVote, Votes_ByAnswerEntity>()
+					.Customize(x => x.Include("QuestionId").WaitForNonStaleResults())
+					.Where(x => x.AnswerId == answerId)
+					.FirstOrDefault();
+
+				session.Load<Question>(vote.QuestionId);
+
 				Assert.Equal(1, session.Advanced.NumberOfRequests);
 			}
 		}
