@@ -119,7 +119,7 @@ namespace Raven.Munin
 			try
 			{
 				var cmds = ReadJObject(log);
-				return cmds.Children().Values().Select(cmd => new Command
+				return cmds.Children().Select(cmd => new Command
 				{
 					Key = cmd.Value<RavenJToken>("key"),
 					Position = cmd.Value<long>("position"),
