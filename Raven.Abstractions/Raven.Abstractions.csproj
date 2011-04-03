@@ -83,6 +83,8 @@
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />
+    <Compile Include="Json\Default.cs" />
+    <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
     <Compile Include="MEF\IPartMetadata.cs" />
     <Compile Include="MEF\OrderedPartCollection.cs" />
     <Compile Include="Json\JsonDateTimeOffsetConverter.cs" />

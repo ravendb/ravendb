@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Json;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Http.Abstractions;
@@ -27,6 +28,7 @@ namespace Raven.Http.Extensions
 
 		private static readonly string EmbeddedLastChangedDate =
 			File.GetLastWriteTime(typeof (HttpExtensions).Assembly.Location).Ticks.ToString("G");
+
 
 		private static Encoding GetRequestEncoding(IHttpContext context)
 		{
@@ -50,10 +52,7 @@ namespace Raven.Http.Extensions
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
 			using (var jsonReader = new JsonTextReader(streamReader))
-				return (T)new JsonSerializer
-				{
-					Converters = {new JsonEnumConverter()}
-				}.Deserialize(jsonReader, typeof(T));
+				return (T)JsonExtensions.CreateDefaultJsonSerializer().Deserialize(jsonReader, typeof(T));
 		}
 
 		public static JArray ReadJsonArray(this IHttpContext context)
@@ -80,10 +79,7 @@ namespace Raven.Http.Extensions
 
 		public static void WriteJson(this IHttpContext context, object obj)
 		{
-			WriteJson(context, JToken.FromObject(obj, new JsonSerializer
-			{
-				Converters = {new JsonToJsonConverter(), new JsonEnumConverter()},
-			}));
+			WriteJson(context, JToken.FromObject(obj, JsonExtensions.CreateDefaultJsonSerializer()));
 		}
 
 		public static void WriteJson(this IHttpContext context, JToken obj)
@@ -106,7 +102,7 @@ namespace Raven.Http.Extensions
 			{
 				Formatting = Formatting.None
 			};
-			obj.WriteTo(jsonTextWriter, new JsonEnumConverter());
+			obj.WriteTo(jsonTextWriter, Default.Converters);
 			jsonTextWriter.Flush();
 			if (string.IsNullOrEmpty(jsonp) == false)
 			{
