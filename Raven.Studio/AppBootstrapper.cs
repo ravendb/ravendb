@@ -7,7 +7,6 @@
 	using System.ComponentModel.Composition.Primitives;
 	using System.Linq;
 	using System.Reflection;
-	using System.Windows;
 	using System.Windows.Controls;
 	using Caliburn.Micro;
 	using Framework;
@@ -82,52 +81,7 @@
 			ConventionManager.AddElementConvention<BusyIndicator>(BusyIndicator.IsBusyProperty, "IsBusy", null);
 
 			var original = ViewLocator.LocateForModelType;
-			ViewLocator.LocateForModelType = (t, v, c) => { return LocateForModelType(t, v, c, original); };
-		}
-
-		static UIElement LocateForModelType(Type modelType, DependencyObject viewLocation, object context,
-		                             Func<Type, DependencyObject, object, UIElement> original)
-		{
-			string viewTypeName;
-			Type viewType;
-			
-			// case 1: types that are not in the Studio assembly
-			if(modelType.Assembly != Assembly.GetExecutingAssembly())
-			{
-				var name = "Raven.Studio.Data." + modelType.Name;
-
-				if (name.Contains("`"))
-					name = name.Substring(0, name.IndexOf("`"));
-				
-				viewTypeName = name + "View";
-
-				if (context != null)
-				{
-					viewTypeName = viewTypeName.Remove(viewTypeName.Length - 4, 4);
-					viewTypeName = viewTypeName + "." + context;
-				}
-
-				viewType = (from assmebly in AssemblySource.Instance
-				                from type in assmebly.GetExportedTypes()
-				                where type.FullName == viewTypeName
-				                select type).FirstOrDefault();
-
-				if (viewType != null)
-					return ViewLocator.GetOrCreateViewType(viewType);
-			}
-
-			// case 2: simplified convention
-			viewTypeName = modelType.FullName + "View";
-			viewType = (from assmebly in AssemblySource.Instance
-							from type in assmebly.GetExportedTypes()
-							where type.FullName == viewTypeName
-							select type).FirstOrDefault();
-
-			if (viewType != null)
-				return ViewLocator.GetOrCreateViewType(viewType);
-
-			// case 3: apply the default when all else fails
-			return original(modelType, viewLocation, context);
+			ViewLocator.LocateForModelType = (t, v, c) => { return StudioViewLocator.LocateForModelType(t, v, c, original); };
 		}
 
 		void ShowMessageBox(string message, string title, MessageBoxOptions options = MessageBoxOptions.Ok,
