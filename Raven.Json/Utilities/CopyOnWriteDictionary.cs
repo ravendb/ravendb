@@ -9,7 +9,7 @@ namespace Raven.Json.Utilities
 {
     public class CopyOnWriteJDictionary<TKey> : IDictionary<TKey, RavenJToken>
     {
-        private static readonly RavenJToken DeletedMarker = new RavenJValue(null, JTokenType.Null);
+        private static readonly RavenJToken DeletedMarker = new RavenJValue("*DeletedMarker*", JTokenType.Null);
     	private int deleteCount;
 
 		private CopyOnWriteJDictionary<TKey> inherittedValues;
@@ -44,7 +44,7 @@ namespace Raven.Json.Utilities
 			if (ContainsKey(key))
 				throw new ArgumentException("An item with the same key has already been added: " + key);
 
-        	LocalChanges.Add(key, value);
+        	LocalChanges[key] = value; // we can't use Add, because LocalChanges may contain a DeletedMarker
         }
 
     	public bool ContainsKey(TKey key)
