@@ -117,15 +117,21 @@ namespace Raven.Json.Linq
 
         public new static RavenJArray Load(JsonReader reader)
         {
-            if (reader.TokenType != JsonToken.StartArray)
-                throw new Exception(
-                    "Error reading JObject from JsonReader. Current JsonReader item is not an object: {0}".FormatWith(
-                        CultureInfo.InvariantCulture, reader.TokenType));
+			ValidationUtils.ArgumentNotNull(reader, "reader");
 
-            if (reader.Read() == false)
-                throw new Exception("Unexpected end of json array");
+			if (reader.TokenType == JsonToken.None)
+			{
+				if (!reader.Read())
+					throw new Exception("Error reading RavenJArray from JsonReader.");
+			}
 
-            var ar = new RavenJArray();
+			if (reader.TokenType != JsonToken.StartArray)
+				throw new Exception("Error reading RavenJArray from JsonReader. Current JsonReader item is not an array: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+
+			if (reader.Read() == false)
+				throw new Exception("Unexpected end of json array");
+
+        	var ar = new RavenJArray();
             RavenJToken val = null;
             do
             {
