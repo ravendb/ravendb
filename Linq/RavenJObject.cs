@@ -184,7 +184,7 @@ namespace Raven.Json.Linq
                         if (!string.IsNullOrEmpty(propName))
                         {
                             var val = RavenJObject.Load(reader);
-                            o.Properties.Add(propName, val);
+							o[propName] = val; // TODO: Assert when o.Properties.ContainsKey and its value != val
                             propName = null;
                         }
                         else
@@ -198,7 +198,7 @@ namespace Raven.Json.Linq
                         if (!string.IsNullOrEmpty(propName))
                         {
                             var val = RavenJArray.Load(reader);
-                            o.Properties.Add(propName, val);
+							o[propName] = val; // TODO: Assert when o.Properties.ContainsKey and its value != val
                             propName = null;
                         }
                         else
