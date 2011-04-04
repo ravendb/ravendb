@@ -161,8 +161,7 @@ namespace Raven.Json.Linq
 
             if (reader.TokenType != JsonToken.StartObject)
                 throw new Exception(
-                    "Error reading JObject from JsonReader. Current JsonReader item is not an object: {0}".FormatWith(
-                        CultureInfo.InvariantCulture, reader.TokenType));
+                    "Error reading JObject from JsonReader. Current JsonReader item is not an object: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
 
             if (reader.Read() == false)
                 throw new Exception("Unexpected end of json object");
@@ -213,7 +212,7 @@ namespace Raven.Json.Linq
                         if (!string.IsNullOrEmpty(propName))
                         {
                             var val = RavenJValue.Load(reader);
-                            o.Properties.Add(propName, val);
+                        	o[propName] = val; // TODO: Assert when o.Properties.ContainsKey and its value != val
                             propName = null;
                         }
                         else
