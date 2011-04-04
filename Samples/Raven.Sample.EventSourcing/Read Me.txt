@@ -6,4 +6,4 @@ Raven.Sample.EventSourcing.ShoppingCartAggregator).
 Run the sample, you should get a message saying the the application has wrote several events to Raven.
 Go to the database instance, using http://localhost:8080 and view the events that were entered.
 
-Then hit enter in the sample application, the application will then proceed to read the generated aggregate from the index and dispaly its information.
+Then hit enter in the sample application, the application will then proceed to read the generated aggregate from the index and display its information.

@@ -127,6 +127,10 @@
     <Compile Include="Bugs\CanProjectIdFromDocumentInQueries.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
+    <Compile Include="Bugs\CompiledIndexes\NetworkEventsToNetworkTemp.cs" />
+    <Compile Include="Bugs\CompiledIndexes\NetworkList.cs" />
+    <Compile Include="Bugs\CompiledIndexes\Network.cs" />
+    <Compile Include="Bugs\CompiledIndexes\UsingNetworkEventsToNetworkTemp.cs" />
     <Compile Include="Bugs\ComplexQueryOnSameObject.cs" />
     <Compile Include="Bugs\CustomDynamicObject.cs" />
     <Compile Include="Bugs\CustomEntityName.cs" />
@@ -237,6 +241,7 @@
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryByTypeOnly.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
+    <Compile Include="Bugs\QueryingOnValueWithMinus.cs" />
     <Compile Include="Bugs\QueryingWithDynamicRavenQueryInspector.cs" />
     <Compile Include="Bugs\QueryOptimizer\LinqToQueryParameters.cs" />
     <Compile Include="Bugs\QueryOptimizer\QueryOptimizeTests.cs" />

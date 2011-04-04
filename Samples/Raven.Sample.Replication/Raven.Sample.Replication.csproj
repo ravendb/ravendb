@@ -34,6 +34,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="MissingBitsFromClientProfile">
+      <HintPath>..\..\SharedLibs\MissingBitsFromClientProfile.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>

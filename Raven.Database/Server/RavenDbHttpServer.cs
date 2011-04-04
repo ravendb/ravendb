@@ -20,7 +20,7 @@ namespace Raven.Database.Server
 {
     public class RavenDbHttpServer : HttpServer
     {
-        private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)");
+        private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
 
         public override Regex TenantsQuery
         {

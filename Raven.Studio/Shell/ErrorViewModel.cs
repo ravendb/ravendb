@@ -1,10 +1,13 @@
-﻿namespace Raven.Studio.Shell
+﻿using System.Reflection;
+
+namespace Raven.Studio.Shell
 {
 	using Caliburn.Micro;
 
 	public class ErrorViewModel : Screen
 	{
-		public static bool ErrorAlreadyShown { get; private set; }
+		public MethodInfo CurrentErrorSource { get; set; }
+		public static ErrorViewModel Current { get; set; }
 
 		public ErrorViewModel()
 		{
@@ -16,12 +19,12 @@
 
 		protected override void OnDeactivate(bool close)
 		{
-			ErrorAlreadyShown = false;
+			Current = null;
 		}
 
 		protected override void OnActivate()
 		{
-			ErrorAlreadyShown = true;
+			Current = this;
 		}
 	}
 }

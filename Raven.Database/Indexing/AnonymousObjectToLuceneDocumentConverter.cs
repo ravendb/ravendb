@@ -114,9 +114,18 @@ namespace Raven.Database.Indexing
 
             if (indexDefinition.GetIndex(name, null) == Field.Index.NOT_ANALYZED)// explicitly not analyzed
             {
-                yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
-                                 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
-                yield break;
+				if (value is DateTime)
+				{
+					var val = new JValue(value).ToString();
+					yield return new Field(name, val.Substring(1, val.Length-2), indexDefinition.GetStorage(name, defaultStorage),
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+				}
+				else
+				{
+					yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+					                       indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+				}
+            	yield break;
 			    
             }
 			if (value is string) 

@@ -44,6 +44,8 @@ namespace Raven.Client.Document
 			FindClrType = (id, doc, metadata) => metadata.Value<string>(Raven.Abstractions.Data.Constants.RavenClrType);
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
+			FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => prop;
+			FindPropertyNameForDynamicIndex = (indexedType, indexedName, path, prop) => path + prop;
 			IdentityPartsSeparator = "/";
 			JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)
 			{
@@ -180,6 +182,18 @@ namespace Raven.Client.Document
 		public Func<Type, string> FindTypeTagName { get; set; }
 
 		/// <summary>
+		/// Gets or sets the function to find the indexed property name
+		/// given the indexed document type, the index name, the current path and the property path.
+		/// </summary>
+		public Func<Type, string, string, string, string> FindPropertyNameForIndex { get; set; }
+
+		/// <summary>
+		/// Gets or sets the function to find the indexed property name
+		/// given the indexed document type, the index name, the current path and the property path.
+		/// </summary>
+		public Func<Type, string, string, string, string> FindPropertyNameForDynamicIndex { get; set; }
+
+		/// <summary>
 		/// Whatever or not RavenDB should cache the request to the specified url.
 		/// </summary>
 		public Func<string, bool> ShouldCacheRequest { get; set; }
@@ -217,6 +231,7 @@ namespace Raven.Client.Document
 				Converters =
 					{
 						new JsonEnumConverter(),
+						new JsonDateTimeISO8601Converter(),
                         new JsonDateTimeOffsetConverter(),
 						new JsonLuceneDateTimeConverter(),
                         new JsonValueTypeConverter<int>(int.TryParse),

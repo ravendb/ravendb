@@ -213,6 +213,7 @@ namespace Raven.Client.Document
 				case "url":
 					Url = value;
 					break;
+				case "database":
 				case "defaultdatabase":
 					DefaultDatabase = value;
 					break;

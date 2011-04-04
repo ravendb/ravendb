@@ -695,6 +695,36 @@ If you really want to do in memory filtering on the data returned from the query
             });
         }
 
+		/// <summary>
+		///   Matches substrings of the field
+		/// </summary>
+		public void WhereContains(string fieldName, params object [] values)
+		{
+			if (values == null || values.Length == 0)
+				return;
+
+			OpenSubclause();
+
+			WhereContains(fieldName, values[0]);
+
+
+			for (var i = 1; i < values.Length; i++)
+			{
+				OrElse();
+				WhereContains(fieldName, values[i]);
+			}
+
+			CloseSubclause();
+		}
+
+		/// <summary>
+		///   Matches substrings of the field
+		/// </summary>
+		public void WhereContains(string fieldName, IEnumerable<object> values)
+		{
+			WhereContains(fieldName, values.ToArray());
+		}
+
         /// <summary>
         ///   Matches fields which starts with the specified value.
         /// </summary>
