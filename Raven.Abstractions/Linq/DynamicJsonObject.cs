@@ -13,6 +13,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 
 namespace Raven.Database.Linq
@@ -158,7 +159,7 @@ namespace Raven.Database.Linq
 					if(s != null)
 					{
 						DateTime time;
-						if (DateTime.TryParseExact(s, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
+                        if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
 							return time;
 					}
 					return value;
