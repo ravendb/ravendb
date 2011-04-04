@@ -3,15 +3,22 @@ namespace Raven.Studio.Features.Database
 	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
+	using System.ComponentModel.Composition.Hosting;
+	using System.IO;
 	using System.Linq;
+	using System.Net;
 	using System.Windows.Browser;
 	using System.Windows.Threading;
 	using Caliburn.Micro;
 	using Client;
+	using Client.Client;
 	using Client.Document;
 	using Client.Extensions;
+	using Client.Silverlight.Client;
 	using Framework.Extensions;
 	using Messages;
+	using Newtonsoft.Json;
+	using Newtonsoft.Json.Linq;
 	using Raven.Database.Data;
 	using Statistics;
 	using Action = System.Action;
@@ -26,6 +33,7 @@ namespace Raven.Studio.Features.Database
 		readonly Dictionary<string, DatabaseStatistics> snapshots = new Dictionary<string, DatabaseStatistics>();
 
 		readonly StatisticsViewModel statistics;
+		readonly AggregateCatalog catalog;
 		readonly DispatcherTimer timer;
 
 		readonly TimeSpan updateFrequency = new TimeSpan(0, 0, 0, 5, 0);
@@ -39,10 +47,11 @@ namespace Raven.Studio.Features.Database
 		string status;
 
 		[ImportingConstructor]
-		public Server(IEventAggregator events, StatisticsViewModel statistics)
+		public Server(IEventAggregator events, StatisticsViewModel statistics, AggregateCatalog catalog)
 		{
 			this.events = events;
 			this.statistics = statistics;
+			this.catalog = catalog;
 
 			timer = new DispatcherTimer { Interval = updateFrequency };
 			timer.Tick += delegate { RetrieveStatisticsForCurrentDatabase(); };
@@ -77,6 +86,7 @@ namespace Raven.Studio.Features.Database
 			Store = new DocumentStore { Url = Address };
 			Store.Initialize();
 
+			LoadPlugins();
 
 			using (var session = Store.OpenAsyncSession())
 				session.Advanced.AsyncDatabaseCommands
@@ -108,6 +118,40 @@ namespace Raven.Studio.Features.Database
 							IsInitialized = false;
 							callback();
 						});
+		}
+
+		void LoadPlugins()
+		{
+			var jsonRequestFactory = new HttpJsonRequestFactory();
+			var baseUrl = (Address + "/silverlight/plugins").NoCache();
+			var credentials = new NetworkCredential();
+			var convention = new DocumentConvention();
+
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, baseUrl, "GET", credentials, convention);
+			var response = request.ReadResponseStringAsync();
+
+			response.ContinueWith(_ => Execute.OnUIThread( ()=> { 
+				{
+					var urls = from item in JArray.Parse(_.Result)
+							   let url = item.Value<string>()
+							   select url;
+
+					var catalogs = from url in urls
+								   let fullUrl = Address + "/silverlight/plugin" + url.Replace('\\','/')
+								   let uri = new Uri(fullUrl,UriKind.Absolute)
+								   select new DeploymentCatalog(uri);
+
+					foreach (var deployment in catalogs)
+					{
+						deployment.DownloadCompleted += (s,e)=>
+						{
+							if (e.Error != null)
+								throw e.Error;                           		
+						};
+						deployment.DownloadAsync();
+						catalog.Catalogs.Add(deployment);
+					}
+				} }));
 		}
 
 		public string CurrentDatabase
