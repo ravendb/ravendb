@@ -35,16 +35,17 @@ namespace Raven.Database.Json
 		{
 			if (patchCmd.Name == null)
 				throw new InvalidOperationException("Patch property must have a name property");
-			foreach (var token in document.SelectTokenWithRavenSyntaxReturningFlatStructure( patchCmd.Name ))
+			foreach (var result in document.SelectTokenWithRavenSyntaxReturningFlatStructure( patchCmd.Name ))
 			{
-				// !!! if (token != null) property = token.Parent as JProperty;
+			    var token = result.Item1;
+			    var parent = result.Item2;
 				switch (patchCmd.Type)
 				{
 					case PatchCommandType.Set:
 						SetProperty(patchCmd, patchCmd.Name, token as RavenJValue);
 						break;
 					case PatchCommandType.Unset:
-						RemoveProperty(patchCmd, patchCmd.Name, token);
+                        RemoveProperty(patchCmd, patchCmd.Name, token, parent);
 						break;
 					case PatchCommandType.Add:
 						AddValue(patchCmd, patchCmd.Name, token);
@@ -230,10 +231,10 @@ namespace Raven.Database.Json
 		}
 
 
-		private void RemoveProperty(PatchRequest patchCmd, string propName, RavenJToken token)
+		private void RemoveProperty(PatchRequest patchCmd, string propName, RavenJToken token, RavenJToken parent)
 		{
 			EnsurePreviousValueMatchCurrentValue(patchCmd, token);
-			var o = token as RavenJObject;
+			var o = parent as RavenJObject;
 			if (o != null)
 				o.Properties.Remove(propName);
 		}

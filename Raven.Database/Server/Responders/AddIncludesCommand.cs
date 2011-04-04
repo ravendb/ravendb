@@ -45,7 +45,7 @@ namespace Raven.Database.Server.Responders
 			{
 				foreach (var token in document.SelectTokenWithRavenSyntaxReturningFlatStructure(include))
 				{
-					ExecuteInternal(token);
+					ExecuteInternal(token.Item1);
 				}
 			}
 		}
