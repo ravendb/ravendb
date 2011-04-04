@@ -110,7 +110,13 @@ namespace Raven.Json.Utilities
 			value = null;
 			RavenJToken unsafeVal;
 			if (localChanges != null && localChanges.TryGetValue(key, out unsafeVal))
-				return unsafeVal != DeletedMarker;
+			{
+				if (unsafeVal == DeletedMarker)
+					return false;
+
+				value = unsafeVal;
+				return true;
+			}
 
 			if (inherittedValues == null || !inherittedValues.TryGetValue(key, out unsafeVal) || unsafeVal == DeletedMarker)
 				return false;
@@ -157,10 +163,77 @@ namespace Raven.Json.Utilities
 
         #endregion
 
-        public IEnumerator<KeyValuePair<TKey, RavenJToken>> GetEnumerator()
-        {
-        	return Keys.Select(key => new KeyValuePair<TKey, RavenJToken>(key, this[key])).GetEnumerator();
-        }
+		public class CopyOnWriteDictEnumerator : IEnumerator<KeyValuePair<TKey, RavenJToken>>
+		{
+			private readonly IEnumerator<KeyValuePair<TKey, RavenJToken>> _inheritted, _local;
+			private IEnumerator<KeyValuePair<TKey, RavenJToken>> _current;
+
+			public CopyOnWriteDictEnumerator(IEnumerator<KeyValuePair<TKey, RavenJToken>> inheritted, IEnumerator<KeyValuePair<TKey, RavenJToken>> local)
+			{
+				_inheritted = inheritted;
+				_local = local;
+				_current = _inheritted ?? _local;
+			}
+
+			public void Dispose()
+			{
+				if (_inheritted != null) _inheritted.Dispose();
+				if (_local != null) _local.Dispose();
+			}
+
+			public bool MoveNext()
+			{
+				if (_current == null)
+					return false;
+
+				while (true)
+				{
+					if (!_current.MoveNext())
+					{
+						if (_current == _inheritted && _local != null)
+						{
+							_current = _local;
+							continue;
+						}
+						_current = null;
+						return false;
+					}
+
+					if (_current.Current.Value != DeletedMarker)
+						return true;
+				}
+			}
+
+			public void Reset()
+			{
+				if (_inheritted != null) _inheritted.Reset();
+				if (_local != null) _local.Reset();
+				_current = _inheritted ?? _local;
+			}
+
+			public KeyValuePair<TKey, RavenJToken> Current
+			{
+				get
+				{
+					if (_current == null)
+						throw new InvalidOperationException();
+					return _current.Current;
+				}
+			}
+
+			object IEnumerator.Current
+			{
+				get { return Current; }
+			}
+		}
+
+		public IEnumerator<KeyValuePair<TKey, RavenJToken>> GetEnumerator()
+		{
+			return new CopyOnWriteDictEnumerator(
+				inherittedValues != null ? inherittedValues.GetEnumerator() : null,
+				localChanges != null ? localChanges.GetEnumerator() : null
+				);
+		}
 
     	IEnumerator IEnumerable.GetEnumerator()
         {

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -9,6 +6,15 @@ namespace Raven.Tests.Json
 {
     public class CopyOnWrite
     {
+		[Fact]
+		public void CopyOnWriteStoresValues()
+		{
+			var f = new RavenJObject();
+			f.Add("test", "Test");
+			f.Add("2nd", "second");
+			Assert.True(f.Properties.Values.Count == 2);
+		}
+
         [Fact]
         public void CopyOnWriteWorksCorrectly()
         {
