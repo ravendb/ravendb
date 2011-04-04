@@ -19,8 +19,8 @@
 	using Raven.Database.Data;
 	using Raven.Database.Indexing;
 
-	[ExportTask("Import Database")]
-	public class ImportTask : ConsoleOutputTask, ITask
+	[Plugins.Tasks.ExportTask("Import Database")]
+	public class ImportTask : ConsoleOutputTask
 	{
 		[ImportingConstructor]
 		public ImportTask(IServer server, IEventAggregator events)

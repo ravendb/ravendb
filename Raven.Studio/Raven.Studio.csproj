@@ -259,6 +259,7 @@
     <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
     <Compile Include="Shell\MessageBox\ShowMessageBox.cs" />
+    <Compile Include="StudioViewLocator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -478,6 +479,10 @@
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
       <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
       <Name>Raven.Client.Silverlight</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Studio.Plugins\Raven.Studio.Plugins.csproj">
+      <Project>{C7C5B03F-A1D9-4CAA-A0F2-6BC879C23556}</Project>
+      <Name>Raven.Studio.Plugins</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
