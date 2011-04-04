@@ -41,9 +41,8 @@ namespace Raven.Json.Utilities
 
         public void Add(TKey key, RavenJToken value)
         {
-        	RavenJToken token;
-        	if (LocalChanges.TryGetValue(key, out token) && token == DeletedMarker)
-        		deleteCount -= 1;
+			if (ContainsKey(key))
+				throw new ArgumentException("An item with the same key has already been added: " + key);
 
         	LocalChanges.Add(key, value);
         }
