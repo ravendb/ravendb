@@ -62,12 +62,12 @@ namespace Raven.Json.Utilities
 
     	public ICollection<TKey> Keys
         {
-            get
-            {
+			get
+			{
 				if (localChanges == null)
 					return inherittedValues != null ? inherittedValues.Keys : new HashSet<TKey>();
 
-            	ICollection<TKey> ret = new HashSet<TKey>();
+				ICollection<TKey> ret = new HashSet<TKey>();
 				if (inherittedValues != null)
 				{
 					foreach (var key in inherittedValues.Keys)
@@ -78,17 +78,14 @@ namespace Raven.Json.Utilities
 					}
 				}
 
-				if (localChanges != null)
+				foreach (var key in localChanges.Keys)
 				{
-					foreach (var key in localChanges.Keys)
-					{
-						if (localChanges[key] == DeletedMarker)
-							continue;
-						ret.Add(key);
-					}
+					if (localChanges[key] == DeletedMarker)
+						continue;
+					ret.Add(key);
 				}
-            	return ret;
-            }
+				return ret;
+			}
         }
 
 		public bool Remove(TKey key)
