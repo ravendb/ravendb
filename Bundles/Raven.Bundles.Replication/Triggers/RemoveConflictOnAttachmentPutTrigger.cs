@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -26,7 +25,7 @@ namespace Raven.Bundles.Replication.Triggers
                     return;
                 // this is a conflict document, holding document keys in the 
                 // values of the properties
-                foreach (var prop in oldVersion.Metadata.Value<JArray>("Conflicts"))
+                foreach (var prop in oldVersion.Metadata.Value<RavenJArray>("Conflicts"))
                 {
                     Database.DeleteStatic(prop.Value<string>(), null);
                 }

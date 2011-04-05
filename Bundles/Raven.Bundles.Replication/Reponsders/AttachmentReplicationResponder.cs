@@ -5,9 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using log4net;
-using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
-using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
@@ -109,7 +107,7 @@ namespace Raven.Bundles.Replication.Reponsders
                 log.DebugFormat("Conflicted document {0} has a new version from {1}, adding to conflicted documents", id, src);
                 
                 // just update the current doc with the new conflict document
-                existingAttachment.Metadata.Value<JArray>("Conflicts").Add(JToken.FromObject(newDocumentConflictId));
+                existingAttachment.Metadata.Value<RavenJArray>("Conflicts").Add(RavenJToken.FromObject(newDocumentConflictId));
                 actions.Attachments.AddAttachment(id, existingAttachment.Etag, existingAttachment.Data, existingAttachment.Metadata);
                 return;
             }

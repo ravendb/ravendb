@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Newtonsoft.Json.Linq;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database;
 using Raven.Database.Json;
