@@ -35,7 +35,7 @@ namespace Raven.Bundles.Authorization.Responders
 
 			var list = new List<OperationAllowedResult>();
 			// we don't want security to take hold when we are trying to ask about security
-			using (AuthorizationContext.Enter()) 
+			using (Database.DisableAllTriggersForCurrentThread()) 
 			{
 				foreach (var docId in docIds)
 				{

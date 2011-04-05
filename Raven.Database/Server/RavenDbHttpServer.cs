@@ -75,7 +75,7 @@ namespace Raven.Database.Server
 
             JsonDocument jsonDocument;
             
-            using (DocumentRetriever.DisableReadTriggers())
+            using (DefaultDatabase.DisableAllTriggersForCurrentThread())
                 jsonDocument = DefaultDatabase.Get("Raven/Databases/" + tenantId, null);
 
             if (jsonDocument == null)

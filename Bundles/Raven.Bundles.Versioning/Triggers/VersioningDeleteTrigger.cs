@@ -13,8 +13,6 @@ namespace Raven.Bundles.Versioning.Triggers
     {
         public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
         {
-            if(VersioningContext.IsInVersioningContext)
-                return VetoResult.Allowed;
             JsonDocument document = Database.Get(key, transactionInformation);
             if (document == null)
                 return VetoResult.Allowed;

@@ -39,7 +39,6 @@ namespace Raven.Database.Extensions
                     Latitude = lat,
                     Longitude = lng,
                     Radius = radius,
-                    SortByDistance = context.SortByDistance()
                 };
             }
             return query;

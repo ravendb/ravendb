@@ -37,7 +37,7 @@ namespace Raven.Bundles.Replication.Reponsders
                 return;
             }
 			var array = context.ReadBsonArray();
-            using (ReplicationContext.Enter())
+            using (Database.DisableAllTriggersForCurrentThread())
             {
                 Database.TransactionalStorage.Batch(actions =>
                 {

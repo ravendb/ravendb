@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
 using Xunit;
 using System.Linq;
 
@@ -29,8 +30,7 @@ namespace Raven.Tests.Bugs.CompiledIndexes
 						.WaitForNonStaleResults()
 						.ToList();
 
-					var expected = new JValue(new DateTime(2011,5,29).ToUniversalTime()).ToString();
-					expected = expected.Substring(1, expected.Length - 2);
+					var expected = new DateTime(2011,5,29).ToUniversalTime();
 					Assert.Equal(expected, list[0].NetworkTimeStamp);
 				}
 			}

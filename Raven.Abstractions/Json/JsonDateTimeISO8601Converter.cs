@@ -9,14 +9,14 @@ namespace Raven.Abstractions.Json
 	{
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
-			writer.WriteValue(((DateTime)value).ToString("o", CultureInfo.InvariantCulture));
+            writer.WriteValue(((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 		}
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
 			var s = reader.Value as string;
 			DateTime time;
-			if(s != null && DateTime.TryParseExact(s, "o", CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind, out time))
+		    if(s != null && DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind, out time))
 			{
 				return time;
 			}

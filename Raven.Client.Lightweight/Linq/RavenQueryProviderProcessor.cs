@@ -268,11 +268,12 @@ namespace Raven.Client.Linq
 			MemberExpression memberExpression = GetMemberExpression(expression);
 
 			//for stnadard queries, we take just the last part. But for dynamic queries, we take the whole part
-			var path = memberExpression.ToString();
-			path = path.Substring(path.LastIndexOf('.') + 1);
+			var fullPath = memberExpression.ToString();
+			var prop = fullPath.Substring(fullPath.LastIndexOf('.') + 1);
+			var path = fullPath.Substring(fullPath.IndexOf('.') + 1);
 
 			return new ExpressionInfo(
-				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path), 
+				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, path, prop), 
 				memberExpression.Member.GetMemberType(), memberExpression.Expression is MemberExpression);
 		}
 

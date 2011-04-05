@@ -13,6 +13,7 @@ using System.Security.Cryptography;
 using System.Text;
 using log4net;
 using Newtonsoft.Json;
+using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
