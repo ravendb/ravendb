@@ -16,6 +16,7 @@ using log4net.Filter;
 using log4net.Layout;
 using Raven.Bundles.Replication.Data;
 using Raven.Client;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Http;
 using Raven.Server;
@@ -29,7 +30,7 @@ namespace Raven.Bundles.Tests.Replication
 
         public ReplicationBase()
         {
-            for (int i = 0; i < 15; i++)
+			for (int i = 0; i < 15; i++)
             {
                 database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data #" + i);
             }

@@ -1,236 +1,257 @@
 namespace Raven.Studio.Features.Database
 {
-    using System;
-    using System.Collections.Generic;
-    using System.ComponentModel.Composition;
-    using System.Linq;
-    using System.Threading.Tasks;
-    using System.Windows.Threading;
-    using Caliburn.Micro;
-    using Client;
-    using Client.Document;
-    using Client.Extensions;
-    using Framework;
-    using Messages;
-    using Raven.Database.Data;
-    using StartUp;
-    using Statistics;
-    using Action = System.Action;
+	using System;
+	using System.Collections.Generic;
+	using System.ComponentModel.Composition;
+	using System.Linq;
+	using System.Windows.Browser;
+	using System.Windows.Threading;
+	using Caliburn.Micro;
+	using Client;
+	using Client.Document;
+	using Client.Extensions;
+	using Framework;
+	using Messages;
+	using Newtonsoft.Json.Linq;
+	using Raven.Database.Data;
+	using Statistics;
+	using Action = System.Action;
 
-    [Export(typeof(IServer))]
-    [PartCreationPolicy(CreationPolicy.Shared)]
-    public class Server : PropertyChangedBase, IServer, IHandle<StatisticsUpdateRequested>
-    {
-        const string DefaultDatabaseName = "Default Database";
-        readonly IEventAggregator events;
-        readonly IDatabaseInitializer[] databaseInitializers;
+	[Export(typeof(IServer))]
+	[PartCreationPolicy(CreationPolicy.Shared)]
+	public class Server : PropertyChangedBase, IServer, IHandle<StatisticsUpdateRequested>
+	{
+		const string DefaultDatabaseName = "Default Database";
+		readonly IEventAggregator events;
 
-        readonly Dictionary<string, DatabaseStatistics> snapshots = new Dictionary<string, DatabaseStatistics>();
+		readonly Dictionary<string, DatabaseStatistics> snapshots = new Dictionary<string, DatabaseStatistics>();
 
-        readonly List<string> startupChecks = new List<string>();
-        readonly StatisticsViewModel statistics;
-        readonly DispatcherTimer timer;
+		readonly StatisticsViewModel statistics;
+		readonly DispatcherTimer timer;
 
-        readonly TimeSpan updateFrequency = new TimeSpan(0, 0, 0, 5, 0);
+		readonly TimeSpan updateFrequency = new TimeSpan(0, 0, 0, 5, 0);
 
-        string currentDatabase;
+		string currentDatabase;
 
-        IEnumerable<string> databases;
-        IEnumerable<ServerError> errors;
+		IEnumerable<string> databases;
+		IEnumerable<ServerError> errors;
 
-        bool isInitialized;
+		bool isInitialized;
+		string status;
 
-        [ImportingConstructor]
-        public Server(IEventAggregator events, [ImportMany] IDatabaseInitializer[] databaseInitializers, StatisticsViewModel statistics)
-        {
-            this.events = events;
-            this.databaseInitializers = databaseInitializers;
-            this.statistics = statistics;
+		[ImportingConstructor]
+		public Server(IEventAggregator events, StatisticsViewModel statistics)
+		{
+			this.events = events;
+			this.statistics = statistics;
 
-            timer = new DispatcherTimer { Interval = updateFrequency };
-            timer.Tick += delegate { RetrieveStatisticsForCurrentDatabase(); };
-            events.Subscribe(this);
-        }
+			timer = new DispatcherTimer { Interval = updateFrequency };
+			timer.Tick += delegate { RetrieveStatisticsForCurrentDatabase(); };
+			events.Subscribe(this);
 
-        public bool HasCurrentDatabase { get { return !string.IsNullOrEmpty(CurrentDatabase); } }
-        public void Handle(StatisticsUpdateRequested message) { RefreshStatistics(false); }
-        public IDocumentStore Store { get; private set; }
+			Status = "Initalizing";
+			Databases = new string[] { };
+		}
 
-        public void Connect(Uri serverAddress, Action callback)
-        {
-            Address = serverAddress.OriginalString;
-            Name = serverAddress.OriginalString;
+		public bool HasCurrentDatabase { get { return !string.IsNullOrEmpty(CurrentDatabase); } }
+		public IDocumentStore Store { get; private set; }
 
-            Store = new DocumentStore { Url = Address };
-            Store.Initialize();
+		public string Status
+		{
+			get { return status; }
+			set
+			{
+				status = value;
+				NotifyOfPropertyChange(() => Status);
+			}
+		}
 
-            SelectDatabase(DefaultDatabaseName, callback);
+		public void Handle(StatisticsUpdateRequested message) { RefreshStatistics(false); }
 
-            Store.OpenAsyncSession().Advanced.AsyncDatabaseCommands
-                .GetDatabaseNamesAsync()
-                .ContinueOnSuccess(t =>
-                                    {
-                                        var dbs = new List<string>
-				                   		          	{
-				                   		          		DefaultDatabaseName
-				                   		          	};
-                                        dbs.AddRange(t.Result);
-                                        Databases = dbs;
+		public void Connect(Uri serverAddress, Action callback)
+		{
+			Status = "Connecting to server...";
 
-                                        SelectDatabase(dbs[0], callback);
-                                    });
-        }
+			Address = serverAddress.OriginalString;
+			Name = serverAddress.OriginalString;
 
-        public string CurrentDatabase
-        {
-            get { return currentDatabase; }
-            set
-            {
-                if (value == currentDatabase) return;
+			Store = new DocumentStore { Url = Address };
+			Store.Initialize();
 
-                currentDatabase = value;
-                NotifyOfPropertyChange(() => CurrentDatabase);
-                NotifyOfPropertyChange(() => HasCurrentDatabase);
-            }
-        }
 
-        public void OpenDatabase(string name, Action callback)
-        {
-            if (callback == null) callback = () => { };
+			using (var session = Store.OpenAsyncSession())
+				session.Advanced.AsyncDatabaseCommands
+					.GetDatabaseNamesAsync()
+					.ContinueWith(
+						task =>
+						{
+							IsInitialized = true;
+							Status = "Connected";
+							var dbs = new List<string>
+							{
+								DefaultDatabaseName
+							};
+							dbs.AddRange(task.Result);
+							Databases = dbs;
 
-            CurrentDatabase = name;
-            InitializeCurrentDatabase(() =>
-                                        {
-                                            RefreshStatistics(true);
-                                            RaiseCurrentDatabaseChanged();
+							OpenDatabase(dbs[0], () =>
+							{
+								Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
 
-                                            callback();
-                                        });
-        }
+								if (callback != null) callback();
+							});
+						},
+						faulted =>
+						{
+							var error = "Unable to connect to " + Address;
+							Status = error;
+							events.Publish(new NotificationRaised(error, NotificationLevel.Error));
+							IsInitialized = false;
+							callback();
+						});
+		}
 
-        public IEnumerable<string> Databases
-        {
-            get { return databases; }
-            private set
-            {
-                databases = value;
-                NotifyOfPropertyChange(() => Databases);
-            }
-        }
+		public string CurrentDatabase
+		{
+			get { return currentDatabase; }
+			set
+			{
+				if (value == currentDatabase) return;
 
-        public void CreateDatabase(string databaseName, Action callback)
-        {
-            Store.AsyncDatabaseCommands
-                .EnsureDatabaseExistsAsync(databaseName)
-                .ContinueWith(create =>
-                                  {
-                                      if (callback != null) callback();
-                                      databases = databases.Union(new[] { databaseName });
-                                      NotifyOfPropertyChange(() => Databases);
-                                  });
-        }
+				currentDatabase = value;
+				NotifyOfPropertyChange(() => CurrentDatabase);
+				NotifyOfPropertyChange(() => HasCurrentDatabase);
+			}
+		}
 
-        public bool IsInitialized
-        {
-            get { return isInitialized; }
-            private set
-            {
-                isInitialized = value;
-                NotifyOfPropertyChange(() => IsInitialized);
-            }
-        }
+		public void OpenDatabase(string name, Action callback)
+		{
+			if (callback == null) callback = () => { };
 
-        public string Address { get; private set; }
-        public string Name { get; private set; }
+			CurrentDatabase = name;
+			RefreshStatistics(true);
+			RaiseCurrentDatabaseChanged();
 
-        public IAsyncDocumentSession OpenSession()
-        {
-            return (CurrentDatabase == DefaultDatabaseName)
-                    ? Store.OpenAsyncSession()
-                    : Store.OpenAsyncSession(CurrentDatabase);
-        }
+			using (var session = OpenSession())
+				session.Advanced.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync();
 
-        public IStatisticsSet Statistics { get { return statistics; } }
+			callback();
+		}
 
-        public event EventHandler CurrentDatabaseChanged = delegate { };
-        public event EventHandler Connected = delegate { };
+		public IEnumerable<string> Databases
+		{
+			get { return databases; }
+			private set
+			{
+				databases = value;
+				NotifyOfPropertyChange(() => Databases);
+			}
+		}
 
-        public IEnumerable<ServerError> Errors
-        {
-            get { return errors; }
-            private set
-            {
-                errors = value;
-                NotifyOfPropertyChange(() => Errors);
-            }
-        }
+		public void CreateDatabase(string databaseName, Action callback)
+		{
+			Store.AsyncDatabaseCommands
+				.EnsureDatabaseExistsAsync(databaseName)
+				.ContinueWith(task =>
+								{
+									if (task.Exception != null)
+										return task;
 
-        void SelectDatabase(string name, Action callback)
-        {
-            OpenDatabase(name, () =>
-                                {
-                                    IsInitialized = true;
-                                    Execute.OnUIThread(() => timer.Start());
+									return Store.AsyncDatabaseCommands
+										.ForDatabase(databaseName)
+										.EnsureSilverlightStartUpAsync();
+								})
+				.ContinueOnSuccess(create =>
+									{
+										if (callback != null) callback();
+										databases = databases.Union(new[] { databaseName });
+										NotifyOfPropertyChange(() => Databases);
+										CurrentDatabase = databaseName;
+									});
+		}
 
-                                    Connected(this, EventArgs.Empty);
+		public bool IsInitialized
+		{
+			get { return isInitialized; }
+			private set
+			{
+				isInitialized = value;
+				NotifyOfPropertyChange(() => IsInitialized);
+			}
+		}
 
-                                    if (callback != null) callback();
-                                });
-        }
+		public string Address { get; private set; }
+		public string CurrentDatabaseAddress
+		{
+			get
+			{
+				return (CurrentDatabase == "Default Database")
+					? Address
+					: Address + "/databases/" + HttpUtility.UrlEncode(CurrentDatabase);
+			}
+		}
 
-        void RaiseCurrentDatabaseChanged() { CurrentDatabaseChanged(this, EventArgs.Empty); }
+		public string Name { get; private set; }
 
-        void InitializeCurrentDatabase(Action callback)
-        {
-            if (startupChecks.Contains(CurrentDatabase))
-            {
-                callback();
-                return;
-            }
-            startupChecks.Add(CurrentDatabase);
+		public IAsyncDocumentSession OpenSession()
+		{
+			return (CurrentDatabase == DefaultDatabaseName)
+					? Store.OpenAsyncSession()
+					: Store.OpenAsyncSession(CurrentDatabase);
+		}
 
-            using (var session = OpenSession())
-            {
-                var tasks = from initializer in databaseInitializers
-                            from task in initializer.Initialize(session)
-                            select task;
-                tasks.ExecuteInSequence(callback);
-            }
-        }
+		public IStatisticsSet Statistics { get { return statistics; } }
 
-        void RefreshStatistics(bool clear)
-        {
-            //if (clear) statistics = new StatisticsViewModel();
+		public event EventHandler CurrentDatabaseChanged = delegate { };
 
-            if (snapshots.ContainsKey(CurrentDatabase))
-            {
-                ProcessStatistics(snapshots[CurrentDatabase]);
-            }
+		public IEnumerable<ServerError> Errors
+		{
+			get { return errors; }
+			private set
+			{
+				errors = value;
+				NotifyOfPropertyChange(() => Errors);
+			}
+		}
 
-            RetrieveStatisticsForCurrentDatabase();
-        }
+		void RaiseCurrentDatabaseChanged() { CurrentDatabaseChanged(this, EventArgs.Empty); }
 
-        void RetrieveStatisticsForCurrentDatabase()
-        {
-            if (!HasCurrentDatabase) return;
+		void RefreshStatistics(bool clear)
+		{
+			//if (clear) statistics = new StatisticsViewModel();
 
-            using (var session = OpenSession())
-            {
-                session.Advanced.AsyncDatabaseCommands
-                    .GetStatisticsAsync()
-                    .ContinueOnSuccess(x =>
-                                           {
-                                               snapshots[CurrentDatabase] = x.Result;
-                                               ProcessStatistics(x.Result);
-                                           });
-            }
-        }
+			if (snapshots.ContainsKey(CurrentDatabase))
+			{
+				ProcessStatistics(snapshots[CurrentDatabase]);
+			}
 
-        private void ProcessStatistics(DatabaseStatistics mostRecent)
-        {
-            statistics.Accept(mostRecent);
-            Errors = mostRecent.Errors.OrderByDescending(error => error.Timestamp);
-            events.Publish(new StatisticsUpdated(mostRecent));
-        }
-    }
+			RetrieveStatisticsForCurrentDatabase();
+		}
+
+		void RetrieveStatisticsForCurrentDatabase()
+		{
+			if (!HasCurrentDatabase) return;
+
+			using (var session = OpenSession())
+			{
+				session.Advanced.AsyncDatabaseCommands
+					.GetStatisticsAsync()
+					.ContinueOnSuccess(x => ProcessStatistics(x.Result));
+			}
+		}
+
+		void ProcessStatistics(DatabaseStatistics mostRecent)
+		{
+			bool docsChanged = false;
+			if (snapshots.ContainsKey(CurrentDatabase))
+			{
+				docsChanged = (snapshots[CurrentDatabase].CountOfDocuments != mostRecent.CountOfDocuments);
+			}
+
+			snapshots[CurrentDatabase] = mostRecent;
+			statistics.Accept(mostRecent);
+			Errors = mostRecent.Errors.OrderByDescending(error => error.Timestamp);
+			events.Publish(new StatisticsUpdated(mostRecent) { HasDocumentCountChanged = docsChanged });
+		}
+	}
 }

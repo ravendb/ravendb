@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Framework
+﻿using System.Reflection;
+
+namespace Raven.Studio.Framework
 {
 	using System;
 	using System.Collections.Generic;
@@ -11,17 +13,61 @@
 
 	public static class TaskExtensions
 	{
+
+		public static Task ContinueWith<T>(this Task<T> task, Action<Task<T>> onSuccess, Action<Task<T>> onFault)
+		{
+			return task.ContinueWith(child =>
+			{
+				if (child.IsFaulted)
+				{
+					onFault(child);
+				}
+				else
+				{
+					onSuccess(child);
+				}
+			});
+		}
+
+		public static Task ContinueWith(this Task task, Action<Task> onSuccess, Action<Task> onFault)
+		{
+			return task.ContinueWith(child =>
+			{
+				if (child.IsFaulted)
+				{
+					onFault(child);
+				}
+				else
+				{
+					onSuccess(child);
+				}
+			});
+		}
+
 		public static Task ContinueOnSuccess<T>(this Task<T> task, Action<Task<T>> onSuccess)
 		{
 			return task.ContinueWith(child =>
 			{
 				if (child.IsFaulted)
 				{
-					NotifyUserOfError(child);
+					NotifyUserOfError(child, onSuccess.Method);
 				}
 				else
 				{
+					HideErrorOnSuccess(onSuccess.Method);
 					onSuccess(child);
+				}
+			});
+		}
+
+		private static void HideErrorOnSuccess(MethodInfo source)
+		{
+			Execute.OnUIThread(() =>
+			{
+				if (ErrorViewModel.Current != null && 
+				    ErrorViewModel.Current.CurrentErrorSource == source)
+				{
+					ErrorViewModel.Current.TryClose();
 				}
 			});
 		}
@@ -32,24 +78,31 @@
 			                  	{
 									if (child.IsFaulted)
 									{
-										NotifyUserOfError(child);
+										NotifyUserOfError(child, onSuccess.Method);
 									}
 									else
 									{
+										HideErrorOnSuccess(onSuccess.Method); 
 										onSuccess(child);
 									}
 			                  	});
 		}
 
-		static void NotifyUserOfError(Task child)
+		static void NotifyUserOfError(Task child, MethodInfo errorSource)
 		{
-			Execute.OnUIThread(()=> IoC
-			        .Get<IWindowManager>()
-			        .ShowDialog(new ErrorViewModel
-			                    	{
-			                    		Message = "Unable to connect to server!", 
-										Details = GetErrorDetails(child.Exception)
-			                    	}));
+			Execute.OnUIThread(()=>
+			{
+				if (ErrorViewModel.Current != null)
+					return;
+				
+				IoC.Get<IWindowManager>()
+						.ShowDialog(new ErrorViewModel
+						{
+							CurrentErrorSource = errorSource,
+							Message = "Unable to connect to server!",
+							Details = GetErrorDetails(child.Exception)
+						});
+			});
 		}
 
 		static string GetErrorDetails(AggregateException x)

@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Collections
+﻿using Raven.Client.Client;
+
+namespace Raven.Studio.Features.Collections
 {
 	using System;
 	using System.Collections.Generic;
@@ -7,7 +9,6 @@
 	using System.Threading.Tasks;
 	using Abstractions.Data;
 	using Caliburn.Micro;
-	using Client.Client;
 	using Database;
 	using Documents;
 	using Framework;
@@ -15,14 +16,12 @@
 	using Raven.Database.Data;
 
 	[Export(typeof(CollectionsViewModel))]
+	[ExportDatabaseScreen("Collections", Index = 20)]
 	public class CollectionsViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{
-		readonly Collection raven = new Collection { Name = "Raven", Count = 0 };
 		readonly IServer server;
 		Collection activeCollection;
-
-		public int Index { get { return 20; } }
 
 		[ImportingConstructor]
 		public CollectionsViewModel(IServer server, IEventAggregator events)
@@ -33,13 +32,36 @@
 			events.Subscribe(this);
 
 			this.server = server;
-			SystemCollections = new BindableCollection<Collection>();
+
+			server.CurrentDatabaseChanged += delegate
+			{
+				Initialize();
+			};	
+		}
+
+		void Initialize() {
+			Status = "Retrieving collections";
+
+			Collections = new BindableCollection<Collection>();
 			ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
+
+			NotifyOfPropertyChange(string.Empty);
+		}
+
+		protected override void OnInitialize()
+		{
+			Initialize();
 		}
 
 		public IEnumerable<Collection> Collections { get; private set; }
-		public BindableCollection<Collection> SystemCollections { get; private set; }
 		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments { get; private set; }
+
+		string status;
+		public string Status
+		{
+			get { return status; }
+			set { status = value; NotifyOfPropertyChange(() => Status); }
+		}
 
 		public Collection ActiveCollection
 		{
@@ -69,11 +91,6 @@
 			get { return Collections != null && Collections.Any(); }
 		}
 
-		public Collection RavenCollection
-		{
-			get { return raven; }
-		}
-
 		void GetDocumentsForActiveCollection()
 		{
 			if (ActiveCollection == null) return;
@@ -84,7 +101,7 @@
 
 		Task<DocumentViewModel[]> GetDocumentsForActiveCollectionQuery(int start, int pageSize)
 		{
-			WorkStarted();
+			WorkStarted("retrieving documents for collection.");
 
 			using (var session = server.OpenSession())
 			{
@@ -93,9 +110,9 @@
 					.QueryAsync("Raven/DocumentsByEntityName", query, new string[] { })
 					.ContinueWith(x =>
 									{
-										if (x.IsFaulted) throw new NotImplementedException("TODO");
+										WorkCompleted("retrieving documents for collection.");
 
-										WorkCompleted();
+										if (x.IsFaulted) throw new NotImplementedException("TODO");
 
 										return x.Result.Results
 											.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
@@ -106,33 +123,34 @@
 
 		protected override void OnActivate()
 		{
-			WorkStarted();
+			WorkStarted("fetching collections");
 
 			var currentActiveCollection = ActiveCollection;
 			using (var session = server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 25)
-					.ContinueOnSuccess(x =>
-										{
-											Collections = x.Result;
-											NotifyOfPropertyChange(() => LargestCollectionCount);
-											NotifyOfPropertyChange(() => Collections);
+					.ContinueWith(
+					x =>
+					{
+						WorkCompleted("fetching collections");
 
-											ActiveCollection = currentActiveCollection ?? Collections.FirstOrDefault();
-											NotifyOfPropertyChange(() => HasCollections);
+						Collections = x.Result;
+						NotifyOfPropertyChange(() => LargestCollectionCount);
+						NotifyOfPropertyChange(() => Collections);
 
-											WorkCompleted();
-										});
+						ActiveCollection = currentActiveCollection ?? Collections.FirstOrDefault();
+						NotifyOfPropertyChange(() => HasCollections);
 
-				//session.Advanced.AsyncDatabaseCommands
-				//    .GetDocumentsStartingWithAsync("Raven",0,1)
-				//    .ContinueOnSuccess(x =>
-				//                        {
-				//                            var c = new Collection { Count = x.Result.TotalResults, Name = "Orphans" };
-				//                            OrphansCollection = c;
-				//                            NotifyOfPropertyChange(() => OrphansCollection);
-				//                        });
+						Status = Collections.Any() ? string.Empty : "The database contains no collections.";
+					},
+					faulted =>
+					{
+						WorkCompleted("fetching collections");
+						var error = "Unable to retrieve collections from server.";
+						Status = error;
+						NotifyError(error);
+					});
 			}
 		}
 

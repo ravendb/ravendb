@@ -270,11 +270,13 @@ namespace Lucene.Net.Search.Spans
 			System.Text.StringBuilder buffer = new System.Text.StringBuilder();
 			buffer.Append("spanOr([");
 			System.Collections.IEnumerator i = clauses.GetEnumerator();
+			int j = 0;
 			while (i.MoveNext())
 			{
+				j++;
 				SpanQuery clause = (SpanQuery) i.Current;
 				buffer.Append(clause.ToString(field));
-				if (i.MoveNext())
+				if (j < clauses.Count)
 				{
 					buffer.Append(", ");
 				}

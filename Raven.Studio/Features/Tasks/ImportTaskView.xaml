@@ -1,0 +1,43 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Tasks.ImportTaskView"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+			 xmlns:Tasks="clr-namespace:Raven.Studio.Features.Tasks"
+			 mc:Ignorable="d"
+			 d:DesignHeight="300"
+			 d:DesignWidth="400">
+
+	<Grid Background="{StaticResource DefaultScreenBackground}">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition />
+			<ColumnDefinition />
+		</Grid.ColumnDefinitions>
+
+		<tk:DockPanel>
+			<TextBlock Text="Import Database"
+					   tk:DockPanel.Dock="Top"
+					   Style="{StaticResource PanelTitle}" />
+			<StackPanel>
+				<TextBlock Style="{StaticResource Instruction}">
+				<Run Text="Import a database from a dump file. " />
+				<LineBreak />
+				<Run Text="Importing will overwrite any existing indexes." />
+				</TextBlock>
+
+				<StackPanel Margin="0 6 0 0">
+					<Button x:Name="ImportData"
+							Margin="0 6 0 0"
+							Content="Begin Import"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Top" />
+				</StackPanel>
+			</StackPanel>
+		</tk:DockPanel>
+
+		<Tasks:ConsoleOutput Grid.Column="1"
+							 Margin="6,0,6,6" />
+	</Grid>
+
+</UserControl>

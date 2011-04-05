@@ -11,6 +11,7 @@ using System.Web;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.MEF;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -27,7 +28,7 @@ namespace Raven.Database.Linq
 	public class DynamicViewCompiler
 	{
 		private readonly IndexDefinition indexDefinition;
-		private readonly AbstractDynamicCompilationExtension[] extensions;
+		private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 		private readonly string basePath;
 		private const string mapReduceTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
 
@@ -36,7 +37,11 @@ namespace Raven.Database.Linq
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForMap = new CaptureQueryParameterNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForReduce = new CaptureQueryParameterNamesVisitor();
 
-		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, AbstractDynamicCompilationExtension[] extensions, string basePath)
+		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, string basePath)
+			:this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath)
+		{}
+
+		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
 		{
 			this.indexDefinition = indexDefinition;
 			this.extensions = extensions;
@@ -299,7 +304,7 @@ namespace Raven.Database.Linq
 				//doc["@metadata"]["Raven-Entity-Name"]
 				var metadata = new IndexerExpression(
 					new IndexerExpression(new IdentifierExpression("__document"), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
-					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
+					new List<Expression> { new PrimitiveExpression(Constants.RavenEntityName, Constants.RavenEntityName) }
 					);
 				var whereMethod = new InvocationExpression(new MemberReferenceExpression(mre.TargetObject, "Where"),
 				                                           new List<Expression>
@@ -331,14 +336,14 @@ namespace Raven.Database.Linq
 
 			var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
 
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constacts.DocumentIdFieldName))
+			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 				return;
 
 			objectInitializer.CreateExpressions.Add(
 				new NamedArgumentExpression
 				{
-					Name = Constacts.DocumentIdFieldName,
-					Expression = new MemberReferenceExpression(identifierExpression, Constacts.DocumentIdFieldName)
+					Name = Constants.DocumentIdFieldName,
+					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 				});
 		}
 
@@ -356,7 +361,7 @@ namespace Raven.Database.Linq
 				//doc["@metadata"]["Raven-Entity-Name"]
 				var metadata = new IndexerExpression(
 					new IndexerExpression(new IdentifierExpression(queryExpression.FromClause.Identifier), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
-					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
+					new List<Expression> { new PrimitiveExpression(Constants.RavenEntityName, Constants.RavenEntityName) }
 					);
 				queryExpression.MiddleClauses.Insert(0, 
 				                                     new QueryExpressionWhereClause
@@ -378,14 +383,14 @@ namespace Raven.Database.Linq
 
 			var identifierExpression = new IdentifierExpression(queryExpression.FromClause.Identifier);
 
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constacts.DocumentIdFieldName))
+			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 				return variableDeclaration;
 
 			objectInitializer.CreateExpressions.Add(
 				new NamedArgumentExpression
 				{
-					Name = Constacts.DocumentIdFieldName,
-					Expression = new MemberReferenceExpression(identifierExpression, Constacts.DocumentIdFieldName)
+					Name = Constants.DocumentIdFieldName,
+					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 				});
 			return variableDeclaration;
 		}

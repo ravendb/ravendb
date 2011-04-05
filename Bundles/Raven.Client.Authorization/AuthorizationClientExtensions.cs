@@ -20,14 +20,14 @@ namespace Raven.Client.Authorization
 	{
 		public const string RavenDocumentAuthorization = "Raven-Document-Authorization";
 
-		public static OperationAllowedResult IsOperationAllowedOnDocument(this IDocumentSession session, string userId, string operation, string documentId)
+		public static OperationAllowedResult IsOperationAllowedOnDocument(this ISyncAdvancedSessionOperation session, string userId, string operation, string documentId)
 		{
 			return IsOperationAllowedOnDocument(session, userId, operation, new[] {documentId}).First();
 		}
 
-		public static OperationAllowedResult[] IsOperationAllowedOnDocument(this IDocumentSession session, string userId, string operation, params string[] documentIds)
+		public static OperationAllowedResult[] IsOperationAllowedOnDocument(this ISyncAdvancedSessionOperation session, string userId, string operation, params string[] documentIds)
 		{
-			var serverClient = session.Advanced.DatabaseCommands as ServerClient;
+			var serverClient = session.DatabaseCommands as ServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Cannot get whatever operation is allowed on document in embedded mode.");
 

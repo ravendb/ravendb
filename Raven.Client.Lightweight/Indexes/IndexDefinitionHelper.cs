@@ -24,16 +24,30 @@ namespace Raven.Client.Indexes
 				return null;
 			var expression = expr.Body;
 
+			string queryRootName = null;
+
 			switch (expression.NodeType)
 			{
 				case ExpressionType.ConvertChecked:
 				case ExpressionType.Convert:
 					expression = ((UnaryExpression)expression).Operand;
 					break;
+				case ExpressionType.Call:
+					var methodCallExpression = ((MethodCallExpression)expression);
+					switch (methodCallExpression.Method.Name)
+					{
+						case "Select":
+							queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments[0]);
+							break;
+						case "SelectMany":
+							queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments[1]);
+							break;
+					}
+					break;
 			}
 
 #if !NET_3_5
-			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, translateIdentityProperty, expression);
+			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, translateIdentityProperty, queryRootName, expression);
 #else
             var linqQuery =expression.ToString();
 #endif
@@ -53,6 +67,20 @@ namespace Raven.Client.Indexes
 			const string pattern = @"(\.Where\(|\.Select\(|\.GroupBy\(|\.SelectMany)";
 			linqQuery = Regex.Replace(linqQuery, pattern, "\r\n\t$1"); // formatting
 			return linqQuery;
+		}
+
+		private static string TryCaptureQueryRoot(Expression expression)
+		{
+			if (expression.NodeType != ExpressionType.Lambda)
+				return null;
+
+			var parameters = ((LambdaExpression)expression).Parameters;
+			if (parameters.Count != 1)
+				return null;
+
+			var parameterExpression = parameters[0];
+
+			return parameterExpression.Name;
 		}
 
 		private static string ReplaceAnonymousTypeBraces(string linqQuery)

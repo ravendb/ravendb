@@ -1,9 +1,14 @@
-﻿namespace Raven.Tests.Silverlight
+﻿using System.Net;
+
+namespace Raven.Tests.Silverlight
 {
+	using System;
 	using System.Collections.Generic;
 	using System.Threading.Tasks;
 	using Client.Document;
 	using Client.Extensions;
+	using Database.Data;
+	using Database.Indexing;
 	using Entities;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -74,6 +79,53 @@
 
 				Assert.AreEqual(1, session.Advanced.NumberOfRequests);
 			}
+		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Querying_against_a_nonindexed_field_raises_an_exception()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				session.Store(new Customer { Name = "Customer #1", Id = "customer/1", Email = "someone@customer.com" });
+				yield return session.SaveChangesAsync();
+			}
+
+			var task = documentStore.AsyncDatabaseCommands
+				.ForDatabase(dbname)
+				.PutIndexAsync("Test", new IndexDefinition
+				                       	{
+				                       		Map = "from doc in docs.Companies select new { doc.Name }"
+				                       	}, true);
+			yield return (task);
+
+			Task<QueryResult> query = null;
+			var indexQuery = new IndexQuery {Query = "NonIndexedField:0"};
+			for (int i = 0; i < 50; i++)
+			{
+				query = documentStore.AsyncDatabaseCommands
+					.ForDatabase(dbname)
+					.QueryAsync("Test", indexQuery, null);
+				yield return (query);
+
+				if(query.Exception != null)
+				{
+					Assert.IsInstanceOfType(query.Exception.ExtractSingleInnerException(), typeof(WebException));
+					yield break;
+				}
+
+				if (query.Result.IsStale)
+				{
+					yield return Delay(100);
+					continue;
+				}
+				yield break;
+			}
+			Assert.Fail("Expected to get an exception");
 		}
 	}
 }

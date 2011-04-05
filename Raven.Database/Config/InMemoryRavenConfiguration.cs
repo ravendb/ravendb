@@ -110,8 +110,8 @@ namespace Raven.Database.Config
 
 
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ??  Settings["Raven/StorageEngine"] ?? 
-			                     //  "esent";
-								 	 "munin";
+			                       "esent";
+								 //	 "munin";
 		}
 
 		public NameValueCollection Settings { get; set; }

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Config;

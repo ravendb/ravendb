@@ -147,22 +147,42 @@
     <Compile Include="Features\Documents\DocumentViewModel.cs" />
     <Compile Include="Features\Documents\ISupportDocumentTemplate.cs" />
     <Compile Include="Features\Query\QueryViewModel.cs" />
-    <Compile Include="Features\StartUp\DefaultDatabaseInitializer.cs" />
-    <Compile Include="Features\StartUp\IDatabaseInitializer.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
     <Compile Include="Features\Statistics\IStatisticsSet.cs" />
     <Compile Include="Features\Statistics\IndexesViewModel.cs" />
     <Compile Include="Features\Statistics\Statistic.cs" />
     <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
+    <Compile Include="Features\Tasks\ConsoleOutput.xaml.cs">
+      <DependentUpon>ConsoleOutput.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Tasks\ExportTask.cs" />
+    <Compile Include="Framework\IMenuItemMetadata.cs" />
+    <Compile Include="Features\Tasks\ImportTask.cs" />
+    <Compile Include="Features\Tasks\InvalidDataException.cs" />
+    <Compile Include="Features\Tasks\Stopwatch.cs" />
+    <Compile Include="Features\Tasks\TasksViewModel.cs" />
     <Compile Include="Framework\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
     <Compile Include="Framework\IKeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyCombination.cs" />
+    <Compile Include="Framework\ListExtensions.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
-    <Compile Include="Framework\SerializationHelper.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
     <Compile Include="Framework\SimpleLogger.cs" />
+    <Compile Include="Impl\DotNetZip\Crc32.cs" />
+    <Compile Include="Impl\DotNetZip\Deflate.cs" />
+    <Compile Include="Impl\DotNetZip\DeflateStream.cs" />
+    <Compile Include="Impl\DotNetZip\GZipStream.cs" />
+    <Compile Include="Impl\DotNetZip\Inflate.cs" />
+    <Compile Include="Impl\DotNetZip\InfTree.cs" />
+    <Compile Include="Impl\DotNetZip\ParallelDeflateOutputStream.cs" />
+    <Compile Include="Impl\DotNetZip\Tree.cs" />
+    <Compile Include="Impl\DotNetZip\Zlib.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibBaseStream.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibCodec.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibConstants.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibStream.cs" />
     <Compile Include="Messages\CollectionTemplateUpdated.cs" />
     <Compile Include="Messages\DatabaseScreenRequested.cs" />
     <Compile Include="Messages\DocumentUpdated.cs" />
@@ -220,6 +240,9 @@
     <Compile Include="Messages\WorkCompleted.cs" />
     <Compile Include="Messages\WorkStarted.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SampleData\PagerSampleData\PagerSampleData.xaml.cs">
+      <DependentUpon>PagerSampleData.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Shell\BusyStatusViewModel.cs" />
     <Compile Include="Shell\ErrorViewModel.cs" />
     <Compile Include="Shell\MessageBox\IMessageBox.cs" />
@@ -349,6 +372,22 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Tasks\ConsoleOutput.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Tasks\ExportTaskView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Tasks\ImportTaskView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Tasks\TasksView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Properties\DesignTimeResources.xaml" Condition="'$(DesignTime)'=='true' OR ('$(SolutionPath)'!='' AND Exists('$(SolutionPath)') AND '$(BuildingInsideVisualStudio)'!='true' AND '$(BuildingInsideExpressionBlend)'!='true')">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -366,6 +405,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <DesignTimeOnly Include="SampleData\PagerSampleData\PagerSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+      <SubType>Designer</SubType>
+    </DesignTimeOnly>
     <Page Include="Shell\BusyStatusView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -425,6 +468,7 @@
     <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
     <EmbeddedResource Include="SampleData\MvcMusicStore_Dump.json" />
     <None Include="Properties\AppManifest.xml" />
+    <DesignTimeOnly Include="SampleData\PagerSampleData\PagerSampleData.xsd" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Properties\OutOfBrowserSettings.xml" />
@@ -449,6 +493,9 @@
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\CollectionsViewModelSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+    </DesignData>
+    <DesignData Include="SampleData\DatabaseViewModelSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\ServerErrorSampleData.xaml">

@@ -12,6 +12,7 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -25,7 +26,7 @@ namespace Raven.Database.Indexing
 		{
 			return (from property in properties.Cast<PropertyDescriptor>()
 			        let name = property.Name
-					where name != Constacts.DocumentIdFieldName
+					where name != Constants.DocumentIdFieldName
 			        let value = property.GetValue(val)
 			        from field in CreateFields(name, value, indexDefinition, defaultStorage)
 			        select field);
@@ -35,7 +36,7 @@ namespace Raven.Database.Indexing
         {
         	return (from property in document.Cast<JProperty>()
         	        let name = property.Name
-					where name != Constacts.DocumentIdFieldName
+					where name != Constants.DocumentIdFieldName
         	        let value = GetPropertyValue(property)
         	        from field in CreateFields(name, value, indexDefinition, defaultStorage)
         	        select field);
@@ -77,7 +78,7 @@ namespace Raven.Database.Indexing
 
 			if (value == null)
 			{
-				yield return new Field(name, "NULL_VALUE", indexDefinition.GetStorage(name, defaultStorage),
+				yield return new Field(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
 								 Field.Index.NOT_ANALYZED);
 				yield break;
 			}
@@ -85,7 +86,7 @@ namespace Raven.Database.Indexing
 			{
 				if(((DynamicNullObject)value ).IsExplicitNull)
 				{
-					yield return new Field(name, "NULL_VALUE", indexDefinition.GetStorage(name, defaultStorage),
+					yield return new Field(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
 							 Field.Index.NOT_ANALYZED);
 				}
 				yield break;
@@ -114,9 +115,18 @@ namespace Raven.Database.Indexing
 
             if (indexDefinition.GetIndex(name, null) == Field.Index.NOT_ANALYZED)// explicitly not analyzed
             {
-                yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
-                                 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
-                yield break;
+				if (value is DateTime)
+				{
+				    var val = (DateTime) value;
+					yield return new Field(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+				}
+				else
+				{
+					yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+					                       indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+				}
+            	yield break;
 			    
             }
 			if (value is string) 

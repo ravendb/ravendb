@@ -30,6 +30,11 @@ namespace Raven.Client.Client
 		NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
+		/// Gets documents for the specified key prefix
+		/// </summary>
+		JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize);
+
+		/// <summary>
 		/// Gets the document for the specified key.
 		/// </summary>
 		/// <param name="key">The key.</param>

@@ -869,7 +869,9 @@ namespace Lucene.Net.Search
 						// store term text
 						// we expect that there is at most one term per document
 						if (t >= mterms.Length)
-							throw new System.SystemException("there are more terms than " + "documents in field \"" + field + "\", but it's impossible to sort on " + "tokenized fields");
+							//throw new System.SystemException("there are more terms than " + "documents in field \"" + field + "\", but it's impossible to sort on " + "tokenized fields");
+							//LUCENENET-388
+							throw new System.IO.IOException("there are more terms than " + "documents in field \"" + field + "\", but it's impossible to sort on " + "tokenized fields");
 						mterms[t] = term.Text();
 						
 						termDocs.Seek(termEnum);

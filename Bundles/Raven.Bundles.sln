@@ -36,6 +36,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Storage.Managed", "..
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin", "..\Modules\Munin\Raven.Munin\Raven.Munin.csproj", "{486537C2-EDF7-404F-9CFB-EEE25996DF5F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Versioning", "Raven.Client.Versioning\Raven.Client.Versioning.csproj", "{ADC25452-35F2-488E-9F2F-40C76F4927DB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -216,6 +218,16 @@ Global
 		{486537C2-EDF7-404F-9CFB-EEE25996DF5F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{486537C2-EDF7-404F-9CFB-EEE25996DF5F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{486537C2-EDF7-404F-9CFB-EEE25996DF5F}.Release|x86.ActiveCfg = Release|Any CPU
+		{ADC25452-35F2-488E-9F2F-40C76F4927DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADC25452-35F2-488E-9F2F-40C76F4927DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADC25452-35F2-488E-9F2F-40C76F4927DB}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{ADC25452-35F2-488E-9F2F-40C76F4927DB}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{ADC25452-35F2-488E-9F2F-40C76F4927DB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{ADC25452-35F2-488E-9F2F-40C76F4927DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADC25452-35F2-488E-9F2F-40C76F4927DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADC25452-35F2-488E-9F2F-40C76F4927DB}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{ADC25452-35F2-488E-9F2F-40C76F4927DB}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{ADC25452-35F2-488E-9F2F-40C76F4927DB}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

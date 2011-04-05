@@ -2,6 +2,7 @@
 namespace Raven.Client.Extensions
 {
 	using System;
+	using System.Linq;
 
 	///<summary>
 	/// Extension methods to handle common scenarios
@@ -28,6 +29,21 @@ namespace Raven.Client.Extensions
 			}
 
 			return e.InnerExceptions[0];
+		}
+
+		/// <summary>
+		/// Extracts a portion of an exception for a user friendly display
+		/// </summary>
+		/// <param name="e">The exception.</param>
+		/// <returns>The primary portion of the exception message.</returns>
+		public static string SimplifyError(this Exception e)
+		{
+			var parts = e.Message.Split(new[] {  "\r\n   " }, StringSplitOptions.None);
+			var firstLine = parts.First();
+			var index = firstLine.IndexOf(':');
+			return index > 0
+				? firstLine.Remove(0,index + 2)
+				: firstLine;
 		}
 	}
 }

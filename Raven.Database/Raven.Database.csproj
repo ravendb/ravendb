@@ -361,6 +361,7 @@
     <Compile Include="Server\Responders\LinearQueryResponder.cs" />
     <Compile Include="Server\Responders\Queries.cs" />
     <Compile Include="Server\Responders\RequestResponder.cs" />
+    <Compile Include="Server\Responders\SilverlightEnsuresStartup.cs" />
     <Compile Include="Server\Responders\Static.cs" />
     <Compile Include="Server\Responders\Statics.cs" />
     <Compile Include="Server\Responders\Statistics.cs" />
@@ -409,7 +410,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Server\WebUI\Raven.Studio.xap" />
     <Content Include="Server\WebUI\studio.html" />
     <Content Include="Server\WebUI\raven-data.ico" />
     <Content Include="Server\WebUI\css\Pager.css" />

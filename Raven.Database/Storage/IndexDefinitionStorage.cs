@@ -13,6 +13,9 @@ using System.Security.Cryptography;
 using System.Text;
 using log4net;
 using Newtonsoft.Json;
+using Raven.Abstractions;
+using Raven.Abstractions.Json;
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -34,14 +37,14 @@ namespace Raven.Database.Storage
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
         private readonly InMemoryRavenConfiguration configuration;
-	    private readonly AbstractDynamicCompilationExtension[] extensions;
+		private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
 		public IndexDefinitionStorage(
             InMemoryRavenConfiguration configuration,
 			ITransactionalStorage  transactionalStorage,
 			string path, 
-			IEnumerable<AbstractViewGenerator> compiledGenerators, 
-			AbstractDynamicCompilationExtension[] extensions)
+			IEnumerable<AbstractViewGenerator> compiledGenerators,
+			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
 		    this.configuration = configuration;
 		    this.extensions = extensions;// this is used later in the ctor, so it must appears first
@@ -99,7 +102,7 @@ namespace Raven.Database.Storage
 	        {
 	            try
 	            {
-	            	var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), new JsonEnumConverter());
+	            	var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), Default.Converters);
 					if (indexDefinition.Name == null)
 						indexDefinition.Name = MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index));
 	            	AddAndCompileIndex(indexDefinition);
@@ -129,7 +132,7 @@ namespace Raven.Database.Storage
             	var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
             	var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
             	// Hash the name if it's too long (as a path)
-            	File.WriteAllText(indexName, JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, new JsonEnumConverter()));
+            	File.WriteAllText(indexName, JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters));
             }
 			return transformer.Name;
 		}

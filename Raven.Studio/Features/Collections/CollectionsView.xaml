@@ -126,22 +126,10 @@
 			         ItemContainerStyle="{StaticResource CollectionListBoxItemStyle}" />
 
 			<TextBlock Grid.Row="1"
-			           Text="The database contains no collections."
+			           Text="{Binding Status}"
 			           Style="{StaticResource Instruction}"
 			           Visibility="{Binding Collections, Converter={StaticResource visibleWhenEmpty}}"
 			           d:IsLocked="True" />
-
-			<StackPanel Orientation="Vertical"
-			            Grid.Row="2"
-			            d:LayoutOverrides="Height">
-				<TextBlock Style="{StaticResource PanelTitle}"
-				           Text="SYSTEM COLLECTIONS" />
-				<StackPanel>
-					<ContentControl x:Name="RavenCollection"
-					                ContentTemplate="{StaticResource CollectionTemplate}" />
-				</StackPanel>
-
-			</StackPanel>
 		</Grid>
 
 		<Grid Grid.Column="1"

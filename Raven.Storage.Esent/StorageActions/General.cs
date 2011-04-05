@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
@@ -25,7 +26,7 @@ namespace Raven.Storage.Esent.StorageActions
 	{
 		public event Action OnCommit = delegate { }; 
 		private readonly TableColumnsCache tableColumnsCache;
-		private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
+		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 	    private readonly IUuidGenerator uuidGenerator;
 		private readonly IDocumentCacher cacher;
 		protected readonly JET_DBID dbid;
@@ -45,7 +46,7 @@ namespace Raven.Storage.Esent.StorageActions
             JET_INSTANCE instance, 
             string database, 
             TableColumnsCache tableColumnsCache, 
-            IEnumerable<AbstractDocumentCodec> documentCodecs,
+            OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
             IUuidGenerator uuidGenerator,
 			IDocumentCacher cacher)
 		{

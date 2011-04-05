@@ -7,6 +7,7 @@ using System;
 using System.Runtime.Caching;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -45,7 +46,7 @@ namespace Raven.Storage.Esent
 
         public void Batch(Action<IStorageActionsAccessor> action)
         {
-            using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, new AbstractDocumentCodec[0], new DummyUuidGenerator(), this))
+            using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, new OrderedPartCollection<AbstractDocumentCodec>(), new DummyUuidGenerator(), this))
             {
                 action(new StorageActionsAccessor(pht));
             }

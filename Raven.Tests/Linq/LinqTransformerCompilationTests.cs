@@ -26,7 +26,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Will_compile_query_successfully()
 		{
-			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0], ".");
+			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query },  ".");
 			dynamicQueryCompiler.GenerateInstance();
 			var compiled = dynamicQueryCompiler.GeneratedType;
 			Assert.NotNull(compiled);
@@ -35,7 +35,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Will_keep_cast_in_query()
 		{
-			var dynamicQueryCompiler = new DynamicViewCompiler("caster", new IndexDefinition { Map = "from x in docs select new { Id = (int)x.Id }" }, new AbstractDynamicCompilationExtension[0], ".");
+			var dynamicQueryCompiler = new DynamicViewCompiler("caster", new IndexDefinition { Map = "from x in docs select new { Id = (int)x.Id }" },  ".");
 			dynamicQueryCompiler.GenerateInstance();
 
 			Assert.Contains("(int)x.Id", dynamicQueryCompiler.CompiledQueryText);
@@ -44,7 +44,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Can_create_new_instance_from_query()
 		{
-			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0], ".");
+			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query },  ".");
 			dynamicQueryCompiler.GenerateInstance();
 			var compiled = dynamicQueryCompiler.GeneratedType;
 			Activator.CreateInstance(compiled);
@@ -53,7 +53,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Can_execute_query()
 		{
-			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0], ".");
+			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query },  ".");
 			var generator = dynamicQueryCompiler.GenerateInstance();
 			var results = generator.MapDefinition(new[]
 			{
@@ -106,7 +106,7 @@ namespace Raven.Tests.Linq
 				Map = @"docs.Users
 	.Select(user => new {Location = user.Location, Count = 1})
 	.Select(user => new {Location = user.Location})"
-			}, new AbstractDynamicCompilationExtension[0], ".").GenerateInstance();
+			},  ".").GenerateInstance();
 
 
 			var results = viewGenerator.MapDefinition(new[]
@@ -141,7 +141,7 @@ namespace Raven.Tests.Linq
 					@"results
 	.GroupBy(agg => agg.Location)
 	.Select(g => new {Loction = g.Key, Count = g.Sum(x => x.Count}))"
-			}, new AbstractDynamicCompilationExtension[0], ".").GenerateInstance();
+			},  ".").GenerateInstance();
 
 
 			var results = viewGenerator.ReduceDefinition(viewGenerator.MapDefinition(new[]

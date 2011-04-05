@@ -7,6 +7,7 @@ using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Json;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Raven.Http;
@@ -52,7 +53,7 @@ namespace Raven.Database.Impl
 				Start = indexQuery.Start,
 				Cutoff = indexQuery.Cutoff,
 				PageSize = int.MaxValue,
-				FieldsToFetch = new[] { Constacts.DocumentIdFieldName },
+				FieldsToFetch = new[] { Constants.DocumentIdFieldName },
 				SortedFields = indexQuery.SortedFields
 			};
 
@@ -76,7 +77,7 @@ namespace Raven.Database.Impl
 					{
 						batchCount++;
 						var result = batchOperation(enumerator.Current, transactionInformation);
-						array.Add(JObject.FromObject(result, new JsonSerializer { Converters = { new JsonEnumConverter() } }));
+						array.Add(JObject.FromObject(result, JsonExtensions.CreateDefaultJsonSerializer()));
 					}
 				});
 				if (batchCount < batchSize) break;
@@ -84,5 +85,6 @@ namespace Raven.Database.Impl
 			return array;
 		}
 
+		
 	}
 }

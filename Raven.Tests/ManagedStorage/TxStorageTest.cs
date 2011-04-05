@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.IO;
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
@@ -27,7 +28,7 @@ namespace Raven.Tests.ManagedStorage
                 DataDirectory = "test",
             }, () => { })
             {
-                DocumentCodecs = new AbstractDocumentCodec[0]
+                DocumentCodecs = new OrderedPartCollection<AbstractDocumentCodec>()
             };
             newTransactionalStorage.Initialize(new DummyUuidGenerator());
             return newTransactionalStorage;

@@ -660,7 +660,7 @@ If you really want to do in memory filtering on the data returned from the query
             var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
             if (identityProperty != null && identityProperty.Name == whereEqualsParams.FieldName)
             {
-				return Constacts.DocumentIdFieldName;
+				return Constants.DocumentIdFieldName;
             }
             return whereEqualsParams.FieldName;
         }
@@ -694,6 +694,36 @@ If you really want to do in memory filtering on the data returned from the query
                 Value = value
             });
         }
+
+		/// <summary>
+		///   Matches substrings of the field
+		/// </summary>
+		public void WhereContains(string fieldName, params object [] values)
+		{
+			if (values == null || values.Length == 0)
+				return;
+
+			OpenSubclause();
+
+			WhereContains(fieldName, values[0]);
+
+
+			for (var i = 1; i < values.Length; i++)
+			{
+				OrElse();
+				WhereContains(fieldName, values[i]);
+			}
+
+			CloseSubclause();
+		}
+
+		/// <summary>
+		///   Matches substrings of the field
+		/// </summary>
+		public void WhereContains(string fieldName, IEnumerable<object> values)
+		{
+			WhereContains(fieldName, values.ToArray());
+		}
 
         /// <summary>
         ///   Matches fields which starts with the specified value.
@@ -1232,7 +1262,7 @@ If you really want to do in memory filtering on the data returned from the query
                 var deserializedResult =
                     (T)theSession.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof(T));
 
-                var documentId = result.Value<string>(Constacts.DocumentIdFieldName); //check if the result contain the reserved name
+                var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
                 if (string.IsNullOrEmpty(documentId) == false)
                 {
                     // we need to make an addtional check, since it is possible that a value was explicitly stated
@@ -1276,7 +1306,7 @@ If you really want to do in memory filtering on the data returned from the query
 				return;
         	}
 
-        	var entityName = metadata.Value<string>("Raven-Entity-Name");
+			var entityName = metadata.Value<string>(Constants.RavenEntityName);
 
 			var idPropName = theSession.Conventions.FindIdentityPropertyNameFromEntityName(entityName);
 			if (result.Property(idPropName) != null)
@@ -1289,7 +1319,7 @@ If you really want to do in memory filtering on the data returned from the query
         {
             if (whereEqualsParams.Value == null)
             {
-                return "[[NULL_VALUE]]";
+				return Constants.NullValueNotAnalyzed;
             }
 
             if (whereEqualsParams.Value is bool)
@@ -1314,7 +1344,7 @@ If you really want to do in memory filtering on the data returned from the query
         private static string TransformToRangeValue(object value)
         {
             if (value == null)
-                return "[[NULL_VALUE]]";
+				return Constants.NullValueNotAnalyzed;
 
             if (value is int)
                 return NumberUtil.NumberToString((int)value);

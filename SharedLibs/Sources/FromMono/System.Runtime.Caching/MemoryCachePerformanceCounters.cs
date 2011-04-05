@@ -89,6 +89,8 @@ namespace System.Runtime.Caching
 
 		public void Dispose ()
 		{
+			if (perfCounters == null)
+				return;
 			foreach (PerformanceCounter counter in perfCounters) {
 				if (counter == null)
 					continue;

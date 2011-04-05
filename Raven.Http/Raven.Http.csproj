@@ -71,6 +71,7 @@
     <Compile Include="HttpServer.cs" />
     <Compile Include="IResourceStore.cs" />
     <Compile Include="IRaveHttpnConfiguration.cs" />
+    <Compile Include="LogHttpRequestStatsParams.cs" />
     <Compile Include="NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

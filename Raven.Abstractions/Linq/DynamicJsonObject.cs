@@ -9,9 +9,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Dynamic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 
 namespace Raven.Database.Linq
@@ -153,6 +155,13 @@ namespace Raven.Database.Linq
 						if (l > int.MinValue && int.MaxValue > l)
 							return (int)l;
 					}
+					var s = value as string;
+					if(s != null)
+					{
+						DateTime time;
+                        if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
+							return time;
+					}
 					return value;
 			}
 		}
@@ -164,7 +173,7 @@ namespace Raven.Database.Linq
 		/// <returns></returns>
 		public object GetValue(string name)
 		{
-			if (name == Constacts.DocumentIdFieldName)
+			if (name == Constants.DocumentIdFieldName)
 			{
 				return GetDocumentId();
 			}
@@ -206,7 +215,7 @@ namespace Raven.Database.Linq
 					return id.Value<string>() ?? (object)new DynamicNullObject();
 				}
 			}
-			return inner.Value<string>(Constacts.DocumentIdFieldName) ?? (object)new DynamicNullObject();
+			return inner.Value<string>(Constants.DocumentIdFieldName) ?? (object)new DynamicNullObject();
 		}
 
 		/// <summary>

@@ -17,6 +17,7 @@ using System.Threading;
 using log4net;
 using Newtonsoft.Json;
 using System.Linq;
+using Raven.Abstractions.MEF;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
 using Raven.Http.Extensions;
@@ -24,7 +25,7 @@ using Formatting = Newtonsoft.Json.Formatting;
 
 namespace Raven.Http
 {
-    public abstract class HttpServer : IDisposable
+	public abstract class HttpServer : IDisposable
     {
         protected readonly IResourceStore DefaultResourceStore;
         protected readonly IRaveHttpnConfiguration DefaultConfiguration;
@@ -40,7 +41,7 @@ namespace Raven.Http
 
 
         [ImportMany]
-        public IEnumerable<AbstractRequestResponder> RequestResponders { get; set; }
+		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
         public IRaveHttpnConfiguration Configuration
         {
@@ -73,7 +74,7 @@ namespace Raven.Http
 
             foreach (var requestResponder in RequestResponders)
             {
-                requestResponder.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value);
+                requestResponder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value);
             }
         }
 
@@ -194,30 +195,60 @@ namespace Raven.Http
             }
             finally
             {
-                ctx.FinalizeResonse();
-				sw.Stop();
-                
-                LogHttpRequestStats(ctx, sw, ravenUiRequest);
+            	try
+            	{
+            		FinalizeRequestProcessing(ctx, sw, ravenUiRequest);
+            	}
+            	catch (Exception e)
+            	{
+            		logger.Error("Could not finalize request properly", e);
+            	}
             }
         }
 
-    	private void LogHttpRequestStats(IHttpContext ctx, Stopwatch sw, bool ravenUiRequest)
-    	{
-    		if (ravenUiRequest) 
+		private void FinalizeRequestProcessing(IHttpContext ctx, Stopwatch sw, bool ravenUiRequest)
+		{
+			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
+			try
+			{
+				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
+					sw, 
+					ctx.Request.Headers, 
+					ctx.Request.HttpMethod, 
+					ctx.Response.StatusCode, 
+					ctx.Request.Url.PathAndQuery);
+			}
+			catch (Exception e)
+			{
+				logger.Warn("Could not gather information to log request stats", e);
+			}
+
+			ctx.FinalizeResonse();
+			sw.Stop();
+
+			if (ravenUiRequest || logHttpRequestStatsParam == null) 
 				return;
+
+			LogHttpRequestStats(logHttpRequestStatsParam);
+			ctx.OutputSavedLogItems(logger);
+		}
+
+		private void LogHttpRequestStats(LogHttpRequestStatsParams logHttpRequestStatsParams)
+    	{
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
-    		if (ctx.Request.Headers["Raven-Timer-Request"] == "true" && sw.ElapsedMilliseconds <= 25) 
+    		if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25) 
 				return;
 
     		var curReq = Interlocked.Increment(ref reqNum);
     		logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
-    		                   curReq, ctx.Request.HttpMethod, sw.ElapsedMilliseconds, ctx.Response.StatusCode,
-    		                   ctx.Request.Url.PathAndQuery,
+    		                   curReq, 
+							   logHttpRequestStatsParams.HttpMethod, 
+							   logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds, 
+							   logHttpRequestStatsParams.ResponseStatusCode,
+    		                   logHttpRequestStatsParams.RequestUri,
     		                   currentTenantId.Value);
-
-    		ctx.OutputSavedLogItems(logger);
     	}
 
     	private void HandleException(IHttpContext ctx, Exception e)
@@ -315,8 +346,9 @@ namespace Raven.Http
 
                 AddAccessControlAllowOriginHeader(ctx);
 
-                foreach (var requestResponder in RequestResponders)
+                foreach (var requestResponderLazy in RequestResponders)
                 {
+                	var requestResponder = requestResponderLazy.Value;
                     if (requestResponder.WillRespond(ctx))
                     {
                         requestResponder.Respond(ctx);
@@ -342,7 +374,7 @@ namespace Raven.Http
                 currentDatabase.Value = DefaultResourceStore;
                 currentConfiguration.Value = DefaultConfiguration;
             }
-            return true;
+            return false;
         }
 
         protected virtual void OnDispatchingRequest(IHttpContext ctx){}
@@ -365,7 +397,15 @@ namespace Raven.Http
                 if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
                 {
                     databaseLastRecentlyUsed.AddOrUpdate(tenantId, DateTime.Now, (s, time) => DateTime.Now);
-                    ctx.AdjustUrl(match.Value);
+
+					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
+					{
+						ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
+					}
+                	else
+					{
+						ctx.AdjustUrl(match.Value);
+					}
                     currentTenantId.Value = tenantId;
                     currentDatabase.Value = resourceStore;
                     currentConfiguration.Value = resourceStore.Configuration;

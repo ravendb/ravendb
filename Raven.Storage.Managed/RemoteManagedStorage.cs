@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
@@ -33,7 +34,7 @@ namespace Raven.Storage.Managed
 			using (var tableStorage = new TableStorage(persistentSource))
 			{
 				tableStorage.Initialze();
-				var accessor = new StorageActionsAccessor(tableStorage, new DummyUuidGenerator(), new AbstractDocumentCodec[0]);
+				var accessor = new StorageActionsAccessor(tableStorage, new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 				action(accessor);
 			}
         }

@@ -10,9 +10,11 @@ using System.IO;
 using System.Reflection;
 using Raven.Bundles.Versioning.Data;
 using Raven.Bundles.Versioning.Triggers;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Xunit;
 using Raven.Server;
+using Raven.Client.Versioning;
 
 namespace Raven.Bundles.Tests.Versioning
 {
@@ -24,7 +26,7 @@ namespace Raven.Bundles.Tests.Versioning
 
         public Versioning()
         {
-            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning)).CodeBase);
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
             database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
             ravenDbServer = new RavenDbServer(
@@ -196,6 +198,31 @@ namespace Raven.Bundles.Tests.Versioning
 				Assert.Equal("companies/1/revisions/1", metadata.Value<string>("Raven-Document-Parent-Revision"));
             }
         }
+
+		[Fact]
+		public void Can_get_all_revisions()
+		{
+			var company = new Company { Name = "Company Name" };
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+				Assert.Equal(1, session.Advanced.GetMetadataFor(company).Value<int>("Raven-Document-Revision"));
+			}
+			using (var session = documentStore.OpenSession())
+			{
+				var company3 = session.Load<Company>(company.Id);
+				company3.Name = "Hibernating Rhinos";
+				session.SaveChanges();
+				Assert.Equal(2, session.Advanced.GetMetadataFor(company3).Value<int>("Raven-Document-Revision"));
+			}
+			using (var session = documentStore.OpenSession())
+			{
+				var companiesRevisions = session.Advanced.GetRevisionsFor<Company>(company.Id, 0, 25);
+				Assert.Equal("Company Name", companiesRevisions[0].Name);
+				Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+			}
+		}
 
         [Fact]
         public void Will_delete_old_revisions()

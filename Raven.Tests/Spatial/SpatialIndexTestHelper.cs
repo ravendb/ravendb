@@ -111,12 +111,7 @@ namespace Raven.Tests.Spatial
 			using (var stringReader = new StringReader(jsonIndexDefinition))
 			using (var jsonReader = new JsonTextReader(stringReader))
 			{
-				var serializer = new JsonSerializer
-				{
-					Converters = { new JsonEnumConverter() }
-				};
-				
-				return serializer.Deserialize<IndexDefinition>(jsonReader);
+				return JsonExtensions.CreateDefaultJsonSerializer().Deserialize<IndexDefinition>(jsonReader);
 			}
 		}
 	}

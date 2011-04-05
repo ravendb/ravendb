@@ -14,12 +14,13 @@ using Raven.Database.Json;
 using Raven.Http;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server
 {
     public class RavenDbHttpServer : HttpServer
     {
-        private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)");
+        private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
 
         public override Regex TenantsQuery
         {
@@ -82,7 +83,7 @@ namespace Raven.Database.Server
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
-            database = ResourcesStoresCache.GetOrAdd(tenantId, s =>
+            database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
             {
                 var config = new InMemoryRavenConfiguration
                 {

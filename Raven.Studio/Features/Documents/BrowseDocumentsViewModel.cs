@@ -1,7 +1,9 @@
 namespace Raven.Studio.Features.Documents
 {
+	using System;
 	using System.ComponentModel.Composition;
 	using System.Linq;
+	using System.Threading.Tasks;
 	using Caliburn.Micro;
 	using Database;
 	using Framework;
@@ -9,13 +11,13 @@ namespace Raven.Studio.Features.Documents
 	using Raven.Database;
 
 	[Export]
+	[ExportDatabaseScreen("Documents", Index = 40)]
 	public class BrowseDocumentsViewModel : RavenScreen, IDatabaseScreenMenuItem,
 		IHandle<DocumentDeleted>
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
-
-		public int Index { get { return 40; } }
+		string status;
 
 		[ImportingConstructor]
 		public BrowseDocumentsViewModel(IServer server, IEventAggregator events)
@@ -26,22 +28,46 @@ namespace Raven.Studio.Features.Documents
 			this.events = events;
 			events.Subscribe(this);
 
-
-			server.Connected += delegate
+			server.CurrentDatabaseChanged += delegate
 			{
-				using (var session = server.OpenSession())
-					Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
-						session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync, 
-						jdoc => new DocumentViewModel(jdoc));
-
-				Documents.PageSize = 25;
+				Initialize();
 			};
+		}
 
+		void Initialize() 
+		{
+			Status = "Retrieving documents.";
+
+			Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
+				GetDocumentsQuery,
+				jdoc => new DocumentViewModel(jdoc));
+					    
+			Documents.PageSize = 25;
+
+			NotifyOfPropertyChange("");
+		}
+
+		protected override void OnInitialize()
+		{
+			Initialize();
+		}
+
+		public string Status
+		{
+			get { return status; }
+			set { status = value; NotifyOfPropertyChange(() => Status); }
+		}
+
+		Task<JsonDocument[]> GetDocumentsQuery(int start, int pageSize)
+		{
+			using (var session = server.OpenSession())
+				return session.Advanced.AsyncDatabaseCommands
+					.GetDocumentsAsync(start,pageSize);
 		}
 
 		public BindablePagedQuery<JsonDocument, DocumentViewModel> Documents { get; private set; }
 
-		public void Handle(DocumentDeleted message)
+		void IHandle<DocumentDeleted>.Handle(DocumentDeleted message)
 		{
 			if (Documents == null) return;
 
@@ -63,26 +89,30 @@ namespace Raven.Studio.Features.Documents
 		{
 			if(Documents == null) return;
 
-			WorkStarted();
+			WorkStarted("counting documents");
 
 			using (var session = server.OpenSession())
-			{
-				Documents.Query = session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync;
-
-				session.Advanced.AsyncDatabaseCommands
-					.GetStatisticsAsync()
-					.ContinueOnSuccess(x => RefreshDocuments(x.Result.CountOfDocuments));
-			}
+			session.Advanced.AsyncDatabaseCommands
+				.GetStatisticsAsync()
+				.ContinueOnSuccess(x =>
+				{
+					WorkCompleted("counting documents");
+					RefreshDocuments(x.Result.CountOfDocuments);
+					Status = x.Result.CountOfDocuments == 0 
+						? "The database contains no documents."
+						: string.Empty;
+				});
 		}
 
 		public void RefreshDocuments(long total)
 		{
+			WorkStarted("retrieving documents");
 			Documents.GetTotalResults = () => total;
 			Documents.LoadPage(() =>
-								{
-									NotifyOfPropertyChange(() => HasDocuments);
-									WorkCompleted();
-								});
+			{
+				NotifyOfPropertyChange(() => HasDocuments);
+				WorkCompleted("retrieving documents");
+			});
 		}
 	}
 }

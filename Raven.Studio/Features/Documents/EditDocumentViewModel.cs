@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Caliburn.Micro;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Studio.Framework;
 
@@ -39,6 +40,7 @@ namespace Raven.Studio.Features.Documents
 			Id = "";
 			document = new JsonDocument();
 			JsonData = InitialJsonData();
+			JsonMetadata = "{}";
 			events.Subscribe(this);
 		    this.keys = keys;
 
@@ -174,7 +176,7 @@ namespace Raven.Studio.Features.Documents
 
 			LastModified = document.LastModified;
 			CollectionType = DocumentViewModel.DetermineCollectionType(document.Metadata);
-			ClrType = metadata.IfPresent<string>(Raven.Abstractions.Data.Constacts.RavenClrType);
+			ClrType = metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
 			Etag = document.Etag.ToString();
 			NonAuthoritiveInformation = document.NonAuthoritiveInformation;
 		}
@@ -184,6 +186,17 @@ namespace Raven.Studio.Features.Documents
 			document.DataAsJson = ToJObject(JsonData);
 			document.Metadata = ToJObject(JsonMetadata);
 			document.Key = Id;
+
+			// user create a document with key like:
+			// users/1234 but didn't specify the Raven-Entity-Name, let 
+			// us provide one for him
+			if(document.Key != null && 
+				document.Key.Contains('/') &&
+				document.Metadata[Constants.RavenEntityName] == null)
+			{
+				var indexOf = document.Key.IndexOf('/');
+				document.Metadata[Constants.RavenEntityName] = char.ToUpper(document.Key[0]) + document.Key.Substring(1, indexOf-1);
+			}
 
 			LastModified = DateTime.Now;
 			metadata = ParseJsonToDictionary(document.Metadata);

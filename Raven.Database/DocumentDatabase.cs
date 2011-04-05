@@ -17,6 +17,7 @@ using log4net;
 using Lucene.Net.Util;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.MEF;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -31,6 +32,7 @@ using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Http;
 using Raven.Http.Exceptions;
+using Constants = Raven.Abstractions.Data.Constants;
 using Index = Raven.Database.Indexing.Index;
 using Task = Raven.Database.Tasks.Task;
 using TransactionInformation = Raven.Http.TransactionInformation;
@@ -40,28 +42,28 @@ namespace Raven.Database
 	public class DocumentDatabase : IResourceStore, IUuidGenerator
 	{
 		[ImportMany]
-		public IEnumerable<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
+		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
+		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
+		public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractPutTrigger> PutTriggers { get; set; }
+		public OrderedPartCollection<AbstractPutTrigger> PutTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractDeleteTrigger> DeleteTriggers { get; set; }
+		public OrderedPartCollection<AbstractDeleteTrigger> DeleteTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
+		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<AbstractReadTrigger> ReadTriggers { get; set; }
+		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 
 		[ImportMany]
-		public AbstractDynamicCompilationExtension[] Extensions { get; set; }
+		public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
 
 		private readonly WorkContext workContext;
 
@@ -366,7 +368,7 @@ namespace Raven.Database
 				var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
 				if (viewGenerator == null)
 					continue;
-				var entityName = metadata.Value<string>("Raven-Entity-Name");
+				var entityName = metadata.Value<string>(Constants.RavenEntityName);
 				if (viewGenerator.ForEntityName != null &&
 						viewGenerator.ForEntityName != entityName)
 					continue;
@@ -564,8 +566,8 @@ namespace Raven.Database
 					var indexDefinition = GetIndexDefinition(index);
 					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
 					                                      viewGenerator.ReduceDefinition == null
-					                                      	? Abstractions.Data.Constacts.DocumentIdFieldName
-					                                      	: Abstractions.Data.Constacts.ReduceKeyFieldName);
+					                                      	? Abstractions.Data.Constants.DocumentIdFieldName
+					                                      	: Abstractions.Data.Constants.ReduceKeyFieldName);
 					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch)
 									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
@@ -632,7 +634,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Constacts.DocumentIdFieldName))
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Raven.Abstractions.Data.Constants.DocumentIdFieldName))
 													select queryResult.Key);
 				});
 			stale = isStale;
@@ -685,10 +687,11 @@ namespace Raven.Database
 				return attachment;
 
 			var foundResult = false;
-			foreach (var attachmentReadTrigger in AttachmentReadTriggers)
+			foreach (var attachmentReadTriggerLazy in AttachmentReadTriggers)
 			{
 				if (foundResult)
 					break;
+				var attachmentReadTrigger = attachmentReadTriggerLazy.Value;
 				var readVetoResult = attachmentReadTrigger.AllowRead(name, attachment.Data, attachment.Metadata,
 																	 ReadOperation.Load);
 				switch (readVetoResult.Veto)
@@ -723,7 +726,7 @@ namespace Raven.Database
 
 			foreach (var attachmentReadTrigger in AttachmentReadTriggers)
 			{
-				attachment.Data = attachmentReadTrigger.OnRead(name, attachment.Data, attachment.Metadata, ReadOperation.Load);
+				attachment.Data = attachmentReadTrigger.Value.OnRead(name, attachment.Data, attachment.Metadata, ReadOperation.Load);
 			}
 		}
 

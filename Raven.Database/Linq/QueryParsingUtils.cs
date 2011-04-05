@@ -17,6 +17,7 @@ using ICSharpCode.NRefactory.PrettyPrinter;
 using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Microsoft.CSharp.RuntimeBinder;
+using Raven.Abstractions.MEF;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
 
@@ -31,7 +32,7 @@ namespace Raven.Database.Linq
             return (output.Text);
         }
 
-        public static string GenerateText(TypeDeclaration type, AbstractDynamicCompilationExtension[] extensions)
+		public static string GenerateText(TypeDeclaration type, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
         {
             var unit = new CompilationUnit();
 
@@ -47,7 +48,7 @@ namespace Raven.Database.Linq
 			};
             foreach (var extension in extensions)
             {
-                foreach (var ns in extension.GetNamespacesToImport())
+                foreach (var ns in extension.Value.GetNamespacesToImport())
                 {
                     namespaces.Add(ns);
                 }
@@ -148,7 +149,7 @@ namespace Raven.Database.Linq
         }
 
 
-        public static Type Compile(string source, string name, string queryText, AbstractDynamicCompilationExtension[] extensions, string basePath)
+        public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
         {
             var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
             var assemblies = new HashSet<string>
@@ -161,7 +162,7 @@ namespace Raven.Database.Linq
 			};
             foreach (var extension in extensions)
             {
-                foreach (var assembly in extension.GetAssembliesToReference())
+                foreach (var assembly in extension.Value.GetAssembliesToReference())
                 {
                     assemblies.Add(assembly);
                 }

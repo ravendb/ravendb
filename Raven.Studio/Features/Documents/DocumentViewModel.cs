@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Documents
+﻿using Raven.Abstractions.Data;
+
+namespace Raven.Studio.Features.Documents
 {
     using System;
     using Collections;
@@ -20,7 +22,7 @@
             this.inner = inner;
             Id = inner.Metadata.IfPresent<string>("@id");
             LastModified = inner.LastModified;
-			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constacts.RavenClrType);
+			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
             CollectionType = DetermineCollectionType();
         }
 
@@ -111,7 +113,7 @@
             if (string.IsNullOrEmpty(id))
                 return BuiltinCollectionName.Projection; // meaning that the document is a projection and not a 'real' document
 
-            var entity = metadata.IfPresent<string>("Raven-Entity-Name");
+            var entity = metadata.IfPresent<string>(Constants.RavenEntityName);
 			if (entity != null)
 				entity = entity.ToLower();
             return entity ??

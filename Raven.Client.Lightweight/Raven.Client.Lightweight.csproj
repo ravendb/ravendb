@@ -68,7 +68,9 @@
   <ItemGroup>
     <Compile Include="Client\Async\AsyncServerClient.cs" />
     <Compile Include="Client\Async\IAsyncDatabaseCommands.cs" />
+    <Compile Include="Client\CachedRequest.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
+    <Compile Include="Client\HttpJsonRequestFactory.cs" />
     <Compile Include="Client\IDatabaseCommands.cs" />
     <Compile Include="Client\JsonExtensions.cs" />
     <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />

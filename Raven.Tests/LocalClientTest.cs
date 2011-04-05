@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -44,7 +45,9 @@ namespace Raven.Tests
                     RunInMemory = inMemory,
                 }
             };
-			
+
+			ModifyConfiguration(documentStore.Configuration);
+
 			if (documentStore.Configuration.RunInMemory == false)
                 IOExtensions.DeleteDirectory(path);
             documentStore.Initialize();
@@ -60,7 +63,11 @@ namespace Raven.Tests
             return documentStore;
         }
 
-        public void WaitForIndexing(EmbeddableDocumentStore store)
+    	protected virtual void ModifyConfiguration(RavenConfiguration configuration)
+    	{
+    	}
+
+    	public void WaitForIndexing(EmbeddableDocumentStore store)
         {
             while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
             {

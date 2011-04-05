@@ -9,8 +9,10 @@ properties {
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-  $web_dlls = @( "Raven.Abstractions.???", "Raven.Studio.xap", "Raven.Web.???", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", `
+  $web_dlls = @( "Raven.Abstractions.???", "Raven.Web.???", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", `
     "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+    
+  $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
   $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
     "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
@@ -229,7 +231,9 @@ task CopyWeb {
   foreach($web_dll in $web_dlls) {
     cp "$build_dir\$web_dll" $build_dir\Output\Web\bin
   }
-	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
+  foreach($web_file in $web_files) {
+    cp "$build_dir\$web_file" $build_dir\Output\Web
+  }
 }
 
 task CopyBundles {
@@ -363,6 +367,11 @@ task UploadUnstable -depends Unstable, DoRelease, Upload {
 task CreateNugetPackage {
   $accessPath = "$base_dir\..\Nuget-Access-Key.txt"
   
+  if( $global:uploadCategory -ne "RavenDB") # we only publish the stable version out
+  {
+    return
+  }
+  
   if ( (Test-Path $accessPath) -eq $false )
   {
     return;
@@ -418,7 +427,9 @@ task CreateNugetPackage {
   
   & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB.$version.$env:buildlabel.nupkg" $accessKey
   
-  $prevVersion = ($env:buildlabel - 1)
   
-  & "$tools_dir\nuget.exe" delete RavenDB "$version.$prevVersion" $accessKey -source http://packages.nuget.org/v1/ -NoPrompt
+  # This is prune to failure since the previous package may not exists
+  
+  #$prevVersion = ($env:buildlabel - 1)
+  # & "$tools_dir\nuget.exe" delete RavenDB "$version.$prevVersion" $accessKey -source http://packages.nuget.org/v1/ -NoPrompt
 }

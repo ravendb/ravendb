@@ -4,16 +4,18 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+using Raven.Abstractions.MEF;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 using Raven.Http.Plugins;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Http.Responders
 {
 	public class SilverlightUI : AbstractRequestResponder
 	{
-		[Import(AllowDefault = true)]
-		public ISilverlightRequestedAware SilverlightRequestedAware { get; set; }
+		[ImportMany]
+		public OrderedPartCollection<ISilverlightRequestedAware> SilverlightRequestedAware { get; set; }
 
 		public override string UrlPattern
 		{
@@ -27,10 +29,12 @@ namespace Raven.Http.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			ResourceStore.ExternalState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
+			ResourceStore.ExternalState.GetOrAddAtomically("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
 			{
-				if (SilverlightRequestedAware != null)
-					SilverlightRequestedAware.SilverlightWasRequested(ResourceStore);
+				foreach (var silverlightRequestedAware in SilverlightRequestedAware)
+				{
+					silverlightRequestedAware.Value.SilverlightWasRequested(ResourceStore);
+				}
 				return true;
 			});
 

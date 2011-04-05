@@ -210,5 +210,20 @@ namespace Raven.Client.Linq
 		{
 			return (IRavenQueryable<TResult>)Queryable.Select(source, selector);
 		}
+
+		/// <summary>
+		///  implementation of In operator
+		/// </summary>
+		public static bool In<T>(this T field, IEnumerable<T> values)
+		{
+			return values.Any(value => field.Equals(value));
+		}
+		/// <summary>
+		///  implementation of In operator
+		/// </summary>
+		public static bool In<T>(this T field, params T[] values)
+		{
+			return values.Any(value => field.Equals(value));
+		}
 	}
 }

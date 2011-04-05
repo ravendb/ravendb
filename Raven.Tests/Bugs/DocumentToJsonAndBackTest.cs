@@ -88,7 +88,7 @@ namespace Raven.Tests.Bugs
 			}.ToIndexDefinition(new DocumentConvention());
 
 			var mapInstance = new DynamicViewCompiler("testView",
-													  indexDefinition, new AbstractDynamicCompilationExtension[] { }, ".").
+													  indexDefinition, ".").
 				GenerateInstance();
 
 			var conventions = new DocumentConvention();

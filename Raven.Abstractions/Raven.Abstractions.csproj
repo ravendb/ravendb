@@ -41,6 +41,7 @@
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -78,9 +79,14 @@
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Extensions\ConcurrentDictionaryExtensions.cs" />
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />
+    <Compile Include="Default.cs" />
+    <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
+    <Compile Include="MEF\IPartMetadata.cs" />
+    <Compile Include="MEF\OrderedPartCollection.cs" />
     <Compile Include="Json\JsonDateTimeOffsetConverter.cs" />
     <Compile Include="Json\JsonMultiDimensionalArrayConverter.cs" />
     <Compile Include="Json\JsonToJsonConverter.cs" />

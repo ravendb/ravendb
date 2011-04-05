@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Transactions;
 #endif
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -31,7 +32,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public abstract class InMemoryDocumentSessionOperations : IDisposable
 	{
-		private const string RavenEntityName = "Raven-Entity-Name";
 		/// <summary>
 		/// The entities waiting to be deleted
 		/// </summary>
@@ -271,7 +271,7 @@ namespace Raven.Client.Document
 					string.Format(
 						@"The maximum number of requests ({0}) allowed for this session has been reached.
 Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
-Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves.
+Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves (call SaveChanges() only once).
 You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
 advisable that you'll look into reducing the number of remote calls first, since that will speed up your application signficantly and result in a 
 more responsive application.
@@ -518,7 +518,7 @@ more responsive application.
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
 			var metadata = new JObject();
 			if(tag != null)
-				metadata.Add(new JProperty(RavenEntityName, new JValue(tag)));
+				metadata.Add(new JProperty(Constants.RavenEntityName, new JValue(tag)));
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
 				Key = id,
@@ -788,9 +788,9 @@ more responsive application.
 				objectAsJson.Remove(identityProperty.Name);
 			}
 #if !SILVERLIGHT
-			metadata[Raven.Abstractions.Data.Constacts.RavenClrType] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
+			metadata[Raven.Abstractions.Data.Constants.RavenClrType] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
 #else
-			metadata[Raven.Abstractions.Data.Constacts.RavenClrType] = JToken.FromObject(entityType.AssemblyQualifiedName);
+			metadata[Raven.Abstractions.Data.Constants.RavenClrType] = JToken.FromObject(entityType.AssemblyQualifiedName);
 #endif
 			var entityConverted = OnEntityConverted;
 			if (entityConverted != null)

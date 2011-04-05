@@ -7,6 +7,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -14,6 +16,7 @@ using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Queries.LinearQueries
 {
@@ -34,10 +37,10 @@ namespace Raven.Database.Queries.LinearQueries
 
         public RemoteQueryResults Query(LinearQuery query)
         {
-            var viewGenerator = queryCache.GetOrAdd(query.Query,
+            var viewGenerator = queryCache.GetOrAddAtomically(query.Query,
                                                     s =>
                                                     new DynamicViewCompiler("query", new IndexDefinition { Map = query.Query, },
-                                                                            new AbstractDynamicCompilationExtension[0], basePath)
+																			new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath)
                                                     {
                                                         RequiresSelectNewAnonymousType = false
                                                     }.GenerateInstance());
@@ -56,7 +59,7 @@ namespace Raven.Database.Queries.LinearQueries
                 if (string.IsNullOrEmpty(viewGenerator.ForEntityName) == false) //optimization
                 {
                     matchingDocs =
-                        matchingDocs.Where(x => x.Item1.Metadata.Value<string>("Raven-Entity-Name") == viewGenerator.ForEntityName);
+                        matchingDocs.Where(x => x.Item1.Metadata.Value<string>(Constants.RavenEntityName) == viewGenerator.ForEntityName);
                 }
 
                 var docs = matchingDocs
