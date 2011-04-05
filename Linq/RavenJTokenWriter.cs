@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -117,14 +114,17 @@ namespace Raven.Json.Linq
 
         internal void AddValue(RavenJValue value, JsonToken token)
         {
-			switch (token)
+			if (value == null)
 			{
-				case JsonToken.Null:
-					value = new RavenJValue(null, JTokenType.Null);
-					break;
-				case JsonToken.Undefined:
-					value = new RavenJValue(null, JTokenType.Undefined);
-					break;
+				switch (token)
+				{
+					case JsonToken.Null:
+						value = new RavenJValue(null, JTokenType.Null);
+						break;
+					case JsonToken.Undefined:
+						value = new RavenJValue(null, JTokenType.Undefined);
+						break;
+				}
 			}
 
         	if (_tokenStack.Count == 0)
