@@ -25,10 +25,7 @@ namespace Raven.Bundles.Authorization.Triggers
 		public override ReadVetoResult AllowRead(string key,  JObject metadata, ReadOperation readOperation,
 		                                         TransactionInformation transactionInformation)
 		{
-			if (AuthorizationContext.IsInAuthorizationContext)
-				return ReadVetoResult.Allowed;
-
-			using(AuthorizationContext.Enter())
+			using (Database.DisableAllTriggersForCurrentThread())
 			{
                 var user = CurrentOperationContext.Headers.Value[Constants.RavenAuthorizationUser];
                 var operation = CurrentOperationContext.Headers.Value[Constants.RavenAuthorizationOperation];

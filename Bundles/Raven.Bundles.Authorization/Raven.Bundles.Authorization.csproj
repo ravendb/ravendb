@@ -45,7 +45,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AuthorizationContext.cs" />
     <Compile Include="AuthorizationDecisions.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Model\AuthorizationRole.cs" />
