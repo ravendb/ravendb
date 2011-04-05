@@ -380,9 +380,9 @@ namespace Raven.Client.Client.Async
 					})
 				.ContinueWith(task =>
 				{
-					JToken json;
+					RavenJToken json;
 					using (var reader = new JsonTextReader(new StringReader(task.Result.Result)))
-						json = (JToken)convention.CreateSerializer().Deserialize(reader);
+						json = RavenJToken.Load(reader);
 
 					//TODO: the json includes LastScanResults and Errors, but it doesn't include the commented out properties below.
 					// Should this change?
@@ -394,7 +394,7 @@ namespace Raven.Client.Client.Async
 						Results = json["Results"].Children().Cast<RavenJObject>().ToList(),
 						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 						//SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-						//Includes = json["Includes"].Children().Cast<JObject>().ToList(), 
+						//Includes = json["Includes"].Children().Cast<RavenJObject>().ToList(), 
 					};
 				});
 		}
@@ -478,7 +478,7 @@ namespace Raven.Client.Client.Async
 					var serializer = convention.CreateSerializer();
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 					{
-						var json = (JToken)serializer.Deserialize(reader);
+						var json = RavenJToken.Load(reader);
 						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
 						return JsonConvert.DeserializeObject<IndexDefinition>(json["Index"].ToString());
 					}
@@ -582,8 +582,8 @@ namespace Raven.Client.Client.Async
 					var serializer = convention.CreateSerializer();
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 					{
-						var json = (JToken)serializer.Deserialize(reader);
-						return json.Select(x => x.Value<string>()).ToArray();
+						var json = RavenJToken.Load(reader) as RavenJObject;
+						return json.Children().Select(x => x.Value<string>()).ToArray();
 					}
 				});
 		}
@@ -604,10 +604,10 @@ namespace Raven.Client.Client.Async
 					var serializer = convention.CreateSerializer();
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 					{
-						var json = (JToken)serializer.Deserialize(reader);
+						var json = RavenJObject.Load(reader);
 						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
 						return json
-							.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(x["definition"].ToString()))
+							.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(x.Value["definition"].ToString()))
 							.ToArray();
 					}
 				});
@@ -649,14 +649,13 @@ namespace Raven.Client.Client.Async
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
-			var serializer = convention.CreateSerializer();
 
 			return request.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 					{
-						var json = (JToken)serializer.Deserialize(reader);
+						var json = RavenJToken.Load(reader);
 						return new SuggestionQueryResult
 						{
 							Suggestions = json["Suggestions"].Children().Select(x => x.Value<string>()).ToArray(),
@@ -923,11 +922,10 @@ namespace Raven.Client.Client.Async
                 .ReadResponseStringAsync()
                 .ContinueWith(task =>
                 {
-                    var serializer = convention.CreateSerializer();
                     using (var reader = new JsonTextReader(new StringReader(task.Result)))
                     {
-                        var json = (JToken)serializer.Deserialize(reader);
-                        return json.Select(x => x.Value<string>()).ToArray();
+                        var json = RavenJObject.Load(reader);
+                        return json.Properties.Select(x => x.Value.Value<string>()).ToArray();
                     }
                 });
 	    }

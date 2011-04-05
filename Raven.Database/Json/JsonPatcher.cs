@@ -201,7 +201,7 @@ namespace Raven.Database.Json
 			if (! (property is RavenJArray))
 			{
 				property = new RavenJArray();
-				document.Properties.Add(propName, property);
+				document[propName] = property;
 			}
 			var array = GetArray(property, propName);
 
