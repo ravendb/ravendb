@@ -17,6 +17,7 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Http.Json;
@@ -100,7 +101,7 @@ namespace Raven.Database.Storage
 	        {
 	            try
 	            {
-	            	var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), new JsonEnumConverter());
+					var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), new JsonEnumConverter(), new JsonToJsonConverter());
 					if (indexDefinition.Name == null)
 						indexDefinition.Name = MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index));
 	            	AddAndCompileIndex(indexDefinition);

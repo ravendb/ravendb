@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Raven.Database.Json;
 using Raven.Json.Linq;
 
 #if !NET_3_5
@@ -438,7 +439,7 @@ namespace Raven.Client.Client.Async
 						{
 							try
 							{
-								return JsonConvert.DeserializeObject<PutResult>(task1.Result, new JsonEnumConverter());
+								return JsonConvert.DeserializeObject<PutResult>(task1.Result, new JsonEnumConverter(), new JsonToJsonConverter());
 							}
 							catch (AggregateException e)
 							{
@@ -480,7 +481,7 @@ namespace Raven.Client.Client.Async
 					{
 						var json = RavenJToken.Load(reader);
 						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-						return JsonConvert.DeserializeObject<IndexDefinition>(json["Index"].ToString());
+						return JsonConvert.DeserializeObject<IndexDefinition>(json["Index"].ToString(), new JsonToJsonConverter());
 					}
 				});
 		}
@@ -532,7 +533,7 @@ namespace Raven.Client.Client.Async
 							.ContinueWith(readStrTask => AttemptToProcessResponse( ()=>
 								{
 									//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctr is private!
-									var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result);
+									var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result, new JsonToJsonConverter());
 									return obj.Index;
 								})))
 					).Unwrap();
@@ -607,7 +608,7 @@ namespace Raven.Client.Client.Async
 						var json = RavenJObject.Load(reader);
 						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
 						return json
-							.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(x.Value["definition"].ToString()))
+							.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(x.Value["definition"].ToString(), new JsonToJsonConverter()))
 							.ToArray();
 					}
 				});
@@ -694,7 +695,7 @@ namespace Raven.Client.Client.Async
 							throw;
 						throw ThrowConcurrencyException(e);
 					}
-					return JsonConvert.DeserializeObject<BatchResult[]>(response);
+					return JsonConvert.DeserializeObject<BatchResult[]>(response, new JsonToJsonConverter());
 				});
 
 		}

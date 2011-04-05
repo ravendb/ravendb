@@ -314,7 +314,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw;
 				throw ThrowConcurrencyException(e);
 			}
-			return JsonConvert.DeserializeObject<PutResult>(readResponseString, new JsonEnumConverter());
+			return JsonConvert.DeserializeObject<PutResult>(readResponseString, new JsonEnumConverter(), new JsonToJsonConverter());
 		}
 
 		private static void AddTransactionInformation(RavenJObject metadata)
@@ -802,7 +802,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw;
 				throw ThrowConcurrencyException(e);
 			}
-			return JsonConvert.DeserializeObject<BatchResult[]>(response);
+			return JsonConvert.DeserializeObject<BatchResult[]>(response, new JsonToJsonConverter());
 		}
 
 		/// <summary>

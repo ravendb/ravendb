@@ -22,6 +22,7 @@ using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Http.Exceptions;
 using Raven.Http.Json;
 using Raven.Json.Linq;
@@ -199,7 +200,7 @@ namespace Raven.Client.Client.Async
 						{
 							try
 							{
-								return JsonConvert.DeserializeObject<PutResult>(task1.Result, new JsonEnumConverter());
+								return JsonConvert.DeserializeObject<PutResult>(task1.Result, new JsonEnumConverter(), new JsonToJsonConverter());
 							}
 							catch (WebException e)
 							{
@@ -483,7 +484,7 @@ namespace Raven.Client.Client.Async
 							throw;
 						throw ThrowConcurrencyException(e);
 					}
-					return JsonConvert.DeserializeObject<BatchResult[]>(response);
+					return JsonConvert.DeserializeObject<BatchResult[]>(response, new JsonToJsonConverter());
 				});
 
 		}

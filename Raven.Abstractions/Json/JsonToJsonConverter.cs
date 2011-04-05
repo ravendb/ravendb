@@ -20,6 +20,13 @@ namespace Raven.Database.Json
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
+			if (objectType.Equals(typeof(RavenJObject)))
+				return RavenJObject.Load(reader);
+			if (objectType.Equals(typeof(RavenJArray)))
+				return RavenJArray.Load(reader);
+			if (objectType.Equals(typeof(RavenJToken)))
+				return RavenJToken.Load(reader);
+
 			throw new NotImplementedException();
 		}
 
