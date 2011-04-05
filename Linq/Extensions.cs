@@ -36,7 +36,7 @@ namespace Raven.Json.Linq
 
 			var token = value as RavenJToken;
 			if (token == null)
-				throw new ArgumentException("Source value must be a JToken.");
+				throw new ArgumentException("Source value must be a RavenJToken.");
 
 			return token.Convert<RavenJToken, U>();
 		}

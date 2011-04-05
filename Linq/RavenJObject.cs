@@ -156,12 +156,12 @@ namespace Raven.Json.Linq
             if (reader.TokenType == JsonToken.None)
             {
                 if (!reader.Read())
-                    throw new Exception("Error reading JObject from JsonReader.");
+                    throw new Exception("Error reading RavenJObject from JsonReader.");
             }
 
             if (reader.TokenType != JsonToken.StartObject)
                 throw new Exception(
-                    "Error reading JObject from JsonReader. Current JsonReader item is not an object: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+                    "Error reading RavenJObject from JsonReader. Current JsonReader item is not an object: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
 
             if (reader.Read() == false)
                 throw new Exception("Unexpected end of json object");
@@ -225,7 +225,7 @@ namespace Raven.Json.Linq
                 }
             } while (reader.Read());
 
-            throw new Exception("Error reading JObject from JsonReader.");
+            throw new Exception("Error reading RavenJObject from JsonReader.");
         }
 
 		/// <summary>
