@@ -5,6 +5,7 @@ namespace Raven.Studio.Features.Database
     using Caliburn.Micro;
     using Framework;
     using Messages;
+    using Plugins;
     using Raven.Client.Extensions;
 
     [Export]

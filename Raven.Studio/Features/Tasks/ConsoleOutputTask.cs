@@ -4,6 +4,7 @@
 	using Database;
 	using Framework;
 	using Framework.Extensions;
+	using Plugins;
 
 	public abstract class ConsoleOutputTask : RavenScreen
 	{

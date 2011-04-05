@@ -19,6 +19,8 @@ namespace Raven.Studio.Features.Database
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
+	using Plugins;
+	using Plugins.Statistics;
 	using Raven.Database.Data;
 	using Statistics;
 	using Action = System.Action;

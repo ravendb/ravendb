@@ -6,6 +6,7 @@
 	using Features.Indexes;
 	using Framework.Extensions;
 	using Messages;
+	using Plugins;
 
 	public class EditIndex
 	{

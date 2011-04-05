@@ -133,9 +133,7 @@
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
-    <Compile Include="Features\Database\IServer.cs" />
     <Compile Include="Features\Statistics\DynamicViewModel.cs" />
-    <Compile Include="Features\Statistics\IStatisticsItem.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
@@ -148,7 +146,6 @@
     <Compile Include="Features\Documents\ISupportDocumentTemplate.cs" />
     <Compile Include="Features\Query\QueryViewModel.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
-    <Compile Include="Features\Statistics\IStatisticsSet.cs" />
     <Compile Include="Features\Statistics\IndexesViewModel.cs" />
     <Compile Include="Features\Statistics\Statistic.cs" />
     <Compile Include="Features\Statistics\StatisticsViewModel.cs" />

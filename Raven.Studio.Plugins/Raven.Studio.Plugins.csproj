@@ -46,6 +46,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Caliburn.Micro">
+      <HintPath>..\SharedLibs\Silverlight\Caliburn.Micro.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows" />
@@ -56,8 +59,17 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IServer.cs" />
+    <Compile Include="Statistics\IStatisticsItem.cs" />
+    <Compile Include="Statistics\IStatisticsSet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tasks\ExportTaskAttribute.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
+      <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
+      <Name>Raven.Client.Silverlight</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <ProjectExtensions>

@@ -17,6 +17,7 @@
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
+	using Plugins;
 
 	[Plugins.Tasks.ExportTask("Export Database")]
 	public class ExportTask : ConsoleOutputTask

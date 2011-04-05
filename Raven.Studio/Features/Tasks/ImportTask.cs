@@ -16,6 +16,7 @@
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
+	using Plugins;
 	using Raven.Database.Data;
 	using Raven.Database.Indexing;
 
