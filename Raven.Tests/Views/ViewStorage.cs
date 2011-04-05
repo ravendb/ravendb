@@ -112,14 +112,14 @@ namespace Raven.Tests.Views
         {
             transactionalStorage.Batch(actions =>
             {
-                actions.MappedResults.PutMappedResult("CommentCountsByBlog", "123", "1", JObject.Parse("{'a': 'abc'}"), MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"));
+                actions.MappedResults.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"), MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"));
             });
 
 
             transactionalStorage.Batch(actions =>
             {
                 actions.MappedResults.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog");
-                actions.MappedResults.PutMappedResult("CommentCountsByBlog", "123", "1", JObject.Parse("{'a': 'def'}"), MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"));
+				actions.MappedResults.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}"), MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"));
             });
 
             transactionalStorage.Batch(actions =>
