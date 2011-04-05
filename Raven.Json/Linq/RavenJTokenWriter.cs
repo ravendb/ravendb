@@ -51,7 +51,7 @@ namespace Raven.Json.Linq
         {
             if (_token == null)
             {
-                _token = new RavenJObject();
+            	_token = token;
                 _tokenStack.Push(_token);
                 return;
             }
