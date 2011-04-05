@@ -185,8 +185,8 @@ namespace Raven.Client.Client.Async
 			if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 			{
 				var conflicts = new StreamReader(httpWebResponse.GetResponseStream());
-				var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
-				var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+				var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
+				var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 				throw new ConflictException("Conflict detected on " + key +
 											", conflict must be resolved before the document will be accessible")
@@ -256,10 +256,10 @@ namespace Raven.Client.Client.Async
 				.ContinueWith(writeTask => request.ReadResponseStringAsync())
 				.ContinueWith(task =>
 				{
-					JArray responses;
+					RavenJArray responses;
 					try
 					{
-						responses = JObject.Parse(task.Result.Result).Value<JArray>("Results");
+						responses = RavenJObject.Parse(task.Result.Result).Value<RavenJArray>("Results");
 					}
 					catch (WebException e)
 					{

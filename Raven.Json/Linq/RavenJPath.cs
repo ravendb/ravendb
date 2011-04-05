@@ -146,7 +146,7 @@ namespace Raven.Json.Linq
 						if (a.Length <= index)
 						{
 							if (errorWhenNoMatch)
-								throw new IndexOutOfRangeException("Index {0} outside the bounds of JArray.".FormatWith(CultureInfo.InvariantCulture, index));
+								throw new IndexOutOfRangeException("Index {0} outside the bounds of RavenJArray.".FormatWith(CultureInfo.InvariantCulture, index));
 
 							return null;
 						}

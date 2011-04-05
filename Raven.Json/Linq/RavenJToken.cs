@@ -235,7 +235,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <typeparam name="T">The type to convert the values to.</typeparam>
 		/// <returns>
-		/// A <see cref="IEnumerable{T}"/> containing the child values of this <see cref="JToken"/>, in document order.
+		/// A <see cref="IEnumerable{T}"/> containing the child values of this <see cref="RavenJToken"/>, in document order.
 		/// </returns>
 		public IEnumerable<T> Values<T>()
 		{

@@ -157,7 +157,7 @@ namespace Raven.Json.Linq
                 }
             } while (reader.Read());
 
-            throw new Exception("Error reading JArray from JsonReader.");
+            throw new Exception("Error reading RavenJArray from JsonReader.");
         }
 
 		/// <summary>

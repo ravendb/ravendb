@@ -117,7 +117,7 @@ namespace Raven.Database.Indexing
             {
 				if (value is DateTime)
 				{
-					var val = new JValue(value).ToString();
+					var val = new RavenJValue(value).ToString();
 					yield return new Field(name, val.Substring(1, val.Length-2), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 				}
