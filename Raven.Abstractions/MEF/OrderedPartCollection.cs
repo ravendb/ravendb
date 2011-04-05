@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading;
 
 namespace Raven.Abstractions.MEF
 {
@@ -11,9 +12,18 @@ namespace Raven.Abstractions.MEF
 	public class OrderedPartCollection<T> : ICollection<Lazy<T, IPartMetadata>>, INotifyCollectionChanged
 	{
 		private readonly ObservableCollection<Lazy<T, IPartMetadata>> inner = new ObservableCollection<Lazy<T, IPartMetadata>>();
+		private ThreadLocal<bool> disableApplication;
 
+		public OrderedPartCollection<T> Init(ThreadLocal<bool> disableApplicationValue)
+		{
+			disableApplication = disableApplicationValue;
+			return this;
+		}
+		
 		public IEnumerator<Lazy<T, IPartMetadata>> GetEnumerator()
 		{
+			if (disableApplication != null && disableApplication.Value)
+				return Enumerable.Empty<Lazy<T, IPartMetadata>>().GetEnumerator();
 			return inner.GetEnumerator();
 		}
 
@@ -86,7 +96,7 @@ namespace Raven.Abstractions.MEF
 
 		public void Apply(Action<T> action)
 		{
-			foreach (var item in inner)
+			foreach (var item in this)
 			{
 				action(item.Value);
 			}
