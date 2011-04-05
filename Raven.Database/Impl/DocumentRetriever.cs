@@ -139,11 +139,9 @@ namespace Raven.Database.Impl
 
 	    	var metadata = doc.Metadata;
 	    	if (metadata == null)
-                return ;
+                return;
 
-            if (metadata.Properties.ContainsKey("@id"))
-                metadata.Properties.Remove("@id");
-            metadata.Properties.Add("@id", new RavenJValue(doc.Key));
+            metadata.Properties["@id"] = new RavenJValue(doc.Key);
 	    }
 
 	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
