@@ -1,6 +1,7 @@
 ﻿#if !NET_3_5
 using System;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Linq;
 using Raven.Json.Linq;
 
@@ -20,14 +21,10 @@ namespace Raven.Database.Json
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
-			if (objectType.Equals(typeof(RavenJObject)))
-				return RavenJObject.Load(reader);
-			if (objectType.Equals(typeof(RavenJArray)))
-				return RavenJArray.Load(reader);
-			if (objectType.Equals(typeof(RavenJToken)))
-				return RavenJToken.Load(reader);
+			// NOTE: THIS DOESN'T SUPPORT READING OF DynamicJsonObject !!!
 
-			throw new NotImplementedException();
+			var o = RavenJToken.Load(reader);
+			return (o.Type == JTokenType.Null || o.Type == JTokenType.Undefined) ? null : o;
 		}
 
 		public override bool CanConvert(Type objectType)
