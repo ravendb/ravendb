@@ -3,12 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.ComponentModel.Composition;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Replication.Triggers
 {
-    public class AttachmentAncestryPutTrigger : AbstractAttachmentPutTrigger
+	[ExportMetadata("Order", 10000)]
+	public class AttachmentAncestryPutTrigger : AbstractAttachmentPutTrigger
     {
         private ReplicationHiLo hiLo;
         public override void Initialize()

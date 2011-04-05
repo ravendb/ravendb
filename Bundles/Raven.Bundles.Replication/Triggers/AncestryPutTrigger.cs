@@ -3,12 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.ComponentModel.Composition;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
 using Raven.Http;
 
 namespace Raven.Bundles.Replication.Triggers
 {
+	[ExportMetadata("Order", 10000)]
     public class AncestryPutTrigger : AbstractPutTrigger
     {
         private ReplicationHiLo hiLo;
@@ -20,6 +22,7 @@ namespace Raven.Bundles.Replication.Triggers
                 Database = Database
             };
         }
+
         public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
             if (key.StartsWith("Raven/")) // we don't deal with system documents

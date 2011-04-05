@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.ComponentModel.Composition;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
@@ -11,7 +12,8 @@ using Raven.Http;
 
 namespace Raven.Bundles.Replication.Triggers
 {
-    public class HideVirtuallyDeletedDocumentsReadTrigger : AbstractReadTrigger
+	[ExportMetadata("Order", 10000)]
+	public class HideVirtuallyDeletedDocumentsReadTrigger : AbstractReadTrigger
     {
         public override ReadVetoResult AllowRead(string key, JObject metadata, ReadOperation operation,
                                                  TransactionInformation transactionInformation)

@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.ComponentModel.Composition;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
@@ -17,7 +18,8 @@ namespace Raven.Bundles.Replication.Triggers
     /// we allow the delete but don't do actual delete, we replace it 
     /// with a delete marker instead
     /// </summary>
-    public class VirtualDeleteTrigger : AbstractDeleteTrigger
+	[ExportMetadata("Order", 10000)]
+	public class VirtualDeleteTrigger : AbstractDeleteTrigger
     {
         readonly ThreadLocal<JToken> deletedSource = new ThreadLocal<JToken>();
         readonly ThreadLocal<JToken> deletedVersion = new ThreadLocal<JToken>();
