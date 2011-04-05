@@ -7,10 +7,6 @@
 			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
 			 xmlns:cm="http://www.caliburnproject.org"
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
-			 xmlns:f="clr-namespace:Raven.Studio.Framework"
-			 xmlns:sh="clr-namespace:Raven.Studio.Controls.SyntaxHighlighting;assembly=Raven.Studio.Controls.SyntaxHighlighting"
-			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-			 xmlns:docs="clr-namespace:Raven.Studio.Features.Documents"
 			 x:Class="Raven.Studio.Features.Documents.BrowseDocumentsView"
 			 mc:Ignorable="d"
 			 d:DesignWidth="640"
@@ -64,11 +60,12 @@
 					 ItemsSource="{Binding Documents}"
 					 PageContainer="{Binding ElementName=DocumentPageContainer}" />
 
-			<!--<c:Pager tk:DockPanel.Dock="Bottom"
-					 PageContainer="{Binding ElementName=DocumentPageContainer}"
-					 cm:Bind.Model="{Binding Documents}" />-->
-
 			<Grid>
+				<TextBlock Style="{StaticResource Instruction}"
+				           Text="{Binding Status}"
+				           d:IsHidden="True"
+				           d:IsLocked="True" />
+
 				<ItemsControl x:Name="DocumentPageContainer"
 							  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 							  BorderThickness="0"
@@ -81,10 +78,6 @@
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>
 
-				<TextBlock Style="{StaticResource Instruction}"
-						   Text="{Binding Status}"
-						   d:IsHidden="True"
-						   d:IsLocked="True" />
 			</Grid>
 		</tk:DockPanel>
 
