@@ -61,7 +61,7 @@ namespace Raven.Json.Linq
                 case JTokenType.Object:
                     if (string.IsNullOrEmpty(_tempPropName))
                         throw new JsonWriterException("Unexpected object token");
-                    ((RavenJObject)CurrentToken).Properties.Add(_tempPropName, token);
+                    ((RavenJObject)CurrentToken).Properties[_tempPropName] = token;
                     _tempPropName = null;
                     break;
                 case JTokenType.Array:
@@ -136,7 +136,7 @@ namespace Raven.Json.Linq
                     case JTokenType.Object:
                         if (string.IsNullOrEmpty(_tempPropName))
                             throw new JsonWriterException("Unexpected value token");
-                        ((RavenJObject)CurrentToken).Properties.Add(_tempPropName, value);
+                        ((RavenJObject)CurrentToken).Properties[_tempPropName] = value;
                         _tempPropName = null;
                         break;
                     case JTokenType.Array:
