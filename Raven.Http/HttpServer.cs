@@ -106,6 +106,14 @@ namespace Raven.Http
                     listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication;
                     break;
                 case AnonymousUserAccessMode.All:
+					 listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
+                        AuthenticationSchemes.Anonymous;
+                    listener.AuthenticationSchemeSelectorDelegate = request =>
+                    {
+						if(request.RawUrl.StartsWith("/admin",StringComparison.InvariantCultureIgnoreCase))
+							return AuthenticationSchemes.IntegratedWindowsAuthentication;
+                        return AuthenticationSchemes.Anonymous;
+                    };
                     break;
                 case AnonymousUserAccessMode.Get:
                     listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
@@ -113,7 +121,7 @@ namespace Raven.Http
                     listener.AuthenticationSchemeSelectorDelegate = request =>
                     {
                         return request.HttpMethod == "GET" || request.HttpMethod == "HEAD" ?
-                            AuthenticationSchemes.Anonymous :
+							AuthenticationSchemes.Anonymous | AuthenticationSchemes.IntegratedWindowsAuthentication :
                             AuthenticationSchemes.IntegratedWindowsAuthentication;
                     };
                     break;

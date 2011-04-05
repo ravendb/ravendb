@@ -437,7 +437,9 @@ namespace Raven.Http.Extensions
 			if(context.User.Identity.IsAuthenticated == false)
 				return false;
 
-			return context.User.IsInRole("Administrators");
+			return
+				context.User.IsInRole(@"administrators") ||
+				context.User.IsInRole(@"builtin\administrators");
 		}
 
 		private static string GetContentType(string docPath)
