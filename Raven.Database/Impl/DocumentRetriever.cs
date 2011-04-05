@@ -97,7 +97,7 @@ namespace Raven.Database.Impl
 							return null;
 					}
 				}
-				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection.Properties.ContainsKey(fieldToFetch) && queryResult.Projection[fieldToFetch] == null);
+				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null);
 				var doc = GetDocumentWithCaching(queryResult.Key);
 				if (doc != null)
 				{
