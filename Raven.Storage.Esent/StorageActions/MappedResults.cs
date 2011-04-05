@@ -19,15 +19,9 @@ namespace Raven.Storage.Esent.StorageActions
 	{
 		public void PutMappedResult(string view, string docId, string reduceKey, JObject data, byte[] viewAndReduceKeyHashed)
 		{
-			Api.JetSetCurrentIndex(session, MappedResults, "by_pk");
-			Api.MakeKey(session, MappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, MappedResults, docId, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.MakeKey(session, MappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
-			var isUpdate = Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ);
-			
 	        Guid etag = uuidGenerator.CreateSequentialUuid();
 
-			using (var update = new Update(session, MappedResults, isUpdate ? JET_prep.Replace : JET_prep.Insert))
+			using (var update = new Update(session, MappedResults, JET_prep.Insert))
 			{
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], view, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"], docId, Encoding.Unicode);

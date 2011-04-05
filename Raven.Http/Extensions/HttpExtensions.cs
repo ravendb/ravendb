@@ -7,11 +7,13 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Database.Json;
@@ -355,14 +357,6 @@ namespace Raven.Http.Extensions
 			return radius;
 		}
 
-		public static bool SortByDistance(this IHttpContext context)
-		{
-			var sortAsString = context.Request.QueryString["sortByDistance"];
-			bool sort;
-			bool.TryParse(sortAsString, out sort);
-			return sort;
-		}
-
 		public static Guid? GetEtagFromQueryString(this IHttpContext context)
 		{
 			var etagAsString = context.Request.QueryString["etag"];
@@ -430,6 +424,22 @@ namespace Raven.Http.Extensions
 			}
 			context.Response.AddHeader("ETag", fileEtag);
 			context.Response.WriteFile(filePath);
+		}
+
+		public static bool IsAdministrator(this IHttpContext context)
+		{
+			if(context == null)
+				return false;
+			if(context.User == null)
+				return false;
+			if(context.User.Identity == null)
+				return false;
+			if(context.User.Identity.IsAuthenticated == false)
+				return false;
+
+			return
+				context.User.IsInRole(@"administrators") ||
+				context.User.IsInRole(@"builtin\administrators");
 		}
 
 		private static string GetContentType(string docPath)

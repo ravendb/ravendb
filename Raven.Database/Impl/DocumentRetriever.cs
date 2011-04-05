@@ -29,15 +29,6 @@ namespace Raven.Database.Impl
 		private readonly IStorageActionsAccessor actions;
 		private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
 
-		private static readonly ThreadLocal<bool> disableReadTriggers = new ThreadLocal<bool>(() => false);
-
-		public static IDisposable DisableReadTriggers()
-		{
-			var old = disableReadTriggers.Value;
-			disableReadTriggers.Value = true;
-			return new DisposableAction(() => disableReadTriggers.Value = old);
-		}
-
 		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers)
 		{
 			this.actions = actions;
@@ -54,9 +45,6 @@ namespace Raven.Database.Impl
 
 		public JsonDocument ExecuteReadTriggers(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
 		{
-			if (disableReadTriggers.Value)
-				return document;
-
 			return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, transactionInformation, operation),
 											 transactionInformation, operation);
 		}
@@ -66,10 +54,11 @@ namespace Raven.Database.Impl
 			if (resultingDocument == null)
 				return null;
 
-			foreach (var readTrigger in triggers)
-			{
-				readTrigger.Value.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation, transactionInformation);
-			}
+			triggers.Apply(
+				trigger =>
+				trigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation,
+				               transactionInformation));
+		
 			return resultingDocument;
 		}
 
@@ -168,9 +157,6 @@ namespace Raven.Database.Impl
 		public T ProcessReadVetoes<T>(T document, TransactionInformation transactionInformation, ReadOperation operation)
 			where T : class, IJsonDocumentMetadata, new()
 		{
-			if (disableReadTriggers.Value)
-				return document;
-
 			if (document == null)
 				return document;
 			foreach (var readTrigger in triggers)

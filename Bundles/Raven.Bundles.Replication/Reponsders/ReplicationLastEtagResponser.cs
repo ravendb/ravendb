@@ -32,7 +32,7 @@ namespace Raven.Bundles.Replication.Reponsders
                 context.SetStatusToBadRequest();
                 return;
             }
-			using (ReplicationContext.Enter())
+			using (Database.DisableAllTriggersForCurrentThread())
             {
                 var document = Database.Get(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null);
                 if (document == null)

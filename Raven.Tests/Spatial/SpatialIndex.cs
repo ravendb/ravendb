@@ -82,7 +82,7 @@ namespace Raven.Tests.Spatial
 					Latitude = lat,
 					Longitude = lng,
 					Radius = radius,
-					SortByDistance = true
+					SortedFields = new[]{new SortedField("__distance"), }
 				});
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
@@ -102,6 +102,131 @@ namespace Raven.Tests.Spatial
 				Assert.True(distance < radius);
 				Assert.True(distance >= previous);
 				previous = distance;
+			}
+		}
+
+		[Fact]
+		public void CanSortByDistanceAndAnotherProp()
+		{
+			var indexDefinition = new IndexDefinition
+			{
+				Map = "from e in docs.Events select new { e.Venue, _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Indexes = {
+					{ "Tag", FieldIndexing.NotAnalyzed }
+				}
+			};
+
+			db.PutIndex("eventsByLatLng", indexDefinition);
+
+			var events = new[]
+			{
+				new Event("a/1", 38.9579000, -77.3572000),
+				new Event("b/1", 38.9579000, -77.3572000),
+				new Event("c/1", 38.9579000, -77.3572000),
+				new Event("a/2", 38.9690000, -77.3862000),
+				new Event("b/2", 38.9690000, -77.3862000),
+				new Event("c/2", 38.9690000, -77.3862000),
+				new Event("a/3", 38.9510000, -77.4107000),
+				new Event("b/3", 38.9510000, -77.4107000),
+				new Event("c/3", 38.9510000, -77.4107000),
+			};
+
+			for (int i = 0; i < events.Length; i++)
+			{
+				db.Put("Events/" + (i + 1), null,
+					JObject.FromObject(events[i]),
+					JObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+			}
+
+			const double lat = 38.96939, lng = -77.386398;
+			const double radius = 6.0;
+			QueryResult queryResult;
+			do
+			{
+				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
+				{
+					Latitude = lat,
+					Longitude = lng,
+					Radius = radius,
+					SortedFields = new[]
+					{
+						new SortedField("__distance"), 
+						new SortedField("Venue"),
+					}
+				});
+				if (queryResult.IsStale)
+					Thread.Sleep(100);
+			} while (queryResult.IsStale);
+
+			Assert.Equal(9, queryResult.Results.Count);
+
+			var expectedOrder = new[] {"a/2", "b/2", "c/2", "a/1", "b/1", "c/1", "a/3", "b/3", "c/3"};
+
+			for (int i = 0; i < queryResult.Results.Count; i++)
+			{
+				Assert.Equal(expectedOrder[i], queryResult.Results[i].Value<string>("Venue"));
+			}
+		}
+
+
+		[Fact]
+		public void CanSortByAnotherPropAnddistance()
+		{
+			var indexDefinition = new IndexDefinition
+			{
+				Map = "from e in docs.Events select new { e.Venue, _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Indexes = {
+					{ "Tag", FieldIndexing.NotAnalyzed }
+				}
+			};
+
+			db.PutIndex("eventsByLatLng", indexDefinition);
+
+			var events = new[]
+			{
+				new Event("b", 38.9579000, -77.3572000),
+				new Event("b", 38.9690000, -77.3862000),
+				new Event("b", 38.9510000, -77.4107000),
+			
+				new Event("a", 38.9579000, -77.3572000),
+				new Event("a", 38.9690000, -77.3862000),
+				new Event("a", 38.9510000, -77.4107000),
+
+		};
+
+			for (int i = 0; i < events.Length; i++)
+			{
+				db.Put("Events/" + (i + 1), null,
+					JObject.FromObject(events[i]),
+					JObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+			}
+
+			const double lat = 38.96939, lng = -77.386398;
+			const double radius = 6.0;
+			QueryResult queryResult;
+			do
+			{
+				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
+				{
+					Latitude = lat,
+					Longitude = lng,
+					Radius = radius,
+					SortedFields = new[]
+					{
+						new SortedField("Venue"),
+						new SortedField("__distance"), 
+					}
+				});
+				if (queryResult.IsStale)
+					Thread.Sleep(100);
+			} while (queryResult.IsStale);
+
+
+			var expectedOrder = new[] { "events/5", "events/4", "events/6", "events/2", "events/1", "events/3", };
+
+			for (int i = 0; i < queryResult.Results.Count; i++)
+			{
+				Assert.Equal(expectedOrder[i], queryResult.Results[i].Value<JObject>("@metadata").Value<string>("@id"));
 			}
 		}
 	}

@@ -18,8 +18,7 @@ namespace Raven.Database.Server.Responders
 
         public override void Respond(IHttpContext context)
         {
-            if (context.User.Identity.IsAuthenticated == false ||
-                context.User.IsInRole("Administrators"))
+            if (context.IsAdministrator() == false)
             {
                 context.SetStatusToForbidden();
                 context.WriteJson(new

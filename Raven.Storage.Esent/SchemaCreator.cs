@@ -392,11 +392,7 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnNotNULL|ColumndefGrbit.ColumnFixed
 			}, null, 0, out columnid);
 
-			var indexDef = "+view\0+document_key\0+reduce_key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_pk", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-			                   100);
-
-			indexDef = "+id\0\0";
+			var indexDef = "+id\0\0";
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
 							   100);
 			

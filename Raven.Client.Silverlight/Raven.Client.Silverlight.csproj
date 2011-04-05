@@ -81,8 +81,8 @@
     <Compile Include="..\Raven.Abstractions\Data\JsonDocumentMetadata.cs">
       <Link>Data\JsonDocumentMetadata.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Default.cs">
-      <Link>Json\Default.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Default.cs">
+      <Link>Default.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeISO8601Converter.cs">
       <Link>Json\JsonDateTimeISO8601Converter.cs</Link>

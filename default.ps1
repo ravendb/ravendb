@@ -263,9 +263,10 @@ task CreateDocs {
   & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\"
 }
 
-task CopyDocFiles -depends CreateDocs {
+task CopyRootFiles -depends CreateDocs {
 	cp $base_dir\license.txt $build_dir\Output\license.txt
-	cp $base_dir\\DefaultConfigs\Start.cmd $build_dir\Output\Start.cmd
+	cp $base_dir\Scripts\Start.cmd $build_dir\Output\Start.cmd
+	cp $base_dir\Scripts\Raven-StartBackup.ps1 $build_dir\Output\Raven-StartBackup.ps1
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
 	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
@@ -319,7 +320,7 @@ task DoRelease -depends Compile, `
 	CopyWeb, `
 	CopyBundles, `
 	CopyServer, `
-	CopyDocFiles, `
+	CopyRootFiles, `
 	CopySamples, `
 	ZipOutput, `
 	CreateNugetPackage, `

@@ -3,19 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.ComponentModel.Composition;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Replication.Triggers
 {
-    public class RemoveConflictOnAttachmentPutTrigger : AbstractAttachmentPutTrigger
+	[ExportMetadata("Order", 10000)]
+	public class RemoveConflictOnAttachmentPutTrigger : AbstractAttachmentPutTrigger
     {
         public override void OnPut(string key, byte[] data, JObject metadata)
         {
-            if (ReplicationContext.IsInReplicationContext)
-                return;
-
-            using (ReplicationContext.Enter())
+            using (Database.DisableAllTriggersForCurrentThread())
             {
                 metadata.Remove(ReplicationConstants.RavenReplicationConflict);// you can't put conflicts
 
