@@ -357,14 +357,6 @@ namespace Raven.Http.Extensions
 			return radius;
 		}
 
-		public static bool SortByDistance(this IHttpContext context)
-		{
-			var sortAsString = context.Request.QueryString["sortByDistance"];
-			bool sort;
-			bool.TryParse(sortAsString, out sort);
-			return sort;
-		}
-
 		public static Guid? GetEtagFromQueryString(this IHttpContext context)
 		{
 			var etagAsString = context.Request.QueryString["etag"];

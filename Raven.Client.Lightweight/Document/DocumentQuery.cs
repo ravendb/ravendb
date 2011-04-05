@@ -470,7 +470,7 @@ namespace Raven.Client.Document
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance()
         {
-            return new SpatialDocumentQuery<T>(this, true);
+            return new SpatialDocumentQuery<T>(this);
         }
 
         /// <summary>

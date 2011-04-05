@@ -329,7 +329,7 @@ namespace Raven.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance()
         {
-            return new AsyncSpatialDocumentQuery<T>(this, true);
+            return new AsyncSpatialDocumentQuery<T>(this);
         }
 
         /// <summary>

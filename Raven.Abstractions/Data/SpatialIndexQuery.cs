@@ -28,11 +28,6 @@ namespace Raven.Database.Data
 		/// </summary>
 		/// <value>The radius.</value>
 		public double Radius { get; set; }
-		/// <summary>
-		/// Gets or sets a value indicating whether [sort by distance].
-		/// </summary>
-		/// <value><c>true</c> if [sort by distance]; otherwise, <c>false</c>.</value>
-		public bool SortByDistance { get; set; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
@@ -65,8 +60,7 @@ namespace Raven.Database.Data
 			return string.Format("latitude={0}&longitude={1}&radius={2}&sortByDistance={3}",
 				Uri.EscapeDataString(Latitude.ToString()),
 				Uri.EscapeDataString(Longitude.ToString()),
-				Uri.EscapeDataString(Radius.ToString()),
-				Uri.EscapeDataString(SortByDistance ? "true" : "false"));
+				Uri.EscapeDataString(Radius.ToString()));
 		}
 	}
 }

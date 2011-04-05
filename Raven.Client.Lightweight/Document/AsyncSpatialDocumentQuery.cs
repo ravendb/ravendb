@@ -13,7 +13,6 @@ namespace Raven.Client.Document
     public class AsyncSpatialDocumentQuery<T> : AsyncDocumentQuery<T>
     {
         private readonly double lat, lng, radius;
-        private readonly bool sortByDistance;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SpatialDocumentQuery&lt;T&gt;"/> class.
@@ -61,16 +60,13 @@ namespace Raven.Client.Document
             lng = longitude;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SpatialDocumentQuery&lt;T&gt;"/> class.
-        /// </summary>
-        /// <param name="documentQuery">The document query.</param>
-        /// <param name="sortByDistance">if set to <c>true</c> the query will be sorted by distance.</param>
-        public AsyncSpatialDocumentQuery(AsyncDocumentQuery<T> documentQuery, bool sortByDistance)
+    	/// <summary>
+    	/// Initializes a new instance of the <see cref="SpatialDocumentQuery&lt;T&gt;"/> class.
+    	/// </summary>
+    	/// <param name="documentQuery">The document query.</param>
+    	public AsyncSpatialDocumentQuery(AsyncDocumentQuery<T> documentQuery)
             : base(documentQuery)
         {
-            this.sortByDistance = sortByDistance;
-
             var other = documentQuery as AsyncSpatialDocumentQuery<T>;
             if (other == null)
                 return;
@@ -99,7 +95,6 @@ namespace Raven.Client.Document
                 Latitude = lat,
                 Longitude = lng,
                 Radius = radius,
-                SortByDistance = sortByDistance
             };
         }
     }
