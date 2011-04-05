@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
 using Raven.Http.Exceptions;
@@ -14,7 +14,7 @@ namespace Raven.Tests.Patching
 {
     public class NestedPatching
     {
-        private readonly JObject doc = JObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}], ""user"": { ""name"": ""ayende"", ""id"": 13} }");
+        private readonly RavenJObject doc = RavenJObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}], ""user"": { ""name"": ""ayende"", ""id"": 13} }");
         [Fact]
         public void RenameSecondItemInArray()
         {
@@ -69,7 +69,7 @@ namespace Raven.Tests.Patching
         				Name = "user",
         				Nested = new[]
         				{
-        					new PatchRequest {Type = PatchCommandType.Set, Name = "name", Value = new JValue("rahien")},
+        					new PatchRequest {Type = PatchCommandType.Set, Name = "name", Value = new RavenJValue("rahien")},
         				}
         			},
         		});
@@ -88,10 +88,10 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Modify,
         				Name = "user",
-						PrevVal = JObject.Parse(@"{ ""name"": ""ayende"", ""id"": 13}"),
+						PrevVal = RavenJObject.Parse(@"{ ""name"": ""ayende"", ""id"": 13}"),
         				Nested = new[]
         				{
-        					new PatchRequest {Type = PatchCommandType.Set, Name = "name", Value = new JValue("rahien")},
+        					new PatchRequest {Type = PatchCommandType.Set, Name = "name", Value = new RavenJValue("rahien")},
         				}
         			},
         		});
@@ -110,10 +110,10 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Modify,
         				Name = "user",
-        				PrevVal = JObject.Parse(@"{ ""name"": ""ayende"", ""id"": 14}"),
+        				PrevVal = RavenJObject.Parse(@"{ ""name"": ""ayende"", ""id"": 14}"),
         				Nested = new[]
         				{
-        					new PatchRequest {Type = PatchCommandType.Set, Name = "name", Value = new JValue("rahien")},
+        					new PatchRequest {Type = PatchCommandType.Set, Name = "name", Value = new RavenJValue("rahien")},
         				}
         			},
         		}));
@@ -130,7 +130,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Modify,
         				Name = "user",
-        				PrevVal = JObject.Parse(@"{ ""name"": ""ayende"", ""id"": 13}"),
+        				PrevVal = RavenJObject.Parse(@"{ ""name"": ""ayende"", ""id"": 13}"),
         				Nested = new[]
         				{
         					new PatchRequest {Type = PatchCommandType.Unset, Name = "name" },
@@ -155,7 +155,7 @@ namespace Raven.Tests.Patching
 						Position = 1,
         				Nested = new[]
         				{
-        					new PatchRequest {Type = PatchCommandType.Set, Name = "author", Value = new JValue("oren")},
+        					new PatchRequest {Type = PatchCommandType.Set, Name = "author", Value = new RavenJValue("oren")},
         				}
         			},
         		});

@@ -7,7 +7,7 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Threading;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -45,7 +45,7 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void CanGetDataFromCompiledIndex()
         {
-            db.Put("events/1", null, JObject.FromObject(new
+            db.Put("events/1", null, RavenJObject.FromObject(new
             {
                 For = "ShoppingCart",
                 Type = "Create",
@@ -53,7 +53,7 @@ namespace Raven.Tests.Indexes
                 ShoppingCartId = "shoppingcarts/12",
                 CustomerId = "users/ayende",
                 CustomerName = "Ayende Rahien"
-            }), new JObject(), null);
+            }), new RavenJObject(), null);
 
             QueryResult queryResult;
             do
@@ -125,7 +125,7 @@ namespace Raven.Tests.Indexes
             };
             for (int i = 0; i < events.Length; i++)
             {
-                db.Put("events/" + (i + 1), null, JObject.FromObject(events[i]), new JObject(), null);
+                db.Put("events/" + (i + 1), null, RavenJObject.FromObject(events[i]), new RavenJObject(), null);
             }
 
             QueryResult queryResult;
@@ -140,7 +140,7 @@ namespace Raven.Tests.Indexes
 
 			Assert.Equal("shoppingcarts/12", queryResult.Results[0].Value<string>("ShoppingCartId"));
         	var cart =
-        		queryResult.Results[0].Value<JObject>("Aggregate").JsonDeserialization
+        		queryResult.Results[0].Value<RavenJObject>("Aggregate").JsonDeserialization
         			<ShoppingCartEventsToShopingCart.ShoppingCart>();
             Assert.Equal(2, cart.Items.Count);
         }

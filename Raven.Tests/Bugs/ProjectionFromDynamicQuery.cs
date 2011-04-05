@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Xunit;
 using System.Linq;
 
@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs
                 {
                     var result = s.Advanced.LuceneQuery<User>()
                         .WhereEquals("Name", "Ayende", isAnalyzed: true)
-                        .SelectFields<JObject>("Email")
+                        .SelectFields<RavenJObject>("Email")
                         .First();
 
                     Assert.Equal("Ayende@ayende.com", result.Value<string>("Email"));
@@ -78,10 +78,10 @@ namespace Raven.Tests.Bugs
                 {
                     var result = s.Advanced.LuceneQuery<Person>()
                         .WhereEquals("Name", "Ayende", isAnalyzed: true)
-                        .SelectFields<JObject>("BillingAddress")
+                        .SelectFields<RavenJObject>("BillingAddress")
                         .First();
 
-                    Assert.Equal("Bologna", result.Value<JObject>("BillingAddress").Value<string>("City"));
+                    Assert.Equal("Bologna", result.Value<RavenJObject>("BillingAddress").Value<string>("City"));
                 }
             }
         }
@@ -108,7 +108,7 @@ namespace Raven.Tests.Bugs
                 {
                     var result = s.Advanced.LuceneQuery<Person>()
                         .WhereEquals("Name", "Ayende", isAnalyzed: true)
-                        .SelectFields<JObject>("BillingAddress.City")
+                        .SelectFields<RavenJObject>("BillingAddress.City")
                         .First();
 
                     Assert.Equal("Bologna", result.Value<string>("BillingAddress.City"));
@@ -143,7 +143,7 @@ namespace Raven.Tests.Bugs
                 {
                     var result = s.Advanced.LuceneQuery<Person>()
                         .WhereEquals("Name", "Ayende", isAnalyzed: true)
-                        .SelectFields<JObject>("Addresses[0].City")
+                        .SelectFields<RavenJObject>("Addresses[0].City")
                         .First();
 
                     Assert.Equal("Old York", result.Value<string>("Addresses[0].City"));

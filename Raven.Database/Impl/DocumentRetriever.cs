@@ -18,6 +18,7 @@ using Raven.Database.Storage;
 using Raven.Http;
 using Raven.Abstractions.Json;
 using System.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
 {
@@ -96,16 +97,16 @@ namespace Raven.Database.Impl
 							return null;
 					}
 				}
-				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection.Property(fieldToFetch) == null);
+				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection.Properties.ContainsKey(fieldToFetch) && queryResult.Projection[fieldToFetch] == null);
 				var doc = GetDocumentWithCaching(queryResult.Key);
 				if (doc != null)
 				{
 					var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
-					foreach (var property in result.Properties())
+					foreach (var property in result.Properties)
 					{
 						if(property.Value == null || property.Value.Type == JTokenType.Null)
 							continue;
-						queryResult.Projection[property.Name] = property.Value;
+						queryResult.Projection[property.Key] = property.Value;
 					}
 				}
 			}
@@ -140,9 +141,9 @@ namespace Raven.Database.Impl
 	    	if (metadata == null)
                 return ;
 
-            if (metadata.Property("@id") != null)
-                metadata.Remove("@id");
-            metadata.Add("@id", new JValue(doc.Key));
+            if (metadata.Properties.ContainsKey("@id"))
+                metadata.Properties.Remove("@id");
+            metadata.Properties.Add("@id", new RavenJValue(doc.Key));
 	    }
 
 	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
@@ -168,13 +169,18 @@ namespace Raven.Database.Impl
 						break;
 					case ReadVetoResult.ReadAllow.Deny:
 						return new T
-						{
-							Metadata = new JObject(
-								new JProperty("Raven-Read-Veto", new JObject(new JProperty("Reason", readVetoResult.Reason),
-																			 new JProperty("Trigger", readTrigger.ToString())
-																	))
-								)
-						};
+						       	{
+						       		Metadata = new RavenJObject
+						       		           	{
+						       		           		{
+						       		           			"Raven-Read-Veto", new RavenJObject
+						       		           			                   	{
+						       		           			                   		{"Reason", readVetoResult.Reason},
+						       		           			                   		{"Trigger", readTrigger.ToString()}
+						       		           			                   	}
+						       		           			}
+						       		           	}
+						       	};
 					case ReadVetoResult.ReadAllow.Ignore:
 						return null;
 					default:
@@ -200,7 +206,7 @@ namespace Raven.Database.Impl
 			var id = maybeId as string;
 			if (id != null)
 				return Load(id);
-			var jId = maybeId as JValue;
+			var jId = maybeId as RavenJValue;
 			if (jId != null)
 				return Load(jId.Value.ToString());
 

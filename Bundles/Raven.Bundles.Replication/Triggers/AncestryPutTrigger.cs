@@ -7,6 +7,7 @@ using System.ComponentModel.Composition;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
@@ -22,8 +23,7 @@ namespace Raven.Bundles.Replication.Triggers
                 Database = Database
             };
         }
-
-        public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+        public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             if (key.StartsWith("Raven/")) // we don't deal with system documents
                 return;
@@ -35,8 +35,8 @@ namespace Raven.Bundles.Replication.Triggers
                 metadata[ReplicationConstants.RavenReplicationParentSource] =
                 doc.Metadata[ReplicationConstants.RavenReplicationSource];
             }
-            metadata[ReplicationConstants.RavenReplicationVersion] = JToken.FromObject(hiLo.NextId());
-            metadata[ReplicationConstants.RavenReplicationSource] = JToken.FromObject(Database.TransactionalStorage.Id);
+            metadata[ReplicationConstants.RavenReplicationVersion] = RavenJToken.FromObject(hiLo.NextId());
+			metadata[ReplicationConstants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
         }
     }
 }

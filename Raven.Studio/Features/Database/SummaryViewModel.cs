@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Database
+﻿using Raven.Json.Linq;
+
+namespace Raven.Studio.Features.Database
 {
     using System;
     using System.Collections.Generic;
@@ -134,7 +136,7 @@
             {
                 var securityCheckId = "forceAuth_" + Guid.NewGuid();
                 var putTask = documentSession.Advanced.AsyncDatabaseCommands
-                    .PutAsync(securityCheckId, null, new JObject(), null);
+                    .PutAsync(securityCheckId, null, new RavenJObject(), null);
 
                 yield return putTask;
 
@@ -143,13 +145,13 @@
                 yield return documentSession.Advanced.AsyncDatabaseCommands
                     .DeleteDocumentAsync(securityCheckId);
 
-                var musicStoreData = (JObject)JToken.ReadFrom(new JsonTextReader(streamReader));
-                foreach (var index in musicStoreData.Value<JArray>("Indexes"))
+				var musicStoreData = (RavenJObject)RavenJToken.ReadFrom(new JsonTextReader(streamReader));
+                foreach (var index in musicStoreData.Value<RavenJArray>("Indexes"))
                 {
                     var indexName = index.Value<string>("name");
                     var putDoc = documentSession.Advanced.AsyncDatabaseCommands
                         .PutIndexAsync(indexName,
-                                        index.Value<JObject>("definition").JsonDeserialization<IndexDefinition>(),
+                                        index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>(),
                                         true);
                     yield return putDoc;
                 }
@@ -158,10 +160,10 @@
 
                 var batch = documentSession.Advanced.AsyncDatabaseCommands
                     .BatchAsync(
-                        musicStoreData.Value<JArray>("Docs").OfType<JObject>().Select(
+						musicStoreData.Value<RavenJArray>("Docs").OfType<RavenJObject>().Select(
                         doc =>
                         {
-                            var metadata = doc.Value<JObject>("@metadata");
+							var metadata = doc.Value<RavenJObject>("@metadata");
                             doc.Remove("@metadata");
                             return new PutCommandData
                                         {

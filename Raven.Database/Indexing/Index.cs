@@ -26,6 +26,7 @@ using Raven.Database.Impl;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -134,9 +135,9 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		private static JObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
+		private static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
 		{
-			return new JObject(
+			return new RavenJObject(
 				fieldsToFetch
 					.SelectMany(name => document.GetFields(name) ?? new Field[0])
 					.Where(x => x != null)
@@ -145,29 +146,29 @@ namespace Raven.Database.Indexing
 						x.Name().EndsWith("_IsArray") == false && x.Name().EndsWith("_Range") == false &&
 						x.Name().EndsWith("_ConvertToJson") == false)
 					.Select(fld => CreateProperty(fld, document))
-					.GroupBy(x => x.Name)
+					.GroupBy(x => x.Key)
 					.Select(g =>
 					{
 						if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
 						{
 							return g.First();
 						}
-						return new JProperty(g.Key, g.Select(x => x.Value));
+						return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray(g.Select(x => x.Value)));
 					})
 				);
 		}
 
-		private static JProperty CreateProperty(Field fld, Document document)
+	    private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
 		{
 			var stringValue = fld.StringValue();
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
 			{
-				object val = JsonConvert.DeserializeObject(stringValue);
-				return new JProperty(fld.Name(), val);
+				var val = RavenJToken.Parse(fld.StringValue());
+				return new KeyValuePair<string, RavenJToken>(fld.Name(), val);
 			}
 			if (stringValue == Constants.NullValue)
 				stringValue = null;
-			return new JProperty(fld.Name(), stringValue);
+			return new KeyValuePair<string, RavenJToken>(fld.Name(), stringValue);
 		}
 
 		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, bool> action)
@@ -455,7 +456,7 @@ namespace Raven.Database.Indexing
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
-			readonly HashSet<JObject> alreadyReturned;
+			readonly HashSet<RavenJObject> alreadyReturned;
 			private readonly FieldsToFetch fieldsToFetch;
 
 			public IndexQueryOperation(
@@ -470,7 +471,7 @@ namespace Raven.Database.Indexing
 				this.fieldsToFetch = fieldsToFetch;
 
 				if (fieldsToFetch.IsDistinctQuery)
-					alreadyReturned = new HashSet<JObject>(new JTokenEqualityComparer());
+					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
 				
 			}
 

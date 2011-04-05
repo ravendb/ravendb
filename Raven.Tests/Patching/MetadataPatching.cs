@@ -1,7 +1,7 @@
-	using Newtonsoft.Json.Linq;
-using Raven.Client;
+
 using Raven.Database.Data;
 using Raven.Database.Json;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Patching
@@ -13,8 +13,8 @@ namespace Raven.Tests.Patching
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.Put("foos/1", null, JObject.Parse("{'Something':'something'}"),
-					JObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
+				store.DocumentDatabase.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
+					RavenJObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 				WaitForIndexing(store);
 				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName",
 					new IndexQuery(), new[]
@@ -29,7 +29,7 @@ namespace Raven.Tests.Patching
 								{
 									Type = PatchCommandType.Set,
 									Name = "Raven-Entity-Name",
-									Value = new JValue("Bars")
+									Value = new RavenJValue("Bars")
 								}
 							}
 						}

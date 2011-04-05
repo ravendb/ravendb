@@ -4,8 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Data
 {
@@ -44,26 +44,26 @@ namespace Raven.Database.Data
 		/// Gets or sets the document.
 		/// </summary>
 		/// <value>The document.</value>
-        public virtual JObject Document { get; set; }
+        public virtual RavenJObject Document { get; set; }
 		/// <summary>
 		/// Gets or sets the metadata.
 		/// </summary>
 		/// <value>The metadata.</value>
-        public virtual JObject Metadata { get; set; }
+        public virtual RavenJObject Metadata { get; set; }
 
 
     	/// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
-		public JObject ToJson()
+		public RavenJObject ToJson()
     	{
-    		return new JObject(
-				new JProperty("Key", new JValue((object)Key)),
-    			new JProperty("Etag", new JValue(Etag != null ? (object)Etag.ToString() : null)),
-    			new JProperty("Method", new JValue(Method)),
-				new JProperty("Document", Document),
-				new JProperty("Metadata", Metadata)
-    			);
+    		var ret = new RavenJObject();
+			ret.Properties.Add("Key", new RavenJValue((object)Key));
+			ret.Properties.Add("Etag", new RavenJValue(Etag != null ? (object)Etag.ToString() : null));
+			ret.Properties.Add("Method", new RavenJValue(Method));
+    		ret.Properties.Add("Document", Document);
+    		ret.Properties.Add("Metadata", Metadata);
+    		return ret;
     	}
     }
 }

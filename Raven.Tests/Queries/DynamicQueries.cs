@@ -6,7 +6,7 @@
 using System.Globalization;
 using System.Threading;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -37,7 +37,7 @@ namespace Raven.Tests.Queries
         [Fact]
         public void CanPerformQueryToSelectSingleItem()
         {
-            db.Put("ayende", null, JObject.FromObject(new {Name = "Ayende"}), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.FromObject(new {Name = "Ayende"}), new RavenJObject(), null);
             
             var result = db.ExecuteQueryUsingLinearSearch(new LinearQuery
             {
@@ -51,7 +51,7 @@ namespace Raven.Tests.Queries
         [Fact]
         public void CanSelectFullDocument()
         {
-            db.Put("ayende", null, JObject.FromObject(new { Name = "Ayende" }), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.FromObject(new { Name = "Ayende" }), new RavenJObject(), null);
 
             var result = db.ExecuteQueryUsingLinearSearch(new LinearQuery
             {
@@ -68,9 +68,9 @@ namespace Raven.Tests.Queries
         [Fact]
         public void CanGetErrorsInQueries()
         {
-            db.Put("ayende", null, JObject.FromObject(new { Name = "Ayende" }), new JObject(), null);
-            db.Put("rahien", null, JObject.FromObject(new { Username = "Ayende" }), new JObject(), null);
-            db.Put("oren", null, JObject.FromObject(new { Name = "Ayende" }), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.FromObject(new { Name = "Ayende" }), new RavenJObject(), null);
+            db.Put("rahien", null, RavenJObject.FromObject(new { Username = "Ayende" }), new RavenJObject(), null);
+            db.Put("oren", null, RavenJObject.FromObject(new { Name = "Ayende" }), new RavenJObject(), null);
 
             var oldCulture = Thread.CurrentThread.CurrentCulture;
             var oldUiCulture = Thread.CurrentThread.CurrentUICulture;

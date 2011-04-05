@@ -1,4 +1,4 @@
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Client.Client;
 using Xunit;
 
@@ -12,7 +12,7 @@ namespace Raven.Tests.Bugs
 			using (var store = NewDocumentStore())
 			{
 				//_db is document store
-				var fooJson = JObject.FromObject(new Foo
+				var fooJson = RavenJObject.FromObject(new Foo
 				{
 					Id = "foo/10",
 					BarItem = new Bar {Name = "My Bar Item X"}

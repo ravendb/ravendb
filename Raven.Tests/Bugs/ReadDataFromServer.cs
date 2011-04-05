@@ -4,9 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Net;
-using System.Text;
-using Newtonsoft.Json.Linq;
-using Raven.Database;
+using Raven.Json.Linq;
 using Raven.Database.Config;
 using Raven.Server;
 using Raven.Tests.Storage;
@@ -26,7 +24,7 @@ namespace Raven.Tests.Bugs
 					var downloadData = webClient.DownloadData("http://localhost:8080/" +
 						"indexes?pageSize=128&start=" + "0");
 					var documents = Smuggler.Smuggler.GetString(downloadData);
-					JArray.Parse(documents);
+					RavenJArray.Parse(documents);
 				}
 			}
 

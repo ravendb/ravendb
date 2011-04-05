@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -52,7 +53,7 @@ namespace Raven.Studio.Features.Documents
             }
         }
 
-        public JObject Contents
+        public RavenJObject Contents
         {
             get { return JsonDocument.DataAsJson; }
         }
@@ -61,7 +62,7 @@ namespace Raven.Studio.Features.Documents
         {
             get
             {
-                JToken selectToken = JsonDocument.DataAsJson.SelectToken(path);
+                RavenJToken selectToken = JsonDocument.DataAsJson.SelectToken(path);
                 if (selectToken == null || 
                     selectToken.Type == JTokenType.Null || 
                     selectToken.Type == JTokenType.Undefined)
@@ -69,7 +70,7 @@ namespace Raven.Studio.Features.Documents
                 if (selectToken.Type == JTokenType.Object ||
                     selectToken.Type == JTokenType.Array)
                     return selectToken.ToString(Formatting.Indented);
-                return ((JValue)selectToken).Value.ToString();
+                return ((RavenJValue)selectToken).Value.ToString();
             }
         }
 
@@ -86,7 +87,7 @@ namespace Raven.Studio.Features.Documents
             }
         }
 
-        public JObject Metadata
+        public RavenJObject Metadata
         {
             get { return JsonDocument.Metadata; }
         }
@@ -106,7 +107,7 @@ namespace Raven.Studio.Features.Documents
             return DetermineCollectionType(Metadata);
         }
 
-        public static string DetermineCollectionType(JObject metadata)
+        public static string DetermineCollectionType(RavenJObject metadata)
         {
             var id = metadata.IfPresent<string>("@id") ?? string.Empty;
 

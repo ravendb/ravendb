@@ -8,7 +8,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Transactions;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
@@ -105,7 +105,7 @@ namespace Raven.Tests.Document
 				var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.Null(attachment);
 
-				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 1, 2, 3 }, new JObject(new JProperty("Hello", "World")));
+				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] {1, 2, 3}, new RavenJObject {{"Hello", "World"}});
 
 				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.NotNull(attachment);
@@ -480,17 +480,17 @@ namespace Raven.Tests.Document
 					{
 						new PutCommandData
 						{
-							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Document = RavenJObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
 							Etag = null,
 							Key = "rhino1",
-							Metadata = new JObject(),
+							Metadata = new RavenJObject(),
 						},
 						new PutCommandData
 						{
-							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Document = RavenJObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
 							Etag = null,
 							Key = "rhino2",
-							Metadata = new JObject(),
+							Metadata = new RavenJObject(),
 						},
 						new DeleteCommandData
 						{
@@ -795,7 +795,7 @@ namespace Raven.Tests.Document
 					{
 						Type = PatchCommandType.Set,
 						Name = "Name",
-						Value = JToken.FromObject("Another Company")
+						Value = RavenJToken.FromObject("Another Company")
 					},
 				}, allowStale: false);
 

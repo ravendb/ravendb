@@ -5,9 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Queries.LinearQueries;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Queries
 {
@@ -58,7 +58,7 @@ namespace Raven.Database.Queries
                 LastScannedResult = result.LastScannedResult,
                 TotalResults = result.TotalResults,
                 Errors = result.Errors,
-                Results = result.Results.Select(JObject.Parse).ToArray()
+                Results = result.Results.Select(RavenJObject.Parse).ToArray()
             };
 
         }

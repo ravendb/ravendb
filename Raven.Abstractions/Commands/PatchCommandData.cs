@@ -4,10 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
 using System.Linq;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Data
 {
@@ -53,7 +53,7 @@ namespace Raven.Database.Data
 			get; set;
 		}
 
-		public JObject Metadata
+		public RavenJObject Metadata
 		{
 			get; set;
 		}
@@ -61,14 +61,15 @@ namespace Raven.Database.Data
         /// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
-		public JObject ToJson()
-		{
-			return new JObject(
-				new JProperty("Key", Key),
-				new JProperty("Method", Method),
-				new JProperty("Etag", Etag == null ? null : new JValue(Etag.ToString())),
-				new JProperty("Patches", new JArray(Patches.Select(x=>x.ToJson())))
-				);
-		}
+		public RavenJObject ToJson()
+        {
+        	var ret = new RavenJObject();
+        	ret.AddValueProperty("Key", Key);
+        	ret.AddValueProperty("Method", Method);
+			if (Etag != null)
+        		ret.Properties.Add("Etag", new RavenJValue(Etag.ToString()));
+        	ret.Properties.Add("Patches", new RavenJArray(Patches.Select(x => x.ToJson())));
+        	return ret;
+        }
 	}
 }

@@ -5,8 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
@@ -22,8 +22,8 @@ namespace Raven.Database.Storage
 		JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation);
 		JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation);
 
-		bool DeleteDocument(string key, Guid? etag, out JObject metadata);
-		Guid AddDocument(string key, Guid? etag, JObject data, JObject metadata);
+		bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata);
+		Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata);
 		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start);
 	}
 }

@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Silverlight
+﻿using Raven.Json.Linq;
+
+namespace Raven.Tests.Silverlight
 {
 	using System;
 	using System.Collections.Generic;
@@ -67,7 +69,7 @@
 
 			yield return store.AsyncDatabaseCommands
 			.PutAsync("1", null,
-					   JObject.Parse(
+					   RavenJObject.Parse(
 						@"{
 								type: 'page', 
 								some: 'val', 
@@ -77,7 +79,7 @@
 								size: 0,
 								'@metadata': {'@id': 1}
 							}"),
-					   new JObject());
+					   new RavenJObject());
 
 			for (int i = 0; i < 50; i++)
 			{

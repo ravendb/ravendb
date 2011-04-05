@@ -6,13 +6,14 @@
 using System.ComponentModel.Composition;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
 	[ExportMetadata("Order", 10000)]
 	public class RemoveConflictOnAttachmentPutTrigger : AbstractAttachmentPutTrigger
     {
-        public override void OnPut(string key, byte[] data, JObject metadata)
+		public override void OnPut(string key, byte[] data, RavenJObject metadata)
         {
             using (Database.DisableAllTriggersForCurrentThread())
             {

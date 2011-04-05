@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client
 {
@@ -32,7 +33,7 @@ namespace Raven.Client.Client
 		/// <value>The response headers.</value>
 		public IDictionary<string, IList<string>> ResponseHeaders { get; set; }
 
-		internal HttpJsonRequest(string url, string method, JObject metadata)
+		internal HttpJsonRequest(string url, string method, RavenJObject metadata)
 		{
 			WebRequest = WebRequestCreator.ClientHttp.Create(new Uri(url));
 
@@ -136,7 +137,7 @@ namespace Raven.Client.Client
 		/// <value>The response status code.</value>
 		public HttpStatusCode ResponseStatusCode { get; set; }
 
-		private void WriteMetadata(JObject metadata)
+		private void WriteMetadata(RavenJObject metadata)
 		{
 			if (metadata == null || metadata.Count == 0)
 			{

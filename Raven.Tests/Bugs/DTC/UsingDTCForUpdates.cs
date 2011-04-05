@@ -1,6 +1,6 @@
 using System;
 using System.Transactions;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs.DTC
@@ -13,16 +13,15 @@ namespace Raven.Tests.Bugs.DTC
 			using (var documentStore = NewDocumentStore())
 			{
 				var id1 = Guid.NewGuid();
-				JObject dummy = null;
+				RavenJObject dummy = null;
 
 				using (TransactionScope trnx = new TransactionScope())
 				{
 					using (var session = documentStore.OpenSession())
 					{
-						dummy = new JObject();
-						var property = new JProperty("Name", "This is the object content");
-						dummy.Add(property);
-						dummy.Add("Id", JToken.FromObject(id1));
+						dummy = new RavenJObject();
+						dummy.Add("Name", "This is the object content");
+						dummy.Add("Id", RavenJToken.FromObject(id1));
 						session.Store(dummy);
 						session.SaveChanges();
 

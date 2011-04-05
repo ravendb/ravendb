@@ -1,6 +1,6 @@
 using Raven.Client.Document;
 using Xunit;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using System.Linq;
 
 namespace Raven.Tests.Bugs.Entities

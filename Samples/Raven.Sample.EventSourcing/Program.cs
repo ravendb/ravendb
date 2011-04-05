@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using System.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Sample.EventSourcing
 {
@@ -72,7 +73,7 @@ namespace Raven.Sample.EventSourcing
             int i = 1;
             foreach (var @event in events)
             {
-                documentStore1.DatabaseCommands.Put("events/" + i++, null, JObject.FromObject(@event), new JObject());                
+                documentStore1.DatabaseCommands.Put("events/" + i++, null, RavenJObject.FromObject(@event), new RavenJObject());                
             }
 
             Console.WriteLine("Wrote {0} events", events.Length);

@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -45,7 +45,7 @@ namespace Raven.Tests.Triggers
                 Map = "from doc in docs from prj in doc.Projects select new{Project = prj}",
                 Stores = { { "Project", FieldStorage.Yes } }
             });
-            db.Put("t", null, JObject.Parse("{'Projects': ['RavenDB', 'NHibernate']}"), new JObject(), null);
+            db.Put("t", null, RavenJObject.Parse("{'Projects': ['RavenDB', 'NHibernate']}"), new RavenJObject(), null);
 
             QueryResult queryResult;
             do

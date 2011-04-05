@@ -24,8 +24,10 @@ using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Http.Exceptions;
 using Raven.Http.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client.Async
 {
@@ -178,13 +180,13 @@ namespace Raven.Client.Client.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
-		public Task<PutResult> PutAsync(string key, Guid? etag, JObject document, JObject metadata)
+		public Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata)
 		{
 			if (metadata == null)
-				metadata = new JObject();
+				metadata = new RavenJObject();
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 			if (etag != null)
-				metadata["ETag"] = new JValue(etag.Value.ToString());
+				metadata["ETag"] = new RavenJValue(etag.Value.ToString());
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, method, metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
@@ -270,7 +272,7 @@ namespace Raven.Client.Client.Async
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 
-			var metadata = new JObject();
+			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, "GET", metadata, credentials, convention);
 
@@ -282,7 +284,7 @@ namespace Raven.Client.Client.Async
 						var responseString = task.Result;
 						return new JsonDocument
 						{
-							DataAsJson = JObject.Parse(responseString),
+							DataAsJson = RavenJObject.Parse(responseString),
 							NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 							Key = key,
 							LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture).ToLocalTime(),
@@ -300,8 +302,8 @@ namespace Raven.Client.Client.Async
 						if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 						{
 							var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-							var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
-							var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+							var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
+							var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 							throw new ConflictException("Conflict detected on " + key +
 														", conflict must be resolved before the document will be accessible")
@@ -322,16 +324,16 @@ namespace Raven.Client.Client.Async
 		public Task<JsonDocument[]> MultiGetAsync(string[] keys)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
-			var array = Encoding.UTF8.GetBytes(new JArray(keys).ToString(Formatting.None));
+			var array = Encoding.UTF8.GetBytes(new RavenJArray(keys).ToString(Formatting.None));
 			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, array, null)
 				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null))
 				.Unwrap()
 				.ContinueWith(task =>
 				{
-					JArray responses;
+					RavenJArray responses;
 					try
 					{
-						responses = JObject.Parse(task.Result).Value<JArray>("Results");
+						responses = RavenJObject.Parse(task.Result).Value<RavenJArray>("Results");
 					}
 					catch (WebException e)
 					{
@@ -342,7 +344,7 @@ namespace Raven.Client.Client.Async
 						throw ThrowConcurrencyException(e);
 					}
 
-					return SerializationHelper.JObjectsToJsonDocuments(responses.Cast<JObject>())
+					return SerializationHelper.RavenJObjectsToJsonDocuments(responses.Cast<RavenJObject>())
 						.ToArray();
 				});
 		}
@@ -391,16 +393,16 @@ namespace Raven.Client.Client.Async
 			return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
 				.ContinueWith(task =>
 				{
-					JToken json;
+					RavenJToken json;
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-						json = (JToken)convention.CreateSerializer().Deserialize(reader);
+						json = (RavenJToken)convention.CreateSerializer().Deserialize(reader);
 
 					return new QueryResult
 					{
 						IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 						IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 						IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
-						Results = json["Results"].Children().Cast<JObject>().ToList(),
+						Results = json["Results"].Children().Cast<RavenJObject>().ToList(),
 						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 						IndexName = json.Value<string>("IndexName"),
 						SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
@@ -444,7 +446,7 @@ namespace Raven.Client.Client.Async
 				{
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 					{
-						var json = (JToken)serializer.Deserialize(reader);
+						var json = (RavenJToken)serializer.Deserialize(reader);
 						return new SuggestionQueryResult
 						{
 							Suggestions = json["Suggestions"].Children().Select(x => x.Value<string>()).ToArray(),
@@ -460,10 +462,10 @@ namespace Raven.Client.Client.Async
 		/// <returns></returns>
 		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas)
 		{
-			var metadata = new JObject();
+			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var req = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
-			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
+			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 			var data = Encoding.UTF8.GetBytes(jArray.ToString(Formatting.None));
 
 			return Task.Factory.FromAsync(req.BeginWrite, req.EndWrite, data, null)
@@ -484,7 +486,7 @@ namespace Raven.Client.Client.Async
 							throw;
 						throw ThrowConcurrencyException(e);
 					}
-					return JsonConvert.DeserializeObject<BatchResult[]>(response);
+					return JsonConvert.DeserializeObject<BatchResult[]>(response, new JsonToJsonConverter());
 				});
 
 		}
@@ -509,13 +511,13 @@ namespace Raven.Client.Client.Async
 			}
 		}
 
-		private static void AddTransactionInformation(JObject metadata)
+		private static void AddTransactionInformation(RavenJObject metadata)
 		{
 			if (Transaction.Current == null)
 				return;
 
 			string txInfo = string.Format("{0}, {1}", Transaction.Current.TransactionInformation.DistributedIdentifier, TransactionManager.DefaultTimeout);
-			metadata["Raven-Transaction-Information"] = new JValue(txInfo);
+			metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
 		}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -558,7 +560,7 @@ namespace Raven.Client.Client.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, JObject metadata)
+		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, RavenJObject metadata)
 		{
 			throw new NotImplementedException();
 		}

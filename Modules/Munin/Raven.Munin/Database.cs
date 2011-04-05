@@ -12,7 +12,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Munin
 {
@@ -80,10 +80,10 @@ namespace Raven.Munin
 
 		private void WriteFileHeader(Stream log)
 		{
-			new JObject
+			new RavenJObject
 			{
 				{"Version", version},
-				{"Tables", new JArray(Tables.Select(x=>x.Name).ToArray())}
+				{"Tables", new RavenJArray(Tables.Select(x=>x.Name).ToArray())}
 			}.WriteTo(new BsonWriter(log));
 		}
 
@@ -91,17 +91,17 @@ namespace Raven.Munin
 		{
 			try
 			{
-				var versionInfo = (JObject)JToken.ReadFrom(new BsonReader(log));
+				var versionInfo = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(log));
 
 				if (versionInfo.Value<int>("Version") != version)
 					throw new InvalidOperationException("Invalid Munin file version!");
 
-				var tableNames = versionInfo.Value<JArray>("Tables");
+				var tableNames = versionInfo.Value<RavenJArray>("Tables");
 
-				if (tableNames.Count != tables.Count)
+				if (tableNames.Length != tables.Count)
 					throw new InvalidOperationException("Different number of tables stored in the Munin file");
 
-				for (int i = 0; i < tableNames.Count; i++)
+				for (int i = 0; i < tableNames.Length; i++)
 				{
 					if (tableNames[i].Value<string>() != tables[i].Name)
 						throw new InvalidOperationException("Table at position " + i + " is expected to be " + tables[i].Name + " but was actually " + tableNames[i]);
@@ -119,9 +119,9 @@ namespace Raven.Munin
 			try
 			{
 				var cmds = ReadJObject(log);
-				return cmds.Values().Select(cmd => new Command
+				return cmds.Children().Select(cmd => new Command
 				{
-					Key = cmd.Value<JToken>("key"),
+					Key = cmd.Value<RavenJToken>("key"),
 					Position = cmd.Value<long>("position"),
 					Size = cmd.Value<int>("size"),
 					Type = (CommandType)cmd.Value<byte>("type"),
@@ -135,9 +135,9 @@ namespace Raven.Munin
 			}
 		}
 
-		private static JObject ReadJObject(Stream log)
+		private static RavenJObject ReadJObject(Stream log)
 		{
-			return JObject.Load(new BsonReader(log)
+			return RavenJObject.Load(new BsonReader(log)
 			{
 				DateTimeKindHandling = DateTimeKind.Utc,
 			});
@@ -244,22 +244,17 @@ namespace Raven.Munin
 
 			if (dataSizeInBytes > 0)
 			{
-				WriteTo(log, new JArray(new JObject
-				{
-					{"type", (short) CommandType.Skip},
-					{"size", dataSizeInBytes}
-				}));
+				WriteTo(log, new RavenJArray(new RavenJObject {{"type", (short) CommandType.Skip}, {"size", dataSizeInBytes}}));
 			}
 
-			var array = new JArray();
+			var array = new RavenJArray();
 			foreach (var command in cmds)
 			{
-				var cmd = new JObject
-				{
-					{"type", (short) command.Type},
-					{"key", command.Key},
-					{"dicId", command.DictionaryId}
-				};
+
+				var cmd = new RavenJObject();
+				cmd.AddValueProperty("type", (short) command.Type);
+				cmd.Properties.Add("key", command.Key);
+				cmd.AddValueProperty("dicId", command.DictionaryId);
 
 				if (command.Type == CommandType.Put)
 				{
@@ -274,19 +269,19 @@ namespace Raven.Munin
 							log.Write(sha, 0, sha.Length);
 						}
 					}
-					cmd.Add("position", command.Position);
-					cmd.Add("size", command.Size);
+					cmd.AddValueProperty("position", command.Position);
+					cmd.AddValueProperty("size", command.Size);
 				}
 
-				array.Add(cmd);
+				array.Items.Add(cmd);
 			}
 
-			if (array.Count == 0 && dataSizeInBytes == 0)
+			if (array.Length == 0 && dataSizeInBytes == 0)
 				return;
 			WriteTo(log, array);
 		}
 
-		private static void WriteTo(Stream log, JToken jToken)
+		private static void WriteTo(Stream log, RavenJToken jToken)
 		{
 			jToken.WriteTo(new BsonWriter(log)
 			{

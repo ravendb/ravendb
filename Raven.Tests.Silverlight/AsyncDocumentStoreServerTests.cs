@@ -183,7 +183,7 @@
 					if (query.Result.IsStale)
 						yield return Delay(100);
 				} while (query.Result.IsStale); 
-				Assert.AreEqual(2, query.Result.Results[0]["Contacts"].Count());
+				Assert.AreEqual(2, query.Result.Results[0]["Contacts"].Children().Count());
 				Assert.AreEqual("Abbot", query.Result.Results[0]["Contacts"][0].Value<string>("Surname"));
 				Assert.AreEqual("Costello", query.Result.Results[0]["Contacts"][1].Value<string>("Surname"));
 			}

@@ -7,25 +7,24 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
-using System.Linq.Expressions;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Linq
 {
 	/// <summary>
-	/// A dynamic implementation on top of <see cref="JObject"/>
+	/// A dynamic implementation on top of <see cref="RavenJObject"/>
 	/// </summary>
 	public class DynamicJsonObject : DynamicObject, IEnumerable<object>
 	{
 		public IEnumerator<dynamic> GetEnumerator()
 		{
-			foreach (var item in Inner)
+			foreach (var item in Inner.Properties)
 			{
                 if(item.Key[0] == '$')
                     continue;
@@ -57,7 +56,7 @@ namespace Raven.Database.Linq
 		{
 			var dynamicJsonObject = other as DynamicJsonObject;
 			if (dynamicJsonObject != null)
-				return new JTokenEqualityComparer().Equals(inner, dynamicJsonObject.inner);
+				return new RavenJTokenEqualityComparer().Equals(inner, dynamicJsonObject.inner);
 			return base.Equals(other);
 		}
 
@@ -70,7 +69,7 @@ namespace Raven.Database.Linq
 		/// <filterpriority>2</filterpriority>
 		public override int GetHashCode()
 		{
-			return new JTokenEqualityComparer().GetHashCode(inner);
+			return new RavenJTokenEqualityComparer().GetHashCode(inner);
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -78,13 +77,13 @@ namespace Raven.Database.Linq
 			return GetEnumerator();
 		}
 
-		private readonly JObject inner;
+		private readonly RavenJObject inner;
 
 		/// <summary>
 		/// Gets the inner json object
 		/// </summary>
 		/// <value>The inner.</value>
-		public JObject Inner
+		public RavenJObject Inner
 		{
 			get { return inner; }
 		}
@@ -93,7 +92,7 @@ namespace Raven.Database.Linq
 		/// Initializes a new instance of the <see cref="DynamicJsonObject"/> class.
 		/// </summary>
 		/// <param name="inner">The obj.</param>
-		public DynamicJsonObject(JObject inner)
+		public DynamicJsonObject(RavenJObject inner)
 		{
 			this.inner = inner;
 		}
@@ -129,20 +128,21 @@ namespace Raven.Database.Linq
 			return true;
 		}
 
-	    public static object TransformToValue(JToken jToken)
+	    public static object TransformToValue(RavenJToken jToken)
 		{
 			switch (jToken.Type)
 			{
 				case JTokenType.Object:
-					var jObject = (JObject)jToken;
-					var values = jObject.Value<JArray>("$values");
+					var jObject = (RavenJObject)jToken;
+					var values = jObject.Value<RavenJArray>("$values");
 					if (values != null)
 					{
 						return new DynamicList(values.Select(TransformToValue).ToArray());
 					}
 					return new DynamicJsonObject(jObject);
 				case JTokenType.Array:
-					return new DynamicList(jToken.Select(TransformToValue).ToArray());
+					var ar = jToken as RavenJArray; // cannot result in null because jToken.Type is set to Array
+					return new DynamicList(ar.Select(TransformToValue).ToArray());
 				case JTokenType.Date:
 					return jToken.Value<DateTime>();
 				case JTokenType.Null:
@@ -177,14 +177,14 @@ namespace Raven.Database.Linq
 			{
 				return GetDocumentId();
 			}
-			JToken value;
-			if (inner.TryGetValue(name, out value))
+			RavenJToken value;
+			if (inner.Properties.TryGetValue(name, out value))
 			{
 				return TransformToValue(value);
 			}
             if(name.StartsWith("_"))
             {
-                if (inner.TryGetValue(name.Substring(1), out value))
+                if (inner.Properties.TryGetValue(name.Substring(1), out value))
                 {
                     return TransformToValue(value);
                 } 
@@ -206,7 +206,7 @@ namespace Raven.Database.Linq
 		/// <returns></returns>
 		public object GetDocumentId()
 		{
-			var metadata = inner["@metadata"];
+			var metadata = inner["@metadata"] as RavenJObject;
 			if (metadata != null)
 			{
 				var id = metadata["@id"];

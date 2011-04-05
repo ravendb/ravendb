@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database.Data;
 using Xunit;
 using System.Linq;
@@ -18,18 +18,18 @@ namespace Raven.Tests.Bugs
             using (var store = NewDocumentStore())
             {
                 store.DatabaseCommands.Put("users/1", null,
-                                           new JObject
+                                           new RavenJObject
                                            {
                                                {"Name", "user1"},
                                            },
-                                           new JObject());
+                                           new RavenJObject());
 
                 store.DatabaseCommands.Put("users/2", null,
-                                           new JObject
+                                           new RavenJObject
                                            {
                                                {"Name", "user2"},
                                            },
-                                           new JObject());
+                                           new RavenJObject());
 
                 store.DatabaseCommands.Query("dynamic", new IndexQuery
                 {
@@ -46,18 +46,18 @@ namespace Raven.Tests.Bugs
             using (var store = NewDocumentStore())
             {
                 store.DatabaseCommands.Put("users/1", null,
-                                           new JObject
+                                           new RavenJObject
                                            {
                                                {"Name", "user1"},
                                            },
-                                           new JObject());
+                                           new RavenJObject());
 
                 store.DatabaseCommands.Put("users/2", null,
-                                           new JObject
+                                           new RavenJObject
                                            {
                                                {"Username", "user2"},
                                            },
-                                           new JObject());
+                                           new RavenJObject());
 
                 store.DatabaseCommands.Query("dynamic", new IndexQuery
                 {

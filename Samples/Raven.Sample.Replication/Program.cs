@@ -50,7 +50,7 @@ namespace Raven.Sample.Replication
                     {
                         var doc = documentStore2.DatabaseCommands.Get(e.ConflictedVersionIds[i]);
                         list.Add(doc);
-                        Console.WriteLine("{0}. {1}", i, doc.DataAsJson.ToString(Formatting.None));
+                        Console.WriteLine("{0}. {1}", i, doc.DataAsJson);
                     }
                     var select = int.Parse(Console.ReadLine());
                     var resolved = list[select];

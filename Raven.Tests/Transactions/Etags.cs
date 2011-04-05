@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Exceptions;
@@ -33,10 +33,10 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void WhenUsingTransactionWillWorkIfDocumentEtagMatch()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var doc = db.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", doc.Etag, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             db.Commit(transactionInformation.Id);
 
 
@@ -46,12 +46,12 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void AfterPuttingDocInTxWillChangeEtag()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var doc = db.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", doc.Etag, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             var docInTx = db.Get("ayende", transactionInformation);
-            db.Put("ayende", docInTx.Etag, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", docInTx.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
             Assert.NotEqual(doc.Etag, docInTx.Etag);
 
@@ -60,10 +60,10 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void AfterCommitWillNotRetainSameEtag()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var doc = db.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", doc.Etag, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             var docInTx = db.Get("ayende", transactionInformation);
             db.Commit(transactionInformation.Id);
             var docAfterTx = db.Get("ayende", null);
@@ -74,11 +74,11 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void WhenUsingTransactionWillFailIfDocumentEtagDoesNotMatch()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
             Assert.Throws<ConcurrencyException>(
                 () =>
-                db.Put("ayende", Guid.NewGuid(), JObject.Parse("{ayende:'rahien'}"), new JObject(),
+                db.Put("ayende", Guid.NewGuid(), RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(),
                        transactionInformation));
         }
     }

@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
 using Raven.Http.Exceptions;
@@ -14,8 +14,8 @@ namespace Raven.Tests.Patching
 {
     public class SimplePatchApplication
     {
-        private readonly JObject doc = 
-            JObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [ {author: ""ayende"", text:""good post""}] }");
+        private readonly RavenJObject doc = 
+            RavenJObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [ {author: ""ayende"", text:""good post""}] }");
 
         [Fact]
         public void PropertyAddition()
@@ -27,7 +27,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Set,
         				Name = "blog_id",
-        				Value = new JValue(1)
+        				Value = new RavenJValue(1)
         			},
         		});
 
@@ -45,7 +45,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Copy,
         				Name = "comments",
-        				Value = new JValue("cmts")
+        				Value = new RavenJValue("cmts")
         			},
         		});
 
@@ -63,7 +63,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Copy,
         				Name = "non-existing",
-        				Value = new JValue("irrelevant")
+        				Value = new RavenJValue("irrelevant")
         			},
         		});
 
@@ -81,7 +81,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Rename,
         				Name = "comments",
-        				Value = new JValue("cmts")
+        				Value = new RavenJValue("cmts")
         			},
         		});
 
@@ -99,7 +99,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Rename,
         				Name = "doesnotexist",
-        				Value = new JValue("irrelevant")
+        				Value = new RavenJValue("irrelevant")
         			},
         		});
 
@@ -117,7 +117,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Set,
         				Name = "blog_id",
-        				Value = new JValue(1)
+        				Value = new RavenJValue(1)
         			},
         		});
 
@@ -128,7 +128,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Inc,
         				Name = "blog_id",
-        				Value = new JValue(1)
+        				Value = new RavenJValue(1)
         			},
         		});
 
@@ -146,7 +146,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Inc,
         				Name = "blog_id",
-        				Value = new JValue(1)
+        				Value = new RavenJValue(1)
         			},
         		});
 
@@ -164,8 +164,8 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Set,
         				Name = "blog_id",
-        				Value = new JValue(1),
-						PrevVal = JObject.Parse("{'a': undefined}").Property("a").Value
+        				Value = new RavenJValue(1),
+						PrevVal = RavenJObject.Parse("{'a': undefined}")["a"]
         			},
         		});
 
@@ -183,8 +183,8 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Set,
         				Name = "blog_id",
-        				Value = new JValue(1),
-        				PrevVal = new JValue((object)null)
+        				Value = new RavenJValue(1),
+        				PrevVal = new RavenJValue((object)null)
         			},
         		}));
         }
@@ -199,8 +199,8 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Set,
         				Name = "blog_id",
-        				Value = new JValue(1),
-        				PrevVal =  new JValue(2)
+        				Value = new RavenJValue(1),
+        				PrevVal =  new RavenJValue(2)
         			},
         		}));
         }
@@ -208,15 +208,15 @@ namespace Raven.Tests.Patching
         [Fact]
         public void PropertyAddition_WithConcurrenty_ExistingValueOn_Ok()
         {
-            JObject apply = new JsonPatcher(doc).Apply(
+            RavenJObject apply = new JsonPatcher(doc).Apply(
                 new[]
         		{
         			new PatchRequest
         			{
         				Type = PatchCommandType.Set,
         				Name = "body",
-        				Value = new JValue("differnt markup"),
-        				PrevVal = new JValue("html markup")
+        				Value = new RavenJValue("differnt markup"),
+        				PrevVal = new RavenJValue("html markup")
         			},
         		});
 
@@ -234,7 +234,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Set,
         				Name = "title",
-        				Value = new JValue("another")
+        				Value = new RavenJValue("another")
         			},
         		});
 
@@ -251,7 +251,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Set,
         				Name = "title",
-        				Value = new JValue((object)null)
+        				Value = new RavenJValue((object)null)
         			},
         		});
 
@@ -284,7 +284,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Unset,
         				Name = "body",
-						PrevVal = new JValue("html markup")
+						PrevVal = new RavenJValue("html markup")
         			},
         		});
 
@@ -301,7 +301,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Unset,
         				Name = "body",
-						PrevVal = new JValue("bad markup")
+						PrevVal = new RavenJValue("bad markup")
         			},
         		}));
         }

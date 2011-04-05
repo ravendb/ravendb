@@ -7,6 +7,7 @@ using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Http;
 using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.CascadeDelete
 {
@@ -23,7 +24,7 @@ namespace Raven.Bundles.CascadeDelete
 
             using (CascadeDeleteContext.Enter())
             {
-                var documentsToDelete = document.Metadata.Value<JArray>(MetadataKeys.DocumentsToCascadeDelete);
+                var documentsToDelete = document.Metadata.Value<RavenJArray>(MetadataKeys.DocumentsToCascadeDelete);
 
                 if (documentsToDelete != null)
                 {

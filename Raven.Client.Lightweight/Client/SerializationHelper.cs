@@ -10,6 +10,7 @@ using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Client
 {
@@ -21,10 +22,10 @@ namespace Raven.Client.Client
 		///<summary>
 		/// Translate a collection of JObject to JsonDocuments
 		///</summary>
-		public static IEnumerable<JsonDocument> JObjectsToJsonDocuments(IEnumerable<JObject> responses)
+		public static IEnumerable<JsonDocument> RavenJObjectsToJsonDocuments(IEnumerable<RavenJObject> responses)
 		{
 			return (from doc in responses
-					let metadata = doc["@metadata"] as JObject
+					let metadata = doc["@metadata"] as RavenJObject
 					let _ = doc.Remove("@metadata")
 					let key = (metadata != null) ? metadata["@id"].Value<string>() : ""
 					let lastModified = (metadata != null) ? DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture).ToLocalTime() : DateTime.Now
@@ -44,17 +45,17 @@ namespace Raven.Client.Client
 		///<summary>
 		/// Translate a collection of JObject to JsonDocuments
 		///</summary>
-		public static IEnumerable<JsonDocument> ToJsonDocuments(this IEnumerable<JObject> responses)
+		public static IEnumerable<JsonDocument> ToJsonDocuments(this IEnumerable<RavenJObject> responses)
 		{
-			return JObjectsToJsonDocuments(responses);
+			return RavenJObjectsToJsonDocuments(responses);
 		}
 
 		///<summary>
 		/// Translate a collection of JObject to JsonDocuments
 		///</summary>
-		public static JsonDocument ToJsonDocument(this JObject response)
+		public static JsonDocument ToJsonDocument(this RavenJObject response)
 		{
-			return JObjectsToJsonDocuments(new[] { response }).First();
+			return RavenJObjectsToJsonDocuments(new[] { response }).First();
 		}
 	}
 }

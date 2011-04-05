@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Tests.Storage;
@@ -36,8 +36,8 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanCascadeDeletes()
 		{
-			db.Put("abc", null, JObject.Parse("{name: 'a'}"), JObject.Parse("{'Cascade-Delete': 'def'}"), null);
-			db.Put("def", null, JObject.Parse("{name: 'b'}"), new JObject(), null);
+			db.Put("abc", null, RavenJObject.Parse("{name: 'a'}"), RavenJObject.Parse("{'Cascade-Delete': 'def'}"), null);
+			db.Put("def", null, RavenJObject.Parse("{name: 'b'}"), new RavenJObject(), null);
 
 			db.Delete("abc", null, null);
 

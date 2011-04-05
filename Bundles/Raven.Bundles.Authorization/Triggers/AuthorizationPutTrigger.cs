@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Authorization.Triggers
 {
@@ -22,7 +23,7 @@ namespace Raven.Bundles.Authorization.Triggers
 			AuthorizationDecisions = new AuthorizationDecisions(Database);
 		}
 
-		public override VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{

@@ -4,28 +4,27 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Raven.Munin.Tree;
 
 namespace Raven.Munin
 {
     public class PersistentDictionaryState
     {
-        public IBinarySearchTree<JToken, PositionInFile> KeyToFilePositionInFiles { get; set; }
+		public IBinarySearchTree<RavenJToken, PositionInFile> KeyToFilePositionInFiles { get; set; }
 
-        public List<IBinarySearchTree<IComparable, IBinarySearchTree<JToken, JToken>>> SecondaryIndicesState { get; set; }
+		public List<IBinarySearchTree<IComparable, IBinarySearchTree<RavenJToken, RavenJToken>>> SecondaryIndicesState { get; set; }
 
-        public ICompererAndEquality<JToken> Comparer { get; set; }
+		public IComparerAndEquality<RavenJToken> Comparer { get; set; }
 
-        public PersistentDictionaryState(ICompererAndEquality<JToken> comparer)
+		public PersistentDictionaryState(IComparerAndEquality<RavenJToken> comparer)
         {
             Comparer = comparer;
-            SecondaryIndicesState = new List<IBinarySearchTree<IComparable, IBinarySearchTree<JToken, JToken>>>();
-            KeyToFilePositionInFiles = new EmptyAVLTree<JToken, PositionInFile>(Comparer, JTokenCloner.Clone, file => new PositionInFile
+			SecondaryIndicesState = new List<IBinarySearchTree<IComparable, IBinarySearchTree<RavenJToken, RavenJToken>>>();
+			KeyToFilePositionInFiles = new EmptyAVLTree<RavenJToken, PositionInFile>(Comparer, RavenJTokenCloner.Clone, file => new PositionInFile
             {
-                Key = JTokenCloner.Clone(file.Key),
+                Key = RavenJTokenCloner.Clone(file.Key),
                 Position = file.Position,
                 Size = file.Size
             });
