@@ -7,6 +7,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
@@ -431,6 +432,20 @@ namespace Raven.Http.Extensions
 			}
 			context.Response.AddHeader("ETag", fileEtag);
 			context.Response.WriteFile(filePath);
+		}
+
+		public static bool IsAdministrator(this IHttpContext context)
+		{
+			if(context == null)
+				return false;
+			if(context.User == null)
+				return false;
+			if(context.User.Identity == null)
+				return false;
+			if(context.User.Identity.IsAuthenticated == false)
+				return false;
+
+			return context.User.IsInRole("Administrators");
 		}
 
 		private static string GetContentType(string docPath)
