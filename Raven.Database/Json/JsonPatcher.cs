@@ -143,15 +143,15 @@ namespace Raven.Database.Json
 			}
 		}
 
-		private void RemoveValue(PatchRequest patchCmd, string propName, RavenJToken property)
+		private void RemoveValue(PatchRequest patchCmd, string propName, RavenJToken token)
 		{
-			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
-			if (! (property is RavenJArray))
+			EnsurePreviousValueMatchCurrentValue(patchCmd, token);
+			if (token == null)
 			{
-				property = new RavenJArray();
-				document[propName] = property;
+				token = new RavenJArray();
+				document[propName] = token;
 			}
-			var array = GetArray(property, propName);
+			var array = GetArray(token, propName);
 
 			var position = patchCmd.Position;
 			var value = patchCmd.Value;
@@ -195,15 +195,15 @@ namespace Raven.Database.Json
 			array.Items.Insert(position.Value, patchCmd.Value);
 		}
 
-		private void AddValue(PatchRequest patchCmd, string propName, RavenJToken property)
+		private void AddValue(PatchRequest patchCmd, string propName, RavenJToken token)
 		{
-			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
-			if (! (property is RavenJArray))
+			EnsurePreviousValueMatchCurrentValue(patchCmd, token);
+			if (token == null)
 			{
-				property = new RavenJArray();
-				document[propName] = property;
+				token = new RavenJArray();
+				document[propName] = token;
 			}
-			var array = GetArray(property, propName);
+			var array = GetArray(token, propName);
 
 			array.Items.Add(patchCmd.Value);
 		}
