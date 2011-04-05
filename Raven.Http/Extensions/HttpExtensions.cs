@@ -7,12 +7,15 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Json;
 using Raven.Database.Json;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
@@ -27,6 +30,7 @@ namespace Raven.Http.Extensions
 
 		private static readonly string EmbeddedLastChangedDate =
 			File.GetLastWriteTime(typeof (HttpExtensions).Assembly.Location).Ticks.ToString("G");
+
 
 		private static Encoding GetRequestEncoding(IHttpContext context)
 		{
@@ -50,10 +54,7 @@ namespace Raven.Http.Extensions
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
 			using (var jsonReader = new JsonTextReader(streamReader))
-				return (T)new JsonSerializer
-				{
-					Converters = {new JsonEnumConverter()}
-				}.Deserialize(jsonReader, typeof(T));
+				return (T)JsonExtensions.CreateDefaultJsonSerializer().Deserialize(jsonReader, typeof(T));
 		}
 
 		public static RavenJArray ReadJsonArray(this IHttpContext context)
@@ -80,10 +81,7 @@ namespace Raven.Http.Extensions
 
 		public static void WriteJson(this IHttpContext context, object obj)
 		{
-			WriteJson(context, RavenJToken.FromObject(obj, new JsonSerializer
-			{
-				Converters = {new JsonToJsonConverter(), new JsonEnumConverter()},
-			}));
+			WriteJson(context, RavenJToken.FromObject(obj, JsonExtensions.CreateDefaultJsonSerializer()));
 		}
 
 		public static void WriteJson(this IHttpContext context, RavenJToken obj)
@@ -106,7 +104,7 @@ namespace Raven.Http.Extensions
 			{
 				Formatting = Formatting.None
 			};
-			obj.WriteTo(jsonTextWriter, new JsonEnumConverter());
+			obj.WriteTo(jsonTextWriter, Default.Converters);
 			jsonTextWriter.Flush();
 			if (string.IsNullOrEmpty(jsonp) == false)
 			{
@@ -363,14 +361,6 @@ namespace Raven.Http.Extensions
 			return radius;
 		}
 
-		public static bool SortByDistance(this IHttpContext context)
-		{
-			var sortAsString = context.Request.QueryString["sortByDistance"];
-			bool sort;
-			bool.TryParse(sortAsString, out sort);
-			return sort;
-		}
-
 		public static Guid? GetEtagFromQueryString(this IHttpContext context)
 		{
 			var etagAsString = context.Request.QueryString["etag"];
@@ -438,6 +428,22 @@ namespace Raven.Http.Extensions
 			}
 			context.Response.AddHeader("ETag", fileEtag);
 			context.Response.WriteFile(filePath);
+		}
+
+		public static bool IsAdministrator(this IHttpContext context)
+		{
+			if(context == null)
+				return false;
+			if(context.User == null)
+				return false;
+			if(context.User.Identity == null)
+				return false;
+			if(context.User.Identity.IsAuthenticated == false)
+				return false;
+
+			return
+				context.User.IsInRole(@"administrators") ||
+				context.User.IsInRole(@"builtin\administrators");
 		}
 
 		private static string GetContentType(string docPath)

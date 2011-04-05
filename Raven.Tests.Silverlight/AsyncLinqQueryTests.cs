@@ -272,6 +272,7 @@
 			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
 				var query = session.Query<Order>()
+							.Customize(x=>x.WaitForNonStaleResults())
 							.Where( x => x.Lines.Any( line => line.Quantity > 1 ))
 							.ToListAsync();
 				yield return query;

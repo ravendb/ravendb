@@ -101,14 +101,7 @@ namespace Raven.Database.Indexing
 		{
 			if (doc is DynamicJsonObject)
 				return ((DynamicJsonObject)doc).Inner;
-			return RavenJObject.FromObject(doc, new JsonSerializer
-			{
-				Converters =
-			                               	{
-			                               		new JsonToJsonConverter(),
-												new JsonEnumConverter()
-			                               	}
-			});
+			return RavenJObject.FromObject(doc, JsonExtensions.CreateDefaultJsonSerializer());
 		}
 
 		private static Func<object, object> CreateDocumentIdFetcherIfNeeded(Func<object, object> documentIdFetcher, object doc)

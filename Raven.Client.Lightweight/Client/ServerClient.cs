@@ -15,7 +15,9 @@ using System.Net.Sockets;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Json;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
@@ -314,7 +316,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw;
 				throw ThrowConcurrencyException(e);
 			}
-			return JsonConvert.DeserializeObject<PutResult>(readResponseString, new JsonEnumConverter(), new JsonToJsonConverter());
+			return JsonConvert.DeserializeObject<PutResult>(readResponseString, Default.Converters);
 		}
 
 		private static void AddTransactionInformation(RavenJObject metadata)
@@ -617,7 +619,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
-			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));
+			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
 
 			var obj = new { index = "" };
 			obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);
@@ -802,7 +804,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw;
 				throw ThrowConcurrencyException(e);
 			}
-			return JsonConvert.DeserializeObject<BatchResult[]>(response, new JsonToJsonConverter());
+			return JsonConvert.DeserializeObject<BatchResult[]>(response, Default.Converters);
 		}
 
 		/// <summary>

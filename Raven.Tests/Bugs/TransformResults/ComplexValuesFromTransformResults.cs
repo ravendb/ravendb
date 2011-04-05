@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Client;
 using Raven.Client.Linq;
 using Raven.Client.Indexes;
@@ -115,7 +116,7 @@ namespace LiveProjectionsBug
 			}
 		}
 
-    	private string CreateEntities(EmbeddableDocumentStore documentStore)
+    	public static string CreateEntities(IDocumentStore documentStore)
         {
             const string questionId = @"question\259";
             const string answerId = @"answer\540";
@@ -141,40 +142,33 @@ namespace LiveProjectionsBug
                                      UserId = user.Id
                                  };
 
-                Answer answerDb = Map(answer);
-                session.Store(answerDb);
+            	session.Store(new Answer
+                {
+                	Id = answer.Id,
+                	UserId = answer.UserId,
+                	QuestionId = answer.Question.Id,
+                	Content = answer.Content
+                });
 
                 var vote1 = new AnswerVoteEntity { Id = "votes\\1", Answer = answer, QuestionId = questionId, Delta = 2 };
-                AnswerVote vote1Db = Map(vote1);
-                session.Store(vote1Db);
+            	session.Store(new AnswerVote
+                {
+                	QuestionId = vote1.QuestionId,
+                	AnswerId = vote1.Answer.Id,
+                	Delta = vote1.Delta
+                });
 
                 var vote2 = new AnswerVoteEntity { Id = "votes\\2", Answer = answer, QuestionId = questionId, Delta = 3 };
-                AnswerVote vote2Db = Map(vote2);
-                session.Store(vote2Db);
+            	session.Store(new AnswerVote
+                {
+                	QuestionId = vote2.QuestionId,
+                	AnswerId = vote2.Answer.Id,
+                	Delta = vote2.Delta
+                });
 
                 session.SaveChanges();
             }
             return answerId;
-        }
-
-        private Answer Map(AnswerEntity entity)
-        {
-            var answer = new Answer();
-            answer.Id = entity.Id;
-            answer.UserId = entity.UserId;
-            answer.QuestionId = entity.Question.Id;
-            answer.Content = entity.Content;
-
-            return answer;
-        }
-
-        private AnswerVote Map(AnswerVoteEntity voteEntity)
-        {
-            var vote = new AnswerVote();
-            vote.QuestionId = voteEntity.QuestionId;
-            vote.AnswerId = voteEntity.Answer.Id;
-            vote.Delta = voteEntity.Delta;
-            return vote;
         }
     }
 }

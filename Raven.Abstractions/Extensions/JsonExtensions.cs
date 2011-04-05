@@ -7,6 +7,8 @@ using System;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using Raven.Abstractions;
+using Raven.Abstractions.Json;
 using Raven.Http.Json;
 using Raven.Json.Linq;
 
@@ -30,16 +32,7 @@ namespace Raven.Database.Json
             	ret.Properties.Add("Value", new RavenJValue(result));
             	return ret;
             }
-            return RavenJObject.FromObject(result, new JsonSerializer
-                                              	{
-                                              		Converters =
-                                              			{
-#if !NET_3_5
-                                              				new JsonToJsonConverter(),
-#endif
-															new JsonEnumConverter()
-                                              			}
-                                              	});
+            return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
         }
 
 		/// <summary>
@@ -106,5 +99,16 @@ namespace Raven.Database.Json
 		{
 			return (T)new JsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
 		}
+
+		public static JsonSerializer CreateDefaultJsonSerializer()
+		{
+			var jsonSerializer = new JsonSerializer();
+			foreach (var defaultJsonConverter in Default.Converters)
+			{
+				jsonSerializer.Converters.Add(defaultJsonConverter);
+			}
+			return jsonSerializer;
+		}
+
 	}
 }

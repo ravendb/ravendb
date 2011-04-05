@@ -49,12 +49,9 @@ namespace Raven.Client.Linq
 			var path = memberExpression.ToString();
 			path = path.Substring(path.IndexOf('.') + 1);
 
-
-			var info = new ExpressionInfo(path, memberExpression.Member.GetMemberType(), memberExpression.Expression is MemberExpression);
-
 			return new ExpressionInfo(
-				CurrentPath + info.Path,
-				info.Type,
+				queryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, CurrentPath, path), 
+				memberExpression.Member.GetMemberType(),
 				memberExpression.Expression is MemberExpression);
 		}
  

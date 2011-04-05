@@ -4,14 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Search;
+using Lucene.Net.Util;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Extensions
 {
@@ -111,29 +114,25 @@ namespace Raven.Database.Extensions
             }
         }
 
-	
         public static Sort GetSort(this IndexQuery self, Filter filter, IndexDefinition indexDefinition)
         {
-            var spatialIndexQuery = self as SpatialIndexQuery;
-            if(spatialIndexQuery != null && spatialIndexQuery.SortByDistance)
-            {
-                var dsort = new Lucene.Net.Spatial.Tier.DistanceFieldComparatorSource((Lucene.Net.Spatial.Tier.DistanceFilter)filter);
-
-                return new Sort(new SortField("foo", dsort, false));
-		
-            }
-
-            if (self.SortedFields != null && self.SortedFields.Length > 0)
-                return new Sort(self.SortedFields.Select(x => ToLuceneSortField(indexDefinition, x)).ToArray());
-            return null;
-        }
-
-        private static SortField ToLuceneSortField(IndexDefinition definition, SortedField sortedField)
-        {
-            SortOptions? sortOptions = GetSortOption(definition, sortedField.Field);
-            if (sortOptions == null)
-                return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
-            return new SortField(sortedField.Field, (int) sortOptions.Value, sortedField.Descending);
+        	if (self.SortedFields == null || self.SortedFields.Length <= 0)
+        		return null;
+        	var isSpatialIndexQuery = self is SpatialIndexQuery;
+			return new Sort(self.SortedFields
+							.Select(sortedField =>
+							{
+								if (isSpatialIndexQuery && sortedField.Field == Constants.DistanceFieldName)
+								{
+									var dsort = new Lucene.Net.Spatial.Tier.DistanceFieldComparatorSource((Lucene.Net.Spatial.Tier.DistanceFilter)filter);
+									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
+								}
+								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
+								if (sortOptions == null)
+									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
+								return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
+							})
+							.ToArray());
         }
 
         public static SortOptions? GetSortOption(this IndexDefinition self, string name)

@@ -61,7 +61,7 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 try
                 {
-                    using (ReplicationContext.Enter())
+                    using (docDb.DisableAllTriggersForCurrentThread())
                     {
                         var destinations = GetReplicationDestinations();
 
@@ -152,7 +152,7 @@ namespace Raven.Bundles.Replication.Tasks
         {
             try
             {
-                using (ReplicationContext.Enter())
+                using (docDb.DisableAllTriggersForCurrentThread())
                 {
                     SourceReplicationInformation sourceReplicationInformation;
                     try

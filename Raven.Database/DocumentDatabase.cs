@@ -72,6 +72,7 @@ namespace Raven.Database
 		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
 
 
+		private ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
         private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task tasksBackgroundTask;
 	    private readonly TaskScheduler backgroundTaskScheduler;
@@ -150,15 +151,29 @@ namespace Raven.Database
 
 		private void InitializeTriggers()
 		{
-			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-			ReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			PutTriggers
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			DeleteTriggers
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			ReadTriggers
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 
-			AttachmentPutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-			AttachmentDeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-			AttachmentReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			AttachmentPutTriggers
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			AttachmentDeleteTriggers
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			AttachmentReadTriggers
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 
-			IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			IndexUpdateTriggers
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
 		private void ExecuteStartupTasks()
@@ -1045,6 +1060,19 @@ namespace Raven.Database
 			if(abstractViewGenerator == null)
 				return new string[0];
 			return abstractViewGenerator.Fields;
+		}
+
+		/// <summary>
+		/// This API is provided solely for the use of bundles that might need to run
+		/// without any other bundle interfering. Specifically, the replication bundle
+		/// need to be able to run without interference from any other bundle.
+		/// </summary>
+		/// <returns></returns>
+		public IDisposable DisableAllTriggersForCurrentThread()
+		{
+			var old = disableAllTriggers.Value;
+			disableAllTriggers.Value = true;
+			return new DisposableAction(() => disableAllTriggers.Value = old);
 		}
 	}
 }

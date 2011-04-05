@@ -1,3 +1,5 @@
+using Raven.Client.Document;
+
 namespace Raven.Client.Linq
 {
 	///<summary>
@@ -5,6 +7,11 @@ namespace Raven.Client.Linq
 	///</summary>
 	public interface IDocumentQueryGenerator
 	{
+		/// <summary>
+		/// Gets the conventions asosciated with this query
+		/// </summary>
+		DocumentConvention Conventions { get; }
+
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>

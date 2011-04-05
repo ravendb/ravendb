@@ -12,6 +12,7 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -117,8 +118,8 @@ namespace Raven.Database.Indexing
             {
 				if (value is DateTime)
 				{
-					var val = new RavenJValue(value).ToString();
-					yield return new Field(name, val.Substring(1, val.Length-2), indexDefinition.GetStorage(name, defaultStorage),
+				    var val = (DateTime) value;
+					yield return new Field(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 				}
 				else

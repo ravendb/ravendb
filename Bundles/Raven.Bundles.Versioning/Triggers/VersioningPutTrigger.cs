@@ -23,9 +23,6 @@ namespace Raven.Bundles.Versioning.Triggers
 
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
-			if (VersioningContext.IsInVersioningContext)
-				return VetoResult.Allowed;
-			
 			if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
 				return VetoResult.Deny("Modifying a historical revision is not allowed");
 			return VetoResult.Allowed;
@@ -33,8 +30,6 @@ namespace Raven.Bundles.Versioning.Triggers
 
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
-			if (VersioningContext.IsInVersioningContext)
-				return;
 			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				return;
 
@@ -47,7 +42,7 @@ namespace Raven.Bundles.Versioning.Triggers
 				return;
 
 			
-			using(VersioningContext.Enter())
+			using(Database.DisableAllTriggersForCurrentThread())
 			{
 				var copyMetadata = new RavenJObject(metadata);
 				copyMetadata[RavenDocumentRevisionStatus] = RavenJToken.FromObject("Historical");

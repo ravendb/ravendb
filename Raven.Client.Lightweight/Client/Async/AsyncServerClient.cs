@@ -16,7 +16,9 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Json;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Database;
@@ -140,7 +142,7 @@ namespace Raven.Client.Client.Async
 
 					var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 					request.AddOperationHeaders(OperationsHeaders);
-					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
+					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
 					byte[] bytes = Encoding.UTF8.GetBytes(serializeObject);
 					return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite,bytes, null)
 						.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
@@ -200,7 +202,7 @@ namespace Raven.Client.Client.Async
 						{
 							try
 							{
-								return JsonConvert.DeserializeObject<PutResult>(task1.Result, new JsonEnumConverter(), new JsonToJsonConverter());
+								return JsonConvert.DeserializeObject<PutResult>(task1.Result, Default.Converters);
 							}
 							catch (WebException e)
 							{

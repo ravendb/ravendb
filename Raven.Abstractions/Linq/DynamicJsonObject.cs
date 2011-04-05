@@ -8,8 +8,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
@@ -152,6 +154,13 @@ namespace Raven.Database.Linq
 						var l = (long)value;
 						if (l > int.MinValue && int.MaxValue > l)
 							return (int)l;
+					}
+					var s = value as string;
+					if(s != null)
+					{
+						DateTime time;
+                        if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
+							return time;
 					}
 					return value;
 			}

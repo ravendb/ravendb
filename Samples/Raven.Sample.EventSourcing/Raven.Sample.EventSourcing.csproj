@@ -35,6 +35,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="MissingBitsFromClientProfile">
+      <HintPath>..\..\SharedLibs\MissingBitsFromClientProfile.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\Raven.Client.Lightweight\bin\Debug\Newtonsoft.Json.dll</HintPath>
     </Reference>

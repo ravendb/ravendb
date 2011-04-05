@@ -25,10 +25,7 @@ namespace Raven.Bundles.Authorization.Triggers
 
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if(AuthorizationContext.IsInAuthorizationContext)
-				return VetoResult.Allowed;
-
-			using(AuthorizationContext.Enter())
+			using (Database.DisableAllTriggersForCurrentThread())
 			{
                 var user = CurrentOperationContext.Headers.Value[Constants.RavenAuthorizationUser];
                 var operation = CurrentOperationContext.Headers.Value[Constants.RavenAuthorizationOperation];

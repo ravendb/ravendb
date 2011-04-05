@@ -13,6 +13,8 @@ using System.Security.Cryptography;
 using System.Text;
 using log4net;
 using Newtonsoft.Json;
+using Raven.Abstractions;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -101,7 +103,7 @@ namespace Raven.Database.Storage
 	        {
 	            try
 	            {
-					var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), new JsonEnumConverter(), new JsonToJsonConverter());
+	            	var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), Default.Converters);
 					if (indexDefinition.Name == null)
 						indexDefinition.Name = MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index));
 	            	AddAndCompileIndex(indexDefinition);
@@ -131,7 +133,7 @@ namespace Raven.Database.Storage
             	var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
             	var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
             	// Hash the name if it's too long (as a path)
-            	File.WriteAllText(indexName, JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, new JsonEnumConverter()));
+            	File.WriteAllText(indexName, JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters));
             }
 			return transformer.Name;
 		}

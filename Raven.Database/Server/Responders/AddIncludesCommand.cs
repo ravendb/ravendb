@@ -52,6 +52,9 @@ namespace Raven.Database.Server.Responders
 
 		private void ExecuteInternal(RavenJToken token)
 		{
+			if (token == null)
+				return; // nothing to do
+
 			switch (token.Type)
 			{
 				case JTokenType.Array:
