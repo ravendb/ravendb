@@ -91,8 +91,8 @@ namespace Raven.Database.Json
 				Nested = nested,
 				Position = patchRequestJson.Value<int?>("Position"),
                 AllPositions = patchRequestJson.Value<bool?>("AllPositions"),
-				PrevVal = patchRequestJson.Properties["PrevVal"] ?? null,
-				Value = patchRequestJson.Properties["Value"] ?? null,
+				PrevVal = patchRequestJson.ContainsKey("PrevVal") ? patchRequestJson.Properties["PrevVal"] : null,
+				Value = patchRequestJson.ContainsKey("Value") ? patchRequestJson.Properties["Value"] : null,
 			};
 		}
 	}
