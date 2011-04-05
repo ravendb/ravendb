@@ -804,7 +804,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw;
 				throw ThrowConcurrencyException(e);
 			}
-			return JsonConvert.DeserializeObject<BatchResult[]>(response, new JsonToJsonConverter());
+			return JsonConvert.DeserializeObject<BatchResult[]>(response, Default.Converters);
 		}
 
 		/// <summary>
