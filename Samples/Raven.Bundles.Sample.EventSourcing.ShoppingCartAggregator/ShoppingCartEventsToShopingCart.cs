@@ -5,11 +5,10 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Database.Linq;
 using Raven.Database.Indexing;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Sample.EventSourcing
 {
@@ -55,7 +54,7 @@ namespace Raven.Sample.EventSourcing
                 yield return new
                 {
                     ShoppingCartId = cart.Id,
-                    Aggregate = JObject.FromObject(cart)
+                    Aggregate = RavenJObject.FromObject(cart)
                 };
             }
         }
