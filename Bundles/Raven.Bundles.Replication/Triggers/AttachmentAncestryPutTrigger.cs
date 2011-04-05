@@ -26,8 +26,6 @@ namespace Raven.Bundles.Replication.Triggers
         {
             if (key.StartsWith("Raven/")) // we don't deal with system attachment
                 return;
-            if (ReplicationContext.IsInReplicationContext)
-                return;
             var doc = Database.Get(key, null);
             if (doc != null)
             {

@@ -57,7 +57,6 @@
     <Compile Include="Triggers\RemoveConflictOnAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\RemoveConflictOnPutTrigger.cs" />
     <Compile Include="ReplicationConstants.cs" />
-    <Compile Include="ReplicationContext.cs" />
     <Compile Include="Reponsders\ReplicationLastEtagResponser.cs" />
     <Compile Include="Reponsders\DocumentReplicationResponder.cs" />
     <Compile Include="Tasks\ReplicationTask.cs" />

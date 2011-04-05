@@ -20,8 +20,6 @@ namespace Raven.Bundles.Replication.Triggers
         {
 			if(metadata == null)
 				return ReadVetoResult.Allowed; // this is a projection, it is allowed
-            if (ReplicationContext.IsInReplicationContext)
-                return ReadVetoResult.Allowed;
             JToken value;
             if (metadata.TryGetValue("Raven-Delete-Marker", out value))
                 return ReadVetoResult.Ignore;

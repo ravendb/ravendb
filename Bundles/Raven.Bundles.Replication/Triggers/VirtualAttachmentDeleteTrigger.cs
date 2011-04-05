@@ -24,9 +24,6 @@ namespace Raven.Bundles.Replication.Triggers
 
         public override void OnDelete(string key)
         {
-            if (ReplicationContext.IsInReplicationContext)
-                return;
-
             var document = Database.GetStatic(key);
             if (document == null)
                 return;
@@ -36,8 +33,6 @@ namespace Raven.Bundles.Replication.Triggers
 
         public override void AfterDelete(string key)
         {
-            if (ReplicationContext.IsInReplicationContext)
-                return;
             var metadata = new JObject(
                 new JProperty("Raven-Delete-Marker", true),
                 new JProperty(ReplicationConstants.RavenReplicationParentSource, deletedSource.Value),

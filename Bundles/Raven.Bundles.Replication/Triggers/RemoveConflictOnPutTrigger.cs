@@ -16,10 +16,7 @@ namespace Raven.Bundles.Replication.Triggers
     {
         public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
-            if (ReplicationContext.IsInReplicationContext)
-                return;
-
-           using(ReplicationContext.Enter())
+           using(Database.DisableAllTriggersForCurrentThread())
            {
                metadata.Remove(ReplicationConstants.RavenReplicationConflict);// you can't put conflicts
 
