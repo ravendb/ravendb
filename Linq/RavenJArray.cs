@@ -242,5 +242,10 @@ namespace Raven.Json.Linq
 		}
 
 		#endregion
-	}
+
+    	public void Add(RavenJToken token)
+    	{
+    		Items.Add(token);
+    	}
+    }
 }
