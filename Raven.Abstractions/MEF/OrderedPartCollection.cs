@@ -29,13 +29,7 @@ namespace Raven.Abstractions.MEF
 
 		public void Add(Lazy<T, IPartMetadata> item)
 		{
-			int insertAt = 0;
-			foreach (var lazy in inner)
-			{
-				if (item.Metadata.Order > lazy.Metadata.Order)
-					break;
-				insertAt++;
-			}
+			int insertAt = inner.TakeWhile(lazy => item.Metadata.Order >= lazy.Metadata.Order).Count();
 			inner.Insert(insertAt, item);
 		}
 
