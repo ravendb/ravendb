@@ -32,7 +32,7 @@ namespace Raven.Bundles.Authorization
 			RavenJObject documentMetadata,
 			Action<string> logger)
 		{
-			var authAsJson = documentMetadata.Value<RavenJObject>(RavenDocumentAuthorization);
+			var authAsJson = documentMetadata[RavenDocumentAuthorization] as RavenJObject;
 			if (authAsJson == null)
 			{
 				if (logger != null)
