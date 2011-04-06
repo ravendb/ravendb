@@ -91,10 +91,9 @@
 									   Style="{StaticResource SectionHeader}" />
 						</Grid>
 
-						<tk:TransitioningContentControl x:Name="ActiveItem"
-														Transition="LeftTransition"
-														VerticalContentAlignment="Stretch"
-														HorizontalContentAlignment="Stretch" />
+						<ContentControl x:Name="ActiveItem"
+										VerticalContentAlignment="Stretch"
+										HorizontalContentAlignment="Stretch" />
 					</Grid>
 
 					<Border x:Name="footer"
