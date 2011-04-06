@@ -139,9 +139,8 @@ namespace Raven.Tests.Indexes
 			Assert.Equal(1, queryResult.Results.Count);
 
 			Assert.Equal("shoppingcarts/12", queryResult.Results[0].Value<string>("ShoppingCartId"));
-        	var cart =
-        		queryResult.Results[0].Value<RavenJObject>("Aggregate").JsonDeserialization
-        			<ShoppingCartEventsToShopingCart.ShoppingCart>();
+        	var ravenJObject = queryResult.Results[0].Value<RavenJObject>("Aggregate");
+        	var cart = ravenJObject.JsonDeserialization<ShoppingCartEventsToShopingCart.ShoppingCart>();
             Assert.Equal(2, cart.Items.Count);
         }
     }
