@@ -133,6 +133,9 @@
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Documents\IDocumentTemplateProvider.cs" />
+    <Compile Include="Features\Statistics\StatisticsItem.xaml.cs">
+      <DependentUpon>StatisticsItem.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Plugins\Database\ExportDatabaseExplorerItemAttribute.cs" />
     <Compile Include="Framework\DynamicViewModel.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
@@ -336,6 +339,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Statistics\IndexesView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Statistics\StatisticsItem.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

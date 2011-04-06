@@ -3,27 +3,10 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-			 xmlns:c="clr-namespace:Raven.Studio.Controls"
-			 xmlns:f="clr-namespace:Raven.Studio.Framework"
+			 xmlns:Statistics="clr-namespace:Raven.Studio.Features.Statistics"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
-	<UserControl.Resources>
-		<Style TargetType="TextBlock">
-			<Setter Property="FontSize"
-					Value="13.667" />
-			<Setter Property="HorizontalAlignment"
-					Value="Right" />
-		</Style>
-
-		<Style TargetType="c:Label"
-			   BasedOn="{StaticResource LabelBaseStyle}">
-			<Setter Property="HorizontalAlignment"
-					Value="Left" />
-		</Style>
-	</UserControl.Resources>
 
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 
@@ -41,24 +24,7 @@
 					  Margin="8,0,0,0">
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
-					<Grid Background="Transparent"
-						  cm:Message.Attach="[Event MouseLeftButtonDown] = [Action RaiseMessageForStat($dataContext)]">
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="84" />
-							<ColumnDefinition Width="6" />
-							<ColumnDefinition />
-						</Grid.ColumnDefinitions>
-
-						<!-- TODO: The columns should not be hardcoded, this should be considered a temporary fix-->
-
-						<c:Label Content="{Binding Label}"
-								 HorizontalAlignment="Right"
-								 Grid.Column="0" />
-
-						<TextBlock Text="{Binding Value}"
-								   FontSize="{StaticResource ControlTitleFontSize}"
-								   Grid.Column="2" />
-					</Grid>
+					<Statistics:StatisticsItem DataContext="{Binding}" />
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
 		</ItemsControl>
