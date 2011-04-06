@@ -662,7 +662,8 @@ namespace Raven.Database
 			IndexDefinitionStorage.RemoveIndex(name);
 			IndexStorage.DeleteIndex(name);
 			//we may run into a conflict when trying to delete if the index is currently
-			//busy indexing documents
+			//busy indexing documents, worst case scenario, we will have an orphaned index
+			//row which will get cleaned up on next db restart.
 			for (var i = 0; i < 10; i++)
 			{
 				try
