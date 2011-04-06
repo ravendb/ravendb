@@ -9,6 +9,7 @@ namespace Raven.Studio.Features.Query
 	using Database;
 	using Documents;
 	using Framework;
+	using Plugins;
 
 	[Export]
 	public class LinqEditorViewModel : Screen

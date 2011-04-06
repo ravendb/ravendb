@@ -12,6 +12,7 @@
 	using Database;
 	using Framework;
 	using Messages;
+	using Plugins;
 	using Raven.Database.Data;
 
 	[Export(typeof (IDocumentTemplateProvider))]

@@ -9,6 +9,7 @@
     using Caliburn.Micro;
     using Database;
     using Messages;
+    using Plugins;
     using Raven.Database.Data;
 
     [Export]

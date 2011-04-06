@@ -6,6 +6,7 @@
 	using Features.Documents;
 	using Framework.Extensions;
 	using Messages;
+	using Plugins;
 	using Shell.MessageBox;
 
     public class EditDocumentById

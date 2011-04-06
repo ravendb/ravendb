@@ -8,6 +8,7 @@ namespace Raven.Studio.Features.Documents
 	using Framework;
 	using Framework.Extensions;
 	using Messages;
+	using Plugins;
 	using Raven.Database;
 
 	[Export]
