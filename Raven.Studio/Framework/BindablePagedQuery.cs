@@ -187,7 +187,6 @@
 			{
 				isLoading = value;
 				NotifyOfPropertyChange("IsLoading");
-				Refresh();
 				IsLoadingChanged(this, new EventArgs<bool>(isLoading));
 			}
 		}
