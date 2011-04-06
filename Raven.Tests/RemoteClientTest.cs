@@ -56,15 +56,18 @@ namespace Raven.Tests
 			using (var documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8080"
-			}.Initialize())
+			})
 			{
-				documentStore.DatabaseCommands.Put("Raven/Delete/Me/To/Continue/Running/The/Tests", null,
+				documentStore.Initialize();
+				documentStore.DatabaseCommands.Put("Pls Delete Me", null,
 				                                   JObject.FromObject(new {StackTrace = new StackTrace(true)}), new JObject());
+
+				Process.Start(documentStore.Url);// start the server
 
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Raven/Delete/Me/To/Continue/Running/The/Tests") != null);
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
 			}
 
 		}
