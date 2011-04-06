@@ -18,8 +18,7 @@
 			if (Directory.Exists(dir))
 			{
 				var paths = from path in Directory.GetFiles(dir, "*.xap", SearchOption.AllDirectories)
-							let significant = path.Replace(dir, string.Empty).Replace(".xap", string.Empty)
-							select new JValue(significant);
+				            select path.Replace(dir, string.Empty).Replace(".xap", string.Empty);
 
 				var xaps = new JArray(paths);
 				context.WriteJson(xaps);
