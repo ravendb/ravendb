@@ -231,7 +231,7 @@ namespace Raven.Json.Utilities
 		{
 			return new CopyOnWriteDictEnumerator(
 				inherittedValues != null ? inherittedValues.GetEnumerator() : null,
-				localChanges != null ? localChanges.GetEnumerator() : null
+				localChanges != null ? (IEnumerator<KeyValuePair<TKey, RavenJToken>>)new Dictionary<TKey, RavenJToken>(localChanges).GetEnumerator() : null
 				);
 		}
 
