@@ -106,6 +106,17 @@ namespace Raven.Json.Linq
 
 		internal static U Convert<T, U>(this T token) where T : RavenJToken
 		{
+			if (token is RavenJArray && typeof(U) == typeof(RavenJObject))
+			{
+				var ar = token as RavenJArray;
+				var o = new RavenJObject();
+				foreach (var item in ar.Items)
+				{
+					o.Properties.Add(item["Key"].Value<string>(), item["Value"]);
+				}
+				return (U) (object) o;
+			}
+
 			bool cast = typeof(RavenJToken).IsAssignableFrom(typeof(U));
 
 			return Convert<T, U>(token, cast);
