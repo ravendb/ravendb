@@ -22,7 +22,7 @@
     using Raven.Database.Indexing;
     using Raven.Database.Json;
 
-    [ExportDatabaseScreen("Summary", Index = 10)]
+    [ExportDatabaseExplorerItem("Summary", Index = 10)]
     public class SummaryViewModel : RavenScreen,
                                     IHandle<DocumentDeleted>,
                                     IHandle<StatisticsUpdated>

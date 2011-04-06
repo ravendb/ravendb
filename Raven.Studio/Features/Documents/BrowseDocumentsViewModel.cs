@@ -12,7 +12,7 @@ namespace Raven.Studio.Features.Documents
 	using Raven.Database;
 
 	[Export]
-	[ExportDatabaseScreen("Documents", Index = 40)]
+	[ExportDatabaseExplorerItem("Documents", Index = 40)]
 	public class BrowseDocumentsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{

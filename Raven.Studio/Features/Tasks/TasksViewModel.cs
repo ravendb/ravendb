@@ -8,7 +8,7 @@
 	using Framework;
 	using Plugins.Database;
 
-	[ExportDatabaseScreen("Tasks", Index = 60)]
+	[ExportDatabaseExplorerItem("Tasks", Index = 60)]
 	public class TasksViewModel : Conductor<object>,
 		IPartImportsSatisfiedNotification
 	{

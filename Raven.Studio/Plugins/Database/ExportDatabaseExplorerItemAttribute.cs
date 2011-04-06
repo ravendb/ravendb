@@ -5,9 +5,9 @@
 
 	[MetadataAttribute]
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-	public class ExportDatabaseScreenAttribute : ExportAttribute
+	public class ExportDatabaseExplorerItemAttribute : ExportAttribute
 	{
-		public ExportDatabaseScreenAttribute(string displayName)
+		public ExportDatabaseExplorerItemAttribute(string displayName)
 			: base("Raven.DatabaseExplorerItem")
 		{
 			DisplayName = displayName;

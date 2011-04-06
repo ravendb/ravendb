@@ -17,7 +17,7 @@
 								  IHandle<DisplayCurrentDatabaseRequested>
 	{
 		readonly BusyStatusViewModel busyStatus;
-		readonly DatabaseViewModel databaseScreen;
+		readonly DatabaseExplorer databaseScreen;
 		readonly IEventAggregator events;
 		readonly NavigationViewModel navigation;
 		readonly NotificationsViewModel notifications;
@@ -33,7 +33,7 @@
 			NotificationsViewModel notifications,
 			BusyStatusViewModel busyStatus,
 			SelectDatabaseViewModel start,
-			DatabaseViewModel databaseScreen,
+			DatabaseExplorer databaseScreen,
 			IKeyboardShortcutBinder binder,
 			IEventAggregator events)
 		{

@@ -11,9 +11,9 @@ namespace Raven.Studio.Features.Database
 	using System.Linq;
 	using Plugins;
 
-	[Export(typeof(DatabaseViewModel))]
+	[Export(typeof(DatabaseExplorer))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class DatabaseViewModel : Conductor<object>, IPartImportsSatisfiedNotification,
+	public class DatabaseExplorer : Conductor<object>, IPartImportsSatisfiedNotification,
 		IHandle<DatabaseScreenRequested>,
 		IHandle<DocumentDeleted>
 	{
@@ -21,7 +21,7 @@ namespace Raven.Studio.Features.Database
 		readonly IServer server;
 
 		[ImportingConstructor]
-		public DatabaseViewModel(IServer server, IEventAggregator events)
+		public DatabaseExplorer(IServer server, IEventAggregator events)
 		{
 			this.server = server;
 			this.events = events;
@@ -31,7 +31,7 @@ namespace Raven.Studio.Features.Database
 		}
 
 		[ImportMany("Raven.DatabaseExplorerItem", AllowRecomposition = true)]
-		public IEnumerable<Lazy<object, IMenuItemMetadata>> Screens { get; set; }
+		public IEnumerable<Lazy<object, IMenuItemMetadata>> AvailableItems { get; set; }
 
 		public IList<string> Items { get; private set; }
 
@@ -43,9 +43,9 @@ namespace Raven.Studio.Features.Database
 			{
 				selectedItem = value;
 				NotifyOfPropertyChange(() => SelectedItem);
-				if (!Screens.Any()) return;
+				if (!AvailableItems.Any()) return;
 
-				ActivateItem(Screens.OrderBy(x => x.Metadata.Index).First(x => x.Metadata.DisplayName == selectedItem).Value);
+				ActivateItem(AvailableItems.OrderBy(x => x.Metadata.Index).First(x => x.Metadata.DisplayName == selectedItem).Value);
 			}
 		}
 
@@ -70,14 +70,14 @@ namespace Raven.Studio.Features.Database
 			if (doc != null && doc.Id == message.DocumentId)
 			{
 				//TODO: this is an arbitrary choice, we should actually go back using the history
-				ActiveItem = Screens.OrderBy(x => x.Metadata.Index).Skip(3).Select(x => x.Value).First();
+				ActiveItem = AvailableItems.OrderBy(x => x.Metadata.Index).Skip(3).Select(x => x.Value).First();
 				doc.TryClose();
 			}
 		}
 
 		public void OnImportsSatisfied()
 		{
-			var screens = Screens.OrderBy(x => x.Metadata.Index).ToList();
+			var screens = AvailableItems.OrderBy(x => x.Metadata.Index).ToList();
 
 			Items = screens.Select(x => x.Metadata.DisplayName).ToList();
 			SelectedItem = screens.Select(x => x.Metadata.DisplayName).FirstOrDefault();

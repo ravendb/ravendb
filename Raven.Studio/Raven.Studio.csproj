@@ -132,7 +132,7 @@
     <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
-    <Compile Include="Plugins\Database\ExportDatabaseScreenAttribute.cs" />
+    <Compile Include="Plugins\Database\ExportDatabaseExplorerItemAttribute.cs" />
     <Compile Include="Framework\DynamicViewModel.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
@@ -256,7 +256,7 @@
     <Compile Include="Shell\NavigationViewModel.cs" />
     <Compile Include="Shell\NotificationsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
-    <Compile Include="Features\Database\DatabaseViewModel.cs" />
+    <Compile Include="Features\Database\DatabaseExplorer.cs" />
     <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
     <Compile Include="Shell\MessageBox\ShowMessageBox.cs" />
@@ -452,7 +452,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Database\DatabaseView.xaml">
+    <Page Include="Features\Database\DatabaseExplorerView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

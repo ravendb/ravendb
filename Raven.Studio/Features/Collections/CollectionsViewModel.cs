@@ -17,7 +17,7 @@
 	using Client.Client;
 
 	[Export(typeof(CollectionsViewModel))]
-	[ExportDatabaseScreen("Collections", Index = 20)]
+	[ExportDatabaseExplorerItem("Collections", Index = 20)]
 	public class CollectionsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{

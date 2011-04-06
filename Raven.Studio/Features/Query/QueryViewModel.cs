@@ -16,7 +16,7 @@
 	using Client.Client;
 
 
-	[ExportDatabaseScreen("Query", Index = 50)]
+	[ExportDatabaseExplorerItem("Query", Index = 50)]
 	public class QueryViewModel : Screen
 	{
 		readonly List<string> dynamicIndex = new List<string>();

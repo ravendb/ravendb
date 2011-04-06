@@ -10,7 +10,7 @@
 	using Raven.Database.Indexing;
 
 	[Export]
-	[ExportDatabaseScreen("Indexes", Index = 30)]
+	[ExportDatabaseExplorerItem("Indexes", Index = 30)]
 	public class BrowseIndexesViewModel : RavenScreen,
 										  IHandle<IndexUpdated>
 	{
