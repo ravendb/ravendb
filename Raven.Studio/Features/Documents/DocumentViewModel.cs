@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Json.Linq;
+using Raven.Studio.Framework;
 
 namespace Raven.Studio.Features.Documents
 {

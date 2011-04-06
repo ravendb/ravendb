@@ -63,12 +63,12 @@ namespace Raven.Client.Client
 			return DateTime.SpecifyKind( DateTime.ParseExact(date, "r", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), DateTimeKind.Utc);
 		}
 
-		static T Extract<T>(IDictionary<string, JToken> metadata, string key, T defaultValue = default(T))
+		static T Extract<T>(RavenJObject metadata, string key, T defaultValue = default(T))
 		{
 			return Extract<T, T>(metadata, key, defaultValue, t => t);
 		}
 
-		static TResult Extract<T, TResult>(IDictionary<string, JToken> metadata, string key, TResult defaultValue, Func<T, TResult> convert)
+		static TResult Extract<T, TResult>(RavenJObject metadata, string key, TResult defaultValue, Func<T, TResult> convert)
 		{
 			if (metadata == null) return defaultValue;
 			if (!metadata.ContainsKey(key)) return defaultValue;

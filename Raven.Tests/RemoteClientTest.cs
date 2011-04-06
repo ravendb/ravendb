@@ -14,6 +14,7 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Http;
+using Raven.Json.Linq;
 using Raven.Server;
 using System.Reflection;
 using Raven.Tests.Document;
@@ -60,7 +61,7 @@ namespace Raven.Tests
 			{
 				documentStore.Initialize();
 				documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-				                                   JObject.FromObject(new {StackTrace = new StackTrace(true)}), new JObject());
+												   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }), new RavenJObject());
 
 				Process.Start(documentStore.Url);// start the server
 

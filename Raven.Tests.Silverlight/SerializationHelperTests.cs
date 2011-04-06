@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Silverlight
+﻿using Raven.Json.Linq;
+
+namespace Raven.Tests.Silverlight
 {
 	using System;
 	using System.Collections.Generic;
@@ -14,8 +16,8 @@
 		[Asynchronous]
 		public IEnumerable<Task> Handles_conversion_when_there_is_no_metadata()
 		{
-			var input = new List<JObject> {new JObject()};
-			var output = SerializationHelper.JObjectsToJsonDocuments(input);
+			var input = new List<RavenJObject> {new RavenJObject()};
+			var output = SerializationHelper.RavenJObjectsToJsonDocuments(input);
 
 			Assert.AreEqual(1, output.Count());
 
@@ -25,11 +27,11 @@
 		[TestMethod]
 		public void Extracts_key_from_metadata()
 		{
-			var doc = new JObject();
-			doc["@metadata"] = new JObject();
+			var doc = new RavenJObject();
+			doc["@metadata"] = new RavenJObject();
 			doc["@metadata"]["@id"] = "some_key";
 
-			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			Assert.AreEqual("some_key", output.First().Key);
 		}
@@ -37,10 +39,10 @@
 		[TestMethod]
 		public void Assumes_empty_string_if_key_is_not_in_metadata()
 		{
-			var doc = new JObject();
-			doc["@metadata"] = new JObject();
+			var doc = new RavenJObject();
+			doc["@metadata"] = new RavenJObject();
 
-			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			Assert.AreEqual(string.Empty, output.First().Key);
 		}
@@ -50,11 +52,11 @@
 		{
 			var april_fools = new DateTime(2011, 4, 1, 4, 20, 0, DateTimeKind.Utc);
 
-			var doc = new JObject();
-			doc["@metadata"] = new JObject();
+			var doc = new RavenJObject();
+			doc["@metadata"] = new RavenJObject();
 			doc["@metadata"]["Last-Modified"] = april_fools.ToString("r");
 
-			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			Assert.AreEqual(april_fools, output.First().LastModified);
 		}
@@ -62,12 +64,12 @@
 		[TestMethod]
 		public void Assumes_now_if_last_modified_date_is_not_in_metadata()
 		{
-			var doc = new JObject();
-			doc["@metadata"] = new JObject();
+			var doc = new RavenJObject();
+			doc["@metadata"] = new RavenJObject();
 
 			var now = DateTime.Now;
 
-			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			var last_modified = output.First().LastModified;
 			var delta = Math.Abs((last_modified - now).Seconds);
@@ -80,11 +82,11 @@
 		{
 			var etag = Guid.NewGuid();
 
-			var doc = new JObject();
-			doc["@metadata"] = new JObject();
+			var doc = new RavenJObject();
+			doc["@metadata"] = new RavenJObject();
 			doc["@metadata"]["@etag"] = etag.ToString();
 
-			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			Assert.AreEqual(etag, output.First().Etag);
 		}
@@ -92,10 +94,10 @@
 		[TestMethod]
 		public void Assumes_empty_guid_if_etag_is_not_in_metadata()
 		{
-			var doc = new JObject();
-			doc["@metadata"] = new JObject();
+			var doc = new RavenJObject();
+			doc["@metadata"] = new RavenJObject();
 
-			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			Assert.AreEqual(Guid.Empty, output.First().Etag);
 		}
@@ -103,11 +105,11 @@
 		[TestMethod]
 		public void Extracts_Non_Authoritive_flag_from_metadata()
 		{
-			var doc = new JObject();
-			doc["@metadata"] = new JObject();
+			var doc = new RavenJObject();
+			doc["@metadata"] = new RavenJObject();
 			doc["@metadata"]["Non-Authoritive-Information"] = true;
 
-			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			Assert.AreEqual(true, output.First().NonAuthoritiveInformation);
 		}
@@ -115,10 +117,10 @@
 		[TestMethod]
 		public void Assumes_false_if_Non_Authoritive_flag_is_not_in_metadata()
 		{
-			var doc = new JObject();
-			doc["@metadata"] = new JObject();
+			var doc = new RavenJObject();
+			doc["@metadata"] = new RavenJObject();
 
-			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
+			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			Assert.AreEqual(false, output.First().NonAuthoritiveInformation);
 		}
