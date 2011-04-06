@@ -1,13 +1,13 @@
-﻿namespace Raven.Studio.Features.Statistics
+﻿namespace Raven.Studio.Framework
 {
-    using System;
-    using System.Collections.Generic;
-    using System.ComponentModel;
-    using System.Dynamic;
-    using System.Linq;
-    using System.Reflection;
+	using System;
+	using System.Collections.Generic;
+	using System.ComponentModel;
+	using System.Dynamic;
+	using System.Linq;
+	using System.Reflection;
 
-    //NOTE: this might be overkill, but it's done and it didn't take long ...
+	//NOTE: this might be overkill, but it's done and it didn't take long ...
     public class DynamicViewModel<T> : DynamicObject, INotifyPropertyChanged where T:class 
     {
         public DynamicViewModel(T proxiedObject)
