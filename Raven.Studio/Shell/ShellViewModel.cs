@@ -80,10 +80,10 @@
 
 		public IServer Server { get { return server; } }
 
-		public override void AttachView(object view, object context)
+		protected override void OnViewAttached(object view, object context)
 		{
 			binder.Initialize((FrameworkElement)view);
-			base.AttachView(view, context);
+			base.OnViewAttached(view, context);
 		}
 
 		public BusyStatusViewModel BusyStatus { get { return busyStatus; } }

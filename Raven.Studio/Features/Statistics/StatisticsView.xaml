@@ -42,7 +42,7 @@
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
 					<Grid Background="Transparent"
-						  cm:Message.Attach="[Event MouseLeftButtonDown] = RaiseMessageForStat($dataContext)">
+						  cm:Message.Attach="[Event MouseLeftButtonDown] = [Action RaiseMessageForStat($dataContext)]">
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition Width="84" />
 							<ColumnDefinition Width="6" />

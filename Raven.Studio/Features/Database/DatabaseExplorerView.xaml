@@ -21,6 +21,7 @@
 				<Setter.Value>
 					<ControlTemplate TargetType="ListBox">
 						<Grid>
+
 							<Border BorderBrush="{TemplateBinding BorderBrush}"
 									BorderThickness="{TemplateBinding BorderThickness}"
 									CornerRadius="2">
@@ -73,7 +74,7 @@
 						 Style="{StaticResource DatabaseMenuListBox}">
 					<ListBox.ItemTemplate>
 						<DataTemplate>
-							<Border cm:Message.Attach="MouseLeftButtonDown = NavigateTo($dataContext)">
+							<Border cm:Message.Attach="[Event MouseLeftButtonDown] = [Action NavigateTo($dataContext)]">
 								<TextBlock Text="{Binding}" />
 							</Border>
 						</DataTemplate>

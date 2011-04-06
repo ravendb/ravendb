@@ -47,10 +47,10 @@
 			keys.Register<SaveDocument>(Key.S, ModifierKeys.Control, x => x.Execute(this), this);
 		}
 
-		public override void AttachView(object view, object context)
+		protected override void OnViewAttached(object view, object context)
 		{
 			keys.Initialize((FrameworkElement)view);
-			base.AttachView(view, context);
+			base.OnViewAttached(view, context);
 		}
 
 		public string ClrType { get; private set; }
