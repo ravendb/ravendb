@@ -204,9 +204,11 @@ namespace Raven.Database.Server.Responders
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 				indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(indexName);
 			});
+			var indexDefinition = Database.GetIndexDefinition(indexName);
 			using(var md5 = MD5.Create())
 			{
 				var list = new List<byte>();
+				list.AddRange(indexDefinition.GetIndexHash());
 				list.AddRange(Encoding.Unicode.GetBytes(indexName));
 				list.AddRange(lastDocEtag.ToByteArray());
 				list.AddRange(indexLastUpdatedAt.Item2.ToByteArray());

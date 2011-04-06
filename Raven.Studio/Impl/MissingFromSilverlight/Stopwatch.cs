@@ -1,4 +1,4 @@
-﻿namespace Raven.Studio.Features.Tasks
+﻿namespace System.Diagnostics
 {
 	using System;
 

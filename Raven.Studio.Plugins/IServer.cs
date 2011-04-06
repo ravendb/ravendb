@@ -1,9 +1,9 @@
-namespace Raven.Studio.Features.Database
+namespace Raven.Studio.Plugins
 {
 	using System;
 	using System.Collections.Generic;
 	using Client;
-	using Raven.Database.Data;
+	using Database.Data;
 	using Statistics;
 
 	public interface IServer
@@ -20,6 +20,6 @@ namespace Raven.Studio.Features.Database
 		void OpenDatabase(string name, Action callback);
 		void Connect(Uri serverAddress, Action callback);
 		event EventHandler CurrentDatabaseChanged;
-	    void CreateDatabase(string databaseName, Action callback);
+		void CreateDatabase(string databaseName, Action callback);
 	}
 }

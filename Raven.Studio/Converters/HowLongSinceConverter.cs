@@ -3,7 +3,7 @@
 	using System;
 	using System.Globalization;
 	using System.Windows.Data;
-	using Framework;
+	using Framework.Extensions;
 
 	public class HowLongSinceConverter : IValueConverter
 	{

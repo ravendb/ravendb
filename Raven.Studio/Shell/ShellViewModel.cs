@@ -7,7 +7,9 @@
 	using Caliburn.Micro;
 	using Features.Database;
 	using Framework;
+	using Framework.Extensions;
 	using Messages;
+	using Plugins;
 
 	[Export(typeof(IShell))]
 	[PartCreationPolicy(CreationPolicy.Shared)]

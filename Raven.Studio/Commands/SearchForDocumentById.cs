@@ -5,7 +5,9 @@
     using Features.Database;
     using Features.Documents;
     using Framework;
+    using Framework.Extensions;
     using Messages;
+    using Plugins;
 
 	public class SearchForDocumentById
     {

@@ -1,16 +1,16 @@
-﻿using System;
-using Raven.Database.Data;
-
-namespace Raven.Studio.Commands
+﻿namespace Raven.Studio.Commands
 {
+	using System;
+	using Database.Data;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Features.Database;
 	using Features.Documents;
-	using Framework;
+	using Framework.Extensions;
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
+	using Plugins;
 
 	public class SaveDocument
 	{

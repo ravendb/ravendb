@@ -4,7 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Threading;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
@@ -24,13 +27,15 @@ namespace Raven.Tests
 
         protected RavenDbServer GetNewServer()
         {
-        	var ravenDbServer = new RavenDbServer(new RavenConfiguration
+        	var ravenConfiguration = new RavenConfiguration
         	{
         		Port = 8080,
         		RunInMemory = true,
         		DataDirectory = "Data",
         		AnonymousUserAccessMode = AnonymousUserAccessMode.All
-        	});
+        	};
+
+        	var ravenDbServer = new RavenDbServer(ravenConfiguration);
 
 			using (var documentStore = new DocumentStore
 			{
@@ -42,6 +47,30 @@ namespace Raven.Tests
 
         	return ravenDbServer;
         }
+
+		protected void WaitForUserToContinueTheTest()
+		{
+			if (Debugger.IsAttached == false)
+				return;
+
+			using (var documentStore = new DocumentStore
+			{
+				Url = "http://localhost:8080"
+			})
+			{
+				documentStore.Initialize();
+				documentStore.DatabaseCommands.Put("Pls Delete Me", null,
+				                                   JObject.FromObject(new {StackTrace = new StackTrace(true)}), new JObject());
+
+				Process.Start(documentStore.Url);// start the server
+
+				do
+				{
+					Thread.Sleep(100);
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
+			}
+
+		}
 
 		protected RavenDbServer GetNewServer(int port, string path)
 		{

@@ -9,16 +9,34 @@ namespace Raven.Abstractions.Json
 	{
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
-            writer.WriteValue(((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+			if(value is DateTime)
+				writer.WriteValue(((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+			else if (value is DateTimeOffset)
+				writer.WriteValue(((DateTimeOffset) value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+			else
+				throw new ArgumentException("Not idea how to process argument: " + value);
 		}
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
 			var s = reader.Value as string;
-			DateTime time;
-		    if(s != null && DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind, out time))
+		    if(s != null)
 			{
-				return time;
+				if (objectType == typeof(DateTime))
+				{
+					DateTime time;
+					if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+					                           DateTimeStyles.RoundtripKind, out time))
+						return time;
+				}
+				if(objectType == typeof(DateTimeOffset))
+				{
+					DateTimeOffset time;
+					if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+											   DateTimeStyles.RoundtripKind, out time))
+						return time;
+				}
+
 			}
 			var anotherConverter =
 				serializer.Converters.Skip(serializer.Converters.IndexOf(this)+1)
@@ -31,7 +49,7 @@ namespace Raven.Abstractions.Json
 
 		public override bool CanConvert(Type objectType)
 		{
-			return typeof (DateTime) == objectType;
+			return typeof (DateTime) == objectType || typeof (DateTimeOffset) == objectType;
 		}
 	}
 }

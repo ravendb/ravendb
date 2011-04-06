@@ -1,6 +1,4 @@
-﻿using Raven.Client.Client;
-
-namespace Raven.Studio.Features.Query
+﻿namespace Raven.Studio.Features.Query
 {
 	using System;
 	using System.Collections.Generic;
@@ -11,8 +9,12 @@ namespace Raven.Studio.Features.Query
 	using Database;
 	using Documents;
 	using Framework;
+	using Framework.Extensions;
+	using Plugins;
 	using Raven.Database.Data;
-	using Raven.Client.Extensions;
+	using Client.Extensions;
+	using Client.Client;
+
 
 	[ExportDatabaseScreen("Query", Index = 50)]
 	public class QueryViewModel : Screen, IDatabaseScreenMenuItem

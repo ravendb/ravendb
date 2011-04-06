@@ -25,7 +25,7 @@
 			  Margin="4,0,0,0">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
-				<RowDefinition Height="6" />
+				<RowDefinition Height="Auto" />
 				<RowDefinition Height="*" />
 				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
@@ -46,6 +46,10 @@
 						</Grid.ColumnDefinitions>
 						<Grid.RowDefinitions>
 							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto"
+										   MinHeight="100" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
 							<RowDefinition Height="Auto" />
 							<RowDefinition Height="Auto" />
 							<RowDefinition Height="Auto" />
@@ -63,15 +67,18 @@
 								 Grid.Row="1" />
 						<Editors:LinqEditor Grid.Row="1"
 											Grid.Column="1"
-											Text="{Binding Map, Mode=TwoWay}"
-											Margin="0 0 0 8" />
+											Text="{Binding Map, Mode=TwoWay}" />
+
+						<w:GridSplitter Grid.Row="2"
+										Grid.ColumnSpan="2"
+										Background="Transparent"
+										HorizontalAlignment="Stretch" />
 
 						<c:Label Content="reduce"
 								 Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}"
-								 Grid.Row="2" />
-						<Grid Grid.Row="2"
-							  Grid.Column="1"
-							  Margin="0 0 0 8">
+								 Grid.Row="3" />
+						<Grid Grid.Row="3"
+							  Grid.Column="1">
 							<Button x:Name="AddReduce"
 									VerticalAlignment="Top"
 									HorizontalAlignment="Left"
@@ -80,12 +87,17 @@
 												Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}" />
 						</Grid>
 
+						<w:GridSplitter Grid.Row="4"
+										Grid.ColumnSpan="2"
+										Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}"
+										Background="Transparent"
+										HorizontalAlignment="Stretch" />
+
 						<c:Label Content="transform"
 								 Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
-								 Grid.Row="3" />
-						<Grid Grid.Row="3"
-							  Grid.Column="1"
-							  Margin="0 0 0 8">
+								 Grid.Row="5" />
+						<Grid Grid.Row="5"
+							  Grid.Column="1">
 							<Button x:Name="AddTransformResults"
 									VerticalAlignment="Top"
 									HorizontalAlignment="Left"
@@ -94,8 +106,14 @@
 												Text="{Binding TransformResults, Mode=TwoWay}" />
 						</Grid>
 
+						<w:GridSplitter Grid.Row="6"
+										Grid.ColumnSpan="2"
+										Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
+										Background="Transparent"
+										HorizontalAlignment="Stretch" />
+
 						<Button x:Name="AddField"
-								Grid.Row="4"
+								Grid.Row="7"
 								ToolTipService.ToolTip="Customize this index."
 								Content="+"
 								HorizontalAlignment="Right"
@@ -103,7 +121,7 @@
 								Margin="0,0,4,0" />
 
 						<ItemsControl Grid.Column="1"
-									  Grid.Row="4"
+									  Grid.Row="7"
 									  ItemsSource="{Binding Fields}">
 							<ItemsControl.ItemTemplate>
 								<DataTemplate>
@@ -197,21 +215,20 @@
 			</ScrollViewer>
 
 			<w:GridSplitter Grid.Row="1"
-							Height="6"
 							Background="{x:Null}"
 							HorizontalAlignment="Stretch" />
 
 			<ScrollViewer Grid.Row="2"
-			              ScrollViewer.HorizontalScrollBarVisibility="Auto"
-			              ScrollViewer.VerticalScrollBarVisibility="Auto"
-			              BorderThickness="0"
-			              VerticalAlignment="Stretch">
+						  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+						  ScrollViewer.VerticalScrollBarVisibility="Auto"
+						  BorderThickness="0"
+						  VerticalAlignment="Stretch">
 				<TextBlock TextWrapping="Wrap"
-				           Text="{Binding Status}"
-				           Foreground="DarkRed"
-				           HorizontalAlignment="Right"
-				           FontSize="16"
-				           Margin="0,0,0,4" />
+						   Text="{Binding Status}"
+						   Foreground="DarkRed"
+						   HorizontalAlignment="Right"
+						   FontSize="16"
+						   Margin="0,0,0,4" />
 			</ScrollViewer>
 
 			<tk:DockPanel x:Name="query"

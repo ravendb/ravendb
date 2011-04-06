@@ -30,8 +30,13 @@
 					<Button x:Name="ImportData"
 							Margin="0 6 0 0"
 							Content="Begin Import"
+							IsEnabled="{Binding IsBusy, Converter={StaticResource booleanToOpposite}}"
 							HorizontalAlignment="Left"
 							VerticalAlignment="Top" />
+							
+					<TextBlock Text="{Binding Status}"
+							   Margin="0,8,0,0"
+							   Style="{StaticResource StatusStyle}" />
 				</StackPanel>
 			</StackPanel>
 		</tk:DockPanel>

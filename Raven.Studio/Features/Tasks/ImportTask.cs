@@ -6,6 +6,7 @@ namespace Raven.Studio.Features.Tasks
 	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
+	using System.Diagnostics;
 	using System.IO;
 	using System.Linq;
 	using System.Text;
@@ -13,54 +14,67 @@ namespace Raven.Studio.Features.Tasks
 	using System.Windows.Controls;
 	using Caliburn.Micro;
 	using Database;
-	using Framework;
+	using Ionic.Zlib;
+	using Framework.Extensions;
+	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
+	using Plugins;
 	using Raven.Database.Data;
 	using Raven.Database.Indexing;
 
-	[ExportTask("Import Database")]
-	public class ImportTask : Screen, ITask
+	[Plugins.Tasks.ExportTask("Import Database")]
+	public class ImportTask : ConsoleOutputTask
 	{
-		readonly IServer server;
-
 		[ImportingConstructor]
-		public ImportTask(IServer server)
+		public ImportTask(IServer server, IEventAggregator events)
+			: base(server, events)
 		{
-			this.server = server;
-			Console = new BindableCollection<string>();
-			server.CurrentDatabaseChanged += delegate { ClearConsole(); };
-		}
-
-		public IObservableCollection<string> Console { get; private set; }
-
-		public void ClearConsole()
-		{
-			Console.Clear();
 		}
 
 		public void ImportData()
 		{
+			WorkStarted("importing database");
+			Status = string.Empty;
+
 			var openFile = new OpenFileDialog();
 			var dialogResult = openFile.ShowDialog();
 
 			if (!dialogResult.HasValue || !dialogResult.Value) return;
 
-			try
+			var tasks = (IEnumerable<Task>)ImportData(openFile).GetEnumerator();
+			tasks.ExecuteInSequence(OnTaskFinished, OnException);
+		}
+
+		void OnTaskFinished(bool success)
+		{
+			WorkCompleted("importing database");
+
+			Status = success ? "Import Complete" : "Import Failed!";
+
+			if (!success) return;
+
+			Events.Publish(new NotificationRaised("Import Completed", NotificationLevel.Info));
+		}
+
+		void OnException(Exception e)
+		{
+			if (e is InvalidDataException)
 			{
-				var tasks = (IEnumerable<Task>)ImportData(openFile).GetEnumerator();
-				tasks.ExecuteInSequence(null);
+				Output("The import file was not formatted correctly:\n\t{0}", e.Message);
+				Output("Import terminated.");
 			}
-			catch (InvalidDataException e)
+			else
 			{
-				Console.Add("The import file was not formatted correctly:\n\t{0}", e.Message);
-				Console.Add("Import terminated.");
+				Output("The export failed with the following exception: {0}", e.Message);
 			}
+
+			NotifyError("Database Import Failed");
 		}
 
 		IEnumerable<Task> ImportData(OpenFileDialog openFile)
 		{
-			Console.Add("Importing from {0}", openFile.File.Name);
+			Output("Importing from {0}", openFile.File.Name);
 
 			var sw = Stopwatch.StartNew();
 
@@ -78,7 +92,7 @@ namespace Raven.Studio.Features.Tasks
 			}
 			catch (Exception)
 			{
-				Console.Add("Import file did not use GZip compression, attempting to read as uncompressed.");
+				Output("Import file did not use GZip compression, attempting to read as uncompressed.");
 
 				stream.Seek(0, SeekOrigin.Begin);
 
@@ -96,7 +110,7 @@ namespace Raven.Studio.Features.Tasks
 			if (jsonReader.Read() == false)
 				yield break;
 
-			Console.Add("Begin reading indexes");
+			Output("Begin reading indexes");
 
 			if (jsonReader.TokenType != JsonToken.PropertyName)
 				throw new InvalidDataException("PropertyName was expected");
@@ -124,15 +138,15 @@ namespace Raven.Studio.Features.Tasks
 
 					totalIndexes++;
 
-					Console.Add("Importing index: {0}", indexName);
+					Output("Importing index: {0}", indexName);
 
 					yield return session.Advanced.AsyncDatabaseCommands
 						.PutIndexAsync(indexName, index, overwrite: true);
 				}
 
-			Console.Add("Imported {0:#,#} indexes", totalIndexes);
+			Output("Imported {0:#,#} indexes", totalIndexes);
 
-			Console.Add("Begin reading documents");
+			Output("Begin reading documents");
 
 			// should read documents now
 			if (jsonReader.Read() == false)
@@ -163,7 +177,7 @@ namespace Raven.Studio.Features.Tasks
 
 			yield return FlushBatch(batch);
 
-			Console.Add("Imported {0:#,#} documents in {1:#,#} ms", totalCount, sw.ElapsedMilliseconds);
+			Output("Imported {0:#,#} documents in {1:#,#} ms", totalCount, sw.ElapsedMilliseconds);
 		}
 
 		Task FlushBatch(List<RavenJObject> batch)
@@ -196,7 +210,7 @@ namespace Raven.Studio.Features.Tasks
 				}
 			}
 
-			Console.Add("Wrote {0} documents [{1:#,#} kb] in {2:#,#} ms",
+			Output("Wrote {0} documents [{1:#,#} kb] in {2:#,#} ms",
 						batch.Count, Math.Round((double)size / 1024, 2), sw.ElapsedMilliseconds);
 			batch.Clear();
 

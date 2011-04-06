@@ -151,6 +151,24 @@ namespace Raven.Database.Indexing
 			return Equals(obj as IndexDefinition);
 		}
 
+		private byte[] cachedHashCodeAsBytes;
+		
+		/// <summary>
+		/// Provide a cached version of the index hash code, which is used when generating
+		/// the index etag. 
+		/// It isn't really useful for anything else, in particular, we cache that because
+		/// we want to avoid calculating the cost of doing this over and over again on each 
+		/// query.
+		/// </summary>
+		public byte[] GetIndexHash()
+		{
+			if (cachedHashCodeAsBytes != null)
+				return cachedHashCodeAsBytes;
+
+			cachedHashCodeAsBytes = BitConverter.GetBytes(GetHashCode());
+			return cachedHashCodeAsBytes;
+		}
+
 		/// <summary>
 		/// Returns a hash code for this instance.
 		/// </summary>

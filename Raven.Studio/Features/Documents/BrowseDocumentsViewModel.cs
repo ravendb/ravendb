@@ -1,13 +1,14 @@
 namespace Raven.Studio.Features.Documents
 {
-	using System;
 	using System.ComponentModel.Composition;
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
 	using Database;
 	using Framework;
+	using Framework.Extensions;
 	using Messages;
+	using Plugins;
 	using Raven.Database;
 
 	[Export]

@@ -5,7 +5,8 @@ namespace Raven.Studio.Features.Documents
 {
     using System;
     using Collections;
-    using Framework;
+	using Abstractions.Data;
+    using Framework.Extensions;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using Raven.Database;

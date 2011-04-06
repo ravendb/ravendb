@@ -133,9 +133,7 @@
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
-    <Compile Include="Features\Database\IServer.cs" />
     <Compile Include="Features\Statistics\DynamicViewModel.cs" />
-    <Compile Include="Features\Statistics\IStatisticsItem.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
@@ -148,25 +146,25 @@
     <Compile Include="Features\Documents\ISupportDocumentTemplate.cs" />
     <Compile Include="Features\Query\QueryViewModel.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
-    <Compile Include="Features\Statistics\IStatisticsSet.cs" />
     <Compile Include="Features\Statistics\IndexesViewModel.cs" />
     <Compile Include="Features\Statistics\Statistic.cs" />
     <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
     <Compile Include="Features\Tasks\ConsoleOutput.xaml.cs">
       <DependentUpon>ConsoleOutput.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Tasks\ConsoleOutputTask.cs" />
     <Compile Include="Features\Tasks\ExportTask.cs" />
     <Compile Include="Framework\IMenuItemMetadata.cs" />
     <Compile Include="Features\Tasks\ImportTask.cs" />
-    <Compile Include="Features\Tasks\InvalidDataException.cs" />
-    <Compile Include="Features\Tasks\Stopwatch.cs" />
+    <Compile Include="Impl\MissingFromSilverlight\InvalidDataException.cs" />
+    <Compile Include="Impl\MissingFromSilverlight\Stopwatch.cs" />
     <Compile Include="Features\Tasks\TasksViewModel.cs" />
-    <Compile Include="Framework\BindableCollectionExtensions.cs" />
+    <Compile Include="Framework\Extensions\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
     <Compile Include="Framework\IKeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyCombination.cs" />
-    <Compile Include="Framework\ListExtensions.cs" />
+    <Compile Include="Framework\Extensions\ListExtensions.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
     <Compile Include="Framework\SimpleLogger.cs" />
@@ -216,13 +214,13 @@
     <Compile Include="Features\Documents\DocumentTemplateProvider.cs" />
     <Compile Include="Features\Documents\EditDocumentViewModel.cs" />
     <Compile Include="Framework\ConventionalCatalog.cs" />
-    <Compile Include="Framework\DateTimeExtensions.cs" />
-    <Compile Include="Framework\DictionaryExtensions.cs" />
+    <Compile Include="Framework\Extensions\DateTimeExtensions.cs" />
+    <Compile Include="Framework\Extensions\DictionaryExtensions.cs" />
     <Compile Include="Features\Database\SummaryViewModel.cs" />
     <Compile Include="Framework\BindablePagedQuery.cs" />
     <Compile Include="Framework\DoubleClickEvent.cs" />
-    <Compile Include="Framework\ScreenExtensions.cs" />
-    <Compile Include="Framework\TaskExtensions.cs" />
+    <Compile Include="Framework\Extensions\ScreenExtensions.cs" />
+    <Compile Include="Framework\Extensions\TaskExtensions.cs" />
     <Compile Include="Framework\TemplateColorProvider.cs" />
     <Compile Include="Messages\DocumentDeleted.cs" />
     <Compile Include="Messages\NavigationOccurred.cs" />
@@ -258,6 +256,7 @@
     <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
     <Compile Include="Shell\MessageBox\ShowMessageBox.cs" />
+    <Compile Include="StudioViewLocator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -393,22 +392,14 @@
       <SubType>Designer</SubType>
       <ContainsDesignTimeResources>true</ContainsDesignTimeResources>
     </Page>
-    <Page Include="Resources\Brushes.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Resources\Fonts.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Resources\Styles.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <DesignTimeOnly Include="SampleData\PagerSampleData\PagerSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
       <SubType>Designer</SubType>
     </DesignTimeOnly>
+    <Page Include="Resources\Styles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Shell\BusyStatusView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -478,6 +469,10 @@
       <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
       <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Studio.Plugins\Raven.Studio.Plugins.csproj">
+      <Project>{C7C5B03F-A1D9-4CAA-A0F2-6BC879C23556}</Project>
+      <Name>Raven.Studio.Plugins</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\Images\add-small.png" />
@@ -496,6 +491,9 @@
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\DatabaseViewModelSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+    </DesignData>
+    <DesignData Include="SampleData\ExportTaskSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\ServerErrorSampleData.xaml">

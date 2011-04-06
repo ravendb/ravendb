@@ -5,6 +5,7 @@
 					xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
 					xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Layout;assembly=Microsoft.Expression.Interactions">
 	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="/Raven.Studio.Plugins;component/Resources/Styles.xaml" />
 		<ResourceDictionary Source="Styles.xaml" />
 		<ResourceDictionary Source="ControlTemplates/Gears.xaml" />
 		<ResourceDictionary Source="ControlTemplates/Menu.xaml" />

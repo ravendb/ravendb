@@ -17,8 +17,21 @@ namespace Raven.Studio.Features.Documents
     using System.Windows;
     using System.Windows.Input;
     using Commands;
+    using Framework.Extensions;
+	using System;
+	using System.Collections.Generic;
+	using System.Collections.ObjectModel;
+	using System.ComponentModel.Composition;
+	using System.Linq;
+	using System.Text.RegularExpressions;
+	using Caliburn.Micro;
+	using Newtonsoft.Json;
+	using Newtonsoft.Json.Linq;
+	using Abstractions.Data;
+	using Raven.Database;
+	using Framework;
 
-    [Export(typeof (EditDocumentViewModel))]
+	[Export(typeof (EditDocumentViewModel))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class EditDocumentViewModel : Screen
 	{

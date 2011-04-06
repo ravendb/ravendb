@@ -71,7 +71,10 @@
 
 				<Border Grid.Column="1"
 						Padding="4">
-					<ContentControl x:Name="ActiveItem" />
+					<ScrollViewer BorderThickness="0"
+								  ScrollViewer.VerticalScrollBarVisibility="Auto">
+						<ContentControl x:Name="ActiveItem" />
+					</ScrollViewer>
 				</Border>
 
 			</Grid>
