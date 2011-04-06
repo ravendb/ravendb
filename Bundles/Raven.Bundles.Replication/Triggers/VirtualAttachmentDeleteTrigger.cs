@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.ComponentModel.Composition;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
@@ -15,16 +16,14 @@ namespace Raven.Bundles.Replication.Triggers
     /// we allow the delete but don't do actual delete, we replace it 
     /// with a delete marker instead
     /// </summary>
-    public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
+	[ExportMetadata("Order", 10000)]
+	public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
     {
         readonly ThreadLocal<JToken> deletedSource = new ThreadLocal<JToken>();
         readonly ThreadLocal<JToken> deletedVersion = new ThreadLocal<JToken>();
 
         public override void OnDelete(string key)
         {
-            if (ReplicationContext.IsInReplicationContext)
-                return;
-
             var document = Database.GetStatic(key);
             if (document == null)
                 return;
@@ -34,8 +33,6 @@ namespace Raven.Bundles.Replication.Triggers
 
         public override void AfterDelete(string key)
         {
-            if (ReplicationContext.IsInReplicationContext)
-                return;
             var metadata = new JObject(
                 new JProperty("Raven-Delete-Marker", true),
                 new JProperty(ReplicationConstants.RavenReplicationParentSource, deletedSource.Value),
