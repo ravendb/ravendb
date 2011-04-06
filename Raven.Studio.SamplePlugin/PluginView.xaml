@@ -7,12 +7,20 @@
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
+	<UserControl.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceDictionary Source="/Raven.Studio.Plugins;component/Resources/Styles.xaml" />
+			</ResourceDictionary.MergedDictionaries>
+		</ResourceDictionary>
+	</UserControl.Resources>
 
 	<Grid x:Name="LayoutRoot"
 		  Width="200"
 		  Height="200">
 		<StackPanel>
 			<TextBlock Text="Sample Plugin"
+					   Style="{StaticResource PanelTitle}"
 					   FontSize="16" />
 			<TextBlock Text="{Binding Status}" />
 			<Button cm:Message.Attach="DeleteTemporaryDocument"
