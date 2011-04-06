@@ -70,7 +70,7 @@
 				<RowDefinition />
 			</Grid.RowDefinitions>
 
-			<TextBlock x:Name="Id"
+			<TextBlock Text="{Binding DisplayId}"
 					   Style="{StaticResource Header}" />
 
 			<Grid Grid.Row="1"
@@ -111,25 +111,16 @@
 					 Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}"
 					 Grid.Row="2" />
 
-			<Border Grid.Row="3"
-					Padding="0 8 0 0"
-					BorderThickness="1"
-					CornerRadius="2"
-					BorderBrush="#0A000000"
-					Margin="0"
-					d:IsLocked="True">
-
-				<c:TabControl>
-					<c:TabItem Header="Data">
-						<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}" />
-					</c:TabItem>
-					<c:TabItem Header="Metadata"
-							   Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}">
-						<Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay}" />
-					</c:TabItem>
-				</c:TabControl>
-
-			</Border>
+			<c:TabControl Grid.Row="3"
+						  Margin="0 8 0 0">
+				<c:TabItem Header="Data">
+					<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}" />
+				</c:TabItem>
+				<c:TabItem Header="Metadata"
+						   Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}">
+					<Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay}" />
+				</c:TabItem>
+			</c:TabControl>
 
 		</Grid>
 
