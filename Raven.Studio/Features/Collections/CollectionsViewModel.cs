@@ -37,14 +37,14 @@
 			server.CurrentDatabaseChanged += delegate
 			{
 				Initialize();
-			};	
+			};
 		}
 
-		void Initialize() {
+		void Initialize()
+		{
 			Status = "Retrieving collections";
 
 			Collections = new BindableCollection<Collection>();
-			ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
 
 			NotifyOfPropertyChange(string.Empty);
 		}
@@ -55,7 +55,12 @@
 		}
 
 		public IEnumerable<Collection> Collections { get; private set; }
-		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments { get; private set; }
+
+		BindablePagedQuery<DocumentViewModel> activeCollectionDocuments;
+		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments
+		{
+			get { return activeCollectionDocuments ?? (activeCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery)); }
+		}
 
 		string status;
 		public string Status
