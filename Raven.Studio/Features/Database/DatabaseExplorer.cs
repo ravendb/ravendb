@@ -35,6 +35,12 @@ namespace Raven.Studio.Features.Database
 
 		public IList<string> Items { get; private set; }
 
+		public void NavigateTo(string item)
+		{
+			if (!AvailableItems.Any()) return;
+			ActivateItem(AvailableItems.OrderBy(x => x.Metadata.Index).First(x => x.Metadata.DisplayName == item).Value);
+		}
+
 		string selectedItem;
 		public string SelectedItem
 		{
@@ -43,9 +49,6 @@ namespace Raven.Studio.Features.Database
 			{
 				selectedItem = value;
 				NotifyOfPropertyChange(() => SelectedItem);
-				if (!AvailableItems.Any()) return;
-
-				ActivateItem(AvailableItems.OrderBy(x => x.Metadata.Index).First(x => x.Metadata.DisplayName == selectedItem).Value);
 			}
 		}
 
@@ -81,6 +84,7 @@ namespace Raven.Studio.Features.Database
 
 			Items = screens.Select(x => x.Metadata.DisplayName).ToList();
 			SelectedItem = screens.Select(x => x.Metadata.DisplayName).FirstOrDefault();
+			NavigateTo(SelectedItem);
 		}
 	}
 }
