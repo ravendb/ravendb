@@ -8,21 +8,20 @@
 	using Database;
 	using Framework;
 
-	[ExportDatabaseScreen("Tasks",Index = 60)]
-	public class TasksViewModel : Conductor<ITask>, IDatabaseScreenMenuItem
+	[ExportDatabaseScreen("Tasks", Index = 60)]
+	public class TasksViewModel : Conductor<object>, IDatabaseScreenMenuItem, 
+		IPartImportsSatisfiedNotification
 	{
-		readonly IEnumerable<Lazy<ITask, IMenuItemMetadata>> tasks;
 		string selectedTask;
 
 		[ImportingConstructor]
-		public TasksViewModel([ImportMany] IEnumerable<Lazy<ITask, IMenuItemMetadata>> tasks)
+		public TasksViewModel()
 		{
 			DisplayName = "Tasks";
-
-			this.tasks = tasks;
-
-			AvailableTasks = tasks.Select(x => x.Metadata.DisplayName).ToList();
 		}
+
+		[ImportMany("Raven.Task",AllowRecomposition = true)]
+		public IEnumerable<Lazy<object , IMenuItemMetadata>> Tasks { get; set; }
 
 		public IList<string> AvailableTasks { get; private set; }
 
@@ -33,22 +32,13 @@
 			{
 				selectedTask = value;
 				NotifyOfPropertyChange(() => SelectedTask);
-				ActivateItem(tasks.First(x => x.Metadata.DisplayName == selectedTask).Value);
+				ActivateItem(Tasks.First(x => x.Metadata.DisplayName == selectedTask).Value);
 			}
 		}
-	}
 
-	[MetadataAttribute]
-	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-	public class ExportTaskAttribute : ExportAttribute
-	{
-		public ExportTaskAttribute(string displayName) : base(typeof (ITask)) { DisplayName = displayName; }
-
-		public string DisplayName { get; private set; }
-		public int Index { get; set; }
-	}
-
-	public interface ITask
-	{
+		public void OnImportsSatisfied()
+		{
+			AvailableTasks = Tasks.Select(x => x.Metadata.DisplayName).ToList();
+		}
 	}
 }

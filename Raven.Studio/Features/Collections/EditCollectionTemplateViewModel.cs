@@ -10,8 +10,9 @@
     using Documents;
     using Messages;
     using Newtonsoft.Json.Linq;
+    using Plugins;
 
-    [Export]
+	[Export]
     public class EditCollectionTemplateViewModel : Screen
     {
         private readonly IEventAggregator events;

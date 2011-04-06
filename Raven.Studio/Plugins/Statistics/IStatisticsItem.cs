@@ -1,4 +1,4 @@
-﻿namespace Raven.Studio.Features.Statistics
+﻿namespace Raven.Studio.Plugins.Statistics
 {
 	using System;
 	using Caliburn.Micro;

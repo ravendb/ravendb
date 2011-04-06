@@ -4,6 +4,7 @@
 	using Caliburn.Micro;
 	using Features.Database;
 	using Messages;
+	using Plugins;
 	using Shell.MessageBox;
 
     public class DeleteDocument

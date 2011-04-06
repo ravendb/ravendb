@@ -6,6 +6,7 @@
 	using Framework;
 	using Framework.Extensions;
 	using Messages;
+	using Plugins;
 	using Raven.Database.Indexing;
 
 	[Export]

@@ -133,9 +133,7 @@
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
-    <Compile Include="Features\Database\IServer.cs" />
     <Compile Include="Features\Statistics\DynamicViewModel.cs" />
-    <Compile Include="Features\Statistics\IStatisticsItem.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
@@ -148,7 +146,6 @@
     <Compile Include="Features\Documents\ISupportDocumentTemplate.cs" />
     <Compile Include="Features\Query\QueryViewModel.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
-    <Compile Include="Features\Statistics\IStatisticsSet.cs" />
     <Compile Include="Features\Statistics\IndexesViewModel.cs" />
     <Compile Include="Features\Statistics\Statistic.cs" />
     <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
@@ -240,6 +237,10 @@
     <Compile Include="Features\Query\LinqEditorViewModel.cs" />
     <Compile Include="Messages\WorkCompleted.cs" />
     <Compile Include="Messages\WorkStarted.cs" />
+    <Compile Include="Plugins\IServer.cs" />
+    <Compile Include="Plugins\Statistics\IStatisticsItem.cs" />
+    <Compile Include="Plugins\Statistics\IStatisticsSet.cs" />
+    <Compile Include="Plugins\Tasks\ExportTaskAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SampleData\PagerSampleData\PagerSampleData.xaml.cs">
       <DependentUpon>PagerSampleData.xaml</DependentUpon>
@@ -259,6 +260,7 @@
     <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
     <Compile Include="Shell\MessageBox\ShowMessageBox.cs" />
+    <Compile Include="StudioViewLocator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -394,22 +396,22 @@
       <SubType>Designer</SubType>
       <ContainsDesignTimeResources>true</ContainsDesignTimeResources>
     </Page>
-    <Page Include="Resources\Brushes.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Resources\Fonts.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Resources\Styles.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <DesignTimeOnly Include="SampleData\PagerSampleData\PagerSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
       <SubType>Designer</SubType>
     </DesignTimeOnly>
+    <ApplicationDefinition Include="Resources\Brushes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <ApplicationDefinition Include="Resources\Fonts.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <Page Include="Resources\Styles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Shell\BusyStatusView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

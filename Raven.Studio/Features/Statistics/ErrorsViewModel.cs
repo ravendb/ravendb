@@ -4,6 +4,7 @@
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Database;
+	using Plugins;
 	using Raven.Database.Data;
 
 	//NOTE: it would probably make more sense to remove IServer.Errors and rely on the message StatisticsUpdated

@@ -12,6 +12,7 @@
 	using Framework;
 	using Framework.Extensions;
 	using Messages;
+	using Plugins;
 	using Raven.Database.Data;
 	using Client.Client;
 

@@ -10,6 +10,7 @@
 	using Documents;
 	using Framework;
 	using Framework.Extensions;
+	using Plugins;
 	using Raven.Database.Data;
 	using Client.Extensions;
 	using Client.Client;

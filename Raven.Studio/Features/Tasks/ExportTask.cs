@@ -17,9 +17,10 @@
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
+	using Plugins;
 
-	[ExportTask("Export Database")]
-	public class ExportTask : ConsoleOutputTask, ITask
+	[Plugins.Tasks.ExportTask("Export Database")]
+	public class ExportTask : ConsoleOutputTask
 	{
 		bool exportIndexesOnly;
 
