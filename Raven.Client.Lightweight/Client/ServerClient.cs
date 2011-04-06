@@ -1046,12 +1046,12 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
-			var serializer = convention.CreateSerializer();
+
 			RavenJToken json;
 			try
 			{
 				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-					json = (RavenJToken)serializer.Deserialize(reader);
+					json = RavenJToken.Load(reader);
 			}
 			catch (WebException e)
 			{
@@ -1083,12 +1083,12 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
-			var serializer = convention.CreateSerializer();
+
 			RavenJToken json;
 			try
 			{
 				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-					json = (RavenJToken)serializer.Deserialize(reader);
+					json = RavenJToken.Load(reader);
 			}
 			catch (WebException e)
 			{

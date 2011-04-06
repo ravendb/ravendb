@@ -97,7 +97,7 @@ namespace Raven.Database.Impl
 							return null;
 					}
 				}
-				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection.Properties.ContainsKey(fieldToFetch) && queryResult.Projection[fieldToFetch] == null);
+				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null);
 				var doc = GetDocumentWithCaching(queryResult.Key);
 				if (doc != null)
 				{
@@ -139,11 +139,9 @@ namespace Raven.Database.Impl
 
 	    	var metadata = doc.Metadata;
 	    	if (metadata == null)
-                return ;
+                return;
 
-            if (metadata.Properties.ContainsKey("@id"))
-                metadata.Properties.Remove("@id");
-            metadata.Properties.Add("@id", new RavenJValue(doc.Key));
+            metadata.Properties["@id"] = new RavenJValue(doc.Key);
 	    }
 
 	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)

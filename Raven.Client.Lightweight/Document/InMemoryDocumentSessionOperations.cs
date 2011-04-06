@@ -460,7 +460,7 @@ more responsive application.
 
 		private static void EnsureNotReadVetoed(RavenJObject metadata)
 		{
-			var readVeto = metadata.Value<RavenJObject>("Raven-Read-Veto");
+			var readVeto = metadata["Raven-Read-Veto"] as RavenJObject;
 			if (readVeto == null)
 				return;
 

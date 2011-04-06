@@ -15,12 +15,12 @@ using Raven.Json.Linq;
 namespace Raven.Client.Client
 {
 	///<summary>
-	/// Helper method to do serialization from JObject to JsonDocument
+	/// Helper method to do serialization from RavenJObject to JsonDocument
 	///</summary>
 	public static class SerializationHelper
 	{
 		///<summary>
-		/// Translate a collection of JObject to JsonDocuments
+		/// Translate a collection of RavenJObject to JsonDocuments
 		///</summary>
 		public static IEnumerable<JsonDocument> RavenJObjectsToJsonDocuments(IEnumerable<RavenJObject> responses)
 		{
@@ -43,7 +43,7 @@ namespace Raven.Client.Client
 		}
 
 		///<summary>
-		/// Translate a collection of JObject to JsonDocuments
+		/// Translate a collection of RavenJObject to JsonDocuments
 		///</summary>
 		public static IEnumerable<JsonDocument> ToJsonDocuments(this IEnumerable<RavenJObject> responses)
 		{
@@ -51,7 +51,7 @@ namespace Raven.Client.Client
 		}
 
 		///<summary>
-		/// Translate a collection of JObject to JsonDocuments
+		/// Translate a collection of RavenJObject to JsonDocuments
 		///</summary>
 		public static JsonDocument ToJsonDocument(this RavenJObject response)
 		{

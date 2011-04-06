@@ -12,7 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
@@ -81,16 +81,16 @@ Usage:
                     while (true)
                     {
 						var documents = GetString(webClient.DownloadData(instanceUrl + "indexes?pageSize=128&start=" + totalCount));
-                        var array = JArray.Parse(documents);
-                        if (array.Count == 0)
+                        var array = RavenJArray.Parse(documents);
+                        if (array.Length == 0)
                         {
                             Console.WriteLine("Done with reading indexes, total: {0}", totalCount);
                             break;
                         }
-                        totalCount += array.Count;
-                        Console.WriteLine("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Count,
+                        totalCount += array.Length;
+                        Console.WriteLine("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Length,
                                           totalCount);
-                        foreach (JToken item in array)
+                        foreach (RavenJToken item in array)
                         {
                             item.WriteTo(jsonWriter);
                         }
@@ -113,20 +113,20 @@ Usage:
                         {
                             var documents =
                                 GetString(webClient.DownloadData(instanceUrl + "docs?pageSize=128&etag=" + lastEtag));
-                            var array = JArray.Parse(documents);
-                            if (array.Count == 0)
+                            var array = RavenJArray.Parse(documents);
+                            if (array.Length == 0)
                             {
                                 Console.WriteLine("Done with reading documents, total: {0}", totalCount);
                                 break;
                             }
-                            totalCount += array.Count;
-                            Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
+                            totalCount += array.Length;
+                            Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Length,
                                               totalCount);
-                            foreach (JToken item in array)
+                            foreach (RavenJToken item in array)
                             {
                                 item.WriteTo(jsonWriter);
                             }
-                            lastEtag = new Guid(array.Last.Value<JObject>("@metadata").Value<string>("@etag"));
+                            lastEtag = new Guid(array.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
                         }
                     }
                 }
@@ -193,14 +193,14 @@ Usage:
                     webClient.Credentials = CredentialCache.DefaultNetworkCredentials; 
                     while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
                     {
-                        var index = JToken.ReadFrom(jsonReader);
+                        var index = RavenJToken.ReadFrom(jsonReader);
                         var indexName = index.Value<string>("name");
                         if(indexName.StartsWith("Raven/"))
                             continue;
                         using (var streamWriter = new StreamWriter(webClient.OpenWrite(instanceUrl + "indexes/" + indexName, "PUT")))
                         using (var jsonTextWriter = new JsonTextWriter(streamWriter))
                         {
-                            index.Value<JObject>("definition").WriteTo(jsonTextWriter);
+                            index.Value<RavenJObject>("definition").WriteTo(jsonTextWriter);
                             jsonTextWriter.Flush();
                             streamWriter.Flush();
                         }
@@ -217,13 +217,13 @@ Usage:
                     return;
                 if (jsonReader.TokenType != JsonToken.StartArray)
                     throw new InvalidDataException("StartArray was expected");
-                var batch = new List<JObject>();
+                var batch = new List<RavenJObject>();
             	int totalCount = 0;
                 while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
                 {
                 	totalCount += 1;
-                    var document = JToken.ReadFrom(jsonReader);
-                    batch.Add((JObject)document);
+                    var document = RavenJToken.ReadFrom(jsonReader);
+                    batch.Add((RavenJObject)document);
                     if (batch.Count >= 128)
                         FlushBatch(instanceUrl, batch);
                 }
@@ -232,7 +232,7 @@ Usage:
             }
         }
 
-        private static void FlushBatch(string instanceUrl, List<JObject> batch)
+        private static void FlushBatch(string instanceUrl, List<RavenJObject> batch)
         {
         	var sw = Stopwatch.StartNew();
         	long size;
@@ -246,17 +246,18 @@ Usage:
 					using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
 					using (var jsonTextWriter = new JsonTextWriter(streamWriter))
 					{
-						var commands = new JArray();
+						var commands = new RavenJArray();
 						foreach (var doc in batch)
 						{
-							var metadata = doc.Value<JObject>("@metadata");
+							var metadata = doc.Value<RavenJObject>("@metadata");
 							doc.Remove("@metadata");
-							commands.Add(new JObject(
-											 new JProperty("Method", "PUT"),
-											 new JProperty("Document", doc),
-											 new JProperty("Metadata", metadata),
-											 new JProperty("Key", metadata.Value<string>("@id"))
-											 ));
+							commands.Add(new RavenJObject
+							             	{
+							             		{"Method", "PUT"},
+							             		{"Document", doc},
+							             		{"Metadata", metadata},
+							             		{"Key", metadata.Value<string>("@id")}
+							             	});
 						}
 						commands.WriteTo(jsonTextWriter);
 						jsonTextWriter.Flush();

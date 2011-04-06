@@ -186,7 +186,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void CanRemoveValuesToList()
+		public void CanRemoveValuesFromList()
 		{
 			using (var store = NewDocumentStore())
 			{

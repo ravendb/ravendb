@@ -9,11 +9,9 @@ using System.Linq;
 using System.Text;
 using Raven.Database.Config;
 using Raven.Database.Queries;
-using Raven.Database.Server;
 using Raven.Tests.Storage;
 using Xunit;
 using Raven.Database;
-using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Database.Data;
 

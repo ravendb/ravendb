@@ -395,7 +395,7 @@ namespace Raven.Client.Client.Async
 				{
 					RavenJToken json;
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-						json = (RavenJToken)convention.CreateSerializer().Deserialize(reader);
+						json = RavenJToken.Load(reader);
 
 					return new QueryResult
 					{

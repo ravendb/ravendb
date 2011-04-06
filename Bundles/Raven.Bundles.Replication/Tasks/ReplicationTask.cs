@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Impl;
@@ -223,7 +222,7 @@ namespace Raven.Bundles.Replication.Tasks
         private bool? ReplicateDocuments(string destination, SourceReplicationInformation sourceReplicationInformation)
         {
             var jsonDocuments = GetJsonDocuments(sourceReplicationInformation.LastDocumentEtag);
-            if (jsonDocuments == null || jsonDocuments.Count == 0)
+            if (jsonDocuments == null || jsonDocuments.Length == 0)
                 return null;
             if (TryReplicationDocuments(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
             {
@@ -306,11 +305,11 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool TryReplicationDocuments(string destination, JArray jsonDocuments)
+        private bool TryReplicationDocuments(string destination, RavenJArray jsonDocuments)
         {
             try
             {
-            	log.DebugFormat("Starting to replicate {0} documents to {1}", jsonDocuments.Count, destination);
+            	log.DebugFormat("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
 				var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateDocs?from=" + UrlEncodedServerUrl());
                 request.UseDefaultCredentials = true;
             	request.ContentType = "application/json; charset=utf-8";
@@ -325,7 +324,7 @@ namespace Raven.Bundles.Replication.Tasks
                 }
                 using (request.GetResponse())
                 {
-                    log.InfoFormat("Replicated {0} documents to {1}", jsonDocuments.Count, destination);
+                    log.InfoFormat("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
                 }
                 return true;
             }
@@ -353,15 +352,15 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private JArray GetJsonDocuments(Guid etag)
+        private RavenJArray GetJsonDocuments(Guid etag)
         {
-            JArray jsonDocuments = null;
+            RavenJArray jsonDocuments = null;
             try
             {
                 var instanceId = docDb.TransactionalStorage.Id.ToString();
                 docDb.TransactionalStorage.Batch(actions =>
                 {
-                    jsonDocuments = new JArray(actions.Documents.GetDocumentsAfter(etag)
+                    jsonDocuments = new RavenJArray(actions.Documents.GetDocumentsAfter(etag)
                         .Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
                         .Where(x =>
 							x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == null ||

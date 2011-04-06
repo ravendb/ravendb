@@ -3,10 +3,6 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Async
 {
-	using System.Linq;
-	using Client.Linq;
-	using Document;
-
 	public class Querying : RemoteClientTest
     {
         [Fact]
