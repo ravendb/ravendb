@@ -7,18 +7,18 @@
 	using System.Threading.Tasks;
 	using Abstractions.Data;
 	using Caliburn.Micro;
-	using Database;
 	using Documents;
 	using Framework;
 	using Framework.Extensions;
 	using Messages;
 	using Plugins;
+	using Plugins.Database;
 	using Raven.Database.Data;
 	using Client.Client;
 
 	[Export(typeof(CollectionsViewModel))]
 	[ExportDatabaseScreen("Collections", Index = 20)]
-	public class CollectionsViewModel : RavenScreen, IDatabaseScreenMenuItem,
+	public class CollectionsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{
 		readonly IServer server;

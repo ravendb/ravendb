@@ -6,7 +6,6 @@ namespace Raven.Studio.Features.Database
     using Framework;
     using Messages;
     using Plugins;
-    using Raven.Client.Extensions;
 
     [Export]
     public class SelectDatabaseViewModel : RavenScreen

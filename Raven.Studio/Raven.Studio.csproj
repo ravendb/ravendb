@@ -132,7 +132,7 @@
     <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
-    <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
+    <Compile Include="Plugins\Database\ExportDatabaseScreenAttribute.cs" />
     <Compile Include="Framework\DynamicViewModel.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />

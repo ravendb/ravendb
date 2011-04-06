@@ -3,7 +3,7 @@ namespace Raven.Studio.Plugins
 	using System;
 	using System.Collections.Generic;
 	using Client;
-	using Database.Data;
+	using Raven.Database.Data;
 	using Statistics;
 
 	public interface IServer

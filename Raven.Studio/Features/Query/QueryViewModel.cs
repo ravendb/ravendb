@@ -6,18 +6,18 @@
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
-	using Database;
 	using Documents;
 	using Framework;
 	using Framework.Extensions;
 	using Plugins;
+	using Plugins.Database;
 	using Raven.Database.Data;
 	using Client.Extensions;
 	using Client.Client;
 
 
 	[ExportDatabaseScreen("Query", Index = 50)]
-	public class QueryViewModel : Screen, IDatabaseScreenMenuItem
+	public class QueryViewModel : Screen
 	{
 		readonly List<string> dynamicIndex = new List<string>();
 		readonly IServer server;

@@ -13,28 +13,25 @@ namespace Raven.Studio.Features.Database
 
 	[Export(typeof(DatabaseViewModel))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class DatabaseViewModel : Conductor<IScreen>,
+	public class DatabaseViewModel : Conductor<object>, IPartImportsSatisfiedNotification,
 		IHandle<DatabaseScreenRequested>,
 		IHandle<DocumentDeleted>
 	{
 		readonly IEventAggregator events;
-		readonly IList<Lazy<IDatabaseScreenMenuItem, IMenuItemMetadata>> screens;
 		readonly IServer server;
 
 		[ImportingConstructor]
-		public DatabaseViewModel(IServer server, IEventAggregator events, [ImportMany]IEnumerable<Lazy<IDatabaseScreenMenuItem, IMenuItemMetadata>> screens)
+		public DatabaseViewModel(IServer server, IEventAggregator events)
 		{
 			this.server = server;
 			this.events = events;
-			this.screens = screens.OrderBy(x => x.Metadata.Index).ToList();
 			DisplayName = "DATABASE";
-
-			Items = this.screens.Select(x => x.Metadata.DisplayName).ToList();
-
-			SelectedItem = this.screens.Select(x => x.Metadata.DisplayName).First();
 
 			events.Subscribe(this);
 		}
+
+		[ImportMany("Raven.DatabaseExplorerItem", AllowRecomposition = true)]
+		public IEnumerable<Lazy<object, IMenuItemMetadata>> Screens { get; set; }
 
 		public IList<string> Items { get; private set; }
 
@@ -46,7 +43,9 @@ namespace Raven.Studio.Features.Database
 			{
 				selectedItem = value;
 				NotifyOfPropertyChange(() => SelectedItem);
-				ActivateItem(screens.First(x => x.Metadata.DisplayName == selectedItem).Value);
+				if (!Screens.Any()) return;
+
+				ActivateItem(Screens.OrderBy(x => x.Metadata.Index).First(x => x.Metadata.DisplayName == selectedItem).Value);
 			}
 		}
 
@@ -71,10 +70,17 @@ namespace Raven.Studio.Features.Database
 			if (doc != null && doc.Id == message.DocumentId)
 			{
 				//TODO: this is an arbitrary choice, we should actually go back using the history
-				ActiveItem = screens.Skip(3).Select(x => x.Value).First();
+				ActiveItem = Screens.OrderBy(x => x.Metadata.Index).Skip(3).Select(x => x.Value).First();
 				doc.TryClose();
-
 			}
+		}
+
+		public void OnImportsSatisfied()
+		{
+			var screens = Screens.OrderBy(x => x.Metadata.Index).ToList();
+
+			Items = screens.Select(x => x.Metadata.DisplayName).ToList();
+			SelectedItem = screens.Select(x => x.Metadata.DisplayName).FirstOrDefault();
 		}
 	}
 }

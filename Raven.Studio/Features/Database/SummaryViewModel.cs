@@ -17,12 +17,13 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using Plugins;
+    using Plugins.Database;
     using Raven.Database.Data;
     using Raven.Database.Indexing;
     using Raven.Database.Json;
 
     [ExportDatabaseScreen("Summary", Index = 10)]
-    public class SummaryViewModel : RavenScreen, IDatabaseScreenMenuItem,
+    public class SummaryViewModel : RavenScreen,
                                     IHandle<DocumentDeleted>,
                                     IHandle<StatisticsUpdated>
     {
