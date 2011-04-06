@@ -237,6 +237,10 @@
     <Compile Include="Features\Query\LinqEditorViewModel.cs" />
     <Compile Include="Messages\WorkCompleted.cs" />
     <Compile Include="Messages\WorkStarted.cs" />
+    <Compile Include="Plugins\IServer.cs" />
+    <Compile Include="Plugins\Statistics\IStatisticsItem.cs" />
+    <Compile Include="Plugins\Statistics\IStatisticsSet.cs" />
+    <Compile Include="Plugins\Tasks\ExportTaskAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SampleData\PagerSampleData\PagerSampleData.xaml.cs">
       <DependentUpon>PagerSampleData.xaml</DependentUpon>
@@ -396,6 +400,14 @@
       <Generator>MSBuild:MarkupCompilePass1</Generator>
       <SubType>Designer</SubType>
     </DesignTimeOnly>
+    <ApplicationDefinition Include="Resources\Brushes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <ApplicationDefinition Include="Resources\Fonts.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
     <Page Include="Resources\Styles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -468,10 +480,6 @@
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
       <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
       <Name>Raven.Client.Silverlight</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Studio.Plugins\Raven.Studio.Plugins.csproj">
-      <Project>{C7C5B03F-A1D9-4CAA-A0F2-6BC879C23556}</Project>
-      <Name>Raven.Studio.Plugins</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
