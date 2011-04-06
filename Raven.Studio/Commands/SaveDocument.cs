@@ -36,12 +36,13 @@
 				.PutAsync(document.Id, jdoc.Etag, jdoc.DataAsJson, jdoc.Metadata)
 				.ContinueOnSuccess(put =>
 				                   	{
-										document.Id = put.Result.Key;
-				                   		document.JsonDocument.Metadata =
-				                   			document.JsonDocument.Metadata.FilterHeaders(isServerDocument: false);
-				                   	    document.JsonDocument.Etag = put.Result.ETag;
-										document.JsonDocument.LastModified = DateTime.Now;
+										var inner = document.JsonDocument;
+										inner.Key = put.Result.Key;
+										inner.Metadata = inner.Metadata.FilterHeaders(isServerDocument: false);
+										inner.Etag = put.Result.ETag;
+										inner.LastModified = DateTime.Now;
 				                        document.UpdateDocumentFromJsonDocument();
+
                                         events.Publish(new DocumentUpdated(document));
 				                   	});
 			
