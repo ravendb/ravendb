@@ -10,9 +10,8 @@ namespace Raven.Studio.Features.Database
 	using Client;
 	using Client.Document;
 	using Client.Extensions;
-	using Framework;
+	using Framework.Extensions;
 	using Messages;
-	using Newtonsoft.Json.Linq;
 	using Raven.Database.Data;
 	using Statistics;
 	using Action = System.Action;

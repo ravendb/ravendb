@@ -12,6 +12,7 @@
     using Collections;
     using Documents;
     using Framework;
+    using Framework.Extensions;
     using Messages;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;

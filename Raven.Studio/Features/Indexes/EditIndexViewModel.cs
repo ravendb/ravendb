@@ -1,5 +1,3 @@
-using Raven.Client.Client;
-
 namespace Raven.Studio.Features.Indexes
 {
 	using System;
@@ -11,9 +9,11 @@ namespace Raven.Studio.Features.Indexes
 	using Database;
 	using Documents;
 	using Framework;
+	using Framework.Extensions;
 	using Messages;
 	using Raven.Database.Data;
 	using Raven.Database.Indexing;
+	using Client.Client;
 
 	public class EditIndexViewModel : RavenScreen
 	{

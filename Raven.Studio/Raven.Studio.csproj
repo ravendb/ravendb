@@ -155,18 +155,19 @@
     <Compile Include="Features\Tasks\ConsoleOutput.xaml.cs">
       <DependentUpon>ConsoleOutput.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Tasks\ConsoleOutputTask.cs" />
     <Compile Include="Features\Tasks\ExportTask.cs" />
     <Compile Include="Framework\IMenuItemMetadata.cs" />
     <Compile Include="Features\Tasks\ImportTask.cs" />
-    <Compile Include="Features\Tasks\InvalidDataException.cs" />
-    <Compile Include="Features\Tasks\Stopwatch.cs" />
+    <Compile Include="Impl\MissingFromSilverlight\InvalidDataException.cs" />
+    <Compile Include="Impl\MissingFromSilverlight\Stopwatch.cs" />
     <Compile Include="Features\Tasks\TasksViewModel.cs" />
-    <Compile Include="Framework\BindableCollectionExtensions.cs" />
+    <Compile Include="Framework\Extensions\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
     <Compile Include="Framework\IKeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyCombination.cs" />
-    <Compile Include="Framework\ListExtensions.cs" />
+    <Compile Include="Framework\Extensions\ListExtensions.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
     <Compile Include="Framework\SimpleLogger.cs" />
@@ -216,13 +217,13 @@
     <Compile Include="Features\Documents\DocumentTemplateProvider.cs" />
     <Compile Include="Features\Documents\EditDocumentViewModel.cs" />
     <Compile Include="Framework\ConventionalCatalog.cs" />
-    <Compile Include="Framework\DateTimeExtensions.cs" />
-    <Compile Include="Framework\DictionaryExtensions.cs" />
+    <Compile Include="Framework\Extensions\DateTimeExtensions.cs" />
+    <Compile Include="Framework\Extensions\DictionaryExtensions.cs" />
     <Compile Include="Features\Database\SummaryViewModel.cs" />
     <Compile Include="Framework\BindablePagedQuery.cs" />
     <Compile Include="Framework\DoubleClickEvent.cs" />
-    <Compile Include="Framework\ScreenExtensions.cs" />
-    <Compile Include="Framework\TaskExtensions.cs" />
+    <Compile Include="Framework\Extensions\ScreenExtensions.cs" />
+    <Compile Include="Framework\Extensions\TaskExtensions.cs" />
     <Compile Include="Framework\TemplateColorProvider.cs" />
     <Compile Include="Messages\DocumentDeleted.cs" />
     <Compile Include="Messages\NavigationOccurred.cs" />
@@ -496,6 +497,9 @@
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\DatabaseViewModelSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+    </DesignData>
+    <DesignData Include="SampleData\ExportTaskSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\ServerErrorSampleData.xaml">

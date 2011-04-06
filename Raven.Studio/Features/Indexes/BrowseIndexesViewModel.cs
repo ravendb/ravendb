@@ -4,6 +4,7 @@
 	using Caliburn.Micro;
 	using Database;
 	using Framework;
+	using Framework.Extensions;
 	using Messages;
 	using Raven.Database.Indexing;
 

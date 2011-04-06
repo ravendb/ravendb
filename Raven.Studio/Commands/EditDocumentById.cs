@@ -1,11 +1,10 @@
 ﻿namespace Raven.Studio.Commands
 {
-	using System;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Features.Database;
 	using Features.Documents;
-	using Framework;
+	using Framework.Extensions;
 	using Messages;
 	using Shell.MessageBox;
 

@@ -7,6 +7,7 @@
 	using Caliburn.Micro;
 	using Features.Database;
 	using Framework;
+	using Framework.Extensions;
 	using Messages;
 
 	[Export(typeof(IShell))]
