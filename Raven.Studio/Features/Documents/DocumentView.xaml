@@ -13,11 +13,13 @@
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
-	<Grid x:Name="grid"
-		  Margin="0 0 6 6"
-		  cm:Action.TargetWithoutContext="EditDocument"
-		  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
-		  Background="#0999">
+	<Border x:Name="frame"
+			Margin="0 0 6 6"
+			Padding="2"
+			cm:Action.TargetWithoutContext="EditDocument"
+			f:DoubleClickEvent.AttachAction="Execute($dataContext)"
+			CornerRadius="2"
+			Background="#0999">
 		<i:Interaction.Triggers>
 			<i:EventTrigger EventName="MouseEnter">
 				<ei:GoToStateAction StateName="MouseOver" />
@@ -33,10 +35,16 @@
 				</VisualStateGroup.Transitions>
 				<VisualState x:Name="MouseOver">
 					<Storyboard>
-						<ColorAnimation To="#f999"
+						<ColorAnimation To="#FF999999"
 										Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)"
-										Storyboard.TargetName="grid"
-										d:IsOptimized="True" />
+										Storyboard.TargetName="frame"
+										d:IsOptimized="True"
+										Duration="0" />
+						<DoubleAnimation To="1"
+										 Storyboard.TargetProperty="(UIElement.Opacity)"
+										 Storyboard.TargetName="overlay"
+										 d:IsOptimized="True"
+										 Duration="0" />
 					</Storyboard>
 				</VisualState>
 				<VisualState x:Name="Normal" />
@@ -66,9 +74,28 @@
 			</ti:ContextMenu>
 		</ti:ContextMenuService.ContextMenu>
 
-		<docs:DocumentTemplateSelector Content="{Binding}"
-									   Margin="2" />
+		<Grid>
+			<docs:DocumentTemplateSelector Content="{Binding}" />
+			<StackPanel x:Name="overlay"
+						Opacity="0"
+						Orientation="Horizontal"
+						HorizontalAlignment="Right"
+						VerticalAlignment="Bottom">
+				<Button Content="edit"
+						cm:Action.TargetWithoutContext="EditDocument"
+						cm:Message.Attach="Execute($dataContext)"
+						Style="{StaticResource SmallIconButton}"
+						ToolTipService.ToolTip="click here to edit the document"
+						Margin="0,0,4,4">
+					<!--
+					TODO: this causes an odd error, uncomment and run to see
+					<Image Source="/Resources/Images/pencil.png"
+						   Height="16"
+						   Width="16" />-->
+				</Button>
+			</StackPanel>
+		</Grid>
 
-	</Grid>
+	</Border>
 
 </UserControl>

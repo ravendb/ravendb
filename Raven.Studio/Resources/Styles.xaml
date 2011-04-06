@@ -713,4 +713,48 @@
 		<Setter Property="Foreground"
 				Value="{StaticResource DarkBrush}" />
 	</Style>
+
+	<Style TargetType="Button"
+		   x:Key="SmallIconButton">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Button">
+					<Grid x:Name="grid"
+						  RenderTransformOrigin="0.5,0.5"
+						  Opacity="0.75">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualState x:Name="Normal" />
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Opacity)"
+																	   Storyboard.TargetName="grid">
+											<EasingDoubleKeyFrame KeyTime="0"
+																  Value="1" />
+											<EasingDoubleKeyFrame KeyTime="0:0:0.2"
+																  Value="1" />
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Pressed" />
+								<VisualState x:Name="Disabled" />
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<Border x:Name="bd"
+								Background="{StaticResource AccentTextBrush}"
+								CornerRadius="2"
+								Padding="2,1">
+							<ContentPresenter HorizontalAlignment="Center"
+											  VerticalAlignment="Center" />
+						</Border>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+		<Setter Property="Foreground"
+				Value="{StaticResource LightTextBrush}" />
+		<Setter Property="FontSize"
+				Value="9.333" />
+	</Style>
+
 </ResourceDictionary>
