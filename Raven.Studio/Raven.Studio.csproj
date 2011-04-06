@@ -190,14 +190,10 @@
     <Compile Include="Controls\DatabaseConnection.xaml.cs">
       <DependentUpon>DatabaseConnection.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\DocumentsContainer.cs" />
-    <Compile Include="Controls\DocumentThumbnail.cs" />
-    <Compile Include="Controls\DragDropPanel.cs" />
     <Compile Include="Controls\ErrorWindow.xaml.cs">
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\Gears.cs" />
-    <Compile Include="Controls\HyperlinkHelper.cs" />
     <Compile Include="Controls\Label.cs" />
     <Compile Include="Controls\LabelValuePanel.cs" />
     <Compile Include="Controls\Pager.xaml.cs">
@@ -235,7 +231,6 @@
     <Compile Include="Messages\IndexUpdated.cs" />
     <Compile Include="Features\Indexes\EditIndexViewModel.cs" />
     <Compile Include="Messages\DisplayCurrentDatabaseRequested.cs" />
-    <Compile Include="Features\Query\LinqEditorViewModel.cs" />
     <Compile Include="Messages\WorkCompleted.cs" />
     <Compile Include="Messages\WorkStarted.cs" />
     <Compile Include="Plugins\IServer.cs" />
@@ -332,10 +327,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Documents\Document\Preview.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <Page Include="Features\Documents\Document\Tooltip.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -357,10 +348,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Indexes\EditIndexView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Query\LinqEditorView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -430,18 +417,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Shell\NotificationsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Resources\ControlTemplates\DocumentsContainer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Resources\ControlTemplates\DocumentThumbnail.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Resources\ControlTemplates\EmptyButton.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
