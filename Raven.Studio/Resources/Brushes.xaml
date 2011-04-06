@@ -4,6 +4,12 @@
 	<SolidColorBrush x:Key="AccentTextBrush"
 					 Color="#FF899EB2" />
 
+	<SolidColorBrush x:Key="LabelTextBrush"
+					 Color="#999" />
+
+	<SolidColorBrush x:Key="DefaultTextBrush"
+					 Color="#000" />
+
 	<SolidColorBrush x:Key="LightTextBrush"
 					 Color="#fff" />
 
@@ -78,8 +84,10 @@
 		<GradientStop Color="#FF013C6C"
 					  Offset="1" />
 	</LinearGradientBrush>
+
 	<SolidColorBrush x:Key="DefaultScreenBackground"
 					 Color="White" />
+
 	<LinearGradientBrush x:Key="DividerBrush"
 						 EndPoint="0.5,1"
 						 StartPoint="0.5,0">

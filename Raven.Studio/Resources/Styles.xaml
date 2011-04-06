@@ -15,7 +15,7 @@
 		<Setter Property="FontSize"
 				Value="{StaticResource ControlTitleFontSize}" />
 		<Setter Property="Foreground"
-				Value="#999" />
+				Value="{StaticResource LabelTextBrush}" />
 		<Setter Property="Margin"
 				Value="0 0 4 0" />
 		<Setter Property="HorizontalAlignment"
