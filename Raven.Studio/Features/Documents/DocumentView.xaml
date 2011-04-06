@@ -8,12 +8,10 @@
 			 xmlns:docs="clr-namespace:Raven.Studio.Features.Documents"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-			 x:Name="userControl"
 			 x:Class="Raven.Studio.Features.Documents.DocumentView"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
-
 
 	<Grid x:Name="grid"
 		  Margin="0 0 6 6"
