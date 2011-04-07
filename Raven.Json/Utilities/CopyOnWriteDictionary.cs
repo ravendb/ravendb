@@ -125,7 +125,10 @@ namespace Raven.Json.Utilities
 			/*var safeVal = unsafeVal.CloneToken();
 			LocalChanges[key] = safeVal;
 			value = safeVal;*/
-    		value = unsafeVal;
+			if (unsafeVal == null)
+				return true;
+
+    		value = unsafeVal.MakeShallowCopy();
 			return true;
 		}
 

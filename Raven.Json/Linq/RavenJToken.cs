@@ -22,6 +22,11 @@ namespace Raven.Json.Linq
         /// <returns>A cloned RavenJToken</returns>
         public abstract RavenJToken CloneToken();
 
+    	internal virtual RavenJToken MakeShallowCopy()
+    	{
+    		return this;
+    	}
+
 		/// <summary>
 		/// Gets the <see cref="RavenJToken"/> with the specified key.
 		/// </summary>
