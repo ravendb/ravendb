@@ -40,5 +40,38 @@ namespace Raven.Tests.Json
         	Assert.Throws(typeof (KeyNotFoundException), () => f.Properties["2"]);
             Assert.NotNull(f1.Properties["2"]);
         }
+
+		[Fact]
+		public void ChangingValuesOfParent()
+		{
+			var obj = RavenJObject.Parse(" { 'User': { 'Name': 'Ayende'}  }");
+			var obj2 = obj.CloneToken();
+			var obj3 = obj.CloneToken();
+			obj2.Value<RavenJObject>("User")["Name"] = "Rahien";
+			obj3.Value<RavenJObject>("User")["Name"] = "Oren";
+			Assert.Equal("Ayende", obj.Value<RavenJObject>("User").Value<string>("Name"));
+			Assert.Equal("Rahien", obj2.Value<RavenJObject>("User").Value<string>("Name"));
+			Assert.Equal("Oren", obj3.Value<RavenJObject>("User").Value<string>("Name"));
+		}
+
+		[Fact]
+		public void ShouldNotFail()
+		{
+			var root = new RavenJObject();
+			var current = root;
+			for (int i = 0; i < 10000; i++)
+			{
+				var temp = new RavenJObject();
+				current.Add("Inner", temp);
+				current = temp;
+			}
+
+			var anotherRoot = root.CloneToken() as RavenJObject;
+
+			do
+			{
+				anotherRoot["TestProp"] = 0;
+			} while ((anotherRoot = anotherRoot["Inner"] as RavenJObject) != null);
+		}
     }
 }
