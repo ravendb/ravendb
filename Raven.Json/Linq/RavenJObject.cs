@@ -28,18 +28,13 @@ namespace Raven.Json.Linq
 			get
 			{
 				if (properties == null)
-				{
 					properties = new CopyOnWriteJDictionary();
-					if (isShallowCopy) parentObject[parentKey] = this;
-					isShallowCopy = false;
-					return properties;
-				}
 
-				if (isShallowCopy)
+				if (parentObject != null)
 				{
 					properties = properties.Clone();
 					parentObject[parentKey] = this;
-					isShallowCopy = false;
+					parentObject = null;
 				}
 				return properties;
 			}
@@ -51,10 +46,9 @@ namespace Raven.Json.Linq
     	}
 
         private CopyOnWriteJDictionary properties;
-    	
-		private bool isShallowCopy;
+
     	private string parentKey;
-    	private System.Collections.Generic.IDictionary<string, RavenJToken> parentObject;
+    	private IDictionary<string, RavenJToken> parentObject;
 
 		public override IEnumerable<RavenJToken> Children()
 		{
@@ -142,7 +136,6 @@ namespace Raven.Json.Linq
 		internal override RavenJToken MakeShallowCopy(IDictionary<string, RavenJToken> dict, object key)
 		{
 			var o = new RavenJObject();
-			o.isShallowCopy = true;
 			o.properties = properties;
 			o.parentObject = dict;
 			o.parentKey = key as string;
