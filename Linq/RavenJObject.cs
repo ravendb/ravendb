@@ -28,7 +28,7 @@ namespace Raven.Json.Linq
 			get
 			{
 				if (properties == null)
-					properties = new CopyOnWriteJDictionary();
+					properties = new CopyOnWriteDictionary();
 
 				if (parentObject != null)
 				{
@@ -45,7 +45,7 @@ namespace Raven.Json.Linq
 			get { return properties == null ? 0 : properties.Count; }
     	}
 
-        private CopyOnWriteJDictionary properties;
+        private CopyOnWriteDictionary properties;
 
     	private string parentKey;
     	private IDictionary<string, RavenJToken> parentObject;
@@ -64,7 +64,7 @@ namespace Raven.Json.Linq
 
 		public RavenJObject(IEnumerable<KeyValuePair<string, RavenJToken>> props)
 		{
-			properties = new CopyOnWriteJDictionary();
+			properties = new CopyOnWriteDictionary();
 			foreach (var kv in props)
 			{
 				properties.Add(kv);

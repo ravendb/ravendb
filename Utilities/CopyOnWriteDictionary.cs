@@ -7,11 +7,11 @@ using System.Linq;
 
 namespace Raven.Json.Utilities
 {
-    public class CopyOnWriteJDictionary : IDictionary<string, RavenJToken>
+    public class CopyOnWriteDictionary : IDictionary<string, RavenJToken>
     {
         private static readonly RavenJToken DeletedMarker = new RavenJValue("*DeletedMarker*", JTokenType.Null);
 
-		private CopyOnWriteJDictionary inherittedValues;
+		private CopyOnWriteDictionary inherittedValues;
 		private IDictionary<string, RavenJToken> localChanges;
 
 		protected IDictionary<string, RavenJToken> LocalChanges
@@ -22,16 +22,16 @@ namespace Raven.Json.Utilities
 			}
 		}
 
-        public CopyOnWriteJDictionary()
+        public CopyOnWriteDictionary()
         {
         }
 
-        private CopyOnWriteJDictionary(IDictionary<string, RavenJToken> props)
+        private CopyOnWriteDictionary(IDictionary<string, RavenJToken> props)
         {
             localChanges = props;
         }
 
-        private CopyOnWriteJDictionary(CopyOnWriteJDictionary previous)
+        private CopyOnWriteDictionary(CopyOnWriteDictionary previous)
         {
             inherittedValues = previous;
         }
@@ -275,22 +275,22 @@ namespace Raven.Json.Utilities
             get { return false; }
         }
 
-        public CopyOnWriteJDictionary Clone()
+        public CopyOnWriteDictionary Clone()
         {
             if (inherittedValues == null)
             {
-                inherittedValues = new CopyOnWriteJDictionary(localChanges);
+                inherittedValues = new CopyOnWriteDictionary(localChanges);
                 localChanges = null;
-                return new CopyOnWriteJDictionary(inherittedValues);
+                return new CopyOnWriteDictionary(inherittedValues);
             }
             if (localChanges == null)
             {
-                return new CopyOnWriteJDictionary(inherittedValues);
+                return new CopyOnWriteDictionary(inherittedValues);
             }
-            inherittedValues = new CopyOnWriteJDictionary(
-                new CopyOnWriteJDictionary(inherittedValues) { localChanges = localChanges });
+            inherittedValues = new CopyOnWriteDictionary(
+                new CopyOnWriteDictionary(inherittedValues) { localChanges = localChanges });
             localChanges = null;
-            return new CopyOnWriteJDictionary(inherittedValues);
+            return new CopyOnWriteDictionary(inherittedValues);
         }
     }
 }
