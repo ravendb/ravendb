@@ -4,7 +4,6 @@
 	using Database.Data;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Features.Database;
 	using Features.Documents;
 	using Framework.Extensions;
 	using Messages;

@@ -125,6 +125,7 @@
     <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
     <Compile Include="Commands\CopyServerError.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Commands\LoadDocument.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
     <Compile Include="Controls\Editors\LinqEditor.cs" />
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
