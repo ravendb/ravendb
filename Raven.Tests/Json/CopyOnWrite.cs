@@ -46,17 +46,17 @@ namespace Raven.Tests.Json
 		{
 			var obj = RavenJObject.Parse(" { 'Me': { 'ObjectID': 1}  }");
 			var obj2 = obj.CloneToken();
-			//var obj3 = obj.CloneToken();
+			var obj3 = obj.CloneToken();
 
 			var o = obj2.Value<RavenJObject>("Me");
 			o["ObjectID"] = 2;
 
-			//obj3.Value<RavenJObject>("Me")["ObjectID"] = 3;
+			obj3.Value<RavenJObject>("Me")["ObjectID"] = 3;
 			Assert.Equal(1, obj.Value<RavenJObject>("Me").Value<int>("ObjectID"));
 			Assert.Equal(2, obj2.Value<RavenJObject>("Me").Value<int>("ObjectID"));
-			//Assert.Equal(3, obj3.Value<RavenJObject>("Me").Value<int>("ObjectID"));
+			Assert.Equal(3, obj3.Value<RavenJObject>("Me").Value<int>("ObjectID"));
 		}
-		/*
+
 		[Fact]
 		public void ShouldNotFail()
 		{
@@ -70,11 +70,10 @@ namespace Raven.Tests.Json
 			}
 
 			var anotherRoot = root.CloneToken() as RavenJObject;
-
 			do
 			{
-				anotherRoot["TestProp"] = 0;
+				anotherRoot["Inner"] = 0;
 			} while ((anotherRoot = anotherRoot["Inner"] as RavenJObject) != null);
-		}*/
+		}
     }
 }

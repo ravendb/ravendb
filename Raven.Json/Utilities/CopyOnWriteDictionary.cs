@@ -7,18 +7,18 @@ using System.Linq;
 
 namespace Raven.Json.Utilities
 {
-    public class CopyOnWriteJDictionary<TKey> : IDictionary<TKey, RavenJToken>
+    public class CopyOnWriteJDictionary : IDictionary<string, RavenJToken>
     {
         private static readonly RavenJToken DeletedMarker = new RavenJValue("*DeletedMarker*", JTokenType.Null);
 
-		private CopyOnWriteJDictionary<TKey> inherittedValues;
-		private IDictionary<TKey, RavenJToken> localChanges;
+		private CopyOnWriteJDictionary inherittedValues;
+		private IDictionary<string, RavenJToken> localChanges;
 
-		protected IDictionary<TKey, RavenJToken> LocalChanges
+		protected IDictionary<string, RavenJToken> LocalChanges
 		{
 			get
 			{
-				return localChanges ?? (localChanges = new Dictionary<TKey, RavenJToken>());
+				return localChanges ?? (localChanges = new Dictionary<string, RavenJToken>());
 			}
 		}
 
@@ -26,19 +26,19 @@ namespace Raven.Json.Utilities
         {
         }
 
-        private CopyOnWriteJDictionary(IDictionary<TKey, RavenJToken> props)
+        private CopyOnWriteJDictionary(IDictionary<string, RavenJToken> props)
         {
             localChanges = props;
         }
 
-        private CopyOnWriteJDictionary(CopyOnWriteJDictionary<TKey> previous)
+        private CopyOnWriteJDictionary(CopyOnWriteJDictionary previous)
         {
             inherittedValues = previous;
         }
 
-        #region Dictionary<TKey,TValue> Members
+        #region Dictionary<string,TValue> Members
 
-        public void Add(TKey key, RavenJToken value)
+        public void Add(string key, RavenJToken value)
         {
 			if (ContainsKey(key))
 				throw new ArgumentException("An item with the same key has already been added: " + key);
@@ -46,7 +46,7 @@ namespace Raven.Json.Utilities
         	LocalChanges[key] = value; // we can't use Add, because LocalChanges may contain a DeletedMarker
         }
 
-    	public bool ContainsKey(TKey key)
+    	public bool ContainsKey(string key)
     	{
     		RavenJToken token;
     		if (localChanges != null && localChanges.TryGetValue(key, out token))
@@ -58,14 +58,14 @@ namespace Raven.Json.Utilities
     		return (inherittedValues != null && inherittedValues.TryGetValue(key, out token) && token != DeletedMarker);
     	}
 
-    	public ICollection<TKey> Keys
+    	public ICollection<string> Keys
         {
 			get
 			{
 				if (localChanges == null)
-					return inherittedValues != null ? inherittedValues.Keys : new HashSet<TKey>();
+					return inherittedValues != null ? inherittedValues.Keys : new HashSet<string>();
 
-				ICollection<TKey> ret = new HashSet<TKey>();
+				ICollection<string> ret = new HashSet<string>();
 				if (inherittedValues != null)
 				{
 					foreach (var key in inherittedValues.Keys)
@@ -86,7 +86,7 @@ namespace Raven.Json.Utilities
 			}
         }
 
-		public bool Remove(TKey key)
+		public bool Remove(string key)
 		{
 			RavenJToken token;
 			if (!LocalChanges.TryGetValue(key, out token))
@@ -102,7 +102,7 @@ namespace Raven.Json.Utilities
 			return true;
 		}
 
-    	public bool TryGetValue(TKey key, out RavenJToken value)
+    	public bool TryGetValue(string key, out RavenJToken value)
 		{
 			value = null;
 			RavenJToken unsafeVal;
@@ -126,7 +126,7 @@ namespace Raven.Json.Utilities
 			if (unsafeVal == null)
 				return true;
 
-    		value = unsafeVal.MakeShallowCopy();
+    		value = unsafeVal.MakeShallowCopy(this, key);
 			return true;
 		}
 
@@ -143,14 +143,14 @@ namespace Raven.Json.Utilities
             }
         }
 
-        public RavenJToken this[TKey key]
+        public RavenJToken this[string key]
         {
             get
             {
             	RavenJToken token;
 				if (TryGetValue(key, out token))
 					return token;
-            	throw new KeyNotFoundException(key.ToString());
+            	throw new KeyNotFoundException(key);
             }
         	set
         	{
@@ -160,12 +160,12 @@ namespace Raven.Json.Utilities
 
         #endregion
 
-		public class CopyOnWriteDictEnumerator : IEnumerator<KeyValuePair<TKey, RavenJToken>>
+		public class CopyOnWriteDictEnumerator : IEnumerator<KeyValuePair<string, RavenJToken>>
 		{
-			private readonly IEnumerator<KeyValuePair<TKey, RavenJToken>> _inheritted, _local;
-			private IEnumerator<KeyValuePair<TKey, RavenJToken>> _current;
+			private readonly IEnumerator<KeyValuePair<string, RavenJToken>> _inheritted, _local;
+			private IEnumerator<KeyValuePair<string, RavenJToken>> _current;
 
-			public CopyOnWriteDictEnumerator(IEnumerator<KeyValuePair<TKey, RavenJToken>> inheritted, IEnumerator<KeyValuePair<TKey, RavenJToken>> local)
+			public CopyOnWriteDictEnumerator(IEnumerator<KeyValuePair<string, RavenJToken>> inheritted, IEnumerator<KeyValuePair<string, RavenJToken>> local)
 			{
 				_inheritted = inheritted;
 				_local = local;
@@ -208,7 +208,7 @@ namespace Raven.Json.Utilities
 				_current = _inheritted ?? _local;
 			}
 
-			public KeyValuePair<TKey, RavenJToken> Current
+			public KeyValuePair<string, RavenJToken> Current
 			{
 				get
 				{
@@ -224,11 +224,11 @@ namespace Raven.Json.Utilities
 			}
 		}
 
-		public IEnumerator<KeyValuePair<TKey, RavenJToken>> GetEnumerator()
+		public IEnumerator<KeyValuePair<string, RavenJToken>> GetEnumerator()
 		{
 			return new CopyOnWriteDictEnumerator(
 				inherittedValues != null ? inherittedValues.GetEnumerator() : null,
-				localChanges != null ? (IEnumerator<KeyValuePair<TKey, RavenJToken>>)new Dictionary<TKey, RavenJToken>(localChanges).GetEnumerator() : null
+				localChanges != null ? (IEnumerator<KeyValuePair<string, RavenJToken>>)new Dictionary<string, RavenJToken>(localChanges).GetEnumerator() : null
 				);
 		}
 
@@ -237,7 +237,7 @@ namespace Raven.Json.Utilities
             return GetEnumerator();
         }
 
-        public void Add(KeyValuePair<TKey, RavenJToken> item)
+        public void Add(KeyValuePair<string, RavenJToken> item)
         {
             Add(item.Key, item.Value);
         }
@@ -250,17 +250,17 @@ namespace Raven.Json.Utilities
         	}
         }
 
-    	public bool Contains(KeyValuePair<TKey, RavenJToken> item)
+    	public bool Contains(KeyValuePair<string, RavenJToken> item)
         {
 			throw new NotImplementedException();
 		}
 
-    	public void CopyTo(KeyValuePair<TKey, RavenJToken>[] array, int arrayIndex)
+    	public void CopyTo(KeyValuePair<string, RavenJToken>[] array, int arrayIndex)
         {
             throw new NotImplementedException();
         }
 
-        public bool Remove(KeyValuePair<TKey, RavenJToken> item)
+        public bool Remove(KeyValuePair<string, RavenJToken> item)
         {
             throw new NotImplementedException();
         }
@@ -275,22 +275,22 @@ namespace Raven.Json.Utilities
             get { return false; }
         }
 
-        public CopyOnWriteJDictionary<TKey> Clone()
+        public CopyOnWriteJDictionary Clone()
         {
             if (inherittedValues == null)
             {
-                inherittedValues = new CopyOnWriteJDictionary<TKey>(localChanges);
+                inherittedValues = new CopyOnWriteJDictionary(localChanges);
                 localChanges = null;
-                return new CopyOnWriteJDictionary<TKey>(inherittedValues);
+                return new CopyOnWriteJDictionary(inherittedValues);
             }
             if (localChanges == null)
             {
-                return new CopyOnWriteJDictionary<TKey>(inherittedValues);
+                return new CopyOnWriteJDictionary(inherittedValues);
             }
-            inherittedValues = new CopyOnWriteJDictionary<TKey>(
-                new CopyOnWriteJDictionary<TKey>(inherittedValues) { localChanges = localChanges });
+            inherittedValues = new CopyOnWriteJDictionary(
+                new CopyOnWriteJDictionary(inherittedValues) { localChanges = localChanges });
             localChanges = null;
-            return new CopyOnWriteJDictionary<TKey>(inherittedValues);
+            return new CopyOnWriteJDictionary(inherittedValues);
         }
     }
 }
