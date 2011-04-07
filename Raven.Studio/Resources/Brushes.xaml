@@ -17,7 +17,7 @@
 					 Color="White" />
 
 	<SolidColorBrush x:Key="ButtonForegroundBrush"
-					 Color="White" />
+					 Color="#FF666666" />
 
 	<SolidColorBrush x:Key="DarkBrush"
 					 Color="#FF123C65" />
@@ -99,5 +99,6 @@
 		<GradientStop Color="#BF123C65"
 					  Offset="0.75" />
 	</LinearGradientBrush>
+	<SolidColorBrush x:Key="ButtonBackgroundBrush" Color="#FFE6E6E6"/>
 
 </ResourceDictionary>

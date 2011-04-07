@@ -756,5 +756,122 @@
 		<Setter Property="FontSize"
 				Value="9.333" />
 	</Style>
+	<Style x:Key="FormButton"
+		   TargetType="Button">
+		<Setter Property="Background"
+				Value="{StaticResource ButtonBackgroundBrush}" />
+		<Setter Property="Foreground"
+				Value="{StaticResource ButtonForegroundBrush}" />
+		<Setter Property="Padding"
+				Value="4,2" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Button">
+					<Grid>
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.2">
+										<VisualTransition.GeneratedEasingFunction>
+											<CubicEase EasingMode="EaseInOut" />
+										</VisualTransition.GeneratedEasingFunction>
+									</VisualTransition>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Normal" />
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<DoubleAnimation Duration="0"
+														 To="0.5"
+														 Storyboard.TargetProperty="(UIElement.Opacity)"
+														 Storyboard.TargetName="highlight"
+														 d:IsOptimized="True" />
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Pressed">
+									<Storyboard>
+										<DoubleAnimation Duration="0"
+														 To="0.75"
+														 Storyboard.TargetProperty="(UIElement.Opacity)"
+														 Storyboard.TargetName="highlight"
+														 d:IsOptimized="True" />
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Disabled">
+									<Storyboard>
+										<DoubleAnimation Duration="0"
+														 To=".55"
+														 Storyboard.TargetProperty="Opacity"
+														 Storyboard.TargetName="DisabledVisualElement" />
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="FocusStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1">
+										<VisualTransition.GeneratedEasingFunction>
+											<CubicEase EasingMode="EaseInOut" />
+										</VisualTransition.GeneratedEasingFunction>
+									</VisualTransition>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Focused">
+									<Storyboard>
+										<DoubleAnimation Duration="0"
+														 To="1"
+														 Storyboard.TargetProperty="Opacity"
+														 Storyboard.TargetName="FocusVisualElement" />
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Unfocused" />
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<Border x:Name="Background"
+								BorderBrush="{TemplateBinding BorderBrush}"
+								BorderThickness="{TemplateBinding BorderThickness}"
+								CornerRadius="3"
+								Background="{TemplateBinding Background}" />
+						<Border x:Name="highlight"
+								CornerRadius="3"
+								Opacity="0">
+							<Border.Background>
+								<LinearGradientBrush EndPoint="0.5,1"
+													 StartPoint="0.5,0">
+									<GradientStop Color="#FF626262" />
+									<GradientStop Color="#FF9A9A9A"
+												  Offset="0.5" />
+									<GradientStop Color="#FF828282"
+												  Offset="1" />
+								</LinearGradientBrush>
+							</Border.Background>
+						</Border>
+						<ContentPresenter x:Name="contentPresenter"
+										  ContentTemplate="{TemplateBinding ContentTemplate}"
+										  Content="{TemplateBinding Content}"
+										  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+										  Margin="{TemplateBinding Padding}"
+										  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+						<Rectangle x:Name="DisabledVisualElement"
+								   Fill="Black"
+								   IsHitTestVisible="false"
+								   RadiusY="2"
+								   RadiusX="2"
+								   Opacity="0" />
+						<Rectangle x:Name="FocusVisualElement"
+								   IsHitTestVisible="false"
+								   RadiusY="2"
+								   RadiusX="2"
+								   Stroke="{StaticResource DisabledForegroundBrush}"
+								   StrokeThickness="1"
+								   Opacity="0" />
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+		<Setter Property="BorderThickness"
+				Value="0" />
+		<Setter Property="FontSize"
+				Value="9.333" />
+		<Setter Property="Margin"
+				Value="0,2,2,2" />
+	</Style>
 
 </ResourceDictionary>
