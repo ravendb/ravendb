@@ -476,13 +476,9 @@ namespace Raven.Client.Client.Async
 			.ToJsonRequest(this, credentials, convention).ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
-					var serializer = convention.CreateSerializer();
-					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-					{
-						var json = RavenJToken.Load(reader);
-						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-						return JsonConvert.DeserializeObject<IndexDefinition>(json["Index"].ToString(), new JsonToJsonConverter());
-					}
+					var json = JObject.Parse(task.Result);
+					//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+					return JsonConvert.DeserializeObject<IndexDefinition>(json["Index"].ToString(), new JsonToJsonConverter());
 				});
 		}
 
@@ -580,12 +576,8 @@ namespace Raven.Client.Client.Async
 				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
-					var serializer = convention.CreateSerializer();
-					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-					{
-						var json = RavenJToken.Load(reader) as RavenJObject;
-						return json.Children().Select(x => x.Value<string>()).ToArray();
-					}
+					var json = RavenJArray.Parse(task.Result);
+					return json.Children().Select(x => x.Value<string>()).ToArray();
 				});
 		}
 
@@ -602,15 +594,11 @@ namespace Raven.Client.Client.Async
 			return request.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
-					var serializer = convention.CreateSerializer();
-					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-					{
-						var json = RavenJObject.Load(reader);
-						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-						return json
-							.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(x.Value["definition"].ToString(), new JsonToJsonConverter()))
-							.ToArray();
-					}
+					var json = RavenJArray.Parse(task.Result);
+					//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+					return json
+						.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(x["definition"].ToString(), new JsonToJsonConverter()))
+						.ToArray();
 				});
 		}
 
