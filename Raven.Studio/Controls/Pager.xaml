@@ -3,10 +3,7 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-			 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
 			 xmlns:SampleData="clr-namespace:Expression.Blend.SampleData.PagerSampleData"
-			 xmlns:System="clr-namespace:System;assembly=mscorlib"
 			 x:Class="Raven.Studio.Controls.Pager"
 			 d:DesignWidth="400"
 			 mc:Ignorable="d">
@@ -14,6 +11,13 @@
 	<UserControl.Resources>
 		<SampleData:PagerSampleData x:Key="PagerSampleData"
 									d:IsDataSource="True" />
+
+		<Style x:Key="PagerButton"
+			   TargetType="Button"
+			   BasedOn="{StaticResource FormButton}">
+			<Setter Property="FontSize"
+					Value="9.333" />
+		</Style>
 	</UserControl.Resources>
 
 	<Grid x:Name="LayoutRoot"
@@ -44,7 +48,7 @@
 				<VisualState x:Name="Loaded" />
 				<VisualState x:Name="Loading">
 					<Storyboard>
-						<DoubleAnimation Duration="0"
+						<DoubleAnimation Duration="0:0:0.2"
 										 To="1"
 										 Storyboard.TargetProperty="(UIElement.Opacity)"
 										 Storyboard.TargetName="progressBar"
@@ -76,12 +80,16 @@
 					VerticalAlignment="Top"
 					HorizontalAlignment="Right">
 			<Button cm:Message.Attach="MoveFirst"
+					Style="{StaticResource PagerButton}"
 					Content="|&lt;-" />
 			<Button cm:Message.Attach="MovePrevious"
+					Style="{StaticResource PagerButton}"
 					Content="&lt;&lt;" />
 			<Button cm:Message.Attach="MoveNext"
+					Style="{StaticResource PagerButton}"
 					Content="&gt;&gt;" />
 			<Button cm:Message.Attach="MoveLast"
+					Style="{StaticResource PagerButton}"
 					Content="-&gt;|" />
 		</StackPanel>
 	</Grid>
