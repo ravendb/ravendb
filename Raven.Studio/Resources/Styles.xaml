@@ -756,6 +756,7 @@
 		<Setter Property="FontSize"
 				Value="9.333" />
 	</Style>
+
 	<Style x:Key="FormButton"
 		   TargetType="Button">
 		<Setter Property="Background"
@@ -872,6 +873,10 @@
 				Value="9.333" />
 		<Setter Property="Margin"
 				Value="0,2,2,2" />
+	</Style>
+
+	<Style TargetType="Button"
+		   BasedOn="{StaticResource FormButton}">
 	</Style>
 
 </ResourceDictionary>
