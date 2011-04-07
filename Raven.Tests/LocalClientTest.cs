@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -14,7 +13,6 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
-using Raven.Json.Linq;
 using Raven.Storage.Managed;
 using Raven.Tests.Document;
 

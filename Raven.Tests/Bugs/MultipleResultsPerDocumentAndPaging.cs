@@ -5,14 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
-using Raven.Client;
-using Raven.Client.Client;
-using Raven.Client.Document;
 using Raven.Database.Indexing;
-using Raven.Database.Server;
-using Raven.Http;
-using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -62,7 +55,6 @@ select new { Actor = actor, Name = movie.Name }",
 
 					if (movies.Count != 2)
 					{
-						Debugger.Break();
 						WaitForUserToContinueTheTest(store);
 					}
 
