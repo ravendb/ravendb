@@ -12,7 +12,6 @@ namespace Raven.Studio.Features.Database
 	using Plugins;
 
 	[Export(typeof(DatabaseExplorer))]
-	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class DatabaseExplorer : Conductor<object>, IPartImportsSatisfiedNotification,
 		IHandle<DatabaseScreenRequested>,
 		IHandle<DocumentDeleted>
@@ -25,21 +24,19 @@ namespace Raven.Studio.Features.Database
 		{
 			this.server = server;
 			this.events = events;
-			DisplayName = "DATABASE";
 
 			events.Subscribe(this);
+			server.CurrentDatabaseChanged += delegate
+			{
+				DisplayName = server.CurrentDatabase.ToUpper();
+				                     		
+			};
 		}
 
 		[ImportMany("Raven.DatabaseExplorerItem", AllowRecomposition = true)]
 		public IEnumerable<Lazy<object, IMenuItemMetadata>> AvailableItems { get; set; }
 
 		public IList<string> Items { get; private set; }
-
-		public void NavigateTo(string item)
-		{
-			if (!AvailableItems.Any()) return;
-			ActivateItem(AvailableItems.OrderBy(x => x.Metadata.Index).First(x => x.Metadata.DisplayName == item).Value);
-		}
 
 		string selectedItem;
 		public string SelectedItem
@@ -62,12 +59,19 @@ namespace Raven.Studio.Features.Database
 			this.TrackNavigationTo(screen, events);
 		}
 
-		public void Handle(DatabaseScreenRequested message)
+		public void ShowByDisplayName(string item)
+		{
+			if (!AvailableItems.Any()) return;
+			var screen = (IScreen)AvailableItems.OrderBy(x => x.Metadata.Index).First(x => x.Metadata.DisplayName == item).Value;
+			Show(screen);
+		}
+
+		void IHandle<DatabaseScreenRequested>.Handle(DatabaseScreenRequested message)
 		{
 			Show(message.GetScreen());
 		}
 
-		public void Handle(DocumentDeleted message)
+		void IHandle<DocumentDeleted>.Handle(DocumentDeleted message)
 		{
 			var doc = ActiveItem as EditDocumentViewModel;
 			if (doc != null && doc.Id == message.DocumentId)
@@ -78,13 +82,21 @@ namespace Raven.Studio.Features.Database
 			}
 		}
 
-		public void OnImportsSatisfied()
+		void IPartImportsSatisfiedNotification.OnImportsSatisfied()
 		{
-			var screens = AvailableItems.OrderBy(x => x.Metadata.Index).ToList();
+			Items = AvailableItems
+				.OrderBy(x => x.Metadata.Index)
+				.Select(x => x.Metadata.DisplayName)
+				.ToList();
+			
+			ShowFirstScreen();
+		}
 
-			Items = screens.Select(x => x.Metadata.DisplayName).ToList();
-			SelectedItem = screens.Select(x => x.Metadata.DisplayName).FirstOrDefault();
-			NavigateTo(SelectedItem);
+		void ShowFirstScreen()
+		{
+			SelectedItem = Items.FirstOrDefault();
+			var first = (IScreen)AvailableItems.First(_ => _.Metadata.DisplayName == SelectedItem).Value;
+			Show(first);
 		}
 	}
 }
