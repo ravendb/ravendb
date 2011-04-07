@@ -10,7 +10,6 @@ namespace Raven.Json.Utilities
     public class CopyOnWriteJDictionary<TKey> : IDictionary<TKey, RavenJToken>
     {
         private static readonly RavenJToken DeletedMarker = new RavenJValue("*DeletedMarker*", JTokenType.Null);
-    	private int deleteCount;
 
 		private CopyOnWriteJDictionary<TKey> inherittedValues;
 		private IDictionary<TKey, RavenJToken> localChanges;
@@ -99,7 +98,6 @@ namespace Raven.Json.Utilities
 			if (token == DeletedMarker)
 				return false;
 
-			deleteCount += 1;
 			LocalChanges[key] = DeletedMarker;
 			return true;
 		}
@@ -156,10 +154,6 @@ namespace Raven.Json.Utilities
             }
         	set
         	{
-				RavenJToken token;
-				if (LocalChanges.TryGetValue(key, out token) && token == DeletedMarker)
-					deleteCount -= 1;
-				
 				LocalChanges[key] = value;
         	}
         }
@@ -273,7 +267,7 @@ namespace Raven.Json.Utilities
 
         public int Count
         {
-            get { return LocalChanges.Count - deleteCount + (inherittedValues != null ? inherittedValues.Count : 0); }
+            get { return Keys.Count; }
         }
 
         public bool IsReadOnly
