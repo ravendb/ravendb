@@ -131,6 +131,7 @@
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
     <Compile Include="Controls\Editors\XamlEditor.cs" />
     <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
+    <Compile Include="Converters\NotificationLevelToColorConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Documents\IDocumentTemplateProvider.cs" />
@@ -486,6 +487,9 @@
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\ExportTaskSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+    </DesignData>
+    <DesignData Include="SampleData\NotficiationsSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
     <DesignData Include="SampleData\ServerErrorSampleData.xaml">

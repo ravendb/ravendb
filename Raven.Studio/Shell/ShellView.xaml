@@ -12,7 +12,7 @@
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
 
-	<Border Background="{StaticResource DefaultScreenBackground}"
+		<Border Background="{StaticResource DefaultScreenBackground}"
 			BorderBrush="#17497A"
 			BorderThickness="1">
 		<Border BorderBrush="#5D8491"
@@ -80,6 +80,7 @@
 									Grid.Row="1" />
 
 					<ContentControl x:Name="Notifications"
+									Margin="8,0,0,0"
 									Grid.Row="2" />
 
 					<Grid Grid.Row="3">

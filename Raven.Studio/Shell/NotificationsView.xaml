@@ -1,28 +1,160 @@
-﻿<UserControl x:Class="Raven.Studio.Shell.NotificationsView"
-			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:l="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Layout.Toolkit"
+			 xmlns:Converters="clr-namespace:Raven.Studio.Converters"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:System="clr-namespace:System;assembly=mscorlib"
+			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+			 x:Name="userControl"
+			 x:Class="Raven.Studio.Shell.NotificationsView"
 			 mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
+			 d:DataContext="{d:DesignData /SampleData/NotficiationsSampleData.xaml}"
+			 d:DesignHeight="24"
+			 d:DesignWidth="600">
+	<UserControl.Resources>
+		<Converters:NotificationLevelToColorConverter x:Key="levelToColor" />
+	</UserControl.Resources>
+	<i:Interaction.Triggers>
+		<i:EventTrigger EventName="MouseEnter"
+						SourceName="border">
+			<ei:GoToStateAction TargetObject="{Binding ElementName=userControl}"
+								StateName="MouseOver" />
+		</i:EventTrigger>
+		<i:EventTrigger EventName="MouseLeftButtonDown"
+						SourceName="border">
+			<ei:GoToStateAction TargetObject="{Binding ElementName=userControl}"
+								StateName="Normal" />
+		</i:EventTrigger>
+	</i:Interaction.Triggers>
 
-	<Grid x:Name="LayoutRoot"
-		  Margin="8 0 8 0"
-		  Height="24">
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition />
-			<ColumnDefinition Width="Auto" />
-		</Grid.ColumnDefinitions>
+	<Border>
+		<VisualStateManager.VisualStateGroups>
+			<VisualStateGroup x:Name="Common">
+				<VisualState x:Name="Normal" />
+				<VisualState x:Name="MouseOver">
+					<Storyboard>
+						<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(Popup.IsOpen)"
+													   Storyboard.TargetName="popup">
+							<DiscreteObjectKeyFrame KeyTime="0">
+								<DiscreteObjectKeyFrame.Value>
+									<System:Boolean>True</System:Boolean>
+								</DiscreteObjectKeyFrame.Value>
+							</DiscreteObjectKeyFrame>
+						</ObjectAnimationUsingKeyFrames>
+					</Storyboard>
+				</VisualState>
+			</VisualStateGroup>
+		</VisualStateManager.VisualStateGroups>
+		<Grid x:Name="LayoutRoot"
+			  Height="24"
+			  Background="{StaticResource DefaultScreenBackground}">
 
-		<l:TransitioningContentControl Content="{Binding MostRecent.Message}"
-									   Foreground="DarkRed"
-									   FontWeight="Bold"
-									   Transition="LeftTransition">
-		</l:TransitioningContentControl>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition />
+				<ColumnDefinition Width="Auto" />
+			</Grid.ColumnDefinitions>
 
-		<TextBlock Grid.Column="1"
-				   Text="{Binding Notifications.Count}" />
-	</Grid>
+			<l:TransitioningContentControl Content="{Binding MostRecent}"
+										   Transition="LeftTransition">
+				<l:TransitioningContentControl.ContentTemplate>
+					<DataTemplate>
+						<Grid x:Name="messageRoot">
+							<Grid.Resources>
+								<SolidColorBrush x:Key="LevelBrush"
+												 Color="{Binding Level, Converter={StaticResource levelToColor}}" />
+							</Grid.Resources>
+							<Grid.Visibility>
+								<Binding Converter="{StaticResource hiddenWhenNull}" />
+							</Grid.Visibility>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto" />
+								<ColumnDefinition Width="*" />
+							</Grid.ColumnDefinitions>
+							<ToolTipService.ToolTip>
+								<StackPanel MaxWidth="200">
+									<TextBlock Text="{Binding Level}"
+											   Foreground="{StaticResource LevelBrush}" />
+									<TextBlock Text="{Binding Message}"
+											   TextWrapping="Wrap" />
+									<TextBlock Text="{Binding CreatedAt, Converter={StaticResource howLongSince}}"
+											   Style="{StaticResource howLongSinceStyle}" />
+								</StackPanel>
+							</ToolTipService.ToolTip>
+
+							<Rectangle Width="16"
+									   StrokeThickness="0"
+									   Fill="{StaticResource LevelBrush}"
+									   RadiusX="3"
+									   RadiusY="3"
+									   Height="16" />
+
+							<TextBlock Text="{Binding Message}"
+									   Grid.Column="1"
+									   TextTrimming="WordEllipsis"
+									   FontSize="13.333"
+									   VerticalAlignment="Center"
+									   Margin="4,0,0,0" />
+						</Grid>
+					</DataTemplate>
+				</l:TransitioningContentControl.ContentTemplate>
+			</l:TransitioningContentControl>
+
+			<Border x:Name="border"
+					Background="Transparent"
+					Grid.Column="1"
+					Width="32"
+					Height="32">
+				<TextBlock Grid.Column="1"
+						   Text="{Binding Notifications.Count}"
+						   Foreground="{StaticResource AccentTextBrush}"
+						   VerticalAlignment="Center"
+						   HorizontalAlignment="Center"
+						   Margin="0,0,0,6"
+						   FontWeight="Bold" />
+			</Border>
+
+			<Popup x:Name="popup"
+				   Grid.Column="1"
+				   Margin="-386,0,0,0">
+				<Border Background="{StaticResource DefaultScreenBackground}"
+						CornerRadius="3"
+						BorderThickness="1"
+						BorderBrush="{StaticResource AccentTextBrush}"
+						cm:Action.Target="{Binding}"
+						Width="400">
+					<ItemsControl ItemsSource="{Binding Notifications}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<Grid Margin="0,0,0,4">
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="20" />
+										<ColumnDefinition />
+									</Grid.ColumnDefinitions>
+									<Button Content="-"
+											cm:Message.Attach="Dismiss($dataContext)"
+											HorizontalAlignment="Left"
+											VerticalAlignment="Top"
+											Margin="2" />
+
+									<StackPanel Grid.Column="1">
+										<TextBlock TextWrapping="Wrap"
+												   Text="{Binding Message}"
+												   d:LayoutOverrides="Width, Height"
+												   VerticalAlignment="Center" />
+
+										<TextBlock Text="{Binding CreatedAt, Converter={StaticResource howLongSince}}"
+												   Style="{StaticResource howLongSinceStyle}" />
+									</StackPanel>
+								</Grid>
+							</DataTemplate>
+
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</Border>
+			</Popup>
+		</Grid>
+	</Border>
 </UserControl>
