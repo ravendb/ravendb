@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
@@ -72,8 +73,8 @@ namespace Raven.Tests
 				return;
 
 			documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-											   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
-											   new RavenJObject());
+											   JObject.FromObject(new { StackTrace = new StackTrace(true) }),
+											   new JObject());
 			using (var server = new RavenDbHttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
 			{
 				server.Start();
