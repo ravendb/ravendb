@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -34,16 +35,31 @@ namespace Raven.Json.Linq
 		/// Initializes a new instance of the <see cref="RavenJArray"/> class with the specified content.
 		/// </summary>
 		/// <param name="content">The contents of the array.</param>
-		public RavenJArray(params object[] content)
+		public RavenJArray(IEnumerable content)
 		{
 			_items = new List<RavenJToken>();
-			foreach (var item in content)
+			var ravenJToken = content as RavenJToken;
+			if(ravenJToken != null)
 			{
-				if (item.GetType().IsSubclassOf(typeof(RavenJToken)))
-					_items.Add((RavenJToken)item);
-				else
-					_items.Add(new RavenJValue(item));
+				_items.Add(ravenJToken);
 			}
+			else
+			{
+				foreach (var item in content)
+				{
+					ravenJToken = item as RavenJToken;
+					_items.Add(ravenJToken ?? new RavenJValue(item));
+				}
+			}
+		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenJArray"/> class with the specified content.
+		/// </summary>
+		/// <param name="content">The contents of the array.</param>
+		public RavenJArray(params object[] content) : this((IEnumerable)content)
+		{
+			
 		}
 
 		public RavenJArray(IEnumerable<RavenJToken> content)
