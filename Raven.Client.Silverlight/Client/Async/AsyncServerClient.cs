@@ -339,7 +339,7 @@ namespace Raven.Client.Client.Async
 				{
 					RavenJToken json;
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-						json = (RavenJToken) convention.CreateSerializer().Deserialize(reader);
+						json = RavenJToken.ReadFrom(reader);
 
 					return new QueryResult
 							{
@@ -675,7 +675,7 @@ namespace Raven.Client.Client.Async
 		{
 			var metadata = new RavenJObject();
 			var req = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
-			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
+			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 			var data = Encoding.UTF8.GetBytes(jArray.ToString(Formatting.None));
 
 			return req.WriteAsync(data)
@@ -786,15 +786,11 @@ namespace Raven.Client.Client.Async
 				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
-					var serializer = convention.CreateSerializer();
-					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-					{
-						var json = (RavenJToken)serializer.Deserialize(reader);
-						return json
-							.Children()
-							.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
-							.ToArray();
-					}
+					var json =RavenJToken.Parse(task.Result);
+					return json
+						.Children()
+						.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+						.ToArray();
 				});
 		}
 
