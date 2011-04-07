@@ -23,15 +23,30 @@ namespace Raven.Json.Linq
 
         public IDictionary<string, RavenJToken> Properties
         {
-            get { return properties ?? (properties = new CopyOnWriteJDictionary<string>()); }
+			get
+			{
+				if (properties == null)
+				{
+					isShallowCopy = false;
+					return (properties = new CopyOnWriteJDictionary<string>());
+				}
+
+				if (isShallowCopy)
+				{
+					properties = properties.Clone();
+					isShallowCopy = false;
+				}
+				return properties;
+			}
         }
 
     	public int Count
     	{
-			get { return Properties.Count; }
+			get { return properties == null ? 0 : properties.Count; }
     	}
 
         private CopyOnWriteJDictionary<string> properties;
+    	private bool isShallowCopy;
 
 		public override IEnumerable<RavenJToken> Children()
 		{
@@ -100,9 +115,12 @@ namespace Raven.Json.Linq
 		{
 			get
 			{
+				if (properties == null)
+					return null;
+
 				ValidationUtils.ArgumentNotNull(propertyName, "propertyName");
 				RavenJToken ret;
-				Properties.TryGetValue(propertyName, out ret);
+				properties.TryGetValue(propertyName, out ret);
 				return ret;
 			}
 			set { Properties[propertyName] = value; }
@@ -112,6 +130,14 @@ namespace Raven.Json.Linq
         {
             return new RavenJObject(this);
         }
+
+		internal override RavenJToken MakeShallowCopy()
+		{
+			var o = new RavenJObject();
+			o.isShallowCopy = true;
+			o.properties = properties;
+			return o;
+		}
 
 		public void AddValueProperty(string key, object value)
 		{
@@ -344,7 +370,12 @@ namespace Raven.Json.Linq
 
     	public bool TryGetValue(string name, out RavenJToken value)
     	{
-			return Properties.TryGetValue(name, out value);	
+			if (properties == null)
+			{
+				value = null;
+				return false;
+			}
+    		return properties.TryGetValue(name, out value);	
     	}
     }
 }
