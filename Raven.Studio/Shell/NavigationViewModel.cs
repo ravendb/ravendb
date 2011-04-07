@@ -53,6 +53,7 @@
 		void IHandle<NavigationOccurred>.Handle(NavigationOccurred message)
 		{
 			history.Push(message);
+			if(history.Count > 20) history.Pop();
 			NotifyOfPropertyChange(() => CanGoBack);
 		}
 	}
