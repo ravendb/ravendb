@@ -2,15 +2,17 @@
 {
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
+	using System.Linq;
 	using Caliburn.Micro;
 	using Messages;
 	using Action = System.Action;
 
 	[Export]
-	public class NavigationViewModel : Screen,
+	public class NavigationViewModel : PropertyChangedBase,
 		IHandle<NavigationOccurred>
 	{
 		readonly IEventAggregator events;
+		readonly Stack<NavigationOccurred> history = new Stack<NavigationOccurred>();
 
 		Action goHomeAction;
 
@@ -22,7 +24,7 @@
 			Breadcrumbs = new BindableCollection<IScreen>();
 		}
 
-		public BindableCollection<IScreen> Breadcrumbs {get; private set;}
+		public BindableCollection<IScreen> Breadcrumbs { get; private set; }
 
 		public void SetGoHome(Action action)
 		{
@@ -34,18 +36,24 @@
 			goHomeAction();
 		}
 
-		public void GoBack()
+		public bool CanGoBack
 		{
-			if(history.Count <= 0) return;
-
-			history.Pop().Reverse();
+			get { return history.Any(); }
 		}
 
-		readonly Stack<NavigationOccurred> history = new Stack<NavigationOccurred>();
+		public void GoBack()
+		{
+			if (CanGoBack) return;
+
+			history.Pop().Reverse();
+
+			NotifyOfPropertyChange(() => CanGoBack);
+		}
 
 		void IHandle<NavigationOccurred>.Handle(NavigationOccurred message)
 		{
 			history.Push(message);
+			NotifyOfPropertyChange(() => CanGoBack);
 		}
 	}
 }
