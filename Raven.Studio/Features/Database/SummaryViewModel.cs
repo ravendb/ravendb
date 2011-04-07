@@ -94,19 +94,6 @@
             }
         }
 
-        public void Handle(DocumentDeleted message)
-        {
-            RecentDocuments
-                .Where(x => x.Id == message.DocumentId)
-                .ToList()
-                .Apply(x => RecentDocuments.Remove(x));
-
-            //TODO: update collections
-            //Collections
-            //    .Where(x => x.Name == message.Document.CollectionType)
-            //    .Apply(x => x.Count--);
-        }
-
         bool showCreateSampleData;
 
         public bool ShowCreateSampleData
@@ -271,11 +258,24 @@
                     });
         }
 
-        public void Handle(StatisticsUpdated message)
+    	void IHandle<StatisticsUpdated>.Handle(StatisticsUpdated message)
         {
             if (!message.HasDocumentCountChanged) return;
 
             RetrieveSummary();
         }
+
+		void IHandle<DocumentDeleted>.Handle(DocumentDeleted message)
+		{
+			RecentDocuments
+				.Where(x => x.Id == message.DocumentId)
+				.ToList()
+				.Apply(x => RecentDocuments.Remove(x));
+
+			//TODO: update collections
+			//Collections
+			//    .Where(x => x.Name == message.Document.CollectionType)
+			//    .Apply(x => x.Count--);
+		}
     }
 }

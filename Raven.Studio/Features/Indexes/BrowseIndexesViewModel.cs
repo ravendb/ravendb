@@ -106,7 +106,7 @@
 			}
 		}
 
-		public void Handle(IndexUpdated message)
+		void IHandle<IndexUpdated>.Handle(IndexUpdated message)
 		{
 			BeginRefreshIndexes();
 

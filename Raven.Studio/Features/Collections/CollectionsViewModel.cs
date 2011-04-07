@@ -167,7 +167,7 @@
 			Events.Publish(new DatabaseScreenRequested(() => vm));
 		}
 
-		public void Handle(DocumentDeleted message)
+		void IHandle<DocumentDeleted>.Handle(DocumentDeleted message)
 		{
 			ActiveCollectionDocuments
 				.Where(x => x.Id == message.DocumentId)

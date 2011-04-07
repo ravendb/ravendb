@@ -4,7 +4,6 @@ namespace Raven.Studio.Features.Database
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using System.ComponentModel.Composition.Hosting;
-	using System.IO;
 	using System.Linq;
 	using System.Net;
 	using System.Windows.Browser;
@@ -17,7 +16,6 @@ namespace Raven.Studio.Features.Database
 	using Client.Silverlight.Client;
 	using Framework.Extensions;
 	using Messages;
-	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Plugins;
 	using Plugins.Statistics;
@@ -26,8 +24,8 @@ namespace Raven.Studio.Features.Database
 	using Action = System.Action;
 
 	[Export(typeof(IServer))]
-	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class Server : PropertyChangedBase, IServer, IHandle<StatisticsUpdateRequested>
+	public class Server : PropertyChangedBase, IServer,
+		IHandle<StatisticsUpdateRequested>
 	{
 		const string DefaultDatabaseName = "Default Database";
 		readonly IEventAggregator events;
@@ -76,7 +74,7 @@ namespace Raven.Studio.Features.Database
 			}
 		}
 
-		public void Handle(StatisticsUpdateRequested message) { RefreshStatistics(false); }
+		void IHandle<StatisticsUpdateRequested>.Handle(StatisticsUpdateRequested message) { RefreshStatistics(false); }
 
 		public void Connect(Uri serverAddress, Action callback)
 		{
@@ -132,28 +130,30 @@ namespace Raven.Studio.Features.Database
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, baseUrl, "GET", credentials, convention);
 			var response = request.ReadResponseStringAsync();
 
-			response.ContinueWith(_ => Execute.OnUIThread( ()=> { 
+			response.ContinueWith(_ => Execute.OnUIThread(() =>
+			{
 				{
 					var urls = from item in JArray.Parse(_.Result)
 							   let url = item.Value<string>()
 							   select url;
 
 					var catalogs = from url in urls
-								   let fullUrl = Address + "/silverlight/plugin" + url.Replace('\\','/')
-								   let uri = new Uri(fullUrl,UriKind.Absolute)
+								   let fullUrl = Address + "/silverlight/plugin" + url.Replace('\\', '/')
+								   let uri = new Uri(fullUrl, UriKind.Absolute)
 								   select new DeploymentCatalog(uri);
 
 					foreach (var deployment in catalogs)
 					{
-						deployment.DownloadCompleted += (s,e)=>
+						deployment.DownloadCompleted += (s, e) =>
 						{
 							if (e.Error != null)
-								throw e.Error;                           		
+								throw e.Error;
 						};
 						deployment.DownloadAsync();
 						catalog.Catalogs.Add(deployment);
 					}
-				} }));
+				}
+			}));
 		}
 
 		public string CurrentDatabase

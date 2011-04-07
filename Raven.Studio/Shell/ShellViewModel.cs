@@ -99,7 +99,7 @@
 			get { return Application.Current.IsRunningOutOfBrowser; }
 		}
 
-		public void Handle(DisplayCurrentDatabaseRequested message)
+		void IHandle<DisplayCurrentDatabaseRequested>.Handle(DisplayCurrentDatabaseRequested message)
 		{
 			//TODO: record the previous database so that the back button is more intuitive
 			this.TrackNavigationTo(databaseScreen, events);

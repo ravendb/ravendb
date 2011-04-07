@@ -40,9 +40,7 @@
 
         public IEnumerable<dynamic> Indexes { get; private set; }
 
-        #region IHandle<StatisticsUpdated> Members
-
-        public void Handle(StatisticsUpdated message)
+    	void IHandle<StatisticsUpdated>.Handle(StatisticsUpdated message)
         {
             var stats = message.Statistics;
             var proxies = from index in stats.Indexes
@@ -55,7 +53,5 @@
 
             NotifyOfPropertyChange(() => Indexes);
         }
-
-        #endregion
     }
 }

@@ -43,7 +43,7 @@
 
 		readonly Stack<NavigationOccurred> history = new Stack<NavigationOccurred>();
 
-		public void Handle(NavigationOccurred message)
+		void IHandle<NavigationOccurred>.Handle(NavigationOccurred message)
 		{
 			history.Push(message);
 		}

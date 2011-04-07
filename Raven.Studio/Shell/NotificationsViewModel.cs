@@ -31,7 +31,7 @@
 
 		public BindableCollection<NotificationRaised> Notifications { get; private set; }
 
-		public void Handle(NotificationRaised message)
+		void IHandle<NotificationRaised>.Handle(NotificationRaised message)
 		{
 			Notifications.Insert(0, message);
 			NotifyOfPropertyChange( ()=> MostRecent);
