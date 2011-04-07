@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -11,6 +12,8 @@ using Raven.Client.Client;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Server;
+using Raven.Json.Linq;
 using Raven.Storage.Managed;
 using Raven.Tests.Document;
 
@@ -62,6 +65,26 @@ namespace Raven.Tests
 
             return documentStore;
         }
+
+		protected void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore)
+		{
+			if (Debugger.IsAttached == false)
+				return;
+
+			documentStore.DatabaseCommands.Put("Pls Delete Me", null,
+											   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
+											   new RavenJObject());
+			using (var server = new RavenDbHttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
+			{
+				server.Start();
+				Process.Start(documentStore.Configuration.ServerUrl); // start the server
+
+				do
+				{
+					Thread.Sleep(100);
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
+			}
+		}
 
     	protected virtual void ModifyConfiguration(RavenConfiguration configuration)
     	{
