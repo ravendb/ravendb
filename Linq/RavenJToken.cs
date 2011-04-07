@@ -36,8 +36,12 @@ namespace Raven.Json.Linq
 
         internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
         {
-            ValidationUtils.ArgumentNotNull(o, "o");
+			ValidationUtils.ArgumentNotNull(o, "o");
             ValidationUtils.ArgumentNotNull(jsonSerializer, "jsonSerializer");
+
+			var ravenJToken = o as RavenJToken;
+			if (ravenJToken != null)
+				return ravenJToken;
 
             RavenJToken token;
             using (var jsonWriter = new RavenJTokenWriter())
@@ -67,7 +71,7 @@ namespace Raven.Json.Linq
         /// <returns>A <see cref="RavenJToken"/> with the value of the specified object</returns>
         public static RavenJToken FromObject(object o, JsonSerializer jsonSerializer)
         {
-            return FromObjectInternal(o, jsonSerializer);
+        	return FromObjectInternal(o, jsonSerializer);
         }
 
         /// <summary>
