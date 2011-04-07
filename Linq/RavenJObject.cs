@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using Newtonsoft.Json;
@@ -21,19 +22,23 @@ namespace Raven.Json.Linq
             get { return JTokenType.Object; }
         }
 
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public IDictionary<string, RavenJToken> Properties
         {
 			get
 			{
 				if (properties == null)
 				{
+					properties = new CopyOnWriteJDictionary();
+					if (isShallowCopy) parentObject[parentKey] = this;
 					isShallowCopy = false;
-					return (properties = new CopyOnWriteJDictionary<string>());
+					return properties;
 				}
 
 				if (isShallowCopy)
 				{
 					properties = properties.Clone();
+					parentObject[parentKey] = this;
 					isShallowCopy = false;
 				}
 				return properties;
@@ -45,8 +50,11 @@ namespace Raven.Json.Linq
 			get { return properties == null ? 0 : properties.Count; }
     	}
 
-        private CopyOnWriteJDictionary<string> properties;
-    	private bool isShallowCopy;
+        private CopyOnWriteJDictionary properties;
+    	
+		private bool isShallowCopy;
+    	private string parentKey;
+    	private System.Collections.Generic.IDictionary<string, RavenJToken> parentObject;
 
 		public override IEnumerable<RavenJToken> Children()
 		{
@@ -62,7 +70,7 @@ namespace Raven.Json.Linq
 
 		public RavenJObject(IEnumerable<KeyValuePair<string, RavenJToken>> props)
 		{
-			properties = new CopyOnWriteJDictionary<string>();
+			properties = new CopyOnWriteJDictionary();
 			foreach (var kv in props)
 			{
 				properties.Add(kv);
@@ -131,11 +139,13 @@ namespace Raven.Json.Linq
             return new RavenJObject(this);
         }
 
-		internal override RavenJToken MakeShallowCopy()
+		internal override RavenJToken MakeShallowCopy(IDictionary<string, RavenJToken> dict, object key)
 		{
 			var o = new RavenJObject();
 			o.isShallowCopy = true;
 			o.properties = properties;
+			o.parentObject = dict;
+			o.parentKey = key as string;
 			return o;
 		}
 
