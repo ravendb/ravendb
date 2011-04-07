@@ -57,7 +57,7 @@
 				<ti:MenuItem Header="Copy Document Id to Clipboard"
 							 Tag="{Binding Id}"
 							 cm:Action.TargetWithoutContext="CopyDocumentIdToClipboard"
-							 cm:Message.Attach="Click=Execute($this.Tag)" />
+							 cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
 			</ti:ContextMenu>
 		</ti:ContextMenuService.ContextMenu>
 
@@ -82,7 +82,7 @@
 							Padding="4,2">
 						<HyperlinkButton Content="Save"
 										 cm:Action.TargetWithoutContext="SaveDocument"
-										 cm:Message.Attach="Click=Execute($dataContext)"
+										 cm:Message.Attach="[Click]=[Execute($dataContext)]"
 										 FontSize="9.333" />
 					</Border>
 					<Border Margin="0,2,2,2"
@@ -100,7 +100,16 @@
 						<HyperlinkButton Content="Delete"
 										 Tag="{Binding Id}"
 										 cm:Action.TargetWithoutContext="DeleteDocument"
-										 cm:Message.Attach="Click=Execute($this.Tag)"
+										 cm:Message.Attach="[Click]=[Execute($this.Tag)]"
+										 FontSize="9.333" />
+					</Border>
+					<Border Margin="0,2,2,2"
+							CornerRadius="2"
+							Background="#19000000"
+							Padding="4,2">
+						<HyperlinkButton Content="Refresh"
+										 cm:Action.TargetWithoutContext="LoadDocument"
+										 cm:Message.Attach="[Click]=[Execute($dataContext)]"
 										 FontSize="9.333" />
 					</Border>
 
