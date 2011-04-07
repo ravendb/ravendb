@@ -80,6 +80,7 @@
 						<Grid Grid.Row="3"
 							  Grid.Column="1">
 							<Button x:Name="AddReduce"
+									Style="{StaticResource FormButton}"
 									VerticalAlignment="Top"
 									HorizontalAlignment="Left"
 									Content="reduce" />
@@ -99,8 +100,10 @@
 						<Grid Grid.Row="5"
 							  Grid.Column="1">
 							<Button x:Name="AddTransformResults"
+									Style="{StaticResource FormButton}"
 									VerticalAlignment="Top"
 									HorizontalAlignment="Left"
+									Margin="0 0 0 6"
 									Content="transform results" />
 							<Editors:LinqEditor Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
 												Text="{Binding TransformResults, Mode=TwoWay}" />
@@ -113,6 +116,7 @@
 										HorizontalAlignment="Stretch" />
 
 						<Button x:Name="AddField"
+								Style="{StaticResource FormButton}"
 								Grid.Row="7"
 								ToolTipService.ToolTip="Customize this index."
 								Content="+"
@@ -154,8 +158,10 @@
 													 Grid.Column="1"
 													 Grid.ColumnSpan="3" />
 											<Button Content="-"
+													Style="{StaticResource FormButton}"
 													cm:Message.Attach="RemoveField($dataContext)"
 													HorizontalAlignment="Left"
+													Margin="4 0 0 0"
 													Grid.Column="4" />
 
 											<c:Label Content="storage"
@@ -254,28 +260,37 @@
 				</ItemsControl>
 			</tk:DockPanel>
 
-			<StackPanel Grid.Row="3"
-						Margin="0,0,0,10"
-						d:LayoutOverrides="Height">
+			<tk:DockPanel Grid.Row="3"
+						  Margin="60,0,0,10">
+
+				<Button x:Name="QueryAgainstIndex"
+						tk:DockPanel.Dock="Left"
+						ToolTipService.ToolTip="Executes a simple query (no criteria) against the index. Save the query to enable the button."
+						Style="{StaticResource FormButton}"
+						IsEnabled="{Binding IsDirty, Converter={StaticResource booleanToOpposite}}"
+						Content="View Query Results" />
 
 				<StackPanel Orientation="Horizontal"
 							d:LayoutOverrides="Width, GridBox"
 							HorizontalAlignment="Right">
+
 					<Button x:Name="Save"
+							Style="{StaticResource FormButton}"
 							ToolTipService.ToolTip="Save Index">
 						<Image Source="../../../Resources/Images/save-small.png"
 							   Stretch="None" />
 					</Button>
+
 					<Button x:Name="Remove"
+							Style="{StaticResource FormButton}"
 							ToolTipService.ToolTip="Delete Index">
 						<Image Source="../../../Resources/Images/delete-small.png"
 							   Stretch="None" />
 					</Button>
-					<Button x:Name="QueryAgainstIndex"
-							IsEnabled="{Binding IsDirty, Converter={StaticResource booleanToOpposite}}"
-							Content="View Query Results" />
+
 				</StackPanel>
-			</StackPanel>
+			</tk:DockPanel>
+
 		</Grid>
 	</tk:BusyIndicator>
 
