@@ -159,15 +159,12 @@ namespace Raven.Http.Extensions
 
 	    private static string GetHeaderValue(RavenJToken header)
 	    {
-	    	var headerValue = header as RavenJValue;
-			if (headerValue == null)
-				return string.Empty;
-
-			if (headerValue.Type == JTokenType.Date)
+	    	if (header.Type == JTokenType.Date)
             {
-                return headerValue.Value<DateTime>().ToString("r");
+                return header.Value<DateTime>().ToString("r");
             }
-	        return StripQuotesIfNeeded(headerValue.ToString(Formatting.None));
+
+	        return StripQuotesIfNeeded(header.ToString(Formatting.None));
 	    }
 
 	    private static string StripQuotesIfNeeded(string str)
