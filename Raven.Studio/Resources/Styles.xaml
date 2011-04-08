@@ -524,27 +524,27 @@
 								<VisualState x:Name="MouseOver">
 									<Storyboard>
 										<DoubleAnimation Duration="0"
-														 To="0.5"
+														 To="1"
 														 Storyboard.TargetProperty="(UIElement.Opacity)"
-														 Storyboard.TargetName="highlight"
+														 Storyboard.TargetName="hover"
 														 d:IsOptimized="True" />
 									</Storyboard>
 								</VisualState>
 								<VisualState x:Name="Pressed">
 									<Storyboard>
 										<DoubleAnimation Duration="0"
-														 To="0.75"
+														 To="1"
 														 Storyboard.TargetProperty="(UIElement.Opacity)"
-														 Storyboard.TargetName="highlight"
+														 Storyboard.TargetName="pressed"
 														 d:IsOptimized="True" />
 									</Storyboard>
 								</VisualState>
 								<VisualState x:Name="Disabled">
 									<Storyboard>
 										<DoubleAnimation Duration="0"
-														 To=".55"
+														 To="0.65"
 														 Storyboard.TargetProperty="Opacity"
-														 Storyboard.TargetName="DisabledVisualElement" />
+														 Storyboard.TargetName="disabled" />
 									</Storyboard>
 								</VisualState>
 							</VisualStateGroup>
@@ -561,7 +561,7 @@
 										<DoubleAnimation Duration="0"
 														 To="1"
 														 Storyboard.TargetProperty="Opacity"
-														 Storyboard.TargetName="FocusVisualElement" />
+														 Storyboard.TargetName="focus" />
 									</Storyboard>
 								</VisualState>
 								<VisualState x:Name="Unfocused" />
@@ -571,38 +571,32 @@
 								BorderBrush="{TemplateBinding BorderBrush}"
 								BorderThickness="{TemplateBinding BorderThickness}"
 								CornerRadius="3"
-								Background="{TemplateBinding Background}" />
-						<Border x:Name="highlight"
-								CornerRadius="3"
-								Opacity="0">
-							<Border.Background>
-								<LinearGradientBrush EndPoint="0.5,1"
-													 StartPoint="0.5,0">
-									<GradientStop Color="#FF626262" />
-									<GradientStop Color="#FF9A9A9A"
-												  Offset="0.5" />
-									<GradientStop Color="#FF828282"
-												  Offset="1" />
-								</LinearGradientBrush>
-							</Border.Background>
-						</Border>
+								Background="{StaticResource ButtonBackgroundBrush}" />
+						<Border x:Name="hover"
+								Background="{StaticResource ButtonForegroundPressedBrush}"
+								Opacity="0"
+								CornerRadius="3" />
+						<Border x:Name="pressed"
+								Background="{StaticResource ButtonForegroundHoverBrush}"
+								Opacity="0"
+								CornerRadius="3" />
 						<ContentPresenter x:Name="contentPresenter"
 										  ContentTemplate="{TemplateBinding ContentTemplate}"
 										  Content="{TemplateBinding Content}"
 										  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
 										  Margin="{TemplateBinding Padding}"
 										  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-						<Rectangle x:Name="DisabledVisualElement"
-								   Fill="Black"
+						<Rectangle x:Name="disabled"
+								   Fill="White"
 								   IsHitTestVisible="false"
 								   RadiusY="2"
 								   RadiusX="2"
 								   Opacity="0" />
-						<Rectangle x:Name="FocusVisualElement"
+						<Rectangle x:Name="focus"
 								   IsHitTestVisible="false"
 								   RadiusY="2"
 								   RadiusX="2"
-								   Stroke="{StaticResource ButtonForegroundDisabledBrush}"
+								   Stroke="{StaticResource AccentTextBrush}"
 								   StrokeThickness="1"
 								   Opacity="0" />
 					</Grid>
