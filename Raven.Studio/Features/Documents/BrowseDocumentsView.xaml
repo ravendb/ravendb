@@ -19,27 +19,59 @@
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 
-		<tk:DockPanel d:IsLocked="True">
+		<tk:DockPanel>
 			<TextBlock Text="Documents"
 					   tk:DockPanel.Dock="Left"
 					   Style="{StaticResource Header}" />
+			<Border tk:DockPanel.Dock="Right"
+					HorizontalAlignment="Right"
+					Margin="0,0,0,10"
+					VerticalAlignment="Bottom"
+					BorderThickness="1"
+					BorderBrush="{StaticResource PanelBorderBrush}"
+					CornerRadius="4">
 
-			<StackPanel Orientation="Horizontal"
-						tk:DockPanel.Dock="Right"
-						HorizontalAlignment="Right"
-						VerticalAlignment="Bottom"
-						Margin="0,0,0,10">
-				<TextBox MinWidth="350"
-						 x:Name="documentId">
-					<i:Interaction.Behaviors>
-						<local:Watermark Text="Search by Document Id"
-										 Foreground="LightGray" />
-					</i:Interaction.Behaviors>
-				</TextBox>
-				<HyperlinkButton Style="{StaticResource SearchButtonStyle}"
-								 cm:Action.TargetWithoutContext="SearchForDocumentById"
-								 cm:Message.Attach="Execute(documentId)" />
-			</StackPanel>
+				<StackPanel Orientation="Horizontal"
+							Height="22"
+							Width="375">
+					<TextBox MinWidth="350"
+							 x:Name="documentId"
+							 BorderThickness="0">
+						<i:Interaction.Behaviors>
+							<local:Watermark Text="Search by Document Id"
+											 Foreground="LightGray" />
+						</i:Interaction.Behaviors>
+					</TextBox>
+					<Button cm:Action.TargetWithoutContext="SearchForDocumentById"
+							cm:Message.Attach="Execute(documentId)"
+							Margin="0">
+						<Grid Width="14"
+							  Height="16"
+							  HorizontalAlignment="Center"
+							  VerticalAlignment="Center"
+							  Margin="3,2,0,0">
+							<Rectangle Fill="#FF767676"
+									   HorizontalAlignment="Right"
+									   Height="8"
+									   Margin="0,0,-0.164,-0.334"
+									   RadiusY="0.5"
+									   RadiusX="0.5"
+									   RenderTransformOrigin="0.5,0.5"
+									   Stroke="#FF767676"
+									   UseLayoutRounding="False"
+									   VerticalAlignment="Bottom"
+									   Width="4">
+								<Rectangle.RenderTransform>
+									<RotateTransform Angle="-45" />
+								</Rectangle.RenderTransform>
+							</Rectangle>
+							<Ellipse Fill="Transparent"
+									 Margin="0,0,1,3"
+									 Stroke="#FF767676" />
+						</Grid>
+					</Button>
+				</StackPanel>
+			</Border>
 		</tk:DockPanel>
 
 		<tk:DockPanel Grid.Row="1">

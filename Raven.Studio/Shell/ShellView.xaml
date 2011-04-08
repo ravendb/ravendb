@@ -12,10 +12,8 @@
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
 
-		<Border Background="{StaticResource DefaultScreenBackground}"
-			BorderBrush="#17497A"
-			BorderThickness="1">
-		<Border BorderBrush="#5D8491"
+	<Border Style="{StaticResource ShellOuterBorder}">
+		<Border BorderBrush="{StaticResource ShellInnerBorderBrush}"
 				BorderThickness="1">
 			<Grid>
 				<Grid>
@@ -29,7 +27,7 @@
 
 					<Border x:Name="titleBorder"
 							Height="30"
-							Background="{StaticResource DarkGradient}"
+							Background="{StaticResource TitleBarGradient}"
 							cm:Message.Attach="[Event MouseLeftButtonDown] = [Action DragWindow]"
 							f:DoubleClickEvent.AttachAction="ToggleWindow">
 						<Grid>
@@ -48,7 +46,7 @@
 										   Style="{StaticResource ApplicationNameStyle}"
 										   TextOptions.TextHintingMode="Fixed"
 										   FontSize="20"
-										   Foreground="{StaticResource ToolbarBackgroundBrush}"
+										   Foreground="{StaticResource LightTextBrush}"
 										   VerticalAlignment="Center"
 										   Margin="5, 0, 0, 0" />
 							</StackPanel>
@@ -71,7 +69,9 @@
 
 					<ContentControl x:Name="Navigation"
 									Visibility="{Binding Server.IsInitialized, Converter={StaticResource visibleWhenTrue}}"
-									Grid.Row="1" />
+									Grid.Row="1"
+									HorizontalAlignment="Left"
+									VerticalAlignment="Top" />
 
 					<ContentControl x:Name="BusyStatus"
 									Margin="0 6 0 0"
@@ -99,7 +99,7 @@
 
 					<Border x:Name="footer"
 							Grid.Row="4"
-							Background="{StaticResource InverseDarkGradient}">
+							Background="{StaticResource FooterGradient}">
 						<tk:DockPanel>
 							<StackPanel HorizontalAlignment="Right"
 										Orientation="Horizontal"

@@ -8,11 +8,10 @@
 			 xmlns:i="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
 			 xmlns:l="clr-namespace:Raven.Studio.Controls"
 			 mc:Ignorable="d"
-			 d:DesignHeight="300"
-			 d:DesignWidth="400">
+			 d:DesignHeight="50" Width="500">
 
 	<StackPanel Orientation="Horizontal"
-				tk:DockPanel.Dock="Top">
+				tk:DockPanel.Dock="Top" Background="{StaticResource DefaultScreenBackground}">
 
 		<Button x:Name="GoBack"
 				Margin="5"

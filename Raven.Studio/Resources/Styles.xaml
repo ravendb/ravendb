@@ -10,12 +10,25 @@
 		<ResourceDictionary Source="Fonts.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
+	<Style x:Key="ShellOuterBorder"
+		   TargetType="Border">
+		<Setter Property="BorderThickness"
+				Value="1" />
+		<Setter Property="Background"
+				Value="{StaticResource DefaultScreenBackground}" />
+		<Setter Property="BorderBrush">
+			<Setter.Value>
+				<SolidColorBrush Color="{StaticResource ShellBorderColor}" />
+			</Setter.Value>
+		</Setter>
+	</Style>
+
 	<Style TargetType="c:Label"
 		   x:Key="LabelBaseStyle">
 		<Setter Property="FontSize"
 				Value="{StaticResource ControlTitleFontSize}" />
 		<Setter Property="Foreground"
-				Value="{StaticResource LabelTextBrush}" />
+				Value="{StaticResource LabelForegroundBrush}" />
 		<Setter Property="Margin"
 				Value="0 0 4 0" />
 		<Setter Property="HorizontalAlignment"
@@ -111,9 +124,11 @@
 										  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
 										  Margin="{TemplateBinding Padding}" />
 						<Border x:Name="selectedVisual"
-								BorderBrush="{StaticResource DividerBrush}"
-								BorderThickness="1,0,0,0"
-								CornerRadius="5"
+								Style="{StaticResource Grouping}"
+								Margin="0"
+								Padding="0"
+								VerticalAlignment="Stretch"
+								HorizontalAlignment="Stretch"
 								Opacity="0" />
 					</Grid>
 				</ControlTemplate>
@@ -232,12 +247,8 @@
 
 	<Style x:Key="LinkStyle"
 		   TargetType="HyperlinkButton">
-		<Setter Property="BorderThickness"
-				Value="1" />
-		<Setter Property="BorderBrush"
-				Value="{StaticResource NavigationBorderBrush}" />
 		<Setter Property="Foreground"
-				Value="{StaticResource NavigationForegroundBrush}" />
+				Value="{StaticResource ButtonForegroundBrush}" />
 		<Setter Property="FontFamily"
 				Value="{StaticResource HeaderFontFamily}" />
 		<Setter Property="FontSize"
@@ -246,355 +257,86 @@
 				Value="Fixed" />
 		<Setter Property="Cursor"
 				Value="Hand" />
-		<Setter Property="MinHeight"
-				Value="28" />
-		<Setter Property="VerticalContentAlignment"
-				Value="Center" />
-		<Setter Property="HorizontalContentAlignment"
-				Value="Center" />
-		<Setter Property="Padding"
-				Value="8,4,0,4" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="HyperlinkButton">
-					<Grid x:Name="ButtonGrid"
-						  Cursor="{TemplateBinding Cursor}">
+					<Grid Cursor="{TemplateBinding Cursor}"
+						  MinWidth="{TemplateBinding MinWidth}"
+						  MinHeight="{TemplateBinding MinHeight}">
 						<VisualStateManager.VisualStateGroups>
 							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.2" />
+								</VisualStateGroup.Transitions>
 								<VisualState x:Name="Normal" />
 								<VisualState x:Name="MouseOver">
 									<Storyboard>
-										<ObjectAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="InteractiveElementBorder"
-																	   Storyboard.TargetProperty="(UIElement.Visibility)">
-											<DiscreteObjectKeyFrame KeyTime="00:00:00">
-												<DiscreteObjectKeyFrame.Value>
-													<Visibility>Visible</Visibility>
-												</DiscreteObjectKeyFrame.Value>
-											</DiscreteObjectKeyFrame>
-										</ObjectAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="InteractiveElementBorder"
-																	   Storyboard.TargetProperty="(UIElement.Opacity)">
-											<EasingDoubleKeyFrame KeyTime="00:00:00"
-																  Value="0.95" />
-										</DoubleAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="ContentPresenter"
-																	   Storyboard.TargetProperty="(UIElement.Opacity)">
-											<EasingDoubleKeyFrame KeyTime="00:00:00"
-																  Value="0" />
-										</DoubleAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="InteractiveBorder"
-																	   Storyboard.TargetProperty="(UIElement.Opacity)">
-											<EasingDoubleKeyFrame KeyTime="00:00:00"
-																  Value="1" />
-										</DoubleAnimationUsingKeyFrames>
+										<ColorAnimation Duration="0"
+														To="{StaticResource ButtonForegroundHoverColor}"
+														Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
+														Storyboard.TargetName="Content"
+														d:IsOptimized="True" />
 									</Storyboard>
 								</VisualState>
 								<VisualState x:Name="Pressed">
 									<Storyboard>
-										<ObjectAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="InteractiveElementBorder"
-																	   Storyboard.TargetProperty="(UIElement.Visibility)">
-											<DiscreteObjectKeyFrame KeyTime="00:00:00">
-												<DiscreteObjectKeyFrame.Value>
-													<Visibility>Visible</Visibility>
-												</DiscreteObjectKeyFrame.Value>
-											</DiscreteObjectKeyFrame>
-										</ObjectAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="InteractiveElementBorder"
-																	   Storyboard.TargetProperty="(UIElement.Opacity)">
-											<EasingDoubleKeyFrame KeyTime="00:00:00"
-																  Value="0.8" />
-										</DoubleAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="ContentPresenter"
-																	   Storyboard.TargetProperty="(UIElement.Opacity)">
-											<EasingDoubleKeyFrame KeyTime="00:00:00"
-																  Value="0.5" />
-										</DoubleAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="InteractiveBorder"
-																	   Storyboard.TargetProperty="(UIElement.Opacity)">
-											<EasingDoubleKeyFrame KeyTime="00:00:00"
-																  Value="1" />
-										</DoubleAnimationUsingKeyFrames>
+										<ColorAnimation Duration="0"
+														To="{StaticResource ButtonForegroundPressedColor}"
+														Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
+														Storyboard.TargetName="Content"
+														d:IsOptimized="True" />
 									</Storyboard>
 								</VisualState>
 								<VisualState x:Name="Disabled">
 									<Storyboard>
-										<ObjectAnimationUsingKeyFrames Duration="0"
-																	   Storyboard.TargetName="DisabledOverlay"
-																	   Storyboard.TargetProperty="Visibility">
-											<DiscreteObjectKeyFrame KeyTime="0">
-												<DiscreteObjectKeyFrame.Value>
-													<Visibility>Visible</Visibility>
-												</DiscreteObjectKeyFrame.Value>
-											</DiscreteObjectKeyFrame>
-										</ObjectAnimationUsingKeyFrames>
-										<ObjectAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="ContentPresenter"
-																	   Storyboard.TargetProperty="(FrameworkElement.HorizontalAlignment)">
-											<DiscreteObjectKeyFrame KeyTime="00:00:00">
-												<DiscreteObjectKeyFrame.Value>
-													<HorizontalAlignment>Center</HorizontalAlignment>
-												</DiscreteObjectKeyFrame.Value>
-											</DiscreteObjectKeyFrame>
-										</ObjectAnimationUsingKeyFrames>
-										<ObjectAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="ContentPresenter"
-																	   Storyboard.TargetProperty="(FrameworkElement.VerticalAlignment)">
-											<DiscreteObjectKeyFrame KeyTime="00:00:00">
-												<DiscreteObjectKeyFrame.Value>
-													<VerticalAlignment>Center</VerticalAlignment>
-												</DiscreteObjectKeyFrame.Value>
-											</DiscreteObjectKeyFrame>
-										</ObjectAnimationUsingKeyFrames>
-										<ObjectAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="DisabledOverlay"
-																	   Storyboard.TargetProperty="(FrameworkElement.HorizontalAlignment)">
-											<DiscreteObjectKeyFrame KeyTime="00:00:00">
-												<DiscreteObjectKeyFrame.Value>
-													<HorizontalAlignment>Center</HorizontalAlignment>
-												</DiscreteObjectKeyFrame.Value>
-											</DiscreteObjectKeyFrame>
-										</ObjectAnimationUsingKeyFrames>
-										<ObjectAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="DisabledOverlay"
-																	   Storyboard.TargetProperty="(FrameworkElement.VerticalAlignment)">
-											<DiscreteObjectKeyFrame KeyTime="00:00:00">
-												<DiscreteObjectKeyFrame.Value>
-													<VerticalAlignment>Center</VerticalAlignment>
-												</DiscreteObjectKeyFrame.Value>
-											</DiscreteObjectKeyFrame>
-										</ObjectAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="ContentPresenter"
-																	   Storyboard.TargetProperty="(UIElement.Opacity)">
-											<EasingDoubleKeyFrame KeyTime="00:00:00"
-																  Value="0" />
-										</DoubleAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="DisabledOverlay"
-																	   Storyboard.TargetProperty="(UIElement.Opacity)">
-											<EasingDoubleKeyFrame KeyTime="00:00:00"
-																  Value="0.5" />
-										</DoubleAnimationUsingKeyFrames>
+										<ColorAnimation Duration="0"
+														To="{StaticResource ButtonForegroundDisabledColor}"
+														Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
+														Storyboard.TargetName="Content"
+														d:IsOptimized="True" />
 									</Storyboard>
 								</VisualState>
 							</VisualStateGroup>
 							<VisualStateGroup x:Name="LinkStates">
 								<VisualState x:Name="ActiveLink">
 									<Storyboard>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00"
-																	   Duration="00:00:00.0010000"
-																	   Storyboard.TargetName="ContentBorder"
-																	   Storyboard.TargetProperty="(UIElement.Opacity)">
-											<EasingDoubleKeyFrame KeyTime="00:00:00"
-																  Value="1" />
-										</DoubleAnimationUsingKeyFrames>
+										<ColorAnimation Duration="0"
+														To="{StaticResource ButtonForegroundPressedColor}"
+														Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+														Storyboard.TargetName="ContentBorder"
+														d:IsOptimized="True" />
 									</Storyboard>
 								</VisualState>
 								<VisualState x:Name="InactiveLink" />
 							</VisualStateGroup>
+							<VisualStateGroup x:Name="FocusStates">
+								<VisualState x:Name="Unfocused" />
+								<VisualState x:Name="Focused" />
+							</VisualStateGroup>
 						</VisualStateManager.VisualStateGroups>
 						<Border x:Name="ContentBorder"
-								MinWidth="{TemplateBinding MinWidth}"
-								MinHeight="{TemplateBinding MinHeight}"
-								Opacity="0.4"
-								Padding="0">
-							<ContentPresenter x:Name="ContentPresenter"
-											  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-											  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-											  Margin="{TemplateBinding Padding}"
-											  Content="{TemplateBinding Content}"
-											  ContentTemplate="{TemplateBinding ContentTemplate}" />
-						</Border>
-						<Border x:Name="InteractiveBorder"
-								MinWidth="{TemplateBinding MinWidth}"
-								MinHeight="{TemplateBinding MinHeight}"
-								Background="{StaticResource HoverHyperlinkBackgroundBrush}"
-								BorderThickness="1,1,1,1"
-								Opacity="0"
-								BorderBrush="{StaticResource HoverHyperlinkBackgroundBrush}"
-								CornerRadius="0" />
-						<Border x:Name="InteractiveElementBorder"
-								HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-								VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-								Visibility="Collapsed">
-							<TextBlock x:Name="InteractiveElement"
-									   Foreground="{StaticResource HoverHyperlinkForegroundBrush}"
+								HorizontalAlignment="Center"
+								VerticalAlignment="Center"
+								CornerRadius="3"
+								Background="Transparent">
+							<TextBlock x:Name="Content"
 									   FontSize="{TemplateBinding FontSize}"
 									   FontWeight="{TemplateBinding FontWeight}"
 									   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
 									   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
 									   Margin="{TemplateBinding Padding}"
-									   Text="{TemplateBinding Content}" />
+									   Text="{TemplateBinding Content}">
+								<TextBlock.Foreground>
+									<SolidColorBrush Color="{StaticResource ButtonForegroundColor}" />
+								</TextBlock.Foreground>
+							</TextBlock>
 						</Border>
-						<TextBlock x:Name="DisabledOverlay"
-								   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-								   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-								   Margin="{TemplateBinding Padding}"
-								   Text="{TemplateBinding Content}"
-								   Foreground="#FFAAAAAA"
-								   Visibility="Collapsed" />
 					</Grid>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
-	</Style>
-
-	<!--SearchButtonStyle-->
-	<Style x:Key="SearchButtonStyle"
-		   TargetType="HyperlinkButton">
-		<Setter Property="Margin"
-				Value="-18,2,18,5" />
-		<Setter Property="ContentTemplate">
-			<Setter.Value>
-				<DataTemplate>
-					<Grid Width="14"
-						  Height="16"
-						  HorizontalAlignment="Center"
-						  VerticalAlignment="Center"
-						  Margin="3,2,0,0">
-						<Rectangle Fill="#FF767676"
-								   HorizontalAlignment="Right"
-								   Height="8"
-								   Margin="0,0,-0.164,-0.334"
-								   RadiusY="0.5"
-								   RadiusX="0.5"
-								   RenderTransformOrigin="0.5,0.5"
-								   Stroke="#FF767676"
-								   UseLayoutRounding="False"
-								   VerticalAlignment="Bottom"
-								   Width="4">
-							<Rectangle.RenderTransform>
-								<RotateTransform Angle="-45" />
-							</Rectangle.RenderTransform>
-						</Rectangle>
-						<Ellipse Fill="Transparent"
-								 Margin="0,0,1,3"
-								 Stroke="#FF767676" />
-					</Grid>
-				</DataTemplate>
-			</Setter.Value>
-		</Setter>
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="HyperlinkButton">
-					<Grid x:Name="grid"
-						  Cursor="{TemplateBinding Cursor}"
-						  Margin="-6,0,0,-4"
-						  Background="White">
-						<VisualStateManager.VisualStateGroups>
-							<VisualStateGroup x:Name="CommonStates">
-								<VisualState x:Name="Normal" />
-								<VisualState x:Name="MouseOver">
-									<Storyboard>
-										<ColorAnimation Duration="0"
-														To="{StaticResource HighlightLightColor}"
-														Storyboard.TargetProperty="(SolidColorBrush.Color)"
-														Storyboard.TargetName="ContentPresenterWrapperColor"
-														d:IsOptimized="True" />
-										<ColorAnimation Duration="0"
-														To="{StaticResource Gray5}"
-														Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)"
-														Storyboard.TargetName="grid"
-														d:IsOptimized="True" />
-									</Storyboard>
-								</VisualState>
-								<VisualState x:Name="Pressed">
-									<Storyboard>
-										<ColorAnimation Duration="0"
-														To="{StaticResource Gray5}"
-														Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)"
-														Storyboard.TargetName="grid"
-														d:IsOptimized="True" />
-										<DoubleAnimation Duration="0"
-														 To="0.8"
-														 Storyboard.TargetProperty="(UIElement.Opacity)"
-														 Storyboard.TargetName="grid"
-														 d:IsOptimized="True" />
-									</Storyboard>
-								</VisualState>
-								<VisualState x:Name="Disabled">
-									<Storyboard>
-										<ObjectAnimationUsingKeyFrames Duration="0"
-																	   Storyboard.TargetProperty="Visibility"
-																	   Storyboard.TargetName="DisabledOverlay">
-											<DiscreteObjectKeyFrame KeyTime="0">
-												<DiscreteObjectKeyFrame.Value>
-													<Visibility>Visible</Visibility>
-												</DiscreteObjectKeyFrame.Value>
-											</DiscreteObjectKeyFrame>
-										</ObjectAnimationUsingKeyFrames>
-									</Storyboard>
-								</VisualState>
-							</VisualStateGroup>
-							<VisualStateGroup x:Name="FocusStates">
-								<VisualState x:Name="Focused" />
-								<VisualState x:Name="Unfocused" />
-							</VisualStateGroup>
-						</VisualStateManager.VisualStateGroups>
-						<TextBlock x:Name="UnderlineTextBlock"
-								   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-								   Margin="{TemplateBinding Padding}"
-								   Text="{TemplateBinding Content}"
-								   TextDecorations="Underline"
-								   Visibility="Collapsed"
-								   VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
-                            <TextBlock.Foreground>
-                                <SolidColorBrush Color="{StaticResource HighlightDarkColor}" />
-                            </TextBlock.Foreground>
-						</TextBlock>
-						<TextBlock x:Name="DisabledOverlay"
-								   Foreground="{StaticResource DisabledForegroundBrush}"
-								   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-								   Margin="{TemplateBinding Padding}"
-								   Text="{TemplateBinding Content}"
-								   Visibility="Collapsed"
-								   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-								   Canvas.ZIndex="1" />
-						<ContentControl>
-							<ContentControl.Foreground>
-								<SolidColorBrush x:Name="ContentPresenterWrapperColor"
-												 Color="{StaticResource HighlightDarkColor}" />
-							</ContentControl.Foreground>
-							<ContentPresenter x:Name="contentPresenter"
-											  ContentTemplate="{TemplateBinding ContentTemplate}"
-											  Content="{TemplateBinding Content}"
-											  Width="21"
-											  Margin="2,3,0,0" />
-						</ContentControl>
-						<Rectangle x:Name="FocusVisualElement"
-								   IsHitTestVisible="false"
-								   Opacity="0"
-								   StrokeThickness="1">
-							<Rectangle.Stroke>
-								<SolidColorBrush Color="{StaticResource HighlightLightColor}" />
-							</Rectangle.Stroke>
-						</Rectangle>
-					</Grid>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
+		<Setter Property="Padding"
+				Value="4,2" />
 	</Style>
 
 	<Style x:Key="CollectionListBoxItemStyle"
@@ -711,7 +453,7 @@
 		<Setter Property="FontStyle"
 				Value="Italic" />
 		<Setter Property="Foreground"
-				Value="{StaticResource DarkBrush}" />
+				Value="{StaticResource DarkAccentBrush}" />
 	</Style>
 
 	<Style TargetType="Button"
@@ -860,7 +602,7 @@
 								   IsHitTestVisible="false"
 								   RadiusY="2"
 								   RadiusX="2"
-								   Stroke="{StaticResource DisabledForegroundBrush}"
+								   Stroke="{StaticResource ButtonForegroundDisabledBrush}"
 								   StrokeThickness="1"
 								   Opacity="0" />
 					</Grid>

@@ -27,7 +27,7 @@
 			<Setter Property="FontSize"
 					Value="{StaticResource LabelFontSize}" />
 			<Setter Property="Foreground"
-					Value="{StaticResource LabelTextBrush}" />
+					Value="{StaticResource LabelForegroundBrush}" />
 		</Style>
 
 		<Style x:Key="MetadataValue"
