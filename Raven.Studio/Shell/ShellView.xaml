@@ -100,13 +100,8 @@
 					<Border x:Name="footer"
 							Grid.Row="4"
 							Background="{StaticResource FooterGradient}">
-						<tk:DockPanel>
-							<c:DatabaseConnection Margin="0 0 4 0"
-												  HorizontalAlignment="Right"
-												  tk:DockPanel.Dock="Right"
-												  DataContext="{Binding ActiveItem.Server}" />
-
-						</tk:DockPanel>
+						<c:DatabaseConnection DataContext="{Binding ActiveItem.Server}"
+											  Margin="8 4 8 0" />
 					</Border>
 
 				</Grid>
