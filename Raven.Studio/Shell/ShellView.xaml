@@ -101,13 +101,11 @@
 							Grid.Row="4"
 							Background="{StaticResource FooterGradient}">
 						<tk:DockPanel>
-							<StackPanel HorizontalAlignment="Right"
-										Orientation="Horizontal"
-										tk:DockPanel.Dock="Right">
-								<c:DatabaseConnection Margin="0 0 4 0"
-													  DataContext="{Binding ActiveItem.Server}" />
-								<c:Gears Margin="0 0 4 0" />
-							</StackPanel>
+							<c:DatabaseConnection Margin="0 0 4 0"
+												  HorizontalAlignment="Right"
+												  tk:DockPanel.Dock="Right"
+												  DataContext="{Binding ActiveItem.Server}" />
+
 						</tk:DockPanel>
 					</Border>
 

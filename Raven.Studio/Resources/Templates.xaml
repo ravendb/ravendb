@@ -5,7 +5,6 @@
 					xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Layout;assembly=Microsoft.Expression.Interactions">
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Styles.xaml" />
-		<ResourceDictionary Source="ControlTemplates/Gears.xaml" />
 		<ResourceDictionary Source="ControlTemplates/Menu.xaml" />
 		<ResourceDictionary Source="ControlTemplates/Indexes.xaml" />
 	</ResourceDictionary.MergedDictionaries>

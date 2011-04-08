@@ -198,7 +198,6 @@
     <Compile Include="Controls\ErrorWindow.xaml.cs">
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\Gears.cs" />
     <Compile Include="Controls\Label.cs" />
     <Compile Include="Controls\LabelValuePanel.cs" />
     <Compile Include="Controls\Pager.xaml.cs">
@@ -281,10 +280,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Resource>
     <Resource Include="Resources\Templates.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Resource>
-    <Resource Include="Resources\ControlTemplates\Gears.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
