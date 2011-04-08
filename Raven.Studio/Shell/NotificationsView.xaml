@@ -8,6 +8,7 @@
 			 xmlns:System="clr-namespace:System;assembly=mscorlib"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 x:Name="userControl"
 			 x:Class="Raven.Studio.Shell.NotificationsView"
 			 mc:Ignorable="d"
@@ -18,15 +19,15 @@
 		<Converters:NotificationLevelToColorConverter x:Key="levelToColor" />
 	</UserControl.Resources>
 	<i:Interaction.Triggers>
-		<i:EventTrigger EventName="MouseEnter"
-						SourceName="border">
-			<ei:GoToStateAction TargetObject="{Binding ElementName=userControl}"
-								StateName="MouseOver" />
-		</i:EventTrigger>
-		<i:EventTrigger EventName="MouseLeftButtonDown"
-						SourceName="border">
+		<i:EventTrigger EventName="Click"
+						SourceName="closePopupButton">
 			<ei:GoToStateAction TargetObject="{Binding ElementName=userControl}"
 								StateName="Normal" />
+		</i:EventTrigger>
+		<i:EventTrigger EventName="Click"
+						SourceName="openPopupButton">
+			<ei:GoToStateAction TargetObject="{Binding ElementName=userControl}"
+								StateName="ShowNotifications" />
 		</i:EventTrigger>
 	</i:Interaction.Triggers>
 
@@ -34,7 +35,7 @@
 		<VisualStateManager.VisualStateGroups>
 			<VisualStateGroup x:Name="Common">
 				<VisualState x:Name="Normal" />
-				<VisualState x:Name="MouseOver">
+				<VisualState x:Name="ShowNotifications">
 					<Storyboard>
 						<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(Popup.IsOpen)"
 													   Storyboard.TargetName="popup">
@@ -61,14 +62,12 @@
 										   Transition="LeftTransition">
 				<l:TransitioningContentControl.ContentTemplate>
 					<DataTemplate>
-						<Grid x:Name="messageRoot">
+						<Grid x:Name="messageRoot"
+							  Visibility="{Binding Converter={StaticResource hiddenWhenNull}}">
 							<Grid.Resources>
 								<SolidColorBrush x:Key="LevelBrush"
 												 Color="{Binding Level, Converter={StaticResource levelToColor}}" />
 							</Grid.Resources>
-							<Grid.Visibility>
-								<Binding Converter="{StaticResource hiddenWhenNull}" />
-							</Grid.Visibility>
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="Auto" />
 								<ColumnDefinition Width="*" />
@@ -105,15 +104,21 @@
 			<Border x:Name="border"
 					Background="Transparent"
 					Grid.Column="1"
-					Width="32"
-					Height="32">
-				<TextBlock Grid.Column="1"
-						   Text="{Binding Notifications.Count}"
-						   Foreground="{StaticResource AccentTextBrush}"
-						   VerticalAlignment="Center"
-						   HorizontalAlignment="Center"
-						   Margin="0,0,0,6"
-						   FontWeight="Bold" />
+					VerticalAlignment="Top"
+					Margin="0,2,6,0">
+				<toolkit:DockPanel>
+					<Button x:Name="openPopupButton"
+							Margin="0"
+							HorizontalAlignment="Center"
+							VerticalAlignment="Center"
+							MinWidth="24"
+							MinHeight="16">
+						<TextBlock Text="{Binding Notifications.Count}"
+								   Foreground="{StaticResource ButtonForegroundBrush}"
+								   FontWeight="Bold"
+								   VerticalAlignment="Center" />
+					</Button>
+				</toolkit:DockPanel>
 			</Border>
 
 			<Popup x:Name="popup"
@@ -124,35 +129,62 @@
 						BorderThickness="1"
 						BorderBrush="{StaticResource AccentTextBrush}"
 						cm:Action.Target="{Binding}"
+						MaxHeight="600"
+						Padding="4"
 						Width="400">
-					<ItemsControl ItemsSource="{Binding Notifications}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<Grid Margin="0,0,0,4">
-									<Grid.ColumnDefinitions>
-										<ColumnDefinition Width="20" />
-										<ColumnDefinition />
-									</Grid.ColumnDefinitions>
-									<Button Content="-"
-											cm:Message.Attach="Dismiss($dataContext)"
-											HorizontalAlignment="Left"
-											VerticalAlignment="Top"
-											Margin="2" />
+					<toolkit:DockPanel>
+						<toolkit:DockPanel toolkit:DockPanel.Dock="Top">
+							<Button x:Name="closePopupButton"
+									Content="x"
+									toolkit:DockPanel.Dock="Right"
+									Margin="0" />
+							<TextBlock TextWrapping="Wrap"
+									   Text="Notifications"
+									   Style="{StaticResource PanelTitle}"
+									   FontSize="12" />
+						</toolkit:DockPanel>
+						<ScrollViewer VerticalScrollBarVisibility="Auto"
+									  Margin="0,6,0,0"
+									  BorderThickness="0">
+							<ItemsControl ItemsSource="{Binding Notifications}"
+										  d:LayoutOverrides="Height">
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<Grid Margin="0,0,0,4">
+											<Grid.Resources>
+												<SolidColorBrush x:Key="LevelBrush"
+																 Color="{Binding Level, Converter={StaticResource levelToColor}}" />
+											</Grid.Resources>
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition Width="20" />
+												<ColumnDefinition />
+											</Grid.ColumnDefinitions>
+											<Button Content="-"
+													cm:Message.Attach="Dismiss($dataContext)"
+													HorizontalAlignment="Left"
+													VerticalAlignment="Top"
+													Margin="2" />
 
-									<StackPanel Grid.Column="1">
-										<TextBlock TextWrapping="Wrap"
-												   Text="{Binding Message}"
-												   d:LayoutOverrides="Width, Height"
-												   VerticalAlignment="Center" />
+											<StackPanel Grid.Column="1"
+														Margin="0 0 4 0">
+												<TextBlock Text="{Binding Level}"
+														   Foreground="{StaticResource LevelBrush}" />
 
-										<TextBlock Text="{Binding CreatedAt, Converter={StaticResource howLongSince}}"
-												   Style="{StaticResource howLongSinceStyle}" />
-									</StackPanel>
-								</Grid>
-							</DataTemplate>
+												<TextBlock TextWrapping="Wrap"
+														   Text="{Binding Message}"
+														   d:LayoutOverrides="Width, Height"
+														   VerticalAlignment="Center" />
 
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
+												<TextBlock Text="{Binding CreatedAt, Converter={StaticResource howLongSince}}"
+														   Style="{StaticResource howLongSinceStyle}" />
+											</StackPanel>
+										</Grid>
+									</DataTemplate>
+
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</ScrollViewer>
+					</toolkit:DockPanel>
 				</Border>
 			</Popup>
 		</Grid>

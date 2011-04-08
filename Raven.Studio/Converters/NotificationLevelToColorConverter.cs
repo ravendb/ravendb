@@ -6,12 +6,15 @@
 	using System.Windows;
 	using System.Windows.Data;
 	using System.Windows.Media;
+	using Caliburn.Micro;
 	using Messages;
 
 	public class NotificationLevelToColorConverter : IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
+			if(Bootstrapper.IsInDesignMode) return Colors.Magenta;
+
 			NotificationLevel level;
 			if (!Enum.TryParse(value.ToString(), out level)) return null;
 
