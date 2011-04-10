@@ -205,7 +205,7 @@ namespace Raven.Database.Data
                 if (val.StartsWith("["))
                     return JArray.Parse(val);
                 DateTime result;
-                if (DateTime.TryParseExact(val, "r", CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
+                if (DateTime.TryParseExact(val, new[]{"r","o"}, CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
                     return new JValue(result);
                 return new JValue(val);
             }

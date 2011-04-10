@@ -52,7 +52,7 @@
 
 			var doc = new JObject();
 			doc["@metadata"] = new JObject();
-			doc["@metadata"]["Last-Modified"] = april_fools.ToString("r");
+			doc["@metadata"]["Last-Modified"] = april_fools;
 
 			var output = SerializationHelper.JObjectsToJsonDocuments(new List<JObject> { doc });
 

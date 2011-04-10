@@ -107,7 +107,7 @@ namespace Raven.Database.Server.Responders
 			{
 				context.SetStatusToNonAuthoritiveInformation();
 			}
-			doc.Metadata["Last-Modified"] = doc.LastModified.ToString("r");
+			doc.Metadata["Last-Modified"] = doc.LastModified;
 			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
 		}
 

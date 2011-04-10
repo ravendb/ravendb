@@ -77,7 +77,7 @@ namespace Raven.Database
 
 			var doc = new JObject(DataAsJson); //clone the document
 			var metadata = new JObject(Metadata); // clone the metadata
-			metadata["Last-Modified"] = JToken.FromObject(LastModified.ToString("r"));
+			metadata["Last-Modified"] = LastModified;
 			var etagProp = metadata.Property("@etag");
 			if (etagProp == null)
 			{

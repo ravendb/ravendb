@@ -59,7 +59,7 @@ namespace Raven.Client.Client
 
 		static DateTime ConvertToUtcDate(string date)
 		{
-			return DateTime.SpecifyKind( DateTime.ParseExact(date, "r", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), DateTimeKind.Utc);
+			return DateTime.SpecifyKind( DateTime.ParseExact(date, new[]{"r","o"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), DateTimeKind.Utc);
 		}
 
 		static T Extract<T>(IDictionary<string, JToken> metadata, string key, T defaultValue = default(T))
