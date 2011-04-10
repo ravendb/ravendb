@@ -54,19 +54,6 @@ namespace Raven.Client
 		/// <returns></returns>
 		IDocumentStore Initialize();
 
-		/// <summary>
-		/// Registers the delete listener.
-		/// </summary>
-		/// <param name="deleteListener">The delete listener.</param>
-		/// <returns></returns>
-		IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener);
-
-		/// <summary>
-		/// Registers the store listener.
-		/// </summary>
-		/// <param name="documentStoreListener">The document store listener.</param>
-		/// <returns></returns>
-		IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener);
 
 #if !NET_3_5
 		/// <summary>
