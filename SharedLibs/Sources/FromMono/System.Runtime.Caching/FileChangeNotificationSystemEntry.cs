@@ -28,10 +28,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.Caching.Hosting;
-using System.Text;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	// This class is NOT thread-safe - the caller needs to assure access serialization when
 	// calling Add/Remove

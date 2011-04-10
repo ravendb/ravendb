@@ -29,10 +29,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Runtime.Caching.Hosting;
 using System.Text;
+using FromMono.System.Runtime.Caching.Hosting;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
     internal sealed class HostFileChangeMonitor : FileChangeMonitor
 	{

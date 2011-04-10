@@ -31,7 +31,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	sealed class MemoryCacheEntry
 	{
