@@ -13,7 +13,7 @@ namespace Raven.Abstractions.Json
 			{
 				var dateTime = ((DateTime)value);
 				if (dateTime.Kind == DateTimeKind.Unspecified)
-					dateTime = dateTime.ToUniversalTime();
+					dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
 				writer.WriteValue(dateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 			}
 			else if (value is DateTimeOffset)
@@ -34,7 +34,7 @@ namespace Raven.Abstractions.Json
 					                           DateTimeStyles.RoundtripKind, out time))
 					{
 						if (time.Kind == DateTimeKind.Unspecified)
-							return DateTime.SpecifyKind(time, DateTimeKind.Utc);
+							return DateTime.SpecifyKind(time, DateTimeKind.Local);
 						return time;
 					}
 				}
