@@ -13,20 +13,17 @@ using System.Security.Principal;
 using System.ServiceProcess;
 using log4net;
 using log4net.Appender;
-using log4net.Config;
-using log4net.Filter;
 using log4net.Layout;
 using log4net.Repository.Hierarchy;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl.Logging;
-using Raven.Database.Server;
 using Raven.Http;
 
 namespace Raven.Server
 {
-    internal class Program
+    public static class Program
     {
         private static void Main(string[] args)
         {
@@ -38,23 +35,24 @@ namespace Raven.Server
                 }
                 catch (ReflectionTypeLoadException e)
                 {
+                    EmitWarningInRed();
+
                     Console.WriteLine(e);
                     foreach (var loaderException in e.LoaderExceptions)
                     {
                         Console.WriteLine("- - - -");
                         Console.WriteLine(loaderException);
                     }
-                    Environment.Exit(-1);
+
+                    WaitForUserInputAndExitWithError();
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("A critical error occurred while starting the server. Please see the exception details bellow for more details:");
-                    Console.WriteLine();
+                    EmitWarningInRed(); 
+                    
                     Console.WriteLine(e);
-                    while (Console.ReadKey(true).Key != ConsoleKey.Enter)
-                    {
-                    }
-                    Environment.Exit(-1);
+
+                    WaitForUserInputAndExitWithError();
                 }
             }
             else
@@ -62,6 +60,21 @@ namespace Raven.Server
                 // no try catch here, we want the exception to be logged by Windows
                 ServiceBase.Run(new RavenService());
             }
+        }
+
+        private static void WaitForUserInputAndExitWithError()
+        {
+            Console.WriteLine("Press any key to continue...");
+            Console.ReadKey(true);
+            Environment.Exit(-1);
+        }
+
+        private static void EmitWarningInRed()
+        {
+            var old = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("A critical error occurred while starting the server. Please see the exception details bellow for more details:");
+            Console.ForegroundColor = old;
         }
 
         private static void InteractiveRun(string[] args)
