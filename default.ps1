@@ -386,6 +386,7 @@ task CreateNugetPackage {
 	mkdir $build_dir\NuPack
 	mkdir $build_dir\NuPack\content
 	mkdir $build_dir\NuPack\lib
+	mkdir $build_dir\NuPack\lib\embedded
 	mkdir $build_dir\NuPack\lib\3.5
 	mkdir $build_dir\NuPack\lib\4.0
 	mkdir $build_dir\NuPack\tools
@@ -399,6 +400,9 @@ task CreateNugetPackage {
     cp "$build_dir\$client_dll" $build_dir\NuPack\lib\4.0
   }	
   
+  foreach($client_dll in $all_client_dlls) {
+    cp "$build_dir\$client_dll" $build_dir\NuPack\lib\embedded
+  }
  foreach($server_file in $server_files) {
     cp "$build_dir\$server_file" $build_dir\NuPack\server
   }
