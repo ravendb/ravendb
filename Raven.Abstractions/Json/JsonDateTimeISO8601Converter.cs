@@ -27,7 +27,11 @@ namespace Raven.Abstractions.Json
 					DateTime time;
 					if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
 					                           DateTimeStyles.RoundtripKind, out time))
+					{
+						if (time.Kind == DateTimeKind.Unspecified)
+							return DateTime.SpecifyKind(time, DateTimeKind.Utc);
 						return time;
+					}
 				}
 				if(objectType == typeof(DateTimeOffset))
 				{
