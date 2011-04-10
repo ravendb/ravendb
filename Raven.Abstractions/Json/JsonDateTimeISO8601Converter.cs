@@ -10,7 +10,12 @@ namespace Raven.Abstractions.Json
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
 			if(value is DateTime)
-				writer.WriteValue(((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+			{
+				var dateTime = ((DateTime)value);
+				if (dateTime.Kind == DateTimeKind.Unspecified)
+					dateTime = dateTime.ToUniversalTime();
+				writer.WriteValue(dateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+			}
 			else if (value is DateTimeOffset)
 				writer.WriteValue(((DateTimeOffset) value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 			else

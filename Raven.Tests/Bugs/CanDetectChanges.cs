@@ -46,8 +46,8 @@ namespace Raven.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					var registration = session.Load<ProjectingDates.Registration>("registrations/1");
-                    Assert.False(session.Advanced.HasChanges);
-                    Assert.False(session.Advanced.HasChanged(registration));
+					Assert.False(session.Advanced.HasChanged(registration));
+					Assert.False(session.Advanced.HasChanges);
 					registration.RegisteredAt = new DateTime(2010, 2, 1);
                     Assert.True(session.Advanced.HasChanges);
                     Assert.True(session.Advanced.HasChanged(registration));
