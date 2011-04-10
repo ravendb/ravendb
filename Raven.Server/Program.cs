@@ -223,9 +223,11 @@ namespace Raven.Server
     	}
 
     	private static bool RunServer(RavenConfiguration ravenConfiguration)
-        {
+    	{
+    		var sp = Stopwatch.StartNew();
             using (var server = new RavenDbServer(ravenConfiguration))
             {
+				sp.Stop();
                 var path = Path.Combine(Environment.CurrentDirectory, "default.raven");
                 if (File.Exists(path))
                 {
@@ -234,6 +236,7 @@ namespace Raven.Server
                 }
 
                 Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
+            	Console.WriteLine("Server started in {0:#,#} ms", sp.ElapsedMilliseconds);
 				Console.WriteLine("Data directory: {0}", ravenConfiguration.DataDirectory);
             	Console.WriteLine("HostName: {0} Port: {1}, Storage: {2}", ravenConfiguration.HostName ?? "<any>", 
 					ravenConfiguration.Port, 
