@@ -48,7 +48,12 @@ namespace Raven.Server
                 }
                 catch (Exception e)
                 {
+                    Console.WriteLine("A critical error occurred while starting the server. Please see the exception details bellow for more details:");
+                    Console.WriteLine();
                     Console.WriteLine(e);
+                    while (Console.ReadKey(true).Key != ConsoleKey.Enter)
+                    {
+                    }
                     Environment.Exit(-1);
                 }
             }
