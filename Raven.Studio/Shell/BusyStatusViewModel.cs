@@ -28,7 +28,7 @@
 
 		public IObservableCollection<string> ActiveTasks {get; private set;}
 
-		public void Handle(WorkStarted message)
+		void IHandle<WorkStarted>.Handle(WorkStarted message)
 		{
 			var job = message.Job;
 			if (!string.IsNullOrEmpty(job)) SimpleLogger.Start(job);
@@ -37,7 +37,7 @@
 			NotifyOfPropertyChange(() => IsBusy);
 		}
 
-		public void Handle(WorkCompleted message)
+		void IHandle<WorkCompleted>.Handle(WorkCompleted message)
 		{
 			var job = message.Job;
 			if(!string.IsNullOrEmpty(job)) SimpleLogger.End(job);

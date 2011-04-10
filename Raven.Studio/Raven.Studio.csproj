@@ -25,7 +25,7 @@
     <TestPageFileName>CaliburnMicroSilverlightTestPage.html</TestPageFileName>
     <CreateTestPage>true</CreateTestPage>
     <ValidateXaml>true</ValidateXaml>
-    <EnableOutOfBrowser>true</EnableOutOfBrowser>
+    <EnableOutOfBrowser>false</EnableOutOfBrowser>
     <OutOfBrowserSettingsFile>Properties\OutOfBrowserSettings.xml</OutOfBrowserSettingsFile>
     <UsePlatformExtensions>false</UsePlatformExtensions>
     <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
@@ -125,15 +125,21 @@
     <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
     <Compile Include="Commands\CopyServerError.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Commands\LoadDocument.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
     <Compile Include="Controls\Editors\LinqEditor.cs" />
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
     <Compile Include="Controls\Editors\XamlEditor.cs" />
     <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
+    <Compile Include="Converters\NotificationLevelToColorConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
-    <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
-    <Compile Include="Features\Statistics\DynamicViewModel.cs" />
+    <Compile Include="Features\Documents\IDocumentTemplateProvider.cs" />
+    <Compile Include="Features\Statistics\StatisticsItem.xaml.cs">
+      <DependentUpon>StatisticsItem.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Database\ExportDatabaseExplorerItemAttribute.cs" />
+    <Compile Include="Framework\DynamicViewModel.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
@@ -189,14 +195,9 @@
     <Compile Include="Controls\DatabaseConnection.xaml.cs">
       <DependentUpon>DatabaseConnection.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\DocumentsContainer.cs" />
-    <Compile Include="Controls\DocumentThumbnail.cs" />
-    <Compile Include="Controls\DragDropPanel.cs" />
     <Compile Include="Controls\ErrorWindow.xaml.cs">
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\Gears.cs" />
-    <Compile Include="Controls\HyperlinkHelper.cs" />
     <Compile Include="Controls\Label.cs" />
     <Compile Include="Controls\LabelValuePanel.cs" />
     <Compile Include="Controls\Pager.xaml.cs">
@@ -234,9 +235,12 @@
     <Compile Include="Messages\IndexUpdated.cs" />
     <Compile Include="Features\Indexes\EditIndexViewModel.cs" />
     <Compile Include="Messages\DisplayCurrentDatabaseRequested.cs" />
-    <Compile Include="Features\Query\LinqEditorViewModel.cs" />
     <Compile Include="Messages\WorkCompleted.cs" />
     <Compile Include="Messages\WorkStarted.cs" />
+    <Compile Include="Plugins\IServer.cs" />
+    <Compile Include="Plugins\Statistics\IStatisticsItem.cs" />
+    <Compile Include="Plugins\Statistics\IStatisticsSet.cs" />
+    <Compile Include="Plugins\Tasks\ExportTaskAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SampleData\PagerSampleData\PagerSampleData.xaml.cs">
       <DependentUpon>PagerSampleData.xaml</DependentUpon>
@@ -252,7 +256,7 @@
     <Compile Include="Shell\NavigationViewModel.cs" />
     <Compile Include="Shell\NotificationsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
-    <Compile Include="Features\Database\DatabaseViewModel.cs" />
+    <Compile Include="Features\Database\DatabaseExplorer.cs" />
     <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
     <Compile Include="Shell\MessageBox\ShowMessageBox.cs" />
@@ -276,10 +280,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Resource>
     <Resource Include="Resources\Templates.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Resource>
-    <Resource Include="Resources\ControlTemplates\Gears.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
@@ -327,10 +327,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Documents\Document\Preview.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <Page Include="Features\Documents\Document\Tooltip.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -343,6 +339,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Statistics\StatisticsItem.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Statistics\StatisticsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -352,10 +352,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Indexes\EditIndexView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Query\LinqEditorView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -396,6 +392,14 @@
       <Generator>MSBuild:MarkupCompilePass1</Generator>
       <SubType>Designer</SubType>
     </DesignTimeOnly>
+    <ApplicationDefinition Include="Resources\Brushes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <ApplicationDefinition Include="Resources\Fonts.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
     <Page Include="Resources\Styles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -420,18 +424,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Resources\ControlTemplates\DocumentsContainer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Resources\ControlTemplates\DocumentThumbnail.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Resources\ControlTemplates\EmptyButton.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Resources\ControlTemplates\Indexes.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -440,7 +432,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Database\DatabaseView.xaml">
+    <Page Include="Features\Database\DatabaseExplorerView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -469,10 +461,6 @@
       <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
       <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Studio.Plugins\Raven.Studio.Plugins.csproj">
-      <Project>{C7C5B03F-A1D9-4CAA-A0F2-6BC879C23556}</Project>
-      <Name>Raven.Studio.Plugins</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\Images\add-small.png" />
@@ -496,9 +484,15 @@
     <DesignData Include="SampleData\ExportTaskSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
+    <DesignData Include="SampleData\NotficiationsSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+    </DesignData>
     <DesignData Include="SampleData\ServerErrorSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\pencil.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -7,7 +7,7 @@
     using System.Windows.Controls;
     using System.Windows.Media;
     using Caliburn.Micro;
-    using Database;
+    using Framework;
     using Messages;
     using Plugins;
     using Raven.Database.Data;
@@ -15,8 +15,8 @@
     [Export]
     public class IndexesViewModel : Screen, IHandle<StatisticsUpdated>
     {
-        private Style defaultStyle;
-        private Style staleStyle;
+        private readonly Style defaultStyle;
+        private readonly Style staleStyle;
 
         [ImportingConstructor]
         public IndexesViewModel(IServer server, IEventAggregator events)
@@ -40,9 +40,7 @@
 
         public IEnumerable<dynamic> Indexes { get; private set; }
 
-        #region IHandle<StatisticsUpdated> Members
-
-        public void Handle(StatisticsUpdated message)
+    	void IHandle<StatisticsUpdated>.Handle(StatisticsUpdated message)
         {
             var stats = message.Statistics;
             var proxies = from index in stats.Indexes
@@ -55,7 +53,5 @@
 
             NotifyOfPropertyChange(() => Indexes);
         }
-
-        #endregion
     }
 }

@@ -6,8 +6,7 @@
 	using System.Diagnostics;
 	using System.Windows.Media;
 
-	[Export(typeof(TemplateColorProvider))]
-	[PartCreationPolicy(CreationPolicy.Shared)]
+	[Export]
 	public class TemplateColorProvider
 	{
 		const double GoldenAngle = 0.381966;

@@ -7,18 +7,18 @@
 	using System.Threading.Tasks;
 	using Abstractions.Data;
 	using Caliburn.Micro;
-	using Database;
 	using Documents;
 	using Framework;
 	using Framework.Extensions;
 	using Messages;
 	using Plugins;
+	using Plugins.Database;
 	using Raven.Database.Data;
 	using Client.Client;
 
 	[Export(typeof(CollectionsViewModel))]
-	[ExportDatabaseScreen("Collections", Index = 20)]
-	public class CollectionsViewModel : RavenScreen, IDatabaseScreenMenuItem,
+	[ExportDatabaseExplorerItem("Collections", Index = 20)]
+	public class CollectionsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
@@ -37,14 +37,14 @@
 			server.CurrentDatabaseChanged += delegate
 			{
 				Initialize();
-			};	
+			};
 		}
 
-		void Initialize() {
+		void Initialize()
+		{
 			Status = "Retrieving collections";
 
 			Collections = new BindableCollection<Collection>();
-			ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
 
 			NotifyOfPropertyChange(string.Empty);
 		}
@@ -55,7 +55,12 @@
 		}
 
 		public IEnumerable<Collection> Collections { get; private set; }
-		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments { get; private set; }
+
+		BindablePagedQuery<DocumentViewModel> activeCollectionDocuments;
+		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments
+		{
+			get { return activeCollectionDocuments ?? (activeCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery)); }
+		}
 
 		string status;
 		public string Status
@@ -162,7 +167,7 @@
 			Events.Publish(new DatabaseScreenRequested(() => vm));
 		}
 
-		public void Handle(DocumentDeleted message)
+		void IHandle<DocumentDeleted>.Handle(DocumentDeleted message)
 		{
 			ActiveCollectionDocuments
 				.Where(x => x.Id == message.DocumentId)

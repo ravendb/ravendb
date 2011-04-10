@@ -95,10 +95,10 @@
 			</Grid.RowDefinitions>
 
 			<StackPanel Orientation="Vertical"
-			            VerticalAlignment="Top">
+						VerticalAlignment="Top">
 
 				<TextBlock Text="Collections"
-				           Style="{StaticResource Header}" />
+						   Style="{StaticResource Header}" />
 
 				<!--
 				TODO: The intent here is to allow sorting of the collections
@@ -117,26 +117,26 @@
 			</StackPanel>
 
 			<ListBox Grid.Row="1"
-			         BorderThickness="0"
-			         Width="360"
-			         x:Name="Collections"
-			         ItemTemplate="{StaticResource CollectionTemplate}"
-			         ItemsSource="{Binding Collections}"
-			         SelectedItem="{Binding ActiveCollection, Mode=TwoWay}"
-			         ItemContainerStyle="{StaticResource CollectionListBoxItemStyle}" />
+					 BorderThickness="0"
+					 Width="360"
+					 x:Name="Collections"
+					 ItemTemplate="{StaticResource CollectionTemplate}"
+					 ItemsSource="{Binding Collections}"
+					 SelectedItem="{Binding ActiveCollection, Mode=TwoWay}"
+					 ItemContainerStyle="{StaticResource CollectionListBoxItemStyle}" />
 
 			<TextBlock Grid.Row="1"
-			           Text="{Binding Status}"
-			           Style="{StaticResource Instruction}"
-			           Visibility="{Binding Collections, Converter={StaticResource visibleWhenEmpty}}"
-			           d:IsLocked="True" />
+					   Text="{Binding Status}"
+					   Style="{StaticResource Instruction}"
+					   Visibility="{Binding Collections, Converter={StaticResource visibleWhenEmpty}}"
+					   d:IsLocked="True" />
 		</Grid>
 
 		<Grid Grid.Column="1"
 			  Visibility="{Binding HasCollections, Converter={StaticResource visibleWhenTrue}}">
 
 			<Border CornerRadius="5,0,0,0"
-					BorderBrush="{StaticResource SelectedItemHighlightBrush}"
+					BorderBrush="{StaticResource PanelBorderBrush}"
 					BorderThickness="1 1 0 0"
 					Margin="-1,0,0,0" />
 
@@ -151,14 +151,9 @@
 
 				<StackPanel tk:DockPanel.Dock="Top"
 							Orientation="Horizontal">
-					<Border Margin="0,2,2,2"
-							CornerRadius="2"
-							Background="#19000000"
-							Padding="4,2">
-						<HyperlinkButton Content="Edit Template"
-										 cm:Message.Attach="EditTemplate"
-										 FontSize="9.333" />
-					</Border>
+					<Button Content="Edit Template"
+							Style="{StaticResource FormButton}"
+							cm:Message.Attach="EditTemplate" />
 				</StackPanel>
 
 				<c:Pager tk:DockPanel.Dock="Top"

@@ -10,11 +10,11 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 
-namespace Raven.Studio.SamplePlugin
+namespace Raven.Studio.Features.Statistics
 {
-	public partial class PluginView : UserControl
+	public partial class StatisticsItem : UserControl
 	{
-		public PluginView()
+		public StatisticsItem()
 		{
 			InitializeComponent();
 		}

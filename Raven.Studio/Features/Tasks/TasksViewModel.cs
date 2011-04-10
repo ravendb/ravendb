@@ -5,11 +5,11 @@
 	using System.ComponentModel.Composition;
 	using System.Linq;
 	using Caliburn.Micro;
-	using Database;
 	using Framework;
+	using Plugins.Database;
 
-	[ExportDatabaseScreen("Tasks", Index = 60)]
-	public class TasksViewModel : Conductor<object>, IDatabaseScreenMenuItem, 
+	[ExportDatabaseExplorerItem("Tasks", Index = 60)]
+	public class TasksViewModel : Conductor<object>,
 		IPartImportsSatisfiedNotification
 	{
 		string selectedTask;
@@ -20,8 +20,8 @@
 			DisplayName = "Tasks";
 		}
 
-		[ImportMany("Raven.Task",AllowRecomposition = true)]
-		public IEnumerable<Lazy<object , IMenuItemMetadata>> Tasks { get; set; }
+		[ImportMany("Raven.Task", AllowRecomposition = true)]
+		public IEnumerable<Lazy<object, IMenuItemMetadata>> Tasks { get; set; }
 
 		public IList<string> AvailableTasks { get; private set; }
 

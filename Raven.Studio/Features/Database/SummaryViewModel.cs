@@ -17,12 +17,13 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using Plugins;
+    using Plugins.Database;
     using Raven.Database.Data;
     using Raven.Database.Indexing;
     using Raven.Database.Json;
 
-    [ExportDatabaseScreen("Summary", Index = 10)]
-    public class SummaryViewModel : RavenScreen, IDatabaseScreenMenuItem,
+    [ExportDatabaseExplorerItem("Summary", Index = 10)]
+    public class SummaryViewModel : RavenScreen,
                                     IHandle<DocumentDeleted>,
                                     IHandle<StatisticsUpdated>
     {
@@ -91,19 +92,6 @@
                         ? 0
                         : Collections.Max(x => x.Count);
             }
-        }
-
-        public void Handle(DocumentDeleted message)
-        {
-            RecentDocuments
-                .Where(x => x.Id == message.DocumentId)
-                .ToList()
-                .Apply(x => RecentDocuments.Remove(x));
-
-            //TODO: update collections
-            //Collections
-            //    .Where(x => x.Name == message.Document.CollectionType)
-            //    .Apply(x => x.Count--);
         }
 
         bool showCreateSampleData;
@@ -270,11 +258,24 @@
                     });
         }
 
-        public void Handle(StatisticsUpdated message)
+    	void IHandle<StatisticsUpdated>.Handle(StatisticsUpdated message)
         {
             if (!message.HasDocumentCountChanged) return;
 
             RetrieveSummary();
         }
+
+		void IHandle<DocumentDeleted>.Handle(DocumentDeleted message)
+		{
+			RecentDocuments
+				.Where(x => x.Id == message.DocumentId)
+				.ToList()
+				.Apply(x => RecentDocuments.Remove(x));
+
+			//TODO: update collections
+			//Collections
+			//    .Where(x => x.Name == message.Document.CollectionType)
+			//    .Apply(x => x.Count--);
+		}
     }
 }

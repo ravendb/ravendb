@@ -57,7 +57,7 @@
                                     <TextBlock Text="{Binding [Name]}"
                                                Style="{Binding [NameStyle]}"
                                                cm:Action.TargetWithoutContext="EditIndex"
-                                               cm:Message.Attach="MouseLeftButtonDown = Execute($this.Text)"
+                                               cm:Message.Attach="[MouseLeftButtonDown] = [Execute($this.Text)]"
                                                FontSize="16" />
                                     <Grid>
                                         <Grid.RowDefinitions>
