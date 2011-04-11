@@ -78,12 +78,7 @@ namespace Raven.Database
 			var doc = new RavenJObject(DataAsJson); //clone the document
 			var metadata = new RavenJObject(Metadata); // clone the metadata
 			metadata["Last-Modified"] = RavenJToken.FromObject(LastModified.ToString("r"));
-			var etagProp = metadata["@etag"];
-			if (etagProp == null || !(etagProp is RavenJValue))
-				metadata["@etag"] = new RavenJValue(Etag.ToString());
-			else
-				((RavenJValue) etagProp).Value = Etag.ToString();
-
+			metadata["@etag"] = Etag.ToString();
 			doc["@metadata"] = metadata;
 			metadata["Non-Authoritive-Information"] = RavenJToken.FromObject(NonAuthoritiveInformation);
 			return doc;
