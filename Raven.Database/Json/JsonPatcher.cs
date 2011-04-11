@@ -81,7 +81,7 @@ namespace Raven.Database.Json
 				return;
 
 			document[patchCmd.Value.Value<string>()] = property;
-			document.Properties.Remove(propName);
+			document.Remove(propName);
 		}
 
 		private void CopyProperty(PatchRequest patchCmd, string propName, RavenJToken property)
@@ -181,7 +181,7 @@ namespace Raven.Database.Json
 			if (!(property is RavenJArray))
 			{
 				property = new RavenJArray();
-				document.Properties.Add(propName, property);
+				document.Add(propName, property);
 			}
 			var array = property as RavenJArray;
 			if (array == null)
@@ -223,7 +223,7 @@ namespace Raven.Database.Json
 				return array;
 
 			var jObject = token as RavenJObject;
-			if (jObject == null || !jObject.Properties.ContainsKey("$values"))
+			if (jObject == null || !jObject.ContainsKey("$values"))
 				return null;
 			array = jObject.Value<RavenJArray>("$values");
 
@@ -236,7 +236,7 @@ namespace Raven.Database.Json
 			EnsurePreviousValueMatchCurrentValue(patchCmd, token);
 			var o = parent as RavenJObject;
 			if (o != null)
-				o.Properties.Remove(propName);
+				o.Remove(propName);
 		}
 
 		private void SetProperty(PatchRequest patchCmd, string propName, RavenJValue property)
@@ -244,7 +244,7 @@ namespace Raven.Database.Json
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)
 			{
-				document.Properties.Add(propName, patchCmd.Value);
+				document.Add(propName, patchCmd.Value);
 				return;
 			}
 			property.Value = (patchCmd.Value as RavenJValue).Value;

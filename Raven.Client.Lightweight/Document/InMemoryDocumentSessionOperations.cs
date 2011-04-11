@@ -288,13 +288,13 @@ more responsive application.
 		/// <returns></returns>
 		protected T TrackEntity<T>(JsonDocument documentFound)
 		{
-			if (!documentFound.Metadata.Properties.ContainsKey("@etag"))
+			if (!documentFound.Metadata.ContainsKey("@etag"))
 			{
-				documentFound.Metadata.Properties.Add("@etag", new RavenJValue(documentFound.Etag.ToString()));
+				documentFound.Metadata["@etag"] = documentFound.Etag.ToString();
 			}
-			if(!documentFound.Metadata.Properties.ContainsKey("Last-Modified"))
+			if(!documentFound.Metadata.ContainsKey("Last-Modified"))
 			{
-				documentFound.Metadata.Properties.Add("Last-Modified", new RavenJValue(documentFound.LastModified));
+				documentFound.Metadata["Last-Modified"] = documentFound.LastModified;
 			}
 			if(documentFound.NonAuthoritiveInformation && AllowNonAuthoritiveInformation == false)
 			{
@@ -326,7 +326,7 @@ more responsive application.
 				return (T) entity;
 			}
 			var etag = metadata.Value<string>("@etag");
-			document.Properties.Remove("@metadata");
+			document.Remove("@metadata");
 			if(metadata.Value<bool>("Non-Authoritive-Information") && 
 				AllowNonAuthoritiveInformation == false)
 			{
@@ -519,7 +519,7 @@ more responsive application.
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
 			var metadata = new RavenJObject();
 			if(tag != null)
-				metadata.Properties.Add(Constants.RavenEntityName, new RavenJValue(tag));
+				metadata.Add(Constants.RavenEntityName, tag);
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
 				Key = id,
@@ -786,7 +786,7 @@ more responsive application.
 			var objectAsJson = GetObjectAsJson(entity);
 			if (identityProperty != null)
 			{
-				objectAsJson.Properties.Remove(identityProperty.Name);
+				objectAsJson.Remove(identityProperty.Name);
 			}
 #if !SILVERLIGHT
 			metadata[Raven.Abstractions.Data.Constants.RavenClrType] =  RavenJToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));

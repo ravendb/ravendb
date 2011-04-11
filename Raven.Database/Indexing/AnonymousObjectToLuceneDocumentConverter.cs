@@ -35,7 +35,7 @@ namespace Raven.Database.Indexing
 
         public static IEnumerable<AbstractField> Index(RavenJObject document, IndexDefinition indexDefinition, Field.Store defaultStorage)
         {
-        	return (from property in document.Properties
+        	return (from property in document
         	        let name = property.Key
 					where name != Constants.DocumentIdFieldName
         	        let value = GetPropertyValue(property.Value)

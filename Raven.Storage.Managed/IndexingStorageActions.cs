@@ -130,15 +130,15 @@ namespace Raven.Storage.Managed
 			if (jObject == null)
 				return;
 
-    		if (!jObject.Properties.ContainsKey("reduce_attempts"))
+    		if (!jObject.ContainsKey("reduce_attempts"))
     		{
     			jObject["reduce_attempts"] = 0;
     		}
-			if (!jObject.Properties.ContainsKey("reduce_failures"))
+			if (!jObject.ContainsKey("reduce_failures"))
 			{
 				jObject["reduce_failures"] = 0;
 			}
-			if (!jObject.Properties.ContainsKey("reduce_successes"))
+			if (!jObject.ContainsKey("reduce_successes"))
 			{
 				jObject["reduce_successes"] = 0;
 			}

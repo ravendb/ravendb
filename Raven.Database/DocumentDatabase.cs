@@ -439,13 +439,13 @@ namespace Raven.Database
         private static void RemoveReservedProperties(RavenJObject document)
 		{
 			var toRemove = new HashSet<string>();
-			foreach (var propertyName in document.Properties.Keys.Where(propertyName => propertyName.StartsWith("@")))
+			foreach (var propertyName in document.Keys.Where(propertyName => propertyName.StartsWith("@")))
 			{
 			    toRemove.Add(propertyName);
 			}
 			foreach (var propertyName in toRemove)
 			{
-				document.Properties.Remove(propertyName);
+				document.Remove(propertyName);
 			}
 		}
 

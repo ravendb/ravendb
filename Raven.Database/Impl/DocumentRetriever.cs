@@ -102,7 +102,7 @@ namespace Raven.Database.Impl
 				if (doc != null)
 				{
 					var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
-					foreach (var property in result.Properties)
+					foreach (var property in result)
 					{
 						if(property.Value == null || property.Value.Type == JTokenType.Null)
 							continue;
@@ -141,7 +141,7 @@ namespace Raven.Database.Impl
 	    	if (metadata == null)
                 return;
 
-            metadata.Properties["@id"] = new RavenJValue(doc.Key);
+            metadata["@id"] = new RavenJValue(doc.Key);
 	    }
 
 	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)

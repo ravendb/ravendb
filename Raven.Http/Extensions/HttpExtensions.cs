@@ -69,7 +69,7 @@ namespace Raven.Http.Extensions
 			using (var jsonReader = new BsonReader(context.Request.InputStream))
 			{
 				var jObject = RavenJObject.Load(jsonReader);
-				return new RavenJArray(jObject.Properties.Values);
+				return new RavenJArray(jObject.Children());
 			}
 		}
 
@@ -132,7 +132,7 @@ namespace Raven.Http.Extensions
 
 		public static void WriteData(this IHttpContext context, byte[] data, RavenJObject headers, Guid etag)
 		{
-			foreach (var header in headers.Properties)
+			foreach (var header in headers)
 			{
 				if (header.Key.StartsWith("@"))
 					continue;

@@ -57,12 +57,15 @@ namespace Raven.Database.Data
 		/// </summary>
 		public RavenJObject ToJson()
     	{
-    		var ret = new RavenJObject();
-			ret.Properties.Add("Key", new RavenJValue((object)Key));
-			ret.Properties.Add("Etag", new RavenJValue(Etag != null ? (object)Etag.ToString() : null));
-			ret.Properties.Add("Method", new RavenJValue(Method));
-    		ret.Properties.Add("Document", Document);
-    		ret.Properties.Add("Metadata", Metadata);
+    		var ret = new RavenJObject
+    		          	{
+    		          		{"Key", Key},
+							{"Method", Method},
+							{"Document", Document},
+							{"Metadata", Metadata}
+    		          	};
+			if (Etag != null)
+				ret.Add("Etag", Etag.ToString());
     		return ret;
     	}
     }

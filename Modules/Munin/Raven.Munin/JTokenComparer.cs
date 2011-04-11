@@ -38,10 +38,10 @@ namespace Raven.Munin
                     // we compare based on _y_ properties order, because that is more stable in our usage
 					var xObj = (RavenJObject)x;
 					var yObj = (RavenJObject)y;
-                    foreach (var prop in yObj.Properties)
+                    foreach (var prop in yObj)
                     {
                         RavenJToken value;
-                        if (xObj.Properties.TryGetValue(prop.Key, out value) == false)
+                        if (xObj.TryGetValue(prop.Key, out value) == false)
                             continue;
                         var compare = Compare(value, prop.Value);
                         if (compare != 0)
@@ -113,7 +113,7 @@ namespace Raven.Munin
                 case JTokenType.Array:
 					return ((RavenJArray)obj).Aggregate(0, (current, val) => (current * 397) ^ GetHashCode(val));
                 case JTokenType.Object:
-                    return ((RavenJObject)obj).Properties.Aggregate(0, (current, val) => (current * 397) ^ ((val.Key.GetHashCode() * 397) ^ GetHashCode(val.Value)));
+                    return ((RavenJObject)obj).Aggregate(0, (current, val) => (current * 397) ^ ((val.Key.GetHashCode() * 397) ^ GetHashCode(val.Value)));
 				//case JTokenType.Property:
 				//    var prop = ((JProperty)obj);
 				//    return (prop.Name.GetHashCode() * 397) ^ GetHashCode(prop.Value);

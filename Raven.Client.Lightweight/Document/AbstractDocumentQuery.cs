@@ -1269,9 +1269,9 @@ If you really want to do in memory filtering on the data returned from the query
                     // we need to make an addtional check, since it is possible that a value was explicitly stated
                     // for the identity property, in which case we don't want to override it.
                     var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
-                    if (identityProperty == null ||
-                        (!result.Properties.ContainsKey(identityProperty.Name) ||
-                            result.Properties[identityProperty.Name].Type == JTokenType.Null))
+					if (identityProperty == null ||
+						(result[identityProperty.Name] == null ||
+							result[identityProperty.Name].Type == JTokenType.Null))
                     {
                         theSession.TrySetIdentity(deserializedResult, documentId);
                     }
@@ -1291,7 +1291,7 @@ If you really want to do in memory filtering on the data returned from the query
         	if (metadata == null) 
         	{
 				// if the item has metadata, then nested items will not have it, so we can skip recursing down
-				foreach (var nested in result.Properties.Select(property => property.Value))
+				foreach (var nested in result.Select(property => property.Value))
 				{
 					var jObject = nested as RavenJObject;
 					if(jObject != null)
@@ -1310,7 +1310,7 @@ If you really want to do in memory filtering on the data returned from the query
 			var entityName = metadata.Value<string>(Constants.RavenEntityName);
 
 			var idPropName = theSession.Conventions.FindIdentityPropertyNameFromEntityName(entityName);
-			if (result.Properties.ContainsKey(idPropName))
+			if (result.ContainsKey(idPropName))
 				return;
 
 			result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));

@@ -27,11 +27,8 @@ namespace Raven.Database.Json
                 return dynamicJsonObject.Inner;
 #endif
             if (result is string || result is ValueType)
-            {
-                var ret = new RavenJObject();
-            	ret.Properties.Add("Value", new RavenJValue(result));
-            	return ret;
-            }
+				return new RavenJObject { { "Value", new RavenJValue(result) } };
+
             return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
         }
 

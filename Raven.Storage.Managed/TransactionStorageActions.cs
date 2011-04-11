@@ -140,7 +140,7 @@ namespace Raven.Storage.Managed
 				var readResult = storage.Documents.Read(new RavenJObject { { "key", data.Key } });
                 if (readResult == null)
                     return;
-                ((RavenJObject)readResult.Key).Properties.Remove("txId");
+                ((RavenJObject)readResult.Key).Remove("txId");
                 storage.Documents.UpdateKey(readResult.Key);
             });
         }

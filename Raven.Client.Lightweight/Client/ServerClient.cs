@@ -356,7 +356,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var webRequest = WebRequest.Create(url + "/static/" + key);
 			webRequest.Method = "PUT";
 			webRequest.Credentials = credentials;
-			foreach (var header in metadata.Properties)
+			foreach (var header in metadata)
 			{
 				if (header.Key.StartsWith("@"))
 					continue;
@@ -555,7 +555,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var metadata = new RavenJObject();
 			if (etag != null)
-				metadata.Properties.Add("ETag", new RavenJValue(etag.Value.ToString()));
+				metadata.Add("ETag", new RavenJValue(etag.Value.ToString()));
 			AddTransactionInformation(metadata);
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);

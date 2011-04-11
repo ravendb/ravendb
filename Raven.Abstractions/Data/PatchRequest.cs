@@ -59,17 +59,17 @@ namespace Raven.Database.Json
 		public RavenJObject ToJson()
         {
         	var jObject = new RavenJObject();
-			jObject.Properties.Add("Type", new RavenJValue(Type.ToString()));
-        	jObject.Properties.Add("Value", Value);
-        	jObject.Properties.Add("Name", new RavenJValue(Name));
+			jObject.Add("Type", new RavenJValue(Type.ToString()));
+        	jObject.Add("Value", Value);
+        	jObject.Add("Name", new RavenJValue(Name));
 			if (Position != null)
-        		jObject.Properties.Add("Position", new RavenJValue(Position.Value));
+        		jObject.Add("Position", new RavenJValue(Position.Value));
 			if (Nested != null)
-        		jObject.Properties.Add("Nested",  new RavenJArray(Nested.Select(x => x.ToJson())));
+        		jObject.Add("Nested",  new RavenJArray(Nested.Select(x => x.ToJson())));
 			if (AllPositions != null)
-				jObject.Properties.Add("AllPositions", new RavenJValue(AllPositions.Value));
+				jObject.Add("AllPositions", new RavenJValue(AllPositions.Value));
 			if (PrevVal != null)
-				jObject.Properties.Add("PrevVal", PrevVal);
+				jObject.Add("PrevVal", PrevVal);
 			return jObject;
 		}
 
@@ -91,8 +91,8 @@ namespace Raven.Database.Json
 				Nested = nested,
 				Position = patchRequestJson.Value<int?>("Position"),
                 AllPositions = patchRequestJson.Value<bool?>("AllPositions"),
-				PrevVal = patchRequestJson.ContainsKey("PrevVal") ? patchRequestJson.Properties["PrevVal"] : null,
-				Value = patchRequestJson.ContainsKey("Value") ? patchRequestJson.Properties["Value"] : null,
+				PrevVal = patchRequestJson["PrevVal"],
+				Value = patchRequestJson["Value"],
 			};
 		}
 	}

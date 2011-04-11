@@ -24,7 +24,7 @@ namespace Raven.Database.Linq
 	{
 		public IEnumerator<dynamic> GetEnumerator()
 		{
-			foreach (var item in Inner.Properties)
+			foreach (var item in Inner)
 			{
                 if(item.Key[0] == '$')
                     continue;
@@ -178,13 +178,13 @@ namespace Raven.Database.Linq
 				return GetDocumentId();
 			}
 			RavenJToken value;
-			if (inner.Properties.TryGetValue(name, out value))
+			if (inner.TryGetValue(name, out value))
 			{
 				return TransformToValue(value);
 			}
             if(name.StartsWith("_"))
             {
-                if (inner.Properties.TryGetValue(name.Substring(1), out value))
+                if (inner.TryGetValue(name.Substring(1), out value))
                 {
                     return TransformToValue(value);
                 } 

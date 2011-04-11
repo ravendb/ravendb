@@ -110,14 +110,14 @@ namespace Raven.Database.Data
 				return self;
 
 			var metadata = new RavenJObject();
-			foreach (var header in self.Properties)
+			foreach (var header in self)
 			{
 				if (HeadersToIgnoreClient.Contains(header.Key))
 					continue;
 				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
 					continue;
 				var headerName = CaptureHeaderName(header.Key);
-				metadata.Properties.Add(headerName, header.Value);
+				metadata.Add(headerName, header.Value);
 			}
 			return metadata;
 		}
@@ -171,7 +171,7 @@ namespace Raven.Database.Data
                     if (values.Length == 1)
                         metadata[headerName] = GetValue(values[0]);
                     else
-                        metadata.Properties.Add(headerName, new RavenJArray(values.Select(GetValue)));
+                        metadata.Add(headerName, new RavenJArray(values.Select(GetValue)));
                 }
                 catch (Exception exc)
                 {

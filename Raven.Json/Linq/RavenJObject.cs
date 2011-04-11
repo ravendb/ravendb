@@ -55,6 +55,11 @@ namespace Raven.Json.Linq
 			return Properties.Values;
 		}
 
+    	public ICollection<string> Keys
+    	{
+			get { return properties == null ? new HashSet<string>() : properties.Keys; }
+    	}
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenJObject"/> class.
         /// </summary>
@@ -363,7 +368,8 @@ namespace Raven.Json.Linq
 
 		public bool ContainsKey(string key)
 		{
-			return Properties.ContainsKey(key);
+			if (properties == null) return false;
+			return properties.ContainsKey(key);
 		}
 
     	public bool TryGetValue(string name, out RavenJToken value)

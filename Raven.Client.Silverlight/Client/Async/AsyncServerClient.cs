@@ -910,7 +910,7 @@ namespace Raven.Client.Client.Async
                     using (var reader = new JsonTextReader(new StringReader(task.Result)))
                     {
                         var json = RavenJObject.Load(reader);
-                        return json.Properties.Select(x => x.Value.Value<string>()).ToArray();
+                        return json.Select(x => x.Value.Value<string>()).ToArray();
                     }
                 });
 	    }

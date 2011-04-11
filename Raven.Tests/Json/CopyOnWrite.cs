@@ -19,8 +19,8 @@ namespace Raven.Tests.Json
         public void CopyOnWriteWorksCorrectly()
         {
             var f = new RavenJObject();
-            f.Properties["1"] = new RavenJValue(1);
-            f.Properties["2"] = new RavenJValue(2);
+            f["1"] = new RavenJValue(1);
+            f["2"] = new RavenJValue(2);
 
             var f1 = (RavenJObject)f.CloneToken();
             f1.Properties["2"] = new RavenJValue(3);
