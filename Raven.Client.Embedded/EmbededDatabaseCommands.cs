@@ -359,8 +359,7 @@ namespace Raven.Client.Client
 		public void StoreRecoveryInformation(Guid resourceManagerId,Guid txId, byte[] recoveryInformation)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var jObject = new RavenJObject();
-			jObject.AddValueProperty("Resource-Manager-Id", resourceManagerId.ToString());
+			var jObject = new RavenJObject {{"Resource-Manager-Id", resourceManagerId.ToString()}};
 			database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, jObject);
 		}
 

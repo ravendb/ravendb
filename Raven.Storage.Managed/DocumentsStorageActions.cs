@@ -224,13 +224,14 @@ namespace Raven.Storage.Managed
             ms.Write(bytes, 0, bytes.Length);
 
             var newEtag = generator.CreateSequentialUuid();
-			var objToPut = new RavenJObject();
-			objToPut.AddValueProperty("key", key);
-			objToPut.AddValueProperty("etag", newEtag.ToByteArray());
-			objToPut.AddValueProperty("modified", DateTime.UtcNow);
-			objToPut.AddValueProperty("id", GetNextDocumentId());
-			objToPut.AddValueProperty("entityName", metadata.Value<string>(Constants.RavenEntityName));
-			storage.Documents.Put(objToPut, ms.ToArray());
+			storage.Documents.Put(new RavenJObject
+             {
+                 {"key", key},
+                 {"etag", newEtag.ToByteArray()},
+                 {"modified", DateTime.UtcNow},
+                 {"id", GetNextDocumentId()},
+                 {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
+             }, ms.ToArray());
 
             return newEtag;
         }

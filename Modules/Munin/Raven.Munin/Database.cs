@@ -251,10 +251,12 @@ namespace Raven.Munin
 			foreach (var command in cmds)
 			{
 
-				var cmd = new RavenJObject();
-				cmd.AddValueProperty("type", (short) command.Type);
-				cmd.Properties.Add("key", command.Key);
-				cmd.AddValueProperty("dicId", command.DictionaryId);
+				var cmd = new RavenJObject
+				          	{
+								{"type", (short) command.Type},
+								{"key", command.Key},
+								{"dicId", command.DictionaryId}
+				          	};
 
 				if (command.Type == CommandType.Put)
 				{
@@ -269,8 +271,8 @@ namespace Raven.Munin
 							log.Write(sha, 0, sha.Length);
 						}
 					}
-					cmd.AddValueProperty("position", command.Position);
-					cmd.AddValueProperty("size", command.Size);
+					cmd.Add("position", command.Position);
+					cmd.Add("size", command.Size);
 				}
 
 				array.Items.Add(cmd);
