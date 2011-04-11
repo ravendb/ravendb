@@ -22,7 +22,7 @@
 		<TextBlock Text="Output"
 				   tk:DockPanel.Dock="Top"
 				   Style="{StaticResource PanelTitle}" />
-		<Border BorderBrush="{StaticResource LightGradient}"
+		<Border BorderBrush="{StaticResource AccentTextBrush}"
 				BorderThickness="1"
 				CornerRadius="5">
 			<ScrollViewer BorderThickness="0"

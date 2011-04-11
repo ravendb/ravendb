@@ -1,0 +1,79 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Statistics.StatisticsItem"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+			 xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions"
+			 mc:Ignorable="d"
+			 d:DesignHeight="300"
+			 d:DesignWidth="400">
+
+	<UserControl.Resources>
+		<Style TargetType="TextBlock">
+			<Setter Property="FontSize"
+					Value="13.667" />
+			<Setter Property="HorizontalAlignment"
+					Value="Right" />
+		</Style>
+
+		<Style TargetType="c:Label"
+			   BasedOn="{StaticResource LabelBaseStyle}">
+			<Setter Property="HorizontalAlignment"
+					Value="Left" />
+		</Style>
+	</UserControl.Resources>
+
+	<Border x:Name="frame"
+			cm:Message.Attach="[Event MouseLeftButtonDown] = [Action RaiseMessageForStat($dataContext)]"
+			CornerRadius="2"
+			Background="#00dcdcdc">
+		<i:Interaction.Triggers>
+			<i:EventTrigger EventName="MouseEnter">
+				<ei:GoToStateAction StateName="MouseOver" />
+			</i:EventTrigger>
+			<i:EventTrigger EventName="MouseLeave">
+				<ei:GoToStateAction StateName="Normal" />
+			</i:EventTrigger>
+		</i:Interaction.Triggers>
+		<VisualStateManager.VisualStateGroups>
+			<VisualStateGroup x:Name="Common">
+				<VisualStateGroup.Transitions>
+					<VisualTransition GeneratedDuration="0:0:0.3" />
+				</VisualStateGroup.Transitions>
+				<VisualState x:Name="MouseOver">
+					<Storyboard>
+						<ColorAnimation To="#dcdcdc"
+										Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)"
+										Storyboard.TargetName="frame"
+										d:IsOptimized="True"
+										Duration="0" />
+					</Storyboard>
+				</VisualState>
+				<VisualState x:Name="Normal" />
+			</VisualStateGroup>
+		</VisualStateManager.VisualStateGroups>
+
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="84" />
+				<ColumnDefinition Width="6" />
+				<ColumnDefinition />
+				<ColumnDefinition Width="12" />
+			</Grid.ColumnDefinitions>
+
+			<!-- TODO: The columns should not be hardcoded, this should be considered a temporary fix-->
+
+			<c:Label Content="{Binding Label}"
+					 HorizontalAlignment="Right"
+					 Grid.Column="0" />
+
+			<TextBlock Text="{Binding Value}"
+					   HorizontalAlignment="Left"
+					   FontSize="{StaticResource ControlTitleFontSize}"
+					   Grid.Column="2" />
+		</Grid>
+	</Border>
+</UserControl>

@@ -31,7 +31,7 @@
                 <ti:ContextMenu>
                     <ti:MenuItem Header="Copy Error to Clipboard"
                                  cm:Action.TargetWithoutContext="CopyServerError"
-                                 cm:Message.Attach="Click=Execute($dataContext)" />
+                                 cm:Message.Attach="[Click]=[Execute($dataContext)]" />
                 </ti:ContextMenu>
             </ti:ContextMenuService.ContextMenu>
 

@@ -9,7 +9,8 @@
 
 		static DocumentTemplateSelector()
 		{
-			Templates = IoC.Get<IDocumentTemplateProvider>();
+			if(!Bootstrapper.IsInDesignMode)
+				Templates = IoC.Get<IDocumentTemplateProvider>();
 		}
 
 		protected override void OnContentChanged(object oldContent, object newContent)

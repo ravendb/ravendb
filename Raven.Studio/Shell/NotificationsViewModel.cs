@@ -10,41 +10,56 @@
 	[Export]
 	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class NotificationsViewModel : PropertyChangedBase,
-	                                      IHandle<NotificationRaised>
+										  IHandle<NotificationRaised>
 	{
 		readonly DispatcherTimer notificationTimer;
+		readonly TimeSpan tick = new TimeSpan(0, 0, 0, 2);
+		readonly TimeSpan dismissAfter = new TimeSpan(0, 0, 0, 7);
 
 		[ImportingConstructor]
 		public NotificationsViewModel(IEventAggregator events)
 		{
 			events.Subscribe(this);
-			notificationTimer = new DispatcherTimer {Interval = new TimeSpan(0, 0, 0, 5)};
-			notificationTimer.Tick += UpdateNotifications;
+			notificationTimer = new DispatcherTimer { Interval = tick };
+			notificationTimer.Tick += HandleTick;
 			notificationTimer.Start();
 			Notifications = new BindableCollection<NotificationRaised>();
 		}
 
+		NotificationRaised mostRecent;
 		public NotificationRaised MostRecent
 		{
-			get { return Notifications.Any() ? Notifications[0] : null; }
+			get { return mostRecent; }
+			private set
+			{
+				mostRecent = value;
+				NotifyOfPropertyChange(() => MostRecent);
+			}
 		}
+
+		public bool HasErrors { get { return Notifications.Any(_ => _.Level == NotificationLevel.Error); } }
 
 		public BindableCollection<NotificationRaised> Notifications { get; private set; }
 
-		public void Handle(NotificationRaised message)
+		void IHandle<NotificationRaised>.Handle(NotificationRaised message)
 		{
 			Notifications.Insert(0, message);
-			NotifyOfPropertyChange( ()=> MostRecent);
+			MostRecent = message;
 		}
 
-		void UpdateNotifications(object sender, EventArgs e)
+		public void Dismiss(NotificationRaised message)
 		{
-			var remove = from item in Notifications
-			             where DateTime.Now - item.CreatedAt > new TimeSpan(0,0,0,5)
-			             select item;
-			remove.ToList().Apply(x => Notifications.Remove(x));
+			Notifications.Remove(message);
 
-			NotifyOfPropertyChange(() => MostRecent);
+			if (message == MostRecent) MostRecent = null;
+
+			NotifyOfPropertyChange(() => HasErrors);
+		}
+
+		void HandleTick(object sender, EventArgs e)
+		{
+			if (MostRecent == null) return;
+			if (DateTime.Now - MostRecent.CreatedAt > dismissAfter) MostRecent = null;
 		}
 	}
 }

@@ -29,6 +29,7 @@ namespace Raven.Tests.Bugs
 				{
 					var log = session.Load<ServiceExecutionLog>("ServiceExecutionLogs/1");
 					Assert.Equal(new DateTime(2010, 2, 17, 19, 06, 06), log.LastDateChecked);
+					Assert.Equal(DateTimeKind.Local, log.LastDateChecked.Kind);
 				}
 			}
 		}
@@ -81,6 +82,7 @@ namespace Raven.Tests.Bugs
 				{
 					var log = session.Load<ServiceExecutionLog>("ServiceExecutionLogs/1");
 					Assert.Equal(new DateTime(2010, 2, 17, 19, 06, 06), log.LastDateChecked);
+					Assert.Equal(DateTimeKind.Utc, log.LastDateChecked.Kind);
 				}
 			}
 		}

@@ -14,10 +14,10 @@ using Raven.Studio.Framework;
 
 namespace Raven.Studio.Features.Documents
 {
-    using System.Windows;
-    using System.Windows.Input;
-    using Commands;
-    using Framework.Extensions;
+	using System.Windows;
+	using System.Windows.Input;
+	using Commands;
+	using Framework.Extensions;
 	using System;
 	using System.Collections.Generic;
 	using System.Collections.ObjectModel;
@@ -31,7 +31,7 @@ namespace Raven.Studio.Features.Documents
 	using Raven.Database;
 	using Framework;
 
-	[Export(typeof (EditDocumentViewModel))]
+	[Export(typeof(EditDocumentViewModel))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
 	public class EditDocumentViewModel : Screen
 	{
@@ -44,7 +44,7 @@ namespace Raven.Studio.Features.Documents
 		private IDictionary<string, RavenJToken> metadata;
 		private bool nonAuthoritiveInformation;
 		private readonly BindableCollection<string> references = new BindableCollection<string>();
-        private IKeyboardShortcutBinder keys;
+		private IKeyboardShortcutBinder keys;
 
 		[ImportingConstructor]
 		public EditDocumentViewModel(IEventAggregator events, IKeyboardShortcutBinder keys)
@@ -56,16 +56,16 @@ namespace Raven.Studio.Features.Documents
 			JsonData = InitialJsonData();
 			JsonMetadata = "{}";
 			events.Subscribe(this);
-		    this.keys = keys;
+			this.keys = keys;
 
-            keys.Register<SaveDocument>(Key.S, ModifierKeys.Control, x => x.Execute(this), this);
+			keys.Register<SaveDocument>(Key.S, ModifierKeys.Control, x => x.Execute(this), this);
 		}
 
-        public override void AttachView(object view, object context)
-        {
-            keys.Initialize((FrameworkElement)view);
-            base.AttachView(view, context);
-        }
+		protected override void OnViewAttached(object view, object context)
+		{
+			keys.Initialize((FrameworkElement)view);
+			base.OnViewAttached(view, context);
+		}
 
 		public string ClrType { get; private set; }
 		public string CollectionType { get; private set; }
@@ -80,13 +80,25 @@ namespace Raven.Studio.Features.Documents
 			}
 		}
 
+		public string DisplayId
+		{
+			get
+			{
+				if (IsProjection) return "Projection";
+				return string.IsNullOrEmpty(Id)
+					? "New Document"
+					: Id;
+			}
+		}
+
 		public string Id
 		{
-			get { return IsProjection ? "Projection" : id; }
+			get { return id; }
 			set
 			{
 				id = value ?? string.Empty;
 				NotifyOfPropertyChange(() => Id);
+				NotifyOfPropertyChange(() => DisplayId);
 			}
 		}
 
@@ -204,12 +216,12 @@ namespace Raven.Studio.Features.Documents
 			// user create a document with key like:
 			// users/1234 but didn't specify the Raven-Entity-Name, let 
 			// us provide one for him
-			if(document.Key != null && 
+			if (document.Key != null &&
 				document.Key.Contains('/') &&
 				document.Metadata[Constants.RavenEntityName] == null)
 			{
 				var indexOf = document.Key.IndexOf('/');
-				document.Metadata[Constants.RavenEntityName] = char.ToUpper(document.Key[0]) + document.Key.Substring(1, indexOf-1);
+				document.Metadata[Constants.RavenEntityName] = char.ToUpper(document.Key[0]) + document.Key.Substring(1, indexOf - 1);
 			}
 
 			LastModified = DateTime.Now;
@@ -241,7 +253,7 @@ namespace Raven.Studio.Features.Documents
 
 		private static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, RavenJToken>> data)
 		{
-		    return JsonConvert.SerializeObject(data, Formatting.Indented);
+			return JsonConvert.SerializeObject(data, Formatting.Indented);
 		}
 
 		private static string InitialJsonData()

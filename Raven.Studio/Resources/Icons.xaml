@@ -135,13 +135,13 @@
 							  Background="{x:Null}"
 							  Width="10"
 							  Height="10">
-							<Rectangle Fill="{StaticResource DarkBrush}"
+							<Rectangle Fill="{StaticResource DarkAccentBrush}"
 									   Stroke="{StaticResource ButtonForegroundBrush}"
 									   RadiusX="1"
 									   RadiusY="1"
 									   StrokeThickness="1"
 									   Margin="2,0,0,2" />
-							<Rectangle Fill="{StaticResource DarkBrush}"
+							<Rectangle Fill="{StaticResource DarkAccentBrush}"
 									   Stroke="{StaticResource ButtonForegroundBrush}"
 									   StrokeThickness="1"
 									   RadiusX="1"

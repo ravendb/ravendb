@@ -2,16 +2,16 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Database;
 	using Framework;
 	using Framework.Extensions;
 	using Messages;
 	using Plugins;
+	using Plugins.Database;
 	using Raven.Database.Indexing;
 
 	[Export]
-	[ExportDatabaseScreen("Indexes", Index = 30)]
-	public class BrowseIndexesViewModel : RavenScreen, IDatabaseScreenMenuItem,
+	[ExportDatabaseExplorerItem("Indexes", Index = 30)]
+	public class BrowseIndexesViewModel : RavenScreen,
 										  IHandle<IndexUpdated>
 	{
 		readonly IServer server;
@@ -106,7 +106,7 @@
 			}
 		}
 
-		public void Handle(IndexUpdated message)
+		void IHandle<IndexUpdated>.Handle(IndexUpdated message)
 		{
 			BeginRefreshIndexes();
 

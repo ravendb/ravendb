@@ -7,6 +7,7 @@
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceDictionary Source="Resources/Manifest.xaml" />
 			</ResourceDictionary.MergedDictionaries>
+
 			<Studio:AppBootstrapper x:Key="bootstrapper" />
 		</ResourceDictionary>
 	</Application.Resources>

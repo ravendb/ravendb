@@ -28,7 +28,7 @@
 using System;
 using System.Collections.ObjectModel;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
     internal abstract class FileChangeMonitor : ChangeMonitor
 	{

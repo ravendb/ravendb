@@ -10,7 +10,12 @@ namespace Raven.Abstractions.Json
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
 			if(value is DateTime)
-				writer.WriteValue(((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+			{
+				var dateTime = ((DateTime)value);
+				if (dateTime.Kind == DateTimeKind.Unspecified)
+					dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
+				writer.WriteValue(dateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+			}
 			else if (value is DateTimeOffset)
 				writer.WriteValue(((DateTimeOffset) value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 			else
@@ -27,7 +32,11 @@ namespace Raven.Abstractions.Json
 					DateTime time;
 					if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
 					                           DateTimeStyles.RoundtripKind, out time))
+					{
+						if (time.Kind == DateTimeKind.Unspecified)
+							return DateTime.SpecifyKind(time, DateTimeKind.Local);
 						return time;
+					}
 				}
 				if(objectType == typeof(DateTimeOffset))
 				{

@@ -52,6 +52,7 @@ namespace Raven.Tests.Silverlight
 		{
 			var april_fools = new DateTime(2011, 4, 1, 4, 20, 0, DateTimeKind.Utc);
 
+
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
 			doc["@metadata"]["Last-Modified"] = april_fools.ToString("r");

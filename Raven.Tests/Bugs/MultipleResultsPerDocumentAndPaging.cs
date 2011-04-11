@@ -62,7 +62,9 @@ select new { Actor = actor, Name = movie.Name }",
 
 					if (movies.Count != 2)
 					{
+
 						Debugger.Break();
+
 						WaitForUserToContinueTheTest(store);
 					}
 

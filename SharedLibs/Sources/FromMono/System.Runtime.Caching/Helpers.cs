@@ -28,7 +28,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	static class Helpers
 	{

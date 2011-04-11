@@ -20,11 +20,14 @@
 											 Action setContext) where T:IHaveActiveItem,IConductor
 		{
 			var old = conductor.ActiveItem as IScreen;
+
+			if(old != null)
 			events.Publish(new NavigationOccurred(old.DisplayName, () =>
 			{
 				if (setContext != null) setContext();
 				conductor.ActivateItem(old);
 			}));
+
 			conductor.ActivateItem(newScreen);
 		}
 	}

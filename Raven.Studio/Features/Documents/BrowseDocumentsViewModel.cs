@@ -4,16 +4,16 @@ namespace Raven.Studio.Features.Documents
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
-	using Database;
 	using Framework;
 	using Framework.Extensions;
 	using Messages;
 	using Plugins;
+	using Plugins.Database;
 	using Raven.Database;
 
 	[Export]
-	[ExportDatabaseScreen("Documents", Index = 40)]
-	public class BrowseDocumentsViewModel : RavenScreen, IDatabaseScreenMenuItem,
+	[ExportDatabaseExplorerItem("Documents", Index = 40)]
+	public class BrowseDocumentsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{
 		readonly IEventAggregator events;

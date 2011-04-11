@@ -28,10 +28,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.Caching.Hosting;
-using System.Text;
+using FromMono.System.Runtime.Caching.Hosting;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	sealed class FileChangeNotificationSystem : IFileChangeNotificationSystem, IDisposable
 	{

@@ -75,12 +75,14 @@ namespace Raven.Database
 			if (Projection != null)
 				return Projection;
 
+
 			var doc = new RavenJObject(DataAsJson); //clone the document
 			var metadata = new RavenJObject(Metadata); // clone the metadata
-			metadata["Last-Modified"] = RavenJToken.FromObject(LastModified.ToString("r"));
+			metadata["Last-Modified"] = LastModified;
 			metadata["@etag"] = Etag.ToString();
 			doc["@metadata"] = metadata;
 			metadata["Non-Authoritive-Information"] = RavenJToken.FromObject(NonAuthoritiveInformation);
+
 			return doc;
 		}
 	}

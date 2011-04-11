@@ -30,7 +30,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	sealed partial class MemoryCacheEntryPriorityQueue
 	{
