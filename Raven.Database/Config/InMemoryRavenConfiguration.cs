@@ -12,6 +12,7 @@ using System.Threading;
 using log4net.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Http;
 
 namespace Raven.Database.Config
@@ -44,9 +45,7 @@ namespace Raven.Database.Config
 		{
 			HostName = Settings["Raven/HostName"];
 
-			var portStr = Settings["Raven/Port"];
-
-			Port = portStr != null ? int.Parse(portStr) : 8080;
+		    Port = PortUtil.GetPort(Settings["Raven/Port"]);
 
 			var maxPageSizeStr = Settings["Raven/MaxPageSize"];
 			var minimumQueryCount = Settings["Raven/TempIndexPromotionMinimumQueryCount"];
