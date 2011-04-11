@@ -555,7 +555,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var metadata = new RavenJObject();
 			if (etag != null)
-				metadata.Add("ETag", new RavenJValue(etag.Value.ToString()));
+				metadata.Add("ETag", etag.Value.ToString());
 			AddTransactionInformation(metadata);
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);

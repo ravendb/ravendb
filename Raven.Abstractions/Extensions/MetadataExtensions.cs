@@ -117,7 +117,7 @@ namespace Raven.Database.Data
 				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
 					continue;
 				var headerName = CaptureHeaderName(header.Key);
-				metadata.Add(headerName, header.Value);
+				metadata[headerName] = header.Value;
 			}
 			return metadata;
 		}
@@ -171,7 +171,7 @@ namespace Raven.Database.Data
                     if (values.Length == 1)
                         metadata[headerName] = GetValue(values[0]);
                     else
-                        metadata.Add(headerName, new RavenJArray(values.Select(GetValue)));
+                        metadata[headerName] = new RavenJArray(values.Select(GetValue));
                 }
                 catch (Exception exc)
                 {

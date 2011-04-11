@@ -181,7 +181,7 @@ namespace Raven.Database.Json
 			if (!(property is RavenJArray))
 			{
 				property = new RavenJArray();
-				document.Add(propName, property);
+				document[propName] = property;
 			}
 			var array = property as RavenJArray;
 			if (array == null)
@@ -244,7 +244,7 @@ namespace Raven.Database.Json
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)
 			{
-				document.Add(propName, patchCmd.Value);
+				document[propName] = patchCmd.Value;
 				return;
 			}
 			property.Value = (patchCmd.Value as RavenJValue).Value;
