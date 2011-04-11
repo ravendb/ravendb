@@ -142,11 +142,6 @@ namespace Raven.Json.Linq
 			return o;
 		}
 
-		public void AddValueProperty(string key, object value)
-		{
-			Properties.Add(key, new RavenJValue(value));
-		}
-
         /// <summary>
         /// Creates a <see cref="RavenJObject"/> from an object.
         /// </summary>
