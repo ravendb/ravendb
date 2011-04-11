@@ -112,7 +112,7 @@ namespace Raven.Json.Linq
 				var o = new RavenJObject();
 				foreach (var item in ar.Items)
 				{
-					o.Add(item["Key"].Value<string>(), item["Value"]);
+					o[item["Key"].Value<string>()] = item["Value"];
 				}
 				return (U) (object) o;
 			}
