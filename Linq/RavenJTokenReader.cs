@@ -67,7 +67,7 @@ namespace Raven.Json.Linq
 			{
 				yield return new ReadState(JsonToken.StartObject);
 
-				foreach (var prop in ((RavenJObject)token).Properties)
+				foreach (var prop in ((RavenJObject)token))
 				{
 					yield return new ReadState(JsonToken.PropertyName, prop.Key);
 					foreach (var item in ReadRavenJToken(prop.Value))
