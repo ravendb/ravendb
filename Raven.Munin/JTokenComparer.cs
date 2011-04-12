@@ -32,7 +32,7 @@ namespace Raven.Munin
                 case JTokenType.None:
                 case JTokenType.Undefined:
                 case JTokenType.Null:
-                    return 0;//both are nil
+                    return 0;// all are nil
                 case JTokenType.Object:
                     // that here we only compare _x_ properties, that is intentional and allows to create partial searches
                     // we compare based on _y_ properties order, because that is more stable in our usage
