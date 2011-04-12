@@ -8,7 +8,7 @@
 	using Raven.Database.Data;
 
 	[Export]
-	public class StatisticsViewModel: IStatisticsSet
+	public class StatisticsViewModel : IStatisticsSet
 	{
 		readonly IEventAggregator events;
 		readonly Dictionary<string, Statistic> hash = new Dictionary<string, Statistic>();
@@ -20,13 +20,17 @@
 			this.events = events;
 		}
 
+		public long CountOfDocuments { get; private set; }
+
 		public IObservableCollection<IStatisticsItem> Items { get; private set; }
 
 		public void Accept(DatabaseStatistics stats)
 		{
+			CountOfDocuments = stats.CountOfDocuments;
+
 			UpdateOrSetStatEntry("documents", stats.CountOfDocuments, IoC.Get<Documents.BrowseDocumentsViewModel>);
 			UpdateOrSetStatEntry("indexes", stats.CountOfIndexes, IoC.Get<IndexesViewModel>);
-            UpdateOrSetStatEntry("stale", stats.StaleIndexes.Length, IoC.Get<IndexesViewModel>);
+			UpdateOrSetStatEntry("stale", stats.StaleIndexes.Length, IoC.Get<IndexesViewModel>);
 			UpdateOrSetStatEntry("errors", stats.Errors.Length, IoC.Get<ErrorsViewModel>);
 			UpdateOrSetStatEntry("triggers", stats.Triggers.Length, null);
 			UpdateOrSetStatEntry("tasks", stats.ApproximateTaskCount, null);
@@ -34,18 +38,18 @@
 
 		public void RaiseMessageForStat(IStatisticsItem item)
 		{
-			if(item.ScreenToOpen == null) return;
+			if (item.ScreenToOpen == null) return;
 			events.Publish(new Messages.DatabaseScreenRequested(item.ScreenToOpen));
 		}
 
 		void UpdateOrSetStatEntry(string label, object value, Func<IScreen> openScreen)
 		{
 			UpdateOrSetStatEntry(new Statistic
-			                     	{
-			                     		Label = label,
-			                     		Value = value.ToString(),
+									{
+										Label = label,
+										Value = value.ToString(),
 										ScreenToOpen = openScreen
-			                     	});
+									});
 		}
 
 		void UpdateOrSetStatEntry(Statistic entry)
