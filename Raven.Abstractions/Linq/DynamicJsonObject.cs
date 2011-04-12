@@ -158,8 +158,8 @@ namespace Raven.Database.Linq
 					var s = value as string;
 					if(s != null)
 					{
-						DateTime time;
-                        if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
+						DateTimeOffset time;
+                        if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
 							return time;
 					}
 					return value;

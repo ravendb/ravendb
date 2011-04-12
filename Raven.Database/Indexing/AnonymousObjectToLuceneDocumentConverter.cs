@@ -121,6 +121,12 @@ namespace Raven.Database.Indexing
 					yield return new Field(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 				}
+				if(value is DateTimeOffset)
+				{
+					var val = (DateTimeOffset)value;
+					yield return new Field(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+				}
 				else
 				{
 					yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
@@ -140,6 +146,12 @@ namespace Raven.Database.Indexing
 			if (value is DateTime)
 			{
 				yield return new Field(name, DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND),
+					indexDefinition.GetStorage(name, defaultStorage),
+					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+			}
+			else if (value is DateTimeOffset)
+			{
+				yield return new Field(name, DateTools.DateToString(((DateTimeOffset)value).UtcDateTime, DateTools.Resolution.MILLISECOND),
 					indexDefinition.GetStorage(name, defaultStorage),
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 			}
