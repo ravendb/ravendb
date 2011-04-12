@@ -138,13 +138,14 @@ namespace Raven.Json.Linq
             return new RavenJObject(this);
         }
 
-		internal override RavenJToken MakeShallowCopy(IDictionary<string, RavenJToken> dict, object key)
+		internal override RavenJToken MakeShallowCopy(IDictionary<string, RavenJToken> dict, string key)
 		{
-			var o = new RavenJObject();
-			o.properties = properties;
-			o.parentObject = dict;
-			o.parentKey = key as string;
-			return o;
+			return new RavenJObject
+			{
+				properties = properties, 
+				parentObject = dict, 
+				parentKey = key
+			};
 		}
 
         /// <summary>
