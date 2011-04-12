@@ -25,6 +25,11 @@
 
 		public void Execute(string documentId)
 		{
+		    if (documentId.EndsWith("/"))
+		    {
+                documentId = documentId.Remove(documentId.Length - 1, 1);
+		    }
+
 			events.Publish(new WorkStarted());
 			server.OpenSession().Advanced.AsyncDatabaseCommands
 				.GetAsync(documentId)
