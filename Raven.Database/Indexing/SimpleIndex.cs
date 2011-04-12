@@ -42,6 +42,9 @@ namespace Raven.Database.Indexing
                     .ToList();
                 var documentsWrapped = documents.Select((dynamic doc) =>
                 {
+					if(doc.__document_id == null)
+						throw new ArgumentException("Cannot index something which doesn't have a document id, but got: " + doc);
+
                     string documentId = doc.__document_id.ToString();
                     if (processedKeys.Add(documentId) == false)
                         return doc;
