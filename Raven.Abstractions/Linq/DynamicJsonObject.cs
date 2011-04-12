@@ -209,11 +209,8 @@ namespace Raven.Database.Linq
 			var metadata = inner["@metadata"] as RavenJObject;
 			if (metadata != null)
 			{
-				var id = metadata["@id"];
-				if (id != null)
-				{
-					return id.Value<string>() ?? (object)new DynamicNullObject();
-				}
+				var id = metadata.Value<string>("@id");
+				return string.IsNullOrEmpty(id) ? (object)new DynamicNullObject() : id;
 			}
 			return inner.Value<string>(Constants.DocumentIdFieldName) ?? (object)new DynamicNullObject();
 		}
