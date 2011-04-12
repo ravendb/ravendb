@@ -24,7 +24,7 @@ namespace Raven.Tests.Bugs
 			public string AuthorId { get; set; }
 		}
 
-        [Fact]
+		[Fact]
         public void CanConvertToAndFromJsonWithNestedPatchRequests()
         {
             var patch = new PatchRequest
