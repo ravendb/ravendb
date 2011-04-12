@@ -134,14 +134,10 @@ namespace Raven.Database.Impl
 
 	    public static void EnsureIdInMetadata(IJsonDocumentMetadata doc)
 	    {
-			if (doc == null)
+			if (doc == null || doc.Metadata == null)
 				return;
 
-	    	var metadata = doc.Metadata;
-	    	if (metadata == null)
-                return;
-
-            metadata["@id"] = new RavenJValue(doc.Key);
+			doc.Metadata["@id"] = new RavenJValue(doc.Key);
 	    }
 
 	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
