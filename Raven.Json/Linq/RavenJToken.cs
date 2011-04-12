@@ -22,7 +22,7 @@ namespace Raven.Json.Linq
         /// <returns>A cloned RavenJToken</returns>
         public abstract RavenJToken CloneToken();
 
-		internal virtual RavenJToken MakeShallowCopy(IDictionary<string, RavenJToken> dict, object key)
+		internal virtual RavenJToken MakeShallowCopy(IDictionary<string, RavenJToken> dict, string key)
 		{
 			return this;
 		}
