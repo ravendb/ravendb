@@ -163,7 +163,7 @@ namespace Raven.Database.Indexing
 			var stringValue = fld.StringValue();
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
 			{
-				var val = RavenJToken.Parse(fld.StringValue());
+				var val = RavenJToken.Parse(fld.StringValue()) as RavenJObject;
 				return new KeyValuePair<string, RavenJToken>(fld.Name(), val);
 			}
 			if (stringValue == Constants.NullValue)
