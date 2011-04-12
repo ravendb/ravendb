@@ -137,6 +137,7 @@
     <Compile Include="Bugs\DateRanges.cs" />
     <Compile Include="Bugs\DateTimeInLocalTime.cs" />
     <Compile Include="Bugs\DateTimeInLocalTimeRemote.cs" />
+    <Compile Include="Bugs\DateTimeOffsets.cs" />
     <Compile Include="Bugs\DecimalPrecision.cs" />
     <Compile Include="Bugs\Distinct.cs" />
     <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
