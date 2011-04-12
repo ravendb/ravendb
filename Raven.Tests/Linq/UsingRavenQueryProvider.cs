@@ -560,6 +560,37 @@ namespace Raven.Tests.Linq
 				}
 			}			
 		}
+
+		[Fact]
+		public void Can_Use_In_IEnumerable_In_Where_Clause_with_negation()
+		{
+			using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+			{
+				store.Initialize();
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new OrderItem { Cost = 1.59m, Quantity = 5 });
+					s.Store(new OrderItem { Cost = 7.59m, Quantity = 3 });
+					s.Store(new OrderItem { Cost = 1.59m, Quantity = 4 });
+					s.Store(new OrderItem { Cost = 1.39m, Quantity = 3 });
+					s.SaveChanges();
+				}
+
+				var list = new List<decimal> { 3, 5 };
+
+				using (var s = store.OpenSession())
+				{
+					var items = (from item in s.Query<OrderItem>()
+								 where !item.Quantity.In(list) 
+								 select item
+									 ).ToArray();
+
+					Assert.Equal(items.Length, 1);
+				}
+			}
+		}
+
 		[Fact]
 		public void Can_Use_In_Params_In_Where_Clause()
 		{

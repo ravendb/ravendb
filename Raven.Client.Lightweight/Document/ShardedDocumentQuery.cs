@@ -112,6 +112,18 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Negate the next operation
+		/// </summary>
+		public void NegateNext()
+		{
+			ApplyForAll(x =>
+			{
+				x.NegateNext();
+				return null;
+			});
+		}
+
+		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
 		/// <param name="path">The path.</param>
