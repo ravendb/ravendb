@@ -5,6 +5,7 @@
 	using System.Threading.Tasks;
 	using System.Windows;
 	using Caliburn.Micro;
+	using Messages;
 	using Action = System.Action;
 
 	public interface IBindablePagedQuery
@@ -214,6 +215,9 @@
 
 		public void LoadPage(Action afterLoaded, int page = 0)
 		{
+			//HACK:
+			IoC.Get<IEventAggregator>().Publish(new WorkStarted("loading page"));
+
 			IsLoading = true;
 
 			query(page * PageSize, PageSize)
@@ -232,6 +236,9 @@
 									Refresh();
 
 									IsLoading = false;
+									
+									//HACK:
+									IoC.Get<IEventAggregator>().Publish(new WorkCompleted("loading page"));
 
 									if (afterLoaded != null) afterLoaded();
 								});
