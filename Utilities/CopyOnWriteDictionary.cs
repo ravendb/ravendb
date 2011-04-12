@@ -118,11 +118,6 @@ namespace Raven.Json.Utilities
 			if (inherittedValues == null || !inherittedValues.TryGetValue(key, out unsafeVal) || unsafeVal == DeletedMarker)
 				return false;
 
-			// Will also perform a copy-on-write clone on object supporting this
-			// TODO: Somehow unsafeval is being assigned a null; before adding a null check we need to eliminate this within Raven
-			/*var safeVal = unsafeVal.CloneToken();
-			LocalChanges[key] = safeVal;
-			value = safeVal;*/
 			if (unsafeVal == null)
 				return true;
 
