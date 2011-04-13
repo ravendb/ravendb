@@ -317,9 +317,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public void SaveChanges()
 		{
-		    try
+		    using(EntitiesToJsonCachingScope())
 		    {
-                jsonCachingEnabled = true;
                 var data = PrepareForSaveChanges();
                 if (data.Commands.Count == 0)
                     return; // nothing to do here
@@ -327,10 +326,6 @@ namespace Raven.Client.Document
                 Debug.WriteLine(string.Format("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier));
                 UpdateBatchResults(DatabaseCommands.Batch(data.Commands), data.Entities);
             }
-		    finally
-		    {
-		        jsonCachingEnabled = false;
-		    }
 		}
 
 

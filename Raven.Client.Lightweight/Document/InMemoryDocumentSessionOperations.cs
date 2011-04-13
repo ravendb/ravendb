@@ -68,11 +68,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly IDocumentQueryListener[] queryListeners;
 
-        /// <summary>
-        /// Set to true to cache json serialization
-        /// </summary>
-        protected bool jsonCachingEnabled;
-
 		/// <summary>
 		/// Gets the number of requests for this session
 		/// </summary>
@@ -81,7 +76,7 @@ namespace Raven.Client.Document
 
 		private readonly IDocumentDeleteListener[] deleteListeners;
 		private readonly IDocumentStoreListener[] storeListeners;
-	    private readonly IDictionary<object, JObject> cachedJsonDocs = new Dictionary<object, JObject>();
+	    private IDictionary<object, JObject> cachedJsonDocs;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
@@ -812,14 +807,22 @@ more responsive application.
 			if (jObject != null)
 				return jObject;
 
-            if (jsonCachingEnabled && cachedJsonDocs.TryGetValue(entity, out jObject))
+            if (cachedJsonDocs != null && cachedJsonDocs.TryGetValue(entity, out jObject))
                 return jObject;
             
             jObject = JObject.FromObject(entity, Conventions.CreateSerializer());
-		    cachedJsonDocs[entity] = jObject;
+			if (cachedJsonDocs != null)
+				cachedJsonDocs[entity] = jObject;
 		    return jObject;
 		}
 
+
+		protected IDisposable EntitiesToJsonCachingScope()
+		{
+			cachedJsonDocs = new Dictionary<object, JObject>();
+
+			return new DisposableAction(() => cachedJsonDocs = null);
+		}
 
 
 		/// <summary>
