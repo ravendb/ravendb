@@ -335,9 +335,14 @@ namespace Raven.Json.Linq
 
 		#endregion
 
-		public new void Add(string propName, RavenJToken token)
+		public void Add(string propName, RavenJToken token)
 		{
 			Properties.Add(propName, token);
+		}
+
+		internal override void AddForCloning(string key, RavenJToken token)
+		{
+			Properties.Add(key, token);
 		}
 
 		public bool Remove(string propName)
