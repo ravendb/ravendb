@@ -101,9 +101,9 @@ namespace Raven.Json.Linq
         	return CloneTokenImpl(new RavenJObject());
         }
 
-		internal override IEnumerator<KeyValuePair<string, RavenJToken>> GetCloningEnumerator()
+		internal override IEnumerable<KeyValuePair<string, RavenJToken>> GetCloningEnumerator()
 		{
-			return Properties.GetEnumerator();
+			return Properties;
 		}
 
         /// <summary>

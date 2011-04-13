@@ -203,9 +203,9 @@ namespace Raven.Json.Linq
 
 		#endregion
 
-		internal override IEnumerator<KeyValuePair<string, RavenJToken>> GetCloningEnumerator()
+		internal override IEnumerable<KeyValuePair<string, RavenJToken>> GetCloningEnumerator()
 		{
-			return Items.Select(i => new KeyValuePair<string, RavenJToken>(null, i)).GetEnumerator();
+			return Items.Select(i => new KeyValuePair<string, RavenJToken>(null, i));
 		}
 
 		#region IEnumerable Members
