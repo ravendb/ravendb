@@ -22,33 +22,12 @@ namespace Raven.Json.Linq
             get { return JTokenType.Object; }
         }
 
-		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        public IDictionary<string, RavenJToken> Properties
-        {
-			get
-			{
-				if (properties == null)
-					properties = new CopyOnWriteDictionary();
+        public DictionaryWithParentSnapshot Properties { get; private set; }
 
-				if (parentObject != null)
-				{
-					properties = properties.Clone();
-					parentObject[parentKey] = this;
-					parentObject = null;
-				}
-				return properties;
-			}
-        }
-
-    	public int Count
+        public int Count
     	{
-			get { return properties == null ? 0 : properties.Count; }
+			get { return Properties.Count; }
     	}
-
-        private CopyOnWriteDictionary properties;
-
-    	private string parentKey;
-    	private IDictionary<string, RavenJToken> parentObject;
 
 		public override IEnumerable<RavenJToken> Children()
 		{
@@ -57,7 +36,7 @@ namespace Raven.Json.Linq
 
     	public ICollection<string> Keys
     	{
-			get { return properties == null ? new HashSet<string>() : properties.Keys; }
+			get { return Properties.Keys; }
     	}
 
         /// <summary>
@@ -65,16 +44,22 @@ namespace Raven.Json.Linq
         /// </summary>
         public RavenJObject()
         {
+            Properties = new DictionaryWithParentSnapshot();
         }
 
 		public RavenJObject(IEnumerable<KeyValuePair<string, RavenJToken>> props)
 		{
-			properties = new CopyOnWriteDictionary();
+			Properties = new DictionaryWithParentSnapshot();
 			foreach (var kv in props)
 			{
-				properties.Add(kv);
+				Properties.Add(kv);
 			}
 		}
+
+        private RavenJObject(DictionaryWithParentSnapshot snapshot)
+        {
+            Properties = snapshot;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenJObject"/> class from another <see cref="RavenJObject"/> object.
@@ -82,8 +67,11 @@ namespace Raven.Json.Linq
         /// <param name="other">A <see cref="RavenJObject"/> object to copy from.</param>
 		public RavenJObject(RavenJObject other)
         {
-        	if (other.properties != null)
-        		properties = other.properties.Clone();
+            Properties = new DictionaryWithParentSnapshot();
+            foreach (var kv in other.Properties)
+            {
+                Properties.Add(kv.Key, kv.Value.CloneToken());
+            }
         }
 
 		/// <summary>
@@ -122,12 +110,9 @@ namespace Raven.Json.Linq
 		{
 			get
 			{
-				if (properties == null)
-					return null;
-
 				ValidationUtils.ArgumentNotNull(propertyName, "propertyName");
 				RavenJToken ret;
-				properties.TryGetValue(propertyName, out ret);
+				Properties.TryGetValue(propertyName, out ret);
 				return ret;
 			}
 			set { Properties[propertyName] = value; }
@@ -137,16 +122,6 @@ namespace Raven.Json.Linq
         {
             return new RavenJObject(this);
         }
-
-		internal override RavenJToken MakeShallowCopy(IDictionary<string, RavenJToken> dict, string key)
-		{
-			return new RavenJObject
-			{
-				properties = properties, 
-				parentObject = dict, 
-				parentKey = key
-			};
-		}
 
         /// <summary>
         /// Creates a <see cref="RavenJObject"/> from an object.
@@ -279,9 +254,9 @@ namespace Raven.Json.Linq
 		{
 			writer.WriteStartObject();
 
-			if (properties != null)
+			if (Properties != null)
 			{
-				foreach (var property in properties)
+				foreach (var property in Properties)
 				{
 					writer.WritePropertyName(property.Key);
 					property.Value.WriteTo(writer, converters);
@@ -297,17 +272,17 @@ namespace Raven.Json.Linq
 			if (t == null)
 				return false;
 
-			if (properties == null || t.properties == null)
+			if (Properties == null || t.Properties == null)
 			{
-				if (properties == t.properties)
+				if (Properties == t.Properties)
 					return true;
 				return false;
 			}
 
 			RavenJToken v1, v2;
-			foreach (var key in properties.Keys)
+			foreach (var key in Properties.Keys)
 			{
-				if (!t.properties.TryGetValue(key, out v2) || !properties.TryGetValue(key, out v1))
+				if (!t.Properties.TryGetValue(key, out v2) || !Properties.TryGetValue(key, out v1))
 					return false;
 
 				if (v1 == null || v2 == null)
@@ -327,9 +302,9 @@ namespace Raven.Json.Linq
 		internal override int GetDeepHashCode()
 		{
 			int hashCode = 0;
-			if (properties != null)
+			if (Properties != null)
 			{
-				foreach (RavenJToken item in properties.Values)
+				foreach (RavenJToken item in Properties.Values)
 				{
 					hashCode ^= item.GetDeepHashCode();
 				}
@@ -341,9 +316,7 @@ namespace Raven.Json.Linq
 
 		public IEnumerator<KeyValuePair<string, RavenJToken>> GetEnumerator()
 		{
-			if (properties == null)
-				return Enumerable.Empty<KeyValuePair<string, RavenJToken>>().GetEnumerator();
-			return properties.Clone().GetEnumerator();
+			return Properties.GetEnumerator();
 		}
 
     	#endregion
@@ -369,18 +342,22 @@ namespace Raven.Json.Linq
 
 		public bool ContainsKey(string key)
 		{
-			if (properties == null) return false;
-			return properties.ContainsKey(key);
+			return Properties.ContainsKey(key);
 		}
 
     	public bool TryGetValue(string name, out RavenJToken value)
     	{
-			if (properties == null)
-			{
-				value = null;
-				return false;
-			}
-    		return properties.TryGetValue(name, out value);	
+    		return Properties.TryGetValue(name, out value);	
     	}
+
+        public RavenJObject CreateSnapshot()
+        {
+            return new RavenJObject(Properties.CreateSnapshot());
+        }
+
+        public void EnsureSnapshot()
+        {
+            Properties.EnsureSnapshot();
+        }
     }
 }
