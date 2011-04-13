@@ -34,14 +34,14 @@ namespace Raven.Database.Util
 
         private static int FindPort()
         {
-            var tcpConnInfoArray = IPGlobalProperties
+            var activeTcpListeners = IPGlobalProperties
                 .GetIPGlobalProperties()
-                .GetActiveTcpConnections();
+                .GetActiveTcpListeners();
 
             for (var port = DefaultPort; port < DefaultPort + 1024; port++)
             {
                 var portCopy = port;
-                if (tcpConnInfoArray.All(tcpi => tcpi.LocalEndPoint.Port != portCopy))
+                if (activeTcpListeners.All(endPoint => endPoint.Port != portCopy))
                     return port;
             }
 
