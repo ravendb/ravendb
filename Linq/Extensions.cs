@@ -20,7 +20,7 @@ namespace Raven.Json.Linq
 
 		public static U Value<U>(this RavenJToken value)
 		{
-			return value.Convert<RavenJToken, U>();
+			return value.Convert<U>();
 		}
 
 		/// <summary>
@@ -38,7 +38,7 @@ namespace Raven.Json.Linq
 			if (token == null)
 				throw new ArgumentException("Source value must be a RavenJToken.");
 
-			return token.Convert<RavenJToken, U>();
+			return token.Convert<U>();
 		}
 
 		/// <summary>
@@ -49,7 +49,7 @@ namespace Raven.Json.Linq
 		/// <returns>An <see cref="IEnumerable{T}"/> that contains the converted values of every node in the source collection.</returns>
 		public static IEnumerable<U> Values<U>(this IEnumerable<RavenJToken> source)
 		{
-			return Values<RavenJToken, U>(source, null);
+			return Values<U>(source, null);
 		}
 
 		/// <summary>
@@ -58,9 +58,9 @@ namespace Raven.Json.Linq
 		/// <param name="source">An <see cref="IEnumerable{T}"/> of <see cref="RavenJToken"/> that contains the source collection.</param>
 		/// <param name="key">The token key.</param>
 		/// <returns>An <see cref="IEnumerable{T}"/> of <see cref="RavenJToken"/> that contains the values of every node in the source collection with the given key.</returns>
-		public static IEnumerable<RavenJToken> Values(this IEnumerable<RavenJToken> source, object key)
+		public static IEnumerable<RavenJToken> Values(this IEnumerable<RavenJToken> source, string key)
 		{
-			return Values<RavenJToken, RavenJToken>(source, key);
+			return Values<RavenJToken>(source, key);
 		}
 
 		/// <summary>
@@ -73,44 +73,41 @@ namespace Raven.Json.Linq
 			return source.Values(null);
 		}
 
-		internal static IEnumerable<U> Values<T, U>(this IEnumerable<T> source, object key) where T : RavenJToken
+		internal static IEnumerable<U> Values<U>(this IEnumerable<RavenJToken> source, string key)
 		{
 			ValidationUtils.ArgumentNotNull(source, "source");
 
 			foreach (RavenJToken token in source)
 			{
-				if (key == null)
+				if (token is RavenJValue)
 				{
-					if (token is RavenJValue)
-					{
-						yield return Convert<RavenJValue, U>((RavenJValue) token);
-					}
-					else
-					{
-						foreach (RavenJToken t in token.Children())
-						{
-							yield return t.Convert<RavenJToken, U>();
-						}
-					}
+					yield return Convert<U>(token);
 				}
 				else
 				{
-					RavenJToken value = token[key];
-					if (value != null)
-						yield return value.Convert<RavenJToken, U>();
+					foreach (RavenJToken t in token.Children())
+					{
+						yield return t.Convert<U>();
+					}
 				}
+
+				var ravenJObject = (RavenJObject) token;
+
+				RavenJToken value = ravenJObject[key];
+				if (value != null)
+					yield return value.Convert<U>();
 			}
 
 			yield break;
 		}
 
-		internal static U Convert<T, U>(this T token) where T : RavenJToken
+		internal static U Convert<U>(this RavenJToken token)
 		{
 			if (token is RavenJArray && typeof(U) == typeof(RavenJObject))
 			{
-				var ar = token as RavenJArray;
+				var ar = (RavenJArray)token;
 				var o = new RavenJObject();
-				foreach (var item in ar.Items)
+				foreach (RavenJObject item in ar.Items)
 				{
 					o[item["Key"].Value<string>()] = item["Value"];
 				}
@@ -119,10 +116,10 @@ namespace Raven.Json.Linq
 
 			bool cast = typeof(RavenJToken).IsAssignableFrom(typeof(U));
 
-			return Convert<T, U>(token, cast);
+			return Convert<U>(token, cast);
 		}
 
-		internal static IEnumerable<U> Convert<T, U>(this IEnumerable<T> source) where T : RavenJToken
+		internal static IEnumerable<U> Convert<U>(this IEnumerable<RavenJToken> source)
 		{
 			ValidationUtils.ArgumentNotNull(source, "source");
 
@@ -130,11 +127,11 @@ namespace Raven.Json.Linq
 
 			foreach (RavenJToken token in source)
 			{
-				yield return Convert<RavenJToken, U>(token, cast);
+				yield return Convert<U>(token, cast);
 			}
 		}
 
-		internal static U Convert<T, U>(this T token, bool cast) where T : RavenJToken
+		internal static U Convert<U>(this RavenJToken token, bool cast)
 		{
 			if (cast)
 			{
@@ -148,7 +145,7 @@ namespace Raven.Json.Linq
 
 				var value = token as RavenJValue;
 				if (value == null)
-					throw new InvalidCastException("Cannot cast {0} to {1}.".FormatWith(CultureInfo.InvariantCulture, token.GetType(), typeof(T)));
+					throw new InvalidCastException("Cannot cast {0} to {1}.".FormatWith(CultureInfo.InvariantCulture, token.GetType(), typeof(U)));
 
 				if (value.Value is U)
 					return (U)value.Value;

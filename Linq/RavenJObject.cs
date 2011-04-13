@@ -74,32 +74,15 @@ namespace Raven.Json.Linq
             }
         }
 
-		/// <summary>
-		/// Gets the <see cref="RavenJToken"/> with the specified key.
-		/// </summary>
-		/// <value>The <see cref="RavenJToken"/> with the specified key.</value>
-		public override RavenJToken this[object key]
+    	/// <summary>
+    	/// Gets the <see cref="RavenJToken"/> with the specified key converted to the specified type.
+    	/// </summary>
+    	/// <typeparam name="T">The type to convert the token to.</typeparam>
+    	/// <param name="key">The token key.</param>
+    	/// <returns>The converted token value.</returns>
+    	public override T Value<T>(string key)
 		{
-			get
-			{
-				ValidationUtils.ArgumentNotNull(key, "o");
-
-				var propertyName = key as string;
-				if (propertyName == null)
-					throw new ArgumentException("Accessed RavenJObject values with invalid key value: {0}. Object property name expected.".FormatWith(CultureInfo.InvariantCulture, MiscellaneousUtils.ToString(key)));
-
-				return this[propertyName];
-			}
-			set
-			{
-				ValidationUtils.ArgumentNotNull(key, "o");
-
-				var propertyName = key as string;
-				if (propertyName == null)
-					throw new ArgumentException("Set RavenJObject values with invalid key value: {0}. Object property name expected.".FormatWith(CultureInfo.InvariantCulture, MiscellaneousUtils.ToString(key)));
-
-				this[propertyName] = value;
-			}
+			return this[key].Convert<T>();
 		}
 
 		/// <summary>

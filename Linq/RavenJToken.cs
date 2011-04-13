@@ -22,17 +22,7 @@ namespace Raven.Json.Linq
         /// <returns>A cloned RavenJToken</returns>
         public abstract RavenJToken CloneToken();
 
-        /// <summary>
-		/// Gets the <see cref="RavenJToken"/> with the specified key.
-		/// </summary>
-		/// <value>The <see cref="RavenJToken"/> with the specified key.</value>
-		public virtual RavenJToken this[object key]
-		{
-			get { throw new InvalidOperationException("Cannot access child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
-			set { throw new InvalidOperationException("Cannot set child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
-		}
-
-    	public abstract IEnumerable<RavenJToken> Children();
+        public abstract IEnumerable<RavenJToken> Children();
 
         internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
         {
@@ -183,9 +173,9 @@ namespace Raven.Json.Linq
 		/// <typeparam name="T">The type to convert the token to.</typeparam>
 		/// <param name="key">The token key.</param>
 		/// <returns>The converted token value.</returns>
-		public virtual T Value<T>(object key)
+		public virtual T Value<T>(string key)
 		{
-			return this[key].Convert<RavenJToken, T>();
+			throw new NotSupportedException();
 		}
 
 		/// <summary>
@@ -243,7 +233,7 @@ namespace Raven.Json.Linq
 		/// </returns>
 		public IEnumerable<T> Values<T>()
 		{
-			return Children().Convert<RavenJToken, T>();
+			return Children().Convert<T>();
 		}
 
 		#region Cast to operators
