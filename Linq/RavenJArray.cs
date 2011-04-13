@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -115,7 +116,7 @@ namespace Raven.Json.Linq
 
         public override RavenJToken CloneToken()
         {
-            return new RavenJArray(this);
+			return CloneTokenImpl(new RavenJArray());
         }
 
         public int Length { get { return _items == null ? 0 : _items.Count; } }
@@ -250,6 +251,11 @@ namespace Raven.Json.Linq
 
 		#endregion
 
+		internal override IEnumerator<KeyValuePair<string, RavenJToken>> GetCloningEnumerator()
+		{
+			return Items.Select(i => new KeyValuePair<string, RavenJToken>(null, i)).GetEnumerator();
+		}
+
 		#region IEnumerable Members
 
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
@@ -263,5 +269,10 @@ namespace Raven.Json.Linq
     	{
     		Items.Add(token);
     	}
+
+		internal override void Add(string key, RavenJToken token)
+		{
+			Add(token);
+		}
     }
 }

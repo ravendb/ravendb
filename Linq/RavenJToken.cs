@@ -22,6 +22,38 @@ namespace Raven.Json.Linq
         /// <returns>A cloned RavenJToken</returns>
         public abstract RavenJToken CloneToken();
 
+		protected RavenJToken CloneTokenImpl(RavenJToken newObject)
+		{
+			var readingStack = new Stack<IEnumerator<KeyValuePair<string, RavenJToken>>>();
+			var writingStack = new Stack<RavenJToken>();
+			
+			writingStack.Push(newObject);
+			readingStack.Push(GetCloningEnumerator());
+
+			while (readingStack.Count > 0)
+			{
+				var curReader = readingStack.Pop();
+				var curObject = writingStack.Pop();
+				while (curReader.MoveNext())
+				{
+					if (curReader.Current.Value is RavenJValue)
+					{
+						curObject.Add(curReader.Current.Key, curReader.Current.Value.CloneToken());
+						continue;
+					}
+
+					if (curReader.Current.Value is RavenJArray)
+						writingStack.Push(new RavenJArray());
+					else if (curReader.Current.Value is RavenJObject)
+						writingStack.Push(new RavenJObject());
+
+					curObject.Add(curReader.Current.Key, writingStack.Peek());
+					readingStack.Push(curReader.Current.Value.GetCloningEnumerator());
+				}
+			}
+			return newObject;
+		}
+
         /// <summary>
 		/// Gets the <see cref="RavenJToken"/> with the specified key.
 		/// </summary>
@@ -244,6 +276,16 @@ namespace Raven.Json.Linq
 		public IEnumerable<T> Values<T>()
 		{
 			return Children().Convert<RavenJToken, T>();
+		}
+
+		internal virtual void Add(string key, RavenJToken token)
+		{
+			
+		}
+
+		internal virtual IEnumerator<KeyValuePair<string, RavenJToken>> GetCloningEnumerator()
+		{
+			return null;
 		}
 
 		#region Cast to operators
