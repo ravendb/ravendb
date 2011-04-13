@@ -243,7 +243,12 @@ namespace Raven.Json.Linq
 			return Items.Convert<T>();
 		}
 
-		internal void AddForCloning(string key, RavenJToken token)
+		public override IEnumerable<RavenJToken> Values()
+		{
+			return Items;
+		}
+
+		internal override void AddForCloning(string key, RavenJToken token)
 		{
 			Add(token);
 		}
