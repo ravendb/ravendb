@@ -179,7 +179,7 @@ task Release -depends Test,TestSilverlight,DoRelease {
 }
 
 task CopySamples {
-	$samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
+	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
                "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", `
                "Raven.Samples.IndexReplication", "Raven.Samples.Includes", "Raven.Sample.SimpleClient", `
                "Raven.Sample.ComplexSharding", "Raven.Sample.MultiTenancy", "Raven.Sample.Suggestions", `
