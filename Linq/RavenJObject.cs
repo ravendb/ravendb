@@ -56,19 +56,6 @@ namespace Raven.Json.Linq
             Properties = snapshot;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RavenJObject"/> class from another <see cref="RavenJObject"/> object.
-        /// </summary>
-        /// <param name="other">A <see cref="RavenJObject"/> object to copy from.</param>
-		public RavenJObject(RavenJObject other)
-        {
-            Properties = new DictionaryWithParentSnapshot();
-            foreach (var kv in other.Properties)
-            {
-                Properties.Add(kv.Key, kv.Value.CloneToken());
-            }
-        }
-
     	/// <summary>
     	/// Gets the <see cref="RavenJToken"/> with the specified key converted to the specified type.
     	/// </summary>

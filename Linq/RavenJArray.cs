@@ -20,21 +20,6 @@ namespace Raven.Json.Linq
         	Items = new List<RavenJToken>();
         }
 
-    	/// <summary>
-		/// Initializes a new instance of the <see cref="RavenJArray"/> class from another <see cref="RavenJArray"/> object.
-        /// </summary>
-		/// <param name="other">A <see cref="RavenJArray"/> object to copy from.</param>
-        public RavenJArray(RavenJArray other)
-        {
-    		Items = new List<RavenJToken>(other.Items.Count);
-    		if (other.Length == 0)
-				return;
-
-            // clone array the hard way
-            foreach (var item in other.Items)
-                Items.Add(item.CloneToken());
-        }
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJArray"/> class with the specified content.
 		/// </summary>
