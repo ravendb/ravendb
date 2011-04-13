@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Raven.Json.Utilities
 {
-    public class DictionaryWithParentSnapshot : IDictionary<string, RavenJToken>
+	internal class DictionaryWithParentSnapshot : IDictionary<string, RavenJToken>
     {
         private static readonly RavenJToken DeletedMarker = new RavenJValue("*DeletedMarker*", JTokenType.Null);
 
