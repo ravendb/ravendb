@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -16,18 +17,21 @@ namespace Raven.Json.Linq
         /// </summary>
         public RavenJArray()
         {
+        	Items = new List<RavenJToken>();
         }
 
-        /// <summary>
+    	/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJArray"/> class from another <see cref="RavenJArray"/> object.
         /// </summary>
 		/// <param name="other">A <see cref="RavenJArray"/> object to copy from.</param>
         public RavenJArray(RavenJArray other)
         {
-            if (other.Length == 0) return;
+    		Items = new List<RavenJToken>(other.Items.Count);
+    		if (other.Length == 0)
+				return;
 
             // clone array the hard way
-            foreach (var item in other._items)
+            foreach (var item in other.Items)
                 Items.Add(item.CloneToken());
         }
 
@@ -37,18 +41,18 @@ namespace Raven.Json.Linq
 		/// <param name="content">The contents of the array.</param>
 		public RavenJArray(IEnumerable content)
 		{
-			_items = new List<RavenJToken>();
+			Items = new List<RavenJToken>();
 			var ravenJToken = content as RavenJToken;
 			if(ravenJToken != null)
 			{
-				_items.Add(ravenJToken);
+				Items.Add(ravenJToken);
 			}
 			else
 			{
 				foreach (var item in content)
 				{
 					ravenJToken = item as RavenJToken;
-					_items.Add(ravenJToken ?? new RavenJValue(item));
+					Items.Add(ravenJToken ?? new RavenJValue(item));
 				}
 			}
 		}
@@ -64,8 +68,8 @@ namespace Raven.Json.Linq
 
 		public RavenJArray(IEnumerable<RavenJToken> content)
 		{
-			_items = new List<RavenJToken>();
-			_items.AddRange(content);
+			Items = new List<RavenJToken>();
+			Items.AddRange(content);
 		}
 
     	/// <summary>
@@ -92,13 +96,9 @@ namespace Raven.Json.Linq
             return new RavenJArray(this);
         }
 
-        public int Length { get { return _items == null ? 0 : _items.Count; } }
+        public int Length { get { return Items.Count; } }
 
-        public List<RavenJToken> Items
-        {
-            get { return _items ?? (_items = new List<RavenJToken>()); }
-        }
-        private List<RavenJToken> _items;
+    	public List<RavenJToken> Items { get; private set; }
 
     	public new static RavenJArray Load(JsonReader reader)
         {
@@ -166,9 +166,9 @@ namespace Raven.Json.Linq
 		{
 			writer.WriteStartArray();
 
-			if (_items != null)
+			if (Items != null)
 			{
-				foreach (var token in _items)
+				foreach (var token in Items)
 				{
 					token.WriteTo(writer, converters);
 				}
@@ -183,34 +183,18 @@ namespace Raven.Json.Linq
 			if (t == null)
 				return false;
 
-			if (_items == null)
-				return t.Items.Count == 0;
-
-			if (_items.Count != t.Items.Count)
+			if (Items.Count != t.Items.Count)
 				return false;
 
-			for (int i = 0; i < _items.Count; i++ )
-			{
-				if (!_items[i].DeepEquals(t._items[i]))
-					return false;
-			}
-			return true;
+			return !Items.Where((t1, i) => !t1.DeepEquals(t.Items[i])).Any();
 		}
 
 		internal override int GetDeepHashCode()
 		{
-			int hashCode = 0;
-			if (_items != null)
-			{
-				foreach (RavenJToken item in _items)
-				{
-					hashCode ^= item.GetDeepHashCode();
-				}
-			}
-			return hashCode;
+			return Items.Aggregate(0, (current, item) => current ^ item.GetDeepHashCode());
 		}
 
-		#region IEnumerable<RavenJToken> Members
+    	#region IEnumerable<RavenJToken> Members
 
 		public IEnumerator<RavenJToken> GetEnumerator()
 		{
