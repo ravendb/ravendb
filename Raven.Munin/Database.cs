@@ -275,7 +275,7 @@ namespace Raven.Munin
 					cmd.Add("size", command.Size);
 				}
 
-				array.Items.Add(cmd);
+				array.Add(cmd);
 			}
 
 			if (array.Length == 0 && dataSizeInBytes == 0)
