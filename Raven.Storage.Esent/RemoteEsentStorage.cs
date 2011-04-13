@@ -16,26 +16,12 @@ using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Storage.Esent
 {
-    public class RemoteEsentStorage : IRemoteStorage, IDocumentCacher
+    public class RemoteEsentStorage : IRemoteStorage
     {
         private readonly JET_INSTANCE instance;
         private readonly TableColumnsCache tableColumnsCache;
         private readonly string database;
-
-		private readonly ObjectCache cachedSerializedDocuments = new MemoryCache(typeof(RemoteEsentStorage).FullName + ".Cache");
-
-		public Tuple<RavenJObject, RavenJObject> GetCachedDocument(string key, Guid etag)
-		{
-			var cachedDocument = (Tuple<RavenJObject, RavenJObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
-			if (cachedDocument != null)
-				return Tuple.Create(new RavenJObject(cachedDocument.Item1), new RavenJObject(cachedDocument.Item2));
-			return null;
-		}
-
-		public void SetCachedDocument(string key, Guid etag, Tuple<RavenJObject, RavenJObject> doc)
-		{
-			cachedSerializedDocuments["Doc/" + key + "/" + etag] = doc;
-		}
+        private readonly IDocumentCacher documentCacher;
 
         public RemoteEsentStorage(RemoteEsentStorageState state)
         {
@@ -43,11 +29,12 @@ namespace Raven.Storage.Esent
             database = state.Database;
             tableColumnsCache = new TableColumnsCache();
             tableColumnsCache.InitColumDictionaries(instance, database);
+            documentCacher = new DocumentCacher();
         }
 
         public void Batch(Action<IStorageActionsAccessor> action)
         {
-            using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, new OrderedPartCollection<AbstractDocumentCodec>(), new DummyUuidGenerator(), this))
+            using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, new OrderedPartCollection<AbstractDocumentCodec>(), new DummyUuidGenerator(), documentCacher))
             {
                 action(new StorageActionsAccessor(pht));
             }
@@ -55,7 +42,7 @@ namespace Raven.Storage.Esent
 
         public void Dispose()
         {
-            
+            documentCacher.Dispose();
         }
     }
 }

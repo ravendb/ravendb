@@ -27,7 +27,7 @@ using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Storage.Esent
 {
-	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage, IDocumentCacher
+	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
 	{
 		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
 		private readonly string database;
@@ -40,23 +40,9 @@ namespace Raven.Storage.Esent
 		private JET_INSTANCE instance;
 		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
 		private IUuidGenerator generator;
+	    private IDocumentCacher documentCacher = new DocumentCacher();
 
-		private readonly ObjectCache cachedSerializedDocuments = new MemoryCache(typeof(TransactionalStorage).FullName + ".Cache");
-
-		public Tuple<RavenJObject, RavenJObject> GetCachedDocument(string key, Guid etag)
-		{
-			var cachedDocument = (Tuple<RavenJObject, RavenJObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
-			if (cachedDocument != null)
-				return Tuple.Create(new RavenJObject(cachedDocument.Item1), new RavenJObject(cachedDocument.Item2));
-			return null;
-		}
-
-		public void SetCachedDocument(string key, Guid etag, Tuple<RavenJObject, RavenJObject> doc)
-		{
-			cachedSerializedDocuments["Doc/" + key + "/" + etag] = doc;
-		}
-
-		[ImportMany]
+	    [ImportMany]
 		public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
 
 		[ImportMany]
@@ -104,6 +90,8 @@ namespace Raven.Storage.Esent
 				if (disposed)
 					return;
 				GC.SuppressFinalize(this);
+                if (documentCacher != null)
+                    documentCacher.Dispose();
 				Api.JetTerm2(instance, TermGrbit.Complete);
 			}
 			finally
@@ -350,7 +338,7 @@ namespace Raven.Storage.Esent
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
 				: CommitTransactionGrbit.None;
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, this))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher))
 			{
 				current.Value = new StorageActionsAccessor(pht);
 				action(current.Value);

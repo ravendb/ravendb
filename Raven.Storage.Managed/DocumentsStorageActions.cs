@@ -27,13 +27,19 @@ namespace Raven.Storage.Managed
         private readonly ITransactionStorageActions transactionStorageActions;
         private readonly IUuidGenerator generator;
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
+        private readonly IDocumentCacher documentCacher;
 
-		public DocumentsStorageActions(TableStorage storage, ITransactionStorageActions transactionStorageActions, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+        public DocumentsStorageActions(TableStorage storage, 
+            ITransactionStorageActions transactionStorageActions, 
+            IUuidGenerator generator, 
+            OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
+            IDocumentCacher documentCacher)
         {
             this.storage = storage;
             this.transactionStorageActions = transactionStorageActions;
             this.generator = generator;
             this.documentCodecs = documentCodecs;
+		    this.documentCacher = documentCacher;
         }
 
         public Tuple<int, int> FirstAndLastDocumentIds()
@@ -156,11 +162,11 @@ namespace Raven.Storage.Managed
 
 		private Tuple<MemoryStream, RavenJObject> ReadMetadata(string key, Guid etag, Func<byte[]> getData, out RavenJObject metadata)
         {
-        	var cachedDocument = storage.GetCachedDocument(key, etag);
+            var cachedDocument = documentCacher.GetCachedDocument(key, etag);
         	if (cachedDocument != null)
         	{
-        		metadata = cachedDocument.Item1;
-				return Tuple.Create<MemoryStream, RavenJObject>(null, cachedDocument.Item2);
+        		metadata = cachedDocument.Metadata;
+				return Tuple.Create<MemoryStream, RavenJObject>(null, cachedDocument.Document);
         	}
 
         	var buffer = getData();
@@ -190,7 +196,7 @@ namespace Raven.Storage.Managed
 
 			var result = memoryStream.ToJObject();
 
-			storage.SetCachedDocument(metadata.Key, metadata.Etag, Tuple.Create(new RavenJObject(metadata.Metadata), new RavenJObject(result)));
+            documentCacher.SetCachedDocument(metadata.Key, metadata.Etag, result, metadata.Metadata);
 
     		return result;
     	}

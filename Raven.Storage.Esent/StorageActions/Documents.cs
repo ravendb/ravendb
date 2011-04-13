@@ -105,7 +105,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var cachedDocument = cacher.GetCachedDocument(key, etag);
 			if (cachedDocument != null)
 			{
-				return cachedDocument.Item1;
+				return cachedDocument.Metadata;
 			}
 
 			return Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject();
@@ -117,12 +117,12 @@ namespace Raven.Storage.Esent.StorageActions
 			var cachedDocument = cacher.GetCachedDocument(key, etag);
 			if (cachedDocument != null)
 			{
-				return cachedDocument.Item2;
+				return cachedDocument.Document;
 			}
 
 			var dataBuffer = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
 			var data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
-			cacher.SetCachedDocument(key, etag, Tuple.Create(new RavenJObject(metadata), new RavenJObject(data)));
+		    cacher.SetCachedDocument(key, etag, data, metadata);
 			return data;
 		}
 
@@ -130,7 +130,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
 			if (existingCachedDocument != null)
-				return existingCachedDocument.Item1;
+				return existingCachedDocument.Metadata;
 
 			return Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 		}
@@ -139,13 +139,13 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
 			if (existingCachedDocument != null)
-				return existingCachedDocument.Item2;
+				return existingCachedDocument.Document;
 
 			var dataBuffer = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
 
 			var data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
 
-			cacher.SetCachedDocument(key, existingEtag, Tuple.Create(new RavenJObject(metadata), new RavenJObject(data)));
+			cacher.SetCachedDocument(key, existingEtag, data, metadata);
 
 			return data;
 		}

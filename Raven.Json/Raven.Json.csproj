@@ -60,7 +60,7 @@
     <Compile Include="Linq\RavenJTokenWriter.cs" />
     <Compile Include="Linq\RavenJValue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Utilities\CopyOnWriteDictionary.cs" />
+    <Compile Include="Utilities\DictionaryWithParentSnapshot.cs" />
     <Compile Include="Utilities\MathUtils.cs" />
     <Compile Include="Utilities\MiscellaneousUtils.cs" />
     <Compile Include="Utilities\StringUtils.cs" />
