@@ -811,7 +811,7 @@ namespace Raven.Database
 					if (document == null)
 						continue;
 
-					list.Items.Add(document.ToJson());
+					list.Add(document.ToJson());
 				}
 			});
 			return list;
@@ -836,7 +836,7 @@ namespace Raven.Database
 					if (document == null)
 						continue;
 
-					list.Items.Add(document.ToJson());
+					list.Add(document.ToJson());
 				}
 			});
 			return list;

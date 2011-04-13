@@ -346,10 +346,10 @@ namespace Raven.Client.Client.Async
 								IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 								IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 								IndexEtag = new Guid(request.ResponseHeaders["ETag"].First()),
-								Results = ((RavenJArray)json["Results"]).Items.Cast<RavenJObject>().ToList(),
+								Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
 								TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 								SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-								Includes = ((RavenJArray)json["Includes"]).Items.Cast<RavenJObject>().ToList(),
+								Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
 							};
 				}));
 		}
@@ -392,7 +392,7 @@ namespace Raven.Client.Client.Async
 						//IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 						//IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 						//IndexEtag = new Guid(request.ResponseHeaders["ETag"].First()),
-						Results = ((RavenJArray)json["Results"]).Items.Cast<RavenJObject>().ToList(),
+						Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
 						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 						//SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
 						//Includes = json["Includes"].Children().Cast<RavenJObject>().ToList(), 
@@ -577,7 +577,7 @@ namespace Raven.Client.Client.Async
 				.ContinueWith(task =>
 				{
 					var json = RavenJArray.Parse(task.Result);
-					return json.Items.Select(x => x.Value<string>()).ToArray();
+					return json.Select(x => x.Value<string>()).ToArray();
 				});
 		}
 
@@ -647,7 +647,7 @@ namespace Raven.Client.Client.Async
 						var json = (RavenJObject)RavenJToken.Load(reader);
 						return new SuggestionQueryResult
 						{
-							Suggestions = ((RavenJArray)json["Suggestions"]).Items.Select(x => x.Value<string>()).ToArray(),
+							Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
 						};
 					}
 				});

@@ -57,7 +57,7 @@ namespace Raven.Json.Linq
 				yield return new ReadState(JsonToken.StartArray);
 				if (((RavenJArray)token).Length > 0) // to prevent object creation if inner array is null
 				{
-					foreach (var item in ((RavenJArray)token).Items)
+					foreach (var item in ((RavenJArray)token))
 						foreach (var i in ReadRavenJToken(item))
 							yield return i;
 				}

@@ -169,10 +169,10 @@ namespace Raven.Database.Json
 				var singleOrDefault = array.FirstOrDefault(x => equalityComparer.Equals(x, value));
 				if (singleOrDefault == null)
 					return;
-				array.Items.Remove(singleOrDefault);
+				array.Remove(singleOrDefault);
 				return;
 			}
-			array.Items.RemoveAt(position.Value);
+			array.RemoveAt(position.Value);
 		}
 
 		private void InsertValue(PatchRequest patchCmd, string propName, RavenJToken property)
@@ -192,7 +192,7 @@ namespace Raven.Database.Json
 			if (position < 0 || position >= array.Length)
 				throw new IndexOutOfRangeException("Cannot remove value from '" + propName +
 												   "' because position element is out of bound bounds");
-			array.Items.Insert(position.Value, patchCmd.Value);
+			array.Insert(position.Value, patchCmd.Value);
 		}
 
 		private void AddValue(PatchRequest patchCmd, string propName, RavenJToken token)
@@ -205,7 +205,7 @@ namespace Raven.Database.Json
 			}
 			var array = GetArray(token, propName);
 
-			array.Items.Add(patchCmd.Value);
+			array.Add(patchCmd.Value);
 		}
 
 		private static RavenJArray GetArray(RavenJToken property, string propName)

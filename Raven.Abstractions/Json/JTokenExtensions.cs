@@ -76,7 +76,7 @@ namespace Raven.Abstractions.Json
 					foreach (var subItem in item.Values<RavenJToken>())
 					{
 						newResult = new RavenJObject();
-						jArray.Items.Add(newResult);
+						jArray.Add(newResult);
 						foreach (var pathPart in Items)
 						{
 							pathPart.Value.ForEach(newResult, subItem.SelectToken(pathPart.Key), action);

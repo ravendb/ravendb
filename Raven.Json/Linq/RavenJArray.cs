@@ -98,7 +98,7 @@ namespace Raven.Json.Linq
 
         public int Length { get { return Items.Count; } }
 
-    	public List<RavenJToken> Items { get; private set; }
+    	private List<RavenJToken> Items { get; set; }
 
     	public new static RavenJArray Load(JsonReader reader)
         {
@@ -216,6 +216,21 @@ namespace Raven.Json.Linq
     	{
     		Items.Add(token);
     	}
+
+		public bool Remove(RavenJToken token)
+		{
+			return Items.Remove(token);
+		}
+
+		public void RemoveAt(int index)
+		{
+			Items.RemoveAt(index);
+		}
+
+		public void Insert(int index, RavenJToken token)
+		{
+			Items.Insert(index, token);
+		}
 
 		public override IEnumerable<T> Values<T>()
 		{
