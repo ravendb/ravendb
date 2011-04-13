@@ -22,9 +22,7 @@ namespace Raven.Json.Linq
         /// <returns>A cloned RavenJToken</returns>
         public abstract RavenJToken CloneToken();
 
-        public abstract IEnumerable<RavenJToken> Children();
-
-        internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
+    	internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
         {
 			ValidationUtils.ArgumentNotNull(o, "o");
             ValidationUtils.ArgumentNotNull(jsonSerializer, "jsonSerializer");
@@ -231,9 +229,9 @@ namespace Raven.Json.Linq
 		/// <returns>
 		/// A <see cref="IEnumerable{T}"/> containing the child values of this <see cref="RavenJToken"/>, in document order.
 		/// </returns>
-		public IEnumerable<T> Values<T>()
+		public virtual IEnumerable<T> Values<T>()
 		{
-			return Children().Convert<T>();
+			throw new NotSupportedException();
 		}
 
 		#region Cast to operators

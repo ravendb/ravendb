@@ -100,12 +100,7 @@ namespace Raven.Json.Linq
         }
         private List<RavenJToken> _items;
 
-		public override IEnumerable<RavenJToken> Children()
-		{
-			return Items;
-		}
-
-        public new static RavenJArray Load(JsonReader reader)
+    	public new static RavenJArray Load(JsonReader reader)
         {
 			ValidationUtils.ArgumentNotNull(reader, "reader");
 
@@ -237,5 +232,10 @@ namespace Raven.Json.Linq
     	{
     		Items.Add(token);
     	}
+
+		public override IEnumerable<T> Values<T>()
+		{
+			return Items.Convert<T>();
+		}
     }
 }
