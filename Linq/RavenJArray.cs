@@ -270,7 +270,7 @@ namespace Raven.Json.Linq
     		Items.Add(token);
     	}
 
-		internal override void Add(string key, RavenJToken token)
+		internal void AddForCloning(string key, RavenJToken token)
 		{
 			Add(token);
 		}

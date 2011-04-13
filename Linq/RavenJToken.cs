@@ -38,7 +38,7 @@ namespace Raven.Json.Linq
 				{
 					if (curReader.Current.Value is RavenJValue)
 					{
-						curObject.Add(curReader.Current.Key, curReader.Current.Value.CloneToken());
+						curObject.AddForCloning(curReader.Current.Key, curReader.Current.Value.CloneToken());
 						continue;
 					}
 
@@ -47,7 +47,7 @@ namespace Raven.Json.Linq
 					else if (curReader.Current.Value is RavenJObject)
 						writingStack.Push(new RavenJObject());
 
-					curObject.Add(curReader.Current.Key, writingStack.Peek());
+					curObject.AddForCloning(curReader.Current.Key, writingStack.Peek());
 					readingStack.Push(curReader.Current.Value.GetCloningEnumerator());
 				}
 			}
@@ -278,9 +278,9 @@ namespace Raven.Json.Linq
 			return Children().Convert<RavenJToken, T>();
 		}
 
-		internal virtual void Add(string key, RavenJToken token)
+		internal virtual void AddForCloning(string key, RavenJToken token)
 		{
-			
+			// kept virtual (as opposed to abstract) to waive the new for implementing this in RavenJValue
 		}
 
 		internal virtual IEnumerator<KeyValuePair<string, RavenJToken>> GetCloningEnumerator()
