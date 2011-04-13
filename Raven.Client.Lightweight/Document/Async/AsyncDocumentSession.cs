@@ -134,9 +134,14 @@ namespace Raven.Client.Document.Async
 		/// <returns></returns>
 		public Task SaveChangesAsync()
 		{
+			var cachingScope = EntitiesToJsonCachingScope();
 			var data = PrepareForSaveChanges();
 			return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
-                .ContinueWith(task => UpdateBatchResults(task.Result, data.Entities));
+				.ContinueWith(task =>
+				{
+					UpdateBatchResults(task.Result, data.Entities);
+					cachingScope.Dispose();
+				});
 		}
 
 		/// <summary>
