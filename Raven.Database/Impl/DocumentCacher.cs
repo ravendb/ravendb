@@ -24,8 +24,8 @@ namespace Raven.Database.Impl
         {
             cachedSerializedDocuments["Doc/" + key + "/" + etag] = new CachedDocument
             {
-                Document = new RavenJObject(doc).EnsureSnapshot(),
-                Metadata = new RavenJObject(metadata).EnsureSnapshot()
+                Document = (doc.CloneToken() as RavenJObject).EnsureSnapshot(),
+                Metadata = (metadata.CloneToken() as RavenJObject).EnsureSnapshot()
             };
         }
 

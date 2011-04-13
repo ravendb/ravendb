@@ -8,8 +8,7 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			RavenJObject x;
-			//x.Properties
+			
 		}
 	}
 }

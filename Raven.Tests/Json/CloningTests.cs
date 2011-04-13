@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
@@ -91,6 +92,27 @@ namespace Raven.Tests.Json
 			{
 				anotherRoot["Inner"] = 0;
 			} while ((anotherRoot = anotherRoot["Inner"] as RavenJObject) != null);
+		}
+
+		[Fact]
+		public void ShouldBehaveNicelyInMultithreaded()
+		{
+			var obj = new RavenJObject
+			          	{
+			          		{"prop1", 2},
+			          		{"prop2", "123"}
+			          	};
+
+			var copy = obj.CloneToken() as RavenJObject;
+			copy["@id"] = "movies/1";
+
+			Parallel.For(0, 10000, i =>
+			                       	{
+			                       		Assert.True(copy.ContainsKey("@id"));
+			                       		var foo = copy.CloneToken() as RavenJObject;
+			                       		Assert.True(foo.ContainsKey("@id"));
+			                       		Assert.True(copy.ContainsKey("@id"));
+			                       	});
 		}
     }
 }
