@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -57,7 +58,7 @@ select new { Actor = actor, Name = movie.Name }",
 					var movies = s2.Advanced.LuceneQuery<Movie>("Movies/ByActor")
 						.WhereContains("Actor", "Bond")
 						.Take(2)
-						.WaitForNonStaleResults()
+						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))
 						.ToList();
 
 					if (movies.Count != 2)
