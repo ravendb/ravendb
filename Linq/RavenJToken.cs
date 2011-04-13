@@ -42,12 +42,11 @@ namespace Raven.Json.Linq
 						continue;
 					}
 
-					if (current.Value is RavenJArray)
-						writingStack.Push(new RavenJArray());
-					else if (current.Value is RavenJObject)
-						writingStack.Push(new RavenJObject());
+					var newVal = current.Value is RavenJArray ? (RavenJToken)new RavenJArray() : new RavenJObject();
+					
+					curObject.AddForCloning(current.Key, newVal);
 
-					curObject.AddForCloning(current.Key, writingStack.Peek());
+					writingStack.Push(newVal);
 					readingStack.Push(current.Value.GetCloningEnumerator());
 				}
 			}
