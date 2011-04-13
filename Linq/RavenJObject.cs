@@ -355,9 +355,10 @@ namespace Raven.Json.Linq
             return new RavenJObject(Properties.CreateSnapshot());
         }
 
-        public void EnsureSnapshot()
+        public RavenJObject EnsureSnapshot()
         {
             Properties.EnsureSnapshot();
+            return this;
         }
     }
 }
