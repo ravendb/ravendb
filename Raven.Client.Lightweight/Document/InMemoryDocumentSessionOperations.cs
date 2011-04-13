@@ -817,6 +817,15 @@ more responsive application.
 		}
 
 
+		/// <summary>
+		/// All calls to convert an entity to a json object would be cache
+		/// This is used inside the SaveChanges() action, where we need to access the entities json
+		/// in several disparate places.
+		/// 
+		/// Note: This assumes that no modifications can happen during the SaveChanges. This is naturally true
+		/// Note: for SaveChanges (and multi threaded access will cause undefined behavior anyway).
+		/// Note: For SaveChangesAsync, the same holds true as well.
+		/// </summary>
 		protected IDisposable EntitiesToJsonCachingScope()
 		{
 			cachedJsonDocs = new Dictionary<object, JObject>();
