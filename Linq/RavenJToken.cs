@@ -176,7 +176,6 @@ namespace Raven.Json.Linq
 					return new RavenJValue(reader.Value);
 			}
 
-			// TODO: loading constructor and parameters?
 			throw new Exception("Error reading RavenJToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
 		}
 

@@ -46,15 +46,6 @@ namespace Raven.Json.Linq
             _valueType = type;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RavenJValue"/> class from another <see cref="RavenJValue"/> object.
-        /// </summary>
-        /// <param name="other">A <see cref="RavenJValue"/> object to copy from.</param>
-        public RavenJValue(RavenJValue other)
-            : this(other.Value, other.Type)
-        {
-        }
-
         public override RavenJToken CloneToken()
         {
             return new RavenJValue(Value, Type);
