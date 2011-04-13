@@ -6,6 +6,7 @@
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
 			 mc:Ignorable="d"
 			 d:DesignWidth="640"
 			 d:DesignHeight="480">
@@ -50,6 +51,14 @@
 						<ListBox.ItemTemplate>
 							<DataTemplate>
 								<StackPanel>
+									<ti:ContextMenuService.ContextMenu>
+										<ti:ContextMenu>
+											<ti:MenuItem Header="Copy Index Definition To Clipboard"
+														 Tag="{Binding Index}"
+														 cm:Action.TargetWithoutContext="CopyIndexDefinitionToClipboard"
+														 cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
+										</ti:ContextMenu>
+									</ti:ContextMenuService.ContextMenu>
 									<TextBlock Text="{Binding Name}"
 											   FontSize="12" />
 									<TextBlock Text="{Binding Type}"
