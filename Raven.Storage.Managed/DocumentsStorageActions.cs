@@ -186,7 +186,7 @@ namespace Raven.Storage.Managed
 			if (documentCodecs.Count() > 0)
     		{
     			byte[] buffer = memoryStream.GetBuffer();
-    			var metadataCopy = metadata.Metadata.CloneToken() as RavenJObject;
+    			var metadataCopy = (RavenJObject)metadata.Metadata.CloneToken() ;
 				var dataBuffer = new byte[memoryStream.Length - memoryStream.Position];
 				Buffer.BlockCopy(buffer, (int)memoryStream.Position, dataBuffer, 0,
     			                 dataBuffer.Length);

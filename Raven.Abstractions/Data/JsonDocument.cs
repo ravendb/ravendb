@@ -76,7 +76,7 @@ namespace Raven.Database
 				return Projection;
 
 
-			var doc = DataAsJson.CloneToken() as RavenJObject;
+			var doc = (RavenJObject)DataAsJson.CloneToken();
 			var metadata = Metadata.CloneToken();
 			metadata["Last-Modified"] = LastModified;
 			metadata["@etag"] = Etag.ToString();

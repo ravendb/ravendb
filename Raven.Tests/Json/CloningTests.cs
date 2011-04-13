@@ -87,7 +87,7 @@ namespace Raven.Tests.Json
 				current = temp;
 			}
 
-			var anotherRoot = root.CloneToken() as RavenJObject;
+			var anotherRoot = (RavenJObject)root.CloneToken();
 			do
 			{
 				anotherRoot["Inner"] = 0;
@@ -103,13 +103,13 @@ namespace Raven.Tests.Json
 			          		{"prop2", "123"}
 			          	};
 
-			var copy = obj.CloneToken() as RavenJObject;
+			var copy = (RavenJObject)obj.CloneToken() ;
 			copy["@id"] = "movies/1";
 
 			Parallel.For(0, 10000, i =>
 			                       	{
 			                       		Assert.True(copy.ContainsKey("@id"));
-			                       		var foo = copy.CloneToken() as RavenJObject;
+			                       		var foo = (RavenJObject)copy.CloneToken();
 			                       		Assert.True(foo.ContainsKey("@id"));
 			                       		Assert.True(copy.ContainsKey("@id"));
 			                       	});

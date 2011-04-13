@@ -193,7 +193,7 @@ namespace Raven.Client.Document
 						ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
 						Key = id,
 						OriginalMetadata = jsonDocument.Metadata,
-						Metadata = jsonDocument.Metadata.CloneToken() as RavenJObject,
+						Metadata = (RavenJObject)jsonDocument.Metadata.CloneToken() ,
 						OriginalValue = new RavenJObject()
 					};
 				}
@@ -338,7 +338,7 @@ more responsive application.
 			{
 				OriginalValue = document,
 				Metadata = metadata,
-				OriginalMetadata = metadata.CloneToken() as RavenJObject,
+				OriginalMetadata = (RavenJObject)metadata.CloneToken() ,
 				ETag = new Guid(etag),
 				Key = key
 			};
@@ -643,7 +643,7 @@ more responsive application.
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
-				documentMetadata.OriginalMetadata = batchResult.Metadata.CloneToken() as RavenJObject;
+				documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken() ;
 				documentMetadata.Metadata = batchResult.Metadata;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
