@@ -192,13 +192,12 @@
 			}
 		}
 
-		public bool IsLoading
+		bool IsLoading
 		{
 			get { return isLoading; }
 			set
 			{
 				isLoading = value;
-				NotifyOfPropertyChange("IsLoading");
 				IsLoadingChanged(this, new EventArgs<bool>(isLoading));
 			}
 		}
