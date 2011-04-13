@@ -455,6 +455,7 @@
     <EmbeddedResource Include="SampleData\MvcMusicStore_Dump.json" />
     <None Include="Properties\AppManifest.xml" />
     <DesignTimeOnly Include="SampleData\PagerSampleData\PagerSampleData.xsd" />
+    <EmbeddedResource Include="Settings.dat" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Properties\OutOfBrowserSettings.xml" />

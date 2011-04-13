@@ -1,4 +1,7 @@
-﻿namespace Raven.Studio
+﻿using System.IO;
+using System.Security.Cryptography;
+
+namespace Raven.Studio
 {
 	using System;
 	using System.Collections.Generic;
@@ -25,6 +28,7 @@
 				AssemblySource.Instance.Select(assembly => new AssemblyCatalog(assembly))
 					.Cast<ComposablePartCatalog>());
 
+            RegisterSettings();
 			RegisterTypesByConvention(catalog);
 			
 			container = CompositionHost.Initialize(catalog);
@@ -39,7 +43,7 @@
 			container.Compose(batch);
 		}
 
-		static void RegisterTypesByConvention(AggregateCatalog master)
+        static void RegisterTypesByConvention(AggregateCatalog master)
 		{
 			var catalog = new ConventionalCatalog();
 			
@@ -100,5 +104,30 @@
 			container.GetExportedValue<IWindowManager>().ShowDialog(box);
             });
 		}
+
+        private static void RegisterSettings()
+        {
+            using (var manifestResourceStream = typeof(AppBootstrapper).Assembly.GetManifestResourceStream("Raven.Studio.Settings.dat"))
+            {
+                if (manifestResourceStream == null || manifestResourceStream.Length == 0)
+                    return;
+
+                using (var reader = new BinaryReader(manifestResourceStream))
+                {
+                    using (var aes = new AesManaged())
+                    {
+                        aes.Key = reader.ReadBytes(32);
+                        aes.IV = reader.ReadBytes(16);
+
+                        using (var cryptoStream = new CryptoStream(manifestResourceStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
+                        using (var cryptoReader = new BinaryReader(cryptoStream))
+                        {
+                            ActiproSoftware.Products.ActiproLicenseManager.RegisterLicense(
+                                cryptoReader.ReadString(), cryptoReader.ReadString());
+                        }
+                    }
+                }
+            }
+        }
 	}
 }
