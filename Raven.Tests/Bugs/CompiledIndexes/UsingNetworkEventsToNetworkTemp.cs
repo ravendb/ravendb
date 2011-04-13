@@ -27,11 +27,13 @@ namespace Raven.Tests.Bugs.CompiledIndexes
 				using(var s = store.OpenSession())
 				{
 					var list = s.Advanced.LuceneQuery<dynamic>("Aggregates/NetworkTest")
-						.WaitForNonStaleResults()
+						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))
 						.ToList();
 
+					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+
 					var expected = new DateTime(2011,5,29).ToUniversalTime();
-					Assert.Equal(expected, list[0].NetworkTimeStamp);
+					Assert.Equal(expected, list[0].NetworkTimeStamp.UtcDateTime);
 				}
 			}
 		}

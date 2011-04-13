@@ -121,7 +121,7 @@ namespace Raven.Database.Indexing
 					yield return new Field(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 				}
-				if(value is DateTimeOffset)
+				else if(value is DateTimeOffset)
 				{
 					var val = (DateTimeOffset)value;
 					yield return new Field(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
