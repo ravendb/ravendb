@@ -336,6 +336,11 @@ namespace Raven.Json.Linq
             return this;
         }
 
+		public override IEnumerable<RavenJToken> Values()
+		{
+			return Properties.Values;
+		}
+
 		public override IEnumerable<T> Values<T>()
 		{
 			return Properties.Values.Convert<T>();

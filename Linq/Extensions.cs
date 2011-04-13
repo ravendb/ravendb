@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
@@ -125,10 +126,7 @@ namespace Raven.Json.Linq
 
 			bool cast = typeof(RavenJToken).IsAssignableFrom(typeof(U));
 
-			foreach (RavenJToken token in source)
-			{
-				yield return Convert<U>(token, cast);
-			}
+			return source.Select(token => Convert<U>(token, cast));
 		}
 
 		internal static U Convert<U>(this RavenJToken token, bool cast)
