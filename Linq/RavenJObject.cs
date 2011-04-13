@@ -22,7 +22,7 @@ namespace Raven.Json.Linq
             get { return JTokenType.Object; }
         }
 
-        public DictionaryWithParentSnapshot Properties { get; private set; }
+    	private DictionaryWithParentSnapshot Properties { get; set; }
 
         public int Count
     	{
