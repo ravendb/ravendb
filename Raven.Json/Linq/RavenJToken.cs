@@ -274,6 +274,13 @@ namespace Raven.Json.Linq
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Returns a collection of the child values of this token, in document order.
+		/// </summary>
+		public virtual IEnumerable<RavenJToken> Values()
+		{
+			throw new NotSupportedException();
+		}
 		internal virtual void AddForCloning(string key, RavenJToken token)
 		{
 			// kept virtual (as opposed to abstract) to waive the new for implementing this in RavenJValue
