@@ -130,7 +130,7 @@
     <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
     <Compile Include="Indexing\TasksExecuter.cs" />
     <Compile Include="Linq\CaptureQueryParameterNamesVisitor.cs" />
-    <Compile Include="Linq\TransformNullCoalasingOperatorVisitor.cs" />
+    <Compile Include="Linq\TransformNullCoalasingOperatorTransformer.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
     <Compile Include="Plugins\Builtins\CreateSilverlightIndexes.cs" />
     <Compile Include="Queries\DynamicQueryExtensions.cs" />

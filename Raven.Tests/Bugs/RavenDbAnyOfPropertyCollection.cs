@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using System.Collections.Generic;
 using Raven.Client;
 using Xunit;
 
@@ -88,32 +87,5 @@ namespace Raven.Tests.Bugs
            if (store != null) store.Dispose();
        }
 
-   }
-
-   public class Account
-   {
-       public Account()
-       {
-           Transactions = new List<Transaction>();
-       }
-
-       public IList<Transaction> Transactions { get; private set; }
-   }
-
-   public class Transaction
-   {
-       public Transaction(int amount, DateTime date)
-       {
-           Amount = amount;
-           Date = date;
-       }
-
-       public Transaction()
-       {
-           
-       }
-
-       public int Amount { get; private set; }
-       public DateTime Date { get; private set; }
    }
 }

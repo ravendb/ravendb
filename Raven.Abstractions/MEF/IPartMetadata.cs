@@ -8,9 +8,4 @@ namespace Raven.Abstractions.MEF
 		[DefaultValue(0)]
 		int Order { get; }
 	}
-
-	public class PartMetadata : IPartMetadata
-	{
-		public int Order { get; set; }
-	}
 }

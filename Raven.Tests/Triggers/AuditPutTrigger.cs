@@ -22,23 +22,4 @@ namespace Raven.Tests.Triggers
 			document["created_at"] = new RavenJValue(new DateTime(2000, 1, 1,0,0,0,DateTimeKind.Utc));
 		}
 	}
-
-    public class AuditAttachmentPutTrigger : AbstractAttachmentPutTrigger
-    {
-        public override void OnPut(string key, byte[] data, RavenJObject metadata)
-        {
-            metadata["created_at"] = new RavenJValue(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-        }
-    }
-
-    public class RefuseBigAttachmentPutTrigger : AbstractAttachmentPutTrigger
-    {
-        public override VetoResult AllowPut(string key, byte[] data, RavenJObject metadata)
-        {
-            if (data.Length > 4)
-                return VetoResult.Deny("Attachment is too big");
-
-            return VetoResult.Allowed;
-        }
-    }
 }

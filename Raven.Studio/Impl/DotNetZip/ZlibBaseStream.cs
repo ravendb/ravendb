@@ -29,9 +29,6 @@ using System.IO;
 
 namespace Ionic.Zlib
 {
-
-    internal enum ZlibStreamFlavor { ZLIB = 1950, DEFLATE = 1951, GZIP = 1952 }
-
     internal class ZlibBaseStream : System.IO.Stream
     {
         protected internal ZlibCodec _z = null; // deferred init... new ZlibCodec();

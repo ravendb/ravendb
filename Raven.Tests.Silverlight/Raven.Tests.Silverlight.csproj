@@ -115,6 +115,7 @@
     <Compile Include="Entities\Customer.cs" />
     <Compile Include="Entities\DenormalizedReference.cs" />
     <Compile Include="Entities\Order.cs" />
+    <Compile Include="Entities\OrderLine.cs" />
     <Compile Include="Generate.cs" />
     <Compile Include="Indexes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -42,10 +42,5 @@ namespace Raven.Tests.Suggestions
                            Term = term
                        };
         }
-    }    
-
-    public class Person
-    {
-        public string Name { get; set; }
     }
 }

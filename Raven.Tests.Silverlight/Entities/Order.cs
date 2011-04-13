@@ -14,9 +14,4 @@
 		public DenormalizedReference Customer { get; set; }
 		public List<OrderLine> Lines { get; set; }
 	}
-
-	public class OrderLine
-	{
-		public int Quantity { get; set; }
-	}
 }

@@ -79,7 +79,7 @@
     <Compile Include="SchemaUpdates\From33To34.cs" />
     <Compile Include="SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="StorageActionsAccessor.cs" />
-    <Compile Include="StorageActions\Attachments.cs" />
+    <Compile Include="StorageActions\DocumentStorageActions.cs" />
     <Compile Include="StorageActions\Documents.cs" />
     <Compile Include="StorageActions\General.cs" />
     <Compile Include="StorageActions\Indexing.cs" />

@@ -15,11 +15,4 @@
 		public string Message { get; private set; }
 		public NotificationLevel Level { get; private set; }
 	}
-
-	public enum NotificationLevel
-	{
-		Info,
-		Warning,
-		Error,
-	}
 }

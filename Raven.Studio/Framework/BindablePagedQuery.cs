@@ -8,16 +8,7 @@
 	using Messages;
 	using Action = System.Action;
 
-	public interface IBindablePagedQuery
-	{
-		Size? ItemElementSize { get; set; }
-		Size PageElementSize { get; set; }
-		void AdjustResultsForPageSize();
-	    void ClearResults();
-		event EventHandler<EventArgs<bool>> IsLoadingChanged;
-	}
-
-	public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
+    public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
 	{
 		public BindablePagedQuery(Func<int, int, Task<T[]>> query)
 			: base(query, t => t)
