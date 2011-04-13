@@ -1,11 +1,29 @@
 ﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Tests.Bugs;
 using Xunit;
 
 namespace Raven.Tests.Json
 {
     public class CloningTests
     {
+		[Fact]
+		public void WhenCloningWillRetainAllValues()
+		{
+			var newBlog = new UsingStartsWith.Blog()
+			{
+				Tags = new[]{
+			          new UsingStartsWith.BlogTag() { Name = "SuperCallaFragalisticExpealadocious" }
+			     }
+			};
+
+			var expected = RavenJObject.FromObject(newBlog);
+			var actual = new RavenJObject(expected);
+
+			Assert.Equal(expected.ToString(Formatting.None), actual.ToString(Formatting.None));
+		}
+
 		[Fact]
 		public void CloningTestsStoresValues()
 		{
@@ -57,7 +75,6 @@ namespace Raven.Tests.Json
 			Assert.Equal(3, obj3.Value<RavenJObject>("Me").Value<int>("ObjectID"));
 		}
 
-		[Fact(Skip = "skipping for now")]
 		public void ShouldNotFail()
 		{
 			var root = new RavenJObject();
