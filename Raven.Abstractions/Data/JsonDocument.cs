@@ -77,11 +77,11 @@ namespace Raven.Database
 
 
 			var doc = (RavenJObject)DataAsJson.CloneToken();
-			var metadata = Metadata.CloneToken();
+			var metadata = (RavenJObject)Metadata.CloneToken();
 			metadata["Last-Modified"] = LastModified;
 			metadata["@etag"] = Etag.ToString();
 			doc["@metadata"] = metadata;
-			metadata["Non-Authoritive-Information"] = RavenJToken.FromObject(NonAuthoritiveInformation);
+			metadata["Non-Authoritive-Information"] = NonAuthoritiveInformation;
 
 			return doc;
 		}

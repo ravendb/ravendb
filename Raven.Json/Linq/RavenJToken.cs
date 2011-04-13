@@ -53,17 +53,7 @@ namespace Raven.Json.Linq
 			return newObject;
 		}
 
-        /// <summary>
-		/// Gets the <see cref="RavenJToken"/> with the specified key.
-		/// </summary>
-		/// <value>The <see cref="RavenJToken"/> with the specified key.</value>
-		public virtual RavenJToken this[object key]
-		{
-			get { throw new InvalidOperationException("Cannot access child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
-			set { throw new InvalidOperationException("Cannot set child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
-		}
-
-        internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
+    	internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
         {
 			ValidationUtils.ArgumentNotNull(o, "o");
             ValidationUtils.ArgumentNotNull(jsonSerializer, "jsonSerializer");
