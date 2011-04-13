@@ -8,6 +8,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Impl;

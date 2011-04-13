@@ -12,9 +12,8 @@ using System.Transactions;
 using System.Threading.Tasks;
 #endif
 using Newtonsoft.Json.Linq;
-using Raven.Database;
-using Raven.Database.Json;
-using Raven.Http.Exceptions;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document

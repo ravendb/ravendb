@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace Raven.Database.Extensions 
+namespace Raven.Abstractions.Extensions 
 {
     ///<summary>
     /// Extensions for Linq expressions

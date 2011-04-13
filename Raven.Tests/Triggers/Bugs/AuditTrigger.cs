@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 using Raven.Http;
 using Raven.Json.Linq;
@@ -7,7 +8,7 @@ namespace Raven.Tests.Triggers.Bugs
 {
     public class AuditTrigger : AbstractPutTrigger
     {
-		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, Raven.Http.TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             if (AuditContext.IsInAuditContext)
                 return;

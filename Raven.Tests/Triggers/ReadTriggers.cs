@@ -6,6 +6,8 @@
 
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;

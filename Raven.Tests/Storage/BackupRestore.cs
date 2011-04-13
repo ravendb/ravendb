@@ -6,6 +6,8 @@
 using System;
 using System.IO;
 using System.Threading;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;

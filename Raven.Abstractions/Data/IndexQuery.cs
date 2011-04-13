@@ -6,10 +6,9 @@
 using System;
 using System.Globalization;
 using System.Text;
-using Raven.Abstractions.Data;
-using Raven.Database.Extensions;
+using Raven.Abstractions.Extensions;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// All the information required to query a Raven index

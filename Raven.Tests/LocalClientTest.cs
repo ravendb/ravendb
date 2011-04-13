@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;

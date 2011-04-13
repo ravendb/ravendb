@@ -15,13 +15,15 @@ using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
-using Raven.Http.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing

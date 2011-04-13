@@ -13,16 +13,15 @@ using System.Text;
 using System.Threading;
 #if !NET_3_5
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Client.Client.Async;
-using Raven.Database.Linq;
 #endif
 using Raven.Abstractions.Data;
 using Raven.Client.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Linq;
-using Raven.Database.Data;
-using Raven.Database.Extensions;
-using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Newtonsoft.Json.Linq;
 

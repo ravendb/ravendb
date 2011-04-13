@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-namespace Raven.Database.Indexing
+namespace Raven.Abstractions.Indexing
 {
 	/// <summary>
 	/// The sort options to use for a particular field

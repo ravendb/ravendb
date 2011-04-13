@@ -10,9 +10,8 @@ using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
-using Raven.Http;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Embedded
 {
     /// <summary>
     /// Manages access to RavenDB and open sessions to work with RavenDB.

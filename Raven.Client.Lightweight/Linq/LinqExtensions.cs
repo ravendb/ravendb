@@ -17,7 +17,6 @@ using Raven.Client.Client;
 namespace Raven.Client.Linq
 {
 	using System.Linq.Expressions;
-	using Database.Data;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 

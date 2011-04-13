@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 
-namespace Raven.Database.Linq
+namespace Raven.Abstractions.Linq
 {
     public class DynamicNullObject : DynamicObject, IEnumerable<object>
     {

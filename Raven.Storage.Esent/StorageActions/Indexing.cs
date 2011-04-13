@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;

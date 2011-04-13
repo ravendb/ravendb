@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using Lucene.Net.Documents;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;

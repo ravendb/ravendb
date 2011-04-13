@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Backup;
 using Raven.Database.Json;

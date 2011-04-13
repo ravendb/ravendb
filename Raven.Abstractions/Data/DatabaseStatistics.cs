@@ -3,9 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections.Generic;
-
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	public class DatabaseStatistics
 	{

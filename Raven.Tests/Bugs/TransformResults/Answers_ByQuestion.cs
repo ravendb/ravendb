@@ -41,7 +41,7 @@ namespace LiveProjectionsBug
                     UserDisplayName = user.DisplayName,
                     VoteTotal = result.VoteTotal
                 };
-            this.SortOptions.Add(x => x.VoteTotal, Raven.Database.Indexing.SortOptions.Int);
+            this.SortOptions.Add(x => x.VoteTotal, Raven.Abstractions.Indexing.SortOptions.Int);
         }
     }
 }

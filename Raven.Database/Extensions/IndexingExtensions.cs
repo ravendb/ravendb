@@ -12,6 +12,8 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Constants = Raven.Abstractions.Data.Constants;

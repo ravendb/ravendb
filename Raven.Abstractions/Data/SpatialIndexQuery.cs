@@ -4,9 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Raven.Database.Indexing;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// A query using spatial filtering

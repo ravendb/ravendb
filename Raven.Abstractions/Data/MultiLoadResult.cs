@@ -6,7 +6,7 @@
 using System.Collections.Generic;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// Represent a result which include both document results and included documents

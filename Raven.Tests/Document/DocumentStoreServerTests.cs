@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="DocumentStoreServerTests.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -6,6 +6,10 @@
 using System;
 using System.Net;
 using System.Transactions;
+using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;

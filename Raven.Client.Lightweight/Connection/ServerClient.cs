@@ -16,18 +16,15 @@ using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Raven.Abstractions;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
-using Raven.Database;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
-using Raven.Database.Json;
-using Raven.Http.Exceptions;
-using Raven.Http.Extensions;
-using Raven.Http.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Client

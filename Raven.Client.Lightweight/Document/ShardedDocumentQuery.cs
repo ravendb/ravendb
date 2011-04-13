@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 #endif
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document

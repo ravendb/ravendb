@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Json;

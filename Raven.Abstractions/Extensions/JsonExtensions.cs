@@ -7,12 +7,9 @@ using System;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
-using Raven.Abstractions;
-using Raven.Abstractions.Json;
-using Raven.Http.Json;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Json
+namespace Raven.Abstractions.Extensions
 {
 	/// <summary>
 	/// Json extensions 

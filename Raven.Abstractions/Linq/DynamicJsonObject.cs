@@ -11,18 +11,17 @@ using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Linq
+namespace Raven.Abstractions.Linq
 {
 	/// <summary>
 	/// A dynamic implementation on top of <see cref="RavenJObject"/>
 	/// </summary>
 	public class DynamicJsonObject : DynamicObject, IEnumerable<object>
 	{
-		public IEnumerator<dynamic> GetEnumerator()
+		public IEnumerator<object> GetEnumerator()
 		{
 			foreach (var item in Inner)
 			{
@@ -250,7 +249,7 @@ namespace Raven.Database.Linq
 							result = Count;
 							return true;
 						}
-						result = Enumerable.Count<dynamic>(this, (Func<dynamic, bool>)args[0]);
+						result = Enumerable.Count<object>(this, (Func<object, bool>)args[0]);
 						return true;
 					case "DefaultIfEmpty":
 						if (inner.Length > 0)
@@ -387,7 +386,7 @@ namespace Raven.Database.Linq
 				get { return inner.Length; }
 			}
 
-			public IEnumerable<dynamic> Select(Func<dynamic,dynamic > func)
+			public IEnumerable<object> Select(Func<object,object > func)
 			{
 				return inner.Select(item => func(item));
 			}

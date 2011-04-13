@@ -4,10 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Raven.Http;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Commands
 {
 	/// <summary>
 	/// A single operation inside a batch

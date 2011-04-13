@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-namespace Raven.Database.Json
+namespace Raven.Abstractions.Data
 {
     /// <summary>
     /// Patch command options

@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Json;
 using Raven.Database.Extensions;

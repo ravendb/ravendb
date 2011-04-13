@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// Represent a field sort options

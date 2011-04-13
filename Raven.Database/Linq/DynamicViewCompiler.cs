@@ -11,6 +11,7 @@ using System.Web;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.MEF;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;

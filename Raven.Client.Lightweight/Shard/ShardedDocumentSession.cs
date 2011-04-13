@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.Client;
 #if !NET_3_5
 using Raven.Client.Client.Async;
@@ -18,7 +19,6 @@ using Raven.Client.Linq;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using System;
-using Raven.Http.Exceptions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Shard

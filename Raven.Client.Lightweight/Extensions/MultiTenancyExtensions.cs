@@ -9,8 +9,8 @@ using System.IO;
 using System.Transactions;
 #endif
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Client;
-using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
@@ -19,9 +19,8 @@ namespace Raven.Client.Extensions
 	using System.Threading.Tasks;
 	using Client.Async;
 #endif
-	using Database;
 
-	///<summary>
+    ///<summary>
 	/// Extension methods to create mutli tenants databases
 	///</summary>
 	public static class MultiTenancyExtensions

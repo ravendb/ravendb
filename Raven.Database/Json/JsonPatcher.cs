@@ -6,6 +6,8 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Http.Exceptions;
 using System.Linq;

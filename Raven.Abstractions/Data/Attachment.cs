@@ -6,7 +6,7 @@
 using System;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// Attachment data and metadata

@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;

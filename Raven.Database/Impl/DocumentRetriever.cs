@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Indexing;

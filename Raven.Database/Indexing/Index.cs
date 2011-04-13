@@ -19,6 +19,8 @@ using Lucene.Net.Store;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Extensions;

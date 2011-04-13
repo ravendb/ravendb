@@ -8,9 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Transactions;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
-using Raven.Database.Data;
-using TransactionInformation = Raven.Http.TransactionInformation;
+using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Client.Client
 {

@@ -1,3 +1,4 @@
+using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Xunit;
 
@@ -13,11 +14,11 @@ namespace Raven.Tests.Bugs.Indexing
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map = "from user in docs.Users select new { user.Name }",
-					SortOptions = {{"Name", Database.Indexing.SortOptions.StringVal}}
+					SortOptions = {{"Name", SortOptions.StringVal}}
 				});
 				var indexDefinition = store.DatabaseCommands.GetIndex("test");
 
-				Assert.Equal(Database.Indexing.SortOptions.StringVal, indexDefinition.SortOptions["Name"]);
+				Assert.Equal(SortOptions.StringVal, indexDefinition.SortOptions["Name"]);
 			}
 		}
 	}

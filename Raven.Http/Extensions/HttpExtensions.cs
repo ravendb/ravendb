@@ -15,11 +15,10 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
-using Raven.Database.Json;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
-using Raven.Http.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Http.Extensions

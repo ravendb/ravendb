@@ -10,14 +10,13 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
 using System;
+using Raven.Abstractions.Data;
 using Raven.Client.Client;
 #if !NET_3_5
 using Raven.Client.Client.Async;
 #endif
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Database;
-using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document

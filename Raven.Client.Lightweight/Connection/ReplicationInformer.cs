@@ -8,9 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.Bundles.Replication.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
-using Raven.Database.Json;
 
 namespace Raven.Client.Client
 {

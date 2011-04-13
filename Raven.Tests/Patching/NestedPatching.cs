@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Newtonsoft.Json;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;

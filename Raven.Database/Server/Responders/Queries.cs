@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;

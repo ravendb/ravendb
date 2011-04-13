@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;

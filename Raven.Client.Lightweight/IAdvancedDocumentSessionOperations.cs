@@ -4,9 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
-using Raven.Http.Exceptions;
 using Raven.Json.Linq;
 
 namespace Raven.Client

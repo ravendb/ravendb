@@ -5,11 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 
-namespace Raven.Database.Indexing
+namespace Raven.Abstractions.Indexing
 {
 	/// <summary>
 	/// A definition of a RavenIndex

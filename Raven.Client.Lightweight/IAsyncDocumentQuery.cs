@@ -1,6 +1,6 @@
 ﻿#if !NET_3_5
 using System.Threading.Tasks;
-using Raven.Database.Data;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client
 {

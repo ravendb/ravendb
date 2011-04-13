@@ -1,5 +1,7 @@
 using System.Dynamic;
 using System.Linq;
+using Raven.Abstractions.Linq;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client;
 using Raven.Client.Client;

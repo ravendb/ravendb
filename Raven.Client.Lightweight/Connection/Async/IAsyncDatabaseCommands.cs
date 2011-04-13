@@ -9,10 +9,9 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-using Raven.Database;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
+using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Client.Async

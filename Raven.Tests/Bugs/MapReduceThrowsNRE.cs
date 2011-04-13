@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Abstractions.Indexing;
 using Xunit;
 using Raven.Database.Indexing;
 using Raven.Client.Indexes;

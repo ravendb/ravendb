@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Data;
 
 namespace Raven.Tests.Triggers.Bugs

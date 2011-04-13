@@ -1,9 +1,9 @@
 ﻿#if !NET_3_5
 
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Client;
 using Raven.Client.Client.Async;
-using Raven.Database.Data;
 
 namespace Raven.Client.Document
 {

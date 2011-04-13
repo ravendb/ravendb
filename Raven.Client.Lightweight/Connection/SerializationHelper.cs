@@ -8,8 +8,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using Raven.Database;
-using Raven.Database.Data;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Client

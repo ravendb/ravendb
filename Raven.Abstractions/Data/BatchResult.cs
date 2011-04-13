@@ -6,7 +6,7 @@
 using System;
 using Raven.Json.Linq;
 
-namespace Raven.Database
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// The result of a single operation inside a batch

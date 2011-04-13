@@ -14,10 +14,13 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Linq;
 using Raven.Json.Linq;
+using DateTools = Lucene.Net.Documents.DateTools;
 
 namespace Raven.Database.Indexing
 {

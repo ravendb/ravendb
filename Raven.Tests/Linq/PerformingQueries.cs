@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Indexing;

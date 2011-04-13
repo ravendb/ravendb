@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using System.Linq;

@@ -10,6 +10,7 @@ using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Tests.Indexes;
 using Xunit;

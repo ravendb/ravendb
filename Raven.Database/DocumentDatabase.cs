@@ -14,7 +14,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using log4net;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Backup;
 using Raven.Database.Config;
@@ -34,7 +39,7 @@ using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using Index = Raven.Database.Indexing.Index;
 using Task = Raven.Database.Tasks.Task;
-using TransactionInformation = Raven.Http.TransactionInformation;
+using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Database
 {

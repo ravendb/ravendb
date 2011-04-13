@@ -6,6 +6,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;

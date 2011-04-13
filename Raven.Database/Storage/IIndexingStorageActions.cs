@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 
 namespace Raven.Database.Storage

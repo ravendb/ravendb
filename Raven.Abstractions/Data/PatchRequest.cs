@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 using System.Linq;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Json
+namespace Raven.Abstractions.Data
 {
     /// <summary>
 	/// A patch request for a specified document

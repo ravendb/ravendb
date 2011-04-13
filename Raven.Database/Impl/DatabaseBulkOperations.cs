@@ -7,11 +7,11 @@ using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Raven.Http;
-using Raven.Http.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Impl

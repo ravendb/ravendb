@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using LiveProjectionsBug;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Indexing;

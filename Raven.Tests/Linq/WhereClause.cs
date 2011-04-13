@@ -9,6 +9,7 @@ using System.Linq.Expressions;
 using Raven.Client;
 using Raven.Client.Client;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Client.Linq;
 using Xunit;
 

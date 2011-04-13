@@ -7,6 +7,8 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using Microsoft.CSharp.RuntimeBinder;
 using Newtonsoft.Json;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;

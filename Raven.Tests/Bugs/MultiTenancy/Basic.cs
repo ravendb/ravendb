@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Data;

@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Storage;
 using Raven.Http;
 using Raven.Http.Exceptions;

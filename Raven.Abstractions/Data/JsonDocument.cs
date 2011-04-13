@@ -6,7 +6,7 @@
 using System;
 using Raven.Json.Linq;
 
-namespace Raven.Database
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// A document representation:

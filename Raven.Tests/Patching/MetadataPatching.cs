@@ -1,4 +1,5 @@
 
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Raven.Json.Linq;

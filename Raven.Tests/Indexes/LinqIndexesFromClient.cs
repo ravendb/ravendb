@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;

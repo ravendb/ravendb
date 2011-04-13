@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// The result of a query

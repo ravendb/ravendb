@@ -9,11 +9,10 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Extensions
 {
     /// <summary>
     /// Extensions for handling metadata

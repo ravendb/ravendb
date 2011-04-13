@@ -8,12 +8,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Database;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
-using Raven.Database.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Client

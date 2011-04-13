@@ -4,7 +4,7 @@ using System.Transactions;
 using Raven.Json.Linq;
 using Raven.Client.Document;
 using Xunit;
-using TransactionInformation = Raven.Http.TransactionInformation;
+using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Tests.Bugs.DTC
 {

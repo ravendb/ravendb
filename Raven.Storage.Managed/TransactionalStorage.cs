@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;

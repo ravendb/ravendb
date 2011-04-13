@@ -7,9 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Lucene.Net.Documents;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Client;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
@@ -102,7 +104,7 @@ namespace Raven.Tests.Bugs
 
 		public class PurchaseHistoryIndex : AbstractIndexCreationTask
 		{
-			public override Raven.Database.Indexing.IndexDefinition CreateIndexDefinition()
+			public override IndexDefinition CreateIndexDefinition()
 			{
 				return new IndexDefinition<Shipment, Shipment>()
 				{

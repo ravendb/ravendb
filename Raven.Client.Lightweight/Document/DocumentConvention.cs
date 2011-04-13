@@ -12,11 +12,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Abstractions.Json;
+using Raven.Client.Client;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using System.Linq;
-using Raven.Database.Json;
-using Raven.Http.Json;
 using Raven.Json.Linq;
 
 

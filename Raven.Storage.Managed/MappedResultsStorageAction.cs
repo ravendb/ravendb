@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;

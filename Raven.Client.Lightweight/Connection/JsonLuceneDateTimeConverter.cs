@@ -6,10 +6,9 @@
 using System;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Raven.Client.Linq;
+using Raven.Abstractions.Linq;
 
-namespace Raven.Database.Json
+namespace Raven.Client.Client
 {
 	/// <summary>
 	/// Convert a lucene data format to and from json values

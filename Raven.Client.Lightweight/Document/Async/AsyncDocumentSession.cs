@@ -9,8 +9,8 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Client.Client.Async;
-using Raven.Database;
 
 namespace Raven.Client.Document.Async
 {

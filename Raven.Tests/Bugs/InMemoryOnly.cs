@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.IO;
 using Raven.Client.Client;
+using Raven.Client.Embedded;
 using Raven.Http;
 using Xunit;
 

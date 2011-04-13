@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage;

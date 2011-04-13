@@ -2,10 +2,10 @@
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Linq;
+using Raven.Abstractions.Linq;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Json
+namespace Raven.Abstractions.Json
 {
 	public class JsonToJsonConverter : JsonConverter
 	{

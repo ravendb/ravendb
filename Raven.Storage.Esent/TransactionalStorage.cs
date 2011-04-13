@@ -12,6 +12,8 @@ using System.Runtime.Caching;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Queries;
 using Raven.Tests.Storage;

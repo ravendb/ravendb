@@ -8,20 +8,21 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database;
-using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
-using Raven.Database.Json;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Raven.Http;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Embedded
 {
 	///<summary>
 	/// Expose the set of operations by the RavenDB server

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;

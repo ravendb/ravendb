@@ -1,4 +1,5 @@
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Linq;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;

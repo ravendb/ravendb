@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using Raven.Client.Client;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
@@ -17,7 +18,7 @@ using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Document;
 using Xunit;
-using TransactionInformation = Raven.Http.TransactionInformation;
+using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Tests.Bugs
 {

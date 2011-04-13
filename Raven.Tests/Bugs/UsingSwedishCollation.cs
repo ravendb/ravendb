@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Database.Indexing.Collation.Cultures;
 using Xunit;

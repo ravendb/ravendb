@@ -1,7 +1,5 @@
 using Newtonsoft.Json;
 using Raven.Abstractions.Json;
-using Raven.Database.Json;
-using Raven.Http.Json;
 
 namespace Raven.Abstractions
 {

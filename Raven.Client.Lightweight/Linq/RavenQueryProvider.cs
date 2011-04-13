@@ -8,12 +8,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Abstractions.Data;
 using Raven.Client.Client;
 #if !NET_3_5
 using Raven.Client.Client.Async;
 #endif
 using Raven.Client.Document;
-using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
