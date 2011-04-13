@@ -58,8 +58,8 @@
 				var parameter = param;
 				var cardinality = GetCardinality(parameter);
 				var importType = cardinality == ImportCardinality.ZeroOrMore
-				                 	? GetCollectionContractType(parameter.ParameterType)
-				                 	: param.ParameterType;
+									? GetCollectionContractType(parameter.ParameterType)
+									: param.ParameterType;
 
 				imports.Add(
 					ReflectionModelServices.CreateImportDefinition(
@@ -79,8 +79,8 @@
 		static ImportCardinality GetCardinality(ParameterInfo param)
 		{
 			return typeof(IEnumerable).IsAssignableFrom(param.ParameterType)
-			       	? ImportCardinality.ZeroOrMore
-			       	: ImportCardinality.ExactlyOne;
+					? ImportCardinality.ZeroOrMore
+					: ImportCardinality.ExactlyOne;
 		}
 
 		//This is hacky! Needs to be cleaned up as it makes many assumptions.
@@ -96,12 +96,16 @@
 			var lazyMember = new LazyMemberInfo(implementationType);
 			var contracName = key ?? AttributedModelServices.GetContractName(contractType);
 			var metadata = new Lazy<IDictionary<string, object>>(() =>
-			                                                     	{
-			                                                     		var md = new Dictionary<string, object> {
-			                                                     		                                        	{ CompositionConstants.ExportTypeIdentityMetadataName, AttributedModelServices.GetTypeIdentity(contractType) }
-			                                                     		                                        };
-			                                                     		return md;
-			                                                     	});
+			{
+				var md = new Dictionary<string, object> 
+				{
+					{
+						CompositionConstants.ExportTypeIdentityMetadataName,
+						AttributedModelServices.GetTypeIdentity(contractType)
+					}
+				};
+				return md;
+			});
 
 			return new[] {
 			             	ReflectionModelServices.CreateExportDefinition(lazyMember, contracName, metadata, null)
