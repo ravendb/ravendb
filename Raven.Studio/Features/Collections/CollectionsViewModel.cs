@@ -99,6 +99,8 @@
 
 		void GetDocumentsForActiveCollection()
 		{
+			ActiveCollectionDocuments.ClearResults();
+			
 			if (ActiveCollection == null) return;
 
 			ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;

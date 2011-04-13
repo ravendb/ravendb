@@ -81,7 +81,6 @@ namespace Raven.Studio.Features.Database
 			Status = "Connecting to server...";
 
 			Address = serverAddress.OriginalString;
-			Name = serverAddress.OriginalString;
 
 			Store = new DocumentStore { Url = Address };
 			Store.Initialize();
@@ -94,7 +93,6 @@ namespace Raven.Studio.Features.Database
 					.ContinueWith(
 						task =>
 						{
-							IsInitialized = true;
 							Status = "Connected";
 							var dbs = new List<string>
 							{
@@ -115,7 +113,6 @@ namespace Raven.Studio.Features.Database
 							var error = "Unable to connect to " + Address;
 							Status = error;
 							events.Publish(new NotificationRaised(error, NotificationLevel.Error));
-							IsInitialized = false;
 							callback();
 						});
 		}
@@ -213,16 +210,6 @@ namespace Raven.Studio.Features.Database
 										NotifyOfPropertyChange(() => Databases);
 										CurrentDatabase = databaseName;
 									});
-		}
-
-		public bool IsInitialized
-		{
-			get { return isInitialized; }
-			private set
-			{
-				isInitialized = value;
-				NotifyOfPropertyChange(() => IsInitialized);
-			}
 		}
 
 		public string Address { get; private set; }
