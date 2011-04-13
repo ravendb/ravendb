@@ -58,6 +58,8 @@
     <Compile Include="PutsAfterRestart.cs" />
     <Compile Include="Removes.cs" />
     <Compile Include="SimpleFileTest.cs" />
+    <Compile Include="ToDo.cs" />
+    <Compile Include="ToDoRepository.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Raven.Json\Raven.Json.csproj">
