@@ -7,7 +7,7 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			for (int i = 0; i < 1000; i++)
+			for (int i = 0; i < 100000; i++)
 			{
 				Console.WriteLine(i);
 				new MultipleResultsPerDocumentAndPaging().WhenOutputingMultipleResultsPerDocAndPagingWillGetCorrectSize();

@@ -61,7 +61,6 @@
     <Compile Include="Backup\EsentBackup.cs" />
     <Compile Include="Backup\RestoreOperation.cs" />
     <Compile Include="EsentExtension.cs" />
-    <Compile Include="IDocumentCacher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteEsentStorage.cs" />
     <Compile Include="RemoteEsentStorageState.cs" />

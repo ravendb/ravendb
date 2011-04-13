@@ -165,8 +165,8 @@
     <Compile Include="..\Raven.Json\Linq\RavenJValue.cs">
       <Link>Raven.Json\Linq\RavenJValue.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Utilities\CopyOnWriteDictionary.cs">
-      <Link>Raven.Json\Utilities\CopyOnWriteDictionary.cs</Link>
+    <Compile Include="..\Raven.Json\Utilities\DictionaryWithParentSnapshot.cs">
+      <Link>Raven.Json\Utilities\DictionaryWithParentSnapshot.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Json\Utilities\MathUtils.cs">
       <Link>Raven.Json\Utilities\MathUtils.cs</Link>

@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Runtime.Caching;
-using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Raven.Munin;
 
@@ -14,21 +11,6 @@ namespace Raven.Storage.Managed.Impl
 {
     public class TableStorage : Munin.Database
     {
-		private readonly MemoryCache cachedSerializedDocuments = new MemoryCache(typeof(TableStorage).FullName + ".Cache");
-
-		public Tuple<RavenJObject, RavenJObject> GetCachedDocument(string key, Guid etag)
-		{
-			var cachedDocument = (Tuple<RavenJObject, RavenJObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
-			if (cachedDocument != null)
-				return Tuple.Create(new RavenJObject(cachedDocument.Item1), new RavenJObject(cachedDocument.Item2));
-			return null;
-		}
-
-		public void SetCachedDocument(string key, Guid etag, Tuple<RavenJObject, RavenJObject> doc)
-		{
-			cachedSerializedDocuments["Doc/" + key + "/" + etag] = doc;
-		}
-
     	public TableStorage(IPersistentSource persistentSource)
             : base(persistentSource)
         {
@@ -110,7 +92,6 @@ namespace Raven.Storage.Managed.Impl
 
 		public override void Dispose()
 		{
-			cachedSerializedDocuments.Dispose();
 			base.Dispose();
 		}
     }
