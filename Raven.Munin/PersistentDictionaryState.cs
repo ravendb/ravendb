@@ -24,7 +24,7 @@ namespace Raven.Munin
 			SecondaryIndicesState = new List<IBinarySearchTree<IComparable, IBinarySearchTree<RavenJToken, RavenJToken>>>();
 			KeyToFilePositionInFiles = new EmptyAVLTree<RavenJToken, PositionInFile>(Comparer, RavenJTokenCloner.Clone, file => new PositionInFile
             {
-                Key = RavenJTokenCloner.Clone(file.Key),
+                Key = file.Key.CloneToken(),
                 Position = file.Position,
                 Size = file.Size
             });
