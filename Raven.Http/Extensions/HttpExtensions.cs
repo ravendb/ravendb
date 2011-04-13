@@ -69,7 +69,7 @@ namespace Raven.Http.Extensions
 			using (var jsonReader = new BsonReader(context.Request.InputStream))
 			{
 				var jObject = RavenJObject.Load(jsonReader);
-				return new RavenJArray(jObject.Children());
+				return new RavenJArray(jObject.Values<RavenJToken>());
 			}
 		}
 

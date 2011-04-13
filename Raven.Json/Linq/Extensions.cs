@@ -85,9 +85,9 @@ namespace Raven.Json.Linq
 				}
 				else
 				{
-					foreach (RavenJToken t in token.Children())
+					foreach (var t in token.Values<U>())
 					{
-						yield return t.Convert<U>();
+						yield return t;
 					}
 				}
 

@@ -73,7 +73,7 @@ namespace Raven.Abstractions.Json
 						jArray = new RavenJArray();
 						((RavenJObject)result)[Name] = jArray;
 					}
-					foreach (var subItem in item.Children())
+					foreach (var subItem in item.Values<RavenJToken>())
 					{
 						newResult = new RavenJObject();
 						jArray.Items.Add(newResult);
@@ -146,7 +146,7 @@ namespace Raven.Abstractions.Json
 			{
 				yield break;
 			}
-			foreach (var item in result.Children())
+			foreach (var item in result.Values<RavenJToken>())
 			{
 				foreach (var subItem in item.SelectTokenWithRavenSyntaxReturningFlatStructure(string.Join(",", pathParts.Skip(1).ToArray())))
 				{

@@ -346,10 +346,10 @@ namespace Raven.Client.Client.Async
 								IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 								IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 								IndexEtag = new Guid(request.ResponseHeaders["ETag"].First()),
-								Results = json["Results"].Children().Cast<RavenJObject>().ToList(),
+								Results = ((RavenJArray)json["Results"]).Items.Cast<RavenJObject>().ToList(),
 								TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 								SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-								Includes = json["Includes"].Children().Cast<RavenJObject>().ToList(),
+								Includes = ((RavenJArray)json["Includes"]).Items.Cast<RavenJObject>().ToList(),
 							};
 				}));
 		}
@@ -392,7 +392,7 @@ namespace Raven.Client.Client.Async
 						//IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 						//IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 						//IndexEtag = new Guid(request.ResponseHeaders["ETag"].First()),
-						Results = json["Results"].Children().Cast<RavenJObject>().ToList(),
+						Results = ((RavenJArray)json["Results"]).Items.Cast<RavenJObject>().ToList(),
 						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 						//SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
 						//Includes = json["Includes"].Children().Cast<RavenJObject>().ToList(), 
@@ -577,7 +577,7 @@ namespace Raven.Client.Client.Async
 				.ContinueWith(task =>
 				{
 					var json = RavenJArray.Parse(task.Result);
-					return json.Children().Select(x => x.Value<string>()).ToArray();
+					return json.Items.Select(x => x.Value<string>()).ToArray();
 				});
 		}
 
@@ -647,7 +647,7 @@ namespace Raven.Client.Client.Async
 						var json = (RavenJObject)RavenJToken.Load(reader);
 						return new SuggestionQueryResult
 						{
-							Suggestions = json["Suggestions"].Children().Select(x => x.Value<string>()).ToArray(),
+							Suggestions = ((RavenJArray)json["Suggestions"]).Items.Select(x => x.Value<string>()).ToArray(),
 						};
 					}
 				});
@@ -774,9 +774,8 @@ namespace Raven.Client.Client.Async
 				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
-					var json =RavenJToken.Parse(task.Result);
+					var json = (RavenJArray)RavenJToken.Parse(task.Result);
 					return json
-						.Children()
 						.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 						.ToArray();
 				});

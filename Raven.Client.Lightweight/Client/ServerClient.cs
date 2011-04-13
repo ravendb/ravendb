@@ -703,8 +703,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 				IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
-				Results = json["Results"].Children().Cast<RavenJObject>().ToList(),
-				Includes = json["Includes"].Children().Cast<RavenJObject>().ToList(),
+				Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
+				Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
 				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 				IndexName = json.Value<string>("IndexName"),
 				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
@@ -1063,7 +1063,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 			return new SuggestionQueryResult
 			{
-				Suggestions = json["Suggestions"].Children().Select(x=>x.Value<string>()).ToArray(),
+				Suggestions = ((RavenJArray)json["Suggestions"]).Select(x=>x.Value<string>()).ToArray(),
 			};
 		}
 

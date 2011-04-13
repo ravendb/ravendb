@@ -402,7 +402,7 @@ namespace Raven.Client.Client.Async
 						IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 						IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 						IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
-						Results = json["Results"].Children().Cast<RavenJObject>().ToList(),
+						Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
 						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 						IndexName = json.Value<string>("IndexName"),
 						SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
@@ -449,7 +449,7 @@ namespace Raven.Client.Client.Async
 						var json = (RavenJObject)serializer.Deserialize(reader);
 						return new SuggestionQueryResult
 						{
-							Suggestions = json["Suggestions"].Children().Select(x => x.Value<string>()).ToArray(),
+							Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
 						};
 					}
 				});

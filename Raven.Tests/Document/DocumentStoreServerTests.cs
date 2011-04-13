@@ -505,7 +505,7 @@ namespace Raven.Tests.Document
 				session.SaveChanges();
 				RavenJToken t;
 				var metadataFromServer = session.Advanced.GetMetadataFor(session.Load<Company>(company.Id));
-				var users = metadataFromServer["Raven-Allowed-Users"].Children().OfType<RavenJValue>().Select(x => (string)x.Value).ToArray();
+				var users = ((RavenJArray)metadataFromServer["Raven-Allowed-Users"]).Cast<RavenJValue>().Select(x => (string)x.Value).ToArray();
 				Assert.Equal(new[]{"ayende","oren","rob"}, users);
 			}
 		}

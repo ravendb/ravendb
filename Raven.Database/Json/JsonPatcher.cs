@@ -123,7 +123,7 @@ namespace Raven.Database.Json
 					var valueList = new List<RavenJToken>();
 					if (allPositionsIsSelected)
 					{
-						valueList.AddRange(arrayOrValue.Children());
+						valueList.AddRange(arrayOrValue.Values<RavenJToken>());
 					}
 					else
 					{

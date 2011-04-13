@@ -29,11 +29,6 @@ namespace Raven.Json.Linq
 			get { return Properties.Count; }
     	}
 
-		public override IEnumerable<RavenJToken> Children()
-		{
-			return Properties.Values;
-		}
-
     	public ICollection<string> Keys
     	{
 			get { return Properties.Keys; }
@@ -343,5 +338,10 @@ namespace Raven.Json.Linq
             Properties.EnsureSnapshot();
             return this;
         }
+
+		public override IEnumerable<T> Values<T>()
+		{
+			return Properties.Values.Convert<T>();
+		}
     }
 }
