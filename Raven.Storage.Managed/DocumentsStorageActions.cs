@@ -165,8 +165,8 @@ namespace Raven.Storage.Managed
             var cachedDocument = documentCacher.GetCachedDocument(key, etag);
         	if (cachedDocument != null)
         	{
-        		metadata = cachedDocument.Item1;
-				return Tuple.Create<MemoryStream, RavenJObject>(null, cachedDocument.Item2);
+        		metadata = cachedDocument.Metadata;
+				return Tuple.Create<MemoryStream, RavenJObject>(null, cachedDocument.Document);
         	}
 
         	var buffer = getData();

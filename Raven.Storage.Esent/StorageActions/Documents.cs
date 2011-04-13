@@ -105,7 +105,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var cachedDocument = cacher.GetCachedDocument(key, etag);
 			if (cachedDocument != null)
 			{
-				return cachedDocument.Item1;
+				return cachedDocument.Metadata;
 			}
 
 			return Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject();
@@ -117,7 +117,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var cachedDocument = cacher.GetCachedDocument(key, etag);
 			if (cachedDocument != null)
 			{
-				return cachedDocument.Item2;
+				return cachedDocument.Document;
 			}
 
 			var dataBuffer = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
@@ -130,7 +130,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
 			if (existingCachedDocument != null)
-				return existingCachedDocument.Item1;
+				return existingCachedDocument.Metadata;
 
 			return Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 		}
@@ -139,7 +139,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
 			if (existingCachedDocument != null)
-				return existingCachedDocument.Item2;
+				return existingCachedDocument.Document;
 
 			var dataBuffer = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
 
