@@ -22,7 +22,49 @@ namespace Raven.Json.Linq
         /// <returns>A cloned RavenJToken</returns>
         public abstract RavenJToken CloneToken();
 
-    	internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
+		protected RavenJToken CloneTokenImpl(RavenJToken newObject)
+		{
+			var readingStack = new Stack<IEnumerator<KeyValuePair<string, RavenJToken>>>();
+			var writingStack = new Stack<RavenJToken>();
+			
+			writingStack.Push(newObject);
+			readingStack.Push(GetCloningEnumerator());
+
+			while (readingStack.Count > 0)
+			{
+				var curReader = readingStack.Pop();
+				var curObject = writingStack.Pop();
+				while (curReader.MoveNext())
+				{
+					if (curReader.Current.Value is RavenJValue)
+					{
+						curObject.AddForCloning(curReader.Current.Key, curReader.Current.Value.CloneToken());
+						continue;
+					}
+
+					if (curReader.Current.Value is RavenJArray)
+						writingStack.Push(new RavenJArray());
+					else if (curReader.Current.Value is RavenJObject)
+						writingStack.Push(new RavenJObject());
+
+					curObject.AddForCloning(curReader.Current.Key, writingStack.Peek());
+					readingStack.Push(curReader.Current.Value.GetCloningEnumerator());
+				}
+			}
+			return newObject;
+		}
+
+        /// <summary>
+		/// Gets the <see cref="RavenJToken"/> with the specified key.
+		/// </summary>
+		/// <value>The <see cref="RavenJToken"/> with the specified key.</value>
+		public virtual RavenJToken this[object key]
+		{
+			get { throw new InvalidOperationException("Cannot access child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
+			set { throw new InvalidOperationException("Cannot set child value on {0}.".FormatWith(CultureInfo.InvariantCulture, GetType())); }
+		}
+
+        internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
         {
 			ValidationUtils.ArgumentNotNull(o, "o");
             ValidationUtils.ArgumentNotNull(jsonSerializer, "jsonSerializer");
@@ -232,6 +274,16 @@ namespace Raven.Json.Linq
 		public virtual IEnumerable<T> Values<T>()
 		{
 			throw new NotSupportedException();
+		}
+
+		internal virtual void AddForCloning(string key, RavenJToken token)
+		{
+			// kept virtual (as opposed to abstract) to waive the new for implementing this in RavenJValue
+		}
+
+		internal virtual IEnumerator<KeyValuePair<string, RavenJToken>> GetCloningEnumerator()
+		{
+			return null;
 		}
 
 		#region Cast to operators

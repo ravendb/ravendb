@@ -93,7 +93,7 @@ namespace Raven.Json.Linq
 
         public override RavenJToken CloneToken()
         {
-            return new RavenJArray(this);
+			return CloneTokenImpl(new RavenJArray());
         }
 
         public int Length { get { return Items.Count; } }
@@ -203,6 +203,11 @@ namespace Raven.Json.Linq
 
 		#endregion
 
+		internal override IEnumerator<KeyValuePair<string, RavenJToken>> GetCloningEnumerator()
+		{
+			return Items.Select(i => new KeyValuePair<string, RavenJToken>(null, i)).GetEnumerator();
+		}
+
 		#region IEnumerable Members
 
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
@@ -211,6 +216,7 @@ namespace Raven.Json.Linq
 		}
 
 		#endregion
+
 
     	public void Add(RavenJToken token)
     	{
@@ -235,6 +241,11 @@ namespace Raven.Json.Linq
 		public override IEnumerable<T> Values<T>()
 		{
 			return Items.Convert<T>();
+		}
+
+		internal void AddForCloning(string key, RavenJToken token)
+		{
+			Add(token);
 		}
     }
 }
