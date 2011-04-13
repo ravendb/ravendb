@@ -98,8 +98,13 @@ namespace Raven.Json.Linq
 
         public override RavenJToken CloneToken()
         {
-            return new RavenJObject(this);
+        	return CloneTokenImpl(new RavenJObject());
         }
+
+		internal override IEnumerator<KeyValuePair<string, RavenJToken>> GetCloningEnumerator()
+		{
+			return Properties.GetEnumerator();
+		}
 
         /// <summary>
         /// Creates a <see cref="RavenJObject"/> from an object.
@@ -311,6 +316,11 @@ namespace Raven.Json.Linq
 		public void Add(string propName, RavenJToken token)
 		{
 			Properties.Add(propName, token);
+		}
+
+		internal override void AddForCloning(string key, RavenJToken token)
+		{
+			Properties.Add(key, token);
 		}
 
 		public bool Remove(string propName)
