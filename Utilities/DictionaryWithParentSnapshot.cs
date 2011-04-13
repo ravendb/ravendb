@@ -199,7 +199,12 @@ namespace Raven.Json.Utilities
 
     	public void CopyTo(KeyValuePair<string, RavenJToken>[] array, int arrayIndex)
         {
-            throw new NotImplementedException();
+    		if(parentSnapshot != null)
+    		{
+    			parentSnapshot.CopyTo(array, arrayIndex);
+    			arrayIndex += parentSnapshot.Count;
+    		}
+			LocalChanges.CopyTo(array, arrayIndex);
         }
 
         public bool Remove(KeyValuePair<string, RavenJToken> item)
