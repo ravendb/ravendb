@@ -48,7 +48,7 @@ namespace Raven.Tests.Bugs.Metadata
                     {
                         if (entity is Account == false)
                             return;
-                        document.Properties.Remove("Revision");
+                        document.Remove("Revision");
                     };
 
                     var account = session.Load<Account>("accounts/1");
@@ -96,7 +96,7 @@ namespace Raven.Tests.Bugs.Metadata
             {
                 if (entity is Account == false)
                     return;
-                document.Properties.Remove("Revision");
+                document.Remove("Revision");
             }
 
             /// <summary>

@@ -12,7 +12,7 @@ namespace Raven.Tests.Json
 			var f = new RavenJObject();
 			f.Add("test", "Test");
 			f.Add("2nd", "second");
-			Assert.True(f.Properties.Values.Count == 2);
+			Assert.True(f.Count == 2);
 		}
 
         [Fact]
@@ -23,22 +23,22 @@ namespace Raven.Tests.Json
             f["2"] = new RavenJValue(2);
 
             var f1 = (RavenJObject)f.CloneToken();
-            f1.Properties["2"] = new RavenJValue(3);
+            f1["2"] = new RavenJValue(3);
 
-            var val = (RavenJValue) f.Properties["2"];
+            var val = (RavenJValue) f["2"];
             Assert.Equal(2, val.Value);
-            val = (RavenJValue)f1.Properties["2"];
+            val = (RavenJValue)f1["2"];
             Assert.Equal(3, val.Value);
 
             var f2 = (RavenJObject)f1.CloneToken();
-            val = (RavenJValue)f2.Properties["2"];
+            val = (RavenJValue)f2["2"];
             Assert.Equal(3, val.Value);
 
-            f.Properties["2"] = f2;
+            f["2"] = f2;
             f1 = (RavenJObject) f.CloneToken();
-            f.Properties.Remove("2");
-        	Assert.Throws(typeof (KeyNotFoundException), () => f.Properties["2"]);
-            Assert.NotNull(f1.Properties["2"]);
+            f.Remove("2");
+        	Assert.Throws(typeof (KeyNotFoundException), () => f["2"]);
+            Assert.NotNull(f1["2"]);
         }
 
 		[Fact]

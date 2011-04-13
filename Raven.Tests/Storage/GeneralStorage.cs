@@ -87,7 +87,7 @@ namespace Raven.Tests.Storage
                 var key = command["Key"] as RavenJObject;
                 if (key != null)
                 {
-                    foreach (var property in key.Properties.ToArray())// nothing in .NET supports iterating & modifying at the same time, no news here
+                    foreach (var property in key.ToArray())// nothing in .NET supports iterating & modifying at the same time, no news here
                     {
                         if(property.Value.Type != JTokenType.String)
                             continue;
