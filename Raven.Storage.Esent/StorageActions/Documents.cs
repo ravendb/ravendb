@@ -122,7 +122,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			var dataBuffer = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
 			var data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
-			cacher.SetCachedDocument(key, etag, Tuple.Create(new RavenJObject(metadata), new RavenJObject(data)));
+		    cacher.SetCachedDocument(key, etag, data, metadata);
 			return data;
 		}
 
@@ -145,7 +145,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			var data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
 
-			cacher.SetCachedDocument(key, existingEtag, Tuple.Create(new RavenJObject(metadata), new RavenJObject(data)));
+			cacher.SetCachedDocument(key, existingEtag, data, metadata);
 
 			return data;
 		}

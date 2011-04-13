@@ -21,11 +21,6 @@ namespace Raven.Json.Utilities
             LocalChanges = new Dictionary<string, RavenJToken>();
         }
 
-        private DictionaryWithParentSnapshot(IDictionary<string, RavenJToken> props)
-        {
-            LocalChanges = props;
-        }
-
         private DictionaryWithParentSnapshot(DictionaryWithParentSnapshot previous)
         {
             LocalChanges = new Dictionary<string, RavenJToken>();
@@ -224,8 +219,14 @@ namespace Raven.Json.Utilities
 
         public DictionaryWithParentSnapshot CreateSnapshot()
         {
-            isSnapshot = true;
+            if(isSnapshot == false)
+                throw new InvalidOperationException("Cannot create snapshot without previously calling EnsureSnapShot");
             return new DictionaryWithParentSnapshot(this);
+        }
+
+        public void EnsureSnapshot()
+        {
+            isSnapshot = true;
         }
     }
 }
