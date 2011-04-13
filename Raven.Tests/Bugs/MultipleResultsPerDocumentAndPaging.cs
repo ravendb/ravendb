@@ -61,14 +61,6 @@ select new { Actor = actor, Name = movie.Name }",
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))
 						.ToList();
 
-					if (movies.Count != 2)
-					{
-
-						Debugger.Break();
-
-						WaitForUserToContinueTheTest(store);
-					}
-
 					Assert.Equal(2, movies.Count);
 				}
 			}
