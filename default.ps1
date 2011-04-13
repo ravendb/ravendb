@@ -73,19 +73,10 @@ task Init -depends Verify40, Clean {
 			-clsCompliant "true"
 	}
 	
-	if (Test-Path "$base_dir\..\BuildsInfo\RavenDB\Settings.dat") {
-		cp "$base_dir\..\BuildsInfo\RavenDB\Settings.dat" "$base_dir\Raven.Studio\Settings.dat" -force
-	}
-	else {
-		new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
-	}
-		
 	new-item $release_dir -itemType directory -ErrorAction SilentlyContinue
 	new-item $build_dir -itemType directory -ErrorAction SilentlyContinue
 	
 	copy $tools_dir\xUnit\*.* $build_dir
-	
-	# exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj .\Raven.Abstractions\Raven.Abstractions.csproj .\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj}
 	
 	if($global:commercial) {
 		exec { .\Utilities\Binaries\Raven.ProjectRewriter.exe commercial }
@@ -97,10 +88,34 @@ task Init -depends Verify40, Clean {
 	}
 }
 
+task BeforeCompile {
+	if (Test-Path "$base_dir\..\BuildsInfo\RavenDB\Settings.dat") {
+		cp "$base_dir\..\BuildsInfo\RavenDB\Settings.dat" "$base_dir\Raven.Studio\Settings.dat" -force
+	}
+	else {
+		new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
+	}
+}
+
+task AfterCompile {
+	new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
+}
+
+
 task Compile -depends Init {
+	
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" }
     
+    try { 
+		ExecuteTask("BeforeCompile")
+		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" }
+	} catch {
+		Throw
+	} finally { 
+		ExecuteTask("AfterCompile")
+	}
+   
+	
     Write-Host "Merging..."
     $old = pwd
     cd $build_dir
