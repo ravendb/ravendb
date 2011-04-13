@@ -48,7 +48,7 @@ namespace Raven.Database.Json
 		{
 			var input = reader.Value as string;
 			if (input != null && luceneDateTimePattern.IsMatch(input))
-				return DateTools.StringToDate(input);
+				return DateTools.StringToDate(input).ToLocalTime();
 			return reader.Value;
 		}
 

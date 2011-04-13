@@ -231,8 +231,6 @@
 
 		void GetIndexNames()
 		{
-			if(!server.IsInitialized) return;
-
 			if (ShouldShowDynamicIndexes)
 			{
 				ShowDynamicIndexes();

@@ -77,6 +77,7 @@ namespace Raven.Client.Document
 
 		private readonly IDocumentDeleteListener[] deleteListeners;
 		private readonly IDocumentStoreListener[] storeListeners;
+	    private IDictionary<object, JObject> cachedJsonDocs;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
@@ -664,6 +665,7 @@ more responsive application.
 		/// <returns></returns>
 		protected SaveChangesData PrepareForSaveChanges()
 		{
+            cachedJsonDocs.Clear();
 			var result = new SaveChangesData
 			{
 				Entities = new List<object>(),
@@ -805,9 +807,32 @@ more responsive application.
 			var jObject = entity as RavenJObject;
 			if (jObject != null)
 				return jObject;
-			return RavenJObject.FromObject(entity, Conventions.CreateSerializer());
+
+            if (cachedJsonDocs != null && cachedJsonDocs.TryGetValue(entity, out jObject))
+                return jObject;
+            
+            jObject = JObject.FromObject(entity, Conventions.CreateSerializer());
+			if (cachedJsonDocs != null)
+				cachedJsonDocs[entity] = jObject;
+		    return jObject;
 		}
 
+
+		/// <summary>
+		/// All calls to convert an entity to a json object would be cache
+		/// This is used inside the SaveChanges() action, where we need to access the entities json
+		/// in several disparate places.
+		/// 
+		/// Note: This assumes that no modifications can happen during the SaveChanges. This is naturally true
+		/// Note: for SaveChanges (and multi threaded access will cause undefined behavior anyway).
+		/// Note: For SaveChangesAsync, the same holds true as well.
+		/// </summary>
+		protected IDisposable EntitiesToJsonCachingScope()
+		{
+			cachedJsonDocs = new Dictionary<object, JObject>();
+
+			return new DisposableAction(() => cachedJsonDocs = null);
+		}
 
 
 		/// <summary>

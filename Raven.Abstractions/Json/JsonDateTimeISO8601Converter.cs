@@ -27,7 +27,7 @@ namespace Raven.Abstractions.Json
 			var s = reader.Value as string;
 		    if(s != null)
 			{
-				if (objectType == typeof(DateTime))
+				if (objectType == typeof(DateTime) || objectType == typeof(DateTime?))
 				{
 					DateTime time;
 					if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
@@ -38,7 +38,7 @@ namespace Raven.Abstractions.Json
 						return time;
 					}
 				}
-				if(objectType == typeof(DateTimeOffset))
+				if(objectType == typeof(DateTimeOffset) || objectType == typeof(DateTimeOffset?))
 				{
 					DateTimeOffset time;
 					if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
@@ -58,7 +58,10 @@ namespace Raven.Abstractions.Json
 
 		public override bool CanConvert(Type objectType)
 		{
-			return typeof (DateTime) == objectType || typeof (DateTimeOffset) == objectType;
+			return typeof (DateTime) == objectType ||
+				typeof(DateTimeOffset) == objectType ||
+				typeof(DateTimeOffset?) == objectType ||
+				typeof(DateTime?) == objectType;
 		}
 	}
 }

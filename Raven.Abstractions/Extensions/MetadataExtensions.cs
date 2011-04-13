@@ -34,6 +34,9 @@ namespace Raven.Database.Data
 			"Non-Authoritive-Information",
 			"Raven-Timer-Request",
 
+            //proxy
+            "Reverse-Via",
+
             "Allow",
             "Content-Disposition",
             "Content-Encoding",
@@ -182,7 +185,7 @@ namespace Raven.Database.Data
         }
 #endif
 
-        private static string CaptureHeaderName(string header)
+      private static string CaptureHeaderName(string header)
         {
             var lastWasDash = true;
             var sb = new StringBuilder(header.Length);

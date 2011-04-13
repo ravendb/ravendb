@@ -92,7 +92,22 @@ namespace Raven.Client.Linq
 						break;
 					case ExpressionType.Not:
 						var unaryExpressionOp = ((UnaryExpression)expression).Operand;
-						VisitMemberAccess((MemberExpression)unaryExpressionOp, false);
+						switch (unaryExpressionOp.NodeType)
+						{
+							case ExpressionType.MemberAccess:
+								VisitMemberAccess((MemberExpression) unaryExpressionOp, false);
+								break;
+							case ExpressionType.Call:
+								// probably a call to !In()
+								luceneQuery.OpenSubclause()
+									.Where("*:*")
+									.NegateNext();
+								VisitMethodCall((MethodCallExpression)unaryExpressionOp);
+								luceneQuery.CloseSubclause();
+								break;
+							default:
+								throw new ArgumentOutOfRangeException(unaryExpressionOp.NodeType.ToString());
+						}
 						break;
 					default:
 						if (expression is MethodCallExpression)

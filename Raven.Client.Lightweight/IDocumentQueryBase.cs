@@ -16,6 +16,11 @@ namespace Raven.Client
         /// </summary>
         TSelf Not { get; }
 
+		/// <summary>
+		///   Negate the next operation
+		/// </summary>
+		void NegateNext();
+
         /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
         /// </summary>

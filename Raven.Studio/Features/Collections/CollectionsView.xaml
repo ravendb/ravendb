@@ -100,20 +100,6 @@
 				<TextBlock Text="Collections"
 						   Style="{StaticResource Header}" />
 
-				<!--
-				TODO: The intent here is to allow sorting of the collections
-				<StackPanel x:Name="sort_by"
-							Visibility="{Binding HasCollections, Converter={StaticResource booleanToVisibility}}"
-							Orientation="Horizontal">
-					<TextBlock TextWrapping="Wrap"
-							   Text="A-Z"
-							   FontWeight="Bold"
-							   Margin="0,0,12,0" />
-					<TextBlock TextWrapping="Wrap"
-							   Text="SIZE" />
-				</StackPanel>
-				-->
-
 			</StackPanel>
 
 			<ListBox Grid.Row="1"

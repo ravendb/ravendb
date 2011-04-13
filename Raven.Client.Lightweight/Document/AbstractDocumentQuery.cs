@@ -1332,6 +1332,11 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 return DateTools.DateToString((DateTime)whereEqualsParams.Value, DateTools.Resolution.MILLISECOND);
             }
+			
+			if (whereEqualsParams.Value is DateTimeOffset)
+			{
+				return DateTools.DateToString(((DateTimeOffset)whereEqualsParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
+			}
 
             var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),
                                             whereEqualsParams.AllowWildcards && whereEqualsParams.IsAnalyzed);
@@ -1359,6 +1364,8 @@ If you really want to do in memory filtering on the data returned from the query
                 return NumberUtil.NumberToString((float)value);
             if (value is DateTime)
                 return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
+			if (value is DateTimeOffset)
+				return DateTools.DateToString(((DateTimeOffset)value).UtcDateTime, DateTools.Resolution.MILLISECOND);
 
             return RavenQuery.Escape(value.ToString(), false);
         }

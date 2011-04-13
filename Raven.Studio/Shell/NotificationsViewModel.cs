@@ -37,6 +37,7 @@
 			}
 		}
 
+		public bool HasNotifications { get { return Notifications.Any(); } }
 		public bool HasErrors { get { return Notifications.Any(_ => _.Level == NotificationLevel.Error); } }
 
 		public BindableCollection<NotificationRaised> Notifications { get; private set; }
@@ -45,6 +46,9 @@
 		{
 			Notifications.Insert(0, message);
 			MostRecent = message;
+
+			NotifyOfPropertyChange(() => HasErrors);
+			NotifyOfPropertyChange(() => HasNotifications);
 		}
 
 		public void Dismiss(NotificationRaised message)
@@ -54,6 +58,7 @@
 			if (message == MostRecent) MostRecent = null;
 
 			NotifyOfPropertyChange(() => HasErrors);
+			NotifyOfPropertyChange(() => HasNotifications);
 		}
 
 		void HandleTick(object sender, EventArgs e)
