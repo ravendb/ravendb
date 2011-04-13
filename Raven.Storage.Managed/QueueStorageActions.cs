@@ -51,7 +51,7 @@ namespace Raven.Storage.Managed
                     continue;
                 }
 
-                readResult.Key["reads"] = readResult.Key.Value<int>("reads") + 1;
+				((RavenJObject)readResult.Key)["reads"] = readResult.Key.Value<int>("reads") + 1;
                 storage.Queues.UpdateKey(readResult.Key);
 
                 yield return new Tuple<byte[], object>(

@@ -78,32 +78,6 @@ namespace Raven.Json.Linq
         }
 
 		/// <summary>
-		/// Gets the <see cref="RavenJToken"/> with the specified key.
-		/// </summary>
-		/// <value>The <see cref="RavenJToken"/> with the specified key.</value>
-		public override RavenJToken this[object key]
-		{
-			get
-			{
-				ValidationUtils.ArgumentNotNull(key, "o");
-
-				if (!(key is int))
-					throw new ArgumentException("Accessed RavenJArray values with invalid key value: {0}. Array position index expected.".FormatWith(CultureInfo.InvariantCulture, MiscellaneousUtils.ToString(key)));
-
-				return this[(int)key];
-			}
-			set
-			{
-				ValidationUtils.ArgumentNotNull(key, "o");
-
-				if (!(key is int))
-					throw new ArgumentException("Set RavenJArray values with invalid key value: {0}. Array position index expected.".FormatWith(CultureInfo.InvariantCulture, MiscellaneousUtils.ToString(key)));
-
-				this[(int)key] = value;
-			}
-		}
-
-		/// <summary>
 		/// Gets or sets the <see cref="RavenJToken"/> at the specified index.
 		/// </summary>
 		/// <value></value>

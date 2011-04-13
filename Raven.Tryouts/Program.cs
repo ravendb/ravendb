@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Json.Linq;
 using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
@@ -7,11 +8,7 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			for (int i = 0; i < 100000; i++)
-			{
-				Console.WriteLine(i);
-				new MultipleResultsPerDocumentAndPaging().WhenOutputingMultipleResultsPerDocAndPagingWillGetCorrectSize();
-			}
+			RavenJToken x;
 		}
 	}
 }

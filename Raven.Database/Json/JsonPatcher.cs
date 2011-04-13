@@ -127,7 +127,7 @@ namespace Raven.Database.Json
 					}
 					else
 					{
-						valueList.Add(arrayOrValue[position]);
+						valueList.Add(((RavenJArray)arrayOrValue)[position.Value]);
 					}
 
 					foreach (var value in valueList)

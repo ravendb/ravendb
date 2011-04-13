@@ -393,9 +393,9 @@ namespace Raven.Client.Client.Async
 			return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
 				.ContinueWith(task =>
 				{
-					RavenJToken json;
+					RavenJObject json;
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-						json = RavenJToken.Load(reader);
+						json = (RavenJObject)RavenJToken.Load(reader);
 
 					return new QueryResult
 					{
@@ -446,7 +446,7 @@ namespace Raven.Client.Client.Async
 				{
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 					{
-						var json = (RavenJToken)serializer.Deserialize(reader);
+						var json = (RavenJObject)serializer.Deserialize(reader);
 						return new SuggestionQueryResult
 						{
 							Suggestions = json["Suggestions"].Children().Select(x => x.Value<string>()).ToArray(),

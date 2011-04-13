@@ -194,10 +194,11 @@ namespace Raven.Storage.Managed
             if (readResult == null)
                 throw new ArgumentException("There is no index with the name: " + index);
 
-            readResult.Key["lastEtag"] = etag.ToByteArray();
-            readResult.Key["lastTimestamp"] = timestamp;
+        	var ravenJObject = (RavenJObject)readResult.Key;
+        	ravenJObject["lastEtag"] = etag.ToByteArray();
+            ravenJObject["lastTimestamp"] = timestamp;
 
-            storage.IndexingStats.UpdateKey(readResult.Key);
+            storage.IndexingStats.UpdateKey(ravenJObject);
         }
     }
 }

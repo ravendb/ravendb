@@ -71,7 +71,7 @@ namespace Raven.Abstractions.Json
 					if (jArray == null)
 					{
 						jArray = new RavenJArray();
-						result[Name] = jArray;
+						((RavenJObject)result)[Name] = jArray;
 					}
 					foreach (var subItem in item.Children())
 					{
@@ -90,7 +90,7 @@ namespace Raven.Abstractions.Json
 				var selectToken = result.SelectToken(Name);
 				if (selectToken != null)
 					return selectToken;
-				return result[Name] = new RavenJObject();
+				return ((RavenJObject)result)[Name] = new RavenJObject();
 			}
 		}
 
@@ -126,7 +126,7 @@ namespace Raven.Abstractions.Json
 			{
 				currentPart.Value.ForEach(obj, self.SelectToken(currentPart.Key), (part, item, result) =>
 				                                                                  	{
-				                                                                  		result[part.Name] = item;
+																						((RavenJObject)result)[part.Name] = item;
 				                                                                  	});
 			}
 

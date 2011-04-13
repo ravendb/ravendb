@@ -337,9 +337,9 @@ namespace Raven.Client.Client.Async
 			return request.ReadResponseStringAsync()
 				.ContinueWith(task => AttemptToProcessResponse( ()=>
 				{
-					RavenJToken json;
+					RavenJObject json;
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-						json = RavenJToken.ReadFrom(reader);
+						json = (RavenJObject)RavenJToken.ReadFrom(reader);
 
 					return new QueryResult
 							{
@@ -381,9 +381,9 @@ namespace Raven.Client.Client.Async
 					})
 				.ContinueWith(task =>
 				{
-					RavenJToken json;
+					RavenJObject json;
 					using (var reader = new JsonTextReader(new StringReader(task.Result.Result)))
-						json = RavenJToken.Load(reader);
+						json = (RavenJObject)RavenJToken.Load(reader);
 
 					//TODO: the json includes LastScanResults and Errors, but it doesn't include the commented out properties below.
 					// Should this change?
@@ -597,7 +597,7 @@ namespace Raven.Client.Client.Async
 					var json = RavenJArray.Parse(task.Result);
 					//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
 					return json
-						.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(x["definition"].ToString(), new JsonToJsonConverter()))
+						.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
 						.ToArray();
 				});
 		}
@@ -644,7 +644,7 @@ namespace Raven.Client.Client.Async
 				{
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 					{
-						var json = RavenJToken.Load(reader);
+						var json = (RavenJObject)RavenJToken.Load(reader);
 						return new SuggestionQueryResult
 						{
 							Suggestions = json["Suggestions"].Children().Select(x => x.Value<string>()).ToArray(),
