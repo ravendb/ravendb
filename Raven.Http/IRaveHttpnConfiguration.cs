@@ -19,6 +19,7 @@ namespace Raven.Http
         string WebDir { get; }
         string AccessControlAllowOrigin { get; }
         NameValueCollection Settings { get; }
-        string GetFullUrl(string url);
+    	string PluginsDirectory { get; set; }
+    	string GetFullUrl(string url);
     }
 }

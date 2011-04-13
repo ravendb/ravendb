@@ -48,7 +48,7 @@
 			<TextBlock x:Name="Errors_Length" />
 			<c:Label Content="errors"
 					 cm:Action.TargetWithoutContext="OpenErrorsScreen"
-					 cm:Message.Attach="[Event MouseLeftButtonDown] = Execute" />
+					 cm:Message.Attach="[MouseLeftButtonDown] = [Execute]" />
 
 			<TextBlock x:Name="Triggers_Length" />
 			<c:Label Content="triggers" />

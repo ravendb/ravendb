@@ -28,7 +28,7 @@
 using System;
 using System.Configuration;
 
-namespace System.Runtime.Caching.Configuration
+namespace FromMono.System.Runtime.Caching.Configuration
 {
 	[ConfigurationCollection (typeof(MemoryCacheElement), CollectionType = ConfigurationElementCollectionType.AddRemoveClearMap)]
 	internal sealed class MemoryCacheSettingsCollection : ConfigurationElementCollection

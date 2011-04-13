@@ -5,7 +5,7 @@ namespace Raven.Studio.Features.Database
     using Caliburn.Micro;
     using Framework;
     using Messages;
-    using Raven.Client.Extensions;
+    using Plugins;
 
     [Export]
     public class SelectDatabaseViewModel : RavenScreen

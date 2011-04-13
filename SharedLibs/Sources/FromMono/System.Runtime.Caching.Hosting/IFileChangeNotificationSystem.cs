@@ -27,7 +27,7 @@
 //
 using System;
 
-namespace System.Runtime.Caching.Hosting
+namespace FromMono.System.Runtime.Caching.Hosting
 {
     internal interface IFileChangeNotificationSystem
 	{

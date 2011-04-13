@@ -4,6 +4,7 @@
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
+	using Plugins.Statistics;
 	using Raven.Database.Data;
 
 	[Export]

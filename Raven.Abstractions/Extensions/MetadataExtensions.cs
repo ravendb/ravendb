@@ -33,6 +33,9 @@ namespace Raven.Database.Data
 			"Non-Authoritive-Information",
 			"Raven-Timer-Request",
 
+            //proxy
+            "Reverse-Via",
+
             "Allow",
             "Content-Disposition",
             "Content-Encoding",
@@ -160,7 +163,6 @@ namespace Raven.Database.Data
             {
                 try
                 {
-
                     if (HeadersToIgnoreClient.Contains(header))
                         continue;
                     if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
@@ -181,7 +183,7 @@ namespace Raven.Database.Data
         }
 #endif
 
-        private static string CaptureHeaderName(string header)
+      private static string CaptureHeaderName(string header)
         {
             var lastWasDash = true;
             var sb = new StringBuilder(header.Length);
@@ -205,7 +207,7 @@ namespace Raven.Database.Data
                 if (val.StartsWith("["))
                     return JArray.Parse(val);
                 DateTime result;
-                if (DateTime.TryParseExact(val, "r", CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
+                if (DateTime.TryParseExact(val, new[]{"r","o"}, CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
                     return new JValue(result);
                 return new JValue(val);
             }

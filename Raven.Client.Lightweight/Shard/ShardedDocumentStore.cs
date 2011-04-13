@@ -93,19 +93,6 @@ namespace Raven.Client.Shard
 
 		#endregion
 
-		/// <summary>
-		/// Registers the store listener.
-		/// </summary>
-		/// <param name="documentStoreListener">The document store listener.</param>
-		/// <returns></returns>
-		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
-		{
-			foreach (var shard in shards)
-			{
-				shard.RegisterListener(documentStoreListener);
-			}
-			return this;
-		}
 
 #if !NET_3_5
 		/// <summary>
@@ -220,20 +207,6 @@ namespace Raven.Client.Shard
 				throw;
 			}
 
-			return this;
-		}
-
-		/// <summary>
-		/// Registers the delete listener.
-		/// </summary>
-		/// <param name="deleteListener">The delete listener.</param>
-		/// <returns></returns>
-		public IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener)
-		{
-			foreach (var shard in shards)
-			{
-				shard.RegisterListener(deleteListener);
-			}
 			return this;
 		}
 	}

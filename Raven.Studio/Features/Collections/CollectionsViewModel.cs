@@ -1,6 +1,4 @@
-﻿using Raven.Client.Client;
-
-namespace Raven.Studio.Features.Collections
+﻿namespace Raven.Studio.Features.Collections
 {
 	using System;
 	using System.Collections.Generic;
@@ -9,15 +7,18 @@ namespace Raven.Studio.Features.Collections
 	using System.Threading.Tasks;
 	using Abstractions.Data;
 	using Caliburn.Micro;
-	using Database;
 	using Documents;
 	using Framework;
+	using Framework.Extensions;
 	using Messages;
+	using Plugins;
+	using Plugins.Database;
 	using Raven.Database.Data;
+	using Client.Client;
 
 	[Export(typeof(CollectionsViewModel))]
-	[ExportDatabaseScreen("Collections", Index = 20)]
-	public class CollectionsViewModel : RavenScreen, IDatabaseScreenMenuItem,
+	[ExportDatabaseExplorerItem("Collections", Index = 20)]
+	public class CollectionsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
@@ -36,14 +37,14 @@ namespace Raven.Studio.Features.Collections
 			server.CurrentDatabaseChanged += delegate
 			{
 				Initialize();
-			};	
+			};
 		}
 
-		void Initialize() {
+		void Initialize()
+		{
 			Status = "Retrieving collections";
 
 			Collections = new BindableCollection<Collection>();
-			ActiveCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery);
 
 			NotifyOfPropertyChange(string.Empty);
 		}
@@ -54,7 +55,12 @@ namespace Raven.Studio.Features.Collections
 		}
 
 		public IEnumerable<Collection> Collections { get; private set; }
-		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments { get; private set; }
+
+		BindablePagedQuery<DocumentViewModel> activeCollectionDocuments;
+		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments
+		{
+			get { return activeCollectionDocuments ?? (activeCollectionDocuments = new BindablePagedQuery<DocumentViewModel>(GetDocumentsForActiveCollectionQuery)); }
+		}
 
 		string status;
 		public string Status
@@ -161,7 +167,7 @@ namespace Raven.Studio.Features.Collections
 			Events.Publish(new DatabaseScreenRequested(() => vm));
 		}
 
-		public void Handle(DocumentDeleted message)
+		void IHandle<DocumentDeleted>.Handle(DocumentDeleted message)
 		{
 			ActiveCollectionDocuments
 				.Where(x => x.Id == message.DocumentId)

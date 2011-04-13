@@ -8,9 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
-using System.Runtime.Caching;
 using System.Text;
-using System.Threading;
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Client

@@ -4,8 +4,9 @@
 	using Caliburn.Micro;
 	using Features.Database;
 	using Features.Indexes;
-	using Framework;
+	using Framework.Extensions;
 	using Messages;
+	using Plugins;
 
 	public class EditIndex
 	{

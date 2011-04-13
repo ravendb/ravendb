@@ -7,11 +7,11 @@
 
 	public class OpenErrorsScreen
 	{
-		readonly DatabaseViewModel database;
+		readonly DatabaseExplorer database;
 		readonly ErrorsViewModel errors;
 
 		[ImportingConstructor]
-		public OpenErrorsScreen(DatabaseViewModel database, ErrorsViewModel errors)
+		public OpenErrorsScreen(DatabaseExplorer database, ErrorsViewModel errors)
 		{
 			this.database = database;
 			this.errors = errors;

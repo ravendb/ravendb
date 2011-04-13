@@ -32,7 +32,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	public abstract class ObjectCache : IEnumerable<KeyValuePair<string, object>>, IEnumerable
 	{

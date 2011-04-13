@@ -3,18 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Diagnostics;
 using System.Linq;
 using Raven.Database.Indexing;
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MultipleResultsPerDocumentAndPaging: LocalClientTest
+	public class MultipleResultsPerDocumentAndPaging : LocalClientTest
 	{
 		[Fact]
 		public void WhenOutputingMultipleResultsPerDocAndPagingWillGetCorrectSize()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
 
 				store.DatabaseCommands.PutIndex("Movies/ByActor", new IndexDefinition
@@ -22,11 +23,12 @@ namespace Raven.Tests.Bugs
 					Map = @"
 from movie in docs.Movies
 from actor in movie.Actors
-select new { Actor = actor }",
-                    Indexes = {{"Actor", FieldIndexing.Analyzed}}
+select new { Actor = actor, Name = movie.Name }",
+					Indexes = { { "Actor", FieldIndexing.Analyzed } },
+					Stores = { { "Name", FieldStorage.Yes } }
 				});
 
-				using(var s1 = store.OpenSession())
+				using (var s1 = store.OpenSession())
 				{
 					s1.Store(
 						new Movie
@@ -39,22 +41,28 @@ select new { Actor = actor }",
 						{
 							Name = "The Sorcerer's Apprentice",
 							Actors = new[] { "Nicolas Cage", "Jay Baruchel", "Alfred Molina", "Teresa Palmer", "James Bond", "Shames Bond" }
-						}); 
+						});
 					s1.SaveChanges();
 				}
 
 				using (var s2 = store.OpenSession())
 				{
-                    var movies = s2.Advanced.LuceneQuery<Movie>("Movies/ByActor")
+					var movies = s2.Advanced.LuceneQuery<Movie>("Movies/ByActor")
 						.WhereContains("Actor", "Bond")
 						.Take(2)
 						.WaitForNonStaleResults()
 						.ToList();
 
+					if (movies.Count != 2)
+					{
+						WaitForUserToContinueTheTest(store);
+					}
+
 					Assert.Equal(2, movies.Count);
 				}
 			}
 		}
+
 
 		public class Movie
 		{

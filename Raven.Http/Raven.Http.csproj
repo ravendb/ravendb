@@ -78,6 +78,8 @@
     <Compile Include="AbstractRequestResponder.cs" />
     <Compile Include="Responders\Favicon.cs" />
     <Compile Include="Responders\RavenRoot.cs" />
+    <Compile Include="Responders\SilverlightPlugin.cs" />
+    <Compile Include="Responders\SilverlightPlugins.cs" />
     <Compile Include="Responders\SilverlightUI.cs" />
     <Compile Include="Responders\RavenUI.cs" />
     <Compile Include="Responders\StudioUI.cs" />

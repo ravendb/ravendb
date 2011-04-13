@@ -31,7 +31,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	sealed class MemoryCacheEntryChangeMonitor : CacheEntryChangeMonitor
 	{

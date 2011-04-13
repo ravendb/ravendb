@@ -1,6 +1,4 @@
-﻿using Ionic.Zlib;
-
-namespace Raven.Studio.Features.Tasks
+﻿namespace Raven.Studio.Features.Tasks
 {
 	using System;
 	using System.Collections.Generic;
@@ -14,31 +12,22 @@ namespace Raven.Studio.Features.Tasks
 	using Client.Document;
 	using Client.Silverlight.Client;
 	using Database;
-	using Framework;
+	using Ionic.Zlib;
+	using Framework.Extensions;
+	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
+	using Plugins;
 
-	[ExportTask("Export Database")]
-	public class ExportTask : Screen, ITask
+	[Plugins.Tasks.ExportTask("Export Database")]
+	public class ExportTask : ConsoleOutputTask
 	{
-		readonly IServer server;
-
 		bool exportIndexesOnly;
 
 		[ImportingConstructor]
-		public ExportTask(IServer server)
+		public ExportTask(IServer server, IEventAggregator events)
+			: base(server, events)
 		{
-			this.server = server;
-
-			Console = new BindableCollection<string>();
-			server.CurrentDatabaseChanged += delegate { ClearConsole(); };
-		}
-
-		public IObservableCollection<string> Console { get; private set; }
-
-		public void ClearConsole()
-		{
-			Console.Clear();
 		}
 
 		public bool ExportIndexesOnly
@@ -53,18 +42,39 @@ namespace Raven.Studio.Features.Tasks
 
 		public void ExportData()
 		{
+			Status = string.Empty;
+
 			var saveFile = new SaveFileDialog();
 			var dialogResult = saveFile.ShowDialog();
 
 			if (!dialogResult.HasValue || !dialogResult.Value) return;
 
-			var tasks = (IEnumerable<Task>) ExportData(saveFile, ExportIndexesOnly).GetEnumerator();
-			tasks.ExecuteInSequence(null);
+			WorkStarted("exporting database");
+	
+			var tasks = (IEnumerable<Task>)ExportData(saveFile, ExportIndexesOnly).GetEnumerator();
+			tasks.ExecuteInSequence(OnTaskFinished, OnException);
+		}
+
+		void OnTaskFinished(bool success)
+		{
+			WorkCompleted("exporting database");
+
+			Status = success ? "Export Complete" : "Export Failed!";
+
+			if(success)
+				Events.Publish(new NotificationRaised("Export Completed", NotificationLevel.Info));
+		}
+
+		void OnException(Exception e)
+		{
+			Output("The export failed with the following exception: {0}", e.Message);
+			NotifyError("Database Export Failed");
 		}
 
 		IEnumerable<Task> ExportData(SaveFileDialog saveFile, bool indexesOnly)
 		{
-			Console.Add("Exporting to {0}",saveFile.SafeFileName);
+			Output("Exporting to {0}", saveFile.SafeFileName);
+			Output("- Indexes only, documents will be excluded");
 
 			var stream = saveFile.OpenFile();
 			var jsonRequestFactory = new HttpJsonRequestFactory();
@@ -74,11 +84,11 @@ namespace Raven.Studio.Features.Tasks
 
 			var streamWriter = new StreamWriter(new GZipStream(stream, CompressionMode.Compress));
 			var jsonWriter = new JsonTextWriter(streamWriter)
-			                 	{
-			                 		Formatting = Formatting.Indented
-			                 	};
+								{
+									Formatting = Formatting.Indented
+								};
 
-			Console.Add("Begin reading indexes");
+			Output("Begin reading indexes");
 
 			jsonWriter.WriteStartObject();
 			jsonWriter.WritePropertyName("Indexes");
@@ -99,13 +109,13 @@ namespace Raven.Studio.Features.Tasks
 				var array = JArray.Parse(documents);
 				if (array.Count == 0)
 				{
-					Console.Add("Done with reading indexes, total: {0}", totalCount);
+					Output("Done with reading indexes, total: {0}", totalCount);
 					completed = true;
 				}
 				else
 				{
 					totalCount += array.Count;
-					Console.Add("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Count, totalCount);
+					Output("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Count, totalCount);
 					foreach (JToken item in array)
 					{
 						item.WriteTo(jsonWriter);
@@ -119,11 +129,11 @@ namespace Raven.Studio.Features.Tasks
 
 			if (indexesOnly)
 			{
-				Console.Add("Documents will not be exported.");
-			} 
-			else 
+				Output("Skipping documents");
+			}
+			else
 			{
-				Console.Add("Begin reading documents.");
+				Output("Begin reading documents");
 
 				var lastEtag = Guid.Empty;
 				totalCount = 0;
@@ -138,14 +148,14 @@ namespace Raven.Studio.Features.Tasks
 					var array = JArray.Parse(response.Result);
 					if (array.Count == 0)
 					{
-						Console.Add("Done with reading documents, total: {0}", totalCount);
+						Output("Done with reading documents, total: {0}", totalCount);
 						completed = true;
 					}
 					else
 					{
 						totalCount += array.Count;
-						Console.Add("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
-						            totalCount);
+						Output("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
+									totalCount);
 						foreach (JToken item in array)
 						{
 							item.WriteTo(jsonWriter);
@@ -156,13 +166,14 @@ namespace Raven.Studio.Features.Tasks
 			}
 
 			Execute.OnUIThread(() =>
-			                   	{
-			                   		jsonWriter.WriteEndArray();
-			                   		jsonWriter.WriteEndObject();
-			                   		streamWriter.Flush();
-			                   		streamWriter.Dispose();
-			                   		stream.Dispose();
-			                   	});
+								{
+									jsonWriter.WriteEndArray();
+									jsonWriter.WriteEndObject();
+									streamWriter.Flush();
+									streamWriter.Dispose();
+									stream.Dispose();
+								});
+			Output("Export complete");
 		}
 	}
 }

@@ -1,0 +1,91 @@
+﻿<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+			 xmlns:cm="http://www.caliburnproject.org"
+			 xmlns:System="clr-namespace:System;assembly=mscorlib"
+			 x:Class="Raven.Studio.Features.Database.DatabaseExplorerView"
+			 mc:Ignorable="d"
+			 d:DesignWidth="640"
+			 d:DesignHeight="480"
+			 Margin="5"
+			 d:DataContext="{d:DesignData /SampleData/DatabaseViewModelSampleData.xaml}">
+
+	<UserControl.Resources>
+		<Style x:Key="DatabaseMenuListBox"
+			   TargetType="ListBox">
+			<Setter Property="Foreground"
+					Value="{StaticResource AccentTextBrush}" />
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="ListBox">
+						<Grid>
+
+							<Border BorderBrush="{TemplateBinding BorderBrush}"
+									BorderThickness="{TemplateBinding BorderThickness}"
+									CornerRadius="2">
+								<ScrollViewer x:Name="ScrollViewer"
+											  BorderBrush="Transparent"
+											  BorderThickness="0"
+											  Background="{TemplateBinding Background}"
+											  Padding="{TemplateBinding Padding}"
+											  TabNavigation="{TemplateBinding TabNavigation}">
+									<ItemsPresenter />
+								</ScrollViewer>
+							</Border>
+						</Grid>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+			<Setter Property="ItemContainerStyle"
+					Value="{StaticResource DatabaseMenuListBoxItem}" />
+			<Setter Property="FontSize"
+					Value="18.667" />
+			<Setter Property="FontFamily"
+					Value="Segoe UI" />
+			<Setter Property="BorderThickness"
+					Value="0" />
+		</Style>
+
+	</UserControl.Resources>
+
+	<Grid Background="{StaticResource DefaultScreenBackground}">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="180" />
+			<ColumnDefinition Width="*" />
+		</Grid.ColumnDefinitions>
+
+		<Border BorderThickness="0 0 1 0"
+				Margin="0 8"
+				Padding="12 0 8 0"
+				BorderBrush="{StaticResource DividerBrush}">
+			<Grid x:Name="explorer"
+				  Margin="1 8 -1 -8">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="2*" />
+					<RowDefinition />
+				</Grid.RowDefinitions>
+
+				<ContentControl x:Name="Server_Statistics"
+								Grid.Row="1" />
+				<ListBox ItemsSource="{Binding Items}"
+						 SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+						 Style="{StaticResource DatabaseMenuListBox}">
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<Border cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ShowByDisplayName($dataContext)]">
+								<TextBlock Text="{Binding}" />
+							</Border>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+			</Grid>
+		</Border>
+
+		<ContentControl x:Name="ActiveItem"
+						Margin="12 0 0 0"
+						Grid.Column="1" />
+
+	</Grid>
+</UserControl>

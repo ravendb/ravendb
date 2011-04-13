@@ -11,6 +11,40 @@
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
 
+	<UserControl.Resources>
+		<GridLength x:Key="LabelWidth">120</GridLength>
+
+		<GridLength x:Key="DividerWidth">8</GridLength>
+
+		<Style x:Key="MetadataLabel"
+			   TargetType="TextBlock">
+			<Setter Property="HorizontalAlignment"
+					Value="Right" />
+			<Setter Property="TextWrapping"
+					Value="Wrap" />
+			<Setter Property="Margin"
+					Value="0,2,0,0" />
+			<Setter Property="FontSize"
+					Value="{StaticResource LabelFontSize}" />
+			<Setter Property="Foreground"
+					Value="{StaticResource LabelForegroundBrush}" />
+		</Style>
+
+		<Style x:Key="MetadataValue"
+			   TargetType="TextBlock">
+			<Setter Property="HorizontalAlignment"
+					Value="Left" />
+			<Setter Property="TextWrapping"
+					Value="Wrap" />
+			<Setter Property="Margin"
+					Value="0,2,0,0" />
+			<Setter Property="FontSize"
+					Value="{StaticResource LabelFontSize}" />
+			<Setter Property="Foreground"
+					Value="{StaticResource DefaultTextBrush}" />
+		</Style>
+	</UserControl.Resources>
+
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="1.5*" />
@@ -23,7 +57,7 @@
 				<ti:MenuItem Header="Copy Document Id to Clipboard"
 							 Tag="{Binding Id}"
 							 cm:Action.TargetWithoutContext="CopyDocumentIdToClipboard"
-							 cm:Message.Attach="Click=Execute($this.Tag)" />
+							 cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
 			</ti:ContextMenu>
 		</ti:ContextMenuService.ContextMenu>
 
@@ -36,39 +70,31 @@
 				<RowDefinition />
 			</Grid.RowDefinitions>
 
-			<TextBlock x:Name="Id"
+			<TextBlock Text="{Binding DisplayId}"
 					   Style="{StaticResource Header}" />
 
 			<Grid Grid.Row="1"
 				  Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}">
 				<StackPanel Orientation="Horizontal">
-					<Border Margin="0,2,2,2"
-							CornerRadius="2"
-							Background="#19000000"
-							Padding="4,2">
-						<HyperlinkButton Content="Save"
-										 cm:Action.TargetWithoutContext="SaveDocument"
-										 cm:Message.Attach="Click=Execute($dataContext)"
-										 FontSize="9.333" />
-					</Border>
-					<Border Margin="0,2,2,2"
-							CornerRadius="2"
-							Background="#19000000"
-							Padding="4,2">
-						<HyperlinkButton Content="Prettify"
-										 cm:Message.Attach="Prettify"
-										 FontSize="9.333" />
-					</Border>
-					<Border Margin="0,2,2,2"
-							CornerRadius="2"
-							Background="#19000000"
-							Padding="4,2">
-						<HyperlinkButton Content="Delete"
-										 Tag="{Binding Id}"
-										 cm:Action.TargetWithoutContext="DeleteDocument"
-										 cm:Message.Attach="Click=Execute($this.Tag)"
-										 FontSize="9.333" />
-					</Border>
+					<Button Content="Save"
+							Style="{StaticResource FormButton}"
+							cm:Action.TargetWithoutContext="SaveDocument"
+							cm:Message.Attach="[Click]=[Execute($dataContext)]" />
+
+					<Button Content="Prettify"
+							Style="{StaticResource FormButton}"
+							cm:Message.Attach="Prettify" />
+
+					<Button Content="Delete"
+							Style="{StaticResource FormButton}"
+							Tag="{Binding Id}"
+							cm:Action.TargetWithoutContext="DeleteDocument"
+							cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
+
+					<Button Content="Refresh"
+							Style="{StaticResource FormButton}"
+							cm:Action.TargetWithoutContext="LoadDocument"
+							cm:Message.Attach="[Click]=[Execute($dataContext)]" />
 
 				</StackPanel>
 			</Grid>
@@ -77,25 +103,16 @@
 					 Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}"
 					 Grid.Row="2" />
 
-			<Border Grid.Row="3"
-					Padding="0 8 0 0"
-					BorderThickness="1"
-					CornerRadius="2"
-					BorderBrush="#0A000000"
-					Margin="0"
-					d:IsLocked="True">
-
-				<c:TabControl>
-					<c:TabItem Header="Data">
-						<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}" />
-					</c:TabItem>
-					<c:TabItem Header="Metadata"
-							   Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}">
-						<Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay}" />
-					</c:TabItem>
-				</c:TabControl>
-
-			</Border>
+			<c:TabControl Grid.Row="3"
+						  Margin="0 8 0 0">
+				<c:TabItem Header="Data">
+					<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}" />
+				</c:TabItem>
+				<c:TabItem Header="Metadata"
+						   Visibility="{Binding IsProjection, Converter={StaticResource visibleWhenFalse}}">
+					<Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay}" />
+				</c:TabItem>
+			</c:TabControl>
 
 		</Grid>
 
@@ -114,14 +131,7 @@
 
 			<Border Background="WhiteSmoke"
 					CornerRadius="5,0,0,5"
-					Grid.RowSpan="2" />
-
-			<Border Background="WhiteSmoke"
-					CornerRadius="5,0,0,5"
-					Grid.RowSpan="2"
-					Grid.Row="2"
-					Margin="0,12,0,0"
-					d:LayoutOverrides="GridBox" />
+					Grid.RowSpan="4" />
 
 			<TextBlock Style="{StaticResource PanelTitle}"
 					   Text="METADATA"
@@ -134,31 +144,28 @@
 					<DataTemplate>
 						<Grid>
 							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="120" />
-								<ColumnDefinition Width="8" />
+								<ColumnDefinition Width="{StaticResource LabelWidth}" />
+								<ColumnDefinition Width="{StaticResource DividerWidth}" />
 								<ColumnDefinition />
 							</Grid.ColumnDefinitions>
 
-							<TextBlock HorizontalAlignment="Right"
-									   TextWrapping="Wrap"
-									   FontSize="12"
-									   VerticalAlignment="Top"
-									   Text="{Binding Key}"
-									   Foreground="#99000000"
-									   Margin="0,2,0,0" />
-							<TextBlock HorizontalAlignment="Left"
-									   TextWrapping="Wrap"
-									   VerticalAlignment="Top"
-									   Grid.Column="2"
+							<TextBlock Text="{Binding Key}"
+									   Style="{StaticResource MetadataLabel}" />
+							<TextBlock Grid.Column="2"
 									   Text="{Binding Value}"
-									   FontSize="14.667" />
+									   Style="{StaticResource MetadataValue}" />
 						</Grid>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
-			
-			<Grid Margin="0,12,0,0"
-				  Grid.Row="2">
+
+			<TextBlock Style="{StaticResource PanelTitle}"
+					   Grid.Row="2"
+					   Text="DETAILS"
+					   Margin="12,6,0,6" />
+
+			<Grid Margin="12,12,0,12"
+				  Grid.Row="3">
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
@@ -167,46 +174,26 @@
 				</Grid.RowDefinitions>
 
 				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="120" />
-					<ColumnDefinition Width="8" />
+					<ColumnDefinition Width="{StaticResource LabelWidth}" />
+					<ColumnDefinition Width="{StaticResource DividerWidth}" />
 					<ColumnDefinition />
 				</Grid.ColumnDefinitions>
 
-				<TextBlock  Style="{StaticResource PanelTitle}"
-							Text="DETAILS"
-							Margin="12,6,0,6" />
-
-				<TextBlock HorizontalAlignment="Right"
-						   TextWrapping="Wrap"
-						   FontSize="12"
-						   VerticalAlignment="Top"
-						   Text="ETag"
+				<TextBlock Text="ETag"
+						   Style="{StaticResource MetadataLabel}"
+						   Grid.Row="1" />
+				<TextBlock Text="{Binding Etag}"
+						   Style="{StaticResource MetadataValue}"
 						   Grid.Row="1"
-						   Foreground="#99000000"
-						   Margin="0,2,0,0" />
-				<TextBlock HorizontalAlignment="Left"
-						   TextWrapping="Wrap"
-						   VerticalAlignment="Top"
-						   Grid.Row="1"
-						   Grid.Column="2"
-						   Text="{Binding ETag}"
-						   FontSize="14.667" />
+						   Grid.Column="2" />
 
-				<TextBlock HorizontalAlignment="Right"
-						   TextWrapping="Wrap"
-						   FontSize="12"
-						   VerticalAlignment="Top"
-						   Text="Last-Modified"
-						   Foreground="#99000000"
+				<TextBlock Text="Last-Modified"
+						   Style="{StaticResource MetadataLabel}"
+						   Grid.Row="2" />
+				<TextBlock Text="{Binding LastModified}"
+						   Style="{StaticResource MetadataValue}"
 						   Grid.Row="2"
-						   Margin="0,2,0,0" />
-				<TextBlock HorizontalAlignment="Left"
-						   TextWrapping="Wrap"
-						   VerticalAlignment="Top"
-						   Grid.Row="2"
-						   Grid.Column="2"
-						   Text="{Binding LastModified}"
-						   FontSize="14.667" />
+						   Grid.Column="2" />
 			</Grid>
 
 			<StackPanel Orientation="Vertical"

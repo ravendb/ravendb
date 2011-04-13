@@ -28,7 +28,7 @@
 using System;
 using System.Collections.ObjectModel;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	public class CacheItemPolicy
 	{

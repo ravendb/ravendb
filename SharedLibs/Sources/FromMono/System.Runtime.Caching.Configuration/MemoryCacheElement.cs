@@ -28,8 +28,9 @@
 using System;
 using System.ComponentModel;
 using System.Configuration;
+using FromMono.System.Configuration;
 
-namespace System.Runtime.Caching.Configuration
+namespace FromMono.System.Runtime.Caching.Configuration
 {
     internal sealed class MemoryCacheElement : ConfigurationElement
 	{

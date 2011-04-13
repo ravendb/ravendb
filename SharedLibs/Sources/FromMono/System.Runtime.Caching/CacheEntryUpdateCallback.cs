@@ -27,7 +27,7 @@
 //
 using System;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	public delegate void CacheEntryUpdateCallback (CacheEntryUpdateArguments arguments);
 }

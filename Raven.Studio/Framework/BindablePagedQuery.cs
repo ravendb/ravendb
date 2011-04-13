@@ -1,7 +1,6 @@
 ﻿namespace Raven.Studio.Framework
 {
 	using System;
-	using System.ComponentModel;
 	using System.Linq;
 	using System.Threading.Tasks;
 	using System.Windows;
@@ -154,11 +153,23 @@
 				NotifyOfPropertyChange("CurrentPage");
 				NotifyOfPropertyChange("CanMovePrevious");
 				NotifyOfPropertyChange("CanMoveNext");
+				NotifyOfPropertyChange("CanMoveFirst");
+				NotifyOfPropertyChange("CanMoveLast");
 				NotifyOfPropertyChange("Status");
 			}
 		}
 
 		public int NumberOfPages { get; private set; }
+
+		public bool CanMoveFirst
+		{
+			get { return CurrentPage > 0; }
+		}
+
+		public bool CanMoveLast
+		{
+			get { return NumberOfPages > 1 && CanMoveNext; }
+		}
 
 		public bool CanMovePrevious
 		{
@@ -187,7 +198,6 @@
 			{
 				isLoading = value;
 				NotifyOfPropertyChange("IsLoading");
-				Refresh();
 				IsLoadingChanged(this, new EventArgs<bool>(isLoading));
 			}
 		}

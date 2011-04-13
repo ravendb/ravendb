@@ -23,14 +23,9 @@
 
 			<StackPanel tk:DockPanel.Dock="Top"
 						Orientation="Horizontal">
-				<Border Margin="0,2,2,2"
-						CornerRadius="2"
-						Background="#19000000"
-						Padding="4,2">
-					<HyperlinkButton Content="New Index"
-									 cm:Message.Attach="CreateNewIndex"
-									 FontSize="9.333" />
-				</Border>
+				<Button Content="New Index"
+						Style="{StaticResource FormButton}"
+						cm:Message.Attach="CreateNewIndex" />
 			</StackPanel>
 
 			<Grid>
@@ -71,7 +66,10 @@
 
 				<Border Grid.Column="1"
 						Padding="4">
-					<ContentControl x:Name="ActiveItem" />
+					<ScrollViewer BorderThickness="0"
+								  ScrollViewer.VerticalScrollBarVisibility="Auto">
+						<ContentControl x:Name="ActiveItem" />
+					</ScrollViewer>
 				</Border>
 
 			</Grid>

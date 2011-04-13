@@ -34,7 +34,7 @@ using System.Diagnostics;
 // Counters in the ".NET Memory Cache 4.0" are not documented on MSDN. They were discovered using
 // perfmon there their definition may change without any notice
 //
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	sealed class MemoryCachePerformanceCounters : IDisposable
 	{

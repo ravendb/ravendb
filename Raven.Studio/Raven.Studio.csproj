@@ -25,7 +25,7 @@
     <TestPageFileName>CaliburnMicroSilverlightTestPage.html</TestPageFileName>
     <CreateTestPage>true</CreateTestPage>
     <ValidateXaml>true</ValidateXaml>
-    <EnableOutOfBrowser>true</EnableOutOfBrowser>
+    <EnableOutOfBrowser>false</EnableOutOfBrowser>
     <OutOfBrowserSettingsFile>Properties\OutOfBrowserSettings.xml</OutOfBrowserSettingsFile>
     <UsePlatformExtensions>false</UsePlatformExtensions>
     <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
@@ -125,17 +125,21 @@
     <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
     <Compile Include="Commands\CopyServerError.cs" />
     <Compile Include="Commands\EditIndex.cs" />
+    <Compile Include="Commands\LoadDocument.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
     <Compile Include="Controls\Editors\LinqEditor.cs" />
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
     <Compile Include="Controls\Editors\XamlEditor.cs" />
     <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
+    <Compile Include="Converters\NotificationLevelToColorConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
-    <Compile Include="Features\Database\IDatabaseScreenMenuItem.cs" />
-    <Compile Include="Features\Database\IServer.cs" />
-    <Compile Include="Features\Statistics\DynamicViewModel.cs" />
-    <Compile Include="Features\Statistics\IStatisticsItem.cs" />
+    <Compile Include="Features\Documents\IDocumentTemplateProvider.cs" />
+    <Compile Include="Features\Statistics\StatisticsItem.xaml.cs">
+      <DependentUpon>StatisticsItem.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Database\ExportDatabaseExplorerItemAttribute.cs" />
+    <Compile Include="Framework\DynamicViewModel.cs" />
     <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
     <Compile Include="Features\Collections\CollectionsViewModel.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
@@ -148,25 +152,25 @@
     <Compile Include="Features\Documents\ISupportDocumentTemplate.cs" />
     <Compile Include="Features\Query\QueryViewModel.cs" />
     <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
-    <Compile Include="Features\Statistics\IStatisticsSet.cs" />
     <Compile Include="Features\Statistics\IndexesViewModel.cs" />
     <Compile Include="Features\Statistics\Statistic.cs" />
     <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
     <Compile Include="Features\Tasks\ConsoleOutput.xaml.cs">
       <DependentUpon>ConsoleOutput.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Tasks\ConsoleOutputTask.cs" />
     <Compile Include="Features\Tasks\ExportTask.cs" />
     <Compile Include="Framework\IMenuItemMetadata.cs" />
     <Compile Include="Features\Tasks\ImportTask.cs" />
-    <Compile Include="Features\Tasks\InvalidDataException.cs" />
-    <Compile Include="Features\Tasks\Stopwatch.cs" />
+    <Compile Include="Impl\MissingFromSilverlight\InvalidDataException.cs" />
+    <Compile Include="Impl\MissingFromSilverlight\Stopwatch.cs" />
     <Compile Include="Features\Tasks\TasksViewModel.cs" />
-    <Compile Include="Framework\BindableCollectionExtensions.cs" />
+    <Compile Include="Framework\Extensions\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
     <Compile Include="Framework\IKeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyboardShortcutBinder.cs" />
     <Compile Include="Framework\KeyCombination.cs" />
-    <Compile Include="Framework\ListExtensions.cs" />
+    <Compile Include="Framework\Extensions\ListExtensions.cs" />
     <Compile Include="Framework\RavenScreen.cs" />
     <Compile Include="Framework\ServerUriProvider.cs" />
     <Compile Include="Framework\SimpleLogger.cs" />
@@ -191,14 +195,9 @@
     <Compile Include="Controls\DatabaseConnection.xaml.cs">
       <DependentUpon>DatabaseConnection.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\DocumentsContainer.cs" />
-    <Compile Include="Controls\DocumentThumbnail.cs" />
-    <Compile Include="Controls\DragDropPanel.cs" />
     <Compile Include="Controls\ErrorWindow.xaml.cs">
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\Gears.cs" />
-    <Compile Include="Controls\HyperlinkHelper.cs" />
     <Compile Include="Controls\Label.cs" />
     <Compile Include="Controls\LabelValuePanel.cs" />
     <Compile Include="Controls\Pager.xaml.cs">
@@ -216,13 +215,13 @@
     <Compile Include="Features\Documents\DocumentTemplateProvider.cs" />
     <Compile Include="Features\Documents\EditDocumentViewModel.cs" />
     <Compile Include="Framework\ConventionalCatalog.cs" />
-    <Compile Include="Framework\DateTimeExtensions.cs" />
-    <Compile Include="Framework\DictionaryExtensions.cs" />
+    <Compile Include="Framework\Extensions\DateTimeExtensions.cs" />
+    <Compile Include="Framework\Extensions\DictionaryExtensions.cs" />
     <Compile Include="Features\Database\SummaryViewModel.cs" />
     <Compile Include="Framework\BindablePagedQuery.cs" />
     <Compile Include="Framework\DoubleClickEvent.cs" />
-    <Compile Include="Framework\ScreenExtensions.cs" />
-    <Compile Include="Framework\TaskExtensions.cs" />
+    <Compile Include="Framework\Extensions\ScreenExtensions.cs" />
+    <Compile Include="Framework\Extensions\TaskExtensions.cs" />
     <Compile Include="Framework\TemplateColorProvider.cs" />
     <Compile Include="Messages\DocumentDeleted.cs" />
     <Compile Include="Messages\NavigationOccurred.cs" />
@@ -236,9 +235,12 @@
     <Compile Include="Messages\IndexUpdated.cs" />
     <Compile Include="Features\Indexes\EditIndexViewModel.cs" />
     <Compile Include="Messages\DisplayCurrentDatabaseRequested.cs" />
-    <Compile Include="Features\Query\LinqEditorViewModel.cs" />
     <Compile Include="Messages\WorkCompleted.cs" />
     <Compile Include="Messages\WorkStarted.cs" />
+    <Compile Include="Plugins\IServer.cs" />
+    <Compile Include="Plugins\Statistics\IStatisticsItem.cs" />
+    <Compile Include="Plugins\Statistics\IStatisticsSet.cs" />
+    <Compile Include="Plugins\Tasks\ExportTaskAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SampleData\PagerSampleData\PagerSampleData.xaml.cs">
       <DependentUpon>PagerSampleData.xaml</DependentUpon>
@@ -254,10 +256,11 @@
     <Compile Include="Shell\NavigationViewModel.cs" />
     <Compile Include="Shell\NotificationsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
-    <Compile Include="Features\Database\DatabaseViewModel.cs" />
+    <Compile Include="Features\Database\DatabaseExplorer.cs" />
     <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Shell\ShellViewModel.cs" />
     <Compile Include="Shell\MessageBox\ShowMessageBox.cs" />
+    <Compile Include="StudioViewLocator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -277,10 +280,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Resource>
     <Resource Include="Resources\Templates.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Resource>
-    <Resource Include="Resources\ControlTemplates\Gears.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
@@ -328,10 +327,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Documents\Document\Preview.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <Page Include="Features\Documents\Document\Tooltip.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -344,6 +339,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Statistics\StatisticsItem.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Statistics\StatisticsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -353,10 +352,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Indexes\EditIndexView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Query\LinqEditorView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -393,22 +388,22 @@
       <SubType>Designer</SubType>
       <ContainsDesignTimeResources>true</ContainsDesignTimeResources>
     </Page>
-    <Page Include="Resources\Brushes.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Resources\Fonts.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Resources\Styles.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <DesignTimeOnly Include="SampleData\PagerSampleData\PagerSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
       <SubType>Designer</SubType>
     </DesignTimeOnly>
+    <ApplicationDefinition Include="Resources\Brushes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <ApplicationDefinition Include="Resources\Fonts.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <Page Include="Resources\Styles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Shell\BusyStatusView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -429,18 +424,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Resources\ControlTemplates\DocumentsContainer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Resources\ControlTemplates\DocumentThumbnail.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Resources\ControlTemplates\EmptyButton.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Resources\ControlTemplates\Indexes.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -449,7 +432,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Database\DatabaseView.xaml">
+    <Page Include="Features\Database\DatabaseExplorerView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -498,9 +481,18 @@
     <DesignData Include="SampleData\DatabaseViewModelSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
+    <DesignData Include="SampleData\ExportTaskSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+    </DesignData>
+    <DesignData Include="SampleData\NotficiationsSampleData.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+    </DesignData>
     <DesignData Include="SampleData\ServerErrorSampleData.xaml">
       <Generator>MSBuild:MarkupCompilePass1</Generator>
     </DesignData>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\pencil.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

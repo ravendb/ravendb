@@ -18,6 +18,7 @@ namespace Raven.Database.Queries
 	{
 		private readonly DocumentDatabase documentDatabase;
 		private readonly ConcurrentDictionary<string, TemporaryIndexInfo> temporaryIndexes;
+		private readonly object createIndexLock = new object();
 
 		public DynamicQueryRunner(DocumentDatabase database)
 		{
@@ -106,20 +107,47 @@ namespace Raven.Database.Queries
 		{
 			var indexInfo = IncrementUsageCount(temporaryIndexName);
 
+			if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)
+				return Tuple.Create(permanentIndexName, false);
+
 			if (TemporaryIndexShouldBeMadePermanent(indexInfo))
 			{
-				var indexDefinition = createDefinition();
-				documentDatabase.DeleteIndex(temporaryIndexName);
-				CreateIndex(indexDefinition, permanentIndexName);
-				TemporaryIndexInfo ignored;
-				temporaryIndexes.TryRemove(temporaryIndexName, out ignored);
+				TempIndexToPermenantIndex(temporaryIndexName, permanentIndexName, createDefinition);
 				return Tuple.Create(permanentIndexName, false);
 			}
+
+			// we make the check here to avoid locking if the index already exists
 			var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
 			if (temporaryIndex != null)
 				return Tuple.Create(temporaryIndexName, false);
-			CreateIndex(createDefinition(), temporaryIndexName);
-			return Tuple.Create(temporaryIndexName, true);
+
+			lock (createIndexLock)
+			{
+				// double checked locking, to ensure that we only create the index once
+				temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
+				if (temporaryIndex != null)
+					return Tuple.Create(temporaryIndexName, false);
+
+				documentDatabase.PutIndex(temporaryIndexName, createDefinition());
+
+				return Tuple.Create(temporaryIndexName, true);
+			}
+
+		}
+
+		private void TempIndexToPermenantIndex(string temporaryIndexName, string permanentIndexName, Func<IndexDefinition> createDefinition)
+		{
+			lock(createIndexLock)
+			{
+				if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)
+					return;
+
+				var indexDefinition = createDefinition();
+				documentDatabase.DeleteIndex(temporaryIndexName);
+				documentDatabase.PutIndex(permanentIndexName, indexDefinition);
+				TemporaryIndexInfo ignored;
+				temporaryIndexes.TryRemove(temporaryIndexName, out ignored);	
+			}
 		}
 
 		private TemporaryIndexInfo IncrementUsageCount(string temporaryIndexName)
@@ -131,7 +159,7 @@ namespace Raven.Database.Queries
 				Name = temporaryIndexName
 			});
 			indexInfo.LastRun = DateTime.Now;
-			indexInfo.RunCount++;
+			Interlocked.Increment(ref indexInfo.RunCount);
 			return indexInfo;
 		}
 
@@ -146,21 +174,12 @@ namespace Raven.Database.Queries
 			return score < documentDatabase.Configuration.TempIndexPromotionThreshold;
 		}
 
-		[MethodImpl(MethodImplOptions.Synchronized)]
-		private void CreateIndex(IndexDefinition definition, string indexName)
-		{
-			if (documentDatabase.GetIndexDefinition(indexName) != null) // avoid race condition when creating the index
-				return;
-
-			documentDatabase.PutIndex(indexName, definition);
-		}
-
 		private class TemporaryIndexInfo
 		{
-			public string Name { get; set;}
-			public DateTime LastRun { get; set;}
-			public DateTime Created { get; set;}
-			public int RunCount { get; set;}
+			public string Name;
+			public DateTime LastRun;
+			public DateTime Created;
+			public int RunCount;
 		}
 	}
 }

@@ -10,9 +10,6 @@
 	using System.Linq;
 	using System.Reflection;
 
-	/// <summary>
-	/// This is one reason why I don't like MEF
-	/// </summary>
 	public class ConventionalCatalog : ComposablePartCatalog
 	{
 		readonly List<ComposablePartDefinition> parts = new List<ComposablePartDefinition>();

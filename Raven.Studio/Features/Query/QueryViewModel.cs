@@ -1,6 +1,4 @@
-﻿using Raven.Client.Client;
-
-namespace Raven.Studio.Features.Query
+﻿namespace Raven.Studio.Features.Query
 {
 	using System;
 	using System.Collections.Generic;
@@ -8,14 +6,18 @@ namespace Raven.Studio.Features.Query
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
-	using Database;
 	using Documents;
 	using Framework;
+	using Framework.Extensions;
+	using Plugins;
+	using Plugins.Database;
 	using Raven.Database.Data;
-	using Raven.Client.Extensions;
+	using Client.Extensions;
+	using Client.Client;
 
-	[ExportDatabaseScreen("Query", Index = 50)]
-	public class QueryViewModel : Screen, IDatabaseScreenMenuItem
+
+	[ExportDatabaseExplorerItem("Query", Index = 50)]
+	public class QueryViewModel : Screen
 	{
 		readonly List<string> dynamicIndex = new List<string>();
 		readonly IServer server;

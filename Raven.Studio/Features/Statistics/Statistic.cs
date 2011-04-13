@@ -3,6 +3,7 @@
 	using System;
 	using Caliburn.Micro;
 	using Messages;
+	using Plugins.Statistics;
 
 	public class Statistic : PropertyChangedBase, IStatisticsItem
 	{

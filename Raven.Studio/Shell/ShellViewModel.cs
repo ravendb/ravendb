@@ -7,7 +7,9 @@
 	using Caliburn.Micro;
 	using Features.Database;
 	using Framework;
+	using Framework.Extensions;
 	using Messages;
+	using Plugins;
 
 	[Export(typeof(IShell))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
@@ -15,7 +17,7 @@
 								  IHandle<DisplayCurrentDatabaseRequested>
 	{
 		readonly BusyStatusViewModel busyStatus;
-		readonly DatabaseViewModel databaseScreen;
+		readonly DatabaseExplorer databaseScreen;
 		readonly IEventAggregator events;
 		readonly NavigationViewModel navigation;
 		readonly NotificationsViewModel notifications;
@@ -31,7 +33,7 @@
 			NotificationsViewModel notifications,
 			BusyStatusViewModel busyStatus,
 			SelectDatabaseViewModel start,
-			DatabaseViewModel databaseScreen,
+			DatabaseExplorer databaseScreen,
 			IKeyboardShortcutBinder binder,
 			IEventAggregator events)
 		{
@@ -78,10 +80,10 @@
 
 		public IServer Server { get { return server; } }
 
-		public override void AttachView(object view, object context)
+		protected override void OnViewAttached(object view, object context)
 		{
 			binder.Initialize((FrameworkElement)view);
-			base.AttachView(view, context);
+			base.OnViewAttached(view, context);
 		}
 
 		public BusyStatusViewModel BusyStatus { get { return busyStatus; } }
@@ -97,7 +99,7 @@
 			get { return Application.Current.IsRunningOutOfBrowser; }
 		}
 
-		public void Handle(DisplayCurrentDatabaseRequested message)
+		void IHandle<DisplayCurrentDatabaseRequested>.Handle(DisplayCurrentDatabaseRequested message)
 		{
 			//TODO: record the previous database so that the back button is more intuitive
 			this.TrackNavigationTo(databaseScreen, events);

@@ -1,0 +1,17 @@
+﻿<Raven_Studio_Shell:NotificationsViewModel xmlns:Raven_Studio_Shell="clr-namespace:Raven.Studio.Shell" xmlns:Raven_Studio_Messages="clr-namespace:Raven.Studio.Messages" IsNotifying="True">
+	<Raven_Studio_Shell:NotificationsViewModel.MostRecent>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Error" Message="Space monkies are attacking!"/>
+	</Raven_Studio_Shell:NotificationsViewModel.MostRecent>
+	<Raven_Studio_Shell:NotificationsViewModel.Notifications>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Error" Message="Sed class cras aliquam curae"/>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Info" Message="Duis nunc"/>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Warning" Message="Vestibulum dis donec"/>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Error" Message="Etiam amet"/>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Warning" Message="Est fusce aenean phasellus"/>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Info" Message="Hac adipiscing consequat"/>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Info" Message="Integer lorem"/>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Error" Message="Leo mauris"/>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Warning" Message="Convallis morbi nulla quisque vivamus"/>
+		<Raven_Studio_Messages:NotificationRaised CreatedAt="04/07/2011 14:48:18" Level="Warning" Message="Ante dignissim"/>
+	</Raven_Studio_Shell:NotificationsViewModel.Notifications>
+</Raven_Studio_Shell:NotificationsViewModel>

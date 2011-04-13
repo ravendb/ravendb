@@ -28,14 +28,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Configuration;
-using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.Caching.Configuration;
 using System.Threading;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	sealed class MemoryCacheContainer : IDisposable
 	{

@@ -12,6 +12,7 @@
 	using Database;
 	using Framework;
 	using Messages;
+	using Plugins;
 	using Raven.Database.Data;
 
 	[Export(typeof (IDocumentTemplateProvider))]
@@ -194,13 +195,5 @@
 				);
 			return template;
 		}
-	}
-
-	public interface IDocumentTemplateProvider
-	{
-		string GetDefaultTemplateXamlFor(string key);
-		Task<DataTemplate> GetTemplateFor(string key);
-		DataTemplate RetrieveFromCache(string key);
-		DataTemplate GetDefaultTemplate(string key);
 	}
 }

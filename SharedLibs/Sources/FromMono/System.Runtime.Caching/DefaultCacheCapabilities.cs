@@ -27,7 +27,7 @@
 //
 using System;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	[Flags]
 	public enum DefaultCacheCapabilities

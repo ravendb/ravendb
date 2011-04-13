@@ -28,7 +28,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace System.Runtime.Caching
+namespace FromMono.System.Runtime.Caching
 {
 	// NOTE: all the public methods in this assume that the owner's write lock is held
 	sealed class MemoryCacheLRU
