@@ -107,7 +107,7 @@ namespace Raven.Json.Linq
 			{
 				var ar = (RavenJArray)token;
 				var o = new RavenJObject();
-				foreach (RavenJObject item in ar.Items)
+				foreach (RavenJObject item in ar)
 				{
 					o[item["Key"].Value<string>()] = item["Value"];
 				}
