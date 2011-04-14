@@ -1,4 +1,5 @@
-﻿Imports Raven.Client.Embedded
+﻿Imports Raven.Abstractions.Indexing
+Imports Raven.Client.Embedded
 Imports Raven.Client.Indexes
 Imports Raven.Tests
 Imports Xunit
