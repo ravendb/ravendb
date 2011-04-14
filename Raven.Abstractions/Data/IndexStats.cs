@@ -13,16 +13,13 @@ namespace Raven.Abstractions.Data
 		public int IndexingAttempts { get; set; }
 		public int IndexingSuccesses { get; set; }
 		public int IndexingErrors { get; set; }
-
-		public int ReduceIndexingAttempts { get; set; }
-		public int ReduceIndexingSuccesses { get; set; }
-		public int ReduceIndexingErrors { get; set; }
-
-
 		public Guid LastIndexedEtag { get; set; }
 		public DateTime LastIndexedTimestamp { get; set; }
 
-        public Guid LastReducedEtag { get; set; }
-        public DateTime LastReducedTimestamp { get; set; }
+        public int? ReduceIndexingAttempts { get; set; }
+        public int? ReduceIndexingSuccesses { get; set; }
+        public int? ReduceIndexingErrors { get; set; }
+        public Guid? LastReducedEtag { get; set; }
+        public DateTime? LastReducedTimestamp { get; set; }
     }
 }
