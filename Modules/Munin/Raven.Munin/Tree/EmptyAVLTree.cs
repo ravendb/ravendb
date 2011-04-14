@@ -83,6 +83,16 @@ namespace Raven.Munin.Tree
             yield break;
         }
 
+        public IEnumerable<TValue> LessThan(TKey ltKey)
+        {
+            yield break;
+        }
+
+        public IEnumerable<TValue> LessThanOrEqual(TKey ltKey)
+        {
+            yield break;
+        }
+
         public IEnumerable<TValue> GreaterThanOrEqual(TKey gteKey)
         {
             yield break;
