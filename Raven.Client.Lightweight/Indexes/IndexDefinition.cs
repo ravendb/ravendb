@@ -7,10 +7,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 
-namespace Raven.Client.Indexes
+// We explicitly rename the namespace to match the one that we are using in Raven.Abstractions
+// ReSharper disable CheckNamespace
+namespace Raven.Abstractions.Indexing
+// ReSharper restore CheckNamespace
 {
 	/// <summary>
 	/// This class attempts to provide a strongly typed index definition on the client.
