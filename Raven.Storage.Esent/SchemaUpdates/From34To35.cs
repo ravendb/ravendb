@@ -48,6 +48,15 @@ namespace Raven.Storage.Esent.SchemaUpdates
 				tx = new Transaction(session);
 			}
 
+            using (var tbl = new Table(session, dbid, "mapped_results",
+                    OpenTableGrbit.PermitDDL | OpenTableGrbit.DenyRead | OpenTableGrbit.DenyWrite))
+            {
+                const string indexDef = "+view\0+etag\0\0";
+                Api.JetCreateIndex(session, tbl, "by_view_and_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+                                   100);
+
+            }
+
 			using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
 			{
 				Api.JetMove(session, details, JET_Move.First, MoveGrbit.None);

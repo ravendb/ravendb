@@ -47,7 +47,8 @@ namespace Raven.Storage.Managed.Impl
             MappedResults = Add(new Table("MappedResults")
             {
                 {"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
-                {"ByViewAndDocumentId", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("docId"))}
+                {"ByViewAndDocumentId", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("docId"))},
+                {"ByViewAndEtag", x => Tuple.Create(x.Value<string>("view"), new ComparableByteArray(x.Value<byte[]>("etag")))}
             });
 
             Queues = Add(new Table(x => new RavenJObject

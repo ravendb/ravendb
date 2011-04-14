@@ -105,5 +105,19 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetDelete(session, MappedResults);
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
+
+	    public IEnumerable<string> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag)
+	    {
+            Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
+            Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, MappedResults, lastReducedEtag.TransformToValueForEsentSorting(), MakeKeyGrbit.None);
+            if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGT) == false)
+                yield break;
+
+	        while (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]) == indexName)
+	        {
+                yield return Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
+	        }
+	    }
 	}
 }

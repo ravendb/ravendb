@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using Raven.Json.Linq;
 
@@ -14,5 +15,6 @@ namespace Raven.Database.Storage
 		IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams);
 		IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view);
 		void DeleteMappedResultsForView(string view);
+	    IEnumerable<string> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag);
 	}
 }

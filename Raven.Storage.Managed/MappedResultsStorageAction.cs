@@ -36,7 +36,7 @@ namespace Raven.Storage.Managed
                 {"view", view},
                 {"reduceKey", reduceKey},
                 {"docId", docId},
-                {"mapResultId", generator.CreateSequentialUuid().ToByteArray()}
+                {"etag", generator.CreateSequentialUuid().ToByteArray()},
             }, ms.ToArray());
         }
 
@@ -84,6 +84,13 @@ namespace Raven.Storage.Managed
             {
                 storage.MappedResults.Remove(key);
             }
+        }
+
+        public IEnumerable<string> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag)
+        {
+            return storage.MappedResults["ByViewAndEtag"].SkipTo(new RavenJObject { { "view", indexName }, {"etag", lastReducedEtag.ToByteArray()}})
+                .TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), indexName))
+                .Select(key => key.Value<string>("reduceKey"));
         }
     }
 }
