@@ -13,8 +13,8 @@ namespace Raven.Tryouts.Json
 {
     public static class PerfTest
     {
-        private const string BigJsonPath = @"z:\Pool5.json";
-        private const int IterationsCount = 100;
+        public const string BigJsonPath = @"C:\Users\Ayende\Desktop\Pool5\Pool5.json";
+        private const int IterationsCount = 1;
 
         public static void RunPerfTest()
         {
