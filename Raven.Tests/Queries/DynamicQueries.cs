@@ -85,7 +85,7 @@ namespace Raven.Tests.Queries
             Thread.CurrentThread.CurrentCulture = oldCulture;
 
 
-            Assert.Equal("Doc 'rahien', Error: Operator '/' cannot be applied to operands of type 'int' and 'Raven.Database.Linq.DynamicNullObject'", result.Errors[0]);
+            Assert.Equal("Doc 'rahien', Error: Operator '/' cannot be applied to operands of type 'int' and 'Raven.Abstractions.Linq.DynamicNullObject'", result.Errors[0]);
             Assert.Equal(@"{""L"":0,""__document_id"":""ayende""}", result.Results[0].ToString(Formatting.None));
             Assert.Equal(@"{""L"":0,""__document_id"":""oren""}", result.Results[1].ToString(Formatting.None));
         }

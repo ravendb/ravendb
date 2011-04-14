@@ -9,17 +9,23 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-		    Console.WriteLine("Starting...");
+            //Console.WriteLine("Starting...");
 
-		    var executeManyFileReads2 = PerfTest.ExecuteManyFileReads2(PerfTest.BigJsonPath);
+            //var executeManyFileReads2 = PerfTest.ExecuteManyFileReads2(PerfTest.BigJsonPath);
 
-		    Console.WriteLine("Ready...");
+            //Console.WriteLine("Ready...");
 
-		    Console.ReadLine();
-
-		    while (true)
+            //Console.ReadLine();
+            //int i = 0;
+            //while (true)
+            //{
+            //    PerfTest.CloneALot2(executeManyFileReads2);
+            //    Console.WriteLine(i++);
+            //}
+		    for (int i = 0; i < 10; i++)
 		    {
-		        PerfTest.CloneALot2(executeManyFileReads2);
+		        Console.WriteLine(i);
+                PerfTest.RunPerfTest();
 		    }
 		}
 	}
