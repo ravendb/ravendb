@@ -120,7 +120,9 @@ namespace Raven.Storage.Managed
 
                     Name = readResult.Key.Value<string>("index"),
                     LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
-                    LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp")
+                    LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
+                    LastReducedEtag = new Guid(readResult.Key.Value<byte[]>("lastReducedEtag")),
+                    LastReducedTimestamp = readResult.Key.Value<DateTime>("lastReducedTimestamp")
                 };
             }
         }
@@ -143,6 +145,14 @@ namespace Raven.Storage.Managed
 			{
 				jObject["reduce_successes"] = 0;
 			}
+            if(!jObject.ContainsKey("lastReducedEtag"))
+            {
+                jObject["lastReducedEtag"] = Guid.Empty.ToByteArray();
+            }
+            if(!jObject.ContainsKey("lastReducedTimestamp"))
+            {
+                jObject["lastReducedTimestamp"] = DateTime.MinValue;
+            }
     	}
 
     	public void AddIndex(string name)
@@ -161,7 +171,9 @@ namespace Raven.Storage.Managed
                 {"reduce_successes", 0},
                 {"reduce_failures", 0},
                 {"lastEtag", Guid.Empty.ToByteArray()},
-                {"lastTimestamp", DateTime.MinValue}
+                {"lastTimestamp", DateTime.MinValue},
+                {"lastReducedEtag", Guid.Empty.ToByteArray()},
+                {"lastReducedTimestamp", DateTime.MinValue}
             });
         }
 
@@ -198,6 +210,19 @@ namespace Raven.Storage.Managed
         	var ravenJObject = (RavenJObject)readResult.Key;
         	ravenJObject["lastEtag"] = etag.ToByteArray();
             ravenJObject["lastTimestamp"] = timestamp;
+
+            storage.IndexingStats.UpdateKey(ravenJObject);
+        }
+
+        public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
+        {
+            var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", index } });
+            if (readResult == null)
+                throw new ArgumentException("There is no index with the name: " + index);
+
+            var ravenJObject = (RavenJObject)readResult.Key;
+            ravenJObject["lastReducedEtag"] = etag.ToByteArray();
+            ravenJObject["lastReducedTimestamp"] = timestamp;
 
             storage.IndexingStats.UpdateKey(ravenJObject);
         }

@@ -21,5 +21,8 @@ namespace Raven.Abstractions.Data
 
 		public Guid LastIndexedEtag { get; set; }
 		public DateTime LastIndexedTimestamp { get; set; }
-	}
+
+        public Guid LastReducedEtag { get; set; }
+        public DateTime LastReducedTimestamp { get; set; }
+    }
 }

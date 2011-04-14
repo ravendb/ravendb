@@ -107,6 +107,11 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting(),
 					LastIndexedTimestamp= 
 						Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
+                    LastReducedEtag = 
+                        Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]).TransfromToGuidWithProperSorting(),
+                    LastReducedTimestamp=
+                        Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]).Value,
+				
 				};
 			}
 		}       
@@ -180,6 +185,26 @@ namespace Raven.Storage.Esent.StorageActions
 				update.Save();
 			}
 		}
+
+        public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
+        {
+            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+            Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+                throw new IndexDoesNotExistsException("There is no index named: " + index);
+
+            using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
+            {
+                Api.SetColumn(session, IndexesStatsReduce,
+                              tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"],
+                              etag.TransformToValueForEsentSorting());
+                Api.SetColumn(session, IndexesStatsReduce,
+                              tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"],
+                              timestamp);
+                update.Save();
+            }
+        }
+
 
     }
 }
