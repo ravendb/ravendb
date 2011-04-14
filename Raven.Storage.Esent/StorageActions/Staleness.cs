@@ -100,7 +100,7 @@ namespace Raven.Storage.Esent.StorageActions
         {
             Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
             Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if(Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE)) // find the next greater view
+            if(Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false) // find the next greater view
                 return Guid.Empty;
 
             // did we find the last item on the view?
@@ -108,7 +108,7 @@ namespace Raven.Storage.Esent.StorageActions
                 return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
 
             // maybe we are at another view?
-            if (Api.TryMovePrevious(session, MappedResults)) // move one step back, now we are at the highest etag for this view, maybe
+            if (Api.TryMovePrevious(session, MappedResults) == false) // move one step back, now we are at the highest etag for this view, maybe
                 return Guid.Empty;
 
             //could't find the name in the table 
