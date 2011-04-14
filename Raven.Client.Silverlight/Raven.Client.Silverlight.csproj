@@ -180,10 +180,10 @@
     <Compile Include="..\Raven.Json\Utilities\ValidationUtils.cs">
       <Link>Raven.Json\Utilities\ValidationUtils.cs</Link>
     </Compile>
-    <Compile Include="Client\Async\AsyncServerClient.cs" />
-    <Compile Include="Client\HttpJsonRequest.cs" />
-    <Compile Include="Client\HttpJsonRequestFactory.cs" />
-    <Compile Include="Client\RavenUrlExtensions.cs" />
+    <Compile Include="Connection\Async\AsyncServerClient.cs" />
+    <Compile Include="Connection\HttpJsonRequest.cs" />
+    <Compile Include="Connection\HttpJsonRequestFactory.cs" />
+    <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Data\ServerRequestError.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FromMono\TaskExtensions.cs" />
@@ -335,38 +335,38 @@
     <Compile Include="..\Raven.Abstractions\Replication\ReplicationDocument.cs">
       <Link>Replication\ReplicationDocument.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\Async\IAsyncDatabaseCommands.cs">
-      <Link>Client\Async\IAsyncDatabaseCommands.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\IAsyncDatabaseCommands.cs">
+      <Link>Connection\Async\IAsyncDatabaseCommands.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\IDatabaseCommands.cs">
-      <Link>Client\IDatabaseCommands.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\IDatabaseCommands.cs">
+      <Link>Connection\IDatabaseCommands.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\JsonExtensions.cs">
-      <Link>Client\JsonExtensions.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\JsonExtensions.cs">
+      <Link>Connection\JsonExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\JsonLuceneDateTimeConverter.cs">
-      <Link>Client\JsonLuceneDateTimeConverter.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\JsonLuceneDateTimeConverter.cs">
+      <Link>Connection\JsonLuceneDateTimeConverter.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\RavenQuery.cs">
-      <Link>Client\RavenQuery.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenQuery.cs">
+      <Link>Connection\RavenQuery.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\RavenTransactionAccessor.cs">
-      <Link>Client\RavenTransactionAccessor.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenTransactionAccessor.cs">
+      <Link>Connection\RavenTransactionAccessor.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\ReplicationInformer.cs">
-      <Link>Client\ReplicationInformer.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformer.cs">
+      <Link>Connection\ReplicationInformer.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\SerializationHelper.cs">
-      <Link>Client\SerializationHelper.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\SerializationHelper.cs">
+      <Link>Connection\SerializationHelper.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\ServerClient.cs">
-      <Link>Client\ServerClient.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ServerClient.cs">
+      <Link>Connection\ServerClient.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\WebRequestEventArgs.cs">
-      <Link>Client\WebRequestEventArgs.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\WebRequestEventArgs.cs">
+      <Link>Connection\WebRequestEventArgs.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\WebResponseExtensions.cs">
-      <Link>Client\WebResponseExtensions.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\WebResponseExtensions.cs">
+      <Link>Connection\WebResponseExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Converters\GuidConverter.cs">
       <Link>Converters\GuidConverter.cs</Link>
@@ -527,8 +527,8 @@
     <Compile Include="..\Raven.Client.Lightweight\Linq\IRavenQueryable.cs">
       <Link>Linq\IRavenQueryable.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Client\IRavenQueryInspector.cs">
-      <Link>Client\IRavenQueryInspector.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\IRavenQueryInspector.cs">
+      <Link>Connection\IRavenQueryInspector.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\IRavenQueryProvider.cs">
       <Link>Linq\IRavenQueryProvider.cs</Link>
