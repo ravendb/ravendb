@@ -80,6 +80,22 @@ namespace Raven.Storage.Esent.StorageActions
             return new Guid(lastEtag);
         }
 
+        public Guid GetMostRecentReducedEtag(string name)
+        {
+            Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
+            Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if(Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE)) // find the next greater view
+                return Guid.Empty;
+            if(Api.TryMovePrevious(session, MappedResults)) // move one step back, now we are at the highest etag for this view, maybe
+                return Guid.Empty;
+
+            //could't find the name in the table 
+            if(Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"],Encoding.Unicode) != name)
+                return Guid.Empty;
+            var lastEtag = Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]);
+            return new Guid(lastEtag);
+        }
+
         private bool IsStaleByEtag()
         {
         	var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,

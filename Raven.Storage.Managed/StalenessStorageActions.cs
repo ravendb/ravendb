@@ -79,6 +79,16 @@ namespace Raven.Storage.Managed
             return Guid.Empty;
         }
 
+        public Guid GetMostRecentReducedEtag(string name)
+        {
+            foreach (var doc in storage.Documents["ByEtag"].SkipAfter(0))
+            {
+                var docEtag = doc.Value<byte[]>("etag");
+                return new Guid(docEtag);
+            }
+            return Guid.Empty;
+        }
+
         private bool IsStaleByEtag(byte [] lastIndexedEtag)
         {
         	return storage.Documents["ByEtag"].SkipFromEnd(0)
