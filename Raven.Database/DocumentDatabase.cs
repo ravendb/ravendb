@@ -1025,7 +1025,7 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.Indexing.DeleteIndex(index);
-			    actions.Indexing.AddIndex(index);
+			    actions.Indexing.AddIndex(index, indexDefinition.IsMapReduce);
 			    workContext.ShouldNotifyAboutWork();
 			});
 		}
