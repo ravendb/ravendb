@@ -65,7 +65,7 @@ namespace Raven.Database.Config
 			MaxPageSize = Math.Max(MaxPageSize, 10);
 
 			MaxNumberOfItemsToIndexInSingleBatch = maxNumberOfItemsToIndexInSingleBatch != null ? int.Parse(maxNumberOfItemsToIndexInSingleBatch) : 2500;
-			MaxPageSize = Math.Max(MaxNumberOfItemsToIndexInSingleBatch, 128);
+			MaxNumberOfItemsToIndexInSingleBatch = Math.Max(MaxNumberOfItemsToIndexInSingleBatch, 128);
 
 			MaxNumberOfParallelIndexTasks = maxNumberOfParallelIndexTasks != null ? int.Parse(maxNumberOfParallelIndexTasks) : Environment.ProcessorCount;
 			MaxNumberOfParallelIndexTasks = Math.Max(1, MaxNumberOfParallelIndexTasks);
