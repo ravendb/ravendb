@@ -125,6 +125,7 @@
     <Compile Include="Impl\DocumentRetriever.cs" />
     <Compile Include="Impl\IDocumentCacher.cs" />
     <Compile Include="Impl\Logging\AsyncBufferingAppender.cs" />
+    <Compile Include="Indexing\AbstractIndexingExecuter.cs" />
     <Compile Include="Indexing\FieldsToFetch.cs" />
     <Compile Include="Indexing\IIndexExtension.cs" />
     <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
