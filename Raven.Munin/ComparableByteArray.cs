@@ -34,23 +34,37 @@ namespace Raven.Munin
         }
     }
 
-    public class ReverseComparable : IComparable<ReverseComparable>, IComparable
+    public class ReverseComparableByteArrayWhichIgnoresNull : IComparable<ReverseComparableByteArrayWhichIgnoresNull>, IComparable
     {
-        private readonly IComparable inner;
+        private readonly byte[] inner;
 
-        public ReverseComparable(IComparable inner)
+        public ReverseComparableByteArrayWhichIgnoresNull(byte[] inner)
         {
             this.inner = inner;
         }
 
-        public int CompareTo(ReverseComparable other)
+        public int CompareTo(ReverseComparableByteArrayWhichIgnoresNull other)
         {
-            return inner.CompareTo(other.inner)*-1;
+            if (inner == null || other.inner == null)
+                return 0;
+            return CompareToImpl(other)*-1;
+        }
+
+        private int CompareToImpl(ReverseComparableByteArrayWhichIgnoresNull other)
+        {
+            if (inner.Length != other.inner.Length)
+                return inner.Length - other.inner.Length;
+            for (int i = 0; i < inner.Length; i++)
+            {
+                if (inner[i] != other.inner[i])
+                    return inner[i] - other.inner[i];
+            }
+            return 0;
         }
 
         public int CompareTo(object obj)
         {
-            return CompareTo((ReverseComparable) obj);
+            return CompareTo((ReverseComparableByteArrayWhichIgnoresNull)obj);
         }
     }
 }
