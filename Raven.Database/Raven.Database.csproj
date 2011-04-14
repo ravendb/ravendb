@@ -128,7 +128,6 @@
     <Compile Include="Indexing\AbstractIndexingExecuter.cs" />
     <Compile Include="Indexing\FieldsToFetch.cs" />
     <Compile Include="Indexing\IIndexExtension.cs" />
-    <Compile Include="Indexing\ReducingExecuter.cs" />
     <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
     <Compile Include="Indexing\TasksExecuter.cs" />
     <Compile Include="Linq\CaptureQueryParameterNamesVisitor.cs" />

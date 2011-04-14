@@ -32,6 +32,6 @@ namespace Raven.Database.Storage
 		IndexFailureInformation GetFailureRate(string index);
 
 		void UpdateLastIndexed(string index, Guid etag, DateTime timestamp);
-        void UpdateLastReduced(string index, Guid etag);
+        void UpdateLastReduced(string index, Guid etag, DateTime timestamp);
 	}
 }

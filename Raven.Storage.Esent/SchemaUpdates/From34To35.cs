@@ -34,6 +34,13 @@ namespace Raven.Storage.Esent.SchemaUpdates
                         cbMax = 16,
                         grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
                     }, null, 0, out columnid);
+
+
+                    Api.JetAddColumn(session, tbl, "last_reduced_timestamp", new JET_COLUMNDEF
+                    {
+                        coltyp = JET_coltyp.DateTime,
+                        grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+                    }, null, 0, out columnid);
 				}
 
 				tx.Commit(CommitTransactionGrbit.LazyFlush);

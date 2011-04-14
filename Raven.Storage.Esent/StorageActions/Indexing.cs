@@ -109,7 +109,10 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
                     LastReducedEtag = 
                         Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]).TransfromToGuidWithProperSorting(),
-               };
+                    LastReducedTimestamp=
+                        Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]).Value,
+				
+				};
 			}
 		}       
 
@@ -127,6 +130,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["key"], name, Encoding.Unicode);
                 Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"], Guid.Empty.TransformToValueForEsentSorting());
+                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue);
                 update.Save();
 			}
 		}
@@ -182,7 +186,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-        public void UpdateLastReduced(string index, Guid etag)
+        public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
         {
             Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
             Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -194,6 +198,9 @@ namespace Raven.Storage.Esent.StorageActions
                 Api.SetColumn(session, IndexesStatsReduce,
                               tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"],
                               etag.TransformToValueForEsentSorting());
+                Api.SetColumn(session, IndexesStatsReduce,
+                              tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"],
+                              timestamp);
                 update.Save();
             }
         }

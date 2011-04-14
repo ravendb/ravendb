@@ -106,7 +106,7 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
 
-        public IEnumerable<Tuple<string, Guid>> GetMappedResultsReduceKeysAndEtagsAfter(string indexName, Guid lastReducedEtag)
+	    public IEnumerable<string> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag)
 	    {
             Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
             Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -116,9 +116,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 	        while (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]) == indexName)
 	        {
-	            var reduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
-	            var etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
-	            yield return Tuple.Create(reduceKey, etag);
+                yield return Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
 	        }
 	    }
 	}

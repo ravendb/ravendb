@@ -95,10 +95,31 @@ namespace Raven.Database.Indexing
             return true;
         }
 
-        protected abstract void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn);
+        private void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
+        {
+            ExecuteIndexingInternal(indexesToWorkOn, documents => Parallel.ForEach(indexesToWorkOn, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
+                TaskScheduler = scheduler
+            }, indexToWorkOn => transactionalStorage.Batch(actions => IndexDocuments(actions, indexToWorkOn.IndexName, documents))));
+        }
 
-        protected abstract void ExecuteIndexingWorkOnSingleThread(IEnumerable<IndexToWorkOn> indexesToWorkOn);
+        protected abstract void IndexDocuments(IStorageActionsAccessor actions, string indexName, JsonDocument[] documents);
 
+        protected abstract void ExecuteIndexingInternal(IEnumerable<IndexToWorkOn> indexesToWorkOn, Action<JsonDocument[]> indexingOp);
+
+        private void ExecuteIndexingWorkOnSingleThread(IEnumerable<IndexToWorkOn> indexesToWorkOn)
+        {
+            ExecuteIndexingInternal(indexesToWorkOn, jsonDocs =>
+            {
+                foreach (var indexToWorkOn in indexesToWorkOn)
+                {
+                    var copy = indexToWorkOn;
+                    transactionalStorage.Batch(
+                        actions => IndexDocuments(actions, copy.IndexName, jsonDocs));
+                }
+            });
+        }
 
         protected abstract bool IsValidIndex(IndexStats indexesStat);
 
