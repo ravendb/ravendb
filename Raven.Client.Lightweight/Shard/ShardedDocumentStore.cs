@@ -12,9 +12,9 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 #if !NET_3_5
+using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 

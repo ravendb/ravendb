@@ -1,8 +1,7 @@
-﻿using Raven.Client.Connection.Async;
-
-namespace Raven.Client.Extensions
+﻿namespace Raven.Client.Extensions
 {
 #if !NET_3_5
+    using Raven.Client.Connection.Async;
 	using System.Threading.Tasks;
 	using Indexes;
 

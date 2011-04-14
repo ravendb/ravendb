@@ -12,18 +12,17 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
 #if !NET_3_5
+using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
 #endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Exceptions;
-using Raven.Client.Linq;
 using Raven.Json.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 
 namespace Raven.Client.Document
 {

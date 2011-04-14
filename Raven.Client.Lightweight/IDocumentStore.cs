@@ -10,10 +10,12 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#endif
+#if !NET_3_5
+using Raven.Client.Connection.Async;
 #endif
 
 namespace Raven.Client

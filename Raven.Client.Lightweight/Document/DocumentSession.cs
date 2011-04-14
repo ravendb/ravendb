@@ -12,9 +12,9 @@ using System.Reflection;
 using System;
 using Raven.Abstractions.Data;
 #if !NET_3_5
+using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Json.Linq;

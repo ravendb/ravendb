@@ -9,10 +9,10 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 #if !NET_3_5
 using System.Threading.Tasks;
-using Raven.Abstractions.Indexing;
-#endif
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+#endif
+using Raven.Abstractions.Indexing;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 
 namespace Raven.Client.Indexes

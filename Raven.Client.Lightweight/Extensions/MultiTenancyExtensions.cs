@@ -11,12 +11,12 @@ using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
 {
 #if !NET_3_5
+    using Raven.Client.Connection.Async;
 	using System.Threading.Tasks;
 
 #endif
