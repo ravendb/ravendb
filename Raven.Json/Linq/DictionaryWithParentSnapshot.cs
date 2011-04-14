@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Linq;
 
-namespace Raven.Json.Utilities
+namespace Raven.Json.Linq
 {
 	internal class DictionaryWithParentSnapshot : IDictionary<string, RavenJToken>
     {

@@ -144,6 +144,9 @@
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Json\Linq\DictionaryWithParentSnapshot.cs">
+      <Link>Imports\Raven.Json\Linq\DictionaryWithParentSnapshot.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Json\Linq\Extensions.cs">
       <Link>Raven.Json\Linq\Extensions.cs</Link>
     </Compile>
@@ -170,9 +173,6 @@
     </Compile>
     <Compile Include="..\Raven.Json\Linq\RavenJValue.cs">
       <Link>Raven.Json\Linq\RavenJValue.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Json\Utilities\DictionaryWithParentSnapshot.cs">
-      <Link>Raven.Json\Utilities\DictionaryWithParentSnapshot.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Json\Utilities\MathUtils.cs">
       <Link>Raven.Json\Utilities\MathUtils.cs</Link>
