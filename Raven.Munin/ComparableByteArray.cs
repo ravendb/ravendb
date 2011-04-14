@@ -34,7 +34,7 @@ namespace Raven.Munin
         }
     }
 
-    public class ReverseComparable : IComparable<ReverseComparable>
+    public class ReverseComparable : IComparable<ReverseComparable>, IComparable
     {
         private readonly IComparable inner;
 
@@ -46,6 +46,11 @@ namespace Raven.Munin
         public int CompareTo(ReverseComparable other)
         {
             return inner.CompareTo(other.inner)*-1;
+        }
+
+        public int CompareTo(object obj)
+        {
+            return CompareTo((ReverseComparable) obj);
         }
     }
 }
