@@ -124,8 +124,8 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Insert))
 			{
 				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["key"], name, Encoding.Unicode);
-                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
-                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_indexed_timestamp"], DateTime.MinValue);
+                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"], Guid.Empty.TransformToValueForEsentSorting());
+                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue);
                 update.Save();
 			}
 		}
