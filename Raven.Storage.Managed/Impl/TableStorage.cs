@@ -48,7 +48,7 @@ namespace Raven.Storage.Managed.Impl
             {
                 {"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
                 {"ByViewAndDocumentId", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("docId"))},
-                {"ByViewAndEtag", x => Tuple.Create(x.Value<string>("view"), new ReverseComparable(new ComparableByteArray(x.Value<byte[]>("etag"))))}
+                {"ByViewAndEtag", x => Tuple.Create(x.Value<string>("view"), new ReverseComparableByteArrayWhichIgnoresNull(x.Value<byte[]>("etag")))}
             });
 
             Queues = Add(new Table(x => new RavenJObject

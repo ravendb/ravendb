@@ -1,7 +1,5 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
-using Newtonsoft.Json.Linq;
-using Raven.Abstractions;
 using Xunit;
 using System.Linq;
 
