@@ -81,12 +81,22 @@ namespace Raven.Storage.Managed
 
         public Guid GetMostRecentReducedEtag(string name)
         {
-            foreach (var doc in storage.Documents["ByEtag"].SkipAfter(0))
-            {
-                var docEtag = doc.Value<byte[]>("etag");
-                return new Guid(docEtag);
-            }
-            return Guid.Empty;
+            var enumerable = storage.MappedResults["ByViewAndEtag"].SkipToAndThenBack(new RavenJObject{{"view", name}}).GetEnumerator();
+            if(enumerable.MoveNext() == false)
+                return Guid.Empty;
+            // did we find the last item on the view?
+            if (enumerable.Current.Value<string>("view") == name)
+                return new Guid(enumerable.Current.Value<byte[]>("etag"));
+
+            // maybe we are at another view?
+            if (enumerable.MoveNext() == false)
+                return Guid.Empty;
+
+            //could't find the name in the table 
+            if (enumerable.Current.Value<string>("view") != name)
+                return Guid.Empty;
+
+            return new Guid(enumerable.Current.Value<byte[]>("etag"));
         }
 
         private bool IsStaleByEtag(byte [] lastIndexedEtag)

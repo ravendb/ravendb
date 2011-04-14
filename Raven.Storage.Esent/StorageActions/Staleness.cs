@@ -86,14 +86,20 @@ namespace Raven.Storage.Esent.StorageActions
             Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
             if(Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE)) // find the next greater view
                 return Guid.Empty;
-            if(Api.TryMovePrevious(session, MappedResults)) // move one step back, now we are at the highest etag for this view, maybe
+
+            // did we find the last item on the view?
+            if (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode) == name)
+                return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
+
+            // maybe we are at another view?
+            if (Api.TryMovePrevious(session, MappedResults)) // move one step back, now we are at the highest etag for this view, maybe
                 return Guid.Empty;
 
             //could't find the name in the table 
             if(Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"],Encoding.Unicode) != name)
                 return Guid.Empty;
-            var lastEtag = Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]);
-            return new Guid(lastEtag);
+
+            return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
         }
 
         private bool IsStaleByEtag()

@@ -175,7 +175,7 @@ namespace Raven.Munin.Tree
             }
         }
 
-        public IEnumerable<TValue> LessThanOrEquals(TKey ltKey)
+        public IEnumerable<TValue> LessThanOrEqual(TKey ltKey)
         {
             int compare = comparer.Compare(theKey, ltKey);
             if (compare > 0)
