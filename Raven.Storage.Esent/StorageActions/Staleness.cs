@@ -10,6 +10,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Json;
 using Raven.Database.Storage;
 using Raven.Database.Extensions;
+using System.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -23,7 +24,15 @@ namespace Raven.Storage.Esent.StorageActions
             {
                 return false;
             }
-            if (IsStaleByEtag())
+
+            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+            Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
+            {
+                throw new InvalidOperationException("Could not find reduce index entry for index, this indicate some problem in the index data, please contact support");
+            }
+
+            if (IsStaleByEtag(name))
             {
                 if (cutOff != null)
                 {
@@ -31,6 +40,13 @@ namespace Raven.Storage.Esent.StorageActions
                         Api.RetrieveColumnAsDateTime(session, IndexesStats,
                                                      tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
                             .Value;
+                    if (cutOff.Value >= lastIndexedTimestamp)
+                        return true;
+
+                    lastIndexedTimestamp =
+                       Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
+                                                    tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"])
+                           .Value;
                     if (cutOff.Value >= lastIndexedTimestamp)
                         return true;
                 }
@@ -102,7 +118,7 @@ namespace Raven.Storage.Esent.StorageActions
             return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
         }
 
-        private bool IsStaleByEtag()
+        private bool IsStaleByEtag(string name)
         {
         	var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
         	                                         tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
@@ -112,7 +128,16 @@ namespace Raven.Storage.Esent.StorageActions
         		return false;
         	}
         	var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
-        	return CompareArrays(lastEtag, lastIndexedEtag) > 0;
+            if (CompareArrays(lastEtag, lastIndexedEtag) > 0)
+                return true;
+
+            var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,
+                tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
+
+            if (lastIndexedEtag.All(x => x == 0))// Guid.Empty
+                return false;
+
+            return CompareArrays(lastReducedEtag, GetMostRecentReducedEtag(name).ToByteArray()) > 0;
         }
 
     	private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)

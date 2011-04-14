@@ -8,6 +8,7 @@ using System.Linq;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -23,29 +24,28 @@ namespace Raven.Storage.Managed
 
         public bool IsIndexStale(string name, DateTime? cutOff, string entityName)
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject
+            var keyToSearch = new RavenJObject
             {
-                {"index", name}
-            });
+                {"index", name},
+            }; 
+            var readResult = storage.IndexingStats.Read(keyToSearch);
 
             if (readResult == null)
                 return false;// index does not exists
 
-            var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
-            var lastIndexedTime = readResult.Key.Value<DateTime>("lastTimestamp");
 
-            if (IsStaleByEtag(lastIndexedEtag))
+            if (IsStaleByEtag(name, readResult))
             {
                 if (cutOff == null)
                     return true;
+                var lastIndexedTime = readResult.Key.Value<DateTime>("lastTimestamp");
                 if (cutOff.Value >= lastIndexedTime)
+                    return true;
+                var lastReducedTime = readResult.Key.Value<DateTime>("lastReduceTimestamp");
+                if (cutOff.Value >= lastReducedTime)
                     return true;
             }
 
-            var keyToSearch = new RavenJObject
-            {
-                {"index", name},
-            };
             var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(keyToSearch);
             if (cutOff != null)
                 tasksAfterCutoffPoint = tasksAfterCutoffPoint
@@ -99,16 +99,24 @@ namespace Raven.Storage.Managed
             return new Guid(enumerable.Current.Value<byte[]>("etag"));
         }
 
-        private bool IsStaleByEtag(byte [] lastIndexedEtag)
+        private bool IsStaleByEtag(string name, Table.ReadResult readResult)
         {
-        	return storage.Documents["ByEtag"].SkipFromEnd(0)
-				.Select(doc => doc.Value<byte[]>("etag"))
-				.Select(docEtag => CompareArrays(docEtag, lastIndexedEtag) > 0)
-				.FirstOrDefault();
+            var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
+            
+            var isStaleByEtag = storage.Documents["ByEtag"].SkipFromEnd(0)
+                .Select(doc => doc.Value<byte[]>("etag"))
+                .Select(docEtag => CompareArrays(docEtag, lastIndexedEtag) > 0)
+                .FirstOrDefault();
+            if (isStaleByEtag)
+                return true;
+
+            var lastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag");
+
+            return CompareArrays(lastReducedEtag, GetMostRecentReducedEtag(name).ToByteArray()) > 0;
         }
 
 
-    	private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
+        private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
         {
             for (int i = 0; i < docEtagBinary.Length; i++)
             {
