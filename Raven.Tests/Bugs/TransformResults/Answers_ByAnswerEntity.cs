@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using Raven.Client.Indexes;
 
-namespace LiveProjectionsBug
+namespace Raven.Tests.Bugs.TransformResults
 {
     public class Answers_ByAnswerEntity : AbstractIndexCreationTask<Answer>
     {

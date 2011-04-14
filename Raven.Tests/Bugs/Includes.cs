@@ -5,12 +5,12 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using LiveProjectionsBug;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
 using Raven.Server;
+using Raven.Tests.Bugs.TransformResults;
 using Xunit;
 
 namespace Raven.Tests.Bugs

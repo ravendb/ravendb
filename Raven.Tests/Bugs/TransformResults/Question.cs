@@ -1,4 +1,4 @@
-﻿namespace LiveProjectionsBug
+﻿namespace Raven.Tests.Bugs.TransformResults
 {
     public class Question
     {
