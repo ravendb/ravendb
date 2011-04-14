@@ -15,6 +15,13 @@ namespace Raven.Database.Storage
 		IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams);
 		IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view);
 		void DeleteMappedResultsForView(string view);
-	    IEnumerable<string> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag);
+        IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag);
 	}
+
+    public class MappedResultInfo
+    {
+        public string ReduceKey { get; set; }
+        public DateTime Timestamp { get; set; }
+        public Guid Etag { get; set; }
+    }
 }

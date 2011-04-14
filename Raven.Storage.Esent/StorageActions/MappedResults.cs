@@ -107,7 +107,7 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
 
-	    public IEnumerable<string> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag)
+	    public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag)
 	    {
             Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
             Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -117,7 +117,12 @@ namespace Raven.Storage.Esent.StorageActions
 
 	        while (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]) == indexName)
 	        {
-                yield return Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
+                yield return new MappedResultInfo
+                {
+                    ReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]),
+                    Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
+                    Timestamp = Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value,
+                };
 	        }
 	    }
 	}

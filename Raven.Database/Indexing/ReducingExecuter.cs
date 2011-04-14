@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 
@@ -11,25 +9,26 @@ namespace Raven.Database.Indexing
 {
     public class ReducingExecuter : AbstractIndexingExecuter
     {
-        public ReducingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler) : base(transactionalStorage, context, scheduler)
+        public ReducingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
+            : base(transactionalStorage, context, scheduler)
         {
         }
 
-        protected  void HandleReduceForIndex(IndexToWorkOn indexToWorkOn)
+        protected void HandleReduceForIndex(IndexToWorkOn indexToWorkOn)
         {
-            List<Tuple<string, Guid>> reduceKeyAndEtags = null;
+            List<MappedResultInfo> reduceKeyAndEtags = null;
             try
             {
                 transactionalStorage.Batch(actions =>
                 {
-                    reduceKeyAndEtags = actions.MappedResults.GetMappedResultsReduceKeysAndEtagsAfter(indexToWorkOn.IndexName,
+                    reduceKeyAndEtags = actions.MappedResults.GetMappedResultsReduceKeysAfter(indexToWorkOn.IndexName,
                                                                                            indexToWorkOn.LastIndexedEtag)
                         .ToList();
 
                     new ReduceTask
                     {
                         Index = indexToWorkOn.IndexName,
-                        ReduceKeys = reduceKeyAndEtags.Select(x => x.Item1).Distinct().ToArray(),
+                        ReduceKeys = reduceKeyAndEtags.Select(x => x.ReduceKey).Distinct().ToArray(),
                     }.Execute(context);
                 });
             }
@@ -38,7 +37,7 @@ namespace Raven.Database.Indexing
                 if (reduceKeyAndEtags != null && reduceKeyAndEtags.Count > 0)
                 {
                     var last = reduceKeyAndEtags.Last();
-                    var lastEtag = last.Item2;
+                    var lastEtag = last.Etag;
 
                     var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
                     // whatever we succeeded in indexing or not, we have to update this
@@ -47,7 +46,7 @@ namespace Raven.Database.Indexing
                     {
                         if (new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray()).CompareTo(lastIndexedEtag) <= 0)
                         {
-                            actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexName, lastEtag);
+                            actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexName, last.Etag, last.Timestamp);
                         }
                     });
                 }
