@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.Database.Extensions;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Document
 {

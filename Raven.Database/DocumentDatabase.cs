@@ -14,9 +14,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using log4net;
-using Lucene.Net.Util;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Backup;
 using Raven.Database.Config;
@@ -33,9 +36,10 @@ using Raven.Database.Tasks;
 using Raven.Http;
 using Raven.Http.Exceptions;
 using Constants = Raven.Abstractions.Data.Constants;
+using Raven.Json.Linq;
 using Index = Raven.Database.Indexing.Index;
 using Task = Raven.Database.Tasks.Task;
-using TransactionInformation = Raven.Http.TransactionInformation;
+using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Database
 {
@@ -326,7 +330,7 @@ namespace Raven.Database
 				.ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
 		}
 
-		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
+        public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
 				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "key");
@@ -376,7 +380,7 @@ namespace Raven.Database
 			};
 		}
 
-		private void AddIndexingTask(IStorageActionsAccessor actions, JToken metadata, Func<Task> taskGenerator)
+		private void AddIndexingTask(IStorageActionsAccessor actions, RavenJToken metadata, Func<Task> taskGenerator)
 		{
 			foreach (var indexName in IndexDefinitionStorage.IndexNames)
 			{
@@ -393,7 +397,7 @@ namespace Raven.Database
 			}
 		}
 
-		private void AssertPutOperationNotVetoed(string key, JObject metadata, JObject document, TransactionInformation transactionInformation)
+		private void AssertPutOperationNotVetoed(string key, RavenJObject metadata, RavenJObject document, TransactionInformation transactionInformation)
 		{
 			var vetoResult = PutTriggers
 				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, document, metadata, transactionInformation) })
@@ -404,7 +408,7 @@ namespace Raven.Database
 			}
 		}
 
-		private void AssertAttachmentPutOperationNotVetoed(string key, JObject metadata, byte[] data)
+		private void AssertAttachmentPutOperationNotVetoed(string key, RavenJObject metadata, byte[] data)
 		{
 			var vetoResult = AttachmentPutTriggers
 				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, data, metadata) })
@@ -437,13 +441,12 @@ namespace Raven.Database
 			}
 		}
 
-		private static void RemoveReservedProperties(JObject document)
+        private static void RemoveReservedProperties(RavenJObject document)
 		{
 			var toRemove = new HashSet<string>();
-			foreach (var property in document.Properties())
+			foreach (var propertyName in document.Keys.Where(propertyName => propertyName.StartsWith("@")))
 			{
-				if (property.Name.StartsWith("@"))
-					toRemove.Add(property.Name);
+			    toRemove.Add(propertyName);
 			}
 			foreach (var propertyName in toRemove)
 			{
@@ -461,7 +464,7 @@ namespace Raven.Database
 
 					DeleteTriggers.Apply(trigger => trigger.OnDelete(key, transactionInformation));
 
-					JObject metadata;
+					RavenJObject metadata;
 					if (actions.Documents.DeleteDocument(key, etag, out metadata))
 					{
 						AddIndexingTask(actions, metadata, () => new RemoveFromIndexTask { Keys = new[] { key } });
@@ -555,7 +558,7 @@ namespace Raven.Database
 		public QueryResult Query(string index, IndexQuery query)
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
-			var list = new List<JObject>();
+			var list = new List<RavenJObject>();
 			var stale = false;
 			Tuple<DateTime, Guid> indexTimestamp = null;
 			TransactionalStorage.Batch(
@@ -590,7 +593,7 @@ namespace Raven.Database
 										 select doc;
 
 					var transformerErrors = new List<string>();
-					IEnumerable<JObject> results;
+					IEnumerable<RavenJObject> results;
 					if (viewGenerator != null &&
 						query.SkipTransformResults == false &&
 						viewGenerator.TransformResultsDefinition != null)
@@ -716,12 +719,17 @@ namespace Raven.Database
 						break;
 					case ReadVetoResult.ReadAllow.Deny:
 						attachment.Data = new byte[0];
-						attachment.Metadata = new JObject(
-							new JProperty("Raven-Read-Veto",
-										  new JObject(new JProperty("Reason", readVetoResult.Reason),
-													  new JProperty("Trigger", attachmentReadTrigger.ToString())
-											  )));
-
+						attachment.Metadata = new RavenJObject
+						                      	{
+						                      		{
+						                      			"Raven-Read-Veto",
+						                      			new RavenJObject
+						                      				{
+						                      					{"Reason", readVetoResult.Reason},
+						                      					{"Trigger", attachmentReadTrigger.ToString()}
+						                      				}
+						                      			}
+						                      	};
 						foundResult = true;
 						break;
 					case ReadVetoResult.ReadAllow.Ignore:
@@ -746,7 +754,7 @@ namespace Raven.Database
 			}
 		}
 
-		public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
+		public void PutStatic(string name, Guid? etag, byte[] data, RavenJObject metadata)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 			if (Encoding.Unicode.GetByteCount(name) >= 255)
@@ -792,9 +800,9 @@ namespace Raven.Database
 
 		}
 
-		public JArray GetDocumentsWithIdStartingWith(string idPrefix, int start, int pageSize)
+		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, int start, int pageSize)
 		{
-			var list = new JArray();
+			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
 				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start)
@@ -814,9 +822,9 @@ namespace Raven.Database
 			return list;
 		}
 
-		public JArray GetDocuments(int start, int pageSize, Guid? etag)
+		public RavenJArray GetDocuments(int start, int pageSize, Guid? etag)
 		{
-			var list = new JArray();
+			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
 				IEnumerable<JsonDocument> documents;
@@ -854,25 +862,24 @@ namespace Raven.Database
 			return documents;
 		}
 
-		public JArray GetIndexNames(int start, int pageSize)
+		public RavenJArray GetIndexNames(int start, int pageSize)
 		{
-			return new JArray(
+			return new RavenJArray(
 				IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
-					.Select(s => new JValue(s))
+					.Select(s => new RavenJValue(s))
 				);
 		}
 
-		public JArray GetIndexes(int start, int pageSize)
+		public RavenJArray GetIndexes(int start, int pageSize)
 		{
-			return new JArray(
+			return new RavenJArray(
 				IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
 					.Select(
-						indexName => new JObject
-						{
-							{"name", new JValue(indexName)},
-							{"definition", JObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName))}
-						})
-				);
+						indexName => new RavenJObject
+							{
+								{"name", new RavenJValue(indexName) },
+								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName))}
+							}));
 		}
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
@@ -897,7 +904,7 @@ namespace Raven.Database
 				{
 					var jsonDoc = doc.ToJson();
 					new JsonPatcher(jsonDoc).Apply(patchDoc);
-					Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<JObject>("@metadata"), transactionInformation);
+					Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<RavenJObject>("@metadata"), transactionInformation);
 					result = PatchResult.Patched;
 				}
 
@@ -981,11 +988,11 @@ namespace Raven.Database
 					throw new InvalidOperationException("Backup is already running");
 				}
 			}
-			Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(new BackupStatus
+			Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(new BackupStatus
 			{
 				Started = DateTime.UtcNow,
 				IsRunning = true,
-			}), new JObject(), null);
+			}), new RavenJObject(), null);
 			IndexStorage.FlushAllIndexes();
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory);
 		}

@@ -7,11 +7,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
-using Newtonsoft.Json.Linq;
-using Raven.Client.Client;
+using Raven.Abstractions.Exceptions;
 #if !NET_3_5
-using Raven.Client.Client.Async;
+using Raven.Client.Connection.Async;
 #endif
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
@@ -19,7 +19,7 @@ using Raven.Client.Linq;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using System;
-using Raven.Http.Exceptions;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Shard
 {
@@ -131,7 +131,7 @@ namespace Raven.Client.Shard
 		/// <typeparam name="T"></typeparam>
 		/// <param name="instance">The instance.</param>
 		/// <returns></returns>
-		public JObject GetMetadataFor<T>(T instance)
+		public RavenJObject GetMetadataFor<T>(T instance)
 		{
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
 			return GetSingleShardSession(shardIds).Advanced.GetMetadataFor(instance);

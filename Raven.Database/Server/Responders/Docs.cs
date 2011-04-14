@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Data;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;

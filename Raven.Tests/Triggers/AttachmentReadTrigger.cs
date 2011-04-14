@@ -4,11 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
-using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Indexing;
 using Raven.Database.Plugins;
+using Raven.Json.Linq;
 using Raven.Tests.Storage;
 using System.Linq;
 using Xunit;
@@ -39,18 +38,18 @@ namespace Raven.Tests.Triggers
         [Fact]
         public void CanFilterAttachment()
         {
-            db.PutStatic("ayendE", null, new byte[] { 1, 2 }, new JObject());
+			db.PutStatic("ayendE", null, new byte[] { 1, 2 }, new RavenJObject());
 
             var attachment = db.GetStatic("ayendE");
 
             Assert.Equal("You don't get to read this attachment",
-                         attachment.Metadata.Value<JObject>("Raven-Read-Veto").Value<string>("Reason"));
+						 attachment.Metadata.Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
         }
 
         [Fact]
         public void CanHideAttachment()
         {
-            db.PutStatic("AYENDE", null, new byte[] { 1, 2 }, new JObject());
+			db.PutStatic("AYENDE", null, new byte[] { 1, 2 }, new RavenJObject());
 
             var attachment = db.GetStatic("AYENDE");
 
@@ -60,7 +59,7 @@ namespace Raven.Tests.Triggers
         [Fact]
         public void CanModifyAttachment()
         {
-            db.PutStatic("ayende", null, new byte[] { 1, 2 }, new JObject());
+			db.PutStatic("ayende", null, new byte[] { 1, 2 }, new RavenJObject());
 
 
             var attachment = db.GetStatic("ayende");
@@ -70,7 +69,7 @@ namespace Raven.Tests.Triggers
 
         public class HideAttachmentByCaseReadTrigger : AbstractAttachmentReadTrigger
         {
-            public override ReadVetoResult AllowRead(string key, byte[] data, Newtonsoft.Json.Linq.JObject metadata, ReadOperation operation)
+			public override ReadVetoResult AllowRead(string key, byte[] data, RavenJObject metadata, ReadOperation operation)
             {
                 if (key.All(char.IsUpper))
                     return ReadVetoResult.Ignore;
@@ -79,7 +78,7 @@ namespace Raven.Tests.Triggers
                 return ReadVetoResult.Allowed;
             }
 
-            public override byte[] OnRead(string key, byte[] data, JObject metadata, ReadOperation operation)
+			public override byte[] OnRead(string key, byte[] data, RavenJObject metadata, ReadOperation operation)
             {
                 return new byte[] { 1, 2, 3, 4 };
             }

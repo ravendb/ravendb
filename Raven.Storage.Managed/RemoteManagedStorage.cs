@@ -17,6 +17,7 @@ namespace Raven.Storage.Managed
     public class RemoteManagedStorage : IRemoteStorage
     {
         private readonly IPersistentSource persistentSource;
+        private IDocumentCacher documentCacher;
 
         public RemoteManagedStorage(RemoteManagedStorageState state)
         {
@@ -28,19 +29,21 @@ namespace Raven.Storage.Managed
             {
                 persistentSource = new MemoryPersistentSource(state.Log);
             }
+            documentCacher = new DocumentCacher();
         }
         public void Batch(Action<IStorageActionsAccessor> action)
         {
 			using (var tableStorage = new TableStorage(persistentSource))
 			{
 				tableStorage.Initialze();
-				var accessor = new StorageActionsAccessor(tableStorage, new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
+				var accessor = new StorageActionsAccessor(tableStorage, new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>(), documentCacher);
 				action(accessor);
 			}
         }
 
         public void Dispose()
         {
+            documentCacher.Dispose();
             persistentSource.Dispose();
         }
     }

@@ -5,5 +5,6 @@
 	public interface IStatisticsSet
 	{
 		IObservableCollection<IStatisticsItem> Items { get; }
+		long CountOfDocuments { get; }
 	}
 }

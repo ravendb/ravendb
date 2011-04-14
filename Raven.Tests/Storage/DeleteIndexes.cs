@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Indexing;

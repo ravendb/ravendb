@@ -1,3 +1,5 @@
+using Raven.Abstractions.Data;
+
 namespace Raven.Studio.Features.Documents
 {
 	using System.ComponentModel.Composition;
@@ -5,13 +7,11 @@ namespace Raven.Studio.Features.Documents
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
 	using Framework;
-	using Framework.Extensions;
 	using Messages;
 	using Plugins;
 	using Plugins.Database;
-	using Raven.Database;
 
-	[Export]
+    [Export]
 	[ExportDatabaseExplorerItem("Documents", Index = 40)]
 	public class BrowseDocumentsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
@@ -35,14 +35,14 @@ namespace Raven.Studio.Features.Documents
 			};
 		}
 
-		void Initialize() 
+		void Initialize()
 		{
 			Status = "Retrieving documents.";
 
 			Documents = new BindablePagedQuery<JsonDocument, DocumentViewModel>(
 				GetDocumentsQuery,
 				jdoc => new DocumentViewModel(jdoc));
-					    
+
 			Documents.PageSize = 25;
 
 			NotifyOfPropertyChange("");
@@ -63,7 +63,7 @@ namespace Raven.Studio.Features.Documents
 		{
 			using (var session = server.OpenSession())
 				return session.Advanced.AsyncDatabaseCommands
-					.GetDocumentsAsync(start,pageSize);
+					.GetDocumentsAsync(start, pageSize);
 		}
 
 		public BindablePagedQuery<JsonDocument, DocumentViewModel> Documents { get; private set; }
@@ -88,21 +88,16 @@ namespace Raven.Studio.Features.Documents
 
 		protected override void OnActivate()
 		{
-			if(Documents == null) return;
+			if (Documents == null) return;
 
-			WorkStarted("counting documents");
+			var countOfDocuments = server.Statistics.CountOfDocuments;
 
-			using (var session = server.OpenSession())
-			session.Advanced.AsyncDatabaseCommands
-				.GetStatisticsAsync()
-				.ContinueOnSuccess(x =>
-				{
-					WorkCompleted("counting documents");
-					RefreshDocuments(x.Result.CountOfDocuments);
-					Status = x.Result.CountOfDocuments == 0 
-						? "The database contains no documents."
-						: string.Empty;
-				});
+			Status = countOfDocuments == 0
+				? "The database contains no documents."
+				: string.Empty;
+
+			if (countOfDocuments > 0)
+				RefreshDocuments(countOfDocuments);
 		}
 
 		public void RefreshDocuments(long total)

@@ -8,8 +8,12 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Transactions;
-using Newtonsoft.Json.Linq;
-using Raven.Client.Client;
+using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
+using Raven.Json.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Database.Data;
@@ -105,7 +109,7 @@ namespace Raven.Tests.Document
 				var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.Null(attachment);
 
-				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 1, 2, 3 }, new JObject(new JProperty("Hello", "World")));
+				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] {1, 2, 3}, new RavenJObject {{"Hello", "World"}});
 
 				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.NotNull(attachment);
@@ -232,7 +236,7 @@ namespace Raven.Tests.Document
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinition<Company>
+				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company>
 				{
 					Map = companies => from c in companies
 					                   select new {c.Name}
@@ -261,7 +265,7 @@ namespace Raven.Tests.Document
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinition<Company, Company>
+				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company, Company>
 				{
 					Map = companies => from c in companies
 					                   select new {c.Name},
@@ -480,17 +484,17 @@ namespace Raven.Tests.Document
 					{
 						new PutCommandData
 						{
-							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Document = RavenJObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
 							Etag = null,
 							Key = "rhino1",
-							Metadata = new JObject(),
+							Metadata = new RavenJObject(),
 						},
 						new PutCommandData
 						{
-							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Document = RavenJObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
 							Etag = null,
 							Key = "rhino2",
-							Metadata = new JObject(),
+							Metadata = new RavenJObject(),
 						},
 						new DeleteCommandData
 						{
@@ -719,7 +723,7 @@ namespace Raven.Tests.Document
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinition<LinqIndexesFromClient.User>
+				store.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinitionBuilder<LinqIndexesFromClient.User>
 				{
 					Map = users => from user in users
 								   where user.Location == "Tel Aviv"
@@ -795,7 +799,7 @@ namespace Raven.Tests.Document
 					{
 						Type = PatchCommandType.Set,
 						Name = "Name",
-						Value = JToken.FromObject("Another Company")
+						Value = RavenJToken.FromObject("Another Company")
 					},
 				}, allowStale: false);
 

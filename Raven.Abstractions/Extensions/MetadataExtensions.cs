@@ -9,10 +9,10 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
+using Raven.Json.Linq;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Extensions
 {
     /// <summary>
     /// Extensions for handling metadata
@@ -105,13 +105,13 @@ namespace Raven.Database.Data
 		/// </summary>
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
-		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static JObject FilterHeaders(this JObject self, bool isServerDocument)
+		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this RavenJObject self, bool isServerDocument)
 		{
 			if (self == null)
 				return self;
 
-			var metadata = new JObject();
+			var metadata = new RavenJObject();
 			foreach (var header in self)
 			{
 				if (HeadersToIgnoreClient.Contains(header.Key))
@@ -119,7 +119,7 @@ namespace Raven.Database.Data
 				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
 					continue;
 				var headerName = CaptureHeaderName(header.Key);
-				metadata.Add(headerName, header.Value);
+				metadata[headerName] = header.Value;
 			}
 			return metadata;
 		}
@@ -130,10 +130,10 @@ namespace Raven.Database.Data
 		/// </summary>
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
-		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-      public static JObject FilterHeaders(this IDictionary<string,IList<string>> self, bool isServerDocument)
+		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this IDictionary<string, IList<string>> self, bool isServerDocument)
           {
-            var metadata = new JObject();
+			  var metadata = new RavenJObject();
             foreach (var header in self)
             {
                 if (HeadersToIgnoreClient.Contains(header.Key))
@@ -145,7 +145,7 @@ namespace Raven.Database.Data
 				if (values.Count == 1)
 					metadata.Add(headerName, GetValue(values[0]));
 				else
-					metadata.Add(headerName, new JArray(values.Select(GetValue)));
+					metadata.Add(headerName, new RavenJArray(values.Select(GetValue)));
             }
             return metadata;
         }
@@ -155,10 +155,10 @@ namespace Raven.Database.Data
         /// </summary>
         /// <param name="self">The self.</param>
         /// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
-        /// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-        public static JObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
+        /// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+        public static RavenJObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
         {
-            var metadata = new JObject();
+            var metadata = new RavenJObject();
             foreach (string header in self)
             {
                 try
@@ -169,10 +169,11 @@ namespace Raven.Database.Data
                         continue;
                     var values = self.GetValues(header);
                     var headerName = CaptureHeaderName(header);
+					// TODO: Can values be null?
                     if (values.Length == 1)
-                        metadata.Add(headerName, GetValue(values[0]));
+                        metadata[headerName] = GetValue(values[0]);
                     else
-                        metadata.Add(headerName, new JArray(values.Select(GetValue)));
+                        metadata[headerName] = new RavenJArray(values.Select(GetValue));
                 }
                 catch (Exception exc)
                 {
@@ -198,18 +199,19 @@ namespace Raven.Database.Data
             return sb.ToString();
         }
 
-        private static JToken GetValue(string val)
+        private static RavenJToken GetValue(string val)
         {
             try
             {
                 if (val.StartsWith("{"))
-                    return JObject.Parse(val);
+                    return RavenJObject.Parse(val);
                 if (val.StartsWith("["))
-                    return JArray.Parse(val);
+                    return RavenJArray.Parse(val);
                 DateTime result;
                 if (DateTime.TryParseExact(val, new[]{"r","o"}, CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
-                    return new JValue(result);
-                return new JValue(val);
+                    return new RavenJValue(result);
+                return new RavenJValue(val);
+
             }
             catch (Exception exc)
             {

@@ -1,4 +1,5 @@
 ﻿Imports System
+Imports Raven.Abstractions.Indexing
 Imports Raven.Client.Linq
 Imports Raven.Client.Indexes
 Imports Raven.Database.Indexing
@@ -11,8 +12,8 @@ Imports Raven.Client.Linq.LinqExtensions
 Public Class Data_NewIndex
     Inherits AbstractIndexCreationTask
 
-    Public Overrides Function CreateIndexDefinition() As Raven.Database.Indexing.IndexDefinition
-		Return (New IndexDefinition(Of TestClass)() With { _
+    Public Overrides Function CreateIndexDefinition() As IndexDefinition
+		Return (New IndexDefinitionBuilder(Of TestClass)() With { _
 				.Map = Function(items) From item In items.WhereEntityIs(Of TestClass)("TestClass", "TestClass2") _
 									   Select New With {item.ResourceKey}
 		}.ToIndexDefinition(Conventions))

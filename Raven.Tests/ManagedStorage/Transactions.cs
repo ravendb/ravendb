@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Json.Linq;
 using Raven.Http;
 using Raven.Http.Exceptions;
 using Xunit;
@@ -25,7 +27,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
                 tx.Batch(viewer => 
@@ -44,7 +46,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
 				var txInfo2 = new TransactionInformation
@@ -72,14 +74,14 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
                 tx.Batch(mutator => mutator.Transactions.CompleteTransaction(transactionInformation.Id, data =>
 				{
 					if (data.Delete)
 					{
-						JObject metadata;
+						RavenJObject metadata;
 						mutator.Documents.DeleteDocument(data.Key, null, out metadata);
 					}
 					else
@@ -101,7 +103,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
                 tx.Batch(viewer =>
@@ -127,7 +129,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
 				tx.Batch(viewer =>
@@ -146,14 +148,14 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 				                                                               transactionInformation));
 				tx.Batch(mutator =>
 				         	Assert.Throws<ConcurrencyException>(
 				         		() =>
 									mutator.Transactions.AddDocumentInTransaction("Ayende", Guid.NewGuid(),
-				         			                                           JObject.FromObject(new {Name = "Rahien"}),
-				         			                                           new JObject(),
+				         			                                           RavenJObject.FromObject(new {Name = "Rahien"}),
+				         			                                           new RavenJObject(),
 				         			                                           new TransactionInformation
 				         			                                           {
 				         			                                               Id = Guid.NewGuid(),
@@ -173,15 +175,15 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
 				Assert.Throws<ConcurrencyException>(
 					() =>
 						tx.Batch(
 							mutator =>
-								mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }),
-								                                           new JObject(),
+								mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }),
+								                                           new RavenJObject(),
 								                                           new TransactionInformation
 								                                           {
 								                                           	Id = Guid.NewGuid(),
@@ -202,9 +204,9 @@ namespace Raven.Tests.ManagedStorage
 			using (var tx = NewTransactionalStorage())
 			{
 
-				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 
-				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien2" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien2" }), new RavenJObject(),
 					transactionInformation));
 
 				tx.Batch(viewer =>
@@ -226,14 +228,14 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 																			   transactionInformation));
 				tx.Batch(mutator =>
 							Assert.Throws<ConcurrencyException>(
 								() =>
 									mutator.Documents.AddDocument("Ayende", Guid.NewGuid(),
-																			   JObject.FromObject(new { Name = "Rahien" }),
-																			   new JObject())));
+																			   RavenJObject.FromObject(new { Name = "Rahien" }),
+																			   new RavenJObject())));
 			}
 		}
 
@@ -248,7 +250,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 				tx.Batch(mutator => mutator.Transactions.DeleteDocumentInTransaction(transactionInformation, "Ayende", null));
 				tx.Batch(viewer =>
 				{
@@ -270,11 +272,11 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien1" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien1" }), new RavenJObject(),
 																			   transactionInformation));
 				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", Guid.NewGuid(),
-																			   JObject.FromObject(new { Name = "Rahien2" }),
-																			   new JObject()));
+																			   RavenJObject.FromObject(new { Name = "Rahien2" }),
+																			   new RavenJObject()));
 
 				tx.Batch(viewer =>
 				{
@@ -292,7 +294,7 @@ namespace Raven.Tests.ManagedStorage
 			using (var tx = NewTransactionalStorage())
 			{
 				var txId = Guid.NewGuid();
-				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, new JObject(), new JObject(), new TransactionInformation
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, new RavenJObject(), new RavenJObject(), new TransactionInformation
 				{
 					Id = txId,
 					Timeout = TimeSpan.FromDays(7)

@@ -6,8 +6,9 @@
 using System;
 using Newtonsoft.Json.Linq;
 using System.Linq;
+using Raven.Json.Linq;
 
-namespace Raven.Database.Json
+namespace Raven.Abstractions.Data
 {
     /// <summary>
 	/// A patch request for a specified document
@@ -25,12 +26,12 @@ namespace Raven.Database.Json
 		/// If the value is null, the operation is always successful
 		/// </summary>
 		/// <value>The previous val.</value>
-		public JToken PrevVal { get; set; }
+		public RavenJToken PrevVal { get; set; }
 		/// <summary>
 		/// Gets or sets the value.
 		/// </summary>
 		/// <value>The value.</value>
-		public JToken Value { get; set; }
+		public RavenJToken Value { get; set; }
 		/// <summary>
 		/// Gets or sets the nested operations to perform. This is only valid when the <see cref="Type"/> is <see cref="PatchCommandType.Modify"/>.
 		/// </summary>
@@ -55,18 +56,20 @@ namespace Raven.Database.Json
         /// <summary>
 		/// Translate this instance to json
 		/// </summary>
-		public JObject ToJson()
-		{
-			var jObject = new JObject(
-				new JProperty("Type", new JValue(Type.ToString())),
-				new JProperty("Value", Value),
-				new JProperty("Name", new JValue(Name)),
-				new JProperty("Position", Position == null ? null : new JValue(Position.Value)),
-				new JProperty("Nested", Nested == null ? null : new JArray(Nested.Select(x => x.ToJson()))),
-                new JProperty("AllPositions", AllPositions == null ? null : new JValue(AllPositions.Value))
-				);
+		public RavenJObject ToJson()
+        {
+        	var jObject = new RavenJObject();
+			jObject.Add("Type", new RavenJValue(Type.ToString()));
+        	jObject.Add("Value", Value);
+        	jObject.Add("Name", new RavenJValue(Name));
+			if (Position != null)
+        		jObject.Add("Position", new RavenJValue(Position.Value));
+			if (Nested != null)
+        		jObject.Add("Nested",  new RavenJArray(Nested.Select(x => x.ToJson())));
+			if (AllPositions != null)
+				jObject.Add("AllPositions", new RavenJValue(AllPositions.Value));
 			if (PrevVal != null)
-				jObject.Add(new JProperty("PrevVal", PrevVal));
+				jObject.Add("PrevVal", PrevVal);
 			return jObject;
 		}
 
@@ -74,12 +77,12 @@ namespace Raven.Database.Json
 		/// Create an instance from a json object
 		/// </summary>
 		/// <param name="patchRequestJson">The patch request json.</param>
-		public static PatchRequest FromJson(JObject patchRequestJson)
+		public static PatchRequest FromJson(RavenJObject patchRequestJson)
 		{
 			PatchRequest[] nested = null;
-			var nestedJson = patchRequestJson.Value<JToken>("Nested");
+			var nestedJson = patchRequestJson.Value<RavenJToken>("Nested");
             if (nestedJson != null && nestedJson.Type != JTokenType.Null)
-                nested = patchRequestJson.Value<JArray>("Nested").Cast<JObject>().Select(FromJson).ToArray();
+                nested = patchRequestJson.Value<RavenJArray>("Nested").Cast<RavenJObject>().Select(FromJson).ToArray();
 
 			return new PatchRequest
 			{
@@ -88,8 +91,8 @@ namespace Raven.Database.Json
 				Nested = nested,
 				Position = patchRequestJson.Value<int?>("Position"),
                 AllPositions = patchRequestJson.Value<bool?>("AllPositions"),
-				PrevVal = patchRequestJson.Property("PrevVal") == null ? null : patchRequestJson.Property("PrevVal").Value,
-				Value = patchRequestJson.Property("Value") == null ? null : patchRequestJson.Property("Value").Value,
+				PrevVal = patchRequestJson["PrevVal"],
+				Value = patchRequestJson["Value"],
 			};
 		}
 	}

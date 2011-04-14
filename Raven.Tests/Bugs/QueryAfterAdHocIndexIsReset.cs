@@ -4,7 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Queries;
 using Xunit;
@@ -19,8 +20,8 @@ namespace Raven.Tests.Bugs
         {
             using(var store = NewDocumentStore())
             {
-                store.DatabaseCommands.Put("ayende", null, new JObject{ {"Name", "Ayende"}}, new JObject());
-            	var baseLineIndexCount = store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Count;
+                store.DatabaseCommands.Put("ayende", null, new RavenJObject{ {"Name", "Ayende"}}, new RavenJObject());
+            	var baseLineIndexCount = store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Length;
 
             	var queryResult = store.DatabaseCommands.Query("dynamic", new IndexQuery
                 {
@@ -29,7 +30,7 @@ namespace Raven.Tests.Bugs
 
                 Assert.NotEmpty(queryResult.Results);
 
-				Assert.Equal(baseLineIndexCount+1, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Count);
+				Assert.Equal(baseLineIndexCount+1, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Length);
                 
                 store.DocumentDatabase.StopBackgroundWokers();
 
@@ -37,7 +38,7 @@ namespace Raven.Tests.Bugs
 
                 store.DocumentDatabase.ExtensionsState.Values.OfType<DynamicQueryRunner>().First().CleanupCache();
 
-				Assert.Equal(baseLineIndexCount, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Count);
+				Assert.Equal(baseLineIndexCount, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Length);
 
                 store.Configuration.TempIndexCleanupThreshold = TimeSpan.FromMinutes(5);
  

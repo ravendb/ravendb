@@ -1,12 +1,14 @@
-﻿namespace Raven.Tests.Silverlight
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
+
+namespace Raven.Tests.Silverlight
 {
 	using System.Collections.Generic;
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Client.Document;
 	using Client.Extensions;
-	using Database.Data;
-	using Database.Indexing;
 	using Document;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -182,10 +184,11 @@
 					yield return query;
 					if (query.Result.IsStale)
 						yield return Delay(100);
-				} while (query.Result.IsStale); 
-				Assert.AreEqual(2, query.Result.Results[0]["Contacts"].Count());
-				Assert.AreEqual("Abbot", query.Result.Results[0]["Contacts"][0].Value<string>("Surname"));
-				Assert.AreEqual("Costello", query.Result.Results[0]["Contacts"][1].Value<string>("Surname"));
+				} while (query.Result.IsStale);
+				var ravenJToken = (RavenJArray)query.Result.Results[0]["Contacts"];
+				Assert.AreEqual(2, ravenJToken.Count());
+				Assert.AreEqual("Abbot", ravenJToken[0].Value<string>("Surname"));
+				Assert.AreEqual("Costello", ravenJToken[1].Value<string>("Surname"));
 			}
 		}
 	}

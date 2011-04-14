@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Collections
+﻿using Raven.Json.Linq;
+
+namespace Raven.Studio.Features.Collections
 {
     using System;
     using System.ComponentModel.Composition;
@@ -30,7 +32,7 @@
             this.templateProvider = templateProvider;
         }
 
-        private JObject Metadata { get; set; }
+		private RavenJObject Metadata { get; set; }
 
         public string Xaml
         {

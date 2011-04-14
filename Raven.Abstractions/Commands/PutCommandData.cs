@@ -4,10 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
-using Raven.Http;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Commands
 {
 	/// <summary>
 	/// A single batch operation for a document PUT
@@ -44,26 +44,29 @@ namespace Raven.Database.Data
 		/// Gets or sets the document.
 		/// </summary>
 		/// <value>The document.</value>
-        public virtual JObject Document { get; set; }
+        public virtual RavenJObject Document { get; set; }
 		/// <summary>
 		/// Gets or sets the metadata.
 		/// </summary>
 		/// <value>The metadata.</value>
-        public virtual JObject Metadata { get; set; }
+        public virtual RavenJObject Metadata { get; set; }
 
 
     	/// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
-		public JObject ToJson()
+		public RavenJObject ToJson()
     	{
-    		return new JObject(
-				new JProperty("Key", new JValue((object)Key)),
-    			new JProperty("Etag", new JValue(Etag != null ? (object)Etag.ToString() : null)),
-    			new JProperty("Method", new JValue(Method)),
-				new JProperty("Document", Document),
-				new JProperty("Metadata", Metadata)
-    			);
+    		var ret = new RavenJObject
+    		          	{
+    		          		{"Key", Key},
+							{"Method", Method},
+							{"Document", Document},
+							{"Metadata", Metadata}
+    		          	};
+			if (Etag != null)
+				ret.Add("Etag", Etag.ToString());
+    		return ret;
     	}
     }
 }

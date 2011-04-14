@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Json.Linq;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
 using Raven.Http.Exceptions;
@@ -15,7 +17,7 @@ namespace Raven.Tests.Patching
 {
     public class ArrayPatching
     {
-        private readonly JObject doc = JObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}] }");
+        private readonly RavenJObject doc = RavenJObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}] }");
 
         [Fact]
         public void AddingItemToArray()
@@ -27,7 +29,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Add,
         				Name = "comments",
-        				Value = JObject.Parse(@"{""author"":""oren"",""text"":""agreed""}")
+        				Value = RavenJObject.Parse(@"{""author"":""oren"",""text"":""agreed""}")
 
         			}
         		});
@@ -46,8 +48,8 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Add,
         				Name = "comments",
-						PrevVal = JArray.Parse(@"[{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}]"),
-        				Value = JObject.Parse(@"{""author"":""oren"",""text"":""agreed""}")
+						PrevVal = RavenJArray.Parse(@"[{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}]"),
+        				Value = RavenJObject.Parse(@"{""author"":""oren"",""text"":""agreed""}")
 
         			}
         		});
@@ -67,9 +69,9 @@ namespace Raven.Tests.Patching
         				Type = PatchCommandType.Add,
         				Name = "comments",
         				PrevVal =
-        					JArray.Parse(
+        					RavenJArray.Parse(
         						@"[{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 1""}]"),
-        				Value = JObject.Parse(@"{""author"":""oren"",""text"":""agreed""}")
+        				Value = RavenJObject.Parse(@"{""author"":""oren"",""text"":""agreed""}")
 
         			}
         		}));
@@ -86,7 +88,7 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Add,
         				Name = "blog_id",
-        				Value = new JValue(1),
+        				Value = new RavenJValue(1),
         			}
         		});
 
@@ -104,8 +106,8 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Add,
         				Name = "blog_id",
-        				Value = new JValue(1),
-						PrevVal = JObject.Parse("{'a': undefined}").Property("a").Value
+        				Value = new RavenJValue(1),
+						PrevVal = RavenJObject.Parse("{'a': undefined}")["a"]
         			}
         		});
 
@@ -124,8 +126,8 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Add,
         				Name = "blog_id",
-        				Value = new JValue(1),
-        				PrevVal = new JArray()
+        				Value = new RavenJValue(1),
+        				PrevVal = new RavenJArray()
         			},
         		}));
         }
@@ -140,19 +142,19 @@ namespace Raven.Tests.Patching
         			{
         				Type = PatchCommandType.Add,
         				Name = "blog_id",
-        				Value = new JValue(1)
+        				Value = new RavenJValue(1)
         			},
 					new PatchRequest
         			{
         				Type = PatchCommandType.Add,
         				Name = "blog_id",
-        				Value = new JValue(2)
+        				Value = new RavenJValue(2)
         			},
 					new PatchRequest
         			{
         				Type = PatchCommandType.Set,
         				Name = "title",
-        				Value = new JValue("abc")
+        				Value = new RavenJValue("abc")
         			},
         		});
 
@@ -181,7 +183,7 @@ namespace Raven.Tests.Patching
         [Fact]
         public void RemoveItemFromArrayByValue()
         {
-            var patchedDoc = new JsonPatcher(JObject.Parse(@"{ name: ""Joe Doe"", roles: [""first/role"", ""second/role"", ""third/role""] }")).Apply(
+            var patchedDoc = new JsonPatcher(RavenJObject.Parse(@"{ name: ""Joe Doe"", roles: [""first/role"", ""second/role"", ""third/role""] }")).Apply(
                 new[]
         		{
         			new PatchRequest
@@ -201,7 +203,7 @@ namespace Raven.Tests.Patching
         public void RemoveItemFromArrayByNonExistingValue()
         {
             var value = @"{""name"":""Joe Doe"",""roles"":[""first/role"",""second/role"",""third/role""]}";
-            var patchedDoc = new JsonPatcher(JObject.Parse(value));
+            var patchedDoc = new JsonPatcher(RavenJObject.Parse(value));
 
             var result = patchedDoc.Apply(
                 new[]
@@ -228,7 +230,7 @@ namespace Raven.Tests.Patching
         				Type = PatchCommandType.Remove,
         				Name = "comments",
 						Position = 0,
-						PrevVal = JArray.Parse(@"[{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}]")
+						PrevVal = RavenJArray.Parse(@"[{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}]")
         			},
         		});
 
@@ -248,7 +250,7 @@ namespace Raven.Tests.Patching
         				Type = PatchCommandType.Remove,
         				Name = "comments",
 						Position = 0,
-						PrevVal = JArray.Parse(@"[{""author"":""ayende"",""text"":""diffrent value""},{author: ""ayende"", text:""good post 2""}]")
+						PrevVal = RavenJArray.Parse(@"[{""author"":""ayende"",""text"":""diffrent value""},{author: ""ayende"", text:""good post 2""}]")
         			},
         		}));
         }
@@ -264,7 +266,7 @@ namespace Raven.Tests.Patching
         				Type = PatchCommandType.Insert,
         				Name = "comments",
 						Position = 1,
-						Value = JObject.Parse(@"{""author"":""ayende"",""text"":""good post 1.5""}")
+						Value = RavenJObject.Parse(@"{""author"":""ayende"",""text"":""good post 1.5""}")
         			},
         		});
 
@@ -283,8 +285,8 @@ namespace Raven.Tests.Patching
         				Type = PatchCommandType.Insert,
         				Name = "comments",
 						Position = 1,
-						Value = JObject.Parse(@"{""author"":""ayende"",""text"":""good post 1.5""}"),
-						PrevVal = JArray.Parse(@"[{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}]")
+						Value = RavenJObject.Parse(@"{""author"":""ayende"",""text"":""good post 1.5""}"),
+						PrevVal = RavenJArray.Parse(@"[{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}]")
         			},
         		});
 
@@ -303,8 +305,8 @@ namespace Raven.Tests.Patching
         				Type = PatchCommandType.Insert,
         				Name = "comments",
 						Position = 1,
-						Value = JObject.Parse(@"{""author"":""yet another author"",""text"":""good post 1.5""}"),
-						PrevVal = JArray.Parse(@"[{""author"":""different"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}]")
+						Value = RavenJObject.Parse(@"{""author"":""yet another author"",""text"":""good post 1.5""}"),
+						PrevVal = RavenJArray.Parse(@"[{""author"":""different"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}]")
         			},
         		}));
         }

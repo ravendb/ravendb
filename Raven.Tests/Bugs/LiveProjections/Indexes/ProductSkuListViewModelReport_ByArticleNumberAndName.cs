@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Bugs.LiveProjections.Indexes
+﻿using Raven.Abstractions.Indexing;
+
+namespace Raven.Tests.Bugs.LiveProjections.Indexes
 {
 	using System;
 	using System.Collections.Generic;

@@ -6,8 +6,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.ShardClient", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.SimpleClient", "Raven.Sample.SimpleClient\Raven.Sample.SimpleClient.csproj", "{FAE55BF3-BC8D-47A9-9E32-305ED5C40EDF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MvcMusicStore", "MvcMusicStore\MvcMusicStore.csproj", "{C83FE52C-47DD-4433-B34E-9C9D72BBFFA1}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Lightweight", "..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj", "{4E087ECB-E7CA-4891-AC3C-3C76702715B6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.Replication", "Raven.Sample.Replication\Raven.Sample.Replication.csproj", "{9F620303-44D9-4ACE-BB37-8CE742B710EB}"
@@ -43,6 +41,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.Suggestions", "Raven.Sample.Suggestions\Raven.Sample.Suggestions.csproj", "{CF9AEB02-E984-4ECD-A1C7-08950DF717B4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.LiveProjections", "Raven.Sample.LiveProjections\Raven.Sample.LiveProjections.csproj", "{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Json", "..\Raven.Json\Raven.Json.csproj", "{31740175-3254-489D-AD59-73EF096BA64D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -264,6 +264,16 @@ Global
 		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Release|Mixed Platforms.Build.0 = Release|x86
 		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Release|x86.ActiveCfg = Release|x86
 		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Release|x86.Build.0 = Release|x86
+		{31740175-3254-489D-AD59-73EF096BA64D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31740175-3254-489D-AD59-73EF096BA64D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31740175-3254-489D-AD59-73EF096BA64D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{31740175-3254-489D-AD59-73EF096BA64D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{31740175-3254-489D-AD59-73EF096BA64D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{31740175-3254-489D-AD59-73EF096BA64D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31740175-3254-489D-AD59-73EF096BA64D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31740175-3254-489D-AD59-73EF096BA64D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{31740175-3254-489D-AD59-73EF096BA64D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{31740175-3254-489D-AD59-73EF096BA64D}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -277,5 +287,6 @@ Global
 		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA} = {5A163257-377D-455F-B852-6425B7BAE6EE}
 		{DA99A419-E137-40DB-9495-0C363B479D4B} = {5A163257-377D-455F-B852-6425B7BAE6EE}
 		{486537C2-EDF7-404F-9CFB-EEE25996DF5F} = {5A163257-377D-455F-B852-6425B7BAE6EE}
+		{31740175-3254-489D-AD59-73EF096BA64D} = {5A163257-377D-455F-B852-6425B7BAE6EE}
 	EndGlobalSection
 EndGlobal

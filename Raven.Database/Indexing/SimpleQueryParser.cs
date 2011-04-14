@@ -27,6 +27,8 @@ namespace Raven.Database.Indexing
 			var results = new HashSet<Tuple<string,string>>();
 			foreach (var result in GetFieldsInternal(query, DynamicQueryTerms))
 			{
+				if(result == "*")
+					continue;
 				results.Add(Tuple.Create(TranslateField(result), result));
 			}
 			return results;

@@ -7,12 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Bundles.Authorization;
 using Raven.Bundles.Authorization.Model;
 using System.Linq;
-using Raven.Bundles.Authorization.Responders;
-using Raven.Client.Client;
+using Raven.Client.Connection;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Authorization
 {
@@ -55,13 +54,13 @@ namespace Raven.Client.Authorization
 			return new JsonSerializer
 			{
 				ContractResolver = session.Advanced.Conventions.JsonContractResolver,
-			}.Deserialize<DocumentAuthorization>(new JTokenReader(docAuthAsJson));
+			}.Deserialize<DocumentAuthorization>(new RavenJTokenReader(docAuthAsJson));
 		}
 
 		public static void SetAuthorizationFor(this IDocumentSession session, object entity, DocumentAuthorization documentAuthorization)
 		{
 			var metadata = session.Advanced.GetMetadataFor(entity);
-			metadata[RavenDocumentAuthorization] = JObject.FromObject(documentAuthorization, new JsonSerializer
+			metadata[RavenDocumentAuthorization] = RavenJObject.FromObject(documentAuthorization, new JsonSerializer
 			{
 				ContractResolver = session.Advanced.Conventions.JsonContractResolver,
 			});

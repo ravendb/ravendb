@@ -7,23 +7,21 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
-using System.Linq.Expressions;
 using Newtonsoft.Json.Linq;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 
-namespace Raven.Database.Linq
+namespace Raven.Abstractions.Linq
 {
 	/// <summary>
-	/// A dynamic implementation on top of <see cref="JObject"/>
+	/// A dynamic implementation on top of <see cref="RavenJObject"/>
 	/// </summary>
 	public class DynamicJsonObject : DynamicObject, IEnumerable<object>
 	{
-		public IEnumerator<dynamic> GetEnumerator()
+		public IEnumerator<object> GetEnumerator()
 		{
 			foreach (var item in Inner)
 			{
@@ -57,7 +55,7 @@ namespace Raven.Database.Linq
 		{
 			var dynamicJsonObject = other as DynamicJsonObject;
 			if (dynamicJsonObject != null)
-				return new JTokenEqualityComparer().Equals(inner, dynamicJsonObject.inner);
+				return new RavenJTokenEqualityComparer().Equals(inner, dynamicJsonObject.inner);
 			return base.Equals(other);
 		}
 
@@ -70,7 +68,7 @@ namespace Raven.Database.Linq
 		/// <filterpriority>2</filterpriority>
 		public override int GetHashCode()
 		{
-			return new JTokenEqualityComparer().GetHashCode(inner);
+			return new RavenJTokenEqualityComparer().GetHashCode(inner);
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -78,13 +76,13 @@ namespace Raven.Database.Linq
 			return GetEnumerator();
 		}
 
-		private readonly JObject inner;
+		private readonly RavenJObject inner;
 
 		/// <summary>
 		/// Gets the inner json object
 		/// </summary>
 		/// <value>The inner.</value>
-		public JObject Inner
+		public RavenJObject Inner
 		{
 			get { return inner; }
 		}
@@ -93,7 +91,7 @@ namespace Raven.Database.Linq
 		/// Initializes a new instance of the <see cref="DynamicJsonObject"/> class.
 		/// </summary>
 		/// <param name="inner">The obj.</param>
-		public DynamicJsonObject(JObject inner)
+		public DynamicJsonObject(RavenJObject inner)
 		{
 			this.inner = inner;
 		}
@@ -129,20 +127,21 @@ namespace Raven.Database.Linq
 			return true;
 		}
 
-	    public static object TransformToValue(JToken jToken)
+	    public static object TransformToValue(RavenJToken jToken)
 		{
 			switch (jToken.Type)
 			{
 				case JTokenType.Object:
-					var jObject = (JObject)jToken;
-					var values = jObject.Value<JArray>("$values");
+					var jObject = (RavenJObject)jToken;
+					var values = jObject.Value<RavenJArray>("$values");
 					if (values != null)
 					{
 						return new DynamicList(values.Select(TransformToValue).ToArray());
 					}
 					return new DynamicJsonObject(jObject);
 				case JTokenType.Array:
-					return new DynamicList(jToken.Select(TransformToValue).ToArray());
+					var ar = jToken as RavenJArray; // cannot result in null because jToken.Type is set to Array
+					return new DynamicList(ar.Select(TransformToValue).ToArray());
 				case JTokenType.Date:
 					return jToken.Value<DateTime>();
 				case JTokenType.Null:
@@ -158,9 +157,12 @@ namespace Raven.Database.Linq
 					var s = value as string;
 					if(s != null)
 					{
-						DateTime time;
-                        if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
-							return time;
+						DateTimeOffset dateTimeOffset;
+                        if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
+							return dateTimeOffset;
+						DateTime dateTime;
+						if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+							return dateTime;
 					}
 					return value;
 			}
@@ -177,7 +179,7 @@ namespace Raven.Database.Linq
 			{
 				return GetDocumentId();
 			}
-			JToken value;
+			RavenJToken value;
 			if (inner.TryGetValue(name, out value))
 			{
 				return TransformToValue(value);
@@ -206,14 +208,11 @@ namespace Raven.Database.Linq
 		/// <returns></returns>
 		public object GetDocumentId()
 		{
-			var metadata = inner["@metadata"];
+			var metadata = inner["@metadata"] as RavenJObject;
 			if (metadata != null)
 			{
-				var id = metadata["@id"];
-				if (id != null)
-				{
-					return id.Value<string>() ?? (object)new DynamicNullObject();
-				}
+				var id = metadata.Value<string>("@id");
+				return string.IsNullOrEmpty(id) ? (object)new DynamicNullObject() : id;
 			}
 			return inner.Value<string>(Constants.DocumentIdFieldName) ?? (object)new DynamicNullObject();
 		}
@@ -250,7 +249,7 @@ namespace Raven.Database.Linq
 							result = Count;
 							return true;
 						}
-						result = Enumerable.Count<dynamic>(this, (Func<dynamic, bool>)args[0]);
+						result = Enumerable.Count<object>(this, (Func<object, bool>)args[0]);
 						return true;
 					case "DefaultIfEmpty":
 						if (inner.Length > 0)
@@ -387,94 +386,10 @@ namespace Raven.Database.Linq
 				get { return inner.Length; }
 			}
 
-			public IEnumerable<dynamic> Select(Func<dynamic,dynamic > func)
+			public IEnumerable<object> Select(Func<object,object > func)
 			{
 				return inner.Select(item => func(item));
 			}
-		}
-	}
-
-	public class DynamicNullObject : DynamicObject, IEnumerable<object>
-	{
-		public override string ToString()
-		{
-			return String.Empty;
-		}
-
-		public bool IsExplicitNull { get; set; }
-
-		public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
-		{
-			result = this;
-			return true;
-		}
-
-		public override bool TryGetMember(GetMemberBinder binder, out object result)
-		{
-			result = this;
-			return true;
-		}
-
-		public IEnumerator<object> GetEnumerator()
-		{
-			yield break;
-		}
-
-		public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
-		{
-			result = this;
-			return true;
-		}
-
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return GetEnumerator();
-		}
-
-		// null is false by default
-		public static implicit operator bool (DynamicNullObject o)
-		{
-			return false;
-		}
-
-		public override bool Equals(object obj)
-		{
-			return obj is DynamicNullObject;
-		}
-
-		public override int GetHashCode()
-		{
-			return 0;
-		}
-
-		public static bool operator ==(DynamicNullObject left, object right)
-		{
-			return right == null || right is DynamicNullObject;
-		}
-
-		public static bool operator !=(DynamicNullObject left, object right)
-		{
-			return right != null && (right is DynamicNullObject) == false ;
-		}
-
-		public static bool operator >(DynamicNullObject left, object right)
-		{
-			return false;
-		}
-
-		public static bool operator <(DynamicNullObject left, object right)
-		{
-			return false;
-		}
-
-		public static bool operator >=(DynamicNullObject left, object right)
-		{
-			return false;
-		}
-
-		public static bool operator <=(DynamicNullObject left, object right)
-		{
-			return false;
 		}
 	}
 }

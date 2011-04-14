@@ -5,18 +5,10 @@
 	using System.Threading.Tasks;
 	using System.Windows;
 	using Caliburn.Micro;
+	using Messages;
 	using Action = System.Action;
 
-	public interface IBindablePagedQuery
-	{
-		Size? ItemElementSize { get; set; }
-		Size PageElementSize { get; set; }
-		void AdjustResultsForPageSize();
-	    void ClearResults();
-		event EventHandler<EventArgs<bool>> IsLoadingChanged;
-	}
-
-	public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
+    public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
 	{
 		public BindablePagedQuery(Func<int, int, Task<T[]>> query)
 			: base(query, t => t)
@@ -191,13 +183,12 @@
 			}
 		}
 
-		public bool IsLoading
+		bool IsLoading
 		{
 			get { return isLoading; }
 			set
 			{
 				isLoading = value;
-				NotifyOfPropertyChange("IsLoading");
 				IsLoadingChanged(this, new EventArgs<bool>(isLoading));
 			}
 		}
@@ -214,6 +205,9 @@
 
 		public void LoadPage(Action afterLoaded, int page = 0)
 		{
+			//HACK:
+			IoC.Get<IEventAggregator>().Publish(new WorkStarted("loading page"));
+
 			IsLoading = true;
 
 			query(page * PageSize, PageSize)
@@ -232,6 +226,9 @@
 									Refresh();
 
 									IsLoading = false;
+									
+									//HACK:
+									IoC.Get<IEventAggregator>().Publish(new WorkCompleted("loading page"));
 
 									if (afterLoaded != null) afterLoaded();
 								});

@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 #endif
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
@@ -90,7 +90,7 @@ namespace Raven.Client.Document
 				// we assume the same json contract resolver across the entire shared sessions set
 				shardSessions.First().Advanced.Conventions.CreateSerializer();
 			return QueryResult.Results
-				.Select(j => (T)jsonSerializer.Deserialize(new JTokenReader(j), typeof(T)))
+				.Select(j => (T)jsonSerializer.Deserialize(new RavenJTokenReader(j), typeof(T)))
 				.GetEnumerator();
 		}
 
@@ -109,6 +109,18 @@ namespace Raven.Client.Document
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		/// <summary>
+		///   Negate the next operation
+		/// </summary>
+		public void NegateNext()
+		{
+			ApplyForAll(x =>
+			{
+				x.NegateNext();
+				return null;
+			});
 		}
 
 		/// <summary>

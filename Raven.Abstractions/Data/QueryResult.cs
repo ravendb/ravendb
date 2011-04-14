@@ -5,9 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// The result of a query
@@ -18,12 +18,12 @@ namespace Raven.Database.Data
 		/// Gets or sets the document resulting from this query.
 		/// </summary>
 		/// <value>The results.</value>
-		public List<JObject> Results { get; set; }
+		public List<RavenJObject> Results { get; set; }
 		/// <summary>
 		/// Gets or sets the document included in the result.
 		/// </summary>
 		/// <value>The includes.</value>
-		public List<JObject> Includes { get; set; }
+		public List<RavenJObject> Includes { get; set; }
 		/// <summary>
 		/// Gets or sets a value indicating whether the index is stale.
 		/// </summary>
@@ -63,8 +63,8 @@ namespace Raven.Database.Data
 		/// </summary>
 		public QueryResult()
 		{
-			Results = new List<JObject>();
-			Includes = new List<JObject>();
+			Results = new List<RavenJObject>();
+			Includes = new List<RavenJObject>();
 		}
 	}
 }

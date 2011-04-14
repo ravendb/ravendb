@@ -7,6 +7,7 @@ using System.ComponentModel.Composition;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
@@ -19,8 +20,8 @@ namespace Raven.Bundles.Replication.Triggers
 	[ExportMetadata("Order", 10000)]
 	public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
     {
-        readonly ThreadLocal<JToken> deletedSource = new ThreadLocal<JToken>();
-        readonly ThreadLocal<JToken> deletedVersion = new ThreadLocal<JToken>();
+        readonly ThreadLocal<RavenJToken> deletedSource = new ThreadLocal<RavenJToken>();
+        readonly ThreadLocal<RavenJToken> deletedVersion = new ThreadLocal<RavenJToken>();
 
         public override void OnDelete(string key)
         {
@@ -33,11 +34,12 @@ namespace Raven.Bundles.Replication.Triggers
 
         public override void AfterDelete(string key)
         {
-            var metadata = new JObject(
-                new JProperty("Raven-Delete-Marker", true),
-                new JProperty(ReplicationConstants.RavenReplicationParentSource, deletedSource.Value),
-                new JProperty(ReplicationConstants.RavenReplicationParentVersion, deletedVersion.Value)
-                );
+        	var metadata = new RavenJObject
+        	{
+        		{"Raven-Delete-Marker", true},
+        		{ReplicationConstants.RavenReplicationParentSource, deletedSource.Value},
+        		{ReplicationConstants.RavenReplicationParentVersion, deletedVersion.Value}
+        	};
             deletedVersion.Value = null;
             deletedSource.Value = null;
             Database.PutStatic(key, null, new byte[0], metadata);

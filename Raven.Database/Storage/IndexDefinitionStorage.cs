@@ -14,14 +14,15 @@ using System.Text;
 using log4net;
 using Newtonsoft.Json;
 using Raven.Abstractions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
-using Raven.Http.Json;
 
 namespace Raven.Database.Storage
 {

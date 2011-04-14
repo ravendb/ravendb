@@ -5,8 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
 {
@@ -34,7 +35,7 @@ namespace Raven.Database.Plugins
     	///    asking for a particular document, or skip including the result entirely 
     	///    in the query results.
     	///  </returns>
-		public virtual ReadVetoResult AllowRead(string key,JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+		public virtual ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
         {
             return ReadVetoResult.Allowed;
         }
@@ -50,7 +51,7 @@ namespace Raven.Database.Plugins
 		/// <param name="metadata">The document metadata</param>
 		/// <param name="operation">Whatever the operation is a load or a query</param>
 		/// <param name="transactionInformation">The transaction information, if any</param>
-		public virtual void OnRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+		public virtual void OnRead(string key, RavenJObject document, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 		{
 		}
 

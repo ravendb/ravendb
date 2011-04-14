@@ -6,9 +6,10 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Http;
-using System.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -18,7 +19,7 @@ namespace Raven.Database.Server.Responders
 		public AddIncludesCommand(
 			DocumentDatabase database, 
 			TransactionInformation transactionInformation, 
-			Action<Guid, JObject> add, 
+			Action<Guid, RavenJObject> add, 
             string[] includes,
 			HashSet<string> loadedIds)
 		{
@@ -31,7 +32,7 @@ namespace Raven.Database.Server.Responders
 
 		private string[] Includes { get; set; }
 
-		private Action<Guid,JObject> Add { get; set; }
+		private Action<Guid,RavenJObject> Add { get; set; }
 
 		private DocumentDatabase Database { get; set; }
 
@@ -39,18 +40,18 @@ namespace Raven.Database.Server.Responders
 
 		private HashSet<string> LoadedIds { get; set; }
 
-		public void Execute(JObject document)
+		public void Execute(RavenJObject document)
 		{
 			foreach (var include in Includes)
 			{
 				foreach (var token in document.SelectTokenWithRavenSyntaxReturningFlatStructure(include))
 				{
-					ExecuteInternal(token);
+					ExecuteInternal(token.Item1);
 				}
 			}
 		}
 
-		private void ExecuteInternal(JToken token)
+		private void ExecuteInternal(RavenJToken token)
 		{
 			if (token == null)
 				return; // nothing to do
@@ -58,7 +59,7 @@ namespace Raven.Database.Server.Responders
 			switch (token.Type)
 			{
 				case JTokenType.Array:
-					foreach (var item in (JArray)token)
+					foreach (var item in (RavenJArray)token)
 					{
 						ExecuteInternal(item);
 					}

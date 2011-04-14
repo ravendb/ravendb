@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using Lucene.Net.Analysis;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
+using Raven.Abstractions.Indexing;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing

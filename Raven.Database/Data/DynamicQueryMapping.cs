@@ -10,6 +10,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Http;
 

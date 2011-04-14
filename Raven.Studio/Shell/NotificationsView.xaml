@@ -103,6 +103,7 @@
 
 			<Border x:Name="border"
 					Background="Transparent"
+					Visibility="{Binding HasNotifications, Converter={StaticResource visibleWhenTrue}}"
 					Grid.Column="1"
 					VerticalAlignment="Top"
 					Margin="0,2,6,0">

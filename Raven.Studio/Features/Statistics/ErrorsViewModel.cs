@@ -1,13 +1,13 @@
-﻿namespace Raven.Studio.Features.Statistics
+﻿using Raven.Abstractions.Data;
+
+namespace Raven.Studio.Features.Statistics
 {
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Database;
 	using Plugins;
-	using Raven.Database.Data;
 
-	//NOTE: it would probably make more sense to remove IServer.Errors and rely on the message StatisticsUpdated
+    //NOTE: it would probably make more sense to remove IServer.Errors and rely on the message StatisticsUpdated
 	[Export]
 	public class ErrorsViewModel : Screen
 	{

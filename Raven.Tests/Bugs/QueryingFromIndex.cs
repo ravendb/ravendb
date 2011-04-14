@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Document;
 using Xunit;
@@ -17,7 +18,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = this.NewDocumentStore())
             {
-                var definition = new IndexDefinition<Company>
+                var definition = new IndexDefinitionBuilder<Company>
                 {
                     Map = docs => from doc in docs
                                   select new
@@ -54,7 +55,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = this.NewDocumentStore())
             {
-                var definition = new IndexDefinition<Company>
+                var definition = new IndexDefinitionBuilder<Company>
                 {
                     Map = docs => from doc in docs
                                   select new

@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Database.Data;
 
 namespace Raven.Client
 {

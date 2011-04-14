@@ -4,7 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Database.Data;
 using Xunit;
 using System.Linq;
@@ -18,7 +19,7 @@ namespace Raven.Tests.ManagedStorage
         {
             using (var tx = NewTransactionalStorage())
             {
-                tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new byte[] { 1, 2, 3 }, new JObject()));
+                tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new byte[] { 1, 2, 3 }, new RavenJObject()));
 
                 Attachment attachment = null;
                 tx.Batch(viewer =>
@@ -37,9 +38,9 @@ namespace Raven.Tests.ManagedStorage
             {
                 tx.Batch(accessor =>
                 {
-                    accessor.Attachments.AddAttachment("1", null, new byte[] { 1, 2, 3 }, new JObject());
-                    accessor.Attachments.AddAttachment("2", null, new byte[] { 1, 2, 3 }, new JObject());
-                    accessor.Attachments.AddAttachment("3", null, new byte[] { 1, 2, 3 }, new JObject());
+                    accessor.Attachments.AddAttachment("1", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+                    accessor.Attachments.AddAttachment("2", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+                    accessor.Attachments.AddAttachment("3", null, new byte[] { 1, 2, 3 }, new RavenJObject());
                 });
 
                 tx.Batch(viewer =>
@@ -61,9 +62,9 @@ namespace Raven.Tests.ManagedStorage
             {
                 tx.Batch(accessor =>
                 {
-                    accessor.Attachments.AddAttachment("1", null, new byte[] { 1, 2, 3 }, new JObject());
-                    accessor.Attachments.AddAttachment("2", null, new byte[] { 1, 2, 3 }, new JObject());
-                    accessor.Attachments.AddAttachment("3", null, new byte[] { 1, 2, 3 }, new JObject());
+                    accessor.Attachments.AddAttachment("1", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+                    accessor.Attachments.AddAttachment("2", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+                    accessor.Attachments.AddAttachment("3", null, new byte[] { 1, 2, 3 }, new RavenJObject());
                 });
 
                 tx.Batch(viewer =>
@@ -85,7 +86,7 @@ namespace Raven.Tests.ManagedStorage
         {
             using (var tx = NewTransactionalStorage())
             {
-                tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new byte[] { 1, 2, 3 }, new JObject()));
+                tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new byte[] { 1, 2, 3 }, new RavenJObject()));
             }
 
             using (var tx = NewTransactionalStorage())
@@ -105,7 +106,7 @@ namespace Raven.Tests.ManagedStorage
         {
             using (var tx = NewTransactionalStorage())
             {
-                tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new byte[] { 1, 2, 3 }, new JObject()));
+                tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new byte[] { 1, 2, 3 }, new RavenJObject()));
                 tx.Batch(accessor => accessor.Attachments.DeleteAttachment("Ayende", null));
             }
 

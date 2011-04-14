@@ -1,4 +1,8 @@
-﻿namespace Raven.Studio.Features.Tasks
+﻿using Raven.Abstractions.Commands;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
+
+namespace Raven.Studio.Features.Tasks
 {
 	using System;
 	using System.Collections.Generic;
@@ -10,17 +14,14 @@
 	using System.Threading.Tasks;
 	using System.Windows.Controls;
 	using Caliburn.Micro;
-	using Database;
 	using Ionic.Zlib;
 	using Framework.Extensions;
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Plugins;
-	using Raven.Database.Data;
-	using Raven.Database.Indexing;
 
-	[Plugins.Tasks.ExportTask("Import Database")]
+    [Plugins.Tasks.ExportTask("Import Database")]
 	public class ImportTask : ConsoleOutputTask
 	{
 		[ImportingConstructor]
@@ -161,13 +162,13 @@
 			if (jsonReader.TokenType != JsonToken.StartArray)
 				throw new InvalidDataException("StartArray was expected");
 
-			var batch = new List<JObject>();
+			var batch = new List<RavenJObject>();
 			int totalCount = 0;
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
 				totalCount += 1;
-				var document = JToken.ReadFrom(jsonReader);
-				batch.Add((JObject)document);
+				var document = RavenJToken.ReadFrom(jsonReader);
+				batch.Add((RavenJObject)document);
 				if (batch.Count >= 128)
 					yield return FlushBatch(batch);
 			}
@@ -177,13 +178,13 @@
 			Output("Imported {0:#,#} documents in {1:#,#} ms", totalCount, sw.ElapsedMilliseconds);
 		}
 
-		Task FlushBatch(List<JObject> batch)
+		Task FlushBatch(List<RavenJObject> batch)
 		{
 			var sw = Stopwatch.StartNew();
 			long size = 0;
 
 			var commands = (from doc in batch
-							let metadata = doc.Value<JObject>("@metadata")
+							let metadata = doc.Value<RavenJObject>("@metadata")
 							let removal = doc.Remove("@metadata")
 							select new PutCommandData
 									{

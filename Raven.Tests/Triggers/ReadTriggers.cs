@@ -3,16 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Http;
+using Raven.Json.Linq;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -48,29 +50,29 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_Get()
 		{
-			db.Put("abc", null, new JObject(), JObject.Parse("{'name': 'abC'}"), null);
+			db.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
 
 			var jsonDocument = db.Get("abc", null);
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
-				jsonDocument.Metadata.Value<JObject>("Raven-Read-Veto").Value<string>("Reason"));
+				jsonDocument.Metadata.Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
 		}
 
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_GetDocuments()
 		{
-			db.Put("abc", null, new JObject(), JObject.Parse("{'name': 'abC'}"), null);
+			db.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
 
 			var jsonDocument = db.GetDocuments(0, 25, null).First();
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
-				jsonDocument.Value<JObject>("@metadata").Value<JObject>("Raven-Read-Veto").Value<string>("Reason"));
+				jsonDocument.Value<RavenJObject>("@metadata").Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
 		}
 
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_Query()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abC'}"), JObject.Parse("{'name': 'abC'}"), null);
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abC'}"), RavenJObject.Parse("{'name': 'abC'}"), null);
 			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
@@ -84,13 +86,13 @@ namespace Raven.Tests.Triggers
 			} while (queryResult.IsStale);
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
-				queryResult.Results[0].Value<JObject>("@metadata").Value<JObject>("Raven-Read-Veto").Value<string>("Reason"));
+				queryResult.Results[0].Value<RavenJObject>("@metadata").Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
 		}
 
 		[Fact]
 		public void CanCompleteHideDocumentUsingTrigger()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), JObject.Parse("{'hidden': true}"), null);
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
 
 			var jsonDocument = db.Get("abc", null);
 
@@ -100,7 +102,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanCompleteHideDocumentUsingTrigger_GetDocuments()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), JObject.Parse("{'hidden': true}"), null);
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
 
 
 			Assert.Empty(db.GetDocuments(0, 25, null));
@@ -109,7 +111,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanCompleteHideDocumentUsingTrigger_Query()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), JObject.Parse("{'hidden': true}"), null);
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
 			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
@@ -131,7 +133,7 @@ namespace Raven.Tests.Triggers
 		{
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put(i.ToString(), null, new JObject(new JProperty("name", "ayende")), new JObject(new JProperty("hidden", i % 2 == 0)), null);
+				db.Put(i.ToString(), null, new RavenJObject{{"name", "ayende"}}, new RavenJObject{{"hidden", i % 2 == 0}}, null);
 			}
 			db.SpinBackgroundWorkers();
 
@@ -153,8 +155,7 @@ namespace Raven.Tests.Triggers
 		{
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put(i.ToString(), null, new JObject(
-					new JProperty("name", "ayende")), new JObject(new JProperty("hidden", i % 2 == 0)), null);
+				db.Put(i.ToString(), null, new RavenJObject{{"name", "ayende"}}, new RavenJObject{{"hidden", i % 2 == 0}}, null);
 			}
 
 			db.SpinBackgroundWorkers();
@@ -179,8 +180,7 @@ namespace Raven.Tests.Triggers
 		{
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put(i.ToString(), null, new JObject(
-											   new JProperty("name", "ayende")), new JObject(new JProperty("hidden", i % 2 == 0)), null);
+				db.Put(i.ToString(), null, new RavenJObject {{"name", "ayende"}}, new RavenJObject {{"hidden", i%2 == 0}}, null);
 			}
 
 			db.SpinBackgroundWorkers();
@@ -210,7 +210,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanModifyDocumentUsingTrigger()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
 			var jsonDocument = db.Get("abc", null);
 
@@ -220,7 +220,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanModifyDocumentUsingTrigger_GetDocuments()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
 
 			Assert.Equal("ABC", db.GetDocuments(0, 10, null).First().Value<string>("name"));
@@ -229,7 +229,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanModifyDocumentUsingTrigger_Query()
 		{
-			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
@@ -247,7 +247,7 @@ namespace Raven.Tests.Triggers
 
 		public class HiddenDocumentsTrigger : AbstractReadTrigger
 		{
-			public override ReadVetoResult AllowRead(string key, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+			public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				if (operation == ReadOperation.Index)
 					return ReadVetoResult.Allowed;
@@ -262,7 +262,7 @@ namespace Raven.Tests.Triggers
 
 		public class VetoReadsOnCapitalNamesTrigger : AbstractReadTrigger
 		{
-			public override ReadVetoResult AllowRead(string key, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+			public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				if (operation == ReadOperation.Index)
 					return ReadVetoResult.Allowed;
@@ -277,12 +277,12 @@ namespace Raven.Tests.Triggers
 
 		public class UpperCaseNamesTrigger : AbstractReadTrigger
 		{
-			public override void OnRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+			public override void OnRead(string key, RavenJObject document, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
-				var name = document.Property("name");
+				var name = document["name"];
 				if (name != null)
 				{
-					name.Value = new JValue(name.Value.Value<string>().ToUpper());
+					document["name"] = new RavenJValue(name.Value<string>().ToUpper());
 				}
 			}
 		}

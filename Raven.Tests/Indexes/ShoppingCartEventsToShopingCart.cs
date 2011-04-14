@@ -6,7 +6,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
 
@@ -56,7 +57,7 @@ namespace Raven.Tests.Indexes
                 yield return new
                 {
                     ShoppingCartId = cart.Id,
-                    Aggregate = JObject.FromObject(cart)
+                    Aggregate = RavenJObject.FromObject(cart)
                 };
             }
         }

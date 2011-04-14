@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
 using Raven.Database.Server;
@@ -21,7 +22,7 @@ namespace Raven.Tests.Bugs
             {
                 httpServer.Start();
                 documentStore.DatabaseCommands.PutIndex("ImagesByTag",
-                                                        new IndexDefinition<Image, ImageByTagSearchModel>
+                                                        new IndexDefinitionBuilder<Image, ImageByTagSearchModel>
                                                         {
                                                             Map = images => from image in images
                                                                         from tag in image.Tags

@@ -6,9 +6,12 @@
 using System;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Json;
 using Raven.Http.Exceptions;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
@@ -51,8 +54,8 @@ namespace Raven.Bundles.Replication.Triggers
                         Database.Put(ReplicationConstants.RavenReplicationVersionHiLo,
                                      Guid.Empty,
                                      // sending empty guid means - ensure the that the document does NOT exists
-                                     JObject.FromObject(new HiLoKey { ServerHi = 2 }),
-                                     new JObject(),
+                                     RavenJObject.FromObject(new HiLoKey { ServerHi = 2 }),
+                                     new RavenJObject(),
                                      null);
                         return 1;
                     }
@@ -60,7 +63,7 @@ namespace Raven.Bundles.Replication.Triggers
                     var newHi = hiLoKey.ServerHi;
                     hiLoKey.ServerHi += 1;
                     Database.Put(ReplicationConstants.RavenReplicationVersionHiLo, document.Etag,
-                                 JObject.FromObject(hiLoKey),
+                                 RavenJObject.FromObject(hiLoKey),
                                  document.Metadata, null);
                     return newHi;
                 }

@@ -7,11 +7,12 @@ using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Raven.Http;
-using Raven.Http.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
 {
@@ -26,7 +27,7 @@ namespace Raven.Database.Impl
 			this.transactionInformation = transactionInformation;
 		}
 
-		public JArray DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
+		public RavenJArray DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			return PerformBulkOperation(indexName, queryToDelete, allowStale, (docId, tx) =>
 			{
@@ -35,7 +36,7 @@ namespace Raven.Database.Impl
 			});
 		}
 
-		public JArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
+		public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 			return PerformBulkOperation(indexName, queryToUpdate, allowStale, (docId, tx) =>
 			{
@@ -44,9 +45,9 @@ namespace Raven.Database.Impl
 			});
 		}
 
-		private JArray PerformBulkOperation(string index, IndexQuery indexQuery, bool allowStale, Func<string, TransactionInformation, object> batchOperation)
+		private RavenJArray PerformBulkOperation(string index, IndexQuery indexQuery, bool allowStale, Func<string, TransactionInformation, object> batchOperation)
 		{
-			var array = new JArray();
+			var array = new RavenJArray();
 			var bulkIndexQuery = new IndexQuery
 			{
 				Query = indexQuery.Query,
@@ -77,7 +78,7 @@ namespace Raven.Database.Impl
 					{
 						batchCount++;
 						var result = batchOperation(enumerator.Current, transactionInformation);
-						array.Add(JObject.FromObject(result, JsonExtensions.CreateDefaultJsonSerializer()));
+						array.Add(RavenJObject.FromObject(result, JsonExtensions.CreateDefaultJsonSerializer()));
 					}
 				});
 				if (batchCount < batchSize) break;

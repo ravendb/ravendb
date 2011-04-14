@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;
@@ -35,6 +36,7 @@ namespace Raven.Storage.Managed
         private Timer idleTimer;
         private long lastUsageTime;
         private IUuidGenerator uuidGenerator;
+        private readonly IDocumentCacher documentCacher;
 
         [ImportMany]
 		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
@@ -43,6 +45,7 @@ namespace Raven.Storage.Managed
         {
             this.configuration = configuration;
             this.onCommit = onCommit;
+            documentCacher = new DocumentCacher();
         }
 
         public void Dispose()
@@ -52,6 +55,8 @@ namespace Raven.Storage.Managed
             {
                 if (disposed)
                     return;
+                if (documentCacher != null)
+                    documentCacher.Dispose();
                 if (idleTimer != null)
                     idleTimer.Dispose();
                 if (persistenceSource != null)
@@ -91,7 +96,7 @@ namespace Raven.Storage.Managed
                 Interlocked.Exchange(ref lastUsageTime, DateTime.Now.ToBinary());
                 using (tableStroage.BeginTransaction())
                 {
-                    var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs);
+                    var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
                     current.Value = storageActionsAccessor;
                     action(current.Value);
                     tableStroage.Commit();

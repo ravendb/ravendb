@@ -10,7 +10,6 @@ using System.IO;
 using System.Reflection;
 using Raven.Bundles.Versioning.Data;
 using Raven.Bundles.Versioning.Triggers;
-using Raven.Client.Client;
 using Raven.Client.Document;
 using Xunit;
 using Raven.Server;

@@ -5,9 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition;
-using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
 {
@@ -21,7 +21,7 @@ namespace Raven.Database.Plugins
         ///  </summary><remarks>
         ///  This method SHOULD NOT modify either the document or the metadata.
         ///  </remarks><param name="key">The document key</param><param name="document">The new document about to be put into Raven</param><param name="metadata">The new document metadata</param><param name="transactionInformation">The current transaction, if it exists</param><returns>Whatever the put was vetoed or not</returns>
-        public virtual VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+        public virtual VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             return VetoResult.Allowed;
         }
@@ -38,7 +38,7 @@ namespace Raven.Database.Plugins
         ///  Any call to the provided <seealso cref="DocumentDatabase" /> instance will be done under the
         ///  same transaction as the PUT operation.
         ///  </remarks><param name="key">The document key</param><param name="document">The new document about to be put into Raven</param><param name="metadata">The new document metadata</param><param name="transactionInformation">The current transaction, if it exists</param>
-        public virtual void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+		public virtual void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             
         }
@@ -52,7 +52,7 @@ namespace Raven.Database.Plugins
     	///  </remarks><param name="key">The document key</param><param name="document">The new document about to be put into Raven</param><param name="metadata">The new document metadata</param>
     	/// <param name="etag">The etag of the just put document</param>
     	/// <param name="transactionInformation">The current transaction, if it exists</param>
-    	public virtual void AfterPut(string key, JObject document, JObject metadata, Guid etag, TransactionInformation transactionInformation)
+		public virtual void AfterPut(string key, RavenJObject document, RavenJObject metadata, Guid etag, TransactionInformation transactionInformation)
         {
             
         }
@@ -64,7 +64,7 @@ namespace Raven.Database.Plugins
     	///  This method SHOULD NOT modify either the document or the metadata
     	///  </remarks><param name="key">The document key</param><param name="document">The document that was put into Raven</param><param name="metadata">The document metadata</param>
     	/// <param name="etag">The etag of the just put document</param>
-    	public virtual void AfterCommit(string key, JObject document, JObject metadata, Guid etag)
+		public virtual void AfterCommit(string key, RavenJObject document, RavenJObject metadata, Guid etag)
         {
             
         }

@@ -3,10 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Database;
+using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 using Raven.Http;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.CascadeDelete
 {
@@ -23,7 +23,7 @@ namespace Raven.Bundles.CascadeDelete
 
             using (CascadeDeleteContext.Enter())
             {
-                var documentsToDelete = document.Metadata.Value<JArray>(MetadataKeys.DocumentsToCascadeDelete);
+                var documentsToDelete = document.Metadata.Value<RavenJArray>(MetadataKeys.DocumentsToCascadeDelete);
 
                 if (documentsToDelete != null)
                 {
@@ -38,7 +38,7 @@ namespace Raven.Bundles.CascadeDelete
                     }
                 }
 
-                var attachmentsToDelete = document.Metadata.Value<JArray>(MetadataKeys.AttachmentsToCascadeDelete);
+                var attachmentsToDelete = document.Metadata.Value<RavenJArray>(MetadataKeys.AttachmentsToCascadeDelete);
 
                 if (attachmentsToDelete != null)
                     foreach (var attachmentToDelete in attachmentsToDelete)

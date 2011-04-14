@@ -4,9 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -25,7 +25,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			var fromTxId = new Guid(context.Request.QueryString["fromTxId"]);
-			context.WriteData(Database.PromoteTransaction(fromTxId), new JObject(), Guid.NewGuid());
+			context.WriteData(Database.PromoteTransaction(fromTxId), new RavenJObject(), Guid.NewGuid());
 		}
 	}
 }

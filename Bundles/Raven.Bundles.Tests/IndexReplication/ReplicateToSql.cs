@@ -11,12 +11,11 @@ using System.Data.Common;
 using System.IO;
 using System.Reflection;
 using System.Xml;
+using Raven.Abstractions.Indexing;
 using Raven.Bundles.Expiration;
 using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
-using Raven.Client.Client;
 using Raven.Client.Document;
-using Raven.Database.Indexing;
 using Raven.Server;
 using Xunit;
 using System.Linq;
@@ -81,8 +80,6 @@ select new
                         },
                     Indexes = {{"Title", FieldIndexing.NotAnalyzed}}
                 });
-
-            CreateRdbmsSchema();
         }
 
         private void CreateRdbmsSchema()
@@ -130,6 +127,8 @@ CREATE TABLE [dbo].[QuestionSummaries]
 		[FactIfSqlServerIsAvailable]
         public void Can_replicate_to_sql()
         {
+			CreateRdbmsSchema();
+
             using (var session = documentStore.OpenSession())
             {
                 session.Store(new IndexReplicationDestination
@@ -197,7 +196,9 @@ CREATE TABLE [dbo].[QuestionSummaries]
 		[FactIfSqlServerIsAvailable]
         public void Can_replicate_to_sql_when_document_is_updated()
         {
-            using (var session = documentStore.OpenSession())
+			CreateRdbmsSchema();
+			
+			using (var session = documentStore.OpenSession())
             {
                 session.Store(new IndexReplicationDestination
                 {

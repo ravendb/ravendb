@@ -4,11 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.ComponentModel;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -24,7 +23,7 @@ namespace Raven.Storage.Managed
 
         public bool IsIndexStale(string name, DateTime? cutOff, string entityName)
         {
-            var readResult = storage.IndexingStats.Read(new JObject
+            var readResult = storage.IndexingStats.Read(new RavenJObject
             {
                 {"index", name}
             });
@@ -43,7 +42,7 @@ namespace Raven.Storage.Managed
                     return true;
             }
 
-            var keyToSearch = new JObject
+            var keyToSearch = new RavenJObject
             {
                 {"index", name},
             };
@@ -56,7 +55,7 @@ namespace Raven.Storage.Managed
 
         public Tuple<DateTime,Guid> IndexLastUpdatedAt(string name)
         {
-            var readResult = storage.IndexingStats.Read(new JObject
+            var readResult = storage.IndexingStats.Read(new RavenJObject
             {
                 {"index", name}
             });

@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;

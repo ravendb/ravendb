@@ -8,7 +8,6 @@ using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Web.Management;
-using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Extensions;

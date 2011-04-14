@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Statistics
+﻿using Raven.Abstractions.Data;
+
+namespace Raven.Studio.Features.Statistics
 {
     using System.Collections.Generic;
     using System.ComponentModel.Composition;
@@ -10,7 +12,6 @@
     using Framework;
     using Messages;
     using Plugins;
-    using Raven.Database.Data;
 
     [Export]
     public class IndexesViewModel : Screen, IHandle<StatisticsUpdated>

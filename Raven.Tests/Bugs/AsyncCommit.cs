@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Transactions;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;

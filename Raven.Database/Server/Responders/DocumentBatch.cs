@@ -4,17 +4,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using log4net;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -43,14 +41,14 @@ namespace Raven.Database.Server.Responders
             		break;
 				case "PATCH":
 					var patchRequestJson = context.ReadJsonArray();
-					var patchRequests = patchRequestJson.Cast<JObject>().Select(PatchRequest.FromJson).ToArray();
+					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					OnBulkOperation(context, (index, query, allowStale) =>
 						databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale));
             		break;
             }
         }
 
-    	private void OnBulkOperation(IHttpContext context, Func<string, IndexQuery, bool, JArray> batchOperation)
+    	private void OnBulkOperation(IHttpContext context, Func<string, IndexQuery, bool, RavenJArray> batchOperation)
     	{
     		var match = urlMatcher.Match(context.GetRequestUrl());
     		var index = match.Groups[2].Value;
@@ -73,7 +71,7 @@ namespace Raven.Database.Server.Responders
             var jsonCommandArray = context.ReadJsonArray();
 
     		var transactionInformation = GetRequestTransaction(context);
-    		var commands = (from JObject jsonCommand in jsonCommandArray
+    		var commands = (from RavenJObject jsonCommand in jsonCommandArray
     		                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
     			.ToArray();
 

@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Data
 {
@@ -27,7 +27,7 @@ namespace Raven.Database.Data
         /// Gets or sets the metadata.
         /// </summary>
         /// <value>The metadata.</value>
-        public JObject Metadata { get; set; }
+        public RavenJObject Metadata { get; set; }
         /// <summary>
         /// Gets or sets the etag.
         /// </summary>

@@ -9,9 +9,8 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Client;
-using Raven.Client.Client.Async;
-using Raven.Database;
+using Raven.Abstractions.Data;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Document.Async
 {
@@ -134,9 +133,14 @@ namespace Raven.Client.Document.Async
 		/// <returns></returns>
 		public Task SaveChangesAsync()
 		{
+			var cachingScope = EntitiesToJsonCachingScope();
 			var data = PrepareForSaveChanges();
 			return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
-                .ContinueWith(task => UpdateBatchResults(task.Result, data.Entities));
+				.ContinueWith(task =>
+				{
+					UpdateBatchResults(task.Result, data.Entities);
+					cachingScope.Dispose();
+				});
 		}
 
 		/// <summary>

@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using log4net.Config;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
 using Raven.Database.Util;

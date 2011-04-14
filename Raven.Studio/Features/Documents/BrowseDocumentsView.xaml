@@ -6,8 +6,7 @@
 			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
 			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
 			 xmlns:cm="http://www.caliburnproject.org"
-			 xmlns:c="clr-namespace:Raven.Studio.Controls"
-			 x:Class="Raven.Studio.Features.Documents.BrowseDocumentsView"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls" xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" x:Class="Raven.Studio.Features.Documents.BrowseDocumentsView"
 			 mc:Ignorable="d"
 			 d:DesignWidth="640"
 			 d:DesignHeight="480"
@@ -100,7 +99,7 @@
 							  ItemsSource="{Binding Documents}">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
-							<ContentControl cm:View.Model="{Binding}" />
+							<Documents:DocumentView DataContext="{Binding}" />
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>

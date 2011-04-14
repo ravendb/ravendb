@@ -13,6 +13,8 @@ using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;

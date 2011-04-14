@@ -7,16 +7,17 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
-using Raven.Client.Client;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Http;
+using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Document;
 using Xunit;
-using TransactionInformation = Raven.Http.TransactionInformation;
+using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Tests.Bugs
 {
@@ -129,7 +130,7 @@ namespace Raven.Tests.Bugs
 		{
 			public static string Hello;
 
-			public override void OnPut(string key, Newtonsoft.Json.Linq.JObject document, Newtonsoft.Json.Linq.JObject metadata, TransactionInformation transactionInformation)
+			public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 			{
 				Hello = CurrentOperationContext.Headers.Value["Hello"];
 				base.OnPut(key, document, metadata, transactionInformation);

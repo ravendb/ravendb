@@ -3,14 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
-using Raven.Client;
-using Raven.Database.Indexing;
 
 namespace Raven.Sample.SimpleClient
 {

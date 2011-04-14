@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -16,7 +17,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = this.NewDocumentStore())
             {
-                var index = new IndexDefinition<Blog, BlogTagItem>()
+                var index = new IndexDefinitionBuilder<Blog, BlogTagItem>()
                 {
                     Map = docs => from doc in docs
                                   from tag in doc.Tags

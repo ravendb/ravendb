@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
@@ -12,8 +12,8 @@ namespace Raven.Database.Storage
     {
         public Guid Etag { get; set; }
         public bool Delete { get; set; }
-        public JObject Metadata { get; set; }
-		public JObject Data { get; set; }
+        public RavenJObject Metadata { get; set; }
+		public RavenJObject Data { get; set; }
         public string Key { get; set; }
 
     }

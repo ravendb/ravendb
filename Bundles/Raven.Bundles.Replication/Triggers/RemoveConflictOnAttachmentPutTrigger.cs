@@ -4,15 +4,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
 	[ExportMetadata("Order", 10000)]
 	public class RemoveConflictOnAttachmentPutTrigger : AbstractAttachmentPutTrigger
     {
-        public override void OnPut(string key, byte[] data, JObject metadata)
+		public override void OnPut(string key, byte[] data, RavenJObject metadata)
         {
             using (Database.DisableAllTriggersForCurrentThread())
             {
@@ -25,7 +25,7 @@ namespace Raven.Bundles.Replication.Triggers
                     return;
                 // this is a conflict document, holding document keys in the 
                 // values of the properties
-                foreach (var prop in oldVersion.Metadata.Value<JArray>("Conflicts"))
+                foreach (var prop in oldVersion.Metadata.Value<RavenJArray>("Conflicts"))
                 {
                     Database.DeleteStatic(prop.Value<string>(), null);
                 }

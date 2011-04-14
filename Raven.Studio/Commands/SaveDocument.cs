@@ -1,7 +1,8 @@
-﻿namespace Raven.Studio.Commands
+﻿using Raven.Abstractions.Extensions;
+
+namespace Raven.Studio.Commands
 {
 	using System;
-	using Database.Data;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Features.Documents;

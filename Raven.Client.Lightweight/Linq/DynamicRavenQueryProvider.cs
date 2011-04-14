@@ -9,12 +9,12 @@ using System.Linq;
 using System.Text;
 using System.Linq.Expressions;
 using System.Reflection;
-using Raven.Client.Client;
+using Raven.Abstractions.Data;
 #if !NET_3_5
-using Raven.Client.Client.Async;
+using Raven.Client.Connection.Async;
 #endif
+using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {

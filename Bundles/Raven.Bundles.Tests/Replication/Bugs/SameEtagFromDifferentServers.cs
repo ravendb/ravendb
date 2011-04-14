@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading;
-using Newtonsoft.Json;
+using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
-using Raven.Database;
 using Xunit;
 
 namespace Raven.Bundles.Tests.Replication.Bugs

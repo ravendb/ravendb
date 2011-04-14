@@ -1,4 +1,7 @@
-﻿namespace Raven.Studio.Features.Query
+﻿using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+
+namespace Raven.Studio.Features.Query
 {
 	using System;
 	using System.Collections.Generic;
@@ -11,9 +14,7 @@
 	using Framework.Extensions;
 	using Plugins;
 	using Plugins.Database;
-	using Raven.Database.Data;
 	using Client.Extensions;
-	using Client.Client;
 
 
 	[ExportDatabaseExplorerItem("Query", Index = 50)]
@@ -231,8 +232,6 @@
 
 		void GetIndexNames()
 		{
-			if(!server.IsInitialized) return;
-
 			if (ShouldShowDynamicIndexes)
 			{
 				ShowDynamicIndexes();

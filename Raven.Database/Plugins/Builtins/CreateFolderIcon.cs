@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using log4net;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Http.Extensions;
 

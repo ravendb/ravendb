@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.ManagedStorage
@@ -19,7 +19,7 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 			}
 
 			using (var tx = NewTransactionalStorage())

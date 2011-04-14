@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Raven.Client.Client;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
 using Xunit;

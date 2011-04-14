@@ -6,21 +6,20 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Database;
-using Raven.Database.Exceptions;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Http;
 using Raven.Http.Exceptions;
+using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
-using Raven.Database.Extensions;
 
 namespace Raven.Storage.Managed
 {
@@ -30,13 +29,19 @@ namespace Raven.Storage.Managed
         private readonly ITransactionStorageActions transactionStorageActions;
         private readonly IUuidGenerator generator;
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
+        private readonly IDocumentCacher documentCacher;
 
-		public DocumentsStorageActions(TableStorage storage, ITransactionStorageActions transactionStorageActions, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+        public DocumentsStorageActions(TableStorage storage, 
+            ITransactionStorageActions transactionStorageActions, 
+            IUuidGenerator generator, 
+            OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
+            IDocumentCacher documentCacher)
         {
             this.storage = storage;
             this.transactionStorageActions = transactionStorageActions;
             this.generator = generator;
             this.documentCodecs = documentCodecs;
+		    this.documentCacher = documentCacher;
         }
 
         public Tuple<int, int> FirstAndLastDocumentIds()
@@ -55,7 +60,7 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId)
         {
-            var results = storage.Documents["ById"].SkipTo(new JObject{{"id", startId}})
+			var results = storage.Documents["ById"].SkipTo(new RavenJObject{{"id", startId}})
                 .TakeWhile(x=>x.Value<int>("id") <= endId);
 
             foreach (var result in results)
@@ -75,13 +80,13 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
         {
-            return storage.Documents["ByEtag"].SkipAfter(new JObject {{"etag", etag.ToByteArray()}})
+            return storage.Documents["ByEtag"].SkipAfter(new RavenJObject{{"etag", etag.ToByteArray()}})
                 .Select(result => DocumentByKey(result.Value<string>("key"), null));
         }
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start)
 		{
-			return storage.Documents["ByKey"].SkipAfter(new JObject {{"key", idPrefix}})
+			return storage.Documents["ByKey"].SkipAfter(new RavenJObject{{"key", idPrefix }})
 				.Skip(start)
 				.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix))
 				.Select(result => DocumentByKey(result.Value<string>("key"), null));
@@ -111,12 +116,13 @@ namespace Raven.Storage.Managed
 		}
 
 
-    	private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<Tuple<MemoryStream, JObject>, JsonDocumentMetadata, T> createResult)
+		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<Tuple<MemoryStream, RavenJObject>, JsonDocumentMetadata, T> createResult)
 			where T : class
     	{
-    		JObject metadata = null;
-            
-    		var resultInTx = storage.DocumentsModifiedByTransactions.Read(new JObject { { "key", key } });
+			RavenJObject metadata = null;
+
+			var resultInTx =
+				storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
     		if (transactionInformation != null && resultInTx != null)
     		{
     			if(new Guid(resultInTx.Key.Value<byte[]>("txId")) == transactionInformation.Id)
@@ -125,7 +131,7 @@ namespace Raven.Storage.Managed
     					return null;
 
     				var txEtag = new Guid(resultInTx.Key.Value<byte[]>("etag"));
-    				Tuple<MemoryStream, JObject> resultTx= null;
+					Tuple<MemoryStream, RavenJObject> resultTx = null;
 					if (resultInTx.Position != -1)
 					{
 						resultTx = ReadMetadata(key, txEtag, resultInTx.Data, out metadata);
@@ -140,7 +146,7 @@ namespace Raven.Storage.Managed
     			}
     		}
 
-    		var readResult = storage.Documents.Read(new JObject{{"key", key}});
+			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
     		if (readResult == null)
     			return null;
 
@@ -156,13 +162,13 @@ namespace Raven.Storage.Managed
     		});
     	}
 
-		private Tuple<MemoryStream, JObject> ReadMetadata(string key, Guid etag, Func<byte[]> getData, out JObject metadata)
+		private Tuple<MemoryStream, RavenJObject> ReadMetadata(string key, Guid etag, Func<byte[]> getData, out RavenJObject metadata)
         {
-        	var cachedDocument = storage.GetCachedDocument(key, etag);
+            var cachedDocument = documentCacher.GetCachedDocument(key, etag);
         	if (cachedDocument != null)
         	{
-        		metadata = cachedDocument.Item1;
-        		return Tuple.Create<MemoryStream, JObject>(null, cachedDocument.Item2);
+        		metadata = cachedDocument.Metadata;
+				return Tuple.Create<MemoryStream, RavenJObject>(null, cachedDocument.Document);
         	}
 
         	var buffer = getData();
@@ -170,10 +176,10 @@ namespace Raven.Storage.Managed
 
         	metadata = memoryStream.ToJObject();
 
-			return Tuple.Create<MemoryStream, JObject>(memoryStream, null);
+			return Tuple.Create<MemoryStream, RavenJObject>(memoryStream, null);
         }
 
-    	private JObject ReadDocument(Tuple<MemoryStream,JObject> stream, JsonDocumentMetadata metadata)
+    	private RavenJObject ReadDocument(Tuple<MemoryStream, RavenJObject> stream, JsonDocumentMetadata metadata)
     	{
 			if (stream.Item2 != null)
 				return stream.Item2;
@@ -182,7 +188,7 @@ namespace Raven.Storage.Managed
 			if (documentCodecs.Count() > 0)
     		{
     			byte[] buffer = memoryStream.GetBuffer();
-				var metadataCopy = new JObject(metadata.Metadata);
+    			var metadataCopy = (RavenJObject)metadata.Metadata.CloneToken() ;
 				var dataBuffer = new byte[memoryStream.Length - memoryStream.Position];
 				Buffer.BlockCopy(buffer, (int)memoryStream.Position, dataBuffer, 0,
     			                 dataBuffer.Length);
@@ -192,31 +198,28 @@ namespace Raven.Storage.Managed
 
 			var result = memoryStream.ToJObject();
 
-			storage.SetCachedDocument(metadata.Key, metadata.Etag, Tuple.Create(new JObject(metadata.Metadata), new JObject(result)));
+            documentCacher.SetCachedDocument(metadata.Key, metadata.Etag, result, metadata.Metadata);
 
     		return result;
     	}
 
-    	public bool DeleteDocument(string key, Guid? etag, out JObject metadata)
+    	public bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata)
         {
             AssertValidEtag(key, etag, "DELETE", null);
 
             metadata = null;
-            var readResult = storage.Documents.Read(new JObject{{"key",key}});
+			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
             if (readResult == null)
                 return false;
 
             metadata = readResult.Data().ToJObject();
 
-            storage.Documents.Remove(new JObject
-            {
-                {"key", key},
-            });
+			storage.Documents.Remove(new RavenJObject { { "key", key } });
 
             return true;
         }
 
-        public Guid AddDocument(string key, Guid? etag, JObject data, JObject metadata)
+		public Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
         {
             AssertValidEtag(key, etag, "PUT", null);
 
@@ -229,14 +232,14 @@ namespace Raven.Storage.Managed
             ms.Write(bytes, 0, bytes.Length);
 
             var newEtag = generator.CreateSequentialUuid();
-            storage.Documents.Put(new JObject
-            {
-                {"key", key},
-                {"etag", newEtag.ToByteArray()},
-                {"modified", DateTime.UtcNow},
-                {"id", GetNextDocumentId()},
-                {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
-            },ms.ToArray());
+			storage.Documents.Put(new RavenJObject
+             {
+                 {"key", key},
+                 {"etag", newEtag.ToByteArray()},
+                 {"modified", DateTime.UtcNow},
+                 {"id", GetNextDocumentId()},
+                 {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
+             }, ms.ToArray());
 
             return newEtag;
         }
@@ -257,10 +260,7 @@ namespace Raven.Storage.Managed
 
         private void AssertValidEtag(string key, Guid? etag, string op, TransactionInformation transactionInformation)
         {
-            var readResult = storage.Documents.Read(new JObject
-            {
-                {"key", key},
-            });
+			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
 
             if (readResult != null)
             {
@@ -282,10 +282,9 @@ namespace Raven.Storage.Managed
             }
             else
             {
-                readResult = storage.DocumentsModifiedByTransactions.Read(new JObject
-                {
-                    {"key", key}
-                });
+            	readResult =
+            		storage.DocumentsModifiedByTransactions.Read(
+						new RavenJObject { { "key", key } });
                 StorageHelper.AssertNotModifiedByAnotherTransaction(storage, transactionStorageActions, key, readResult, transactionInformation);
 
             }

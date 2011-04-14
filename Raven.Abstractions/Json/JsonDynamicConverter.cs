@@ -8,11 +8,11 @@ using System;
 using System.Dynamic;
 using System.Linq.Expressions;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Database.Linq;
 using System.Linq;
+using Raven.Abstractions.Linq;
+using Raven.Json.Linq;
 
-namespace Raven.Database.Json
+namespace Raven.Abstractions.Json
 {
 	/// <summary>
 	/// Convert a dynamic variable to a json value and vice versa
@@ -53,11 +53,11 @@ namespace Raven.Database.Json
 		/// <returns>The object value.</returns>
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
-		    var token = JToken.ReadFrom(reader);
-		    var val = token as JValue;
+		    var token = RavenJToken.ReadFrom(reader);
+		    var val = token as RavenJValue;
 		    if(val != null)
 		        return val.Value;
-		    var array = token as JArray;
+		    var array = token as RavenJArray;
             if (array != null)
                 return new DynamicJsonObject.DynamicList(array.Select(DynamicJsonObject.TransformToValue).ToArray());
 
@@ -67,11 +67,11 @@ namespace Raven.Database.Json
                 var type = Type.GetType(typeName, false);
                 if(type != null)
                 {
-                    return serializer.Deserialize(new JTokenReader(token), type);
+                	return serializer.Deserialize(new RavenJTokenReader(token), type);
                 }
             }
 
-		    return new DynamicJsonObject((JObject)token);
+		    return new DynamicJsonObject((RavenJObject)token);
 		}
 
 		/// <summary>

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
@@ -25,7 +26,7 @@ namespace Raven.Tests.Suggestions
 
         public static IndexDefinition GetIndex(DocumentStore doc)
         {
-            return new IndexDefinition<Person>()
+            return new IndexDefinitionBuilder<Person>()
                        {
                            Map = persons => from p in persons select new {p.Name}
                        }.ToIndexDefinition(doc.Conventions);
@@ -42,10 +43,5 @@ namespace Raven.Tests.Suggestions
                            Term = term
                        };
         }
-    }    
-
-    public class Person
-    {
-        public string Name { get; set; }
     }
 }

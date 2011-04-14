@@ -7,8 +7,10 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Raven.Client.Client;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
@@ -35,7 +37,7 @@ namespace Raven.Tests.Bugs
             };
         	documentStore.Initialize();
 
-            documentStore.DatabaseCommands.PutIndex("Foo/Something", new IndexDefinition<Foo> {
+            documentStore.DatabaseCommands.PutIndex("Foo/Something", new IndexDefinitionBuilder<Foo> {
                                                                                                   Map = docs => from doc in docs select new { doc.Something }
                                                                                               });
         }

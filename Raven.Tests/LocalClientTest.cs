@@ -3,16 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Client;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Json.Linq;
 using Raven.Storage.Managed;
 using Raven.Tests.Document;
 
@@ -71,8 +74,10 @@ namespace Raven.Tests
 				return;
 
 			documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-											   JObject.FromObject(new { StackTrace = new StackTrace(true) }),
-											   new JObject());
+
+											   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
+											   new RavenJObject());
+
 			using (var server = new RavenDbHttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
 			{
 				server.Start();

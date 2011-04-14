@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Indexes
+﻿using Raven.Abstractions.Indexing;
+
+namespace Raven.Studio.Features.Indexes
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
@@ -7,9 +9,8 @@
 	using Messages;
 	using Plugins;
 	using Plugins.Database;
-	using Raven.Database.Indexing;
 
-	[Export]
+    [Export]
 	[ExportDatabaseExplorerItem("Indexes", Index = 30)]
 	public class BrowseIndexesViewModel : RavenScreen,
 										  IHandle<IndexUpdated>
