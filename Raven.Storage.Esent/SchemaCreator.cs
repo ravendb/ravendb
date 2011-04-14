@@ -12,7 +12,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "3.4";
+		public const string SchemaVersion = "3.5";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -160,6 +160,20 @@ namespace Raven.Storage.Esent
 				coltyp = JET_coltyp.Long,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
 			}, defaultValue, defaultValue.Length, out columnid);
+
+            Api.JetAddColumn(session, tableid, "last_reduced_etag", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Binary,
+				cbMax = 16,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+
+			Api.JetAddColumn(session, tableid, "last_reduced_timestamp", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.DateTime,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
 
 			const string indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
