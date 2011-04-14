@@ -545,17 +545,15 @@ namespace Raven.Database
 			}
 			IndexDefinitionStorage.AddIndex(definition);
 			IndexStorage.CreateIndexImplementation(definition);
-			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, name));
+		    TransactionalStorage.Batch(actions =>
+		    {
+		        actions.Indexing.AddIndex(name, definition.IsMapReduce);
+		        workContext.ShouldNotifyAboutWork();
+		    });
 			return name;
 		}
 
-		private void AddIndexAndEnqueueIndexingTasks(IStorageActionsAccessor actions, string indexName)
-		{
-			actions.Indexing.AddIndex(indexName);
-			workContext.ShouldNotifyAboutWork();
-		}
-
-		public QueryResult Query(string index, IndexQuery query)
+	    public QueryResult Query(string index, IndexQuery query)
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
@@ -1027,7 +1025,8 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.Indexing.DeleteIndex(index);
-				AddIndexAndEnqueueIndexingTasks(actions, index);
+			    actions.Indexing.AddIndex(index);
+			    workContext.ShouldNotifyAboutWork();
 			});
 		}
 

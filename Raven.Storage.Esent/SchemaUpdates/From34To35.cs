@@ -32,14 +32,14 @@ namespace Raven.Storage.Esent.SchemaUpdates
                     {
                         coltyp = JET_coltyp.Binary,
                         cbMax = 16,
-                        grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+                        grbit = ColumndefGrbit.ColumnFixed
                     }, null, 0, out columnid);
 
 
                     Api.JetAddColumn(session, tbl, "last_reduced_timestamp", new JET_COLUMNDEF
                     {
                         coltyp = JET_coltyp.DateTime,
-                        grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+                        grbit = ColumndefGrbit.ColumnFixed
                     }, null, 0, out columnid);
 				}
 

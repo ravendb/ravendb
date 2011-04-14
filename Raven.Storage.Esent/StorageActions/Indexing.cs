@@ -17,22 +17,25 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IIndexingStorageActions
 	{
-		
 		public void SetCurrentIndexStatsTo(string index)
 		{
-			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-				throw new IndexDoesNotExistsException("There is no index named: " + index);
-
-			// this is optional
-			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.MakeKey(session, IndexesStatsReduce, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if(Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
-				throw new IndexDoesNotExistsException("There is no index named: " + index);
+		    SetCurrentIndexStatsToImpl(index);
 		}
 
-		public void IncrementIndexingAttempt()
+	    private bool SetCurrentIndexStatsToImpl(string index)
+	    {
+	        Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+	        Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+	        if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+	            throw new IndexDoesNotExistsException("There is no index named: " + index);
+
+	        // this is optional
+	        Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+	        Api.MakeKey(session, IndexesStatsReduce, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+	        return Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
+	    }
+
+	    public void IncrementIndexingAttempt()
 		{
 			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"], 1);
 		}
@@ -57,11 +60,8 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.EscrowUpdate(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"], -1);
 		}
 
-		public void IncrementReduceIndexingAttempt()
+	    public void IncrementReduceIndexingAttempt()
 		{
-			JET_RECPOS recpos;
-			Api.JetGetRecordPosition(session, IndexesStatsReduce, out recpos);
-			
 			Api.EscrowUpdate(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"], 1);
 		}
 
@@ -84,10 +84,8 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				var indexName = Api.RetrieveColumnAsString(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"]);
 				Api.MakeKey(session, IndexesStatsReduce, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				if(Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
-					throw new InvalidOperationException("Could not find reduce stats for index: " + indexName +
-					                                    ", this is probably a bug");
-				yield return new IndexStats
+			    var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
+			    yield return new IndexStats
 				{
 					Name = indexName,
 					IndexingAttempts =
@@ -96,27 +94,27 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
 					IndexingErrors =
 						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
-					ReduceIndexingAttempts =
-						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]).Value,
-					ReduceIndexingSuccesses =
-						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]).Value,
-					ReduceIndexingErrors =
-						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]).Value,
-					
-					LastIndexedEtag = 
-						Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting(),
-					LastIndexedTimestamp= 
-						Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
-                    LastReducedEtag = 
+
+                    LastIndexedEtag =
+                        Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting(),
+                    LastIndexedTimestamp =
+                        Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
+                        
+                    ReduceIndexingAttempts = hasReduce == false ? (int?)null : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
+                    ReduceIndexingSuccesses = hasReduce == false ? (int?)null : 
+						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
+                    ReduceIndexingErrors = hasReduce == false ? (int?)null : 
+						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
+					LastReducedEtag = hasReduce == false ? (Guid?)null : 
                         Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]).TransfromToGuidWithProperSorting(),
-                    LastReducedTimestamp=
-                        Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]).Value,
+                    LastReducedTimestamp = hasReduce == false ? (DateTime?)null : 
+                        Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]),
 				
 				};
 			}
 		}       
 
-		public void AddIndex(string name)
+		public void AddIndex(string name, bool createMapReduce)
 		{
 			using (var update = new Update(session, IndexesStats, JET_prep.Insert))
 			{
@@ -125,6 +123,9 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue);
 				update.Save();
 			}
+
+            if (createMapReduce == false)
+                return;
 
 			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Insert))
 			{
@@ -154,16 +155,16 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IndexFailureInformation GetFailureRate(string index)
 		{
-			SetCurrentIndexStatsTo(index);
+			var hasReduce = SetCurrentIndexStatsToImpl(index);
 			return new IndexFailureInformation
 			{
 				Name = index,
 				Attempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
 				Errors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
 				Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
-				ReduceAttempts = Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]).Value,
-				ReduceErrors = Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]).Value,
-				ReduceSuccesses = Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]).Value
+				ReduceAttempts = hasReduce ? null: Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
+                ReduceErrors = hasReduce ? null : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
+                ReduceSuccesses = hasReduce ? null : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"])
 			};
 		}
 
@@ -191,7 +192,7 @@ namespace Raven.Storage.Esent.StorageActions
             Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
             Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-                throw new IndexDoesNotExistsException("There is no index named: " + index);
+                throw new IndexDoesNotExistsException("There is no reduce index named: " + index);
 
             using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
             {

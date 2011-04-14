@@ -25,7 +25,7 @@ namespace Raven.Database.Storage
 		void DecrementReduceIndexingAttempt();
 
 		IEnumerable<IndexStats> GetIndexesStats();
-		void AddIndex(string name);
+		void AddIndex(string name, bool createMapReduce);
 		void DeleteIndex(string name);
 
 

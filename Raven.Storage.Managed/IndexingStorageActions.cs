@@ -125,7 +125,7 @@ namespace Raven.Storage.Managed
             }
         }
 
-    	public void AddIndex(string name)
+    	public void AddIndex(string name, bool createMapReduce)
         {
             var readResult = storage.IndexingStats.Read(new RavenJObject {{"index", name}});
             if(readResult != null)
@@ -137,13 +137,13 @@ namespace Raven.Storage.Managed
                 {"attempts", 0},
                 {"successes", 0},
                 {"failures", 0},
-				{"reduce_attempts", null},
-                {"reduce_successes", null},
-                {"reduce_failures", null},
+				{"reduce_attempts", createMapReduce? (RavenJToken)null : 0},
+                {"reduce_successes", createMapReduce? (RavenJToken)null : 0},
+                {"reduce_failures", createMapReduce? (RavenJToken)null : 0},
                 {"lastEtag", Guid.Empty.ToByteArray()},
                 {"lastTimestamp", DateTime.MinValue},
-                {"lastReducedEtag", null},
-                {"lastReducedTimestamp", null}
+                {"lastReducedEtag", createMapReduce? null : Guid.Empty.ToByteArray()},
+                {"lastReducedTimestamp", createMapReduce? (RavenJToken)null : DateTime.MinValue}
             });
         }
 
