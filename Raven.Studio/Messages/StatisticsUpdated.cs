@@ -1,7 +1,7 @@
-﻿namespace Raven.Studio.Messages
-{
-	using Database.Data;
+﻿using Raven.Abstractions.Data;
 
+namespace Raven.Studio.Messages
+{
 	public class StatisticsUpdated
 	{
 		public StatisticsUpdated(DatabaseStatistics statistics) { Statistics = statistics; }

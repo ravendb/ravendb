@@ -1,9 +1,10 @@
-﻿namespace Raven.Studio.Commands
+﻿using Raven.Abstractions.Data;
+
+namespace Raven.Studio.Commands
 {
 	using System.Windows;
-	using Database.Data;
 
-	public class CopyServerError
+    public class CopyServerError
 	{
 		public void Execute(ServerError error)
 		{

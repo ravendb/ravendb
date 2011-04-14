@@ -1,4 +1,6 @@
-﻿using Raven.Json.Linq;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 
 namespace Raven.Tests.Silverlight
 {
@@ -7,8 +9,6 @@ namespace Raven.Tests.Silverlight
 	using System.Threading.Tasks;
 	using Client.Document;
 	using Client.Extensions;
-	using Database.Data;
-	using Database.Indexing;
 	using Document;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;

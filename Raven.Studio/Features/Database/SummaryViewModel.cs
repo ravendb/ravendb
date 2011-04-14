@@ -1,4 +1,7 @@
-﻿using Raven.Json.Linq;
+﻿using Raven.Abstractions.Commands;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 
 namespace Raven.Studio.Features.Database
 {
@@ -17,12 +20,8 @@ namespace Raven.Studio.Features.Database
     using Framework.Extensions;
     using Messages;
     using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
     using Plugins;
     using Plugins.Database;
-    using Raven.Database.Data;
-    using Raven.Database.Indexing;
-    using Raven.Database.Json;
 
     [ExportDatabaseExplorerItem("Summary", Index = 10)]
     public class SummaryViewModel : RavenScreen,

@@ -1,4 +1,5 @@
-﻿using Ionic.Zlib;
+﻿using Raven.Abstractions.Commands;
+using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 
 namespace Raven.Studio.Features.Tasks
@@ -13,17 +14,14 @@ namespace Raven.Studio.Features.Tasks
 	using System.Threading.Tasks;
 	using System.Windows.Controls;
 	using Caliburn.Micro;
-	using Database;
 	using Ionic.Zlib;
 	using Framework.Extensions;
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Plugins;
-	using Raven.Database.Data;
-	using Raven.Database.Indexing;
 
-	[Plugins.Tasks.ExportTask("Import Database")]
+    [Plugins.Tasks.ExportTask("Import Database")]
 	public class ImportTask : ConsoleOutputTask
 	{
 		[ImportingConstructor]

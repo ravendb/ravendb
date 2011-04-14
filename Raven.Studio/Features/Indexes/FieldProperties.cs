@@ -1,8 +1,8 @@
-﻿namespace Raven.Studio.Features.Indexes
-{
-	using Raven.Database.Indexing;
+﻿using Raven.Abstractions.Indexing;
 
-	public class FieldProperties
+namespace Raven.Studio.Features.Indexes
+{
+    public class FieldProperties
 	{
 		public string Name { get; set; }
 

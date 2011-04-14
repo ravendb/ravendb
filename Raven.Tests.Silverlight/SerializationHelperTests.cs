@@ -1,4 +1,5 @@
-﻿using Raven.Json.Linq;
+﻿using Raven.Client.Connection;
+using Raven.Json.Linq;
 
 namespace Raven.Tests.Silverlight
 {
@@ -6,10 +7,8 @@ namespace Raven.Tests.Silverlight
 	using System.Collections.Generic;
 	using System.Linq;
 	using System.Threading.Tasks;
-	using Client.Client;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
-	using Newtonsoft.Json.Linq;
 
 	public class SerializationHelperTests : RavenTestBase
 	{

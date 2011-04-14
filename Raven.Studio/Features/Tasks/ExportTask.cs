@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Tasks
+﻿using Raven.Client.Silverlight.Connection;
+
+namespace Raven.Studio.Features.Tasks
 {
 	using System;
 	using System.Collections.Generic;
@@ -8,9 +10,7 @@
 	using System.Threading.Tasks;
 	using System.Windows.Controls;
 	using Caliburn.Micro;
-	using Client.Client;
 	using Client.Document;
-	using Client.Silverlight.Client;
 	using Database;
 	using Ionic.Zlib;
 	using Framework.Extensions;

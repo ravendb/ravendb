@@ -1,23 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel.Composition;
-using System.Linq;
-using System.Text.RegularExpressions;
-using Caliburn.Micro;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Abstractions.Data;
-using Raven.Database;
-using Raven.Json.Linq;
-using Raven.Studio.Framework;
+﻿using Raven.Json.Linq;
 
 namespace Raven.Studio.Features.Documents
 {
 	using System.Windows;
 	using System.Windows.Input;
 	using Commands;
-	using Framework.Extensions;
 	using System;
 	using System.Collections.Generic;
 	using System.Collections.ObjectModel;
@@ -26,9 +13,7 @@ namespace Raven.Studio.Features.Documents
 	using System.Text.RegularExpressions;
 	using Caliburn.Micro;
 	using Newtonsoft.Json;
-	using Newtonsoft.Json.Linq;
 	using Abstractions.Data;
-	using Raven.Database;
 	using Framework;
 
 	[Export(typeof(EditDocumentViewModel))]

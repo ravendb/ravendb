@@ -1,3 +1,5 @@
+using Raven.Abstractions.Data;
+
 namespace Raven.Studio.Features.Documents
 {
 	using System.ComponentModel.Composition;
@@ -5,13 +7,11 @@ namespace Raven.Studio.Features.Documents
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
 	using Framework;
-	using Framework.Extensions;
 	using Messages;
 	using Plugins;
 	using Plugins.Database;
-	using Raven.Database;
 
-	[Export]
+    [Export]
 	[ExportDatabaseExplorerItem("Documents", Index = 40)]
 	public class BrowseDocumentsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>

@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Collections
+﻿using Raven.Client.Connection;
+
+namespace Raven.Studio.Features.Collections
 {
 	using System;
 	using System.Collections.Generic;
@@ -13,8 +15,6 @@
 	using Messages;
 	using Plugins;
 	using Plugins.Database;
-	using Raven.Database.Data;
-	using Client.Client;
 
 	[Export(typeof(CollectionsViewModel))]
 	[ExportDatabaseExplorerItem("Collections", Index = 20)]

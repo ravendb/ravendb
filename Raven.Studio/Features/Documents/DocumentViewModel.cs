@@ -1,5 +1,4 @@
-﻿using Raven.Abstractions.Data;
-using Raven.Json.Linq;
+﻿using Raven.Json.Linq;
 using Raven.Studio.Framework;
 
 namespace Raven.Studio.Features.Documents
@@ -7,10 +6,8 @@ namespace Raven.Studio.Features.Documents
     using System;
     using Collections;
 	using Abstractions.Data;
-    using Framework.Extensions;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
-    using Raven.Database;
 
     /// <summary>
     /// This view model is for displaying documents in bulk. There is no change notification and no behaviours related to editing

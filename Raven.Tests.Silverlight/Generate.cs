@@ -1,22 +1,19 @@
-﻿using Raven.Json.Linq;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 
 namespace Raven.Tests.Silverlight
 {
-	using System;
-	using System.Collections.Generic;
+    using System.Collections.Generic;
 	using System.Linq;
-	using System.Threading;
-	using System.Threading.Tasks;
+    using System.Threading.Tasks;
 	using Client.Document;
-	using Database.Data;
-	using Database.Indexing;
-	using Document;
+    using Document;
 	using Entities;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
-	using Newtonsoft.Json.Linq;
 
-	/// <summary>
+    /// <summary>
 	/// Not actually a test, just an easy way for me to insert some sample data
 	/// </summary>
 	public class Generate : RavenTestBase
