@@ -29,6 +29,7 @@ namespace Raven.Storage.Esent.StorageActions
                 Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key_and_view_hashed"], viewAndReduceKeyHashed);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"], data.ToBytes());
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.TransformToValueForEsentSorting());
+                Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"], DateTime.Now);
 
 				update.Save();
 			}

@@ -406,6 +406,12 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnNotNULL|ColumndefGrbit.ColumnFixed
 			}, null, 0, out columnid);
 
+            Api.JetAddColumn(session, tableid, "timestamp", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.DateTime,
+                grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed
+            }, null, 0, out columnid);
+
 			var indexDef = "+id\0\0";
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
 							   100);

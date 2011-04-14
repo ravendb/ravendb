@@ -37,6 +37,7 @@ namespace Raven.Storage.Managed
                 {"reduceKey", reduceKey},
                 {"docId", docId},
                 {"etag", generator.CreateSequentialUuid().ToByteArray()},
+                {"timestamp", DateTime.Now}
             }, ms.ToArray());
         }
 

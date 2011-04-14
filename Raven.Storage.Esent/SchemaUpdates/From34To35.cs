@@ -51,10 +51,31 @@ namespace Raven.Storage.Esent.SchemaUpdates
             using (var tbl = new Table(session, dbid, "mapped_results",
                     OpenTableGrbit.PermitDDL | OpenTableGrbit.DenyRead | OpenTableGrbit.DenyWrite))
             {
+                JET_COLUMNID columnid;
+                Api.JetAddColumn(session, tbl, "timestamp", new JET_COLUMNDEF
+                {
+                    coltyp = JET_coltyp.DateTime,
+                    grbit = ColumndefGrbit.ColumnFixed
+                }, null, 0, out columnid);
                 const string indexDef = "+view\0+etag\0\0";
                 Api.JetCreateIndex(session, tbl, "by_view_and_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
                                    100);
 
+            }
+
+            using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
+            {
+                var tblKeyColumn = Api.GetColumnDictionary(session, mappedResults);
+
+                Api.MoveBeforeFirst(session, mappedResults);
+                while (Api.TryMoveNext(session, mappedResults))
+                {
+                    using (var update = new Update(session, mappedResults, JET_prep.Replace))
+                    {
+                        Api.SetColumn(session, mappedResults, tblKeyColumn["timestamp"], DateTime.Now);
+                        update.Save();
+                    }
+                }
             }
 
 			using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
