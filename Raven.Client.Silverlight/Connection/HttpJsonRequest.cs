@@ -9,13 +9,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Browser;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Silverlight.Connection
 {
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server

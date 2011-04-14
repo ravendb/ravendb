@@ -1,15 +1,13 @@
-﻿using Raven.Client.Client.Async;
+﻿using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Browser;
+using System.Windows.Browser;
+using Raven.Client.Silverlight.Connection.Async;
 
-namespace Raven.Client.Silverlight.Client
+namespace Raven.Client.Silverlight.Connection
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Net;
-	using System.Net.Browser;
-	using System.Windows.Browser;
-	using Raven.Client.Client;
-
-	public static class RavenUrlExtensions
+    public static class RavenUrlExtensions
 	{
 		public static string Indexes(this string url, string index)
 		{

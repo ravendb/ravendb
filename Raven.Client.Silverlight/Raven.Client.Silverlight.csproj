@@ -70,19 +70,22 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Raven.Abstractions\Data\Collection.cs">
-      <Link>Data\Collection.cs</Link>
+      <Link>Imports\Data\Collection.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\Constacts.cs">
-      <Link>Data\Constacts.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Data\Constants.cs">
+      <Link>Imports\Data\Constants.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\EnumerableExtension.cs">
+      <Link>Imports\Data\EnumerableExtension.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\IJsonDocumentMetadata.cs">
-      <Link>Data\IJsonDocumentMetadata.cs</Link>
+      <Link>Imports\Data\IJsonDocumentMetadata.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\JsonDocumentMetadata.cs">
-      <Link>Data\JsonDocumentMetadata.cs</Link>
+      <Link>Imports\Data\JsonDocumentMetadata.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Default.cs">
-      <Link>Default.cs</Link>
+      <Link>Imports\Default.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeISO8601Converter.cs">
       <Link>Json\JsonDateTimeISO8601Converter.cs</Link>
@@ -95,6 +98,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonValueTypeConverter.cs">
       <Link>Json\JsonValueTypeConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Linq\DynamicNullObject.cs">
+      <Link>Linq\DynamicNullObject.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\AbstractDocumentQuery.cs">
       <Link>Document\AbstractDocumentQuery.cs</Link>
@@ -112,16 +118,16 @@
       <Link>Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
-      <Link>IAsyncDocumentQuery.cs</Link>
+      <Link>Imports\IAsyncDocumentQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryBase.cs">
-      <Link>IDocumentQueryBase.cs</Link>
+      <Link>Imports\IDocumentQueryBase.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\ExceptionExtensions.cs">
       <Link>Extensions\ExceptionExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
-      <Link>IDocumentQueryListener.cs</Link>
+      <Link>Imports\IDocumentQueryListener.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenCollections.cs">
       <Link>Indexes\RavenCollections.cs</Link>
@@ -136,7 +142,7 @@
       <Link>Indexes\IndexDefinitionHelper.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
-      <Link>WhereEqualsParams.cs</Link>
+      <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Json\Linq\Extensions.cs">
       <Link>Raven.Json\Linq\Extensions.cs</Link>
@@ -204,67 +210,67 @@
       <Link>Commands\PutCommandData.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\AggregationOperation.cs">
-      <Link>Data\AggregationOperation.cs</Link>
+      <Link>Imports\Data\AggregationOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Attachment.cs">
-      <Link>Data\Attachment.cs</Link>
+      <Link>Imports\Data\Attachment.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\BatchResult.cs">
-      <Link>Data\BatchResult.cs</Link>
+      <Link>Imports\Data\BatchResult.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\DatabaseDocument.cs">
-      <Link>Data\DatabaseDocument.cs</Link>
+      <Link>Imports\Data\DatabaseDocument.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\DatabaseStatistics.cs">
-      <Link>Data\DatabaseStatistics.cs</Link>
+      <Link>Imports\Data\DatabaseStatistics.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Commands\ICommandData.cs">
       <Link>Commands\ICommandData.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\IndexStats.cs">
-      <Link>Data\IndexStats.cs</Link>
+      <Link>Imports\Data\IndexStats.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\JsonDocument.cs">
-      <Link>Data\JsonDocument.cs</Link>
+      <Link>Imports\Data\JsonDocument.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\MultiLoadResult.cs">
-      <Link>Data\MultiLoadResult.cs</Link>
+      <Link>Imports\Data\MultiLoadResult.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\PatchCommandType.cs">
-      <Link>Data\PatchCommandType.cs</Link>
+      <Link>Imports\Data\PatchCommandType.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\PatchRequest.cs">
-      <Link>Data\PatchRequest.cs</Link>
+      <Link>Imports\Data\PatchRequest.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\PatchResult.cs">
-      <Link>Data\PatchResult.cs</Link>
+      <Link>Imports\Data\PatchResult.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\PutResult.cs">
-      <Link>Data\PutResult.cs</Link>
+      <Link>Imports\Data\PutResult.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\ServerError.cs">
-      <Link>Data\ServerError.cs</Link>
+      <Link>Imports\Data\ServerError.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\SortedField.cs">
-      <Link>Data\SortedField.cs</Link>
+      <Link>Imports\Data\SortedField.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\SpatialIndexQuery.cs">
-      <Link>Data\SpatialIndexQuery.cs</Link>
+      <Link>Imports\Data\SpatialIndexQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\StringDistanceTypes.cs">
-      <Link>Data\StringDistanceTypes.cs</Link>
+      <Link>Imports\Data\StringDistanceTypes.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\SuggestionQuery.cs">
-      <Link>Data\SuggestionQuery.cs</Link>
+      <Link>Imports\Data\SuggestionQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\SuggestionQueryResult.cs">
-      <Link>Data\SuggestionQueryResult.cs</Link>
+      <Link>Imports\Data\SuggestionQueryResult.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\TransactionInformation.cs">
-      <Link>Data\TransactionInformation.cs</Link>
+      <Link>Imports\Data\TransactionInformation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\TransactionMode.cs">
-      <Link>Data\TransactionMode.cs</Link>
+      <Link>Imports\Data\TransactionMode.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Exceptions\ConcurrencyException.cs">
       <Link>Exceptions\ConcurrencyException.cs</Link>
@@ -300,7 +306,7 @@
       <Link>Indexing\NumberUtil.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\IndexQuery.cs">
-      <Link>Data\IndexQuery.cs</Link>
+      <Link>Imports\Data\IndexQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\DynamicUtil.cs">
       <Link>Json\DynamicUtil.cs</Link>
@@ -324,7 +330,7 @@
       <Link>Linq\DynamicJsonObject.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\QueryResult.cs">
-      <Link>Data\QueryResult.cs</Link>
+      <Link>Imports\Data\QueryResult.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\SortOptions.cs">
       <Link>Indexing\SortOptions.cs</Link>
@@ -336,37 +342,37 @@
       <Link>Replication\ReplicationDocument.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\IAsyncDatabaseCommands.cs">
-      <Link>Connection\Async\IAsyncDatabaseCommands.cs</Link>
+      <Link>Imports\Connection\Async\IAsyncDatabaseCommands.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\IDatabaseCommands.cs">
-      <Link>Connection\IDatabaseCommands.cs</Link>
+      <Link>Imports\Connection\IDatabaseCommands.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\JsonExtensions.cs">
-      <Link>Connection\JsonExtensions.cs</Link>
+      <Link>Imports\Connection\JsonExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\JsonLuceneDateTimeConverter.cs">
-      <Link>Connection\JsonLuceneDateTimeConverter.cs</Link>
+      <Link>Imports\Connection\JsonLuceneDateTimeConverter.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\RavenQuery.cs">
-      <Link>Connection\RavenQuery.cs</Link>
+      <Link>Imports\Connection\RavenQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\RavenTransactionAccessor.cs">
-      <Link>Connection\RavenTransactionAccessor.cs</Link>
+      <Link>Imports\Connection\RavenTransactionAccessor.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformer.cs">
-      <Link>Connection\ReplicationInformer.cs</Link>
+      <Link>Imports\Connection\ReplicationInformer.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\SerializationHelper.cs">
-      <Link>Connection\SerializationHelper.cs</Link>
+      <Link>Imports\Connection\SerializationHelper.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\ServerClient.cs">
-      <Link>Connection\ServerClient.cs</Link>
+      <Link>Imports\Connection\ServerClient.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\WebRequestEventArgs.cs">
-      <Link>Connection\WebRequestEventArgs.cs</Link>
+      <Link>Imports\Connection\WebRequestEventArgs.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\WebResponseExtensions.cs">
-      <Link>Connection\WebResponseExtensions.cs</Link>
+      <Link>Imports\Connection\WebResponseExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Converters\GuidConverter.cs">
       <Link>Converters\GuidConverter.cs</Link>
@@ -429,10 +435,10 @@
       <Link>Document\SpatialDocumentQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\EntityStored.cs">
-      <Link>EntityStored.cs</Link>
+      <Link>Imports\EntityStored.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\EntityToDocument.cs">
-      <Link>EntityToDocument.cs</Link>
+      <Link>Imports\EntityToDocument.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Exceptions\ConflictException.cs">
       <Link>Exceptions\ConflictException.cs</Link>
@@ -450,34 +456,34 @@
       <Link>Extensions\MultiTenancyExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAdvancedDocumentSessionOperations.cs">
-      <Link>IAdvancedDocumentSessionOperations.cs</Link>
+      <Link>Imports\IAdvancedDocumentSessionOperations.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncAdvancedSessionOperations.cs">
-      <Link>IAsyncAdvancedSessionOperations.cs</Link>
+      <Link>Imports\IAsyncAdvancedSessionOperations.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentSession.cs">
-      <Link>IAsyncDocumentSession.cs</Link>
+      <Link>Imports\IAsyncDocumentSession.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentConversionListener.cs">
-      <Link>IDocumentConversionListener.cs</Link>
+      <Link>Imports\IDocumentConversionListener.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentDeleteListener.cs">
-      <Link>IDocumentDeleteListener.cs</Link>
+      <Link>Imports\IDocumentDeleteListener.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQuery.cs">
-      <Link>IDocumentQuery.cs</Link>
+      <Link>Imports\IDocumentQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryCustomization.cs">
-      <Link>IDocumentQueryCustomization.cs</Link>
+      <Link>Imports\IDocumentQueryCustomization.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentSession.cs">
-      <Link>IDocumentSession.cs</Link>
+      <Link>Imports\IDocumentSession.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentStore.cs">
-      <Link>IDocumentStore.cs</Link>
+      <Link>Imports\IDocumentStore.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentStoreListener.cs">
-      <Link>IDocumentStoreListener.cs</Link>
+      <Link>Imports\IDocumentStoreListener.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractIndexCreationTask.cs">
       <Link>Indexes\AbstractIndexCreationTask.cs</Link>
@@ -504,10 +510,10 @@
       <Link>Indexes\SpatialIndex.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\ISyncAdvancedSessionOperation.cs">
-      <Link>ISyncAdvancedSessionOperation.cs</Link>
+      <Link>Imports\ISyncAdvancedSessionOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\ITransactionalDocumentSession.cs">
-      <Link>ITransactionalDocumentSession.cs</Link>
+      <Link>Imports\ITransactionalDocumentSession.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicQueryProviderProcessor.cs">
       <Link>Linq\DynamicQueryProviderProcessor.cs</Link>
@@ -528,7 +534,7 @@
       <Link>Linq\IRavenQueryable.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\IRavenQueryInspector.cs">
-      <Link>Connection\IRavenQueryInspector.cs</Link>
+      <Link>Imports\Connection\IRavenQueryInspector.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\IRavenQueryProvider.cs">
       <Link>Linq\IRavenQueryProvider.cs</Link>
@@ -594,7 +600,7 @@
       <Link>Shard\ShardStrategy\ShardStrategy.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\StoredEntityEventArgs.cs">
-      <Link>StoredEntityEventArgs.cs</Link>
+      <Link>Imports\StoredEntityEventArgs.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Inflector.cs">
       <Link>Util\Inflector.cs</Link>

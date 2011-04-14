@@ -16,6 +16,10 @@ using Raven.Client.Document.Async;
 using System.Linq;
 #if !SILVERLIGHT
 using Raven.Client.Extensions;
+#else
+using Raven.Client.Silverlight.Connection;
+using Raven.Client.Silverlight.Connection.Async;
+
 #endif
 
 namespace Raven.Client.Document

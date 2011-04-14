@@ -3,38 +3,36 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Database.Json;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
+using Raven.Client.Connection.Async;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Browser;
+using System.Text;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Exceptions;
+using Raven.Client.Silverlight.Data;
+using Raven.Client.Document;
+using Raven.Abstractions.Commands;
+using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
+using Raven.Client.Extensions;
 
 #if !NET_3_5
 
-namespace Raven.Client.Client.Async
+namespace Raven.Client.Silverlight.Connection.Async
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Globalization;
-	using System.IO;
-	using System.Linq;
-	using System.Net;
-	using System.Net.Browser;
-	using System.Text;
-	using System.Threading.Tasks;
-	using Newtonsoft.Json;
-	using Newtonsoft.Json.Linq;
-	using Abstractions.Data;
-	using Client;
-	using Document;
-	using Exceptions;
-	using Database;
-	using Database.Data;
-	using Database.Indexing;
-	using Http.Exceptions;
-	using Http.Json;
-	using Extensions;
-	using Silverlight.Client;
-	using Silverlight.Data;
-
-	/// <summary>
+    /// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands

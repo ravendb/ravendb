@@ -9,11 +9,12 @@ using System.Collections.Specialized;
 #endif
 using System.Collections.Generic;
 using System.Net;
-#if !NET_3_5
-#endif
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection;
+#endif
 
 namespace Raven.Client
 {
@@ -35,7 +36,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for this store
 		/// </summary>
-		HttpJsonRequestFactory JsonRequestFactory { get; }
+        HttpJsonRequestFactory JsonRequestFactory { get; }
 
 		/// <summary>
 		/// Occurs when an entity is stored inside any session opened from this instance

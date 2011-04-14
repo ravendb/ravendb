@@ -1,10 +1,10 @@
 using System;
 using System.Net;
-using Newtonsoft.Json.Linq;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Silverlight.Connection
 {
 	///<summary>
 	/// Create the HTTP Json Requests to the RavenDB Server
