@@ -22,7 +22,7 @@ Public Class LinqQueriesUsingVB
 
         Using store As EmbeddableDocumentStore = NewDocumentStore()
 
-            store.DatabaseCommands.PutIndex("test", New IndexDefinition(Of PortalPageSettings)() With
+            store.DatabaseCommands.PutIndex("test", New IndexDefinitionBuilder(Of PortalPageSettings)() With
             { _
                 .Map = Function(pages) From page In pages _
                 From IdxMod In page.Zones("Left").Modules _
@@ -69,7 +69,7 @@ Public Class LinqQueriesUsingVB
 
         Using store As EmbeddableDocumentStore = NewDocumentStore()
 
-            Dim index As New IndexDefinition(Of Object)() With
+            Dim index As New IndexDefinitionBuilder(Of Object)() With
             { _
                 .Map = Function(pages) From page In pages.WhereEntityIs(Of PortalPageSettings)("Ayende", "Rahien") _
                 From IdxMod In page.Zones("Left").Modules _
@@ -87,7 +87,7 @@ Public Class LinqQueriesUsingVB
 
         Using store As EmbeddableDocumentStore = NewDocumentStore()
 
-            Dim index As New IndexDefinition(Of Object)() With
+            Dim index As New IndexDefinitionBuilder(Of Object)() With
             { _
                 .Map = Function(pages) From page In pages.WhereEntityIs(Of PortalPageSettings)("Ayende", "Rahien") _
                 From IdxMod In page.Zones("Left").Modules _
@@ -108,7 +108,7 @@ Public Class LinqQueriesUsingVB
 
         Using store As EmbeddableDocumentStore = NewDocumentStore()
 
-            store.DatabaseCommands.PutIndex("test", New IndexDefinition(Of PortalPageSettings)() With
+            store.DatabaseCommands.PutIndex("test", New IndexDefinitionBuilder(Of PortalPageSettings)() With
             { _
                 .Map = Function(pages) From page In pages _
                                          From PaneName In page.Zones.Keys _

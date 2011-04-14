@@ -118,7 +118,7 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		/// <returns></returns>
-		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef);
+		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef);
 
 		/// <summary>
 		/// Puts the index for the specified name
@@ -135,7 +135,7 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
-		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef, bool overwrite);
+		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite);
 
 		/// <summary>
 		/// Queries the specified index.

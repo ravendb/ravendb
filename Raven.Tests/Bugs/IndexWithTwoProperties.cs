@@ -28,7 +28,7 @@ namespace Raven.Tests.Bugs
 
 				store.DatabaseCommands.PutIndex(
 					"FeedSync/TwoProperties",
-					new IndexDefinition<Foo>
+					new IndexDefinitionBuilder<Foo>
 
 
 					{

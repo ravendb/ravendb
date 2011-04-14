@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
         {
             var documentStore = new EmbeddableDocumentStore { RunInMemory = true };
             documentStore.Initialize();
-            var def = new IndexDefinition<Listing>
+            var def = new IndexDefinitionBuilder<Listing>
             {
                 Map = listings => from listingItem in listings
                                   select new

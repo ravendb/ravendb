@@ -638,7 +638,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		/// <returns></returns>
-		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef)
+		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
 		{
 			return PutIndex(name, indexDef.ToIndexDefinition(convention));
 		}
@@ -653,7 +653,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <param name="indexDef">The index def.</param>
 		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
 		/// <returns></returns>
-		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef, bool overwrite)
+		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
 		{
 			return PutIndex(name, indexDef.ToIndexDefinition(convention), overwrite);
 		}

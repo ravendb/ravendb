@@ -269,7 +269,7 @@ namespace Raven.Tests.Document
 					Layout = new SimpleLayout()
 				});
 			    store.DatabaseCommands.PutIndex("GameEventCountZoneBySpecificCharacter",
-			                                    new IndexDefinition<GameEvent, GameEventCount>
+			                                    new IndexDefinitionBuilder<GameEvent, GameEventCount>
 			                                    {
 			                                        Map = docs =>
 			                                            from doc in docs

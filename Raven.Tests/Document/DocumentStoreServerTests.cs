@@ -83,7 +83,7 @@ namespace Raven.Tests.Document
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
 
-				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinition<Company, Company>
+				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company, Company>
 				{
 					Map = companies => from c in companies
 									   select new { c.Name },
@@ -1058,7 +1058,7 @@ namespace Raven.Tests.Document
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
-				documentStore.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinition<LinqIndexesFromClient.User>
+				documentStore.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinitionBuilder<LinqIndexesFromClient.User>
 				{
 					Map = users => from user in users
 								   where user.Location == "Tel Aviv"
@@ -1092,7 +1092,7 @@ namespace Raven.Tests.Document
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
-				documentStore.DatabaseCommands.PutIndex("UsersCountByLocation", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationCount>
+				documentStore.DatabaseCommands.PutIndex("UsersCountByLocation", new IndexDefinitionBuilder<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationCount>
 				{
 					Map = users => from user in users
 								   where user.Location == "Tel Aviv"
@@ -1131,7 +1131,7 @@ namespace Raven.Tests.Document
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
-				documentStore.DatabaseCommands.PutIndex("AvgAgeByLocation", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge>
+				documentStore.DatabaseCommands.PutIndex("AvgAgeByLocation", new IndexDefinitionBuilder<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge>
 				{
 					Map = users => from user in users
 								   select new { user.Location, user.Age },
@@ -1177,7 +1177,7 @@ namespace Raven.Tests.Document
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
 
-				documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge> {
+				documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinitionBuilder<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge> {
 					Map = users => from user in users
 								   select new { user.Age },
 					Indexes = {{x=>x.Age, FieldIndexing.Analyzed}},

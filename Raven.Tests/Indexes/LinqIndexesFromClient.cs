@@ -26,7 +26,7 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void Convert_select_many_will_keep_doc_id()
         {
-            IndexDefinition indexDefinition = new IndexDefinition<Order>
+            IndexDefinition indexDefinition = new IndexDefinitionBuilder<Order>
             {
                 Map = orders => from order in orders
                                 from line in order.OrderLines
@@ -66,7 +66,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void CanCompileComplexQuery()
 		{
-			var indexDefinition = new IndexDefinition<Person>()
+			var indexDefinition = new IndexDefinitionBuilder<Person>()
 			{
 				Map = people => from person in people
 				                from role in person.Roles
@@ -87,7 +87,7 @@ namespace Raven.Tests.Indexes
 	    [Fact]
 		public void Convert_simple_query()
 		{
-			IndexDefinition generated = new IndexDefinition<User, Named>
+			IndexDefinition generated = new IndexDefinitionBuilder<User, Named>
 			{
 				Map = users => from user in users
 							   where user.Location == "Tel Aviv"
@@ -108,7 +108,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Convert_using_id()
 		{
-			IndexDefinition generated = new IndexDefinition<User, Named>
+			IndexDefinition generated = new IndexDefinitionBuilder<User, Named>
 			{
 				Map = users => from user in users
 							   where user.Location == "Tel Aviv"
@@ -129,7 +129,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Convert_simple_query_with_not_operator_and_nested_braces()
 		{
-			IndexDefinition generated = new IndexDefinition<User, Named>
+			IndexDefinition generated = new IndexDefinitionBuilder<User, Named>
 			{
 				Map = users => from user in users
 				               where !(user.Location == "Te(l) (A)viv")
@@ -151,7 +151,7 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void Convert_map_reduce_query()
         {
-            IndexDefinition generated = new IndexDefinition<User, LocationCount>
+            IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>
             {
                 Map = users => from user in users
                                select new { user.Location, Count = 1 },
@@ -176,7 +176,7 @@ namespace Raven.Tests.Indexes
 #if !NET_3_5        
         public void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
         {
-            IndexDefinition generated = new IndexDefinition<User, LocationCount>
+            IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>
             {
                 Map = mapExpression,
                 Reduce = counts => from agg in counts

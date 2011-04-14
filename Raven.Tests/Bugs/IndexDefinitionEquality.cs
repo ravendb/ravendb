@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void TransformResultsFactoredIntoEqualityCheck()
         {
-            IndexDefinition definitionOne = new IndexDefinition<Blog, Blog>()
+            IndexDefinition definitionOne = new IndexDefinitionBuilder<Blog, Blog>()
             {
                 Map = docs => from doc in docs
                               select new { doc.Property },
@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs
                                                           }
             }.ToIndexDefinition(new Client.Document.DocumentConvention());
 
-            IndexDefinition definitionTwo = new IndexDefinition<Blog, Blog>()
+            IndexDefinition definitionTwo = new IndexDefinitionBuilder<Blog, Blog>()
             {
                 Map = docs => from doc in docs
                               select new { doc.Property }

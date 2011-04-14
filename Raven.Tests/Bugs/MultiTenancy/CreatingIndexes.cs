@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
             }.Initialize())
             {
                 store.DatabaseCommands.PutIndex("TestIndex",
-                                                new IndexDefinition<Test, Test>
+                                                new IndexDefinitionBuilder<Test, Test>
                                                 {
                                                     Map = movies => from movie in movies
                                                                     select new {movie.Name}

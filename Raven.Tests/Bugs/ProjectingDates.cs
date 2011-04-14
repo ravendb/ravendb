@@ -20,7 +20,7 @@ namespace Raven.Tests.Bugs
 			using(var store = NewDocumentStore())
 			{
 				store.DatabaseCommands.PutIndex("Regs",
-												new IndexDefinition<Registration, Registration>
+												new IndexDefinitionBuilder<Registration, Registration>
 				                                {
 				                                	Map = regs => from reg in regs
 																  select new { reg.RegisteredAt },

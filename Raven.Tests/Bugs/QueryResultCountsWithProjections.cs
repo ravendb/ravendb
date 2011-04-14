@@ -109,7 +109,7 @@ namespace Raven.Tests.Bugs
         private void PopulateDatastore()
         {
             store.DatabaseCommands.PutIndex("SelectManyIndexWithNoTransformer",
-                new IndexDefinition<Blog,BlogProjection>()
+                new IndexDefinitionBuilder<Blog,BlogProjection>()
                 {
                     Map = docs => from doc in docs
                                   from tag in doc.Tags
@@ -122,7 +122,7 @@ namespace Raven.Tests.Bugs
                 }.ToIndexDefinition(store.Conventions));
 
              store.DatabaseCommands.PutIndex("SelectManyIndexWithTransformer",
-               new IndexDefinition<Blog, Blog>()
+               new IndexDefinitionBuilder<Blog, Blog>()
                {
                    Map = docs => from doc in docs
                                  from tag in doc.Tags

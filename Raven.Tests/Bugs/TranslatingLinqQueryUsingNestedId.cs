@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void Id_on_member_should_not_be_converted_to_document_id()
         {
-            var generated = new IndexDefinition<SubCategory>
+            var generated = new IndexDefinitionBuilder<SubCategory>
             {
                 Map = subs => from subCategory in subs
                               select new

@@ -112,7 +112,7 @@ namespace Raven.Tests.Bugs
 
             public override IndexDefinition CreateIndexDefinition()
             {
-                return new IndexDefinition<Children, ChildrenMapResult>
+                return new IndexDefinitionBuilder<Children, ChildrenMapResult>
                 {
                     Map = children => from child in children
                                       select new

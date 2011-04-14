@@ -235,7 +235,7 @@ namespace Raven.Client.Embedded
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		/// <returns></returns>
-		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef)
+		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
 		{
 			return PutIndex(name, indexDef.ToIndexDefinition(convention));
 		}
@@ -248,7 +248,7 @@ namespace Raven.Client.Embedded
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
-		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef, bool overwrite)
+		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
 		{
 			return PutIndex(name, indexDef.ToIndexDefinition(convention), overwrite);
 		}

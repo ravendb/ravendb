@@ -126,7 +126,7 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public override IndexDefinition CreateIndexDefinition()
 		{
-            return new IndexDefinition<TDocument, TReduceResult>
+            return new IndexDefinitionBuilder<TDocument, TReduceResult>
 			{
 				Indexes = Indexes,
 				SortOptions = SortOptions,

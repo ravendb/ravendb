@@ -134,7 +134,7 @@
     <Compile Include="Indexes\ExpressionStringBuilder.cs" />
     <Compile Include="Indexes\IClientSideDatabase.cs" />
     <Compile Include="Indexes\IndexCreation.cs" />
-    <Compile Include="Indexes\IndexDefinition.cs" />
+    <Compile Include="Indexes\IndexDefinitionBuilder.cs" />
     <Compile Include="Indexes\IndexDefinitionHelper.cs" />
     <Compile Include="Indexes\RavenCollections.cs" />
     <Compile Include="Indexes\RavenDocumentsByEntityName.cs" />

@@ -60,7 +60,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = base.NewDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("matryoshka", new IndexDefinition<Outer, Outer>()
+                store.DatabaseCommands.PutIndex("matryoshka", new IndexDefinitionBuilder<Outer, Outer>()
                     {
                         Map = docs => from doc in docs
                                       select new { doc.middle.inner.ID},

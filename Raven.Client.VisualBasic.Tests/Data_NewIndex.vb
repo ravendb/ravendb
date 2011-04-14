@@ -13,7 +13,7 @@ Public Class Data_NewIndex
     Inherits AbstractIndexCreationTask
 
     Public Overrides Function CreateIndexDefinition() As IndexDefinition
-		Return (New IndexDefinition(Of TestClass)() With { _
+		Return (New IndexDefinitionBuilder(Of TestClass)() With { _
 				.Map = Function(items) From item In items.WhereEntityIs(Of TestClass)("TestClass", "TestClass2") _
 									   Select New With {item.ResourceKey}
 		}.ToIndexDefinition(Conventions))

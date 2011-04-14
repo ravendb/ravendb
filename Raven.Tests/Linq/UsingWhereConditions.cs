@@ -48,7 +48,7 @@ namespace Raven.Tests.Linq
 
                     db.DatabaseCommands.DeleteIndex(indexName);
                     var result = db.DatabaseCommands.PutIndex<CommitInfo, CommitInfo>(indexName,
-                            new IndexDefinition<CommitInfo, CommitInfo>()
+                            new IndexDefinitionBuilder<CommitInfo, CommitInfo>()
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Revision},

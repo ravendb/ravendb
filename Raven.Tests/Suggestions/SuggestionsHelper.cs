@@ -26,7 +26,7 @@ namespace Raven.Tests.Suggestions
 
         public static IndexDefinition GetIndex(DocumentStore doc)
         {
-            return new IndexDefinition<Person>()
+            return new IndexDefinitionBuilder<Person>()
                        {
                            Map = persons => from p in persons select new {p.Name}
                        }.ToIndexDefinition(doc.Conventions);

@@ -20,7 +20,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore())
             {
-            	var indexDefinition = new IndexDefinition<Shipment, Shipment>()
+            	var indexDefinition = new IndexDefinitionBuilder<Shipment, Shipment>()
             	                      	{
             	                      		Map = docs => from doc in docs
             	                      		              select new
@@ -70,7 +70,7 @@ namespace Raven.Tests.Bugs
 
                 store.DatabaseCommands.PutIndex(
                     "AmazingIndex",
-                    new IndexDefinition<Shipment, Shipment>()
+                    new IndexDefinitionBuilder<Shipment, Shipment>()
                     {
                         Map = docs => from doc in docs
                                       select new
@@ -116,7 +116,7 @@ namespace Raven.Tests.Bugs
 
                 store.DatabaseCommands.PutIndex(
                     "AmazingIndex",
-                    new IndexDefinition<Shipment>()
+                    new IndexDefinitionBuilder<Shipment>()
                     {
                         Map = docs => from doc in docs
                                       select new

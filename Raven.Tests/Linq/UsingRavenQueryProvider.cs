@@ -40,7 +40,7 @@ namespace Raven.Tests.Linq
 
                     db.DatabaseCommands.DeleteIndex(indexName);
                     db.DatabaseCommands.PutIndex<User, User>(indexName,
-                            new IndexDefinition<User, User>()
+                            new IndexDefinitionBuilder<User, User>()
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age },
@@ -92,7 +92,7 @@ namespace Raven.Tests.Linq
 
                     db.DatabaseCommands.DeleteIndex(indexName);
                     var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
-                            new IndexDefinition<User, User>()
+                            new IndexDefinitionBuilder<User, User>()
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age },
@@ -132,7 +132,7 @@ namespace Raven.Tests.Linq
 
                     db.DatabaseCommands.DeleteIndex(indexName);
                     var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
-                            new IndexDefinition<User, User>()
+                            new IndexDefinitionBuilder<User, User>()
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age },
@@ -177,7 +177,7 @@ namespace Raven.Tests.Linq
 
                     db.DatabaseCommands.DeleteIndex(indexName);
                     var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
-                            new IndexDefinition<User, User>() {
+                            new IndexDefinitionBuilder<User, User>() {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age, doc.Info, doc.Active },
                                 Indexes = {{x=>x.Name, FieldIndexing.Analyzed}}
@@ -219,7 +219,7 @@ namespace Raven.Tests.Linq
 
                     db.DatabaseCommands.DeleteIndex(indexName);
                     var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
-                            new IndexDefinition<User, User>() {
+                            new IndexDefinitionBuilder<User, User>() {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Created },
                             }, true);
@@ -280,7 +280,7 @@ namespace Raven.Tests.Linq
 
 					db.DatabaseCommands.DeleteIndex(indexName);
 					db.DatabaseCommands.PutIndex<User, User>(indexName,
-							new IndexDefinition<User, User>()
+							new IndexDefinitionBuilder<User, User>()
 							{
 								Map = docs => from doc in docs select new { doc.Name, doc.Age },
 							}, true);

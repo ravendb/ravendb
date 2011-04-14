@@ -58,7 +58,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void LinqQueryWithStaticCallOnEnumerableIsTranslatedToExtensionMethod()
 		{
-			var indexDefinition = new IndexDefinition<Page>
+			var indexDefinition = new IndexDefinitionBuilder<Page>
 			{
 				Map = pages => from p in pages
 							   from coAuthor in Enumerable.DefaultIfEmpty(p.CoAuthors)
@@ -78,7 +78,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void LinqQueryWithStaticCallOnEnumerableIsCanBeCompiledAndRun()
 		{
-			var indexDefinition = new IndexDefinition<Page>
+			var indexDefinition = new IndexDefinitionBuilder<Page>
 			{
 				Map = pages => from p in pages
 							   from coAuthor in p.CoAuthors.DefaultIfEmpty()

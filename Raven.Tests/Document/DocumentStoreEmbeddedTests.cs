@@ -236,7 +236,7 @@ namespace Raven.Tests.Document
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinition<Company>
+				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company>
 				{
 					Map = companies => from c in companies
 					                   select new {c.Name}
@@ -265,7 +265,7 @@ namespace Raven.Tests.Document
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinition<Company, Company>
+				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company, Company>
 				{
 					Map = companies => from c in companies
 					                   select new {c.Name},
@@ -723,7 +723,7 @@ namespace Raven.Tests.Document
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinition<LinqIndexesFromClient.User>
+				store.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinitionBuilder<LinqIndexesFromClient.User>
 				{
 					Map = users => from user in users
 								   where user.Location == "Tel Aviv"

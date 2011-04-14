@@ -43,7 +43,7 @@ namespace Raven.Tests.Indexes
         {
             using (var store = NewDocumentStore())
             {
-                var indexDefinition = new IndexDefinition<Entity, EntityCount>()
+                var indexDefinition = new IndexDefinitionBuilder<Entity, EntityCount>()
                 {
                     Map = docs => docs.Select(doc => new { Name = doc.Name, NormalizedName = doc.Name, Count = 1 }),
                     Reduce = docs => from doc in docs

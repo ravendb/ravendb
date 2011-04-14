@@ -7,20 +7,17 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
 
-// We explicitly rename the namespace to match the one that we are using in Raven.Abstractions
-// ReSharper disable CheckNamespace
-namespace Raven.Abstractions.Indexing
-// ReSharper restore CheckNamespace
+namespace Raven.Client.Indexes
 {
 	/// <summary>
 	/// This class attempts to provide a strongly typed index definition on the client.
 	/// It is here solely as a convenience, and it is _expected_ to fail in some scenarios.
 	/// The recommended way is to define indexes outside your code, using the Web UI.
 	/// </summary>
-	public class IndexDefinition<TDocument, TReduceResult> 
+	public class IndexDefinitionBuilder<TDocument, TReduceResult> 
 	{
 		/// <summary>
 		/// Gets or sets the map function
@@ -60,9 +57,9 @@ namespace Raven.Abstractions.Indexing
         public IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers { get; set; }
 
 	    /// <summary>
-		/// Initializes a new instance of the <see cref="IndexDefinition&lt;TDocument, TReduceResult&gt;"/> class.
+		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
-		public IndexDefinition()
+		public IndexDefinitionBuilder()
 		{
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
@@ -144,5 +141,5 @@ namespace Raven.Abstractions.Indexing
 	/// It is here solely as a convenience, and it is _expected_ to fail in some scenarios.
 	/// The recommended way is to define indexes outside your code, using the Web UI.
 	/// </summary>
-	public class IndexDefinition<TDocument> : IndexDefinition<TDocument, object> { }
+	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, object> { }
 }

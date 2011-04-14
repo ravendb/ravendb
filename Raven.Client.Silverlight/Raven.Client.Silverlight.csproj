@@ -129,6 +129,9 @@
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
       <Link>Imports\IDocumentQueryListener.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs">
+      <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenCollections.cs">
       <Link>Imports\Indexes\RavenCollections.cs</Link>
     </Compile>
@@ -502,9 +505,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexCreation.cs">
       <Link>Imports\Indexes\IndexCreation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinition.cs">
-      <Link>Imports\Indexes\IndexDefinition.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\SpatialIndex.cs">
       <Link>Imports\Indexes\SpatialIndex.cs</Link>
