@@ -57,7 +57,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
                     coltyp = JET_coltyp.DateTime,
                     grbit = ColumndefGrbit.ColumnFixed
                 }, null, 0, out columnid);
-                const string indexDef = "+view\0+etag\0\0";
+                const string indexDef = "+view\0-etag\0\0";
                 Api.JetCreateIndex(session, tbl, "by_view_and_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
                                    100);
 

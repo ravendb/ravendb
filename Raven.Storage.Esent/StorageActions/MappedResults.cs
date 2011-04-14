@@ -111,8 +111,7 @@ namespace Raven.Storage.Esent.StorageActions
 	    {
             Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
             Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            Api.MakeKey(session, MappedResults, lastReducedEtag.TransformToValueForEsentSorting(), MakeKeyGrbit.None);
-            if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGT) == false)
+            if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
                 yield break;
 
 	        while (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]) == indexName)
@@ -123,6 +122,11 @@ namespace Raven.Storage.Esent.StorageActions
                     Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
                     Timestamp = Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value,
                 };
+
+                // the index is view ascending and etag descending
+                // that means that we are going backward to go up
+                if (Api.TryMovePrevious(session, MappedResults) == false)
+                    yield break;
 	        }
 	    }
 	}

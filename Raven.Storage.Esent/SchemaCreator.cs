@@ -425,7 +425,7 @@ namespace Raven.Storage.Esent
 			Api.JetCreateIndex(session, tableid, "by_view", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
 			                   100);
 
-            indexDef = "+view\0+etag\0\0";
+            indexDef = "+view\0-etag\0\0";
             Api.JetCreateIndex(session, tableid, "by_view_and_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
                                100);
 
