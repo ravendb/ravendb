@@ -42,8 +42,8 @@ namespace Raven.Storage.Managed
                 if (cutOff.Value >= lastIndexedTime)
                     return true;
                 
-                var lastReducedTime = readResult.Key.Value<DateTime>("lastReducedTimestamp");
-                if (cutOff.Value >= lastReducedTime)
+                var lastReducedTime = readResult.Key.Value<DateTime?>("lastReducedTimestamp");
+                if(lastReducedTime != null && cutOff.Value >= lastReducedTime.Value)
                     return true;
             }
 

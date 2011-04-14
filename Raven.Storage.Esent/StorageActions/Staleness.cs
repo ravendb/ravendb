@@ -27,10 +27,7 @@ namespace Raven.Storage.Esent.StorageActions
 
             Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
             Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
-            {
-                throw new InvalidOperationException("Could not find reduce index entry for index, this indicate some problem in the index data, please contact support");
-            }
+            var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 
             if (IsStaleByEtag(name))
             {
@@ -47,7 +44,7 @@ namespace Raven.Storage.Esent.StorageActions
                        Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
                                                     tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"])
                            .Value;
-                    if (cutOff.Value >= lastIndexedTimestamp)
+                    if (hasReduce && cutOff.Value >= lastIndexedTimestamp)
                         return true;
                 }
                 else
