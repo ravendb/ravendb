@@ -6,7 +6,6 @@
 using System;
 using System.IO;
 using System.Reflection;
-using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Database.Extensions;

@@ -1,5 +1,5 @@
+using Raven.Client.Connection;
 using Raven.Json.Linq;
-using Raven.Client.Client;
 using Xunit;
 
 namespace Raven.Tests.Bugs

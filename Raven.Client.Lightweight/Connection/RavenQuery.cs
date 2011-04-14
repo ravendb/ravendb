@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Text;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Connection
 {
 	/// <summary>
 	/// Helper class that provide a way to escape query terms

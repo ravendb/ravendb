@@ -1,6 +1,6 @@
 ﻿using System.Collections.Specialized;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Connection
 {
 	internal class CachedRequest
 	{

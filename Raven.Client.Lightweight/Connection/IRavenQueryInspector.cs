@@ -3,14 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Collections.Generic;
+using Raven.Client.Connection.Async;
 #if !NET_3_5
-using Raven.Client.Client.Async;
 #endif
-using Raven.Client.Document;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Connection
 {
 
 	/// <summary>

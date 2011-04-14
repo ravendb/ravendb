@@ -4,7 +4,6 @@ using Raven.Abstractions.Linq;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client;
-using Raven.Client.Client;
 using Raven.Database.Linq;
 using Xunit;
 

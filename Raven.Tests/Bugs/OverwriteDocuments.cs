@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Exceptions;
-using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;

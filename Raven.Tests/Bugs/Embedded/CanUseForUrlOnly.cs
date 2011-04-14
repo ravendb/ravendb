@@ -1,4 +1,3 @@
-using Raven.Client.Client;
 using Raven.Client.Embedded;
 using Xunit;
 

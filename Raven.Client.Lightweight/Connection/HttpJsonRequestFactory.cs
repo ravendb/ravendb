@@ -3,11 +3,10 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Threading;
 using FromMono.System.Runtime.Caching;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Connection
 {
 	///<summary>
 	/// Create the HTTP Json Requests to the RavenDB Server

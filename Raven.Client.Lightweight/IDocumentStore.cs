@@ -9,10 +9,10 @@ using System.Collections.Specialized;
 #endif
 using System.Collections.Generic;
 using System.Net;
-using Raven.Client.Client;
 #if !NET_3_5
-using Raven.Client.Client.Async;
 #endif
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 
 namespace Raven.Client

@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 #if !NET_3_5
 
-using Raven.Client.Client.Async;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Client
 {

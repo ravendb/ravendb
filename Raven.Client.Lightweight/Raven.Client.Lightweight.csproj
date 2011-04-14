@@ -66,21 +66,22 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Client\Async\AsyncServerClient.cs" />
-    <Compile Include="Client\Async\IAsyncDatabaseCommands.cs" />
-    <Compile Include="Client\CachedRequest.cs" />
-    <Compile Include="Client\HttpJsonRequest.cs" />
-    <Compile Include="Client\HttpJsonRequestFactory.cs" />
-    <Compile Include="Client\IDatabaseCommands.cs" />
-    <Compile Include="Client\JsonExtensions.cs" />
-    <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />
-    <Compile Include="Client\RavenQuery.cs" />
-    <Compile Include="Client\RavenTransactionAccessor.cs" />
-    <Compile Include="Client\ReplicationInformer.cs" />
-    <Compile Include="Client\SerializationHelper.cs" />
-    <Compile Include="Client\ServerClient.cs" />
-    <Compile Include="Client\WebRequestEventArgs.cs" />
-    <Compile Include="Client\WebResponseExtensions.cs" />
+    <Compile Include="Connection\Async\AsyncServerClient.cs" />
+    <Compile Include="Connection\Async\IAsyncDatabaseCommands.cs" />
+    <Compile Include="Connection\CachedRequest.cs" />
+    <Compile Include="Connection\HttpJsonRequest.cs" />
+    <Compile Include="Connection\HttpJsonRequestFactory.cs" />
+    <Compile Include="Connection\IDatabaseCommands.cs" />
+    <Compile Include="Connection\IRavenQueryInspector.cs" />
+    <Compile Include="Connection\JsonExtensions.cs" />
+    <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
+    <Compile Include="Connection\RavenQuery.cs" />
+    <Compile Include="Connection\RavenTransactionAccessor.cs" />
+    <Compile Include="Connection\ReplicationInformer.cs" />
+    <Compile Include="Connection\SerializationHelper.cs" />
+    <Compile Include="Connection\ServerClient.cs" />
+    <Compile Include="Connection\WebRequestEventArgs.cs" />
+    <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Converters\GuidConverter.cs" />
     <Compile Include="Converters\Int32Converter.cs" />
     <Compile Include="Converters\Int64Converter.cs" />
@@ -146,7 +147,6 @@
     <Compile Include="Linq\ExpressionInfo.cs" />
     <Compile Include="Linq\IDocumentQueryGenerator.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />
-    <Compile Include="Client\IRavenQueryInspector.cs" />
     <Compile Include="Linq\IRavenQueryProvider.cs" />
     <Compile Include="Linq\LinqExtensions.cs" />
     <Compile Include="Linq\LinqExtensions_Obsolete.cs" />

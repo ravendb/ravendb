@@ -10,14 +10,15 @@ using System.Transactions;
 #endif
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Client;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
 {
 #if !NET_3_5
 	using System.Threading.Tasks;
-	using Client.Async;
+
 #endif
 
     ///<summary>

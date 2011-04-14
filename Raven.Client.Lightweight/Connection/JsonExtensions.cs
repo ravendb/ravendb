@@ -7,7 +7,7 @@ using System;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Connection
 {
 	/// <summary>
 	/// Extension to json objects

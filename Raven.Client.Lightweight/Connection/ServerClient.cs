@@ -21,13 +21,12 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Connection
 {
 	/// <summary>
 	/// Access the RavenDB operations using HTTP

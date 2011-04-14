@@ -11,7 +11,6 @@ using log4net.Appender;
 using log4net.Config;
 using log4net.Layout;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;

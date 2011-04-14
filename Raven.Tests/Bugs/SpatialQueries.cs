@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
-using Raven.Client.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;

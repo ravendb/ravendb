@@ -4,10 +4,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Client.Client;
 #if !NET_3_5
-using Raven.Client.Client.Async;
 #endif
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
 
 namespace Raven.Client

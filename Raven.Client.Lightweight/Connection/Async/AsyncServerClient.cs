@@ -15,7 +15,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -27,7 +26,7 @@ using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Client.Async
+namespace Raven.Client.Connection.Async
 {
 	/// <summary>
 	/// Access the database commands in async fashion

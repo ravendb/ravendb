@@ -16,10 +16,10 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
-using Raven.Client.Client.Async;
 #endif
 using Raven.Abstractions.Data;
-using Raven.Client.Client;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Json.Linq;

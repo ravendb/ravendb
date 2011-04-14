@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
 using Raven.Database.Server;

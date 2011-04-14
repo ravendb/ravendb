@@ -2,8 +2,8 @@
 
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Client;
-using Raven.Client.Client.Async;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Document
 {

@@ -6,13 +6,12 @@
 #if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Transactions;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Connection
 {
 	/// <summary>
 	/// Provide access to the current transaction 

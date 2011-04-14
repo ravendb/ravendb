@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Linq;
-using Raven.Client.Client;
 using Raven.Client.Embedded;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;

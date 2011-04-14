@@ -8,10 +8,9 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
 using System.Text.RegularExpressions;
-using Raven.Client.Client;
-
 #if !NET_3_5
-using Raven.Client.Client.Async;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document.Async;
 #endif
 using System.Linq;

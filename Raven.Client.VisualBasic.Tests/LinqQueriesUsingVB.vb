@@ -1,5 +1,4 @@
 ﻿Imports Raven.Client.Embedded
-Imports Raven.Client.Client
 Imports Raven.Client.Indexes
 Imports Raven.Tests
 Imports Xunit

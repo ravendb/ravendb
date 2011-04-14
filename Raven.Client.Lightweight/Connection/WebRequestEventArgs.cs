@@ -6,7 +6,7 @@
 using System;
 using System.Net;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Connection
 {
 	/// <summary>
 	/// Event arguments for the event of creating a <see cref="WebRequest"/>

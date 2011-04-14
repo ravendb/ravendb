@@ -14,7 +14,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
-using Raven.Client.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Database.Data;

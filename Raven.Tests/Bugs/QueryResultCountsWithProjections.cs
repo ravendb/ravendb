@@ -14,7 +14,6 @@ using Raven.Database;
 using Raven.Database.Indexing;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
-using Raven.Client.Client;
 using Raven.Client.Linq;
 using System.Threading;
 

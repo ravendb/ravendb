@@ -12,7 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
-using Raven.Client.Client;
+using Raven.Client.Connection;
 
 namespace Raven.Client.Linq
 {

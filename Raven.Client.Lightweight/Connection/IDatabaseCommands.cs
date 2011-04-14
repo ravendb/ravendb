@@ -14,7 +14,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Connection
 {
 	///<summary>
 	/// Expose the set of operations by the RavenDB server

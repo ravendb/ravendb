@@ -14,7 +14,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Client.Async
+namespace Raven.Client.Connection.Async
 {
 	/// <summary>
 	/// An async database command operations

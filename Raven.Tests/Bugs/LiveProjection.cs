@@ -9,7 +9,6 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;

@@ -12,7 +12,7 @@ using System.Text;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Connection
 {
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server
