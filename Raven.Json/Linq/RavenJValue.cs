@@ -479,5 +479,10 @@ namespace Raven.Json.Linq
 			
 			return _value.ToString();
 		}
+
+	    public static RavenJValue Null
+	    {
+	        get { return new RavenJValue(null, JTokenType.Null); }
+	    }
     }
 }

@@ -140,11 +140,11 @@ namespace Raven.Storage.Managed
 				{"lastEtag", Guid.Empty.ToByteArray()},
                 {"lastTimestamp", DateTime.MinValue},
                 
-                {"reduce_attempts", createMapReduce? 0 : (RavenJToken)null},
-                {"reduce_successes",createMapReduce? 0 : (RavenJToken)null},
-                {"reduce_failures", createMapReduce? 0 : (RavenJToken)null},
-                {"lastReducedEtag", createMapReduce? Guid.Empty.ToByteArray() : null},
-                {"lastReducedTimestamp", createMapReduce? DateTime.MinValue : (RavenJToken)null}
+                {"reduce_attempts", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
+                {"reduce_successes",createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
+                {"reduce_failures", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
+                {"lastReducedEtag", createMapReduce? Guid.Empty.ToByteArray() : (RavenJToken)RavenJValue.Null},
+                {"lastReducedTimestamp", createMapReduce? DateTime.MinValue : (RavenJToken)RavenJValue.Null}
             });
         }
 
