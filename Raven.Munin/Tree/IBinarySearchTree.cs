@@ -32,6 +32,8 @@ namespace Raven.Munin.Tree
         IEnumerable<KeyValuePair<TKey, TValue>> Pairs { get; }
         IBinarySearchTree<TKey, TValue> Search(TKey key);
         IEnumerable<TValue> GreaterThan(TKey gtKey);
+        IEnumerable<TValue> LessThan(TKey ltKey);
+        IEnumerable<TValue> LessThanOrEqual(TKey ltKey);
         IEnumerable<TValue> GreaterThanOrEqual(TKey gteKey);
         IBinarySearchTree<TKey, TValue> Add(TKey key, TValue value);
         IBinarySearchTree<TKey, TValue> AddOrUpdate(TKey key, TValue value, Func<TKey, TValue, TValue> updateValueFactory);

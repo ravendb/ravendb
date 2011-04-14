@@ -33,4 +33,19 @@ namespace Raven.Munin
             return CompareTo((ComparableByteArray) obj);
         }
     }
+
+    public class ReverseComparable : IComparable<ReverseComparable>
+    {
+        private readonly IComparable inner;
+
+        public ReverseComparable(IComparable inner)
+        {
+            this.inner = inner;
+        }
+
+        public int CompareTo(ReverseComparable other)
+        {
+            return inner.CompareTo(other.inner)*-1;
+        }
+    }
 }

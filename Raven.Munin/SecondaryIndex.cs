@@ -94,6 +94,14 @@ namespace Raven.Munin
                     Index.GreaterThan(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInOrder));
         }
 
+        public IEnumerable<RavenJToken> SkipBefore(RavenJToken key)
+        {
+            return
+                persistentSource.Read(
+                    () =>
+                    Index.LessThan(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInReverseOrder));
+        }
+
 		public IEnumerable<RavenJToken> SkipTo(RavenJToken key)
         {
             return
