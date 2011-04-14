@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Web;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Http;

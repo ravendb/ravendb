@@ -4,9 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
-using Raven.Database.Data;
 using Raven.Json.Linq;
 using Xunit;
 

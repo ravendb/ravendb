@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Abstractions.Extensions;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database;
 using Raven.Database.Json;

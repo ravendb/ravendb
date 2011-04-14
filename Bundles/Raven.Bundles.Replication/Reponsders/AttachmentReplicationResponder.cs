@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using log4net;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Data;
 using Raven.Database.Data;
 using Raven.Database.Server.Responders;

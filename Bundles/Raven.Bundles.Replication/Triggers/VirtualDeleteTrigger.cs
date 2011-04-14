@@ -6,6 +6,7 @@
 using System.ComponentModel.Composition;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Http;

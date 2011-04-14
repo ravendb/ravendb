@@ -14,6 +14,8 @@ using System.Threading.Tasks;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Impl;

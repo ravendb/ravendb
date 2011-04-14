@@ -3,11 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Threading;
-using Raven.Client.Linq;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Expiration

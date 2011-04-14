@@ -4,13 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Bundles.Versioning.Data;
-using Raven.Database;
 using Raven.Database.Plugins;
 using System.Linq;
-using Raven.Database.Json;
-using Raven.Http;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Versioning.Triggers
