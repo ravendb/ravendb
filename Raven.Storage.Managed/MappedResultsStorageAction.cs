@@ -86,11 +86,11 @@ namespace Raven.Storage.Managed
             }
         }
 
-        public IEnumerable<string> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag)
+        public IEnumerable<Tuple<string, Guid>> GetMappedResultsReduceKeysAndEtagsAfter(string indexName, Guid lastReducedEtag)
         {
             return storage.MappedResults["ByViewAndEtag"].SkipTo(new RavenJObject { { "view", indexName }, {"etag", lastReducedEtag.ToByteArray()}})
                 .TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), indexName))
-                .Select(key => key.Value<string>("reduceKey"));
+                .Select(key => Tuple.Create(key.Value<string>("reduceKey"), new Guid(key.Value<byte[]>("etag"))));
         }
     }
 }

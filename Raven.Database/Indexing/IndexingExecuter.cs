@@ -22,7 +22,29 @@ namespace Raven.Database.Indexing
         {
         }
 
-        protected override void ExecuteIndexingInternal(IEnumerable<IndexToWorkOn> indexesToWorkOn, Action<JsonDocument[]> indexingOp)
+        protected override void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
+        {
+            ExecuteIndexingInternal(indexesToWorkOn, documents => Parallel.ForEach(indexesToWorkOn, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
+                TaskScheduler = scheduler
+            }, indexToWorkOn => transactionalStorage.Batch(actions => IndexDocuments(actions, indexToWorkOn.IndexName, documents))));
+        }
+
+        protected override void ExecuteIndexingWorkOnSingleThread(IEnumerable<IndexToWorkOn> indexesToWorkOn)
+        {
+            ExecuteIndexingInternal(indexesToWorkOn, jsonDocs =>
+            {
+                foreach (var indexToWorkOn in indexesToWorkOn)
+                {
+                    var copy = indexToWorkOn;
+                    transactionalStorage.Batch(
+                        actions => IndexDocuments(actions, copy.IndexName, jsonDocs));
+                }
+            });
+        }
+
+        private void ExecuteIndexingInternal(IEnumerable<IndexToWorkOn> indexesToWorkOn, Action<JsonDocument[]> indexingOp)
 		{
 			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
 
@@ -75,7 +97,7 @@ namespace Raven.Database.Indexing
         }
 
 
-        protected override void IndexDocuments(IStorageActionsAccessor actions, string index, JsonDocument[] jsonDocs)
+        private void IndexDocuments(IStorageActionsAccessor actions, string index, JsonDocument[] jsonDocs)
 		{
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
 			if (viewGenerator == null)

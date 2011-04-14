@@ -122,7 +122,7 @@ namespace Raven.Storage.Managed
                     LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
                     LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
                     LastReducedEtag = new Guid(readResult.Key.Value<byte[]>("lastReducedEtag")),
-                    LastReducedTimestamp = readResult.Key.Value<DateTime>("lastReducedTimestamp")
+                    
                 };
             }
         }
@@ -149,10 +149,6 @@ namespace Raven.Storage.Managed
             {
                 jObject["lastReducedEtag"] = Guid.Empty.ToByteArray();
             }
-            if(!jObject.ContainsKey("lastReducedTimestamp"))
-            {
-                jObject["lastReducedTimestamp"] = DateTime.MinValue;
-            }
     	}
 
     	public void AddIndex(string name)
@@ -173,7 +169,7 @@ namespace Raven.Storage.Managed
                 {"lastEtag", Guid.Empty.ToByteArray()},
                 {"lastTimestamp", DateTime.MinValue},
                 {"lastReducedEtag", Guid.Empty.ToByteArray()},
-                {"lastReducedTimestamp", DateTime.MinValue}
+                
             });
         }
 
@@ -214,7 +210,7 @@ namespace Raven.Storage.Managed
             storage.IndexingStats.UpdateKey(ravenJObject);
         }
 
-        public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
+        public void UpdateLastReduced(string index, Guid etag)
         {
             var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", index } });
             if (readResult == null)
@@ -222,8 +218,7 @@ namespace Raven.Storage.Managed
 
             var ravenJObject = (RavenJObject)readResult.Key;
             ravenJObject["lastReducedEtag"] = etag.ToByteArray();
-            ravenJObject["lastReducedTimestamp"] = timestamp;
-
+            
             storage.IndexingStats.UpdateKey(ravenJObject);
         }
     }

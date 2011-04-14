@@ -168,13 +168,6 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
-
-			Api.JetAddColumn(session, tableid, "last_reduced_timestamp", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.DateTime,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-			}, null, 0, out columnid);
-
 			const string indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
 							   100);
