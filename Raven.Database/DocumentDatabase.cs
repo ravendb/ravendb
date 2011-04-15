@@ -344,6 +344,8 @@ namespace Raven.Database
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
 				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "key");
 
+            log.DebugFormat("Putting a document with key: {0} and etag {1}", key, etag);
+
 			if (string.IsNullOrEmpty(key))
 			{
 				// we no longer sort by the key, so it doesn't matter
@@ -465,6 +467,7 @@ namespace Raven.Database
 
 		public void Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
+            log.DebugFormat("Delete a document with key: {0} and etag {1}", key, etag);
 			TransactionalStorage.Batch(actions =>
 			{
 				if (transactionInformation == null)
