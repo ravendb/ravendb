@@ -16,6 +16,6 @@ namespace Raven.Database.Storage
 
         Tuple<DateTime, Guid> IndexLastUpdatedAt(string name);
         Guid GetMostRecentDocumentEtag();
-        Guid GetMostRecentReducedEtag(string name);
+        Guid? GetMostRecentReducedEtag(string name);
     }
 }

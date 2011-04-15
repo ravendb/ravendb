@@ -70,7 +70,11 @@ namespace Raven.Storage.Managed
             if (lastReducedEtag == null)
                 return false;
 
-            return CompareArrays(lastReducedEtag, GetMostRecentReducedEtag(name).ToByteArray()) > 0;
+            var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
+            if (mostRecentReducedEtag == null)
+                return false;
+
+            return CompareArrays(lastReducedEtag, mostRecentReducedEtag.Value.ToByteArray()) > 0;
    
         }
 
@@ -119,22 +123,22 @@ namespace Raven.Storage.Managed
             return Guid.Empty;
         }
 
-        public Guid GetMostRecentReducedEtag(string name)
+        public Guid? GetMostRecentReducedEtag(string name)
         {
             var enumerable = storage.MappedResults["ByViewAndEtag"].SkipToAndThenBack(new RavenJObject{{"view", name}}).GetEnumerator();
             if(enumerable.MoveNext() == false)
-                return Guid.Empty;
+                return null;
             // did we find the last item on the view?
             if (enumerable.Current.Value<string>("view") == name)
                 return new Guid(enumerable.Current.Value<byte[]>("etag"));
 
             // maybe we are at another view?
             if (enumerable.MoveNext() == false)
-                return Guid.Empty;
+                return null;
 
             //could't find the name in the table 
             if (enumerable.Current.Value<string>("view") != name)
-                return Guid.Empty;
+                return null;
 
             return new Guid(enumerable.Current.Value<byte[]>("etag"));
         }
@@ -155,7 +159,10 @@ namespace Raven.Storage.Managed
             if (lastReducedEtag == null)
                 return false;
 
-            return CompareArrays(lastReducedEtag, GetMostRecentReducedEtag(name).ToByteArray()) > 0;
+            var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
+            if (mostRecentReducedEtag == null)
+                return false;
+            return CompareArrays(lastReducedEtag, mostRecentReducedEtag.Value.ToByteArray()) > 0;
         }
 
 

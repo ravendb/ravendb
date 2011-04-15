@@ -75,7 +75,10 @@ namespace Raven.Storage.Esent.StorageActions
 
             var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
 
-            return CompareArrays(lastReducedEtag, GetMostRecentReducedEtag(name).ToByteArray()) > 0;
+            var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
+            if (mostRecentReducedEtag == null)
+                return false;
+            return CompareArrays(lastReducedEtag, mostRecentReducedEtag.Value.ToByteArray()) > 0;
         }
 
         public bool IsMapStale(string name)
@@ -123,12 +126,12 @@ namespace Raven.Storage.Esent.StorageActions
             return new Guid(lastEtag);
         }
 
-        public Guid GetMostRecentReducedEtag(string name)
+        public Guid? GetMostRecentReducedEtag(string name)
         {
             Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
             Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
             if(Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false) // find the next greater view
-                return Guid.Empty;
+                return null;
 
             // did we find the last item on the view?
             if (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode) == name)
@@ -136,11 +139,11 @@ namespace Raven.Storage.Esent.StorageActions
 
             // maybe we are at another view?
             if (Api.TryMovePrevious(session, MappedResults) == false) // move one step back, now we are at the highest etag for this view, maybe
-                return Guid.Empty;
+                return null;
 
             //could't find the name in the table 
             if(Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"],Encoding.Unicode) != name)
-                return Guid.Empty;
+                return null;
 
             return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
         }
@@ -164,7 +167,10 @@ namespace Raven.Storage.Esent.StorageActions
             var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,
                 tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
 
-            return CompareArrays(lastReducedEtag, GetMostRecentReducedEtag(name).ToByteArray()) > 0;
+            var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
+            if (mostRecentReducedEtag == null)
+                return false;
+            return CompareArrays(lastReducedEtag, mostRecentReducedEtag.Value.ToByteArray()) > 0;
         }
 
     	private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
