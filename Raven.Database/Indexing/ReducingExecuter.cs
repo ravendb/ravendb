@@ -26,6 +26,11 @@ namespace Raven.Database.Indexing
                                                                                            indexToWorkOn.LastIndexedEtag)
                         .ToList();
 
+                    if(log.IsDebugEnabled)
+                    {
+                        log.DebugFormat("Found {0} reduce keys [{1}]",reduceKeyAndEtags.Count, string.Join(", ", reduceKeyAndEtags.Select(x=>x.ReduceKey)));
+                    }
+
                     new ReduceTask
                     {
                         Index = indexToWorkOn.IndexName,
