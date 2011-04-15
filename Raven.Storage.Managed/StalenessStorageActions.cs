@@ -113,6 +113,9 @@ namespace Raven.Storage.Managed
 
             var lastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag");
 
+            if (lastReducedEtag == null)
+                return false;
+
             return CompareArrays(lastReducedEtag, GetMostRecentReducedEtag(name).ToByteArray()) > 0;
         }
 
