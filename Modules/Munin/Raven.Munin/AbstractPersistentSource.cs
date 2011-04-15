@@ -44,10 +44,9 @@ namespace Raven.Munin
         {
 			if (disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-            
-            var needUpdating = currentStates.Value == null;
-            if (needUpdating)
-                currentStates.Value = globalStates;
+
+            var oldValue = currentStates.Value;
+            currentStates.Value = oldValue ?? globalStates;
             try
             {
                 Stream stream;
@@ -56,8 +55,7 @@ namespace Raven.Munin
             }
             finally
             {
-                if (needUpdating)
-                    currentStates.Value = null;
+                currentStates.Value = oldValue;
             }
         }
 
@@ -65,17 +63,15 @@ namespace Raven.Munin
         {
 			if(disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-            var needUpdating = currentStates.Value == null;
-            if (needUpdating)
-                currentStates.Value = globalStates;
+            var oldValue = currentStates.Value;
+            currentStates.Value = oldValue ?? globalStates;
             try
             {
                 return readOnlyAction();
             }
             finally
             {
-                if (needUpdating)
-                    currentStates.Value = null;
+                currentStates.Value = oldValue;
             }
         }
 
@@ -83,10 +79,10 @@ namespace Raven.Munin
         {
 			if (disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-            
-            var needUpdating = currentStates.Value == null;
-            if (needUpdating)
-                currentStates.Value = globalStates;
+
+            var oldValue = currentStates.Value;
+            currentStates.Value = oldValue ?? globalStates;
+          
             try
             {
                 foreach (T item in readOnlyAction())
@@ -96,8 +92,7 @@ namespace Raven.Munin
             }
             finally
             {
-                if (needUpdating)
-                    currentStates.Value = null;
+                currentStates.Value = oldValue;
             }
         }
 
