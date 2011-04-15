@@ -100,14 +100,14 @@ namespace Raven.Storage.Esent.StorageActions
                     LastIndexedTimestamp =
                         Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
                         
-                    ReduceIndexingAttempts = hasReduce == false ? (int?)null : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
-                    ReduceIndexingSuccesses = hasReduce == false ? (int?)null : 
+                    ReduceIndexingAttempts = hasReduce == false ? null : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
+                    ReduceIndexingSuccesses = hasReduce == false ? null : 
 						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
-                    ReduceIndexingErrors = hasReduce == false ? (int?)null : 
+                    ReduceIndexingErrors = hasReduce == false ? null : 
 						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
 					LastReducedEtag = hasReduce == false ? (Guid?)null : 
                         Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]).TransfromToGuidWithProperSorting(),
-                    LastReducedTimestamp = hasReduce == false ? (DateTime?)null : 
+                    LastReducedTimestamp = hasReduce == false ? null : 
                         Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]),
 				
 				};

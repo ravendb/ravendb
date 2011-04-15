@@ -112,14 +112,14 @@ namespace Raven.Storage.Managed
                     IndexingErrors = readResult.Key.Value<int>("failures"),
                     IndexingSuccesses = readResult.Key.Value<int>("successes"),
 
-					ReduceIndexingAttempts = readResult.Key.Value<int>("reduce_attempts"),
-					ReduceIndexingErrors = readResult.Key.Value<int>("reduce_failures"),
-					ReduceIndexingSuccesses = readResult.Key.Value<int>("reduce_successes"),
+					ReduceIndexingAttempts = readResult.Key.Value<int?>("reduce_attempts"),
+					ReduceIndexingErrors = readResult.Key.Value<int?>("reduce_failures"),
+					ReduceIndexingSuccesses = readResult.Key.Value<int?>("reduce_successes"),
 
                     Name = readResult.Key.Value<string>("index"),
                     LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
                     LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
-                    LastReducedEtag =readResult.Key.Value<byte[]>("lastReducedEtag") != null ? (Guid?)new Guid(readResult.Key.Value<byte[]>("lastReducedEtag")) : null,
+                    LastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag") != null ? (Guid?)new Guid(readResult.Key.Value<byte[]>("lastReducedEtag")) : null,
                     LastReducedTimestamp = readResult.Key.Value<DateTime?>("lastReducedTimestamp")
                 };
             }
