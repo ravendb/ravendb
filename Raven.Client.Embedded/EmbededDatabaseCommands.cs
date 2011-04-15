@@ -271,10 +271,7 @@ namespace Raven.Client.Embedded
 					entityName = index.Substring("dynamic/".Length);
 				return database.ExecuteDynamicQuery(entityName, query);
 			}
-			else
-			{
-				return database.Query(index, query);
-			}
+		    return database.Query(index, query);
 		}
 
 		/// <summary>
