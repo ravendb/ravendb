@@ -37,8 +37,8 @@ namespace Raven.Database.Indexing
             {
                 if (reduceKeyAndEtags != null && reduceKeyAndEtags.Count > 0)
                 {
-                    var last = reduceKeyAndEtags.Last();
-                    var lastEtag = last.Etag;
+                    var lastByEtag = GetLastByEtag(reduceKeyAndEtags);
+                    var lastEtag = lastByEtag.Etag;
 
                     var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
                     // whatever we succeeded in indexing or not, we have to update this
@@ -47,11 +47,24 @@ namespace Raven.Database.Indexing
                     {
                         if (new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray()).CompareTo(lastIndexedEtag) <= 0)
                         {
-                            actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexName, last.Etag, last.Timestamp);
+                            actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexName, lastByEtag.Etag, lastByEtag.Timestamp);
                         }
                     });
                 }
             }
+        }
+
+
+        private MappedResultInfo GetLastByEtag(List<MappedResultInfo> reduceKeyAndEtags)
+        {
+            // the last item is either the first or the last
+
+            var first = reduceKeyAndEtags.First();
+            var last = reduceKeyAndEtags.Last();
+
+            if (new ComparableByteArray(first.Etag.ToByteArray()).CompareTo(new ComparableByteArray(last.Etag.ToByteArray())) > 0)
+                return last;
+            return first;
         }
 
         protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
