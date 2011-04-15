@@ -29,7 +29,7 @@ namespace Raven.Storage.Esent.StorageActions
             Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
             var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 
-            if (IsStaleByEtag(name, hasReduce))
+            if (IsMapStale(name) || hasReduce && IsReduceStale(name))
             {
                 if (cutOff != null)
                 {
@@ -78,7 +78,7 @@ namespace Raven.Storage.Esent.StorageActions
             var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
             if (mostRecentReducedEtag == null)
                 return false;
-            return CompareArrays(lastReducedEtag, mostRecentReducedEtag.Value.ToByteArray()) > 0;
+            return CompareArrays(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
         }
 
         public bool IsMapStale(string name)
@@ -146,31 +146,6 @@ namespace Raven.Storage.Esent.StorageActions
                 return null;
 
             return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
-        }
-
-        private bool IsStaleByEtag(string name, bool hasReduce)
-        {
-        	var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
-        	                                         tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
-        	Api.JetSetCurrentIndex(session, Documents, "by_etag");
-        	if (!Api.TryMoveLast(session, Documents))
-        	{
-        		return false;
-        	}
-        	var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
-            if (CompareArrays(lastEtag, lastIndexedEtag) > 0)
-                return true;
-
-            if (hasReduce == false)
-                return false;
-
-            var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,
-                tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
-
-            var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
-            if (mostRecentReducedEtag == null)
-                return false;
-            return CompareArrays(lastReducedEtag, mostRecentReducedEtag.Value.ToByteArray()) > 0;
         }
 
     	private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)

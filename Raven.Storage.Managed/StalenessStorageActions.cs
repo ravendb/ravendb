@@ -34,7 +34,7 @@ namespace Raven.Storage.Managed
                 return false;// index does not exists
 
 
-            if (IsStaleByEtag(name, readResult))
+            if (IsMapStale(name) || IsReduceStale(name))
             {
                 if (cutOff == null)
                     return true;
@@ -74,7 +74,7 @@ namespace Raven.Storage.Managed
             if (mostRecentReducedEtag == null)
                 return false;
 
-            return CompareArrays(lastReducedEtag, mostRecentReducedEtag.Value.ToByteArray()) > 0;
+            return CompareArrays(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
    
         }
 
@@ -141,28 +141,6 @@ namespace Raven.Storage.Managed
                 return null;
 
             return new Guid(enumerable.Current.Value<byte[]>("etag"));
-        }
-
-        private bool IsStaleByEtag(string name, Table.ReadResult readResult)
-        {
-            var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
-            
-            var isStaleByEtag = storage.Documents["ByEtag"].SkipFromEnd(0)
-                .Select(doc => doc.Value<byte[]>("etag"))
-                .Select(docEtag => CompareArrays(docEtag, lastIndexedEtag) > 0)
-                .FirstOrDefault();
-            if (isStaleByEtag)
-                return true;
-
-            var lastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag");
-
-            if (lastReducedEtag == null)
-                return false;
-
-            var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
-            if (mostRecentReducedEtag == null)
-                return false;
-            return CompareArrays(lastReducedEtag, mostRecentReducedEtag.Value.ToByteArray()) > 0;
         }
 
 
