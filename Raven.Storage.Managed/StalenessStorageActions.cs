@@ -24,11 +24,7 @@ namespace Raven.Storage.Managed
 
         public bool IsIndexStale(string name, DateTime? cutOff, string entityName)
         {
-            var keyToSearch = new RavenJObject
-            {
-                {"index", name},
-            }; 
-            var readResult = storage.IndexingStats.Read(keyToSearch);
+            var readResult = storage.IndexingStats.Read(name);
 
             if (readResult == null)
                 return false;// index does not exists
@@ -47,7 +43,7 @@ namespace Raven.Storage.Managed
                     return true;
             }
 
-            var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(keyToSearch);
+            var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(new RavenJObject{{"index", name}});
             if (cutOff != null)
                 tasksAfterCutoffPoint = tasksAfterCutoffPoint
                     .Where(x => x.Value<DateTime>("time") < cutOff.Value);
@@ -56,11 +52,7 @@ namespace Raven.Storage.Managed
 
         public bool IsReduceStale(string name)
         {
-            var keyToSearch = new RavenJObject
-            {
-                {"index", name},
-            };
-            var readResult = storage.IndexingStats.Read(keyToSearch);
+            var readResult = storage.IndexingStats.Read(name);
 
             if (readResult == null)
                 return false;// index does not exists
@@ -80,11 +72,7 @@ namespace Raven.Storage.Managed
 
         public bool IsMapStale(string name)
         {
-            var keyToSearch = new RavenJObject
-            {
-                {"index", name},
-            };
-            var readResult = storage.IndexingStats.Read(keyToSearch);
+            var readResult = storage.IndexingStats.Read(name);
 
             if (readResult == null)
                 return false;// index does not exists
@@ -99,10 +87,7 @@ namespace Raven.Storage.Managed
 
         public Tuple<DateTime,Guid> IndexLastUpdatedAt(string name)
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject
-            {
-                {"index", name}
-            });
+            var readResult = storage.IndexingStats.Read(name);
 
             if (readResult == null)
                 throw new IndexDoesNotExistsException("Could not find index named: " + name);

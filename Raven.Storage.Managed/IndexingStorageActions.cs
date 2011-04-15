@@ -48,7 +48,7 @@ namespace Raven.Storage.Managed
 
         private RavenJObject GetCurrentIndex()
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", currentIndex.Value } });
+            var readResult = storage.IndexingStats.Read(currentIndex.Value);
             if (readResult == null)
                 throw new ArgumentException("There is no index with the name: " + currentIndex.Value);
         	var key = (RavenJObject)readResult.Key;
@@ -127,7 +127,7 @@ namespace Raven.Storage.Managed
 
     	public void AddIndex(string name, bool createMapReduce)
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject {{"index", name}});
+            var readResult = storage.IndexingStats.Read(name);
             if(readResult != null)
                 throw new ArgumentException("There is already an index with the name: " + name);
 
@@ -150,7 +150,7 @@ namespace Raven.Storage.Managed
 
         public void DeleteIndex(string name)
         {
-            storage.IndexingStats.Remove(new RavenJObject { { "index", name } });
+            storage.IndexingStats.Remove(name);
         }
 
         public IndexFailureInformation GetFailureRate(string index)
@@ -173,7 +173,7 @@ namespace Raven.Storage.Managed
 
         public void UpdateLastIndexed(string index, Guid etag, DateTime timestamp)
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", index } });
+            var readResult = storage.IndexingStats.Read(index);
             if (readResult == null)
                 throw new ArgumentException("There is no index with the name: " + index);
 
@@ -186,7 +186,7 @@ namespace Raven.Storage.Managed
 
         public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", index } });
+            var readResult = storage.IndexingStats.Read(index);
             if (readResult == null)
                 throw new ArgumentException("There is no index with the name: " + index);
 
