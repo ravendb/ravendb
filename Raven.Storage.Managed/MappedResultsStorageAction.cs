@@ -97,7 +97,7 @@ namespace Raven.Storage.Managed
                 .Select(key => new MappedResultInfo
                 {
                     ReduceKey = key.Value<string>("reduceKey"),
-                    Etag = new Guid(key.Value<byte[]>()),
+                    Etag = new Guid(key.Value<byte[]>("etag")),
                     Timestamp = key.Value<DateTime>("timestamp")
                 });
         }

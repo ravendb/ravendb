@@ -29,7 +29,7 @@ namespace Raven.Tests.Bugs
 				// force a wait until indexing is done
 				using (var session = store.OpenSession())
 				{
-					session.Query<EntityStatisticResult, MapReduceIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).ToList();
+					session.Query<EntityStatisticResult, MapReduceIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
 				using (var session = store.OpenSession())
