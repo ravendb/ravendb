@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -51,6 +52,11 @@ namespace Raven.Database.Indexing
                     });
                 }
             }
+        }
+
+        protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
+        {
+            return actions.Staleness.IsReduceStale(indexesStat.Name);
         }
 
         protected override void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)

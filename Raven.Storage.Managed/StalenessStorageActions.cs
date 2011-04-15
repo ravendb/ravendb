@@ -54,6 +54,45 @@ namespace Raven.Storage.Managed
             return tasksAfterCutoffPoint.Any();
         }
 
+        public bool IsReduceStale(string name)
+        {
+            var keyToSearch = new RavenJObject
+            {
+                {"index", name},
+            };
+            var readResult = storage.IndexingStats.Read(keyToSearch);
+
+            if (readResult == null)
+                return false;// index does not exists
+
+            var lastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag");
+
+            if (lastReducedEtag == null)
+                return false;
+
+            return CompareArrays(lastReducedEtag, GetMostRecentReducedEtag(name).ToByteArray()) > 0;
+   
+        }
+
+        public bool IsMapStale(string name)
+        {
+            var keyToSearch = new RavenJObject
+            {
+                {"index", name},
+            };
+            var readResult = storage.IndexingStats.Read(keyToSearch);
+
+            if (readResult == null)
+                return false;// index does not exists
+
+            var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
+
+            return storage.Documents["ByEtag"].SkipFromEnd(0)
+                .Select(doc => doc.Value<byte[]>("etag"))
+                .Select(docEtag => CompareArrays(docEtag, lastIndexedEtag) > 0)
+                .FirstOrDefault();
+        }
+
         public Tuple<DateTime,Guid> IndexLastUpdatedAt(string name)
         {
             var readResult = storage.IndexingStats.Read(new RavenJObject

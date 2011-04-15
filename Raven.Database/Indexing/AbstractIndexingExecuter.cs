@@ -74,7 +74,7 @@ namespace Raven.Database.Indexing
                                        failureRate.FailureRate);
                         continue;
                     }
-                    if (!actions.Staleness.IsIndexStale(indexesStat.Name, null, null))
+                    if (IsIndexStale(indexesStat, actions) == false)
                         continue;
                     indexesToWorkOn.Add(new IndexToWorkOn
                     {
@@ -94,6 +94,8 @@ namespace Raven.Database.Indexing
 
             return true;
         }
+
+        protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
 
         protected abstract void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn);
 

@@ -23,6 +23,11 @@ namespace Raven.Database.Indexing
         {
         }
 
+        protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
+        {
+            return actions.Staleness.IsMapStale(indexesStat.Name);
+        }
+
         protected override void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
         {
             ExecuteIndexingInternal(indexesToWorkOn, documents => Parallel.ForEach(indexesToWorkOn, new ParallelOptions

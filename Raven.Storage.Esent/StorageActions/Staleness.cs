@@ -66,6 +66,36 @@ namespace Raven.Storage.Esent.StorageActions
             return cutOff.Value >= addedAt;
         }
 
+        public bool IsReduceStale(string name)
+        {
+            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+            Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
+                return false;// not a map/reduce index
+
+            var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
+
+            return CompareArrays(lastReducedEtag, GetMostRecentReducedEtag(name).ToByteArray()) > 0;
+        }
+
+        public bool IsMapStale(string name)
+        {
+             Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+            Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+                return false;
+
+            var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
+        	                                         tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
+        	Api.JetSetCurrentIndex(session, Documents, "by_etag");
+        	if (!Api.TryMoveLast(session, Documents))
+        	{
+        		return false;
+        	}
+        	var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
+            return CompareArrays(lastEtag, lastIndexedEtag) > 0;
+        }
+
         public Tuple<DateTime, Guid> IndexLastUpdatedAt(string name)
         {
             Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
@@ -133,9 +163,6 @@ namespace Raven.Storage.Esent.StorageActions
 
             var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,
                 tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
-
-            if (lastIndexedEtag.All(x => x == 0))// Guid.Empty
-                return false;
 
             return CompareArrays(lastReducedEtag, GetMostRecentReducedEtag(name).ToByteArray()) > 0;
         }
