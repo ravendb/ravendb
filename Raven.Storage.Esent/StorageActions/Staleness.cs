@@ -29,7 +29,7 @@ namespace Raven.Storage.Esent.StorageActions
             Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
             var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 
-            if (IsStaleByEtag(name))
+            if (IsStaleByEtag(name, hasReduce))
             {
                 if (cutOff != null)
                 {
@@ -115,7 +115,7 @@ namespace Raven.Storage.Esent.StorageActions
             return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
         }
 
-        private bool IsStaleByEtag(string name)
+        private bool IsStaleByEtag(string name, bool hasReduce)
         {
         	var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
         	                                         tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
@@ -127,6 +127,9 @@ namespace Raven.Storage.Esent.StorageActions
         	var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
             if (CompareArrays(lastEtag, lastIndexedEtag) > 0)
                 return true;
+
+            if (hasReduce == false)
+                return false;
 
             var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,
                 tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
