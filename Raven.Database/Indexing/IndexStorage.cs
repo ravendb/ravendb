@@ -12,6 +12,7 @@ using System.Runtime.ConstrainedExecution;
 using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -221,9 +222,14 @@ namespace Raven.Database.Indexing
 			mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
 		}
 
-        internal Index.CurrentIndexSearcher GetCurrentIndexSearcher(string indexName)
+        /// <summary>
+        /// if you are calling this method, you _have_ to call 
+        /// searcher.GetIndexReader().DecRef();
+        /// when you are done searching
+        /// </summary>
+        internal IndexSearcher GetCurrentIndexSearcher(string indexName)
         {
-        	return GetIndexByName(indexName).Searcher;
+        	return GetIndexByName(indexName).GetSearcher();
         }
 
 		private Index GetIndexByName(string indexName)
