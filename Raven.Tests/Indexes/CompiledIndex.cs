@@ -130,13 +130,15 @@ namespace Raven.Tests.Indexes
                 db.Put("events/" + (i + 1), null, RavenJObject.FromObject(events[i]), new RavenJObject(), null);
             }
 
-            QueryResult queryResult;
-            do
+            QueryResult queryResult = null;
+            for (int i = 0; i < 500; i++)
             {
                 queryResult = db.Query("Aggregates/ShoppingCart", new IndexQuery());
                 if (queryResult.IsStale)
                     Thread.Sleep(100);
-            } while (queryResult.IsStale);
+                else
+                    break;
+            }
 
 			Assert.Equal(1, queryResult.Results.Count);
 
