@@ -4,11 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Text;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using System.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Sample.EventSourcing
 {
@@ -72,7 +71,7 @@ namespace Raven.Sample.EventSourcing
             int i = 1;
             foreach (var @event in events)
             {
-                documentStore1.DatabaseCommands.Put("events/" + i++, null, JObject.FromObject(@event), new JObject());                
+                documentStore1.DatabaseCommands.Put("events/" + i++, null, RavenJObject.FromObject(@event), new RavenJObject());                
             }
 
             Console.WriteLine("Wrote {0} events", events.Length);
@@ -85,7 +84,7 @@ namespace Raven.Sample.EventSourcing
                     .Where("ShoppingCartId:shoppingcarts/12")
                     .Single();
 
-                var cart = new JsonSerializer().Deserialize<ShoppingCart>(new JTokenReader(aggregate.Aggregate));
+                var cart = new JsonSerializer().Deserialize<ShoppingCart>(new RavenJTokenReader(aggregate.Aggregate));
 
                 Console.WriteLine(cart.Total);
             }
@@ -95,6 +94,6 @@ namespace Raven.Sample.EventSourcing
     public class AggregateHolder
     {
         public string ShoppingCartId { get; set; }
-        public JObject Aggregate { get; set; }
+        public RavenJObject Aggregate { get; set; }
     }
 }

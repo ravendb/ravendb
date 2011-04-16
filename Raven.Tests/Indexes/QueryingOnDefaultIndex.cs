@@ -3,7 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
@@ -37,8 +38,8 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void CanQueryOverDefaultIndex()
 		{
-			db.Put("users/ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"),
-			       JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+			db.Put("users/ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"),
+			       RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
 
 			QueryResult queryResult;
 			do
@@ -57,12 +58,12 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void CanPageOverDefaultIndex()
         {
-            db.Put("users/ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"),
-                   JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
-            db.Put("users/rob", null, JObject.Parse("{'email':'robashton@codeofrob.com'}"),
-                   JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
-            db.Put("users/joe", null, JObject.Parse("{'email':'joe@bloggs.com'}"),
-                   JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+            db.Put("users/ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"),
+                   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+            db.Put("users/rob", null, RavenJObject.Parse("{'email':'robashton@codeofrob.com'}"),
+                   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+            db.Put("users/joe", null, RavenJObject.Parse("{'email':'joe@bloggs.com'}"),
+                   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
 
             QueryResult queryResultPageOne;
             QueryResult queryResultPageTwo;

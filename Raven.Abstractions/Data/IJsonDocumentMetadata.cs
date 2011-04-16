@@ -1,7 +1,7 @@
 ﻿using System;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
-namespace Raven.Database
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// Interface that is used purely internally
@@ -12,7 +12,7 @@ namespace Raven.Database
 		/// 	Gets or sets the metadata for the document
 		/// </summary>
 		/// <value>The metadata.</value>
-		JObject Metadata { get; set; }
+		RavenJObject Metadata { get; set; }
 
 		/// <summary>
 		/// 	Gets or sets the key for the document

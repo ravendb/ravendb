@@ -3,7 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Database.Data;
 using Xunit;
 
@@ -17,19 +18,19 @@ namespace Raven.Tests.Bugs
             using(var store = NewDocumentStore())
             {
                 store.DatabaseCommands.Put("users/1", null,
-                                           new JObject
+                                           new RavenJObject
                                            {
                                                {"Name", "user1"},
-                                               {"Tags", new JArray(new[]{"abc", "def"})}
+                                               {"Tags", new RavenJArray(new[]{"abc", "def"})}
                                            },
-                                           new JObject());
+                                           new RavenJObject());
 
                 store.DatabaseCommands.Put("users/2", null,
-                                           new JObject
+                                           new RavenJObject
                                            {
                                                {"Name", "user2"},
                                            },
-                                           new JObject());
+                                           new RavenJObject());
 
                 var queryResult = store.DatabaseCommands.Query("dynamic", new IndexQuery
                 {
@@ -46,19 +47,19 @@ namespace Raven.Tests.Bugs
             using (var store = NewDocumentStore())
             {
                 store.DatabaseCommands.Put("users/1", null,
-                                           new JObject
+                                           new RavenJObject
                                            {
                                                {"Name", "user1"},
                                            },
-                                           new JObject());
+                                           new RavenJObject());
 
                 store.DatabaseCommands.Put("users/2", null,
-                                           new JObject
+                                           new RavenJObject
                                            {
                                                {"Name", "user2"},
-                                               {"Tags", new JArray(new[]{"abc", "def"})}
+                                               {"Tags", new RavenJArray(new[]{"abc", "def"})}
                                            },
-                                           new JObject());
+                                           new RavenJObject());
 
                 var queryResult = store.DatabaseCommands.Query("dynamic", new IndexQuery
                 {

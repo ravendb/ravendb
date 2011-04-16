@@ -12,11 +12,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Abstractions.Json;
+using Raven.Client.Connection;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using System.Linq;
-using Raven.Database.Json;
-using Raven.Http.Json;
+using Raven.Json.Linq;
 
 
 namespace Raven.Client.Document
@@ -167,7 +167,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Gets or sets the function to find the clr type of a document.
 		/// </summary>
-		public Func<string, JObject, JObject, string> FindClrType { get; set; }
+		public Func<string, RavenJObject, RavenJObject, string> FindClrType { get; set; }
 
 		/// <summary>
 		/// Gets or sets the json contract resolver.
@@ -253,7 +253,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Get the CLR type (if exists) from the document
 		/// </summary>
-		public string GetClrType(string id, JObject document, JObject metadata)
+		public string GetClrType(string id, RavenJObject document, RavenJObject metadata)
 		{
 			return FindClrType(id, document, metadata);
 		}

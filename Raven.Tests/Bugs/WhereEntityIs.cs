@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Xunit;
 using Raven.Client.Linq;
@@ -17,7 +18,7 @@ namespace Raven.Tests.Bugs
         {
             using(var store = NewDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition<object>()
+                store.DatabaseCommands.PutIndex("test", new IndexDefinitionBuilder<object>()
                 {
                     Map = docs => from i in docs.WhereEntityIs<Animal>("Cats", "Dogs")
                                   select new {i.Color}
@@ -57,7 +58,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition<Animal>()
+                store.DatabaseCommands.PutIndex("test", new IndexDefinitionBuilder<Animal>()
                 {
                     Map = docs => from i in docs.WhereEntityIs<Animal>("Cats", "Dogs")
                                   select new { i.Color }

@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	public class ServerError
 	{

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
@@ -41,7 +42,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
             }.Initialize())
             {
                 store.DatabaseCommands.PutIndex("TestIndex",
-                                                new IndexDefinition<Test, Test>
+                                                new IndexDefinitionBuilder<Test, Test>
                                                 {
                                                     Map = movies => from movie in movies
                                                                     select new {movie.Name}
@@ -71,11 +72,5 @@ namespace Raven.Tests.Bugs.MultiTenancy
             IOExtensions.DeleteDirectory("Data");
             IOExtensions.DeleteDirectory("Test");
         }
-    }
-
-    public class Test
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
     }
 }

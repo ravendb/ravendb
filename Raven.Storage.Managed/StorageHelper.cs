@@ -4,12 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
-using Raven.Database;
-using Raven.Database.Exceptions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Storage;
 using Raven.Http;
 using Raven.Http.Exceptions;
+using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
@@ -31,7 +31,7 @@ namespace Raven.Storage.Managed
                 return;
             }
 
-            var existingTx = storage.Transactions.Read(new JObject { { "txId", txId.ToByteArray() } });
+            var existingTx = storage.Transactions.Read(new RavenJObject { { "txId", txId.ToByteArray() } });
             if (existingTx == null)//probably a bug, ignoring this as not a real tx
                 return;
 

@@ -1,3 +1,6 @@
+using Raven.Abstractions.Data;
+using Raven.Client.Silverlight.Connection;
+
 namespace Raven.Studio.Features.Database
 {
 	using System;
@@ -10,16 +13,13 @@ namespace Raven.Studio.Features.Database
 	using System.Windows.Threading;
 	using Caliburn.Micro;
 	using Client;
-	using Client.Client;
 	using Client.Document;
 	using Client.Extensions;
-	using Client.Silverlight.Client;
 	using Framework.Extensions;
 	using Messages;
 	using Newtonsoft.Json.Linq;
 	using Plugins;
 	using Plugins.Statistics;
-	using Raven.Database.Data;
 	using Statistics;
 	using Action = System.Action;
 

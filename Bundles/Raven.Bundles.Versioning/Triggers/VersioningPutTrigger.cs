@@ -4,13 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Bundles.Versioning.Data;
-using Raven.Database;
 using Raven.Database.Plugins;
 using System.Linq;
-using Raven.Database.Json;
-using Raven.Http;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Versioning.Triggers
 {
@@ -20,14 +19,14 @@ namespace Raven.Bundles.Versioning.Triggers
 		public const string RavenDocumentParentRevision = "Raven-Document-Parent-Revision"; 
 		public const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
 
-        public override VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
 			if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
 				return VetoResult.Deny("Modifying a historical revision is not allowed");
 			return VetoResult.Allowed;
         }
 
-        public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
 			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				return;
@@ -43,8 +42,8 @@ namespace Raven.Bundles.Versioning.Triggers
 			
 			using(Database.DisableAllTriggersForCurrentThread())
 			{
-				var copyMetadata = new JObject(metadata);
-				copyMetadata[RavenDocumentRevisionStatus] = JToken.FromObject("Historical");
+				var copyMetadata = new RavenJObject(metadata);
+				copyMetadata[RavenDocumentRevisionStatus] = RavenJToken.FromObject("Historical");
 				copyMetadata.Remove(RavenDocumentRevision);
 				var parentRevision = metadata.Value<string>(RavenDocumentRevision);
 				if(parentRevision!=null)
@@ -59,12 +58,12 @@ namespace Raven.Bundles.Versioning.Triggers
 
                 RemoveOldRevisions(key, revision, versioningConfiguration, transactionInformation);
 
-				metadata[RavenDocumentRevisionStatus] = JToken.FromObject("Current");
-				metadata[RavenDocumentRevision] = JToken.FromObject(revision);
+				metadata[RavenDocumentRevisionStatus] = RavenJToken.FromObject("Current");
+				metadata[RavenDocumentRevision] = RavenJToken.FromObject(revision);
 			}
         }
 
-        private VersioningConfiguration GetDocumentVersioningConfiguration(JObject metadata)
+		private VersioningConfiguration GetDocumentVersioningConfiguration(RavenJObject metadata)
         {
             var versioningConfiguration = new VersioningConfiguration
             {

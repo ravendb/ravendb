@@ -1,8 +1,5 @@
-using System;
+using Raven.Abstractions.Data;
 using Raven.Bundles.Authorization.Model;
-using Raven.Bundles.Tests.Versioning;
-using Raven.Client.Authorization;
-using Raven.Database.Data;
 using Xunit;
 using Raven.Client.Extensions;
 

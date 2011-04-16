@@ -4,9 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
-namespace Raven.Database
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// A document representation:
@@ -21,20 +21,20 @@ namespace Raven.Database
 		/// </summary>
 		public JsonDocument()
 		{
-			DataAsJson=new JObject();	
-			Metadata = new JObject();
+			DataAsJson = new RavenJObject();
+			Metadata = new RavenJObject();
 		}
 		/// <summary>
 		/// 	Gets or sets the document data as json.
 		/// </summary>
 		/// <value>The data as json.</value>
-		public JObject DataAsJson { get; set; }
+		public RavenJObject DataAsJson { get; set; }
 
 		/// <summary>
 		/// 	Gets or sets the metadata for the document
 		/// </summary>
 		/// <value>The metadata.</value>
-		public JObject Metadata { get; set; }
+		public RavenJObject Metadata { get; set; }
 
 		/// <summary>
 		/// 	Gets or sets the key for the document
@@ -64,29 +64,25 @@ namespace Raven.Database
 		/// 	Either <see cref = "Projection" /> or <see cref = "DataAsJson" /> are valid, never both.
 		/// </summary>
 		/// <value>The projection.</value>
-		public JObject Projection { get; set; }
+		public RavenJObject Projection { get; set; }
 
 		/// <summary>
-		/// 	Translate the json document to a <see cref = "JObject" />
+		/// 	Translate the json document to a <see cref = "RavenJObject" />
 		/// </summary>
 		/// <returns></returns>
-		public JObject ToJson()
+		public RavenJObject ToJson()
 		{
 			if (Projection != null)
 				return Projection;
 
-			var doc = new JObject(DataAsJson); //clone the document
-			var metadata = new JObject(Metadata); // clone the metadata
+
+			var doc = (RavenJObject)DataAsJson.CloneToken();
+			var metadata = (RavenJObject)Metadata.CloneToken();
 			metadata["Last-Modified"] = LastModified;
-			var etagProp = metadata.Property("@etag");
-			if (etagProp == null)
-			{
-				etagProp = new JProperty("@etag");
-				metadata.Add(etagProp);
-			}
-			etagProp.Value = new JValue(Etag.ToString());
-			doc.Add("@metadata", metadata);
-			metadata["Non-Authoritive-Information"] = JToken.FromObject(NonAuthoritiveInformation);
+			metadata["@etag"] = Etag.ToString();
+			doc["@metadata"] = metadata;
+			metadata["Non-Authoritive-Information"] = NonAuthoritiveInformation;
+
 			return doc;
 		}
 	}

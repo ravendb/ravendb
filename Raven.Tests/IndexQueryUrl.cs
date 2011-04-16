@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Web;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Http.Abstractions;

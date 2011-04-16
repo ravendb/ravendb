@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;

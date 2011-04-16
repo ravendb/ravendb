@@ -65,6 +65,10 @@
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

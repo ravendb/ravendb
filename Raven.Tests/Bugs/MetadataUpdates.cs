@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Xunit;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Tests.Bugs
 {

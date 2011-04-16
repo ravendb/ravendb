@@ -49,10 +49,4 @@ namespace Raven.Tests.Bugs
             Assert.Equal("docs\r\n\t.GroupBy(y => y.Denomination)\r\n\t.Select(g => new {Denomination = g.Key, Cost = ((double)g.First().Cost).ToString()})", code);
         } 
 	}
-
-	public class Coin
-	{
-		public int Denomination { get; set; }
-		public double Cost { get; set; }
-	}
 }

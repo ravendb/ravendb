@@ -11,6 +11,7 @@ using System.Data.SqlClient;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
+using Raven.Abstractions.Extensions;
 using Raven.Bundles.IndexReplication.Data;
 using Raven.Database.Json;
 using Raven.Database.Plugins;

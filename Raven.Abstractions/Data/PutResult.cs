@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 
-namespace Raven.Database
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// The result of a PUT operation

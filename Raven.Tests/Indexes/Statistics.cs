@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -58,7 +60,7 @@ namespace Raven.Tests.Indexes
 		public void Can_get_stats_for_indexing()
 		{
 			db.Put("1", Guid.Empty,
-			       JObject.Parse(
+			       RavenJObject.Parse(
 			       	@"{
                 type: 'page', 
                 some: 'val', 
@@ -68,7 +70,7 @@ namespace Raven.Tests.Indexes
                 size: 1,
                 '@metadata': {'@id': 1}
             }"),
-                   new JObject(), null);
+                   new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -93,7 +95,7 @@ namespace Raven.Tests.Indexes
 		public void Can_get_stats_for_indexing_including_errors()
 		{
 			db.Put("1", Guid.Empty,
-			       JObject.Parse(
+			       RavenJObject.Parse(
 			       	@"{
                 type: 'page', 
                 some: 'val', 
@@ -103,9 +105,9 @@ namespace Raven.Tests.Indexes
                 size: 0,
                 '@metadata': {'@id': 1}
             }"),
-                   new JObject(), null);
+                   new RavenJObject(), null);
 			db.Put("2", Guid.Empty,
-			       JObject.Parse(
+			       RavenJObject.Parse(
 			       	@"{
                 type: 'page', 
                 some: 'val', 
@@ -115,7 +117,7 @@ namespace Raven.Tests.Indexes
                 size: 1,
                 '@metadata': {'@id': 1}
             }"),
-                   new JObject(), null);
+                   new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -141,7 +143,7 @@ namespace Raven.Tests.Indexes
 		public void Can_get_details_about_indexing_errors()
 		{
 			db.Put("1", Guid.Empty,
-			       JObject.Parse(
+			       RavenJObject.Parse(
 			       	@"{
                 type: 'page', 
                 some: 'val', 
@@ -151,7 +153,7 @@ namespace Raven.Tests.Indexes
                 size: 0,
                 '@metadata': {'@id': 1}
             }"),
-                   new JObject(), null);
+                   new RavenJObject(), null);
 
 			QueryResult docs;
 			do

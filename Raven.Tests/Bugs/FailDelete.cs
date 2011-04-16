@@ -4,14 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Json.Linq;
 
 namespace Raven.Tests.Bugs
 {
     public class FailDelete : IDocumentDeleteListener
     {
-        public void BeforeDelete(string key, object entityInstance, JObject metadata)
+		public void BeforeDelete(string key, object entityInstance, RavenJObject metadata)
         {
             throw new NotImplementedException();
         }

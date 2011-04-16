@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
@@ -18,15 +20,15 @@ namespace Raven.Tests.Bugs
 			using(var store = NewDocumentStore())
 			{
 				store.DatabaseCommands.Put("test/1", null,
-				                           JObject.Parse("{ FirstName: 'Bob',LastName: 'Smith', MiddleInitial: 'Q' }"),
-				                           new JObject());
+				                           RavenJObject.Parse("{ FirstName: 'Bob',LastName: 'Smith', MiddleInitial: 'Q' }"),
+				                           new RavenJObject());
 				store.DatabaseCommands.Put("test/2", null,
-										   JObject.Parse("{ FirstName: 'Bob',LastName: 'Smith', MiddleInitial: null }"),
-										   new JObject());
+										   RavenJObject.Parse("{ FirstName: 'Bob',LastName: 'Smith', MiddleInitial: null }"),
+										   new RavenJObject());
 
 				store.DatabaseCommands.Put("test/3", null,
-										   JObject.Parse("{ FirstName: null, LastName: 'Smith', MiddleInitial: 'Q' }"),
-										   new JObject());
+										   RavenJObject.Parse("{ FirstName: null, LastName: 'Smith', MiddleInitial: 'Q' }"),
+										   new RavenJObject());
 
 
 				store.DatabaseCommands.PutIndex("testByLastName", new IndexDefinition

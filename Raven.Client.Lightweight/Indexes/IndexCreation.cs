@@ -9,8 +9,8 @@ using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Raven.Client.Client;
-using Raven.Client.Client.Async;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 
 namespace Raven.Client.Indexes

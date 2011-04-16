@@ -1,9 +1,10 @@
+using Raven.Abstractions.Data;
+
 namespace Raven.Studio.Plugins
 {
 	using System;
 	using System.Collections.Generic;
 	using Client;
-	using Raven.Database.Data;
 	using Statistics;
 
 	public interface IServer

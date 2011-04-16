@@ -12,18 +12,17 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
 #if !NET_3_5
+using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
-using Raven.Client.Client.Async;
-using Raven.Database.Linq;
 #endif
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Client;
+using Raven.Client.Connection;
 using Raven.Client.Exceptions;
-using Raven.Client.Linq;
-using Raven.Database.Data;
-using Raven.Database.Extensions;
-using Raven.Database.Indexing;
+using Raven.Json.Linq;
+using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 
 namespace Raven.Client.Document
 {
@@ -426,7 +425,7 @@ namespace Raven.Client.Document
 #endif
                     foreach (var include in queryResult.Includes)
                     {
-                        var metadata = include.Value<JObject>("@metadata");
+                        var metadata = include.Value<RavenJObject>("@metadata");
 
                         theSession.TrackEntity<object>(metadata.Value<string>("@id"),
                                                     include,
@@ -1166,6 +1165,7 @@ If you really want to do in memory filtering on the data returned from the query
                 var result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
                 if (theWaitForNonStaleResults && result.IsStale)
                 {
+#if !DEBUG
                     if (sp.Elapsed > timeout)
                     {
                         sp.Stop();
@@ -1173,6 +1173,7 @@ If you really want to do in memory filtering on the data returned from the query
                             string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
                                           sp.ElapsedMilliseconds));
                     }
+#endif
                     Debug.WriteLine(
                         string.Format(
                             "Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
@@ -1240,15 +1241,15 @@ If you really want to do in memory filtering on the data returned from the query
             }
         }
 
-        private T Deserialize(JObject result)
+        private T Deserialize(RavenJObject result)
         {
-            var metadata = result.Value<JObject>("@metadata");
+            var metadata = result.Value<RavenJObject>("@metadata");
             if (projectionFields != null && projectionFields.Length > 0
                 // we asked for a projection directly from the index
                 || metadata == null)
             // we aren't querying a document, we are probably querying a map reduce index result
             {
-                if (typeof(T) == typeof(JObject))
+                if (typeof(T) == typeof(RavenJObject))
                     return (T)(object)result;
 
 #if !NET_3_5
@@ -1260,7 +1261,7 @@ If you really want to do in memory filtering on the data returned from the query
                 HandleInternalMetadata(result);
 
                 var deserializedResult =
-                    (T)theSession.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof(T));
+                    (T)theSession.Conventions.CreateSerializer().Deserialize(new RavenJTokenReader(result), typeof(T));
 
                 var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
                 if (string.IsNullOrEmpty(documentId) == false)
@@ -1268,9 +1269,9 @@ If you really want to do in memory filtering on the data returned from the query
                     // we need to make an addtional check, since it is possible that a value was explicitly stated
                     // for the identity property, in which case we don't want to override it.
                     var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
-                    if (identityProperty == null ||
-                        (result.Property(identityProperty.Name) == null ||
-                            result.Property(identityProperty.Name).Value.Type == JTokenType.Null))
+					if (identityProperty == null ||
+						(result[identityProperty.Name] == null ||
+							result[identityProperty.Name].Type == JTokenType.Null))
                     {
                         theSession.TrySetIdentity(deserializedResult, documentId);
                     }
@@ -1283,22 +1284,22 @@ If you really want to do in memory filtering on the data returned from the query
                                           metadata);
         }
 
-        private void HandleInternalMetadata(JObject result)
+        private void HandleInternalMetadata(RavenJObject result)
         {
 			// Implant a property with "id" value ... if not exists
-        	var metadata = result.Value<JObject>("@metadata");
+        	var metadata = result.Value<RavenJObject>("@metadata");
         	if (metadata == null) 
         	{
 				// if the item has metadata, then nested items will not have it, so we can skip recursing down
-				foreach (var nested in result.Properties().Select(property => property.Value))
+				foreach (var nested in result.Select(property => property.Value))
 				{
-					var jObject = nested as JObject;
+					var jObject = nested as RavenJObject;
 					if(jObject != null)
 						HandleInternalMetadata(jObject);
-					var jArray = nested as JArray;
+					var jArray = nested as RavenJArray;
 					if (jArray == null) 
 						continue;
-					foreach (var item in jArray.OfType<JObject>())
+					foreach (var item in jArray.OfType<RavenJObject>())
 					{
 						HandleInternalMetadata(item);
 					}
@@ -1309,10 +1310,10 @@ If you really want to do in memory filtering on the data returned from the query
 			var entityName = metadata.Value<string>(Constants.RavenEntityName);
 
 			var idPropName = theSession.Conventions.FindIdentityPropertyNameFromEntityName(entityName);
-			if (result.Property(idPropName) != null)
+			if (result.ContainsKey(idPropName))
 				return;
 
-			result[idPropName] = metadata.Value<string>("@id");
+			result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
         }
 
     	private static string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
@@ -1406,7 +1407,7 @@ If you really want to do in memory filtering on the data returned from the query
 
                     foreach (var include in result.Includes)
                     {
-                        var metadata = include.Value<JObject>("@metadata");
+                        var metadata = include.Value<RavenJObject>("@metadata");
                         theSession.TrackEntity<object>(metadata.Value<string>("@id"), include, metadata);
                     }
 

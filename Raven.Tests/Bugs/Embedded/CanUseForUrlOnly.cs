@@ -1,4 +1,4 @@
-using Raven.Client.Client;
+using Raven.Client.Embedded;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Embedded

@@ -5,11 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using Raven.Client.Client;
+using Raven.Abstractions.Data;
 #if !NET_3_5
-using Raven.Client.Client.Async;
+
 #endif
-using Raven.Database.Data;
 
 namespace Raven.Client.Document
 {

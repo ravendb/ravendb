@@ -7,6 +7,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Data;
 using System.Diagnostics;
 using System.Threading;

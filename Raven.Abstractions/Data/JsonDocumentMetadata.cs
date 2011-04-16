@@ -1,7 +1,7 @@
 ﻿using System;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
-namespace Raven.Database
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// A document representation:
@@ -14,7 +14,7 @@ namespace Raven.Database
 		/// 	Gets or sets the metadata for the document
 		/// </summary>
 		/// <value>The metadata.</value>
-		public JObject Metadata { get; set; }
+		public RavenJObject Metadata { get; set; }
 
 		/// <summary>
 		/// 	Gets or sets the key for the document

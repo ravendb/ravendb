@@ -7,12 +7,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
 using Xunit;
 using Raven.Database;
 using Raven.Database.Indexing;
 using Raven.Client.Indexes;
-using Newtonsoft.Json.Linq;
-using Raven.Client.Client;
+using Raven.Json.Linq;
 using Raven.Client.Linq;
 using System.Threading;
 
@@ -108,7 +109,7 @@ namespace Raven.Tests.Bugs
         private void PopulateDatastore()
         {
             store.DatabaseCommands.PutIndex("SelectManyIndexWithNoTransformer",
-                new IndexDefinition<Blog,BlogProjection>()
+                new IndexDefinitionBuilder<Blog,BlogProjection>()
                 {
                     Map = docs => from doc in docs
                                   from tag in doc.Tags
@@ -121,7 +122,7 @@ namespace Raven.Tests.Bugs
                 }.ToIndexDefinition(store.Conventions));
 
              store.DatabaseCommands.PutIndex("SelectManyIndexWithTransformer",
-               new IndexDefinition<Blog, Blog>()
+               new IndexDefinitionBuilder<Blog, Blog>()
                {
                    Map = docs => from doc in docs
                                  from tag in doc.Tags

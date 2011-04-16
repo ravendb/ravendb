@@ -1,13 +1,16 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="DocumentStoreServerTests.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.Net;
 using System.Transactions;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Data;
@@ -80,7 +83,7 @@ namespace Raven.Tests.Document
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
 
-				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinition<Company, Company>
+				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company, Company>
 				{
 					Map = companies => from c in companies
 									   select new { c.Name },
@@ -302,7 +305,7 @@ namespace Raven.Tests.Document
 					{
 						Type = PatchCommandType.Set,
 						Name = "Name",
-						Value = JToken.FromObject("Another Company")
+						Value = RavenJToken.FromObject("Another Company")
 					},
 				}, allowStale: false);
 
@@ -438,14 +441,14 @@ namespace Raven.Tests.Document
 
 				using (var s = documentStore.OpenSession())
 				{
-					var query = s.Advanced.LuceneQuery<JObject>("my_index")
+					var query = s.Advanced.LuceneQuery<RavenJObject>("my_index")
 						.Where("Type:Feats AND Language:Fran�ais")
-						.SelectFields<JObject>("Value")
+						.SelectFields<RavenJObject>("Value")
 						.WaitForNonStaleResults();
 					var first = query.First();
 
-					Assert.Equal(42, first.Value<JObject>("Value").Value<int>("Answers"));
-					Assert.Equal(7, first.Value<JObject>("Value").Value<int>("Paths"));
+					Assert.Equal(42, first.Value<RavenJObject>("Value").Value<int>("Answers"));
+					Assert.Equal(7, first.Value<RavenJObject>("Value").Value<int>("Paths"));
 				}
 			}
 		}
@@ -498,15 +501,15 @@ namespace Raven.Tests.Document
 				var session = documentStore.OpenSession();
 				session.Advanced.OnEntityConverted += (entity, document, metadata) =>
 				{
-					metadata["Raven-Allowed-Users"] = new JArray("ayende", "oren", "rob");
+					metadata["Raven-Allowed-Users"] = new RavenJArray("ayende", "oren", "rob");
 				};
 
 				var company = new Company { Name = "Company" };
 				session.Store(company);
 				session.SaveChanges();
-
+				RavenJToken t;
 				var metadataFromServer = session.Advanced.GetMetadataFor(session.Load<Company>(company.Id));
-				var users = metadataFromServer["Raven-Allowed-Users"].OfType<JValue>().Select(x => (string)x.Value).ToArray();
+				var users = ((RavenJArray)metadataFromServer["Raven-Allowed-Users"]).Cast<RavenJValue>().Select(x => (string)x.Value).ToArray();
 				Assert.Equal(new[]{"ayende","oren","rob"}, users);
 			}
 		}
@@ -524,17 +527,17 @@ namespace Raven.Tests.Document
 					{
 						new PutCommandData
 						{
-							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Document = RavenJObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
 							Etag = null,
 							Key = "rhino1",
-							Metadata = new JObject(),
+							Metadata = new RavenJObject(),
 						},
 						new PutCommandData
 						{
-							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Document = RavenJObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
 							Etag = null,
 							Key = "rhino2",
-							Metadata = new JObject(),
+							Metadata = new RavenJObject(),
 						},
 						new DeleteCommandData
 						{
@@ -1055,7 +1058,7 @@ namespace Raven.Tests.Document
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
-				documentStore.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinition<LinqIndexesFromClient.User>
+				documentStore.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinitionBuilder<LinqIndexesFromClient.User>
 				{
 					Map = users => from user in users
 								   where user.Location == "Tel Aviv"
@@ -1089,7 +1092,7 @@ namespace Raven.Tests.Document
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
-				documentStore.DatabaseCommands.PutIndex("UsersCountByLocation", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationCount>
+				documentStore.DatabaseCommands.PutIndex("UsersCountByLocation", new IndexDefinitionBuilder<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationCount>
 				{
 					Map = users => from user in users
 								   where user.Location == "Tel Aviv"
@@ -1128,7 +1131,7 @@ namespace Raven.Tests.Document
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
-				documentStore.DatabaseCommands.PutIndex("AvgAgeByLocation", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge>
+				documentStore.DatabaseCommands.PutIndex("AvgAgeByLocation", new IndexDefinitionBuilder<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge>
 				{
 					Map = users => from user in users
 								   select new { user.Location, user.Age },
@@ -1174,7 +1177,7 @@ namespace Raven.Tests.Document
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
 
-				documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge> {
+				documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinitionBuilder<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge> {
 					Map = users => from user in users
 								   select new { user.Age },
 					Indexes = {{x=>x.Age, FieldIndexing.Analyzed}},
@@ -1222,7 +1225,7 @@ namespace Raven.Tests.Document
 				var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.Null(attachment);
 
-				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 1, 2, 3 }, new JObject(new JProperty("Hello", "World")));
+				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] {1, 2, 3}, new RavenJObject {{"Hello", "World"}});
 
 				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.NotNull(attachment);
@@ -1249,7 +1252,7 @@ namespace Raven.Tests.Document
 				documentStore.Initialize();
 
 				var key = string.Format("{0}-{1}", "test", DateTime.Now.ToFileTimeUtc());
-				var metadata = new JObject {
+				var metadata = new RavenJObject {
 									{ "owner", 5 },
 									{ "Content-Type", "text/plain" },
 									{ "filename", "test.txt" },

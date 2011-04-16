@@ -1,7 +1,6 @@
 using System.Linq;
-using LiveProjectionsBug;
 using Raven.Client;
-using Raven.Client.Client;
+using Raven.Tests.Bugs.TransformResults;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Queries

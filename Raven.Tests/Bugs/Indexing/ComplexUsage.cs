@@ -1,18 +1,16 @@
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Linq;
 using Raven.Client.Indexes;
-using Raven.Database.Indexing;
-using Raven.Tests;
 using Xunit;
 
-namespace GBS.NetLabels.Examples.Tests
+namespace Raven.Tests.Bugs.Indexing
 {
 	public class ComplexUsage : LocalClientTest
 	{
 		[Fact]
 		public void ShouldNotOutputNull()
 		{
-			//using (var store = GBS.NetLabels.Data.DocumentStoreFactory.Create("Examples"))
 			using (var store = NewDocumentStore())
 			{
 				using (var session = store.OpenSession())
@@ -52,7 +50,7 @@ namespace GBS.NetLabels.Examples.Tests
 
 				using (var session = store.OpenSession())
 				{
-					var objects = session.Query<dynamic, Accounts_Search>()
+					var objects = session.Query<object, Accounts_Search>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.AsProjection<AccountIndex>()
 						.OrderBy(x => x.AccountId) //this is just to make sure the second result is last for the test

@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Xunit;
@@ -170,7 +172,7 @@ namespace Raven.Tests.Bugs
 									          			{
 									          				Type = PatchCommandType.Add,
 									          				Name = "Comments",
-									          				Value = JObject.FromObject(new Comment {AuthorId = "authors/456"})
+									          				Value = RavenJObject.FromObject(new Comment {AuthorId = "authors/456"})
 									          			},
 									          	}
 								}
@@ -186,7 +188,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void CanRemoveValuesToList()
+		public void CanRemoveValuesFromList()
 		{
 			using (var store = NewDocumentStore())
 			{

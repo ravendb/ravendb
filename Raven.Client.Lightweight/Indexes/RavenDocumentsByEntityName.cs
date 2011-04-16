@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Database.Indexing;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Client.Indexes
 {

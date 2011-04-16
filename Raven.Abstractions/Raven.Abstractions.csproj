@@ -55,13 +55,15 @@
     <Compile Include="Commands\PatchCommandData.cs" />
     <Compile Include="Commands\PutCommandData.cs" />
     <Compile Include="Data\AggregationOperation.cs" />
+    <Compile Include="Data\AggregationOperationExtensions.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\BatchResult.cs" />
     <Compile Include="Data\Collection.cs" />
-    <Compile Include="Data\Constacts.cs" />
+    <Compile Include="Data\Constants.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
     <Compile Include="Commands\ICommandData.cs" />
+    <Compile Include="Data\EnumerableExtension.cs" />
     <Compile Include="Data\IJsonDocumentMetadata.cs" />
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\JsonDocument.cs" />
@@ -86,6 +88,7 @@
     <Compile Include="Extensions\JsonExtensions.cs" />
     <Compile Include="Default.cs" />
     <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
+    <Compile Include="Linq\DynamicNullObject.cs" />
     <Compile Include="MEF\IPartMetadata.cs" />
     <Compile Include="MEF\OrderedPartCollection.cs" />
     <Compile Include="Json\JsonDateTimeOffsetConverter.cs" />
@@ -106,6 +109,7 @@
     <Compile Include="Json\JTokenExtensions.cs" />
     <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\DynamicJsonObject.cs" />
+    <Compile Include="MEF\PartMetadata.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>
       </SubType>
@@ -119,6 +123,12 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

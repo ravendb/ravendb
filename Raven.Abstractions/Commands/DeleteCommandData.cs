@@ -4,10 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
-using Raven.Http;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Commands
 {
 	/// <summary>
 	/// A single batch operation for a document DELETE
@@ -39,7 +39,7 @@ namespace Raven.Database.Data
             get; set;
         }
 
-    	public JObject Metadata
+    	public RavenJObject Metadata
     	{
 			get { return null; }
     	}
@@ -47,13 +47,14 @@ namespace Raven.Database.Data
 		/// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
-    	public JObject ToJson()
-    	{
-    		return new JObject(
-				new JProperty("Key", Key),
-				new JProperty("Etag", new JValue(Etag != null ? (object)Etag.ToString() : null)),
-				new JProperty("Method", Method)
-				);
-    	}
+		public RavenJObject ToJson()
+		{
+			return new RavenJObject
+			       	{
+			       		{"Key", Key},
+						{"Etag", new RavenJValue(Etag != null ? (object) Etag.ToString() : null)},
+						{"Method", Method}
+			       	};
+		}
     }
 }

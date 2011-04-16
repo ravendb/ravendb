@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -48,7 +50,7 @@ namespace Raven.Tests.Indexes
                 "
 					   });
 			db.Put("1", Guid.Empty,
-			       JObject.Parse(
+			       RavenJObject.Parse(
 			       	@"{
                 type: 'page', 
                 some: 'val', 
@@ -58,7 +60,7 @@ namespace Raven.Tests.Indexes
                 size: 5,
                 '@metadata': {'@id': 1}
             }"),
-                   new JObject(), null);
+                   new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -88,9 +90,9 @@ namespace Raven.Tests.Indexes
                 "
 					   });
 			 db.Put("1", null,
-				   JObject.Parse(
+				   RavenJObject.Parse(
 					@"{ type: 'page', name: 'ayende' }"),
-				   new JObject(), null);
+				   new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -106,9 +108,9 @@ namespace Raven.Tests.Indexes
 			Assert.Equal(1, docs.Results.Count);
 
 			db.Put("1", null,
-				   JObject.Parse(
+				   RavenJObject.Parse(
 					@"{ type: 'bar', name: 'ayende' }"),
-				   new JObject(), null);
+				   new RavenJObject(), null);
 
 			do
 			{
@@ -137,9 +139,9 @@ select new{project_name = prj.name}
 						});
 
 			var document =
-				JObject.Parse(
+				RavenJObject.Parse(
 					"{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven'}], '@metadata': { '@id': 1}}");
-            db.Put("1", Guid.Empty, document, new JObject(), null);
+            db.Put("1", Guid.Empty, document, new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -154,8 +156,8 @@ select new{project_name = prj.name}
 					Thread.Sleep(100);
 			} while (docs.IsStale);
 			Assert.Equal(1, docs.Results.Count);
-			var jProperty = docs.Results[0].Property("name");
-			Assert.Equal("ayende", jProperty.Value.Value<string>());
+			var jProperty = docs.Results[0]["name"];
+			Assert.Equal("ayende", jProperty.Value<string>());
 		}
 
 		[Fact]
@@ -171,9 +173,9 @@ select new{project_name = prj.name, project_num = prj.num}
 "
 						});
 			var document =
-				JObject.Parse(
+				RavenJObject.Parse(
 					"{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven', 'num': 5}, {'name':'crow', 'num': 6}], '@metadata': { '@id': 1}}");
-            db.Put("1", Guid.Empty, document, new JObject(), null);
+            db.Put("1", Guid.Empty, document, new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -212,9 +214,9 @@ select new{project_name = prj.name, project_num = prj.num}
 "
 					   });
 			db.Put("1", Guid.Empty,
-			       JObject.Parse(
+			       RavenJObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
-                   new JObject(), null);
+                   new RavenJObject(), null);
 
 
 			QueryResult docs;
@@ -254,9 +256,9 @@ select new{project_name = prj.name, project_num = prj.num}
 "
 					   });
 			db.Put("1", Guid.Empty,
-			       JObject.Parse(
+			       RavenJObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
-                   new JObject(), null);
+                   new RavenJObject(), null);
 
 
 			QueryResult docs;
@@ -278,9 +280,9 @@ select new{project_name = prj.name, project_num = prj.num}
 		public void Can_read_values_from_index_of_documents_already_in_db()
 		{
 			db.Put("1", Guid.Empty,
-			       JObject.Parse(
+			       RavenJObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
-                   new JObject(), null);
+                   new RavenJObject(), null);
 
 			db.PutIndex("pagesByTitle",
 					   new IndexDefinition
@@ -310,13 +312,13 @@ select new{project_name = prj.name, project_num = prj.num}
 		public void Can_read_values_from_indexes_of_documents_already_in_db_when_multiple_docs_exists()
 		{
 			db.Put(null, Guid.Empty,
-			       JObject.Parse(
+			       RavenJObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
-                   new JObject(), null);
+                   new RavenJObject(), null);
 			db.Put(null, Guid.Empty,
-			       JObject.Parse(
+			       RavenJObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
-                   new JObject(), null);
+                   new RavenJObject(), null);
 
 			db.PutIndex("pagesByTitle",
 						new IndexDefinition
@@ -354,11 +356,11 @@ select new{project_name = prj.name, project_num = prj.num}
 				Indexes = {{"Region", FieldIndexing.NotAnalyzed}}
             });
 
-            db.Put("1", Guid.Empty, JObject.Parse(
+            db.Put("1", Guid.Empty, RavenJObject.Parse(
             @"{
                 Region: 'A', 
             }"),
-            new JObject(), null);
+            new RavenJObject(), null);
 
             QueryResult docs;
             do

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Impl;
@@ -18,15 +19,12 @@ namespace Raven.Storage.Managed
 {
     public class StorageActionsAccessor : IStorageActionsAccessor
     {
-		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
-
-        public StorageActionsAccessor(TableStorage storage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+        public StorageActionsAccessor(TableStorage storage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher)
         {
-            this.documentCodecs = documentCodecs;
             General = new GeneralStorageActions(storage);
             Attachments = new AttachmentsStorageActions(storage, generator);
             Transactions = new TransactionStorageActions(storage, generator, documentCodecs);
-            Documents = new DocumentsStorageActions(storage, Transactions, generator, documentCodecs);
+            Documents = new DocumentsStorageActions(storage, Transactions, generator, documentCodecs, documentCacher);
             Indexing = new IndexingStorageActions(storage);
             MappedResults = new MappedResultsStorageAction(storage, generator);
             Queue = new QueueStorageActions(storage, generator);

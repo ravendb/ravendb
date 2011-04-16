@@ -4,9 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
-using Raven.Bundles.Replication;
 using Raven.Bundles.Tests.Versioning;
-using Raven.Client;
 using Xunit;
 
 namespace Raven.Bundles.Tests.Replication

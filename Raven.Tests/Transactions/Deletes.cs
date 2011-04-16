@@ -4,7 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Http;
@@ -31,7 +32,7 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void DeletingDocumentInTransactionInNotVisibleBeforeCommit()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
             db.Delete("ayende", null, transactionInformation);
             Assert.NotNull(db.Get("ayende", null));
@@ -40,7 +41,7 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void DeletingDocumentInTransactionInNotFoundInSameTransactionBeforeCommit()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
             db.Delete("ayende", null, transactionInformation);
             Assert.Null(db.Get("ayende", transactionInformation));
@@ -50,10 +51,10 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void DeletingDocumentAndThenAddingDocumentInSameTransactionCanWork()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
             db.Delete("ayende", null, transactionInformation);
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             db.Commit(transactionInformation.Id);
 
             Assert.Equal("rahien", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
@@ -63,7 +64,7 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void DeletingDocumentInTransactionInRemovedAfterCommit()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
             db.Delete("ayende", null, transactionInformation);
             db.Commit(transactionInformation.Id);

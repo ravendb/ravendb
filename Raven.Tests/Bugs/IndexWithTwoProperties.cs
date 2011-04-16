@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -27,7 +28,7 @@ namespace Raven.Tests.Bugs
 
 				store.DatabaseCommands.PutIndex(
 					"FeedSync/TwoProperties",
-					new IndexDefinition<Foo>
+					new IndexDefinitionBuilder<Foo>
 
 
 					{

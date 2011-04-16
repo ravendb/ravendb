@@ -4,13 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using Raven.Abstractions.Data;
-using Raven.Database.Extensions;
+using Raven.Abstractions.Extensions;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// All the information required to query a Raven index
@@ -139,19 +137,6 @@ namespace Raven.Database.Data
 		protected virtual string GetCustomQueryStringVariables()
 		{
 			return string.Empty;
-		}
-	}
-
-	internal static class EnumerableExtension
-	{
-		public static void ApplyIfNotNull<T>(this IEnumerable<T> self, Action<T> action)
-		{
-			if (self == null)
-				return;
-			foreach (var item in self)
-			{
-				action(item);
-			}
 		}
 	}
 }

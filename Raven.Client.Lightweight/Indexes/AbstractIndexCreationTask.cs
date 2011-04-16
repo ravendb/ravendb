@@ -9,11 +9,11 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 #if !NET_3_5
 using System.Threading.Tasks;
-using Raven.Client.Client.Async;
+using Raven.Client.Connection.Async;
 #endif
-using Raven.Client.Client;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Database.Indexing;
 
 namespace Raven.Client.Indexes
 {
@@ -126,7 +126,7 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public override IndexDefinition CreateIndexDefinition()
 		{
-            return new IndexDefinition<TDocument, TReduceResult>
+            return new IndexDefinitionBuilder<TDocument, TReduceResult>
 			{
 				Indexes = Indexes,
 				SortOptions = SortOptions,

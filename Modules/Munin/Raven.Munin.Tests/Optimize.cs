@@ -3,8 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using Newtonsoft.Json.Linq;
+
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Munin.Tests
@@ -17,12 +17,12 @@ namespace Raven.Munin.Tests
             
             for (int i = 0; i < 16; i++)
             {
-                Table.Put(JToken.FromObject(i), new byte[512]);
+				Table.Put(RavenJToken.FromObject(i), new byte[512]);
             }
 
             for (int i = 0; i < 16; i++)
             {
-                Table.Remove(JToken.FromObject(i));
+				Table.Remove(RavenJToken.FromObject(i));
             }
 
 
@@ -40,15 +40,15 @@ namespace Raven.Munin.Tests
             
             for (int i = 0; i < 16; i++)
             {
-                Table.Put(JToken.FromObject(i), new byte[512]);
+				Table.Put(RavenJToken.FromObject(i), new byte[512]);
             }
 
             for (int i = 0; i < 16; i++)
             {
-                Table.Remove(JToken.FromObject(i));
+				Table.Remove(RavenJToken.FromObject(i));
             }
 
-            Table.Put(JToken.FromObject("a"), new byte[512]);
+			Table.Put(RavenJToken.FromObject("a"), new byte[512]);
 
 
             Commit();
@@ -58,7 +58,7 @@ namespace Raven.Munin.Tests
             Assert.True(oldSize > PersistentSource.Read(log => log.Length));
 
             Assert.NotNull(
-                Table.Read(JToken.FromObject("a"))
+				Table.Read(RavenJToken.FromObject("a"))
                 );
         }
 
@@ -69,16 +69,16 @@ namespace Raven.Munin.Tests
             
             for (int i = 0; i < 16; i++)
             {
-                Table.Put(JToken.FromObject(i), new byte[512]);
+				Table.Put(RavenJToken.FromObject(i), new byte[512]);
             }
 
             for (int i = 0; i < 16; i++)
             {
-                Table.Remove(JToken.FromObject(i));
+				Table.Remove(RavenJToken.FromObject(i));
             }
 
-            var txId2 = Guid.NewGuid();
-            Table.Put(JToken.FromObject("a"), new byte[512]);
+            //var txId2 = Guid.NewGuid();
+			Table.Put(RavenJToken.FromObject("a"), new byte[512]);
 
 
             Commit();
@@ -88,7 +88,7 @@ namespace Raven.Munin.Tests
             Assert.True(oldSize > PersistentSource.Read(log => log.Length));
 
             Assert.NotNull(
-                Table.Read(JToken.FromObject("a"))
+				Table.Read(RavenJToken.FromObject("a"))
                 );
         }
     }

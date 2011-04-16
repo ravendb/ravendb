@@ -1,9 +1,10 @@
-﻿namespace Raven.Studio.Features.Documents
+﻿using Raven.Json.Linq;
+
+namespace Raven.Studio.Features.Documents
 {
 	using System.Windows;
 	using System.Windows.Input;
 	using Commands;
-	using Framework.Extensions;
 	using System;
 	using System.Collections.Generic;
 	using System.Collections.ObjectModel;
@@ -12,9 +13,7 @@
 	using System.Text.RegularExpressions;
 	using Caliburn.Micro;
 	using Newtonsoft.Json;
-	using Newtonsoft.Json.Linq;
 	using Abstractions.Data;
-	using Raven.Database;
 	using Framework;
 
 	[Export(typeof(EditDocumentViewModel))]
@@ -27,7 +26,7 @@
 		private string jsonData;
 		private string jsonMetadata;
 		private DateTime lastModified;
-		private IDictionary<string, JToken> metadata;
+		private IDictionary<string, RavenJToken> metadata;
 		private bool nonAuthoritiveInformation;
 		private readonly BindableCollection<string> references = new BindableCollection<string>();
 		private IKeyboardShortcutBinder keys;
@@ -35,7 +34,7 @@
 		[ImportingConstructor]
 		public EditDocumentViewModel(IEventAggregator events, IKeyboardShortcutBinder keys)
 		{
-			metadata = new Dictionary<string, JToken>();
+			metadata = new Dictionary<string, RavenJToken>();
 
 			Id = "";
 			document = new JsonDocument();
@@ -145,7 +144,7 @@
 			}
 		}
 
-		public IDictionary<string, JToken> Metadata
+		public IDictionary<string, RavenJToken> Metadata
 		{
 			get { return metadata; }
 		}
@@ -175,10 +174,10 @@
 
 			if (document.Metadata != null)
 			{
-				foreach (JProperty property in document.Metadata.Properties().ToList())
+				foreach (var property in document.Metadata.ToList())
 				{
-					if (property.Name.StartsWith("@"))
-						property.Remove();
+					if (property.Key.StartsWith("@"))
+						document.Metadata.Remove(property.Key);
 				}
 			}
 
@@ -215,9 +214,9 @@
 			NotifyOfPropertyChange(() => Metadata);
 		}
 
-		private static JObject ToJObject(string json)
+		private static RavenJObject ToJObject(string json)
 		{
-			return string.IsNullOrEmpty(json) ? new JObject() : JObject.Parse(json);
+			return string.IsNullOrEmpty(json) ? new RavenJObject() : RavenJObject.Parse(json);
 		}
 
 		public void Prettify()
@@ -232,19 +231,12 @@
 			return JsonConvert.SerializeObject(JsonConvert.DeserializeObject(json), Formatting.Indented);
 		}
 
-		private static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
+		private static IDictionary<string, RavenJToken> ParseJsonToDictionary(RavenJObject dataAsJson)
 		{
-			IDictionary<string, JToken> result = new Dictionary<string, JToken>();
-
-			foreach (var d in dataAsJson)
-			{
-				result.Add(d.Key, d.Value);
-			}
-
-			return result;
+			return dataAsJson.ToDictionary(d => d.Key, d => d.Value);
 		}
 
-		private static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, JToken>> data)
+		private static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, RavenJToken>> data)
 		{
 			return JsonConvert.SerializeObject(data, Formatting.Indented);
 		}

@@ -8,15 +8,18 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
 using System.Text.RegularExpressions;
-using Raven.Client.Client;
-
+using Raven.Client.Connection;
 #if !NET_3_5
-using Raven.Client.Client.Async;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document.Async;
 #endif
 using System.Linq;
 #if !SILVERLIGHT
 using Raven.Client.Extensions;
+#else
+using Raven.Client.Silverlight.Connection;
+using Raven.Client.Silverlight.Connection.Async;
+
 #endif
 
 namespace Raven.Client.Document

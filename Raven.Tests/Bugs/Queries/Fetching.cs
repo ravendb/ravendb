@@ -1,6 +1,5 @@
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Xunit;
 using System.Linq;
 
@@ -32,7 +31,7 @@ namespace Raven.Tests.Bugs.Queries
 				using (var s = store.OpenSession())
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
-						.SelectFields<JObject>("Tags,Id", "Tags,Id3")
+						.SelectFields<RavenJObject>("Tags,Id", "Tags,Id3")
 						.ToArray();
 
 					var expected = new[]

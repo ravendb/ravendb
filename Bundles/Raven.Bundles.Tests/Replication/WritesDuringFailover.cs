@@ -1,10 +1,9 @@
 using System;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using Raven.Bundles.Tests.Versioning;
 using Raven.Client;
-using Raven.Client.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Xunit;
 

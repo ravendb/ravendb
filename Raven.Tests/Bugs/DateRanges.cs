@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Client.Linq;
 using Raven.Database.Indexing;
 using Xunit;

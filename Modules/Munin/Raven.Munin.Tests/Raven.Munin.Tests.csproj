@@ -58,8 +58,14 @@
     <Compile Include="PutsAfterRestart.cs" />
     <Compile Include="Removes.cs" />
     <Compile Include="SimpleFileTest.cs" />
+    <Compile Include="ToDo.cs" />
+    <Compile Include="ToDoRepository.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Munin\Raven.Munin.csproj">
       <Project>{486537C2-EDF7-404F-9CFB-EEE25996DF5F}</Project>
       <Name>Raven.Munin</Name>

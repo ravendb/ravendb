@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Munin.Tree
 {
@@ -17,7 +17,7 @@ namespace Raven.Munin.Tree
         bool IsEmpty { get; }
         TValue Value { get; }
 
-        JObject ToJObject();
+        RavenJObject ToJObject();
 
         IBinarySearchTree<TKey, TValue> LeftMost { get; }
         IBinarySearchTree<TKey, TValue> RightMost { get; }

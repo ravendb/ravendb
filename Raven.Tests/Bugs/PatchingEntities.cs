@@ -1,8 +1,11 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Json.Linq;
 using Xunit;
 using System.Linq;
 
@@ -23,13 +26,13 @@ namespace Raven.Tests.Bugs
 					Map = "from doc in docs from note in doc.Comment.Notes select new { note}"
 				});
 
-				store.DatabaseCommands.Put("items/1", null, JObject.FromObject(new
+				store.DatabaseCommands.Put("items/1", null, RavenJObject.FromObject(new
 				{
 					Comment = new
 					{
 						Notes = new[] {"old", "item"}
 					}
-				}), new JObject());
+				}), new RavenJObject());
 
 				store.OpenSession().Advanced.LuceneQuery<object>("MyIndex").WaitForNonStaleResults().ToList();
 

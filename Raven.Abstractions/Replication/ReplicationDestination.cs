@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-namespace Raven.Bundles.Replication.Data
+namespace Raven.Abstractions.Replication
 {
 	/// <summary>
 	/// Data class for replication destination documents

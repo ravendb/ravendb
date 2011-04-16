@@ -1,12 +1,13 @@
-﻿namespace Raven.Studio.Features.Documents
+﻿using Raven.Json.Linq;
+using Raven.Studio.Framework;
+
+namespace Raven.Studio.Features.Documents
 {
     using System;
     using Collections;
 	using Abstractions.Data;
-    using Framework.Extensions;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
-    using Raven.Database;
 
     /// <summary>
     /// This view model is for displaying documents in bulk. There is no change notification and no behaviours related to editing
@@ -51,7 +52,7 @@
             }
         }
 
-        public JObject Contents
+        public RavenJObject Contents
         {
             get { return JsonDocument.DataAsJson; }
         }
@@ -60,7 +61,7 @@
         {
             get
             {
-                JToken selectToken = JsonDocument.DataAsJson.SelectToken(path);
+                RavenJToken selectToken = JsonDocument.DataAsJson.SelectToken(path);
                 if (selectToken == null || 
                     selectToken.Type == JTokenType.Null || 
                     selectToken.Type == JTokenType.Undefined)
@@ -68,7 +69,7 @@
                 if (selectToken.Type == JTokenType.Object ||
                     selectToken.Type == JTokenType.Array)
                     return selectToken.ToString(Formatting.Indented);
-                return ((JValue)selectToken).Value.ToString();
+                return ((RavenJValue)selectToken).Value.ToString();
             }
         }
 
@@ -85,7 +86,7 @@
             }
         }
 
-        public JObject Metadata
+        public RavenJObject Metadata
         {
             get { return JsonDocument.Metadata; }
         }
@@ -105,7 +106,7 @@
             return DetermineCollectionType(Metadata);
         }
 
-        public static string DetermineCollectionType(JObject metadata)
+        public static string DetermineCollectionType(RavenJObject metadata)
         {
             var id = metadata.IfPresent<string>("@id") ?? string.Empty;
 

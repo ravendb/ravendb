@@ -5,10 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
-using Raven.Database;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
 
@@ -27,7 +26,7 @@ namespace Raven.Storage.Managed
 
         public void EnqueueToQueue(string name, byte[] data)
         {
-            storage.Queues.Put(new JObject
+            storage.Queues.Put(new RavenJObject
             {
                 {"name", name},
                 {"id", generator.CreateSequentialUuid().ToByteArray()},
@@ -37,7 +36,7 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<Tuple<byte[], object>> PeekFromQueue(string name)
         {
-            foreach (var queuedMsgKey in storage.Queues["ByName"].SkipTo(new JObject
+            foreach (var queuedMsgKey in storage.Queues["ByName"].SkipTo(new RavenJObject
             {
                 {"name", name}
             }).TakeWhile(x=> StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("name"), name)))
@@ -52,7 +51,7 @@ namespace Raven.Storage.Managed
                     continue;
                 }
 
-                readResult.Key["reads"] = readResult.Key.Value<int>("reads") + 1;
+				((RavenJObject)readResult.Key)["reads"] = readResult.Key.Value<int>("reads") + 1;
                 storage.Queues.UpdateKey(readResult.Key);
 
                 yield return new Tuple<byte[], object>(
@@ -64,7 +63,7 @@ namespace Raven.Storage.Managed
 
         public void DeleteFromQueue(string name, object id)
         {
-            storage.Queues.Remove(new JObject
+            storage.Queues.Remove(new RavenJObject
                 {
                     {"name", name},
                     {"id", (byte[])id}

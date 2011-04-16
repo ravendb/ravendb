@@ -6,11 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
-using Raven.Database;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
 using Raven.Database.Json;
@@ -28,11 +27,11 @@ namespace Raven.Storage.Managed
             this.generator = generator;
         }
 
-        public void PutMappedResult(string view, string docId, string reduceKey, JObject data, byte[] viewAndReduceKeyHashed)
+        public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data, byte[] viewAndReduceKeyHashed)
         {
             var ms = new MemoryStream();
             data.WriteTo(ms);
-            storage.MappedResults.Put(new JObject
+			storage.MappedResults.Put(new RavenJObject
             {
                 {"view", view},
                 {"reduceKey", reduceKey},
@@ -41,18 +40,18 @@ namespace Raven.Storage.Managed
             }, ms.ToArray());
         }
 
-    	public IEnumerable<JObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
+    	public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
     	{
     		return getMappedResultsParams.SelectMany(GetMappedResults);
     	}
 
-    	public IEnumerable<JObject> GetMappedResults(GetMappedResultsParams getMappedResultsParams)
+    	public IEnumerable<RavenJObject> GetMappedResults(GetMappedResultsParams getMappedResultsParams)
         {
-            return storage.MappedResults["ByViewAndReduceKey"].SkipTo(new JObject
+            return storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject
             {
                 {"view", getMappedResultsParams.View},
                 {"reduceKey", getMappedResultsParams.ReduceKey}
-            }).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), getMappedResultsParams.View) &&
+		}).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), getMappedResultsParams.View) &&
                               StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("reduceKey"), getMappedResultsParams.ReduceKey))
                 .Select(x =>
                 {
@@ -66,24 +65,22 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
         {
-            foreach (var key in storage.MappedResults["ByViewAndDocumentId"].SkipTo(new JObject
+            foreach (var key in storage.MappedResults["ByViewAndDocumentId"].SkipTo(new RavenJObject
             {
                 {"view", view},
-                {"docId", documentId},
+                {"docId", documentId}
             }).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view) &&
                               StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("docId"), documentId)))
             {
                 storage.MappedResults.Remove(key);
                 yield return key.Value<string>("reduceKey");
-            };
+            }
         }
 
         public void DeleteMappedResultsForView(string view)
         {
-            foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new JObject
-            {
-                {"view", view},
-            }).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view)))
+            foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject{{"view", view}})
+            .TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view)))
             {
                 storage.MappedResults.Remove(key);
             }

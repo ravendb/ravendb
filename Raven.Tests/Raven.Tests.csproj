@@ -106,11 +106,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bugs\Account.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
-    <Compile Include="Bugs\AnyQueries.cs" />
+    <Compile Include="Bugs\RavenDbAnyOfPropertyCollection.cs" />
     <Compile Include="Bugs\Arrays.cs" />
     <Compile Include="Bugs\AsyncCommit.cs" />
     <Compile Include="Bugs\Async\Querying.cs" />
@@ -118,6 +119,7 @@
     <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\AutoCreateIndexes.cs" />
     <Compile Include="Bugs\AutoDetectAnaylzersForQuery.cs" />
+    <Compile Include="Bugs\Blog.cs" />
     <Compile Include="Bugs\Caching\CachingOfDocumentInclude.cs" />
     <Compile Include="Bugs\Caching\CachingOfDocumentLoad.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
@@ -127,6 +129,7 @@
     <Compile Include="Bugs\CanProjectIdFromDocumentInQueries.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
+    <Compile Include="Bugs\Coin.cs" />
     <Compile Include="Bugs\CompiledIndexes\NetworkEventsToNetworkTemp.cs" />
     <Compile Include="Bugs\CompiledIndexes\NetworkList.cs" />
     <Compile Include="Bugs\CompiledIndexes\Network.cs" />
@@ -148,9 +151,10 @@
     <Compile Include="Bugs\DTC\UsingRemoteDTC.cs" />
     <Compile Include="Bugs\Embedded\CanUseForUrlOnly.cs" />
     <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Local.cs" />
-    <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Remote.cs" />
+    <Compile Include="Bugs\Entities\CanSaveUpdateAndRead.cs" />
     <Compile Include="Bugs\Entities\JObjectEntity.cs" />
     <Compile Include="Bugs\EntityWithDate.cs" />
+    <Compile Include="Bugs\EntityWithNullableDateTimeOffset.cs" />
     <Compile Include="Bugs\EntityWithoutId.cs" />
     <Compile Include="Bugs\Errors\CanIndexOnNull.cs" />
     <Compile Include="Bugs\Etag.cs" />
@@ -182,6 +186,9 @@
     <Compile Include="Bugs\Indexing\IndexingOnDictionary.cs" />
     <Compile Include="Bugs\Indexing\MissingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\RemoteIndexingOnDictionary.cs" />
+    <Compile Include="Bugs\Indexing\Transaction.cs" />
+    <Compile Include="Bugs\Indexing\TransactionIndexByMrnRemote.cs" />
+    <Compile Include="Bugs\Indexing\Transaction_ByMrn.cs" />
     <Compile Include="Bugs\Indexing\UsingSortOptions.cs" />
     <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\TransactionIndexByMrn.cs" />
@@ -203,6 +210,8 @@
     <Compile Include="Bugs\LiveProjections\Entities\Product.cs" />
     <Compile Include="Bugs\LiveProjections\Indexes\ProductDetailsReport_ByProductId.cs" />
     <Compile Include="Bugs\LiveProjections\Indexes\ProductSkuListViewModelReport_ByArticleNumberAndName.cs" />
+    <Compile Include="Bugs\LiveProjections\ParentAndChildrenNames.cs" />
+    <Compile Include="Bugs\LiveProjections\Person.cs" />
     <Compile Include="Bugs\LiveProjections\Views\ProductDetailsReport.cs" />
     <Compile Include="Bugs\LiveProjections\Views\ProductSkuListViewModelReport.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\ProductSku.cs" />
@@ -222,6 +231,7 @@
     <Compile Include="Bugs\MultiTenancy\Basic.cs" />
     <Compile Include="Bugs\MultiTenancy\CreatingIndexes.cs" />
     <Compile Include="Bugs\MultiTenancy\NoCaseSensitive.cs" />
+    <Compile Include="Bugs\MultiTenancy\Test.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\NullableEnum.cs" />
     <Compile Include="Bugs\Nullables.cs" />
@@ -244,8 +254,11 @@
     <Compile Include="Bugs\Queries\WithAs.cs" />
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryByTypeOnly.cs" />
+    <Compile Include="Bugs\QueryByTypeOnlyRemote.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
     <Compile Include="Bugs\QueryingOnValueWithMinus.cs" />
+    <Compile Include="Bugs\QueryingOnValueWithMinusAnalyzed.cs" />
+    <Compile Include="Bugs\QueryingOnValueWithMinusRemote.cs" />
     <Compile Include="Bugs\QueryingWithDynamicRavenQueryInspector.cs" />
     <Compile Include="Bugs\QueryOptimizer\LinqToQueryParameters.cs" />
     <Compile Include="Bugs\QueryOptimizer\QueryOptimizeTests.cs" />
@@ -275,16 +288,31 @@
     <Compile Include="Bugs\SortingOnLong.cs" />
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\SpatialQueries.cs" />
+    <Compile Include="Bugs\Transaction.cs" />
+    <Compile Include="Bugs\TransformResults\Answer.cs" />
+    <Compile Include="Bugs\TransformResults\AnswerEntity.cs" />
+    <Compile Include="Bugs\TransformResults\Answers_ByAnswerEntity.cs" />
+    <Compile Include="Bugs\TransformResults\Answers_ByQuestion.cs" />
+    <Compile Include="Bugs\TransformResults\AnswerViewItem.cs" />
+    <Compile Include="Bugs\TransformResults\AnswerVote.cs" />
+    <Compile Include="Bugs\TransformResults\AnswerVoteEntity.cs" />
     <Compile Include="Bugs\TransformResults\ComplexValuesFromTransformResults.cs" />
-    <Compile Include="Bugs\TransformResults\StackOverFlowIndexes.cs" />
-    <Compile Include="Bugs\TransformResults\StackOverFlowTypes.cs" />
-    <Compile Include="Bugs\TransformResults\StackOverFlowViews.cs" />
+    <Compile Include="Bugs\TransformResults\Question.cs" />
+    <Compile Include="Bugs\TransformResults\QuestionVote.cs" />
+    <Compile Include="Bugs\TransformResults\QuestionWithVoteTotalIndex.cs" />
+    <Compile Include="Bugs\TransformResults\User.cs" />
+    <Compile Include="Bugs\TransformResults\QuestionView.cs" />
+    <Compile Include="Bugs\TransformResults\Thor.cs" />
+    <Compile Include="Bugs\TransformResults\ThorIndex.cs" />
+    <Compile Include="Bugs\TransformResults\Votes_ByAnswerEntity.cs" />
     <Compile Include="Bugs\TransformResults\WithGuidId.cs" />
     <Compile Include="Bugs\TransitiveNull.cs" />
     <Compile Include="Bugs\TranslatingLinqQueriesToIndexes.cs" />
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Bugs\User.cs" />
+    <Compile Include="Bugs\UserGuid.cs" />
+    <Compile Include="Bugs\UserInt32.cs" />
     <Compile Include="Bugs\UsingAsProjection.cs" />
     <Compile Include="Bugs\UsingEnumInLinq.cs" />
     <Compile Include="Bugs\UsingLongAsId.cs" />
@@ -293,7 +321,7 @@
     <Compile Include="Bugs\VeryBigResultSet.cs" />
     <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
-    <Compile Include="Bugs\Vlko\Relations.cs" />
+    <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />
     <Compile Include="Bugs\WhereEntityIs.cs" />
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />
@@ -334,6 +362,8 @@
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="IndexQueryUrl.cs" />
+    <Compile Include="Json\CloningTests.cs" />
+    <Compile Include="Json\RavenJObjects.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
     <Compile Include="Linq\SampleGeoLocation.cs" />
@@ -409,6 +439,7 @@
     <Compile Include="Storage\GeneralStorage.cs" />
     <Compile Include="Storage\IndexStaleViaEtags.cs" />
     <Compile Include="Storage\WithDebugging.cs" />
+    <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
     <Compile Include="Transactions\Deletes.cs" />
@@ -419,17 +450,19 @@
     <Compile Include="Triggers\AttachmentDeleteTrigger.cs" />
     <Compile Include="Triggers\AttachmentReadTrigger.cs" />
     <Compile Include="Triggers\AttachmentPutTriggers.cs" />
+    <Compile Include="Triggers\AuditAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\AuditPutTrigger.cs" />
+    <Compile Include="Triggers\Bugs\AuditContext.cs" />
     <Compile Include="Triggers\Bugs\AuditTrigger.cs" />
     <Compile Include="Triggers\Bugs\ModifyingMetadataFromTrigger.cs" />
     <Compile Include="Triggers\Bugs\Person.cs" />
-    <Compile Include="Triggers\Bugs\Program.cs" />
     <Compile Include="Triggers\CascadeDeleteTrigger.cs" />
     <Compile Include="Triggers\DeleteTriggers.cs" />
     <Compile Include="Triggers\IndexToDataTable.cs" />
     <Compile Include="Triggers\IndexTriggers.cs" />
     <Compile Include="Triggers\PutTriggers.cs" />
     <Compile Include="Triggers\ReadTriggers.cs" />
+    <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
     <Compile Include="Views\MapReduce.cs" />
@@ -478,6 +511,10 @@
     <ProjectReference Include="..\Raven.Http\Raven.Http.csproj">
       <Project>{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}</Project>
       <Name>Raven.Http</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Server\Raven.Server.csproj">
       <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>

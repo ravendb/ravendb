@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
@@ -16,12 +16,12 @@ namespace Raven.Client
         /// <summary>
         /// Called when converting an entity to a document and metadata
         /// </summary>
-        void EntityToDocument(object entity, JObject document, JObject metadata);
+        void EntityToDocument(object entity, RavenJObject document, RavenJObject metadata);
 
         /// <summary>
         /// Called when converting a document and metadata to an entity
         /// </summary>
-        void DocumentToEntity(object entity, JObject document, JObject metadata);
+        void DocumentToEntity(object entity, RavenJObject document, RavenJObject metadata);
 
     }
 }

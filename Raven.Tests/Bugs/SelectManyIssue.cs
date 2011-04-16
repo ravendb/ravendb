@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Xunit;
 using System.Linq;
@@ -75,9 +76,9 @@ namespace Raven.Tests.Bugs
 
 		public class ClassificationSummary : AbstractIndexCreationTask
 		{
-			public override Raven.Database.Indexing.IndexDefinition CreateIndexDefinition()
+			public override IndexDefinition CreateIndexDefinition()
 			{
-				return new Raven.Database.Indexing.IndexDefinition
+				return new IndexDefinition
 				{
 					Map = @"from request in docs.AdvertisementRequests
                         from imp in Hierarchy(request, \""Impressions\"")

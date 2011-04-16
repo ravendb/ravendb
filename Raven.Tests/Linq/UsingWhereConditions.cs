@@ -7,7 +7,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Raven.Client.Client;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Xunit;
@@ -46,7 +48,7 @@ namespace Raven.Tests.Linq
 
                     db.DatabaseCommands.DeleteIndex(indexName);
                     var result = db.DatabaseCommands.PutIndex<CommitInfo, CommitInfo>(indexName,
-                            new IndexDefinition<CommitInfo, CommitInfo>()
+                            new IndexDefinitionBuilder<CommitInfo, CommitInfo>()
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Revision},

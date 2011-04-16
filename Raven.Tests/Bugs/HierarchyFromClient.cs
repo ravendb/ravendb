@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -17,7 +18,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanDefineHierarchicalIndexOnTheClient()
         {
-            var indexDefinition = new IndexDefinition<Person>
+            var indexDefinition = new IndexDefinitionBuilder<Person>
             {
                 Map = people => from p in people
                                 from c in p.Hierarchy("Children")
@@ -30,7 +31,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanDefineHierarchicalIndexOnTheClient_WithLinq()
         {
-            var indexDefinition = new IndexDefinition<Person>
+            var indexDefinition = new IndexDefinitionBuilder<Person>
             {
                 Map = people => from p in people
                                 from c in p.Hierarchy(x=>x.Children)

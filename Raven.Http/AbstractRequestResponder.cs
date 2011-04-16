@@ -8,6 +8,7 @@ using System.ComponentModel.Composition;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Data;
 using Raven.Http.Abstractions;
 
 namespace Raven.Http

@@ -2,9 +2,10 @@
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Linq;
+using Raven.Abstractions.Linq;
+using Raven.Json.Linq;
 
-namespace Raven.Database.Json
+namespace Raven.Abstractions.Json
 {
 	public class JsonToJsonConverter : JsonConverter
 	{
@@ -12,20 +13,23 @@ namespace Raven.Database.Json
 		{
 			if(value is DynamicNullObject)
 				writer.WriteNull();
-			else if (value is JObject)
-				((JObject)value).WriteTo(writer);
+			else if (value is RavenJObject)
+				((RavenJObject)value).WriteTo(writer);
 			else
 				((DynamicJsonObject)value).Inner.WriteTo(writer);
 		}
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
-			throw new NotImplementedException();
+			// NOTE: THIS DOESN'T SUPPORT READING OF DynamicJsonObject !!!
+
+			var o = RavenJToken.Load(reader);
+			return (o.Type == JTokenType.Null || o.Type == JTokenType.Undefined) ? null : o;
 		}
 
 		public override bool CanConvert(Type objectType)
 		{
-			return objectType == typeof(JObject) || objectType == typeof(DynamicJsonObject) || objectType == typeof(DynamicNullObject);
+			return objectType == typeof(RavenJObject) || objectType == typeof(DynamicJsonObject) || objectType == typeof(DynamicNullObject);
 		}
 	}
 }

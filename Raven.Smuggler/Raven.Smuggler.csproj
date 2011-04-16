@@ -10,9 +10,8 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Smuggler</RootNamespace>
     <AssemblyName>Raven.Smuggler</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <TargetFrameworkProfile>
-    </TargetFrameworkProfile>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
@@ -44,8 +43,8 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json.Net35">
-      <HintPath>..\SharedLibs\Newtonsoft.Json.Net35.dll</HintPath>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -67,6 +66,13 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+    <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -5,7 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using Raven.Client.Client;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
 using Xunit;

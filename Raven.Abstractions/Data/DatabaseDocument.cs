@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
     public class DatabaseDocument
     {

@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Munin
 {
@@ -12,7 +12,7 @@ namespace Raven.Munin
     {
         public byte[] Payload { get; set; }
         public int Size { get; set; }
-        public JToken Key { get; set; }
+		public RavenJToken Key { get; set; }
         public CommandType Type { get; set; }
         public long Position { get; set; }
         public int DictionaryId { get; set; }

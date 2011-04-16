@@ -24,7 +24,7 @@ namespace Raven.Samples.IndexReplication
             using (var documentStore = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
             {
                 documentStore.DatabaseCommands.PutIndex("Questions/VoteTotals",
-                                                        new IndexDefinition<Question>
+                                                        new IndexDefinitionBuilder<Question>
                                                         {
                                                             Map = questions => from question in questions
                                                                                select new

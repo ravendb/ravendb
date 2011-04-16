@@ -93,6 +93,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq">
@@ -114,19 +115,22 @@
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
+    <Compile Include="Impl\CachedDocument.cs" />
     <Compile Include="Impl\DatabaseBulkOperations.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
+    <Compile Include="Impl\DocumentCacher.cs" />
     <Compile Include="Impl\DocumentRetriever.cs" />
+    <Compile Include="Impl\IDocumentCacher.cs" />
     <Compile Include="Impl\Logging\AsyncBufferingAppender.cs" />
     <Compile Include="Indexing\FieldsToFetch.cs" />
     <Compile Include="Indexing\IIndexExtension.cs" />
     <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
     <Compile Include="Indexing\TasksExecuter.cs" />
     <Compile Include="Linq\CaptureQueryParameterNamesVisitor.cs" />
-    <Compile Include="Linq\TransformNullCoalasingOperatorVisitor.cs" />
+    <Compile Include="Linq\TransformNullCoalasingOperatorTransformer.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
     <Compile Include="Plugins\Builtins\CreateSilverlightIndexes.cs" />
     <Compile Include="Queries\DynamicQueryExtensions.cs" />
@@ -510,6 +514,10 @@
     <ProjectReference Include="..\Raven.Http\Raven.Http.csproj">
       <Project>{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}</Project>
       <Name>Raven.Http</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

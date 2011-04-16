@@ -6,11 +6,12 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database;
 using Raven.Database.Json;
 using System.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Authorization
 {
@@ -29,10 +30,10 @@ namespace Raven.Bundles.Authorization
 			string userId,
 			string operation,
 			string documentId,
-			JObject documentMetadata,
+			RavenJObject documentMetadata,
 			Action<string> logger)
 		{
-			var authAsJson = documentMetadata.Value<JObject>(RavenDocumentAuthorization);
+			var authAsJson = documentMetadata[RavenDocumentAuthorization] as RavenJObject;
 			if (authAsJson == null)
 			{
 				if (logger != null)

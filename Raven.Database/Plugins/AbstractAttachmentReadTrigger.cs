@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
 {
@@ -29,7 +29,7 @@ namespace Raven.Database.Plugins
         ///    asking for a particular document, or skip including the result entirely 
         ///    in the query results.
         ///  </returns>
-        public virtual ReadVetoResult AllowRead(string key, byte[] data, JObject metadata, ReadOperation operation)
+        public virtual ReadVetoResult AllowRead(string key, byte[] data, RavenJObject metadata, ReadOperation operation)
         {
             return ReadVetoResult.Allowed;
         }
@@ -43,7 +43,7 @@ namespace Raven.Database.Plugins
         /// <param name="data">The attachment being read</param>
         /// <param name="metadata">The document metadata</param>
         /// <param name="operation">Whatever the operation is a load or a query</param>
-        public virtual byte[] OnRead(string key, byte[] data, JObject metadata, ReadOperation operation)
+        public virtual byte[] OnRead(string key, byte[] data, RavenJObject metadata, ReadOperation operation)
         {
             return data;
         }

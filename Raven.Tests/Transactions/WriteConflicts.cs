@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Exceptions;
@@ -33,21 +35,21 @@ namespace Raven.Tests.Transactions
         [Fact]
         public void WhileDocumentIsBeingUpdatedInTransactionCannotUpdateOutsideTransaction()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             Assert.Throws<ConcurrencyException>(
-                () => db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null));
+                () => db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null));
         }
 
         [Fact]
         public void WhileDocumentIsBeingUpdatedInTransactionCannotUpdateInsideAnotherTransaction()
         {
-            db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             Assert.Throws<ConcurrencyException>(
-                () => db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), new TransactionInformation
+                () => db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), new TransactionInformation
                 {
                     Id = Guid.NewGuid(),
                     Timeout = TimeSpan.FromMinutes(1)
@@ -59,9 +61,9 @@ namespace Raven.Tests.Transactions
         public void WhileCreatingDocumentInTransactionTryingToWriteInAnotherTransactionFail()
         {
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             Assert.Throws<ConcurrencyException>(
-                () => db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), new TransactionInformation
+                () => db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), new TransactionInformation
                 {
                     Id = Guid.NewGuid(),
                     Timeout = TimeSpan.FromMinutes(1)
@@ -72,9 +74,9 @@ namespace Raven.Tests.Transactions
         public void WhileCreatingDocumentInTransactionTryingToWriteOutsideTransactionFail()
         {
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+            db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             Assert.Throws<ConcurrencyException>(
-                () => db.Put("ayende", null, JObject.Parse("{ayende:'oren'}"), new JObject(), null));
+                () => db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null));
         }
     }
 }

@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
-using Raven.Client.Client;
+using Raven.Client.Connection;
 using Raven.Tests.Document;
 using Xunit;
 

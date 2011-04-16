@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 
-namespace Raven.Bundles.Replication.Data
+namespace Raven.Abstractions.Replication
 {
 	/// <summary>
 	/// This class represent the list of replication destinations for the server

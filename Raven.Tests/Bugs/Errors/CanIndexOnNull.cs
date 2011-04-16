@@ -1,5 +1,6 @@
 using System;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
@@ -22,7 +23,7 @@ namespace Raven.Tests.Bugs.Errors
 				for (int i = 0; i < 50; i++)
 				{
 					store.DatabaseCommands.Put("item/" + i, null,
-					                           new JObject {{"Type", "Car"}}, new JObject());
+					                           new RavenJObject {{"Type", "Car"}}, new RavenJObject());
 				}
 
 

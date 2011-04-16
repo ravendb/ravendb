@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Queries
@@ -45,9 +47,10 @@ namespace Raven.Tests.Bugs.Queries
                                                                }, 
                                                                new string[0]);
 
-                Assert.Equal(2, queryResult.Results[0]["Addresses"].Count());
-				Assert.Equal("Hadera", queryResult.Results[0]["Addresses"][0].Value<string>("Name"));
-				Assert.Equal("Tel Aviv", queryResult.Results[0]["Addresses"][1].Value<string>("Name"));
+            	var array = (RavenJArray)queryResult.Results[0]["Addresses"];
+            	Assert.Equal(2, array.Length);
+				Assert.Equal("Hadera", array[0].Value<string>("Name"));
+				Assert.Equal("Tel Aviv", array[1].Value<string>("Name"));
             }
         }
 

@@ -10,8 +10,9 @@ using System.Reflection;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Layout;
-using Raven.Client.Client;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -268,7 +269,7 @@ namespace Raven.Tests.Document
 					Layout = new SimpleLayout()
 				});
 			    store.DatabaseCommands.PutIndex("GameEventCountZoneBySpecificCharacter",
-			                                    new IndexDefinition<GameEvent, GameEventCount>
+			                                    new IndexDefinitionBuilder<GameEvent, GameEventCount>
 			                                    {
 			                                        Map = docs =>
 			                                            from doc in docs

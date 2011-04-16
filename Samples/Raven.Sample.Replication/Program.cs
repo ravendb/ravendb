@@ -5,12 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Net;
-using Newtonsoft.Json;
-using Raven.Client.Client;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
-using Raven.Database;
 
 namespace Raven.Sample.Replication
 {
@@ -50,7 +47,7 @@ namespace Raven.Sample.Replication
                     {
                         var doc = documentStore2.DatabaseCommands.Get(e.ConflictedVersionIds[i]);
                         list.Add(doc);
-                        Console.WriteLine("{0}. {1}", i, doc.DataAsJson.ToString(Formatting.None));
+                        Console.WriteLine("{0}. {1}", i, doc.DataAsJson);
                     }
                     var select = int.Parse(Console.ReadLine());
                     var resolved = list[select];

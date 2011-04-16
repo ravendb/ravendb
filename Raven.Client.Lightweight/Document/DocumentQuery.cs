@@ -5,9 +5,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using Raven.Abstractions.Data;
-using Raven.Client.Client;
+using Raven.Client.Connection;
 #if !NET_3_5
-using Raven.Client.Client.Async;
+using Raven.Client.Connection.Async;
 #endif
 
 namespace Raven.Client.Document

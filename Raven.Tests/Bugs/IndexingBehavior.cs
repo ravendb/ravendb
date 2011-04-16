@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
@@ -61,7 +63,7 @@ namespace Raven.Tests.Bugs
 
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put("a" + i, null, new JObject(), new JObject(), null);
+				db.Put("a" + i, null, new RavenJObject(), new RavenJObject(), null);
 			}
 
 			Assert.Empty(db.Statistics.Errors); 
@@ -93,7 +95,7 @@ namespace Raven.Tests.Bugs
 
 			for (int i = 0; i < 150; i++)
 			{
-				db.Put("a"+i, null, new JObject(), new JObject(),null);
+				db.Put("a"+i, null, new RavenJObject(), new RavenJObject(),null);
 			}
 
 			db.SpinBackgroundWorkers();
@@ -121,14 +123,14 @@ namespace Raven.Tests.Bugs
 				Map = @"from doc in docs select new{ doc.Something}"
 			});
 
-			db.Put("foos/1", null, JObject.Parse("{'Something':'something'}"),
-			  JObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
+			db.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
+			  RavenJObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 
 			var document = db.Get("foos/1", null);
 			db.Delete("foos/1", document.Etag, null);
 
-			db.Put("foos/1", null, JObject.Parse("{'Something':'something'}"),
-			JObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
+			db.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
+			RavenJObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 
 			db.SpinBackgroundWorkers();
 

@@ -4,23 +4,20 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
-using Newtonsoft.Json.Linq;
 using System;
-using Raven.Client.Client;
+using Raven.Abstractions.Data;
 #if !NET_3_5
-using Raven.Client.Client.Async;
+using Raven.Client.Connection.Async;
 #endif
+using Raven.Client.Connection;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Database;
-using Raven.Database.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
@@ -175,8 +172,8 @@ namespace Raven.Client.Document
 			{
 
 				multiLoadResult = DatabaseCommands.Get(ids, includes);
-				includeResults = SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
-				results = SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
+				includeResults = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
+				results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
 			} while (
 				AllowNonAuthoritiveInformation == false &&
 				results.Any(x => x.NonAuthoritiveInformation) &&
@@ -245,7 +242,7 @@ namespace Raven.Client.Document
 				throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
 
 			value.Metadata = jsonDocument.Metadata;
-			value.OriginalMetadata = new JObject(jsonDocument.Metadata);
+			value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
 			value.ETag = jsonDocument.Etag;
 			value.OriginalValue = jsonDocument.DataAsJson;
 			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);

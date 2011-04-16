@@ -10,6 +10,8 @@ using System.Linq;
 using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Impl;

@@ -8,16 +8,11 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
-using System.Threading;
-using Newtonsoft.Json.Linq;
 using Raven.Bundles.CascadeDelete;
-using Raven.Bundles.Tests.Versioning;
-using Raven.Client.Client;
 using Raven.Client.Document;
-using Raven.Database;
+using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Bundles.Tests.CascadeDelete
 {
@@ -103,8 +98,8 @@ namespace Raven.Bundles.Tests.CascadeDelete
             using (var session = documentStore.OpenSession())
             {
                 session.Store(master);
-                session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new JArray("I_Dont_Exist");
-                session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new JArray("Neither_Do_I");
+            	session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray {"I_Dont_Exist"};
+            	session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray {"Neither_Do_I"};
                 session.SaveChanges();
             }
 
@@ -135,9 +130,9 @@ namespace Raven.Bundles.Tests.CascadeDelete
             
             using (var session = documentStore.OpenSession())
             {
-                session.Store(master);
-                session.Store(child);
-                session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new JArray(child.Id);
+            	session.Store(master);
+            	session.Store(child);
+            	session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray {child.Id};
                 session.SaveChanges();
             }
 
@@ -175,7 +170,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
                 session.Store(master);
                 session.Store(child1);
                 session.Store(child2);
-                session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new JArray(child1.Id, child2.Id);
+                session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray(child1.Id, child2.Id);
                 session.SaveChanges();
             }
 
@@ -214,8 +209,8 @@ namespace Raven.Bundles.Tests.CascadeDelete
             using (var session = documentStore.OpenSession())
             {
                 session.Store(master);
-                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me", null, new byte[] { 1, 2, 3 }, new JObject());
-                session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new JArray("Cascade-Delete-Me");
+                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+            	session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray{"Cascade-Delete-Me"};
                 session.SaveChanges();
             }
 
@@ -251,9 +246,9 @@ namespace Raven.Bundles.Tests.CascadeDelete
             using (var session = documentStore.OpenSession())
             {
                 session.Store(master);
-                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-1", null, new byte[] {1, 2, 3}, new JObject());
-                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-2", null, new byte[] {1, 2, 3}, new JObject());
-                session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new JArray("Cascade-Delete-Me-1","Cascade-Delete-Me-2");
+				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-1", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-2", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+                session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray("Cascade-Delete-Me-1","Cascade-Delete-Me-2");
                 session.SaveChanges();
             }
 
@@ -299,10 +294,10 @@ namespace Raven.Bundles.Tests.CascadeDelete
                 session.Store(master);
                 session.Store(child1);
                 session.Store(child2);
-                session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new JArray(child1.Id, child2.Id);
-                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-1", null, new byte[] { 1, 2, 3 }, new JObject());
-                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-2", null, new byte[] { 1, 2, 3 }, new JObject());
-                session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new JArray("Cascade-Delete-Me-1", "Cascade-Delete-Me-2");
+                session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray(child1.Id, child2.Id);
+				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-1", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-2", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+                session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray("Cascade-Delete-Me-1", "Cascade-Delete-Me-2");
                 session.SaveChanges();
             }
 
@@ -352,10 +347,11 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
            using (var session = documentStore.OpenSession())
            {
-               session.Store(master1);
-               session.Store(master2);
-               session.Advanced.GetMetadataFor(master1)[MetadataKeys.DocumentsToCascadeDelete] = new JArray(master2.Id);
-               session.Advanced.GetMetadataFor(master2)[MetadataKeys.DocumentsToCascadeDelete] = new JArray(master1.Id);
+           	session.Store(master1);
+           	session.Store(master2);
+           	session.Advanced.GetMetadataFor(master1)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray{master2.Id}
+       	;
+               session.Advanced.GetMetadataFor(master2)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray{master1.Id};
                session.SaveChanges();
            }
 

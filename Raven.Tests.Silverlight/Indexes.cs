@@ -1,11 +1,12 @@
-﻿namespace Raven.Tests.Silverlight
+﻿using Raven.Abstractions.Indexing;
+
+namespace Raven.Tests.Silverlight
 {
 	using System.Collections.Generic;
 	using System.Threading.Tasks;
 	using System.Linq;
 	using Client.Document;
 	using Client.Extensions;
-	using Database.Indexing;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 

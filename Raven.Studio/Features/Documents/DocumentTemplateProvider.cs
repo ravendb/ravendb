@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Documents
+﻿using Raven.Abstractions.Data;
+
+namespace Raven.Studio.Features.Documents
 {
 	using System;
 	using System.Collections.Generic;
@@ -13,7 +15,6 @@
 	using Framework;
 	using Messages;
 	using Plugins;
-	using Raven.Database.Data;
 
 	[Export(typeof (IDocumentTemplateProvider))]
 	[PartCreationPolicy(CreationPolicy.Shared)]

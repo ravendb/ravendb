@@ -5,7 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using log4net;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Json;
@@ -13,6 +14,7 @@ using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Reponsders
 {
@@ -41,14 +43,14 @@ namespace Raven.Bundles.Replication.Reponsders
                 Database.TransactionalStorage.Batch(actions =>
                 {
                     string lastEtag = Guid.Empty.ToString();
-                    foreach (JObject document in array)
+                    foreach (RavenJObject document in array)
                     {
-                        var metadata = document.Value<JObject>("@metadata");
+                        var metadata = document.Value<RavenJObject>("@metadata");
                         if(metadata[ReplicationConstants.RavenReplicationSource] == null)
                         {
                             // not sure why, old document from when the user didn't have replciation
                             // that we suddenly decided to replicate, choose the source for that
-                            metadata[ReplicationConstants.RavenReplicationSource] = JToken.FromObject(src);
+                            metadata[ReplicationConstants.RavenReplicationSource] = RavenJToken.FromObject(src);
                         }
                         lastEtag = metadata.Value<string>("@etag");
                         var id = metadata.Value<string>("@id");
@@ -66,17 +68,17 @@ namespace Raven.Bundles.Replication.Reponsders
                                 LastAttachmentEtag;
                     }
                     Database.Put(replicationDocKey, null,
-                                 JObject.FromObject(new SourceReplicationInformation
+                                 RavenJObject.FromObject(new SourceReplicationInformation
                                  {
                                      LastDocumentEtag = new Guid(lastEtag),
                                      LastAttachmentEtag = lastAttachmentId
                                  }),
-                                 new JObject(), null);
+                                 new RavenJObject(), null);
                 });
             }
         }
 
-        private void ReplicateDocument(IStorageActionsAccessor actions, string id, JObject metadata, JObject document, string src)
+        private void ReplicateDocument(IStorageActionsAccessor actions, string id, RavenJObject metadata, RavenJObject document, string src)
         {
             var existingDoc = actions.Documents.DocumentByKey(id, null);
             if (existingDoc == null)
@@ -99,7 +101,7 @@ namespace Raven.Bundles.Replication.Reponsders
         	var newDocumentConflictId = id + "/conflicts/" +
         	                            metadata.Value<string>(ReplicationConstants.RavenReplicationSource) + "/" +
         	                            metadata.Value<string>("@etag");
-            metadata.Add(ReplicationConstants.RavenReplicationConflict, JToken.FromObject(true));
+            metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			actions.Documents.AddDocument(newDocumentConflictId, null, document, metadata);
 
             if (existingDocumentIsInConflict) // the existing document is in conflict
@@ -107,7 +109,7 @@ namespace Raven.Bundles.Replication.Reponsders
                 log.DebugFormat("Conflicted document {0} has a new version from {1}, adding to conflicted documents", id, src);
                 
                 // just update the current doc with the new conflict document
-                existingDoc.DataAsJson.Value<JArray>("Conflicts").Add(JToken.FromObject(newDocumentConflictId));
+                existingDoc.DataAsJson.Value<RavenJArray>("Conflicts").Add(RavenJToken.FromObject(newDocumentConflictId));
 				actions.Documents.AddDocument(id, existingDoc.Etag, existingDoc.DataAsJson, existingDoc.Metadata);
                 return;
             }
@@ -117,23 +119,28 @@ namespace Raven.Bundles.Replication.Reponsders
             // move the existing doc to a conflict and create a conflict document
         	var existingDocumentConflictId = id + "/conflicts/" + Database.TransactionalStorage.Id + "/" + existingDoc.Etag;
             
-            existingDoc.Metadata.Add(ReplicationConstants.RavenReplicationConflict, JToken.FromObject(true));
+            existingDoc.Metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			actions.Documents.AddDocument(existingDocumentConflictId, null, existingDoc.DataAsJson, existingDoc.Metadata);
-			actions.Documents.AddDocument(id, null,
-                                new JObject(
-                                    new JProperty("Conflicts", new JArray(existingDocumentConflictId, newDocumentConflictId))),
-                                new JObject(
-                                    new JProperty(ReplicationConstants.RavenReplicationConflict, true), 
-                                    new JProperty("@Http-Status-Code", 409),
-                                    new JProperty("@Http-Status-Description", "Conflict")
-                                    ));
+        	actions.Documents.AddDocument(id, null,
+        	                              new RavenJObject
+        	                              {
+        	                              	{
+        	                              	"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)
+        	                              	}
+        	                              },
+        	                              new RavenJObject
+        	                              {
+        	                              	{ReplicationConstants.RavenReplicationConflict, true},
+        	                              	{"@Http-Status-Code", 409},
+        	                              	{"@Http-Status-Description", "Conflict"}
+        	                              });
         }
 
-        private static bool IsDirectChildOfCurrentDocument(JsonDocument existingDoc, JObject metadata)
+        private static bool IsDirectChildOfCurrentDocument(JsonDocument existingDoc, RavenJObject metadata)
         {
-            return JToken.DeepEquals(existingDoc.Metadata[ReplicationConstants.RavenReplicationVersion],
+            return RavenJToken.DeepEquals(existingDoc.Metadata[ReplicationConstants.RavenReplicationVersion],
                                      metadata[ReplicationConstants.RavenReplicationParentVersion]) && 
-                   JToken.DeepEquals(existingDoc.Metadata[ReplicationConstants.RavenReplicationSource],
+                   RavenJToken.DeepEquals(existingDoc.Metadata[ReplicationConstants.RavenReplicationSource],
                                      metadata[ReplicationConstants.RavenReplicationParentSource]);
         }
 

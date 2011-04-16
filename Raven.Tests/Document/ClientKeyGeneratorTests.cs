@@ -5,9 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using Raven.Client.Client;
 using Raven.Client.Document;
 using System.Reflection;
+using Raven.Client.Embedded;
 using Raven.Database.Extensions;
 using Xunit;
 

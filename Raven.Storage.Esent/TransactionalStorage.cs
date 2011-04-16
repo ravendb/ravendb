@@ -12,23 +12,24 @@ using System.Runtime.Caching;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Exceptions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
 using Raven.Http.Exceptions;
+using Raven.Json.Linq;
 using Raven.Storage.Esent.Backup;
 using Raven.Storage.Esent.SchemaUpdates;
 using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Storage.Esent
 {
-	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage, IDocumentCacher
+	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
 	{
 		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
 		private readonly string database;
@@ -41,23 +42,9 @@ namespace Raven.Storage.Esent
 		private JET_INSTANCE instance;
 		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
 		private IUuidGenerator generator;
+	    private IDocumentCacher documentCacher = new DocumentCacher();
 
-		private readonly ObjectCache cachedSerializedDocuments = new MemoryCache(typeof(TransactionalStorage).FullName + ".Cache");
-
-		public Tuple<JObject, JObject> GetCachedDocument(string key, Guid etag)
-		{
-			var cachedDocument = (Tuple<JObject, JObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
-			if (cachedDocument != null)
-				return Tuple.Create(new JObject(cachedDocument.Item1), new JObject(cachedDocument.Item2));
-			return null;
-		}
-
-		public void SetCachedDocument(string key, Guid etag, Tuple<JObject, JObject> doc)
-		{
-			cachedSerializedDocuments["Doc/" + key + "/" + etag] = doc;
-		}
-
-		[ImportMany]
+	    [ImportMany]
 		public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
 
 		[ImportMany]
@@ -105,6 +92,8 @@ namespace Raven.Storage.Esent
 				if (disposed)
 					return;
 				GC.SuppressFinalize(this);
+                if (documentCacher != null)
+                    documentCacher.Dispose();
 				Api.JetTerm2(instance, TermGrbit.Complete);
 			}
 			finally
@@ -351,7 +340,7 @@ namespace Raven.Storage.Esent
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
 				: CommitTransactionGrbit.None;
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, this))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher))
 			{
 				current.Value = new StorageActionsAccessor(pht);
 				action(current.Value);

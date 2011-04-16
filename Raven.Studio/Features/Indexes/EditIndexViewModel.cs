@@ -1,3 +1,7 @@
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Connection;
+
 namespace Raven.Studio.Features.Indexes
 {
 	using System;
@@ -6,17 +10,13 @@ namespace Raven.Studio.Features.Indexes
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
 	using Client.Extensions;
-	using Database;
 	using Documents;
 	using Framework;
 	using Framework.Extensions;
 	using Messages;
 	using Plugins;
-	using Raven.Database.Data;
-	using Raven.Database.Indexing;
-	using Client.Client;
 
-	public class EditIndexViewModel : RavenScreen
+    public class EditIndexViewModel : RavenScreen
 	{
 		readonly IndexDefinition index;
 		readonly IServer server;

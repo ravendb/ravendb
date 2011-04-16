@@ -1,13 +1,14 @@
-﻿namespace Raven.Studio.Features.Statistics
+﻿using Raven.Abstractions.Data;
+
+namespace Raven.Studio.Features.Statistics
 {
 	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Plugins.Statistics;
-	using Raven.Database.Data;
 
-	[Export]
+    [Export]
 	public class StatisticsViewModel : IStatisticsSet
 	{
 		readonly IEventAggregator events;

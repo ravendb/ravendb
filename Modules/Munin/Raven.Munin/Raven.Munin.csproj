@@ -53,15 +53,15 @@
   <ItemGroup>
     <Compile Include="AbstractPersistentSource.cs" />
     <Compile Include="Database.cs" />
-    <Compile Include="CompererAndEquality.cs" />
-    <Compile Include="JTokenCloner.cs" />
+    <Compile Include="IComparerAndEquality.cs" />
+    <Compile Include="RavenJTokenCloner.cs" />
     <Compile Include="Tree\AVLTree.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandType.cs" />
     <Compile Include="ComparableByteArray.cs" />
     <Compile Include="FileBasedPersistentSource.cs" />
     <Compile Include="IPersistentSource.cs" />
-    <Compile Include="JTokenComparer.cs" />
+    <Compile Include="RavenJTokenComparer.cs" />
     <Compile Include="MemoryPersistentSource.cs" />
     <Compile Include="ModifiedJTokenComparer.cs" />
     <Compile Include="Table.cs" />
@@ -84,6 +84,12 @@
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

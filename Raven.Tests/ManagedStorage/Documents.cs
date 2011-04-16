@@ -3,7 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
+
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.ManagedStorage
@@ -15,9 +16,9 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 
-				JObject document = null;
+				RavenJObject document = null;
                 tx.Batch(viewer =>
 				{
 					document = viewer.Documents.DocumentByKey("Ayende", null).DataAsJson;
@@ -32,13 +33,13 @@ namespace Raven.Tests.ManagedStorage
         {
             using (var tx = NewTransactionalStorage())
             {
-                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 
-                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Oren" }), new JObject()));
+                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Oren" }), new RavenJObject()));
 
                 tx.Batch(x => Assert.Equal(1, x.Documents.GetDocumentsCount()));
 
-                JObject document = null;
+                RavenJObject document = null;
                 tx.Batch(viewer =>
                 {
                     document = viewer.Documents.DocumentByKey("Ayende", null).DataAsJson;
@@ -56,15 +57,15 @@ namespace Raven.Tests.ManagedStorage
             {
                 for (int i = 0; i < 11; i++)
                 {
-                    tx.Batch(mutator => mutator.Documents.AddDocument("docs/"+i, null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+                    tx.Batch(mutator => mutator.Documents.AddDocument("docs/"+i, null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
                     
                 }
 
-                tx.Batch(mutator => mutator.Documents.AddDocument("docs/0", null, JObject.FromObject(new { Name = "Oren" }), new JObject()));
+                tx.Batch(mutator => mutator.Documents.AddDocument("docs/0", null, RavenJObject.FromObject(new { Name = "Oren" }), new RavenJObject()));
 
                 tx.Batch(x => Assert.Equal(11, x.Documents.GetDocumentsCount()));
 
-                JObject document = null;
+                RavenJObject document = null;
                 tx.Batch(viewer =>
                 {
                     document = viewer.Documents.DocumentByKey("docs/0", null).DataAsJson;
@@ -82,12 +83,12 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 			}
 
 			using (var tx = NewTransactionalStorage())
 			{
-				JObject document = null;
+				RavenJObject document = null;
                 tx.Batch(viewer =>
 				{
 					document = viewer.Documents.DocumentByKey("Ayende", null).DataAsJson;
@@ -102,8 +103,8 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
-				JObject metadata;
+                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
+				RavenJObject metadata;
                 tx.Batch(mutator => mutator.Documents.DeleteDocument("Ayende", null, out metadata));
 			}
 
@@ -119,9 +120,9 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
                 tx.Batch(accessor => Assert.Equal(1, accessor.Documents.GetDocumentsCount()));
-				JObject metadata;
+				RavenJObject metadata;
                 tx.Batch(mutator => mutator.Documents.DeleteDocument("Ayende", null, out metadata));
 
                 tx.Batch(accessor => Assert.Equal(0, accessor.Documents.GetDocumentsCount()));
