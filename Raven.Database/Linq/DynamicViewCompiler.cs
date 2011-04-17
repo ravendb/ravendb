@@ -13,6 +13,7 @@ using ICSharpCode.NRefactory.PrettyPrinter;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.MEF;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -39,16 +40,19 @@ namespace Raven.Database.Linq
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForReduce = new CaptureQueryParameterNamesVisitor();
 
 		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, string basePath)
-			:this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath)
+			:this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath, new InMemoryRavenConfiguration())
 		{}
 
-		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
+		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)
 		{
 			this.indexDefinition = indexDefinition;
 			this.extensions = extensions;
-			this.basePath = Path.Combine(basePath, "TemporaryIndexDefinitionsAsSource");
-			if (Directory.Exists(this.basePath) == false)
-				Directory.CreateDirectory(this.basePath);
+			if (configuration.RunInMemory == false)
+			{
+				this.basePath = Path.Combine(basePath, "TemporaryIndexDefinitionsAsSource");
+				if (Directory.Exists(this.basePath) == false)
+					Directory.CreateDirectory(this.basePath);
+			}
 			this.name = MonoHttpUtility.UrlEncode(name);
 		    RequiresSelectNewAnonymousType = true;
 		}

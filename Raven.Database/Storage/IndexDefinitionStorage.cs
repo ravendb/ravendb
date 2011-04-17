@@ -141,7 +141,7 @@ namespace Raven.Database.Storage
 		private DynamicViewCompiler AddAndCompileIndex(IndexDefinition indexDefinition)
 		{
 			var name = FixupIndexName(indexDefinition.Name, path);
-			var transformer = new DynamicViewCompiler(name, indexDefinition, extensions, path);
+			var transformer = new DynamicViewCompiler(name, indexDefinition, extensions, path, configuration);
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
 			indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) =>

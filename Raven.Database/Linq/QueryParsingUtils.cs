@@ -169,11 +169,13 @@ namespace Raven.Database.Linq
             }
             var compilerParameters = new CompilerParameters
             {
-				TempFiles = new TempFileCollection(basePath,false),
                 GenerateExecutable = false,
                 GenerateInMemory = true,
                 IncludeDebugInformation = true,
             };
+			if (basePath != null)
+				compilerParameters.TempFiles = new TempFileCollection(basePath, false);
+
             foreach (var assembly in assemblies)
             {
                 compilerParameters.ReferencedAssemblies.Add(assembly);
