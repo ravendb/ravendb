@@ -220,18 +220,7 @@ namespace Raven.Database.Indexing
 						throw;
 					}
 
-					if (!context.Configuration.RunInMemory && indexDefinition.IsTemp)
-					{
-						var dir = indexWriter.GetDirectory() as RAMDirectory;
-						if (dir != null && dir.SizeInBytes() >= context.Configuration.TempIndexInMemoryMaxBytes)
-						{
-							indexWriter.Commit();
-							var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
-							directory = fsDir;
-							indexWriter.Close();
-							indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
-						}
-					}
+					WriteTempIndexToDiskIfNeeded(context);
 				}
 				finally
 				{
@@ -246,6 +235,23 @@ namespace Raven.Database.Indexing
 				if (shouldRecreateSearcher)
 					RecreateSearcher();
 			}
+		}
+
+		private void WriteTempIndexToDiskIfNeeded(WorkContext context)
+		{
+			if (context.Configuration.RunInMemory || !indexDefinition.IsTemp) 
+				return;
+
+			var dir = indexWriter.GetDirectory() as RAMDirectory;
+			if (dir == null ||
+				dir.SizeInBytes() < context.Configuration.TempIndexInMemoryMaxBytes) 
+				return;
+
+			indexWriter.Commit();
+			var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
+			directory = fsDir;
+			indexWriter.Close();
+			indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
 		}
 
 		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose)
