@@ -289,8 +289,6 @@
     <Compile Include="Plugins\AbstractAttachmentReadTrigger.cs" />
     <Compile Include="Plugins\IStartupTask.cs" />
     <Compile Include="Data\LinearQuery.cs" />
-    <Compile Include="Queries\LinearQueries\IRemoteSingleQueryRunner.cs" />
-    <Compile Include="Queries\LinearQueries\SingleQueryRunner.cs" />
     <Compile Include="Linq\GroupByKeyFunc.cs" />
     <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
     <Compile Include="Linq\PrivateExtensions\MetadataExtensions.cs" />
@@ -311,8 +309,6 @@
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Data\QueryResults.cs" />
-    <Compile Include="Queries\LinearQueries\QueryRunnerManager.cs" />
-    <Compile Include="Queries\LinearQueries\RemoteQueryResults.cs" />
     <Compile Include="Data\CommandDataFactory.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\IndexQueryResult.cs" />
@@ -343,8 +339,6 @@
     <Compile Include="Plugins\VetoResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Config\RavenConfiguration.cs" />
-    <Compile Include="Queries\LinearQueryExtensions.cs" />
-    <Compile Include="Queries\LinearQueryRunner.cs" />
     <Compile Include="Queries\SuggestionQueryExtensions.cs" />
     <Compile Include="Queries\SuggestionQueryIndexExtension.cs" />
     <Compile Include="Queries\TermsQueryRunner.cs" />
@@ -362,7 +356,6 @@
     <Compile Include="Server\Responders\DocumentBatch.cs" />
     <Compile Include="Server\Responders\Index.cs" />
     <Compile Include="Server\Responders\Indexes.cs" />
-    <Compile Include="Server\Responders\LinearQueryResponder.cs" />
     <Compile Include="Server\Responders\Queries.cs" />
     <Compile Include="Server\Responders\RequestResponder.cs" />
     <Compile Include="Server\Responders\SilverlightEnsuresStartup.cs" />

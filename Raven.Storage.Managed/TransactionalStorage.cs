@@ -163,16 +163,6 @@ namespace Raven.Storage.Managed
             new RestoreOperation(backupLocation, databaseLocation).Execute();
         }
 
-        public Type TypeForRunningQueriesInRemoteAppDomain
-        {
-            get { return typeof(RemoteManagedStorage); }
-        }
-
-        public object StateForRunningQueriesInRemoteAppDomain
-        {
-            get { return persistenceSource.CreateRemoteAppDomainState(); }
-        }
-
     	public string FriendlyName
     	{
 			get { return "Munin"; }

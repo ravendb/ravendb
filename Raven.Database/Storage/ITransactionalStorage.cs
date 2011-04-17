@@ -20,8 +20,6 @@ namespace Raven.Database.Storage
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory);
 		void Restore(string backupLocation, string databaseLocation);
 
-	    Type TypeForRunningQueriesInRemoteAppDomain { get;}
-        object StateForRunningQueriesInRemoteAppDomain { get; }
     	string FriendlyName { get; }
     	bool HandleException(Exception exception);
 	}

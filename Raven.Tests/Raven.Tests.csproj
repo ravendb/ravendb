@@ -400,7 +400,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Patching\MetadataPatching.cs" />
-    <Compile Include="Queries\DynamicQueries.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />
     <Compile Include="Querying\UsingDocumentQuery.cs" />

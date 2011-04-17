@@ -119,23 +119,6 @@ namespace Raven.Storage.Esent
 			new RestoreOperation(backupLocation, databaseLocation).Execute();
 		}
 
-		public Type TypeForRunningQueriesInRemoteAppDomain
-		{
-			get { return typeof(RemoteEsentStorage); }
-		}
-
-		public object StateForRunningQueriesInRemoteAppDomain
-		{
-			get
-			{
-				return new RemoteEsentStorageState
-				{
-					Database = database,
-					Instance = instance
-				};
-			}
-		}
-
 		public string FriendlyName
 		{
 			get { return "Esent"; }
