@@ -14,6 +14,11 @@ using System.Linq;
 
 namespace Raven.Database.Linq
 {
+	/// <summary>
+	/// This class represents a base class for all "Views" we generate and compile on the fly - all
+	/// Map and MapReduce indexes are being re-written into this class and then compiled and executed
+	/// against the data in RavenDB
+	/// </summary>
     [InheritedExport]
 	public abstract class AbstractViewGenerator
 	{
