@@ -67,7 +67,7 @@ namespace Raven.Database.Indexing
             var first = reduceKeyAndEtags.First();
             var last = reduceKeyAndEtags.Last();
 
-            if (new ComparableByteArray(first.Etag.ToByteArray()).CompareTo(new ComparableByteArray(last.Etag.ToByteArray())) > 0)
+            if (new ComparableByteArray(first.Etag.ToByteArray()).CompareTo(new ComparableByteArray(last.Etag.ToByteArray())) < 0)
                 return last;
             return first;
         }
