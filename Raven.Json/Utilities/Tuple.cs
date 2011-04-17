@@ -1,6 +1,3 @@
-namespace Raven.Json.Utilities
-{
-
 #if NET_3_5
 namespace System
 {
@@ -25,4 +22,3 @@ namespace System
 	}
 }
 #endif
-}
