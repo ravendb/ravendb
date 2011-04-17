@@ -63,7 +63,7 @@ namespace Raven.Database.Indexing
 		    }
 		}
 
-		
+
 		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, string indexName = null)
 		{
 			Lucene.Net.Store.Directory directory;
@@ -76,14 +76,8 @@ namespace Raven.Database.Indexing
 			}
 
 			//creating index structure if we need to
-	        try
-	        {
-				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).
-	                Close();
-	        }
-	        catch
-	        {
-	        }
+			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
+
 			return directory;
 		}
 
