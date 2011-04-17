@@ -68,6 +68,7 @@
 					</Border>
 
 					<ContentControl x:Name="Navigation"
+									Visibility="{Binding Server.IsInitialized, Converter={StaticResource visibleWhenTrue}}"
 									Grid.Row="1"
 									HorizontalAlignment="Left"
 									VerticalAlignment="Top" />

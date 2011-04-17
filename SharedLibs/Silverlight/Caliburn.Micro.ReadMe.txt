@@ -1,2 +1,0 @@
-The version of Caliburn Micro used in this project is located at:
-http://caliburnmicro.codeplex.com/SourceControl/network/Forks/bennage/CaliburnMicro4RavenStudio

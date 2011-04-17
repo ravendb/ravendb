@@ -65,7 +65,6 @@ namespace Raven.Studio.Features.Indexes
 				NotifyOfPropertyChange(() => Status);
 			}
 		}
-		public IndexDefinition Index { get { return index; } }
 
 		public IEnumerable<ServerError> RelatedErrors { get; private set; }
 
