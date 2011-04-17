@@ -28,6 +28,16 @@ namespace Raven.Database.Indexing
             return actions.Staleness.IsMapStale(indexesStat.Name);
         }
 
+		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
+		{
+			return new IndexToWorkOn
+			{
+				IndexName = indexesStat.Name,
+				LastIndexedEtag = indexesStat.LastIndexedEtag
+			};
+		}
+
+
         protected override void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
         {
             ExecuteIndexingInternal(indexesToWorkOn, documents => Parallel.ForEach(indexesToWorkOn, new ParallelOptions

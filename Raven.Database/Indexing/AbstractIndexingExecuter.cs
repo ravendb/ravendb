@@ -76,11 +76,7 @@ namespace Raven.Database.Indexing
                     }
                     if (IsIndexStale(indexesStat, actions) == false)
                         continue;
-                    indexesToWorkOn.Add(new IndexToWorkOn
-                    {
-                        IndexName = indexesStat.Name,
-                        LastIndexedEtag = indexesStat.LastIndexedEtag
-                    });
+                    indexesToWorkOn.Add(GetIndexToWorkOn(indexesStat));
                 }
             });
 
@@ -95,7 +91,9 @@ namespace Raven.Database.Indexing
             return true;
         }
 
-        protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
+    	protected abstract IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat);
+
+    	protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
 
         protected abstract void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn);
 

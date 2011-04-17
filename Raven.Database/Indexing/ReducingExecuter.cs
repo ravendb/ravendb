@@ -77,6 +77,16 @@ namespace Raven.Database.Indexing
             return actions.Staleness.IsReduceStale(indexesStat.Name);
         }
 
+		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
+		{
+			return new IndexToWorkOn
+			{
+				IndexName = indexesStat.Name,
+				LastIndexedEtag = indexesStat.LastReducedEtag ?? Guid.Empty
+			};
+		}
+
+
         protected override void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
         {
             Parallel.ForEach(indexesToWorkOn, new ParallelOptions
