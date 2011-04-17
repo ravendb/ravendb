@@ -154,7 +154,6 @@ namespace Raven.Munin
 				return new StreamsPool.DisposableAction(() => { }); // no op, already in tx
 
 			CurrentTransactionId.Value = Guid.NewGuid();
-		    persistentSource.ClearStateIfNeeded();
 			return new StreamsPool.DisposableAction(() =>
 			{
 				if (CurrentTransactionId.Value != Guid.Empty) // tx not committed
