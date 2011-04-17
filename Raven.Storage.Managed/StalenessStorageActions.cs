@@ -110,7 +110,9 @@ namespace Raven.Storage.Managed
 
         public Guid? GetMostRecentReducedEtag(string name)
         {
-            using(var enumerable = storage.MappedResults["ByViewAndEtag"].SkipToAndThenBack(new RavenJObject{{"view", name}}).GetEnumerator())
+            using(var enumerable = storage.MappedResults["ByViewAndEtag"]
+				.SkipToAndThenBack(new RavenJObject{{"view", name}})
+				.GetEnumerator())
             {
 				if (enumerable.MoveNext() == false)
 					return null;

@@ -180,13 +180,13 @@ namespace Raven.Munin.Tree
             int compare = comparer.Compare(theKey, ltKey);
             if (compare > 0)
             {
-                foreach (var value in Left.LessThan(ltKey))
+				foreach (var value in Left.LessThanOrEqual(ltKey))
                 {
                     yield return value;
                 }
                 yield break;
             }
-            foreach (var value in Left.LessThan(ltKey))
+			foreach (var value in Left.LessThanOrEqual(ltKey))
             {
                 yield return value;
             }
@@ -195,7 +195,7 @@ namespace Raven.Munin.Tree
             if (compare == 0)
                 yield break;
 
-            foreach (var value in Right.LessThan(ltKey))
+			foreach (var value in Right.LessThanOrEqual(ltKey))
             {
                 yield return value;
             }

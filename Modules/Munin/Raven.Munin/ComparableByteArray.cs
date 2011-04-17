@@ -45,8 +45,12 @@ namespace Raven.Munin
 
         public int CompareTo(ReverseComparableByteArrayWhichIgnoresNull other)
         {
-            if (inner == null || other.inner == null)
+            if (inner == null && other.inner == null)
                 return 0;
+			if (inner == null)
+				return 1;
+			if (other.inner == null)
+				return -1;
             return CompareToImpl(other)*-1;
         }
 
@@ -66,5 +70,12 @@ namespace Raven.Munin
         {
             return CompareTo((ReverseComparableByteArrayWhichIgnoresNull)obj);
         }
+
+		public override string ToString()
+		{
+			if (inner == null)
+				return "null";
+			return new Guid(inner).ToString();
+		}
     }
 }
