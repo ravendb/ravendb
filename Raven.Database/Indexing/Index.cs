@@ -16,15 +16,12 @@ using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -41,7 +38,7 @@ namespace Raven.Database.Indexing
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof (Index) + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof (Index) + ".Querying");
 		private readonly List<Document> currentlyIndexDocumented = new List<Document>();
-		private readonly Directory directory;
+		private Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
@@ -193,8 +190,12 @@ namespace Raven.Database.Indexing
 						context.AddError(name, "Creating Analyzer", e.ToString());
 						throw;
 					}
+
 					if (indexWriter == null)
+					{
 						indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
+					}
+
 					try
 					{
 						shouldRecreateSearcher = action(indexWriter, analyzer);
@@ -207,6 +208,19 @@ namespace Raven.Database.Indexing
 					{
 						context.AddError(name, null, e.ToString());
 						throw;
+					}
+
+					if (!context.Configuration.RunInMemory && indexDefinition.IsTemp)
+					{
+						var dir = indexWriter.GetDirectory() as RAMDirectory;
+						if (dir != null && dir.SizeInBytes() > 26214400) // TODO: Make configurable
+						{
+							indexWriter.Commit();
+							var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
+							directory = fsDir;
+							indexWriter.Close();
+							indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
+						}
 					}
 				}
 				finally

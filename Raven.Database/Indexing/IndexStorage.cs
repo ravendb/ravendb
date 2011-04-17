@@ -54,21 +54,26 @@ namespace Raven.Database.Indexing
 		        var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
 		        if (indexDefinition == null)
 		            continue;
-				var luceneDirectory = OpenOrCreateLuceneDirectory(IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path));
+
+		    	var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition);
 		    	var indexImplementation = CreateIndexImplementation(indexDirectory, indexDefinition, luceneDirectory);
 		    	indexes.TryAdd(indexDirectory, indexImplementation);
 		    }
 		}
 
 		
-		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(string indexDirectory)
+		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, string indexName = null)
 		{
 			Lucene.Net.Store.Directory directory;
-			if (configuration.RunInMemory)
+			if (indexDefinition.IsTemp || configuration.RunInMemory)
 				directory = new RAMDirectory();
 			else
+			{
+				var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
 				directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory))));
-            //creating index structure if we need to
+			}
+
+			//creating index structure if we need to
 	        var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
 	        try
 	        {
@@ -80,6 +85,13 @@ namespace Raven.Database.Indexing
 	            standardAnalyzer.Close();
 	        }
             return directory;
+		}
+
+		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
+		{
+			var newDir =  FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path)))));
+			Lucene.Net.Store.Directory.Copy(ramDir, newDir, true);
+			return newDir;
 		}
 
 		private Index CreateIndexImplementation(string directoryPath, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
@@ -144,7 +156,7 @@ namespace Raven.Database.Indexing
 
 		    indexes.AddOrUpdate(indexDefinition.Name, n =>
 			{
-				var directory = OpenOrCreateLuceneDirectory(encodedName);
+				var directory = OpenOrCreateLuceneDirectory(indexDefinition, encodedName);
 				return CreateIndexImplementation(encodedName, indexDefinition, directory);
 			}, (s, index) => index);
 		}
