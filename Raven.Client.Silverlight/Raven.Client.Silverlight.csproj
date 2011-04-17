@@ -99,6 +99,9 @@
     <Compile Include="..\Raven.Abstractions\Json\JsonValueTypeConverter.cs">
       <Link>Imports\Json\JsonValueTypeConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\RavenJsonConverter.cs">
+      <Link>Imports\Json\RavenJsonConverter.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Linq\DynamicNullObject.cs">
       <Link>Imports\Linq\DynamicNullObject.cs</Link>
     </Compile>

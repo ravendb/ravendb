@@ -30,11 +30,11 @@ namespace Raven.Abstractions.Json
         /// </returns>
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            var jObject = RavenJObject.Load(reader);
-			if (jObject.ContainsKey("DateTime") == false)
+			if (reader.TokenType != JsonToken.StartObject)
 				return DeferReadToNextConverter(reader, objectType, serializer, existingValue);
 
-            var dateTime = jObject.Value<DateTime>("DateTime");
+			var jObject = RavenJObject.Load(reader);
+			var dateTime = jObject.Value<DateTime>("DateTime");
             return new DateTimeOffset(
                 dateTime.Year,dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Millisecond, dateTime.Second, dateTime.Millisecond,
                 TimeSpan.FromMilliseconds(jObject.Value<double>("Offset"))
