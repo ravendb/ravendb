@@ -276,9 +276,43 @@ namespace Raven.Json.Linq
 			return true;
 		}
 
-    	internal abstract int GetDeepHashCode();
+		internal virtual int GetDeepHashCode()
+		{
+			var stack = new Stack<Tuple<int, RavenJToken>>();
+			int ret = 0;
 
-		/// <summary>
+			stack.Push(Tuple.Create(0, this));
+
+			while (stack.Count > 0)
+			{
+				var cur = stack.Pop();
+
+				if (cur.Item2.Type == JTokenType.Array)
+				{
+					var arr = (RavenJArray) cur.Item2;
+					for (int i = 0; i < arr.Length; i++)
+					{
+						stack.Push(Tuple.Create(cur.Item1 ^ (i*397), arr[i]));
+					}
+				}
+				else if (cur.Item2.Type == JTokenType.Object)
+				{
+					var selfObj = (RavenJObject) cur.Item2;
+					foreach (var kvp in selfObj.Properties)
+					{
+						stack.Push(Tuple.Create(cur.Item1 ^ (397*kvp.Key.GetHashCode()), kvp.Value));
+					}
+				}
+				else // value
+				{
+					ret ^= cur.Item1 ^ (cur.Item2.GetDeepHashCode()*397);
+				}
+			}
+
+			return ret;
+		}
+
+    	/// <summary>
 		/// Selects the token that matches the object path.
 		/// </summary>
 		/// <param name="path">
