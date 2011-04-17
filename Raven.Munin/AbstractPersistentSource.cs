@@ -154,12 +154,8 @@ namespace Raven.Munin
         }
 
     	public abstract void EnsureCapacity(int value);
-        public void ClearStateIfNeeded()
-        {
-            CurrentStates = null;
-        }
 
-        public virtual void Dispose()
+    	public virtual void Dispose()
         {
             pool.Dispose();
     		disposed = true;
