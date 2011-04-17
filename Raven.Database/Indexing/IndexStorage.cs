@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using log4net;
+using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -38,6 +39,7 @@ namespace Raven.Database.Indexing
 		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
+		private static readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 
         public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration)
 		{
@@ -55,32 +57,36 @@ namespace Raven.Database.Indexing
 		        var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
 		        if (indexDefinition == null)
 		            continue;
-				var luceneDirectory = OpenOrCreateLuceneDirectory(IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path));
+
+		    	var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition);
 		    	var indexImplementation = CreateIndexImplementation(indexDirectory, indexDefinition, luceneDirectory);
 		    	indexes.TryAdd(indexDirectory, indexImplementation);
 		    }
 		}
 
-		
-		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(string indexDirectory)
+
+		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, string indexName = null)
 		{
 			Lucene.Net.Store.Directory directory;
-			if (configuration.RunInMemory)
+			if (indexDefinition.IsTemp || configuration.RunInMemory)
 				directory = new RAMDirectory();
 			else
+			{
+				var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
 				directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory))));
-            //creating index structure if we need to
-	        var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
-	        try
-	        {
-	            new IndexWriter(directory, standardAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).
-	                Close();
-	        }
-	        finally
-	        {
-	            standardAnalyzer.Close();
-	        }
-            return directory;
+			}
+
+			//creating index structure if we need to
+			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
+
+			return directory;
+		}
+
+		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
+		{
+			var newDir =  FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path)))));
+			Lucene.Net.Store.Directory.Copy(ramDir, newDir, true);
+			return newDir;
 		}
 
 		private Index CreateIndexImplementation(string directoryPath, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
@@ -145,7 +151,7 @@ namespace Raven.Database.Indexing
 
 		    indexes.AddOrUpdate(indexDefinition.Name, n =>
 			{
-				var directory = OpenOrCreateLuceneDirectory(encodedName);
+				var directory = OpenOrCreateLuceneDirectory(indexDefinition, encodedName);
 				return CreateIndexImplementation(encodedName, indexDefinition, directory);
 			}, (s, index) => index);
 		}

@@ -38,7 +38,7 @@ namespace Raven.Database.Indexing
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof (Index) + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof (Index) + ".Querying");
 		private readonly List<Document> currentlyIndexDocumented = new List<Document>();
-		private readonly Directory directory;
+		private Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
@@ -200,8 +200,12 @@ namespace Raven.Database.Indexing
 						context.AddError(name, "Creating Analyzer", e.ToString());
 						throw;
 					}
+
 					if (indexWriter == null)
+					{
 						indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
+					}
+
 					try
 					{
 						shouldRecreateSearcher = action(indexWriter, analyzer);
@@ -214,6 +218,19 @@ namespace Raven.Database.Indexing
 					{
 						context.AddError(name, null, e.ToString());
 						throw;
+					}
+
+					if (!context.Configuration.RunInMemory && indexDefinition.IsTemp)
+					{
+						var dir = indexWriter.GetDirectory() as RAMDirectory;
+						if (dir != null && dir.SizeInBytes() >= context.Configuration.TempIndexInMemoryMaxBytes)
+						{
+							indexWriter.Commit();
+							var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
+							directory = fsDir;
+							indexWriter.Close();
+							indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
+						}
 					}
 				}
 				finally

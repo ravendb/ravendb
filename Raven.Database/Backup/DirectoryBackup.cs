@@ -106,7 +106,7 @@ namespace Raven.Database.Backup
             foreach (var sourceFile in sourceFilesSnapshot)
             {
                 if (Path.GetFileName(sourceFile) == "write.lock")
-                    continue; // skip the Lucne lock file
+                    continue; // skip the Lucene lock file
 
                
                 var destFileName = Path.Combine(tempPath, Path.GetFileName(sourceFile));

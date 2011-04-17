@@ -221,7 +221,7 @@ namespace Raven.Database.Storage
 
 		public static string FixupIndexName(string index, string path)
 		{
-			string prefix = null; ;
+			string prefix = null;
 			if (index.StartsWith("Temp/") || index.StartsWith("Auto/"))
 			{
 				prefix = index.Substring(0, 5);
