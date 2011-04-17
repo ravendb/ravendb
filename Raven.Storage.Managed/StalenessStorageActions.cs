@@ -110,24 +110,25 @@ namespace Raven.Storage.Managed
 
         public Guid? GetMostRecentReducedEtag(string name)
         {
-            var enumerable = storage.MappedResults["ByViewAndEtag"].SkipToAndThenBack(new RavenJObject{{"view", name}}).GetEnumerator();
-            if(enumerable.MoveNext() == false)
-                return null;
-            // did we find the last item on the view?
-            if (enumerable.Current.Value<string>("view") == name)
-                return new Guid(enumerable.Current.Value<byte[]>("etag"));
+            using(var enumerable = storage.MappedResults["ByViewAndEtag"].SkipToAndThenBack(new RavenJObject{{"view", name}}).GetEnumerator())
+            {
+				if (enumerable.MoveNext() == false)
+					return null;
+				// did we find the last item on the view?
+				if (enumerable.Current.Value<string>("view") == name)
+					return new Guid(enumerable.Current.Value<byte[]>("etag"));
 
-            // maybe we are at another view?
-            if (enumerable.MoveNext() == false)
-                return null;
+				// maybe we are at another view?
+				if (enumerable.MoveNext() == false)
+					return null;
 
-            //could't find the name in the table 
-            if (enumerable.Current.Value<string>("view") != name)
-                return null;
+				//could't find the name in the table 
+				if (enumerable.Current.Value<string>("view") != name)
+					return null;
 
-            return new Guid(enumerable.Current.Value<byte[]>("etag"));
+				return new Guid(enumerable.Current.Value<byte[]>("etag"));
+            }
         }
-
 
         private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
         {

@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Bugs.CompiledIndexes;
 using Raven.Tests.Indexes;
 using Raven.Tryouts.Json;
 
@@ -26,7 +27,7 @@ namespace Raven.Tryouts
 		    for (int i = 0; i < 100; i++)
 		    {
 		    	Console.WriteLine(i);
-				new MapReduceIndexOnLargeDataSet().WillNotProduceAnyErrors();
+				new UsingNetworkEventsToNetworkTemp().CanGetGoodResults();
 
 		    }
 		}

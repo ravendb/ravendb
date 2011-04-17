@@ -20,18 +20,27 @@ namespace Raven.Database.Indexing
 
         public IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func)
         {
-            var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());
-            IEnumerator<object> en = func(wrapped).GetEnumerator();
-            do
-            {
-                var moveSuccessful = MoveNext(en, wrapped);
-                if (moveSuccessful == false)
-                    yield break;
-                if (moveSuccessful == true)
-                    yield return en.Current;
-                else
-                    en = func(wrapped).GetEnumerator();
-            } while (true);
+			using (var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator()))
+			{
+				IEnumerator<dynamic> en;
+				using (en = func(wrapped).GetEnumerator())
+				{
+					do
+					{
+						var moveSuccessful = MoveNext(en, wrapped);
+						if (moveSuccessful == false)
+							yield break;
+						if (moveSuccessful == true)
+							yield return en.Current;
+						else
+						{
+							en.Dispose();
+
+							en = func(wrapped).GetEnumerator();
+						}
+					} while (true);
+				}
+			}
         }
 
         private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator)
