@@ -235,19 +235,6 @@ namespace Raven.Json.Linq
 			writer.WriteEndObject();
 		}
 
-		internal override int GetDeepHashCode()
-		{
-			int hashCode = 0;
-			if (Properties != null)
-			{
-				foreach (RavenJToken item in Properties.Values)
-				{
-					hashCode ^= item.GetDeepHashCode();
-				}
-			}
-			return hashCode;
-		}
-
 		#region IEnumerable<KeyValuePair<string,RavenJToken>> Members
 
 		public IEnumerator<KeyValuePair<string, RavenJToken>> GetEnumerator()
