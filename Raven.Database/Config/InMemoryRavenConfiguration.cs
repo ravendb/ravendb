@@ -75,6 +75,10 @@ namespace Raven.Database.Config
 			var cleanupThreshold = Settings["Raven/TempIndexCleanupThreshold"];
 			TempIndexCleanupThreshold = cleanupThreshold != null ? TimeSpan.FromSeconds(int.Parse(cleanupThreshold)) : TimeSpan.FromMinutes(20);
 
+			var tempMemoryMaxbytes = Settings["Raven/TempIndexInMemoryMaxBytes"];
+			TempIndexInMemoryMaxBytes = tempMemoryMaxbytes != null ? int.Parse(tempMemoryMaxbytes) : 26214400;
+			TempIndexInMemoryMaxBytes = Math.Max(1024000, TempIndexInMemoryMaxBytes);
+
 			// Data settings
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
@@ -180,6 +184,13 @@ namespace Raven.Database.Config
 		/// Default: 1200 (20 minutes)
 		/// </summary>
 		public TimeSpan TempIndexCleanupThreshold { get; set; }
+
+		/// <summary>
+		/// Temp indexes are kept in memory until they reach this value in bytes 
+		/// Default: 26214400 (25 MB)
+		/// Minimu: 1024000
+		/// </summary>
+		public int TempIndexInMemoryMaxBytes { get; set; }
 
 #endregion
 

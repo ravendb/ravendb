@@ -213,7 +213,7 @@ namespace Raven.Database.Indexing
 					if (!context.Configuration.RunInMemory && indexDefinition.IsTemp)
 					{
 						var dir = indexWriter.GetDirectory() as RAMDirectory;
-						if (dir != null && dir.SizeInBytes() > 26214400) // TODO: Make configurable
+						if (dir != null && dir.SizeInBytes() >= context.Configuration.TempIndexInMemoryMaxBytes)
 						{
 							indexWriter.Commit();
 							var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
