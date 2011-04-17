@@ -38,6 +38,11 @@ namespace Raven.Storage.Managed
         private IUuidGenerator uuidGenerator;
         private readonly IDocumentCacher documentCacher;
 
+        public IPersistentSource PersistenceSource
+        {
+            get { return persistenceSource; }
+        }
+
         [ImportMany]
 		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 

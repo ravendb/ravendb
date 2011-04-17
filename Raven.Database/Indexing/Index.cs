@@ -16,15 +16,12 @@ using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -53,7 +50,7 @@ namespace Raven.Database.Indexing
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
-		private CurrentIndexSearcher searcher;
+		private IndexSearcher searcher;
 
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
@@ -74,18 +71,25 @@ namespace Raven.Database.Indexing
 			// writing to the index
 			this.directory.ClearLock("write.lock");
 
-			searcher = new CurrentIndexSearcher(new IndexSearcher(directory, true));
+		    searcher = new IndexSearcher(directory, true);
+            searcher.GetIndexReader().IncRef();
 		}
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractAnalyzerGenerator> AnalyzerGenerators { get; set; }
 
-		internal CurrentIndexSearcher Searcher
-		{
-			get { return searcher; }
-		}
+        /// <summary>
+        /// if you are calling this method, you _have_ to call 
+        /// searcher.GetIndexReader().DecRef();
+        /// when you are done searching
+        /// </summary>
+        internal IndexSearcher GetSearcher()
+	    {
+            searcher.GetIndexReader().IncRef();
+	        return searcher;
+	    }
 
-		#region IDisposable Members
+	    #region IDisposable Members
 
 		public void Dispose()
 		{
@@ -96,9 +100,12 @@ namespace Raven.Database.Indexing
 				{
 					indexExtension.Value.Dispose();
 				}
-				IndexSearcher _;
-				using (searcher.Use(out _))
-					searcher.MarkForDispoal();
+			    var indexReader = searcher.GetIndexReader();
+				searcher.Close();
+                while (indexReader.GetRefCount() > 0)
+			    {
+                    indexReader.DecRef();
+			    }
 				if (indexWriter != null)
 				{
 					IndexWriter writer = indexWriter;
@@ -338,23 +345,30 @@ namespace Raven.Database.Indexing
 
 		private void RecreateSearcher()
 		{
-			IndexSearcher _;
-			using (searcher.Use(out _))
-			{
-				searcher.MarkForDispoal();
-				if (indexWriter == null)
-				{
-					searcher = new CurrentIndexSearcher(new IndexSearcher(directory, true));
-				}
-				else
-				{
-					searcher = new CurrentIndexSearcher(new IndexSearcher(indexWriter.GetReader()));
-				}
-				Thread.MemoryBarrier(); // force other threads to see this write
-			}
+		    var oldSearch = searcher;
+            
+		    if (indexWriter == null)
+		    {
+		        searcher = new IndexSearcher(directory, true);
+                searcher.GetIndexReader().IncRef();
+		    }
+		    else
+		    {
+		        var indexReader = indexWriter.GetReader();
+		        indexReader.IncRef();
+		        searcher = new IndexSearcher(indexReader);
+		    }
+
+            if (oldSearch != null)
+            {
+                oldSearch.GetIndexReader().DecRef();
+                oldSearch.Close();
+            }
+            
+            Thread.MemoryBarrier(); // force other threads to see this write
 		}
 
-		protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
+	    protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
 		{
 			Analyzer newAnalyzer = AnalyzerGenerators.Aggregate(analyzer,
 			                                                    (currentAnalyzer, generator) =>
@@ -394,63 +408,6 @@ namespace Raven.Database.Indexing
 			indexExtensions.TryAdd(indexExtensionKey, extension);
 		}
 
-		#region Nested type: CurrentIndexSearcher
-
-		public class CurrentIndexSearcher
-		{
-			private readonly IndexSearcher searcher;
-			private bool shouldDisposeWhenThereAreNoUsages;
-			private int useCount;
-
-			public CurrentIndexSearcher(IndexSearcher searcher)
-			{
-				this.searcher = searcher;
-			}
-
-			public IDisposable Use(out IndexSearcher indexSearcher)
-			{
-				Interlocked.Increment(ref useCount);
-				indexSearcher = searcher;
-				return new CleanUp(this);
-			}
-
-			public void MarkForDispoal()
-			{
-				shouldDisposeWhenThereAreNoUsages = true;
-			}
-
-			#region Nested type: CleanUp
-
-			private class CleanUp : IDisposable
-			{
-				private readonly CurrentIndexSearcher parent;
-
-				public CleanUp(CurrentIndexSearcher parent)
-				{
-					this.parent = parent;
-				}
-
-				#region IDisposable Members
-
-				public void Dispose()
-				{
-					int uses = Interlocked.Decrement(ref parent.useCount);
-					if (parent.shouldDisposeWhenThereAreNoUsages && uses == 0)
-					{
-						IndexReader indexReader = parent.searcher.GetIndexReader();
-						parent.searcher.Close();
-						indexReader.Close();
-					}
-				}
-
-				#endregion
-			}
-
-			#endregion
-		}
-
-		#endregion
-
 		#region Nested type: IndexQueryOperation
 
 		internal class IndexQueryOperation
@@ -480,8 +437,9 @@ namespace Raven.Database.Indexing
 			public IEnumerable<IndexQueryResult> Query()
 			{
 				AssertQueryDoesNotContainFieldsThatAreNotIndexes();
-				IndexSearcher indexSearcher;
-				using (parent.searcher.Use(out indexSearcher))
+			    var indexSearcher = parent.searcher;
+			    indexSearcher.GetIndexReader().IncRef();
+                try
 				{
 					Query luceneQuery = GetLuceneQuery();
 					int start = indexQuery.Start;
@@ -521,6 +479,10 @@ namespace Raven.Database.Indexing
 						}
 					} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
 				}
+                finally
+                {
+                    indexSearcher.GetIndexReader().DecRef();
+                }
 			}
 
 			private bool ShouldIncludeInResults(IndexQueryResult indexQueryResult)

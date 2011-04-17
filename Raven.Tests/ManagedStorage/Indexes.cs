@@ -15,7 +15,7 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+				tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
 				tx.Batch( viewer =>
 					Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Name == "def")));
 			}
@@ -26,7 +26,7 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+                tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
                 tx.Batch(viewer =>
 					Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Name == "def")));
 
@@ -42,7 +42,7 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+                tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
 				tx.Batch(viewer =>
 					Assert.Equal("def", viewer.Indexing.GetFailureRate("def").Name));
 			}
@@ -53,7 +53,7 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+                tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
 				tx.Batch(mutator=>
 				{
 					mutator.Indexing.SetCurrentIndexStatsTo("def");
@@ -71,7 +71,7 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+                tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
 				tx.Batch(mutator =>
 				{
 					mutator.Indexing.SetCurrentIndexStatsTo("def");
@@ -100,7 +100,7 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+                tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
 				tx.Batch(mutator =>
 				{
 					mutator.Indexing.SetCurrentIndexStatsTo("def");
@@ -118,7 +118,7 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+                tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
 				tx.Batch(mutator =>
 				{
 					mutator.Indexing.SetCurrentIndexStatsTo("def");

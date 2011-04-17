@@ -1165,7 +1165,6 @@ If you really want to do in memory filtering on the data returned from the query
                 var result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
                 if (theWaitForNonStaleResults && result.IsStale)
                 {
-#if !DEBUG
                     if (sp.Elapsed > timeout)
                     {
                         sp.Stop();
@@ -1173,7 +1172,6 @@ If you really want to do in memory filtering on the data returned from the query
                             string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
                                           sp.ElapsedMilliseconds));
                     }
-#endif
                     Debug.WriteLine(
                         string.Format(
                             "Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",

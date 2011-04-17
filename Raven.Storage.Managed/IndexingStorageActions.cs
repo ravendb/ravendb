@@ -48,11 +48,10 @@ namespace Raven.Storage.Managed
 
         private RavenJObject GetCurrentIndex()
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", currentIndex.Value } });
+            var readResult = storage.IndexingStats.Read(currentIndex.Value);
             if (readResult == null)
                 throw new ArgumentException("There is no index with the name: " + currentIndex.Value);
         	var key = (RavenJObject)readResult.Key;
-			EnsureKeyMatchExpectedSchema(key);
         	return key;
         }
 
@@ -81,21 +80,21 @@ namespace Raven.Storage.Managed
 		public void IncrementReduceSuccessIndexing()
 		{
 			var index = GetCurrentIndex();
-			index["reduce_successes"] = index.Value<int>("reduce_successes") + 1;
+			index["reduce_successes"] = index.Value<int?>("reduce_successes") + 1;
 			storage.IndexingStats.UpdateKey(index);
 		}
 
 		public void IncrementReduceIndexingFailure()
 		{
 			var index = GetCurrentIndex();
-			index["reduce_failures"] = index.Value<int>("reduce_failures") + 1;
+			index["reduce_failures"] = index.Value<int?>("reduce_failures") + 1;
 			storage.IndexingStats.UpdateKey(index);
 		}
 
 		public void DecrementReduceIndexingAttempt()
 		{
 			var index = GetCurrentIndex();
-			index["reduce_attempts"] = index.Value<int>("reduce_attempts") - 1;
+			index["reduce_attempts"] = index.Value<int?>("reduce_attempts") - 1;
 			storage.IndexingStats.UpdateKey(index);
 
 		}
@@ -107,47 +106,28 @@ namespace Raven.Storage.Managed
                 var readResult = storage.IndexingStats.Read(key);
                 if(readResult == null)
                     continue;
-            	EnsureKeyMatchExpectedSchema(readResult.Key);
                 yield return new IndexStats
                 {
                     IndexingAttempts = readResult.Key.Value<int>("attempts"),
                     IndexingErrors = readResult.Key.Value<int>("failures"),
                     IndexingSuccesses = readResult.Key.Value<int>("successes"),
 
-					ReduceIndexingAttempts = readResult.Key.Value<int>("reduce_attempts"),
-					ReduceIndexingErrors = readResult.Key.Value<int>("reduce_failures"),
-					ReduceIndexingSuccesses = readResult.Key.Value<int>("reduce_successes"),
+					ReduceIndexingAttempts = readResult.Key.Value<int?>("reduce_attempts"),
+					ReduceIndexingErrors = readResult.Key.Value<int?>("reduce_failures"),
+					ReduceIndexingSuccesses = readResult.Key.Value<int?>("reduce_successes"),
 
                     Name = readResult.Key.Value<string>("index"),
                     LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
-                    LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp")
+                    LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
+                    LastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag") != null ? (Guid?)new Guid(readResult.Key.Value<byte[]>("lastReducedEtag")) : null,
+                    LastReducedTimestamp = readResult.Key.Value<DateTime?>("lastReducedTimestamp")
                 };
             }
         }
 
-    	private static void EnsureKeyMatchExpectedSchema(RavenJToken key)
-    	{
-    		var jObject = key as RavenJObject;
-			if (jObject == null)
-				return;
-
-    		if (!jObject.ContainsKey("reduce_attempts"))
-    		{
-    			jObject["reduce_attempts"] = 0;
-    		}
-			if (!jObject.ContainsKey("reduce_failures"))
-			{
-				jObject["reduce_failures"] = 0;
-			}
-			if (!jObject.ContainsKey("reduce_successes"))
-			{
-				jObject["reduce_successes"] = 0;
-			}
-    	}
-
-    	public void AddIndex(string name)
+    	public void AddIndex(string name, bool createMapReduce)
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject {{"index", name}});
+            var readResult = storage.IndexingStats.Read(name);
             if(readResult != null)
                 throw new ArgumentException("There is already an index with the name: " + name);
 
@@ -157,17 +137,20 @@ namespace Raven.Storage.Managed
                 {"attempts", 0},
                 {"successes", 0},
                 {"failures", 0},
-				{"reduce_attempts", 0},
-                {"reduce_successes", 0},
-                {"reduce_failures", 0},
-                {"lastEtag", Guid.Empty.ToByteArray()},
-                {"lastTimestamp", DateTime.MinValue}
+				{"lastEtag", Guid.Empty.ToByteArray()},
+                {"lastTimestamp", DateTime.MinValue},
+                
+                {"reduce_attempts", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
+                {"reduce_successes",createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
+                {"reduce_failures", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
+                {"lastReducedEtag", createMapReduce? Guid.Empty.ToByteArray() : (RavenJToken)RavenJValue.Null},
+                {"lastReducedTimestamp", createMapReduce? DateTime.MinValue : (RavenJToken)RavenJValue.Null}
             });
         }
 
         public void DeleteIndex(string name)
         {
-            storage.IndexingStats.Remove(new RavenJObject { { "index", name } });
+            storage.IndexingStats.Remove(name);
         }
 
         public IndexFailureInformation GetFailureRate(string index)
@@ -175,15 +158,14 @@ namespace Raven.Storage.Managed
             var readResult = storage.IndexingStats.Read(index);
             if (readResult == null)
                 throw new IndexDoesNotExistsException("There is no index named: " + index);
-        	EnsureKeyMatchExpectedSchema(readResult.Key);
             var indexFailureInformation = new IndexFailureInformation
             {
                 Attempts = readResult.Key.Value<int>("attempts"),
                 Errors = readResult.Key.Value<int>("failures"),
                 Successes = readResult.Key.Value<int>("successes"),
-				ReduceAttempts = readResult.Key.Value<int>("reduce_attempts"),
-				ReduceErrors = readResult.Key.Value<int>("reduce_failures"),
-				ReduceSuccesses = readResult.Key.Value<int>("reduce_successes"),
+				ReduceAttempts = readResult.Key.Value<int?>("reduce_attempts"),
+				ReduceErrors = readResult.Key.Value<int?>("reduce_failures"),
+				ReduceSuccesses = readResult.Key.Value<int?>("reduce_successes"),
                 Name = readResult.Key.Value<string>("index"),
             };
             return indexFailureInformation;
@@ -191,13 +173,26 @@ namespace Raven.Storage.Managed
 
         public void UpdateLastIndexed(string index, Guid etag, DateTime timestamp)
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", index } });
+            var readResult = storage.IndexingStats.Read(index);
             if (readResult == null)
                 throw new ArgumentException("There is no index with the name: " + index);
 
         	var ravenJObject = (RavenJObject)readResult.Key;
         	ravenJObject["lastEtag"] = etag.ToByteArray();
             ravenJObject["lastTimestamp"] = timestamp;
+
+            storage.IndexingStats.UpdateKey(ravenJObject);
+        }
+
+        public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
+        {
+            var readResult = storage.IndexingStats.Read(index);
+            if (readResult == null)
+                throw new ArgumentException("There is no index with the name: " + index);
+
+            var ravenJObject = (RavenJObject)readResult.Key;
+            ravenJObject["lastReducedEtag"] = etag.ToByteArray();
+            ravenJObject["lastReducedTimestamp"] = timestamp;
 
             storage.IndexingStats.UpdateKey(ravenJObject);
         }

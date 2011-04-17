@@ -79,7 +79,7 @@ namespace Raven.Database.Storage
 	                if (actions.Indexing.GetIndexesStats().Any(x => x.Name == name))
 	                    return;
 
-	                actions.Indexing.AddIndex(name);
+	                actions.Indexing.AddIndex(name, generator.ReduceDefinition != null);
 	            });
 
 	            var indexDefinition = new IndexDefinition

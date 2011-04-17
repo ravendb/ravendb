@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Linq;
@@ -19,10 +20,27 @@ namespace Raven.Munin
         private readonly ThreadLocal<IList<PersistentDictionaryState>> currentStates =
             new ThreadLocal<IList<PersistentDictionaryState>>(() => null);
 
+        //private readonly ThreadLocal<Stack<StackTrace>> traces = new ThreadLocal<Stack<StackTrace>>(()=>new Stack<StackTrace>());
+
     	private bool disposed;
 
+        public IList<PersistentDictionaryState> CurrentStates
+        {
+            get { return currentStates.Value; }
+            set
+            {
+                currentStates.Value = value;
+                //if (value == null)
+                //{
+                //    if (traces.Value.Count != 0)
+                //        traces.Value.Pop();
+                //}
+                //else
+                //    traces.Value.Push(new StackTrace(true));
+            }
+        }
 
-    	protected AbstractPersistentSource()
+        protected AbstractPersistentSource()
         {
             pool = new StreamsPool(CreateClonedStreamForReadOnlyPurposes);
         }
@@ -35,7 +53,7 @@ namespace Raven.Munin
 
         public IList<PersistentDictionaryState> DictionariesStates
         {
-            get { return currentStates.Value ?? globalStates; }
+            get { return CurrentStates ?? globalStates; }
         }
 
         protected abstract Stream CreateClonedStreamForReadOnlyPurposes();
@@ -44,10 +62,9 @@ namespace Raven.Munin
         {
 			if (disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-            
-            var needUpdating = currentStates.Value == null;
-            if (needUpdating)
-                currentStates.Value = globalStates;
+
+            var oldValue = CurrentStates;
+            CurrentStates = oldValue ?? globalStates;
             try
             {
                 Stream stream;
@@ -56,8 +73,7 @@ namespace Raven.Munin
             }
             finally
             {
-                if (needUpdating)
-                    currentStates.Value = null;
+                CurrentStates = oldValue;
             }
         }
 
@@ -65,17 +81,15 @@ namespace Raven.Munin
         {
 			if(disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-            var needUpdating = currentStates.Value == null;
-            if (needUpdating)
-                currentStates.Value = globalStates;
+            var oldValue = CurrentStates;
+            CurrentStates = oldValue ?? globalStates;
             try
             {
                 return readOnlyAction();
             }
             finally
             {
-                if (needUpdating)
-                    currentStates.Value = null;
+                CurrentStates = oldValue;
             }
         }
 
@@ -83,10 +97,10 @@ namespace Raven.Munin
         {
 			if (disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-            
-            var needUpdating = currentStates.Value == null;
-            if (needUpdating)
-                currentStates.Value = globalStates;
+
+            var oldValue = CurrentStates;
+            CurrentStates = oldValue ?? globalStates;
+          
             try
             {
                 foreach (T item in readOnlyAction())
@@ -96,8 +110,7 @@ namespace Raven.Munin
             }
             finally
             {
-                if (needUpdating)
-                    currentStates.Value = null;
+                CurrentStates = oldValue;
             }
         }
 
@@ -110,7 +123,7 @@ namespace Raven.Munin
             
                 try
                 {
-                    currentStates.Value = new List<PersistentDictionaryState>(
+                    CurrentStates = new List<PersistentDictionaryState>(
                         globalStates.Select(x => new PersistentDictionaryState(x.Comparer)
                         {
                             KeyToFilePositionInFiles = x.KeyToFilePositionInFiles,
@@ -122,8 +135,8 @@ namespace Raven.Munin
                 finally
                 {
                     pool.Clear();
-                    Interlocked.Exchange(ref globalStates, currentStates.Value);
-                    currentStates.Value = null;
+                    Interlocked.Exchange(ref globalStates, CurrentStates);
+                    CurrentStates = null;
                 }
             }
         }
@@ -141,8 +154,12 @@ namespace Raven.Munin
         }
 
     	public abstract void EnsureCapacity(int value);
+        public void ClearStateIfNeeded()
+        {
+            CurrentStates = null;
+        }
 
-    	public virtual void Dispose()
+        public virtual void Dispose()
         {
             pool.Dispose();
     		disposed = true;

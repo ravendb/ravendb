@@ -63,6 +63,7 @@
     <Compile Include="EsentExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SchemaCreator.cs" />
+    <Compile Include="SchemaUpdates\From34To35.cs" />
     <Compile Include="SchemaUpdates\From32To33.cs" />
     <Compile Include="SchemaUpdates\From29To30.cs" />
     <Compile Include="SchemaUpdates\From21To22.cs" />
