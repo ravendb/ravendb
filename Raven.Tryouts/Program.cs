@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Indexes;
 using Raven.Tryouts.Json;
 
 namespace Raven.Tryouts
@@ -22,10 +23,11 @@ namespace Raven.Tryouts
             //    PerfTest.CloneALot2(executeManyFileReads2);
             //    Console.WriteLine(i++);
             //}
-		    for (int i = 0; i < 10; i++)
+		    for (int i = 0; i < 100; i++)
 		    {
-		        Console.WriteLine(i);
-                PerfTest.RunPerfTest();
+		    	Console.WriteLine(i);
+				new MapReduceIndexOnLargeDataSet().WillNotProduceAnyErrors();
+
 		    }
 		}
 	}

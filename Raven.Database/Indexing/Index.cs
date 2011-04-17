@@ -71,8 +71,7 @@ namespace Raven.Database.Indexing
 			// writing to the index
 			this.directory.ClearLock("write.lock");
 
-		    searcher = new IndexSearcher(directory, true);
-            searcher.GetIndexReader().IncRef();
+			RecreateSearcher();
 		}
 
 		[ImportMany]
@@ -85,8 +84,9 @@ namespace Raven.Database.Indexing
         /// </summary>
         internal IndexSearcher GetSearcher()
 	    {
-            searcher.GetIndexReader().IncRef();
-	        return searcher;
+        	var indexSearcher = searcher;
+        	indexSearcher.GetIndexReader().IncRef();
+	        return indexSearcher;
 	    }
 
 	    #region IDisposable Members
@@ -104,7 +104,7 @@ namespace Raven.Database.Indexing
 				searcher.Close();
                 while (indexReader.GetRefCount() > 0)
 			    {
-                    indexReader.DecRef();
+                    indexReader.Close();
 			    }
 				if (indexWriter != null)
 				{
@@ -350,19 +350,23 @@ namespace Raven.Database.Indexing
 		    if (indexWriter == null)
 		    {
 		        searcher = new IndexSearcher(directory, true);
-                searcher.GetIndexReader().IncRef();
 		    }
 		    else
 		    {
 		        var indexReader = indexWriter.GetReader();
-		        indexReader.IncRef();
-		        searcher = new IndexSearcher(indexReader);
+		    	searcher = new IndexSearcher(indexReader);
 		    }
 
             if (oldSearch != null)
             {
-                oldSearch.GetIndexReader().DecRef();
-                oldSearch.Close();
+            	var indexReader = oldSearch.GetIndexReader();
+				oldSearch.Close();
+				indexReader.Close();
+
+				if(indexReader.GetRefCount() != 0)
+				{
+					
+				}
             }
             
             Thread.MemoryBarrier(); // force other threads to see this write
