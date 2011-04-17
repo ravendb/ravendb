@@ -50,6 +50,11 @@ namespace Raven.Storage.Esent
 		[ImportMany]
 		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
+		static TransactionalStorage()
+		{
+			SystemParameters.MaxInstances = 1024;
+		}
+
 		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
 		{
 			database = configuration.DataDirectory;

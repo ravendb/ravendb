@@ -35,6 +35,8 @@ namespace Raven.Tests
         		AnonymousUserAccessMode = AnonymousUserAccessMode.All
         	};
 
+        	ConfigureServer(ravenConfiguration);
+
         	var ravenDbServer = new RavenDbServer(ravenConfiguration);
 
 			using (var documentStore = new DocumentStore
@@ -47,6 +49,10 @@ namespace Raven.Tests
 
         	return ravenDbServer;
         }
+
+		protected virtual void ConfigureServer(RavenConfiguration ravenConfiguration)
+		{
+		}
 
 		protected void WaitForUserToContinueTheTest()
 		{
