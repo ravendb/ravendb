@@ -76,7 +76,7 @@ namespace Raven.Database.Config
 			TempIndexCleanupThreshold = cleanupThreshold != null ? TimeSpan.FromSeconds(int.Parse(cleanupThreshold)) : TimeSpan.FromMinutes(20);
 
 			var tempMemoryMaxbytes = Settings["Raven/TempIndexInMemoryMaxBytes"];
-			TempIndexInMemoryMaxBytes = tempMemoryMaxbytes != null ? int.Parse(tempMemoryMaxbytes) : 26214400;
+			TempIndexInMemoryMaxBytes = tempMemoryMaxbytes != null ? int.Parse(tempMemoryMaxbytes) * 1024000 : 26214400;
 			TempIndexInMemoryMaxBytes = Math.Max(1024000, TempIndexInMemoryMaxBytes);
 
 			// Data settings
@@ -186,9 +186,9 @@ namespace Raven.Database.Config
 		public TimeSpan TempIndexCleanupThreshold { get; set; }
 
 		/// <summary>
-		/// Temp indexes are kept in memory until they reach this value in bytes 
-		/// Default: 26214400 (25 MB)
-		/// Minimu: 1024000
+		/// Temp indexes are kept in memory until they reach this integer value in MB
+		/// Default: 25 MB
+		/// Minimum: 1 MB
 		/// </summary>
 		public int TempIndexInMemoryMaxBytes { get; set; }
 
