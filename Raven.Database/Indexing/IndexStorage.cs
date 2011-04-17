@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using log4net;
+using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
@@ -37,6 +38,7 @@ namespace Raven.Database.Indexing
 		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
+		private static readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 
         public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration)
 		{
@@ -74,17 +76,15 @@ namespace Raven.Database.Indexing
 			}
 
 			//creating index structure if we need to
-	        var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
 	        try
 	        {
-	            new IndexWriter(directory, standardAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).
+				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).
 	                Close();
 	        }
-	        finally
+	        catch
 	        {
-	            standardAnalyzer.Close();
 	        }
-            return directory;
+			return directory;
 		}
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
