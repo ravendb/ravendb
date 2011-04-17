@@ -375,8 +375,6 @@ namespace Raven.Tests.Document
 							.WaitForNonStaleResults(TimeSpan.FromDays(1))
 							.ToArray();
 
-					LocalClientTest.WaitForUserToContinueTheTest((EmbeddableDocumentStore)store);
-
 					Assert.Equal(3, darykalSumResults.Length);
 
 				}

@@ -111,7 +111,8 @@ namespace Raven.Storage.Esent.StorageActions
 	    {
             Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
             Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
+			Api.MakeKey(session, MappedResults, lastReducedEtag, MakeKeyGrbit.None);
+            if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekLE) == false)
                 yield break;
 
 	        while (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]) == indexName)
