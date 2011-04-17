@@ -1,11 +1,10 @@
 using System;
 using System.Globalization;
 using Newtonsoft.Json;
-using System.Linq;
 
 namespace Raven.Abstractions.Json
 {
-	public class JsonDateTimeISO8601Converter : JsonConverter
+	public class JsonDateTimeISO8601Converter : RavenJsonConverter
 	{
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
@@ -47,13 +46,7 @@ namespace Raven.Abstractions.Json
 				}
 
 			}
-			var anotherConverter =
-				serializer.Converters.Skip(serializer.Converters.IndexOf(this)+1)
-				.Where(x => x.CanConvert(objectType))
-				.FirstOrDefault();
-			if (anotherConverter != null)
-				return anotherConverter.ReadJson(reader, objectType, existingValue, serializer);
-			return reader.Value;
+			return DeferReadToNextConverter(reader, objectType, serializer, existingValue);
 		}
 
 		public override bool CanConvert(Type objectType)
