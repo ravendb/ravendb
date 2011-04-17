@@ -34,7 +34,10 @@ namespace Raven.Database.Indexing
 							yield return en.Current;
 						else
 						{
-							en.Dispose();
+							// we explictly do not dispose the enumerator, since that would not allow us 
+							// to continue on with the next item in the list.
+							// Not actually a problem, because we are iterating only over in memory data
+							// en.Dispose();
 
 							en = func(wrapped).GetEnumerator();
 						}
