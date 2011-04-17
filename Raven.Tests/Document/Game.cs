@@ -311,154 +311,71 @@ namespace Raven.Tests.Document
 
 				using (var documentSession = store.OpenSession())
 				{
-					documentSession.Store(new GameEvent()
+					for (int i = 0; i < 5; i++)
 					{
-						Id = "1",
-						UserId = "UserId1",
-						Time = "232",
-						ActionName = "Something",
-						CharacterName = "Darykal",
-						DataUploadId = "10",
-						RealmName = "Moonglade",
-						Region = "SingleRegion",
-						SubZone = "SubzoneOne",
-						Zone = "ZoneOne"
-					});
+						documentSession.Store(new GameEvent()
+						{
+							Id = (i+1).ToString(),
+							UserId = "UserId1",
+							Time = "232",
+							ActionName = "Something",
+							CharacterName = "Darykal",
+							DataUploadId = "10",
+							RealmName = "Moonglade",
+							Region = "SingleRegion",
+							SubZone = "SubzoneOne",
+							Zone = "ZoneOne"
+						});
 
-					documentSession.Store(new GameEvent()
-					{
-						Id = "2",
-						UserId = "UserId1",
-						Time = "232",
-						ActionName = "Something",
-						CharacterName = "Darykal",
-						DataUploadId = "10",
-						RealmName = "Moonglade",
-						Region = "SingleRegion",
-						SubZone = "SubzoneOne",
-						Zone = "ZoneOne"
-					});
+					}
 
-					documentSession.Store(new GameEvent()
-					{
-						Id = "3",
-						UserId = "UserId1",
-						Time = "232",
-						ActionName = "Something",
-						CharacterName = "Darykal",
-						DataUploadId = "10",
-						RealmName = "Moonglade",
-						Region = "SingleRegion",
-						SubZone = "SubzoneOne",
-						Zone = "ZoneOne"
-					});
 
-					documentSession.Store(new GameEvent()
+					for (int i =6; i < 8; i++)
 					{
-						Id = "4",
-						UserId = "UserId1",
-						Time = "232",
-						ActionName = "Something",
-						CharacterName = "Darykal",
-						DataUploadId = "10",
-						RealmName = "Moonglade",
-						Region = "SingleRegion",
-						SubZone = "SubzoneOne",
-						Zone = "ZoneOne"
-					});
+						documentSession.Store(new GameEvent()
+						{
+							Id = (i+1).ToString(),
+							UserId = "UserId1",
+							Time = "232",
+							ActionName = "Something",
+							CharacterName = "Darykal",
+							DataUploadId = "10",
+							RealmName = "Moonglade",
+							Region = "SingleRegion",
+							SubZone = "SubzoneOne",
+							Zone = "ZoneTwo"
+						});
 
-					documentSession.Store(new GameEvent()
-					{
-						Id = "5",
-						UserId = "UserId1",
-						Time = "232",
-						ActionName = "Something",
-						CharacterName = "Darykal",
-						DataUploadId = "10",
-						RealmName = "Moonglade",
-						Region = "SingleRegion",
-						SubZone = "SubzoneOne",
-						Zone = "ZoneOne"
-					});
+						
+					}
 
-					documentSession.Store(new GameEvent()
+					for (int i = 9; i < 12; i++)
 					{
-						Id = "6",
-						UserId = "UserId1",
-						Time = "232",
-						ActionName = "Something",
-						CharacterName = "Darykal",
-						DataUploadId = "10",
-						RealmName = "Moonglade",
-						Region = "SingleRegion",
-						SubZone = "SubzoneOne",
-						Zone = "ZoneTwo"
-					});
+						documentSession.Store(new GameEvent()
+						{
+							Id = (i + 1).ToString(),
+							UserId = "UserId1",
+							Time = "232",
+							ActionName = "Something",
+							CharacterName = "Darykal",
+							DataUploadId = "10",
+							RealmName = "Moonglade",
+							Region = "SingleRegion",
+							SubZone = "SubzoneOne",
+							Zone = "ZoneThree"
+						});
 
-					documentSession.Store(new GameEvent()
-					{
-						Id = "7",
-						UserId = "UserId1",
-						Time = "232",
-						ActionName = "Something",
-						CharacterName = "Darykal",
-						DataUploadId = "10",
-						RealmName = "Moonglade",
-						Region = "SingleRegion",
-						SubZone = "SubzoneOne",
-						Zone = "ZoneTwo"
-					});
-
-					documentSession.Store(new GameEvent()
-					{
-						Id = "8",
-						UserId = "UserId1",
-						Time = "232",
-						ActionName = "Something",
-						CharacterName = "Darykal",
-						DataUploadId = "10",
-						RealmName = "Moonglade",
-						Region = "SingleRegion",
-						SubZone = "SubzoneOne",
-						Zone = "ZoneThree"
-					});
-
-					documentSession.Store(new GameEvent()
-					{
-						Id = "9",
-						UserId = "UserId1",
-						Time = "232",
-						ActionName = "Something",
-						CharacterName = "Darykal",
-						DataUploadId = "10",
-						RealmName = "Moonglade",
-						Region = "SingleRegion",
-						SubZone = "SubzoneOne",
-						Zone = "ZoneThree"
-					});
-
-					documentSession.Store(new GameEvent()
-					{
-						Id = "10",
-						UserId = "UserId1",
-						Time = "232",
-						ActionName = "Something",
-						CharacterName = "Darykal",
-						DataUploadId = "10",
-						RealmName = "Moonglade",
-						Region = "SingleRegion",
-						SubZone = "SubzoneOne",
-						Zone = "ZoneOne"
-					});
+					}
 
 					documentSession.SaveChanges();
 
 					var darykalSumResults =
-                        documentSession.Advanced.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
+                        documentSession.Advanced.LuceneQuery<dynamic>("GameEventCountZoneBySpecificCharacter")
 							.Where("CharacterName:Darykal AND RealmName:Moonglade AND Region:SingleRegion AND DataUploadId:10 ")
-							.SelectFields<ZoneCountResult>("Zone", "Count")
 							.WaitForNonStaleResults(TimeSpan.FromDays(1))
 							.ToArray();
+
+					LocalClientTest.WaitForUserToContinueTheTest((EmbeddableDocumentStore)store);
 
 					Assert.Equal(3, darykalSumResults.Length);
 
