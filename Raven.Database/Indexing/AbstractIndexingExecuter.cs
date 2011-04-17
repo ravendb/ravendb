@@ -145,6 +145,11 @@ namespace Raven.Database.Indexing
             {
                 return new Guid(inner);
             }
+
+			public override string ToString()
+			{
+				return ToGuid().ToString();
+			}
         }
 
     }
