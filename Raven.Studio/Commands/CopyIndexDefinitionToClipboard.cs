@@ -1,7 +1,7 @@
 ﻿namespace Raven.Studio.Commands
 {
 	using System.Windows;
-	using Database.Indexing;
+	using Abstractions.Indexing;
 	using Newtonsoft.Json;
 
 	public class CopyIndexDefinitionToClipboard
