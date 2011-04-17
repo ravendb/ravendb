@@ -1,6 +1,7 @@
 ﻿namespace Raven.Studio.Framework
 {
 	using System;
+	using System.Collections.Generic;
 	using System.Linq;
 	using System.Threading.Tasks;
 	using System.Windows;
@@ -213,25 +214,29 @@
 			query(page * PageSize, PageSize)
 				.ContinueWith(x =>
 								{
-									hasLoadedFirstPage = true;
+									HandleLoadPageResults(x.Result, page);
 
-									IsNotifying = false;
-									Clear();
-									AddRange(x.Result.Select(transform));
-									IsNotifying = true;
-
-									CurrentPage = page;
-									AdjustNumberOfPages();
-
-									Refresh();
-
-									IsLoading = false;
-									
 									//HACK:
 									IoC.Get<IEventAggregator>().Publish(new WorkCompleted("loading page"));
 
 									if (afterLoaded != null) afterLoaded();
 								});
+		}
+
+		void HandleLoadPageResults(IEnumerable<TResult> results, int page) {
+			hasLoadedFirstPage = true;
+
+			IsNotifying = false;
+			Clear();
+			AddRange(results.Select(transform));
+			IsNotifying = true;
+
+			CurrentPage = page;
+			AdjustNumberOfPages();
+
+			Refresh();
+
+			IsLoading = false;
 		}
 
 		public void MoveFirst()

@@ -30,6 +30,15 @@
 				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
 
+			<tk:ContextMenuService.ContextMenu>
+				<tk:ContextMenu>
+					<tk:MenuItem Header="Copy Index Definition To Clipboard"
+								 Tag="{Binding Index}"
+								 cm:Action.TargetWithoutContext="CopyIndexDefinitionToClipboard"
+								 cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
+				</tk:ContextMenu>
+			</tk:ContextMenuService.ContextMenu>
+
 			<ScrollViewer BorderThickness="0"
 						  VerticalScrollBarVisibility="Auto"
 						  HorizontalScrollBarVisibility="Auto">

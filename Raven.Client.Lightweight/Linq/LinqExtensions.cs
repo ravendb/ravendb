@@ -224,5 +224,14 @@ namespace Raven.Client.Linq
 		{
 			return values.Any(value => field.Equals(value));
 		}
+
+		/// <summary>
+		/// Bypasses a specified number of elements in a sequence and then returns the remaining elements.
+		/// </summary>
+		/// Summary:
+		public static IRavenQueryable<TSource> Skip<TSource>(this IRavenQueryable<TSource> source, int count)
+		{
+			return (IRavenQueryable<TSource>)Queryable.Skip(source,count);
+		}
 	}
 }

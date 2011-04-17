@@ -123,6 +123,7 @@
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
+    <Compile Include="Commands\CopyIndexDefinitionToClipboard.cs" />
     <Compile Include="Commands\CopyServerError.cs" />
     <Compile Include="Commands\EditIndex.cs" />
     <Compile Include="Commands\LoadDocument.cs" />
@@ -167,7 +168,6 @@
     <Compile Include="Commands\EditDocument.cs" />
     <Compile Include="Commands\EditDocumentById.cs" />
     <Compile Include="Commands\SaveDocument.cs" />
-    <Compile Include="Commands\SearchForDocumentById.cs" />
     <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
     <Compile Include="Features\Documents\DocumentViewModel.cs" />
     <Compile Include="Features\Documents\ISupportDocumentTemplate.cs" />
