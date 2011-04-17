@@ -217,8 +217,66 @@ namespace Raven.Json.Linq
 			return (t1 == t2 || (t1 != null && t2 != null && t1.DeepEquals(t2)));
 		}
 
-		internal abstract bool DeepEquals(RavenJToken node);
-		internal abstract int GetDeepHashCode();
+		internal virtual bool DeepEquals(RavenJToken other)
+		{
+			if (other == null)
+				return false;
+
+			if (Type != other.Type)
+				return false;
+
+			var otherStack = new Stack<RavenJToken>();
+			var thisStack = new Stack<RavenJToken>();
+
+			thisStack.Push(this);
+			otherStack.Push(other);
+
+			while (otherStack.Count > 0)
+			{
+				var curOtherReader = otherStack.Pop();
+				var curThisReader = thisStack.Pop();
+
+				if (curThisReader.Type != curOtherReader.Type) return false;
+
+				if (curOtherReader.Type == JTokenType.Array)
+				{
+					var selfArray = (RavenJArray)curThisReader;
+					var otherArray = (RavenJArray)curOtherReader;
+					if (selfArray.Length != otherArray.Length)
+						return false;
+
+					for (int i = 0; i < selfArray.Length; i++)
+					{
+						thisStack.Push(selfArray[i]);
+						otherStack.Push(otherArray[i]);
+					}
+				}
+				else if (curOtherReader.Type == JTokenType.Object)
+				{
+					var selfObj = (RavenJObject)curThisReader;
+					var otherObj = (RavenJObject)curOtherReader;
+					if (selfObj.Count != otherObj.Count)
+						return false;
+
+					foreach (var kvp in selfObj.Properties)
+					{
+						RavenJToken token;
+						if (otherObj.TryGetValue(kvp.Key, out token) == false)
+							return false;
+						otherStack.Push(token);
+						thisStack.Push(kvp.Value);
+					}
+				}
+				else // value
+				{
+					return curOtherReader.DeepEquals(curThisReader);
+				}
+			}
+
+			return true;
+		}
+
+    	internal abstract int GetDeepHashCode();
 
 		/// <summary>
 		/// Selects the token that matches the object path.
