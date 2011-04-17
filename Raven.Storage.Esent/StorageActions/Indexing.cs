@@ -190,8 +190,8 @@ namespace Raven.Storage.Esent.StorageActions
         public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
         {
             Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-            Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+			Api.MakeKey(session, IndexesStatsReduce, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
                 throw new IndexDoesNotExistsException("There is no reduce index named: " + index);
 
             using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
