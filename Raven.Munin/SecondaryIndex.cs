@@ -106,8 +106,7 @@ namespace Raven.Munin
 
         public IEnumerable<RavenJToken> SkipToAndThenBack(RavenJObject key)
         {
-            return
-                   persistentSource.Read(
+            return persistentSource.Read(
                        () =>
                        Index.LessThanOrEqual(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInReverseOrder));
         }
