@@ -13,6 +13,7 @@ namespace Raven.Json.Linq
 
 		private readonly DictionaryWithParentSnapshot parentSnapshot;
         private bool isSnapshot;
+		private int count;
 
         protected IDictionary<string, RavenJToken> LocalChanges { get; private set; }
 
@@ -37,6 +38,7 @@ namespace Raven.Json.Linq
 			if (ContainsKey(key))
 				throw new ArgumentException("An item with the same key has already been added: " + key);
 
+			count = -1;
             LocalChanges[key] = value; // we can't use Add, because LocalChanges may contain a DeletedMarker
         }
 
@@ -57,8 +59,16 @@ namespace Raven.Json.Linq
 			get
 			{
 				if (LocalChanges == null)
-					return parentSnapshot != null ? parentSnapshot.Keys : new HashSet<string>();
+				{
+					if (parentSnapshot != null)
+					{
+						if (count == -1) count = parentSnapshot.count;
+						return parentSnapshot.Keys;
+					}
+					return new HashSet<string>();
+				}
 
+				int counter = 0;
 				ICollection<string> ret = new HashSet<string>();
 				if (parentSnapshot != null)
 				{
@@ -67,6 +77,7 @@ namespace Raven.Json.Linq
 						if (LocalChanges.ContainsKey(key))
 							continue;
 						ret.Add(key);
+						++counter;
 					}
 				}
 
@@ -75,7 +86,10 @@ namespace Raven.Json.Linq
 					if (LocalChanges[key] == DeletedMarker)
 						continue;
 					ret.Add(key);
+					++counter;
 				}
+
+				count = counter;
 				return ret;
 			}
         }
@@ -85,6 +99,7 @@ namespace Raven.Json.Linq
             if (isSnapshot)
                 throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
 
+			count = -1;
 		    bool parentHasIt = false;
 			RavenJToken token;
 			if (!LocalChanges.TryGetValue(key, out token))
@@ -148,6 +163,7 @@ namespace Raven.Json.Linq
             }
         	set
         	{
+        		count = -1;
 				LocalChanges[key] = value;
         	}
         }
@@ -186,6 +202,8 @@ namespace Raven.Json.Linq
 
         public void Clear()
         {
+			// we either already have count set to -1, or it will be invalidated by a call to Remove below
+
         	foreach (var key in Keys.ToArray()) // clone the values for the iteration
         	{
         		Remove(key);
@@ -214,7 +232,7 @@ namespace Raven.Json.Linq
 
         public int Count
         {
-            get { return Keys.Count; }
+            get { return (count >= 0) ? count : Keys.Count; }
         }
 
         public bool IsReadOnly
