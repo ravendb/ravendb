@@ -20,7 +20,7 @@ namespace Raven.Munin
         private readonly ThreadLocal<IList<PersistentDictionaryState>> currentStates =
             new ThreadLocal<IList<PersistentDictionaryState>>(() => null);
 
-		private readonly ThreadLocal<Stack<StackTrace>> traces = new ThreadLocal<Stack<StackTrace>>(() => new Stack<StackTrace>());
+		private readonly ThreadLocal<List<StackTrace>> traces = new ThreadLocal<List<StackTrace>>(() => new List<StackTrace>());
 
     	private bool disposed;
 
@@ -41,7 +41,7 @@ namespace Raven.Munin
 						
 					}
 
-					traces.Value.Push(new StackTrace(true));
+					traces.Value.Add(new StackTrace(true));
 				}
             }
         }
@@ -99,26 +99,6 @@ namespace Raven.Munin
             }
         }
 
-        public IEnumerable<T> Read<T>(Func<IEnumerable<T>> readOnlyAction)
-        {
-			if (disposed)
-				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-
-            var oldValue = CurrentStates;
-            CurrentStates = oldValue ?? globalStates;
-          
-            try
-            {
-                foreach (T item in readOnlyAction())
-                {
-                    yield return item;
-                }
-            }
-            finally
-            {
-                CurrentStates = oldValue;
-            }
-        }
 
         public void Write(Action<Stream> readWriteAction)
         {
