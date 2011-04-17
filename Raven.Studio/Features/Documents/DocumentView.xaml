@@ -78,7 +78,7 @@
 			  Height="60">
 			<docs:DocumentTemplateSelector Content="{Binding Mode=OneTime}"
 										   VerticalContentAlignment="Stretch"
-										   HorizontalAlignment="Stretch" />
+                                           HorizontalContentAlignment="Stretch" />
 			<StackPanel x:Name="overlay"
 						Opacity="0"
 						Orientation="Horizontal"
