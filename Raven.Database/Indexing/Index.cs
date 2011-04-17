@@ -362,11 +362,6 @@ namespace Raven.Database.Indexing
             	var indexReader = oldSearch.GetIndexReader();
 				oldSearch.Close();
 				indexReader.Close();
-
-				if(indexReader.GetRefCount() != 0)
-				{
-					
-				}
             }
             
             Thread.MemoryBarrier(); // force other threads to see this write

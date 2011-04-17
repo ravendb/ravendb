@@ -31,14 +31,16 @@ namespace Raven.Storage.Managed
         {
             var ms = new MemoryStream();
             data.WriteTo(ms);
-			storage.MappedResults.Put(new RavenJObject
-            {
-                {"view", view},
-                {"reduceKey", reduceKey},
-                {"docId", docId},
-                {"etag", generator.CreateSequentialUuid().ToByteArray()},
-                {"timestamp", DateTime.Now}
-            }, ms.ToArray());
+        	var byteArray = generator.CreateSequentialUuid().ToByteArray();
+        	var key = new RavenJObject
+        	{
+        		{"view", view},
+        		{"reduceKey", reduceKey},
+        		{"docId", docId},
+        		{"etag", byteArray},
+        		{"timestamp", DateTime.Now}
+        	};
+        	storage.MappedResults.Put(key, ms.ToArray());
         }
 
     	public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
