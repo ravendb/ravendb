@@ -126,8 +126,9 @@ select new {
 			}
 
 			GetUnstableQueryResult("blog_id:3");
-		    
 
+			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""14""}", q.Results[0].ToString(Formatting.None));
+			
 			db.Put("docs/0", null, RavenJObject.Parse("{blog_id: 3, comments: [{}]}"), new RavenJObject(), null);
 
             var q = GetUnstableQueryResult("blog_id:3");

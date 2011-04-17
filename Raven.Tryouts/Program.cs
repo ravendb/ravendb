@@ -3,6 +3,7 @@ using Raven.Json.Linq;
 using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.CompiledIndexes;
 using Raven.Tests.Indexes;
+using Raven.Tests.Views;
 using Raven.Tryouts.Json;
 
 namespace Raven.Tryouts
@@ -27,7 +28,7 @@ namespace Raven.Tryouts
 		    for (int i = 0; i < 100; i++)
 		    {
 		    	Console.WriteLine(i);
-				new MichaelJonson().CanQueryAndIncludeFromMapReduceIndex();
+				new MapReduce().CanUpdateReduceValue();
 
 		    }
 		}
