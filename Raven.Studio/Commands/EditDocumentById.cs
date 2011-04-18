@@ -2,7 +2,6 @@
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Features.Database;
 	using Features.Documents;
 	using Framework.Extensions;
 	using Messages;
@@ -25,22 +24,26 @@
 
 		public void Execute(string documentId)
 		{
-			events.Publish(new WorkStarted());
+			events.Publish(new WorkStarted("searching for document by id"));
+
 			server.OpenSession().Advanced.AsyncDatabaseCommands
 				.GetAsync(documentId)
 				.ContinueOnSuccess( get =>
 				               	{
+
+									events.Publish(new WorkCompleted("searching for document by id"));
+
                                     if(get.Result == null)
                                     {
-                                        var msg = string.Format("No document with id {0} was found.", documentId);
-                                        showMessageBox(msg, "Document Not found");
+										var msg = string.Format("Could not locate a document with id {0}.", documentId);
+                                    	events.Publish(new NotificationRaised(msg));
+                                    	showMessageBox(msg, "Document Not found");
                                         return;
                                     }
 
 				               		var doc = IoC.Get<EditDocumentViewModel>();
 									doc.Initialize(get.Result);
 									events.Publish(new DatabaseScreenRequested(() => doc));
-									events.Publish(new WorkCompleted());
 				               	});
 		}
 	}

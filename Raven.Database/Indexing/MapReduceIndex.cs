@@ -12,15 +12,12 @@ using System.Text;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
-using Lucene.Net.Util;
 using Newtonsoft.Json;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
@@ -45,13 +42,16 @@ namespace Raven.Database.Indexing
 			actions.Indexing.SetCurrentIndexStatsTo(name);
 			var count = 0;
 			Func<object, object> documentIdFetcher = null;
-			var reduceKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+            // we mark the reduce keys to delete when we delete the mapped results, then we remove
+            // any reduce key that is actually being used to generate new mapped results
+            // this way, only reduces that removed data will force us to use the tasks approach
+			var reduceKeysToDelete = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 			var documentsWrapped = documents.Select(doc =>
 			{
 				var documentId = doc.__document_id;
 				foreach (var reduceKey in actions.MappedResults.DeleteMappedResultsForDocumentId((string)documentId, name))
 				{
-					reduceKeys.Add(reduceKey);
+					reduceKeysToDelete.Add(reduceKey);
 				}
 				return doc;
 			});
@@ -74,7 +74,7 @@ namespace Raven.Database.Indexing
 				var reduceKey = ReduceKeyToString(reduceValue);
 				var docId = docIdValue.ToString();
 
-				reduceKeys.Add(reduceKey);
+				reduceKeysToDelete.Remove((string) reduceKey);
 
 				var data = GetMapedData(doc);
 
@@ -87,12 +87,12 @@ namespace Raven.Database.Indexing
 				actions.Indexing.IncrementSuccessIndexing();
 			}
 
-			if (reduceKeys.Count > 0)
+			if (reduceKeysToDelete.Count > 0)
 			{
 				actions.Tasks.AddTask(new ReduceTask
 				{
 					Index = name,
-					ReduceKeys = reduceKeys.ToArray()
+					ReduceKeys = reduceKeysToDelete.ToArray()
 				}, minimumTimestamp);
 			}
 
@@ -182,17 +182,21 @@ namespace Raven.Database.Indexing
 			});
 		}
 
+
+        // This method may be called concurrently, by both the ReduceTask (for removal)
+        // and by the ReducingExecuter (for add/modify). This is okay with us, since the 
+        // Write() call is already handling locking properly
 		public void ReduceDocuments(AbstractViewGenerator viewGenerator,
 									IEnumerable<object> mappedResults,
 									WorkContext context,
 									IStorageActionsAccessor actions,
 									string[] reduceKeys)
 		{
-			actions.Indexing.SetCurrentIndexStatsTo(name);
 			var count = 0;
 			Write(context, (indexWriter, analyzer) =>
 			{
-				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
+                actions.Indexing.SetCurrentIndexStatsTo(name);
+                var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
 					.Where(x => x != null)
 					.ToList();
 				foreach (var reduceKey in reduceKeys)

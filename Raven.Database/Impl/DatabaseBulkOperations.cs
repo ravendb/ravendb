@@ -67,25 +67,27 @@ namespace Raven.Database.Impl
 						"Bulk operation cancelled because the index is stale and allowStale is false");
 			}
 
-			var enumerator = queryResults.GetEnumerator();
 			const int batchSize = 1024;
-			while (true)
+			using (var enumerator = queryResults.GetEnumerator())
 			{
-				var batchCount = 0;
-				database.TransactionalStorage.Batch(actions =>
+				while (true)
 				{
-					while (batchCount < batchSize  && enumerator.MoveNext())
+					var batchCount = 0;
+					database.TransactionalStorage.Batch(actions =>
 					{
-						batchCount++;
-						var result = batchOperation(enumerator.Current, transactionInformation);
-						array.Add(RavenJObject.FromObject(result, JsonExtensions.CreateDefaultJsonSerializer()));
-					}
-				});
-				if (batchCount < batchSize) break;
+						while (batchCount < batchSize && enumerator.MoveNext())
+						{
+							batchCount++;
+							var result = batchOperation(enumerator.Current, transactionInformation);
+							array.Add(RavenJObject.FromObject(result, JsonExtensions.CreateDefaultJsonSerializer()));
+						}
+					});
+					if (batchCount < batchSize) break;
+				}
 			}
 			return array;
 		}
 
-		
+
 	}
 }

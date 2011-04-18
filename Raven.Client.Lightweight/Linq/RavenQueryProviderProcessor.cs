@@ -687,7 +687,6 @@ namespace Raven.Client.Linq
 				case ExpressionType.New:                
 					var newExpression = ((NewExpression) body);
 			        newExpressionType = newExpression.Type;
-                    var idProperty = luceneQuery.DocumentConvention.GetIdentityProperty(newExpressionType);
                     foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
                     {
 						AddToFieldsToFetch(field);

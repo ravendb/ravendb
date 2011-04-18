@@ -8,6 +8,7 @@ using System.Linq;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -23,42 +24,70 @@ namespace Raven.Storage.Managed
 
         public bool IsIndexStale(string name, DateTime? cutOff, string entityName)
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject
-            {
-                {"index", name}
-            });
+            var readResult = storage.IndexingStats.Read(name);
 
             if (readResult == null)
                 return false;// index does not exists
 
-            var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
-            var lastIndexedTime = readResult.Key.Value<DateTime>("lastTimestamp");
 
-            if (IsStaleByEtag(lastIndexedEtag))
+            if (IsMapStale(name) || IsReduceStale(name))
             {
                 if (cutOff == null)
                     return true;
+                var lastIndexedTime = readResult.Key.Value<DateTime>("lastTimestamp");
                 if (cutOff.Value >= lastIndexedTime)
+                    return true;
+                
+                var lastReducedTime = readResult.Key.Value<DateTime?>("lastReducedTimestamp");
+                if(lastReducedTime != null && cutOff.Value >= lastReducedTime.Value)
                     return true;
             }
 
-            var keyToSearch = new RavenJObject
-            {
-                {"index", name},
-            };
-            var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(keyToSearch);
+            var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(new RavenJObject{{"index", name}});
             if (cutOff != null)
                 tasksAfterCutoffPoint = tasksAfterCutoffPoint
                     .Where(x => x.Value<DateTime>("time") < cutOff.Value);
             return tasksAfterCutoffPoint.Any();
         }
 
+        public bool IsReduceStale(string name)
+        {
+            var readResult = storage.IndexingStats.Read(name);
+
+            if (readResult == null)
+                return false;// index does not exists
+
+            var lastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag");
+
+            if (lastReducedEtag == null)
+                return false;
+
+            var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
+            if (mostRecentReducedEtag == null)
+                return false;
+
+            return CompareArrays(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
+   
+        }
+
+        public bool IsMapStale(string name)
+        {
+            var readResult = storage.IndexingStats.Read(name);
+
+            if (readResult == null)
+                return false;// index does not exists
+
+            var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
+
+            return storage.Documents["ByEtag"].SkipFromEnd(0)
+                .Select(doc => doc.Value<byte[]>("etag"))
+                .Select(docEtag => CompareArrays(docEtag, lastIndexedEtag) > 0)
+                .FirstOrDefault();
+        }
+
         public Tuple<DateTime,Guid> IndexLastUpdatedAt(string name)
         {
-            var readResult = storage.IndexingStats.Read(new RavenJObject
-            {
-                {"index", name}
-            });
+            var readResult = storage.IndexingStats.Read(name);
 
             if (readResult == null)
                 throw new IndexDoesNotExistsException("Could not find index named: " + name);
@@ -79,16 +108,31 @@ namespace Raven.Storage.Managed
             return Guid.Empty;
         }
 
-        private bool IsStaleByEtag(byte [] lastIndexedEtag)
+        public Guid? GetMostRecentReducedEtag(string name)
         {
-        	return storage.Documents["ByEtag"].SkipFromEnd(0)
-				.Select(doc => doc.Value<byte[]>("etag"))
-				.Select(docEtag => CompareArrays(docEtag, lastIndexedEtag) > 0)
-				.FirstOrDefault();
+            using(var enumerable = storage.MappedResults["ByViewAndEtag"]
+				.SkipToAndThenBack(new RavenJObject{{"view", name}})
+				.GetEnumerator())
+            {
+				if (enumerable.MoveNext() == false)
+					return null;
+				// did we find the last item on the view?
+				if (enumerable.Current.Value<string>("view") == name)
+					return new Guid(enumerable.Current.Value<byte[]>("etag"));
+
+				// maybe we are at another view?
+				if (enumerable.MoveNext() == false)
+					return null;
+
+				//could't find the name in the table 
+				if (enumerable.Current.Value<string>("view") != name)
+					return null;
+
+				return new Guid(enumerable.Current.Value<byte[]>("etag"));
+            }
         }
 
-
-    	private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
+        private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
         {
             for (int i = 0; i < docEtagBinary.Length; i++)
             {

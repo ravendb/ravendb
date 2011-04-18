@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Json.Linq;
@@ -94,6 +95,22 @@ namespace Raven.Munin
                     Index.GreaterThan(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInOrder));
         }
 
+        public IEnumerable<RavenJToken> SkipBefore(RavenJToken key)
+        {
+            return
+                persistentSource.Read(
+                    () =>
+                    Index.LessThan(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInReverseOrder));
+        }
+
+
+        public IEnumerable<RavenJToken> SkipToAndThenBack(RavenJObject key)
+        {
+            return persistentSource.Read(
+                       () =>
+                       Index.LessThanOrEqual(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInReverseOrder));
+        }
+
 		public IEnumerable<RavenJToken> SkipTo(RavenJToken key)
         {
             return
@@ -135,5 +152,6 @@ namespace Raven.Munin
             IndexId = indexId;
             persistentSource = thePersistentSource;
         }
+
     }
 }

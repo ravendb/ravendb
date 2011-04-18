@@ -50,6 +50,11 @@ namespace Raven.Storage.Esent
 		[ImportMany]
 		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
+		static TransactionalStorage()
+		{
+			SystemParameters.MaxInstances = 1024;
+		}
+
 		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
 		{
 			database = configuration.DataDirectory;
@@ -112,23 +117,6 @@ namespace Raven.Storage.Esent
 		public void Restore(string backupLocation, string databaseLocation)
 		{
 			new RestoreOperation(backupLocation, databaseLocation).Execute();
-		}
-
-		public Type TypeForRunningQueriesInRemoteAppDomain
-		{
-			get { return typeof(RemoteEsentStorage); }
-		}
-
-		public object StateForRunningQueriesInRemoteAppDomain
-		{
-			get
-			{
-				return new RemoteEsentStorageState
-				{
-					Database = database,
-					Instance = instance
-				};
-			}
 		}
 
 		public string FriendlyName

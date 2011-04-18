@@ -56,7 +56,7 @@ namespace Raven.Tests.Indexes
 			db.SpinBackgroundWorkers();
             db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 
-        	for (int i = 0; i < 50; i++)
+        	for (int i = 0; i < 500; i++)
         	{
         		var queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
         		{

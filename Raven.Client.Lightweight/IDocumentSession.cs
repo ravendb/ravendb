@@ -51,6 +51,20 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		T[] Load<T>(IEnumerable<string> ids);
+
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		T Load<T>(ValueType id);
 		
 		/// <summary>
 		/// Queries the specified index using Linq.

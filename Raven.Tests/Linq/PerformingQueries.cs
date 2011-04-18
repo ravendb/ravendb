@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Indexing;
@@ -62,11 +63,11 @@ namespace Raven.Tests.Linq
 from doc in docs
 select new { GeoHash = SampleGeoLocation.GeoHash(doc.loc, doc.lang) }
 "
-			},
+			                                                                              },
 													  new OrderedPartCollection<AbstractDynamicCompilationExtension>
 													  {
-			                                          	new SampleDynamicCompilationExtension()
-			                                          }, ".");
+													  	new SampleDynamicCompilationExtension()
+													  }, ".", new InMemoryRavenConfiguration());
 			var compiledQuery = transformer.GenerateInstance();
 			var actual = compiledQuery.MapDefinition(documents)
 				.Cast<object>().ToArray();

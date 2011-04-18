@@ -153,6 +153,24 @@ namespace Raven.Client.Document
 			return LoadInternal<T>(ids.ToArray(), null);
 		}
 
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public T Load<T>(ValueType id)
+		{
+			var documentKey = Conventions.FindFullDocumentKeyFromValueTypeIdentifier(id, typeof(T));
+			return Load<T>(documentKey);
+		}
+
 		internal T[] LoadInternal<T>(string[] ids, string[] includes)
 		{
 			if(ids.Length == 0)

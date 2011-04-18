@@ -64,6 +64,7 @@
     <Compile Include="Utilities\MathUtils.cs" />
     <Compile Include="Utilities\MiscellaneousUtils.cs" />
     <Compile Include="Utilities\StringUtils.cs" />
+    <Compile Include="Utilities\Tuple.cs" />
     <Compile Include="Utilities\ValidationUtils.cs" />
   </ItemGroup>
   <ItemGroup>

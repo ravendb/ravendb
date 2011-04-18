@@ -41,7 +41,8 @@ namespace Raven.Client.Document
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
-			FindClrType = (id, doc, metadata) => metadata.Value<string>(Raven.Abstractions.Data.Constants.RavenClrType);
+			FindClrType = (id, doc, metadata) => metadata.Value<string>(Abstractions.Data.Constants.RavenClrType);
+			FindFullDocumentKeyFromValueTypeIdentifier = DefaultFindFullDocumentKeyFromValueTypeIdentifier;
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => prop;
@@ -53,6 +54,26 @@ namespace Raven.Client.Document
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
+		}
+
+		///<summary>
+		/// Find the full document name assuming that we are using the standard conventions
+		/// for generating a document key
+		///</summary>
+		///<returns></returns>
+		public string DefaultFindFullDocumentKeyFromValueTypeIdentifier(ValueType id, Type type)
+		{
+			string idPart;
+			var converter = IdentityTypeConvertors.FirstOrDefault(x=>x.CanConvertFrom(id.GetType()));
+			if(converter != null)
+			{
+				idPart = converter.ConvertFrom(id);
+			}
+			else
+			{
+				idPart = id.ToString();
+			}
+			return GetTypeTagName(type) + IdentityPartsSeparator + idPart;
 		}
 
 
@@ -168,6 +189,13 @@ namespace Raven.Client.Document
 		/// Gets or sets the function to find the clr type of a document.
 		/// </summary>
 		public Func<string, RavenJObject, RavenJObject, string> FindClrType { get; set; }
+
+
+		/// <summary>
+		/// Gets or sets the function to find the full document key based on the type of a document
+		/// and the value type identifier (just the numeric part of the id).
+		/// </summary>
+		public Func<ValueType, Type, string> FindFullDocumentKeyFromValueTypeIdentifier { get; set; }
 
 		/// <summary>
 		/// Gets or sets the json contract resolver.

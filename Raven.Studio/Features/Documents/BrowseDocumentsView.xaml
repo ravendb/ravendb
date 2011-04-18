@@ -41,7 +41,7 @@
 											 Foreground="LightGray" />
 						</i:Interaction.Behaviors>
 					</TextBox>
-					<Button cm:Action.TargetWithoutContext="SearchForDocumentById"
+					<Button cm:Action.TargetWithoutContext="EditDocumentById"
 							cm:Message.Attach="Execute(documentId)"
 							Margin="0">
 						<Grid Width="14"

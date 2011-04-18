@@ -77,8 +77,9 @@ namespace Raven.Database
 		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
 
 
-		private ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
+		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
         private System.Threading.Tasks.Task indexingBackgroundTask;
+        private System.Threading.Tasks.Task reducingBackgroundTask;
 		private System.Threading.Tasks.Task tasksBackgroundTask;
 	    private readonly TaskScheduler backgroundTaskScheduler;
 
@@ -93,8 +94,8 @@ namespace Raven.Database
 			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
 			{
 				backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
-					// we need a minimum of three task threads - one for indexing dispatch, one for tasks, one for indexing ops
-					Math.Max(3, configuration.MaxNumberOfParallelIndexTasks + 2),
+					// we need a minimum of four task threads - one for indexing dispatch, one for reducing dispatch, one for tasks, one for indexing/reducing ops
+					Math.Max(4, configuration.MaxNumberOfParallelIndexTasks + 2),
 					configuration.BackgroundTasksPriority);
 			}
 			else
@@ -254,10 +255,14 @@ namespace Raven.Database
 			}
 			TransactionalStorage.Dispose();
 			IndexStorage.Dispose();
+
 			if (tasksBackgroundTask != null)
 				tasksBackgroundTask.Wait(); 
 			if (indexingBackgroundTask != null)
 				indexingBackgroundTask.Wait();
+            if (reducingBackgroundTask != null)
+                reducingBackgroundTask.Wait();
+
 			var disposable = backgroundTaskScheduler as IDisposable;
 			if (disposable != null)
 				disposable.Dispose();
@@ -268,6 +273,7 @@ namespace Raven.Database
 			workContext.StopWork();
 			tasksBackgroundTask.Wait();
 			indexingBackgroundTask.Wait();
+		    reducingBackgroundTask.Wait();
 		}
 
 		public WorkContext WorkContext
@@ -282,6 +288,9 @@ namespace Raven.Database
 			workContext.StartWork();
             indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 		        new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
+                CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+            reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+                new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
             tasksBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
                 new TasksExecuter(TransactionalStorage, workContext).Execute,
@@ -334,6 +343,8 @@ namespace Raven.Database
 		{
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
 				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "key");
+
+            log.DebugFormat("Putting a document with key: {0} and etag {1}", key, etag);
 
 			if (string.IsNullOrEmpty(key))
 			{
@@ -456,6 +467,7 @@ namespace Raven.Database
 
 		public void Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
+            log.DebugFormat("Delete a document with key: {0} and etag {1}", key, etag);
 			TransactionalStorage.Batch(actions =>
 			{
 				if (transactionInformation == null)
@@ -539,23 +551,21 @@ namespace Raven.Database
 					return name;
 				case IndexCreationOptions.Update:
 					// ensure that the code can compile
-					new DynamicViewCompiler(name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath).GenerateInstance();
+					new DynamicViewCompiler(name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Configuration).GenerateInstance();
 					DeleteIndex(name);
 					break;
 			}
 			IndexDefinitionStorage.AddIndex(definition);
 			IndexStorage.CreateIndexImplementation(definition);
-			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, name));
+		    TransactionalStorage.Batch(actions =>
+		    {
+		        actions.Indexing.AddIndex(name, definition.IsMapReduce);
+		        workContext.ShouldNotifyAboutWork();
+		    });
 			return name;
 		}
 
-		private void AddIndexAndEnqueueIndexingTasks(IStorageActionsAccessor actions, string indexName)
-		{
-			actions.Indexing.AddIndex(indexName);
-			workContext.ShouldNotifyAboutWork();
-		}
-
-		public QueryResult Query(string index, IndexQuery query)
+	    public QueryResult Query(string index, IndexQuery query)
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
@@ -1027,7 +1037,8 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.Indexing.DeleteIndex(index);
-				AddIndexAndEnqueueIndexingTasks(actions, index);
+			    actions.Indexing.AddIndex(index, indexDefinition.IsMapReduce);
+			    workContext.ShouldNotifyAboutWork();
 			});
 		}
 

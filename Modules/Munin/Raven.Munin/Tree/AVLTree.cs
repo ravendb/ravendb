@@ -150,6 +150,57 @@ namespace Raven.Munin.Tree
             }
         }
 
+        public IEnumerable<TValue> LessThan(TKey ltKey)
+        {
+            int compare = comparer.Compare(theKey, ltKey);
+            if (compare > 0)
+            {
+                foreach (var value in Left.LessThan(ltKey))
+                {
+                    yield return value;
+                }
+                yield break;
+            }
+            foreach (var value in Left.LessThan(ltKey))
+            {
+                yield return value;
+            }
+            if(compare == 0)
+                yield break;
+
+            yield return Value;
+            foreach (var value in Right.LessThan(ltKey))
+            {
+                yield return value;
+            }
+        }
+
+        public IEnumerable<TValue> LessThanOrEqual(TKey ltKey)
+        {
+            int compare = comparer.Compare(theKey, ltKey);
+            if (compare > 0)
+            {
+				foreach (var value in Left.LessThanOrEqual(ltKey))
+                {
+                    yield return value;
+                }
+                yield break;
+            }
+			foreach (var value in Left.LessThanOrEqual(ltKey))
+            {
+                yield return value;
+            }
+            yield return Value;
+            
+            if (compare == 0)
+                yield break;
+
+			foreach (var value in Right.LessThanOrEqual(ltKey))
+            {
+                yield return value;
+            }
+        }
+
         public IEnumerable<TValue> GreaterThanOrEqual(TKey gteKey)
         {
             int compare = comparer.Compare(theKey, gteKey);

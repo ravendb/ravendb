@@ -47,7 +47,12 @@ namespace Raven.Client.Connection
 		{
 			var input = reader.Value as string;
 			if (input != null && luceneDateTimePattern.IsMatch(input))
-				return DateTools.StringToDate(input).ToLocalTime();
+			{
+				var stringToDate = DateTools.StringToDate(input);
+				if (objectType == typeof(DateTimeOffset) || objectType == typeof(DateTimeOffset?))
+					return new DateTimeOffset(stringToDate, DateTimeOffset.Now.Offset);
+				return stringToDate.ToLocalTime();
+			}
 			return reader.Value;
 		}
 
@@ -60,7 +65,11 @@ namespace Raven.Client.Connection
 		/// </returns>
 		public override bool CanConvert(Type objectType)
 		{
-			return objectType == typeof (DateTime);
+			return 
+				objectType == typeof (DateTime) || 
+				objectType == typeof (DateTimeOffset) || 
+				objectType == typeof (DateTime?) ||
+			    objectType == typeof (DateTimeOffset?);
 		}
 
 		/// <summary>

@@ -248,6 +248,7 @@ namespace Raven.Client.Document
 		}
 
 
+
 		/// <summary>
 		/// Determines whether the specified entity has changed.
 		/// </summary>
@@ -372,6 +373,7 @@ more responsive application.
 				throw new InvalidOperationException(entity+" is not associated with the session, cannot delete unknown entity instance");
 			deletedEntities.Add(entity);
 		}
+
 
 		/// <summary>
 		/// Converts the json document to an entity.

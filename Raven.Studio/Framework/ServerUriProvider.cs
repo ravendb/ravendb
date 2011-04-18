@@ -39,10 +39,8 @@
 					);
 			 }
 
-#if !DEBUG
             IsolatedStorageSettings.ApplicationSettings[uriLookup] = uri;
             IsolatedStorageSettings.ApplicationSettings.Save();
-#endif
 
 			return uri;
 		}
