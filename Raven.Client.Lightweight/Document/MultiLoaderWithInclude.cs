@@ -58,6 +58,25 @@ namespace Raven.Client.Document
             return session.LoadInternal<T>(new[] { id }, includes.ToArray()).FirstOrDefault();
         }
 
+
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public T Load(ValueType id)
+		{
+			var idAsStr = session.Conventions.FindFullDocumentKeyFromValueTypeIdentifier(id, typeof (T));
+			return Load(idAsStr);
+		}
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiLoaderWithInclude{T}"/> class.
         /// </summary>
@@ -86,6 +105,24 @@ namespace Raven.Client.Document
         {
             return Load<TResult>(new[] {id}).FirstOrDefault();
         }
+
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public TResult Load<TResult>(ValueType id)
+		{
+			var idAsStr = session.Conventions.FindFullDocumentKeyFromValueTypeIdentifier(id, typeof(T));
+			return Load<TResult>(new[] { idAsStr }).FirstOrDefault();
+		}
     }
 }
 #endif

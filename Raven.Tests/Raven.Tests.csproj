@@ -112,6 +112,7 @@
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\CanReadLuceneProjectedDateTimeOffset.cs" />
+    <Compile Include="Bugs\IntegerIds.cs" />
     <Compile Include="Bugs\Iulian\CanReadEntityWithUrlId.cs" />
     <Compile Include="Bugs\MassivelyMultiTenant.cs" />
     <Compile Include="Bugs\RavenDbAnyOfPropertyCollection.cs" />

@@ -633,9 +633,9 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public void WhereEquals(WhereEqualsParams whereEqualsParams)
         {
-            var fieldName = EnsureValidFieldName(whereEqualsParams);
+            EnsureValidFieldName(whereEqualsParams);
             var transformToEqualValue = TransformToEqualValue(whereEqualsParams);
-            lastEquality = new KeyValuePair<string, string>(fieldName, transformToEqualValue);
+			lastEquality = new KeyValuePair<string, string>(whereEqualsParams.FieldName, transformToEqualValue);
             if (theQueryText.Length > 0 && theQueryText[theQueryText.Length - 1] != '(')
             {
                 theQueryText.Append(" ");
@@ -643,25 +643,21 @@ If you really want to do in memory filtering on the data returned from the query
 
             NegateIfNeeded();
 
-            theQueryText.Append(fieldName);
+            theQueryText.Append(whereEqualsParams.FieldName);
             theQueryText.Append(":");
             theQueryText.Append(transformToEqualValue);
         }
 
         private string EnsureValidFieldName(WhereEqualsParams whereEqualsParams)
         {
-            if (theSession == null)
-                return whereEqualsParams.FieldName;
-            if (theSession.Conventions == null)
-                return whereEqualsParams.FieldName;
-            if (whereEqualsParams.IsNestedPath)
-                return whereEqualsParams.FieldName;
+			if (theSession == null || theSession.Conventions == null || whereEqualsParams.IsNestedPath)
+				return whereEqualsParams.FieldName;
+
             var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
-            if (identityProperty != null && identityProperty.Name == whereEqualsParams.FieldName)
-            {
-				return Constants.DocumentIdFieldName;
-            }
-            return whereEqualsParams.FieldName;
+			if (identityProperty == null || identityProperty.Name != whereEqualsParams.FieldName)
+				return whereEqualsParams.FieldName;
+        	
+			return whereEqualsParams.FieldName = Constants.DocumentIdFieldName;
         }
 
         ///<summary>
@@ -1314,7 +1310,7 @@ If you really want to do in memory filtering on the data returned from the query
 			result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
         }
 
-    	private static string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
+    	private string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
         {
             if (whereEqualsParams.Value == null)
             {
@@ -1336,7 +1332,13 @@ If you really want to do in memory filtering on the data returned from the query
 				return DateTools.DateToString(((DateTimeOffset)whereEqualsParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
 			}
 
-            var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),
+			if(whereEqualsParams.FieldName == Constants.DocumentIdFieldName && whereEqualsParams.Value is ValueType)
+			{
+				var id = (ValueType) whereEqualsParams.Value;
+				return theSession.Conventions.FindFullDocumentKeyFromValueTypeIdentifier(id,typeof (T));
+			}
+
+    		var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),
                                             whereEqualsParams.AllowWildcards && whereEqualsParams.IsAnalyzed);
 
             if (whereEqualsParams.Value is string == false)

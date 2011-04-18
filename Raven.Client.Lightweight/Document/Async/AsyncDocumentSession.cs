@@ -76,6 +76,24 @@ namespace Raven.Client.Document.Async
             get { return this; }
 	    }
 
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public Task<T> LoadAsync<T>(ValueType id)
+		{
+			var documentKey = Conventions.FindFullDocumentKeyFromValueTypeIdentifier(id, typeof(T));
+			return LoadAsync<T>(documentKey);
+		}
+
 	    /// <summary>
 		/// Begins the async load operation
 		/// </summary>
