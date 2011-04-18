@@ -31,13 +31,16 @@ namespace Raven.Database.Tasks
 			var keysToRemove = new HashSet<string>();
 			context.TransactionaStorage.Batch(accessor =>
 			{
-				foreach (var key in Keys)
+				foreach (var key in
+					from key in Keys
+					let documentByKey = accessor.Documents.DocumentByKey(key, null)
+					where documentByKey == null
+					select key)
 				{
-					var documentByKey = accessor.Documents.DocumentByKey(key, null);
-					if (documentByKey != null)  // if the document exists, it was added since we removed the document
-						continue;
 					keysToRemove.Add(key);
 				}
+				var indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(Index);
+				accessor.Indexing.UpdateLastIndexed(Index, indexLastUpdatedAt.Item2, DateTime.Now);
 			});
 			context.IndexStorage.RemoveFromIndex(Index, keysToRemove.ToArray(), context);
 		}
