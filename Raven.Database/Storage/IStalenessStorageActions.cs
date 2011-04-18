@@ -10,7 +10,12 @@ namespace Raven.Database.Storage
     public interface IStalenessStorageActions
     {
         bool IsIndexStale(string name, DateTime? cutOff, string entityName);
+
+        bool IsReduceStale(string name);
+        bool IsMapStale(string name);
+
         Tuple<DateTime, Guid> IndexLastUpdatedAt(string name);
         Guid GetMostRecentDocumentEtag();
+        Guid? GetMostRecentReducedEtag(string name);
     }
 }

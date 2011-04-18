@@ -68,7 +68,7 @@ namespace Raven.Tests
             return documentStore;
         }
 
-		protected void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore)
+    	static public void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore)
 		{
 			if (Debugger.IsAttached == false)
 				return;

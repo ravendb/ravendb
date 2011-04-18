@@ -25,11 +25,13 @@ namespace Raven.Database.Storage
 		void DecrementReduceIndexingAttempt();
 
 		IEnumerable<IndexStats> GetIndexesStats();
-		void AddIndex(string name);
+		void AddIndex(string name, bool createMapReduce);
 		void DeleteIndex(string name);
 
 
 		IndexFailureInformation GetFailureRate(string index);
+
 		void UpdateLastIndexed(string index, Guid etag, DateTime timestamp);
+        void UpdateLastReduced(string index, Guid etag, DateTime timestamp);
 	}
 }

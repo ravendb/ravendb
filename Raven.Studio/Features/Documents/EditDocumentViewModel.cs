@@ -236,9 +236,9 @@ namespace Raven.Studio.Features.Documents
 			return dataAsJson.ToDictionary(d => d.Key, d => d.Value);
 		}
 
-		private static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, RavenJToken>> data)
+		private static string PrepareRawJsonString(RavenJObject json)
 		{
-			return JsonConvert.SerializeObject(data, Formatting.Indented);
+			return json.ToString(Formatting.Indented);
 		}
 
 		private static string InitialJsonData()

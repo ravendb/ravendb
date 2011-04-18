@@ -38,6 +38,11 @@ namespace Raven.Storage.Managed
         private IUuidGenerator uuidGenerator;
         private readonly IDocumentCacher documentCacher;
 
+        public IPersistentSource PersistenceSource
+        {
+            get { return persistenceSource; }
+        }
+
         [ImportMany]
 		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
@@ -161,16 +166,6 @@ namespace Raven.Storage.Managed
         public void Restore(string backupLocation, string databaseLocation)
         {
             new RestoreOperation(backupLocation, databaseLocation).Execute();
-        }
-
-        public Type TypeForRunningQueriesInRemoteAppDomain
-        {
-            get { return typeof(RemoteManagedStorage); }
-        }
-
-        public object StateForRunningQueriesInRemoteAppDomain
-        {
-            get { return persistenceSource.CreateRemoteAppDomainState(); }
         }
 
     	public string FriendlyName

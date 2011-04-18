@@ -3,12 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
 namespace Raven.Database.Indexing
 {
-	public class StatefulEnumerableWrapper<T> : IEnumerable<T>
+	public class StatefulEnumerableWrapper<T> : IEnumerable<T>, IDisposable
 	{
 		private readonly IEnumerator<T> inner;
 		private bool calledMoveNext;
@@ -92,5 +93,10 @@ namespace Raven.Database.Indexing
 		}
 
 		#endregion
+
+		public void Dispose()
+		{
+			inner.Dispose();
+		}
 	}
 }

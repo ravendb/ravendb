@@ -27,7 +27,7 @@ namespace Raven.Client.Embedded
 	///<summary>
 	/// Expose the set of operations by the RavenDB server
 	///</summary>
-	public class EmbededDatabaseCommands : IDatabaseCommands
+	public class EmbeddedDatabaseCommands : IDatabaseCommands
 	{
 		private readonly DocumentDatabase database;
 		private readonly DocumentConvention convention;
@@ -35,7 +35,7 @@ namespace Raven.Client.Embedded
 		///<summary>
 		/// Create a new instance
 		///</summary>
-		public EmbededDatabaseCommands(DocumentDatabase database, DocumentConvention convention)
+		public EmbeddedDatabaseCommands(DocumentDatabase database, DocumentConvention convention)
 		{
 			this.database = database;
 			this.convention = convention;
@@ -271,10 +271,7 @@ namespace Raven.Client.Embedded
 					entityName = index.Substring("dynamic/".Length);
 				return database.ExecuteDynamicQuery(entityName, query);
 			}
-			else
-			{
-				return database.Query(index, query);
-			}
+		    return database.Query(index, query);
 		}
 
 		/// <summary>

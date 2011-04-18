@@ -16,7 +16,7 @@ using Raven.Client.Document;
 namespace Raven.Client.Indexes
 {
 	/// <summary>
-	/// Helper class for creating indexed from implementations of <see cref="AbstractIndexCreationTask"/>.
+	/// Helper class for creating indexes from implementations of <see cref="AbstractIndexCreationTask"/>.
 	/// </summary>
 	public static class IndexCreation
 	{

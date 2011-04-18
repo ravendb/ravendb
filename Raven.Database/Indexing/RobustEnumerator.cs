@@ -20,18 +20,30 @@ namespace Raven.Database.Indexing
 
         public IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func)
         {
-            var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());
-            IEnumerator<object> en = func(wrapped).GetEnumerator();
-            do
-            {
-                var moveSuccessful = MoveNext(en, wrapped);
-                if (moveSuccessful == false)
-                    yield break;
-                if (moveSuccessful == true)
-                    yield return en.Current;
-                else
-                    en = func(wrapped).GetEnumerator();
-            } while (true);
+			using (var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator()))
+			{
+				IEnumerator<dynamic> en;
+				using (en = func(wrapped).GetEnumerator())
+				{
+					do
+					{
+						var moveSuccessful = MoveNext(en, wrapped);
+						if (moveSuccessful == false)
+							yield break;
+						if (moveSuccessful == true)
+							yield return en.Current;
+						else
+						{
+							// we explictly do not dispose the enumerator, since that would not allow us 
+							// to continue on with the next item in the list.
+							// Not actually a problem, because we are iterating only over in memory data
+							// en.Dispose();
+
+							en = func(wrapped).GetEnumerator();
+						}
+					} while (true);
+				}
+			}
         }
 
         private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator)

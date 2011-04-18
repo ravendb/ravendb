@@ -198,12 +198,14 @@ namespace Raven.Database.Server.Responders
 		private Guid GetIndexEtag(string indexName)
 		{
 			Guid lastDocEtag = Guid.Empty;
+			Guid? lastReducedEtag = null;
 			bool isStale = false;
 			Tuple<DateTime, Guid> indexLastUpdatedAt = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				isStale = accessor.Staleness.IsIndexStale(indexName, null, null);
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
 				indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(indexName);
 			});
 			var indexDefinition = Database.GetIndexDefinition(indexName);
@@ -215,6 +217,10 @@ namespace Raven.Database.Server.Responders
 				list.AddRange(lastDocEtag.ToByteArray());
 				list.AddRange(indexLastUpdatedAt.Item2.ToByteArray());
 				list.AddRange(BitConverter.GetBytes(isStale));
+				if(lastReducedEtag != null)
+				{
+					list.AddRange(lastReducedEtag.Value.ToByteArray());
+				}
 				return new Guid(md5.ComputeHash(list.ToArray()));
 			}
 		}

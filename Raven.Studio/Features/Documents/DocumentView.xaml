@@ -74,11 +74,8 @@
 			</ti:ContextMenu>
 		</ti:ContextMenuService.ContextMenu>
 
-		<Grid Width="120"
-			  Height="60">
-			<docs:DocumentTemplateSelector Content="{Binding Mode=OneTime}"
-										   VerticalContentAlignment="Stretch"
-										   HorizontalAlignment="Stretch" />
+		<Grid>
+			<docs:DocumentTemplateSelector Content="{Binding}" />
 			<StackPanel x:Name="overlay"
 						Opacity="0"
 						Orientation="Horizontal"

@@ -15,8 +15,6 @@ namespace Raven.Munin
 
         T Read<T>(Func<T> readOnlyAction);
 
-        IEnumerable<T> Read<T>(Func<IEnumerable<T>> readOnlyAction);
-
         void Write(Action<Stream> readWriteAction);
 
         bool CreatedNew { get; }

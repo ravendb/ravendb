@@ -139,8 +139,8 @@ namespace Raven.Studio.Framework.Extensions
 
 		public static void ExecuteInSequence(this IEnumerable<Task> tasks, Action<bool> callback, Action<Exception> handleException = null)
 		{
-			var enumerator = tasks.GetEnumerator();
-			ExecuteNextTask(enumerator, callback, handleException);
+			using (var enumerator = tasks.GetEnumerator())
+				ExecuteNextTask(enumerator, callback, handleException);
 		}
 
 		static void ExecuteNextTask(IEnumerator<Task> enumerator, Action<bool> callback, Action<Exception> handleException)

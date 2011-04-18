@@ -75,16 +75,13 @@ namespace Raven.Studio.Features.Documents
 					.GetAttachmentAsync(key + "Template")
 					.ContinueWith(get =>
 					{
-						var template = (get.Result != null)
-							? GenerateTemplateFrom(get.Result,key)
-							: GetDefaultTemplate(key);
-
+						var template = GenerateTemplateFrom(get.Result,key);
 						lock (templates)
 						{
 							if (!templates.ContainsKey(key)) templates[key] = template;
 						}
 
-						// let those waiting know we've got it now 
+						// let those waiting know we've go it now 
 						DataTemplateRetrieved(this,new EventArgs<DataTemplate>(template));
 
 						tcs.TrySetResult(template);
@@ -144,7 +141,9 @@ namespace Raven.Studio.Features.Documents
 			return @"
 <Grid xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 	  xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"" 
-	  Margin=""0"">
+	  Margin=""0""
+	  Width=""120""
+	  Height=""60"">
 	<Rectangle Fill=""#FFF4F4F5"" />
 	<Rectangle Fill=""" +
 	fill +
@@ -168,7 +167,9 @@ namespace Raven.Studio.Features.Documents
 		static string GetProjectionTemplateXaml()
 		{
 			return
-				@"<Grid Margin=""0"">
+				@"<Grid Margin=""0""
+				      Width=""120""
+				      Height=""60"">
 				<Rectangle Fill=""#FFF4F4F5"" />
 		
 				<Grid Margin=""2,0,0,0"">
