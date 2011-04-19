@@ -63,10 +63,10 @@ task Init -depends Verify40, Clean {
 		$projectName = [System.IO.Path]::GetFileName($projectDir)
 		$asmInfo = [System.IO.Path]::Combine($projectDir, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
 		
-		$clsComliant = $true
+		$clsComliant = "true"
 		
 		if([System.Array]::IndexOf($notclsCompliant, $projectName) -ne -1) {
-      $clsComliant = $false
+      $clsComliant = "false"
 		}
 		
 		Generate-Assembly-Info `
