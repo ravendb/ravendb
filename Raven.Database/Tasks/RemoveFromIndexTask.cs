@@ -39,8 +39,7 @@ namespace Raven.Database.Tasks
 				{
 					keysToRemove.Add(key);
 				}
-				var indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(Index);
-				accessor.Indexing.UpdateLastIndexed(Index, indexLastUpdatedAt.Item2, DateTime.Now);
+				accessor.Indexing.TouchIndexEtag(Index);
 			});
 			context.IndexStorage.RemoveFromIndex(Index, keysToRemove.ToArray(), context);
 		}
