@@ -181,23 +181,31 @@ namespace Raven.Client.Document
 				var connectionString = ConfigurationManager.ConnectionStrings[connectionStringName];
 				if(connectionString == null)
 					throw new ArgumentException("Could not find connection string name: " + connectionStringName);
-				var strings = connectionStringArgumentsSplitterRegex.Split(connectionString.ConnectionString);
-				var networkCredential = new NetworkCredential();
-				foreach (var arg in strings)
-				{
-					var match = connectionStringRegex.Match(arg);
-					if (match.Success == false)
-						throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
-					ProcessConnectionStringOption(networkCredential, match.Groups[1].Value.ToLower(), match.Groups[2].Value.Trim());
-				}
-
-				if (setupUsernameInConnectionString == false && setupPasswordInConnectionString == false) 
-					return;
-
-				if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
-					throw new ArgumentException("User and Password must both be specified in the connection string: " + connectionStringName);
-				Credentials = networkCredential;
+				ParseConnectionString(connectionString.ConnectionString);
 			}
+		}
+
+		///<summary>
+		/// Parse a given connection string
+		///</summary>
+		public void ParseConnectionString(string connectionString)
+		{
+			var strings = connectionStringArgumentsSplitterRegex.Split(connectionString);
+			var networkCredential = new NetworkCredential();
+			foreach (var arg in strings)
+			{
+				var match = connectionStringRegex.Match(arg);
+				if (match.Success == false)
+					throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
+				ProcessConnectionStringOption(networkCredential, match.Groups[1].Value.ToLower(), match.Groups[2].Value.Trim());
+			}
+
+			if (setupUsernameInConnectionString == false && setupPasswordInConnectionString == false) 
+				return;
+
+			if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
+				throw new ArgumentException("User and Password must both be specified in the connection string: " + connectionStringName);
+			Credentials = networkCredential;
 		}
 
 		private bool setupUsernameInConnectionString;
