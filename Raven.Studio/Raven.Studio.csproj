@@ -359,6 +359,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Statistics\ErrorView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Features\Statistics\StatisticsItem.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
