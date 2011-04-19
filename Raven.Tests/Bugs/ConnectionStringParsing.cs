@@ -8,10 +8,11 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void EnsureWellFormedConnectionStrings_ParsingWithEndingSemicolons_Successful()
 		{
-			new DocumentStore().ParseConnectionString("Url=http://localhost:10301");
-			new DocumentStore().ParseConnectionString("Url=http://localhost:10301/");
-			new DocumentStore().ParseConnectionString("Url=http://localhost:10301;");
-			new DocumentStore().ParseConnectionString("Url=http://localhost:10301/;");
+			var documentStore = new DocumentStore();
+			documentStore.ParseConnectionString("Url=http://localhost:10301;");
+			Assert.DoesNotContain(";", documentStore.Url);
+			documentStore.ParseConnectionString("Url=http://localhost:10301/;");
+			Assert.DoesNotContain(";", documentStore.Url);
 		}
 	}
 }

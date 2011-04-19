@@ -192,8 +192,9 @@ namespace Raven.Client.Document
 		{
 			var strings = connectionStringArgumentsSplitterRegex.Split(connectionString);
 			var networkCredential = new NetworkCredential();
-			foreach (var arg in strings)
+			foreach (var str in strings)
 			{
+				var arg = str.Trim(';');
 				var match = connectionStringRegex.Match(arg);
 				if (match.Success == false)
 					throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
