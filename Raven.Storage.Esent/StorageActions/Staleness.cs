@@ -126,7 +126,18 @@ namespace Raven.Storage.Esent.StorageActions
             return new Guid(lastEtag);
         }
 
-        public Guid? GetMostRecentReducedEtag(string name)
+		public int GetIndexTouchCount(string name)
+		{
+			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
+			Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false) // find the next greater view
+				return -1;
+
+			return Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value;
+		}
+
+
+    	public Guid? GetMostRecentReducedEtag(string name)
         {
             Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
             Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
