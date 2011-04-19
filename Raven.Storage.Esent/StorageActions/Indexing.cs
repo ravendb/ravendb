@@ -87,12 +87,12 @@ namespace Raven.Storage.Esent.StorageActions
 			    var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 
 				Api.MakeKey(session, IndexesEtags, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
+				var a = Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
 
 			    yield return new IndexStats
 				{
 					Name = indexName,
-					TouchCount = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["touches"]).Value,
+					TouchCount = Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value,
 					IndexingAttempts =
 						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
 					IndexingSuccesses =
@@ -137,6 +137,13 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue);
+				update.Save();
+			}
+
+
+			using (var update = new Update(session, IndexesEtags, JET_prep.Insert))
+			{
+				Api.SetColumn(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["key"], name, Encoding.Unicode);
 				update.Save();
 			}
 
