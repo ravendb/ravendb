@@ -40,10 +40,10 @@ namespace Raven.Storage.Esent.StorageActions
                     if (cutOff.Value >= lastIndexedTimestamp)
                         return true;
 
-                    lastIndexedTimestamp =
-                       Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
-                                                    tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"])
-                           .Value;
+                	lastIndexedTimestamp =
+                		Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
+                		                             tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ??
+                		DateTime.MinValue;
                     if (hasReduce && cutOff.Value >= lastIndexedTimestamp)
                         return true;
                 }
@@ -73,7 +73,7 @@ namespace Raven.Storage.Esent.StorageActions
             if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
                 return false;// not a map/reduce index
 
-            var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
+            var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]) ?? Guid.Empty.ToByteArray();
 
             var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
             if (mostRecentReducedEtag == null)

@@ -105,14 +105,25 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
                     ReduceIndexingErrors = hasReduce == false ? null : 
 						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
-					LastReducedEtag = hasReduce == false ? (Guid?)null : 
-                        Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]).TransfromToGuidWithProperSorting(),
-                    LastReducedTimestamp = hasReduce == false ? null : 
-                        Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]),
+					LastReducedEtag = hasReduce == false ? (Guid?)null : GetLastReduceIndexWithPotentialNull(),
+                    LastReducedTimestamp = hasReduce == false ? (DateTime?)null : GetLastReducedTimestampWithPotentialNull(),
 				
 				};
 			}
-		}       
+		}
+
+		private DateTime GetLastReducedTimestampWithPotentialNull()
+		{
+			return Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ?? DateTime.MinValue;
+		}
+
+		private Guid GetLastReduceIndexWithPotentialNull()
+		{
+			var bytes = Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
+			if(bytes == null)
+				return Guid.Empty;
+			return bytes.TransfromToGuidWithProperSorting();
+		}
 
 		public void AddIndex(string name, bool createMapReduce)
 		{
