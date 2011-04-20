@@ -299,7 +299,7 @@ namespace Raven.Database.Indexing
 		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IndexingFunc func,
 		                                                     IStorageActionsAccessor actions, WorkContext context)
 		{
-			return new RobustEnumerator
+			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
 				BeforeMoveNext = actions.Indexing.IncrementIndexingAttempt,
 				CancelMoveNext = actions.Indexing.DecrementIndexingAttempt,
@@ -327,7 +327,8 @@ namespace Raven.Database.Indexing
 		protected IEnumerable<object> RobustEnumerationReduce(IEnumerable<object> input, IndexingFunc func,
 		                                                      IStorageActionsAccessor actions, WorkContext context)
 		{
-			return new RobustEnumerator
+			// not strictly accurate, but if we get that many errors, probably an error anyway.
+			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
 				BeforeMoveNext = actions.Indexing.IncrementReduceIndexingAttempt,
 				CancelMoveNext = actions.Indexing.DecrementReduceIndexingAttempt,

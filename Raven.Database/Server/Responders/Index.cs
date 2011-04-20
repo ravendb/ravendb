@@ -200,13 +200,13 @@ namespace Raven.Database.Server.Responders
 			Guid lastDocEtag = Guid.Empty;
 			Guid? lastReducedEtag = null;
 			bool isStale = false;
-			Tuple<DateTime, Guid> indexLastUpdatedAt = null;
+			int touchCount = 0;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				isStale = accessor.Staleness.IsIndexStale(indexName, null, null);
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
-				indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(indexName);
+				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
 			});
 			var indexDefinition = Database.GetIndexDefinition(indexName);
 			using(var md5 = MD5.Create())
@@ -215,7 +215,7 @@ namespace Raven.Database.Server.Responders
 				list.AddRange(indexDefinition.GetIndexHash());
 				list.AddRange(Encoding.Unicode.GetBytes(indexName));
 				list.AddRange(lastDocEtag.ToByteArray());
-				list.AddRange(indexLastUpdatedAt.Item2.ToByteArray());
+				list.AddRange(BitConverter.GetBytes(touchCount));
 				list.AddRange(BitConverter.GetBytes(isStale));
 				if(lastReducedEtag != null)
 				{

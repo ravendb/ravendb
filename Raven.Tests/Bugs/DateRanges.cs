@@ -6,8 +6,6 @@
 using System;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
-using Raven.Client.Linq;
-using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
 
@@ -40,7 +38,7 @@ namespace Raven.Tests.Bugs
                 using(var session = store.OpenSession())
                 {
                     var result = session.Advanced.LuceneQuery<Record>("Date")
-                        .Where("Date:" + DateTools.DateToString(new DateTime(2001,1,1).ToUniversalTime(), DateTools.Resolution.MILLISECOND))
+                        .Where("Date:" + DateTools.DateToString(new DateTime(2001,1,1), DateTools.Resolution.MILLISECOND))
                         .WaitForNonStaleResults()
                         .ToList();
 
@@ -74,7 +72,7 @@ namespace Raven.Tests.Bugs
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.LuceneQuery<Record>("Date")
-                        .Where("Date:[* TO " + DateTools.DateToString(new DateTime(2001, 1, 2).ToUniversalTime(), DateTools.Resolution.MILLISECOND) +"]")
+                        .Where("Date:[* TO " + DateTools.DateToString(new DateTime(2001, 1, 2), DateTools.Resolution.MILLISECOND) +"]")
                         .WaitForNonStaleResults()
                         .ToList();
 
@@ -108,7 +106,7 @@ namespace Raven.Tests.Bugs
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.LuceneQuery<Record>("Date")
-                        .Where("Date:[" + DateTools.DateToString(new DateTime(2000, 1, 1).ToUniversalTime(), DateTools.Resolution.MILLISECOND) + " TO NULL]")
+                        .Where("Date:[" + DateTools.DateToString(new DateTime(2000, 1, 1), DateTools.Resolution.MILLISECOND) + " TO NULL]")
                         .WaitForNonStaleResults()
                         .ToList();
 

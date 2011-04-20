@@ -20,8 +20,6 @@ namespace Raven.Munin
         private readonly ThreadLocal<IList<PersistentDictionaryState>> currentStates =
             new ThreadLocal<IList<PersistentDictionaryState>>(() => null);
 
-		private readonly ThreadLocal<List<StackTrace>> traces = new ThreadLocal<List<StackTrace>>(() => new List<StackTrace>());
-
     	private bool disposed;
 
         public IList<PersistentDictionaryState> CurrentStates
@@ -30,19 +28,6 @@ namespace Raven.Munin
             set
             {
                 currentStates.Value = value;
-				if (value == null)
-				{
-					traces.Value.Clear();
-				}
-				else
-				{
-					if (traces.Value.Count > 0)
-					{
-						
-					}
-
-					traces.Value.Add(new StackTrace(true));
-				}
             }
         }
 

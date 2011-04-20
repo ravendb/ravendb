@@ -171,7 +171,7 @@ namespace Raven.Database.Linq
             {
                 GenerateExecutable = false,
                 GenerateInMemory = true,
-                IncludeDebugInformation = true,
+                IncludeDebugInformation = false
             };
 			if (basePath != null)
 				compilerParameters.TempFiles = new TempFileCollection(basePath, false);

@@ -33,5 +33,6 @@ namespace Raven.Database.Storage
 
 		void UpdateLastIndexed(string index, Guid etag, DateTime timestamp);
         void UpdateLastReduced(string index, Guid etag, DateTime timestamp);
+		void TouchIndexEtag(string index);
 	}
 }

@@ -43,7 +43,7 @@ namespace Raven.Tests.Bugs
 						.SelectFields<Registration>("RegisteredAt")
 						.WaitForNonStaleResults()
 						.First();
-					Assert.Equal(new DateTime(2010, 1, 1), registration.RegisteredAt);
+					Assert.Equal(new DateTime(2010, 1, 1,0,0,0,DateTimeKind.Local), registration.RegisteredAt);
 					Assert.NotNull(registration.Id);
                     Assert.Null(registration.Name);
 				}

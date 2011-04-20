@@ -63,6 +63,13 @@ namespace Raven.Storage.Esent.StorageActions
 			get { return indexesStatsReduce ?? (indexesStatsReduce = new Table(session, dbid, "indexes_stats_reduce", OpenTableGrbit.None)); }
 		}
 
+		private Table indexesEtags;
+		protected Table IndexesEtags
+		{
+			get { return indexesEtags ?? (indexesEtags = new Table(session, dbid, "indexes_etag", OpenTableGrbit.None)); }
+		}
+
+
 		private Table mappedResults;
 		protected Table MappedResults
 		{

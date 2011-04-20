@@ -12,7 +12,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "3.5";
+		public const string SchemaVersion = "3.6";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -36,6 +36,7 @@ namespace Raven.Storage.Esent
 					CreateMapResultsTable(dbid);
 					CreateIndexingStatsTable(dbid);
 					CreateIndexingStatsReduceTable(dbid);
+					CreateIndexingEtagsTable(dbid);
 					CreateFilesTable(dbid);
                     CreateQueueTable(dbid);
 					CreateIdentityTable(dbid);
@@ -126,6 +127,35 @@ namespace Raven.Storage.Esent
 			const string indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
 			                   100);
+		}
+
+		// this table exists solely so that other threads can touch the index
+		// etag, such as when we remove an item from the index, without causing
+		// concurrency conflicts with the indexing thread
+		private void CreateIndexingEtagsTable(JET_DBID dbid)
+		{
+			JET_TABLEID tableid;
+			Api.JetCreateTable(session, dbid, "indexes_etag", 16, 100, out tableid);
+			JET_COLUMNID columnid;
+
+			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+			{
+				cbMax = 255,
+				coltyp = JET_coltyp.Text,
+				cp = JET_CP.Unicode,
+				grbit = ColumndefGrbit.ColumnTagged
+			}, null, 0, out columnid);
+
+			var defaultValue = BitConverter.GetBytes(0);
+			Api.JetAddColumn(session, tableid, "touches", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
+			}, defaultValue, defaultValue.Length, out columnid);
+
+			const string indexDef = "+key\0\0";
+			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+							   100);
 		}
 
 		private void CreateIndexingStatsReduceTable(JET_DBID dbid)

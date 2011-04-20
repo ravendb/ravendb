@@ -47,34 +47,34 @@ namespace Raven.Database.Indexing
 			get { return serverErrors.ToArray(); }
 		}
 
-		public void WaitForWork(TimeSpan timeout, ref int workerWorkCounter)
+		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter)
 		{
-			WaitForWork(timeout, ref workerWorkCounter, null);
+			return WaitForWork(timeout, ref workerWorkCounter, null);
 		}
 
-		public void WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait)
+		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait)
 		{
 			if (!doWork)
-				return;
+				return false;
 			var currentWorkCounter = Thread.VolatileRead(ref workCounter);
 			if (currentWorkCounter != workerWorkCounter)
 			{
 				workerWorkCounter = currentWorkCounter;
-				return;
+				return true;
 			}
 			if (beforeWait != null)
 				beforeWait();
 			lock (waitForWork)
 			{
 				if (!doWork)
-					return;
+					return false;
 				currentWorkCounter = Thread.VolatileRead(ref workCounter);
 				if (currentWorkCounter != workerWorkCounter)
 				{
 					workerWorkCounter = currentWorkCounter;
-					return;
+					return true;
 				}
-				Monitor.Wait(waitForWork, timeout);
+				return Monitor.Wait(waitForWork, timeout);
 			}
 		}
 

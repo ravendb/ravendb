@@ -43,7 +43,6 @@ namespace Raven.Studio.Features.Database
 		IEnumerable<string> databases;
 		IEnumerable<ServerError> errors;
 
-		bool isInitialized;
 		string status;
 
 		[ImportingConstructor]

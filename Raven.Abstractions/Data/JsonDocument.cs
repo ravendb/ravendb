@@ -78,7 +78,7 @@ namespace Raven.Abstractions.Data
 
 			var doc = (RavenJObject)DataAsJson.CloneToken();
 			var metadata = (RavenJObject)Metadata.CloneToken();
-			metadata["Last-Modified"] = LastModified;
+			metadata["Last-Modified"] = LastModified.ToString("r");
 			metadata["@etag"] = Etag.ToString();
 			doc["@metadata"] = metadata;
 			metadata["Non-Authoritive-Information"] = NonAuthoritiveInformation;

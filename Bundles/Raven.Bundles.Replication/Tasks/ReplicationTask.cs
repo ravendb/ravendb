@@ -57,6 +57,8 @@ namespace Raven.Bundles.Replication.Tasks
 
         private void Execute()
         {
+        	var timeToWaitInMinutes = TimeSpan.FromMinutes(5);
+        	bool runningBecauseOfDataModifications = false;
             var context = docDb.WorkContext;
             while (context.DoWork)
             {
@@ -74,8 +76,14 @@ namespace Raven.Bundles.Replication.Tasks
                         {
                             var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
-                            var destinationForReplication = destinations
-                                .Where(dest => IsNotFailing(dest, currentReplicationAttempts));
+							var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
+							var destinationForReplication = destinations
+                                .Where(dest =>
+                                {
+                                	if (copyOfrunningBecauseOfDataModifications == false)
+										return true;
+                                	return IsNotFailing(dest, currentReplicationAttempts);
+                                });
 
                             foreach (var dest in destinationForReplication)
                             {
@@ -100,7 +108,10 @@ namespace Raven.Bundles.Replication.Tasks
                     log.Error("Failed to perform replication", e);
                 }
 
-                context.WaitForWork(TimeSpan.FromMinutes(1), ref workCounter);
+				runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter);
+            	timeToWaitInMinutes = runningBecauseOfDataModifications
+            	                      	? TimeSpan.FromSeconds(30)
+            	                      	: TimeSpan.FromMinutes(5);
             }
         }
 

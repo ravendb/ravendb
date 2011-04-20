@@ -594,8 +594,8 @@ namespace Raven.Database
 					var indexDefinition = GetIndexDefinition(index);
 					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
 					                                      viewGenerator.ReduceDefinition == null
-					                                      	? Abstractions.Data.Constants.DocumentIdFieldName
-					                                      	: Abstractions.Data.Constants.ReduceKeyFieldName);
+					                                      	? Constants.DocumentIdFieldName
+					                                      	: Constants.ReduceKeyFieldName);
 					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch)
 									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
@@ -604,18 +604,17 @@ namespace Raven.Database
 
 					var transformerErrors = new List<string>();
 					IEnumerable<RavenJObject> results;
-					if (viewGenerator != null &&
-						query.SkipTransformResults == false &&
+					if (query.SkipTransformResults == false &&
 						viewGenerator.TransformResultsDefinition != null)
 					{
-						var robustEnumerator = new RobustEnumerator
+						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
+						var robustEnumerator = new RobustEnumerator(dynamicJsonObjects.Length)
 						{
 							OnError =
 								(exception, o) =>
 								transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
 														 exception.Message))
 						};
-						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
 						results =
 							robustEnumerator.RobustEnumeration(
 								dynamicJsonObjects,

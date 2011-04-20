@@ -191,7 +191,7 @@ namespace Raven.Client.Linq
 		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
 		/// </summary>
 		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
-		public static IList<T> ToList<T>()
+		public static IList<TOther> ToList<TOther>()
 		{
 			throw new NotSupportedException();
 		}
@@ -200,7 +200,7 @@ namespace Raven.Client.Linq
 		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
 		/// </summary>
 		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
-		public static T[] ToArray<T>()
+		public static TOther[] ToArray<TOther>()
 		{
 			throw new NotSupportedException();
 		}

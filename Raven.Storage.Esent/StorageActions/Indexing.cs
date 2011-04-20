@@ -85,9 +85,14 @@ namespace Raven.Storage.Esent.StorageActions
 				var indexName = Api.RetrieveColumnAsString(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"]);
 				Api.MakeKey(session, IndexesStatsReduce, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			    var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
+
+				Api.MakeKey(session, IndexesEtags, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				var a = Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
+
 			    yield return new IndexStats
 				{
 					Name = indexName,
+					TouchCount = Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value,
 					IndexingAttempts =
 						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
 					IndexingSuccesses =
@@ -105,14 +110,25 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
                     ReduceIndexingErrors = hasReduce == false ? null : 
 						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
-					LastReducedEtag = hasReduce == false ? (Guid?)null : 
-                        Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]).TransfromToGuidWithProperSorting(),
-                    LastReducedTimestamp = hasReduce == false ? null : 
-                        Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]),
+					LastReducedEtag = hasReduce == false ? (Guid?)null : GetLastReduceIndexWithPotentialNull(),
+                    LastReducedTimestamp = hasReduce == false ? (DateTime?)null : GetLastReducedTimestampWithPotentialNull(),
 				
 				};
 			}
-		}       
+		}
+
+		private DateTime GetLastReducedTimestampWithPotentialNull()
+		{
+			return Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ?? DateTime.MinValue;
+		}
+
+		private Guid GetLastReduceIndexWithPotentialNull()
+		{
+			var bytes = Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
+			if(bytes == null)
+				return Guid.Empty;
+			return bytes.TransfromToGuidWithProperSorting();
+		}
 
 		public void AddIndex(string name, bool createMapReduce)
 		{
@@ -121,6 +137,13 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue);
+				update.Save();
+			}
+
+
+			using (var update = new Update(session, IndexesEtags, JET_prep.Insert))
+			{
+				Api.SetColumn(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["key"], name, Encoding.Unicode);
 				update.Save();
 			}
 
@@ -187,7 +210,17 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-        public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
+		public void TouchIndexEtag(string index)
+		{
+			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
+			Api.MakeKey(session, IndexesEtags, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ) == false)
+				throw new IndexDoesNotExistsException("There is no reduce index named: " + index);
+
+			Api.EscrowUpdate(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"], 1);
+		}
+
+		public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
         {
             Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
 			Api.MakeKey(session, IndexesStatsReduce, index, Encoding.Unicode, MakeKeyGrbit.NewKey);

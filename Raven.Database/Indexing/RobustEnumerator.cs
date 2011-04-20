@@ -16,22 +16,31 @@ namespace Raven.Database.Indexing
         public Action BeforeMoveNext = delegate { };
         public Action CancelMoveNext = delegate { };
         public Action<Exception, object> OnError = delegate { };
+    	private int numberOfConsecutiveErrors;
 
+    	public RobustEnumerator(int numberOfConsecutiveErrors)
+    	{
+    		this.numberOfConsecutiveErrors = numberOfConsecutiveErrors;
+    	}
 
-        public IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func)
+    	public IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func)
         {
 			using (var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator()))
 			{
 				IEnumerator<dynamic> en;
 				using (en = func(wrapped).GetEnumerator())
 				{
+					int maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
 					do
 					{
 						var moveSuccessful = MoveNext(en, wrapped);
 						if (moveSuccessful == false)
 							yield break;
 						if (moveSuccessful == true)
+						{
+							maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
 							yield return en.Current;
+						}
 						else
 						{
 							// we explictly do not dispose the enumerator, since that would not allow us 
@@ -40,8 +49,9 @@ namespace Raven.Database.Indexing
 							// en.Dispose();
 
 							en = func(wrapped).GetEnumerator();
+							maxNumberOfConsecutiveErrors--;
 						}
-					} while (true);
+					} while (maxNumberOfConsecutiveErrors > 0);
 				}
 			}
         }
