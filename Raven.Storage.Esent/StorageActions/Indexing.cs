@@ -168,6 +168,13 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetDelete(session, IndexesStats);
 			}
 
+			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
+			Api.MakeKey(session, IndexesEtags, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ) != false)
+			{
+				Api.JetDelete(session, IndexesEtags);
+			}
+
 			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
 			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) != false)
