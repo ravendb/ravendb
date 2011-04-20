@@ -284,6 +284,7 @@
     <Compile Include="Bugs\QueryWithReservedCharacters.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\ReportQueryCount.cs" />
+    <Compile Include="Bugs\ResettingIndex.cs" />
     <Compile Include="Bugs\ReuseQuery.cs" />
     <Compile Include="Bugs\SelectManyIssue.cs" />
     <Compile Include="Bugs\SelectManyOnNull.cs" />
