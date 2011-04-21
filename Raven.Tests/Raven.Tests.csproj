@@ -111,6 +111,7 @@
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
+    <Compile Include="Bugs\CanGetScores.cs" />
     <Compile Include="Bugs\CanReadLuceneProjectedDateTimeOffset.cs" />
     <Compile Include="Bugs\ConnectionStringParsing.cs" />
     <Compile Include="Bugs\IntegerIds.cs" />
