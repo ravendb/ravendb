@@ -162,18 +162,6 @@ namespace Raven.Json.Linq
 			writer.WriteEndArray();
 		}
 
-		internal override bool DeepEquals(RavenJToken node)
-		{
-			var t = node as RavenJArray;
-			if (t == null)
-				return false;
-
-			if (Items.Count != t.Items.Count)
-				return false;
-
-			return !Items.Where((t1, i) => !t1.DeepEquals(t.Items[i])).Any();
-		}
-
     	#region IEnumerable<RavenJToken> Members
 
 		public IEnumerator<RavenJToken> GetEnumerator()

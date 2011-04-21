@@ -235,39 +235,6 @@ namespace Raven.Json.Linq
 			writer.WriteEndObject();
 		}
 
-		internal override bool DeepEquals(RavenJToken node)
-		{
-			var t = node as RavenJObject;
-			if (t == null)
-				return false;
-
-			if (Properties == null || t.Properties == null)
-			{
-				if (Properties == t.Properties)
-					return true;
-				return false;
-			}
-
-			RavenJToken v1, v2;
-			foreach (var key in Properties.Keys)
-			{
-				if (!t.Properties.TryGetValue(key, out v2) || !Properties.TryGetValue(key, out v1))
-					return false;
-
-				if (v1 == null || v2 == null)
-				{
-					if (v1 == v2)
-						continue;
-
-					return false;
-				}
-
-				if (!v1.DeepEquals(v2))
-					return false;
-			}
-			return true;
-		}
-
 		#region IEnumerable<KeyValuePair<string,RavenJToken>> Members
 
 		public IEnumerator<KeyValuePair<string, RavenJToken>> GetEnumerator()
