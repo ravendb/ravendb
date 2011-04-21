@@ -143,12 +143,12 @@ namespace Raven.Database.Indexing
 		}
 
 
-		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch)
+		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
 		{
 			if (fieldsToFetch.IsProjection == false)
 				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().OfType<Fieldable>().Select(x => x.Name()).ToArray());
 			fieldsToFetch.EnsureHasField(Raven.Abstractions.Data.Constants.ReduceKeyFieldName);
-			return base.RetrieveDocument(document, fieldsToFetch);
+			return base.RetrieveDocument(document, fieldsToFetch, score);
 		}
 
 		public override void Remove(string[] keys, WorkContext context)

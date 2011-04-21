@@ -120,7 +120,8 @@ namespace Raven.Client.Document
 					return default(T);
 
 			} while (
-				documentFound.NonAuthoritiveInformation &&
+				documentFound.NonAuthoritiveInformation.HasValue &&
+			documentFound.NonAuthoritiveInformation.Value &&
 				AllowNonAuthoritiveInformation == false &&
 #if !SILVERLIGHT
 				sp.Elapsed < NonAuthoritiveInformationTimeout
@@ -194,7 +195,7 @@ namespace Raven.Client.Document
 				results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
 			} while (
 				AllowNonAuthoritiveInformation == false &&
-				results.Any(x => x.NonAuthoritiveInformation) &&
+				results.Any(x => x.NonAuthoritiveInformation ?? false) &&
 #if !SILVERLIGHT
 				sp.Elapsed < NonAuthoritiveInformationTimeout
 #else 

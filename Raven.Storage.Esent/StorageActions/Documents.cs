@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
@@ -31,14 +32,18 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
-			return DocumentByKeyInternal(key, transactionInformation, (metadata, createDocument) => new JsonDocument
+			return DocumentByKeyInternal(key, transactionInformation, (metadata, createDocument) =>
 			{
-				DataAsJson = createDocument(metadata.Key, metadata.Etag, metadata.Metadata),
-				Etag = metadata.Etag,
-				Key = metadata.Key,
-				LastModified = metadata.LastModified,
-				Metadata = metadata.Metadata,
-				NonAuthoritiveInformation = metadata.NonAuthoritiveInformation,
+				Debug.Assert(metadata.Etag != null);
+				return new JsonDocument
+				{
+					DataAsJson = createDocument(metadata.Key, metadata.Etag.Value, metadata.Metadata),
+					Etag = metadata.Etag,
+					Key = metadata.Key,
+					LastModified = metadata.LastModified,
+					Metadata = metadata.Metadata,
+					NonAuthoritiveInformation = metadata.NonAuthoritiveInformation,
+				};
 			});
 		}
 

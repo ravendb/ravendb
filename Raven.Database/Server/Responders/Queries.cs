@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
@@ -55,8 +56,11 @@ namespace Raven.Database.Server.Responders
 						continue;
 					result.Results.Add(documentByKey.ToJson());
 
-					includedEtags.AddRange(documentByKey.Etag.ToByteArray());
-				    addIncludesCommand.Execute(documentByKey.DataAsJson);
+					if (documentByKey.Etag != null)
+					{
+						includedEtags.AddRange(documentByKey.Etag.Value.ToByteArray());
+					}
+					addIncludesCommand.Execute(documentByKey.DataAsJson);
 				}
             });
 

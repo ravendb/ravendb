@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -198,7 +199,8 @@ namespace Raven.Storage.Managed
 
 			var result = memoryStream.ToJObject();
 
-            documentCacher.SetCachedDocument(metadata.Key, metadata.Etag, result, metadata.Metadata);
+    		Debug.Assert(metadata.Etag != null);
+            documentCacher.SetCachedDocument(metadata.Key, metadata.Etag.Value, result, metadata.Metadata);
 
     		return result;
     	}

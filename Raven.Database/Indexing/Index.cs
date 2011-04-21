@@ -135,10 +135,11 @@ namespace Raven.Database.Indexing
 		                                    WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
 
-		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch)
+		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
 		{
 			return new IndexQueryResult
 			{
+				Score = score,
 				Key = document.Get(Constants.DocumentIdFieldName),
 				Projection = fieldsToFetch.IsProjection ? CreateDocumentFromFields(document, fieldsToFetch) : null
 			};
@@ -487,7 +488,7 @@ namespace Raven.Database.Indexing
 						for (int i = start; i < search.totalHits && (i - start) < pageSize; i++)
 						{
 							Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
-							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch);
+							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.scoreDocs[i].score);
 							if (ShouldIncludeInResults(indexQueryResult) == false)
 							{
 								indexQuery.SkippedResults.Value++;
@@ -527,7 +528,7 @@ namespace Raven.Database.Indexing
 				for (int i = 0; i < min; i++)
 				{
 					Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.scoreDocs[i].score);
 					alreadyReturned.Add(indexQueryResult.Projection);
 				}
 			}

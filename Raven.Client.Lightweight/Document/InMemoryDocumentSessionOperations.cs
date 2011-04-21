@@ -300,7 +300,9 @@ more responsive application.
 			{
 				documentFound.Metadata["Last-Modified"] = documentFound.LastModified;
 			}
-			if(documentFound.NonAuthoritiveInformation && AllowNonAuthoritiveInformation == false)
+			if(documentFound.NonAuthoritiveInformation.HasValue 
+				&& documentFound.NonAuthoritiveInformation.Value
+				&& AllowNonAuthoritiveInformation == false)
 			{
 				throw new NonAuthoritiveInformationException("Document " + documentFound.Key +
 				" returned Non Authoritive Information (probably modified by a transaction in progress) and AllowNonAuthoritiveInformation  is set to false");
