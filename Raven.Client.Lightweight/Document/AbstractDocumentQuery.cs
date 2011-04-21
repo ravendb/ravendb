@@ -73,23 +73,23 @@ namespace Raven.Client.Document
         /// <summary>
         ///   The cutoff date to use for detecting staleness in the index
         /// </summary>
-        public DateTime? cutoff;
+        protected DateTime? cutoff;
 
         /// <summary>
         ///   The fields to order the results by
         /// </summary>
-        public string[] orderByFields = new string[0];
+        protected string[] orderByFields = new string[0];
 
 
         /// <summary>
         ///   The types to sort the fields by (NULL if not specified)
         /// </summary>
-        public HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
+        protected HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
 
         /// <summary>
         ///   The page size to use when querying the index
         /// </summary>
-        public int pageSize = 128;
+        protected int? pageSize;
 
         private QueryResult queryResult;
 
@@ -1214,7 +1214,7 @@ If you really want to do in memory filtering on the data returned from the query
                 GroupBy = groupByFields,
                 AggregationOperation = aggregationOp,
                 Query = query,
-                PageSize = pageSize,
+                PageSize = pageSize ?? 128,
                 Start = start,
                 Cutoff = cutoff,
                 SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
