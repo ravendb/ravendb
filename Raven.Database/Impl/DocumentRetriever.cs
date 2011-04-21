@@ -170,7 +170,10 @@ namespace Raven.Database.Impl
 					case ReadVetoResult.ReadAllow.Deny:
 						return new T
 						       	{
-						       		Metadata = new RavenJObject
+									Etag = Guid.Empty,
+									LastModified = DateTime.MinValue,
+						       		NonAuthoritiveInformation = false,
+									Metadata = new RavenJObject
 						       		           	{
 						       		           		{
 						       		           			"Raven-Read-Veto", new RavenJObject
