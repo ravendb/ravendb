@@ -63,17 +63,15 @@ namespace Raven.Client.Document
 		///<returns></returns>
 		public string DefaultFindFullDocumentKeyFromValueTypeIdentifier(ValueType id, Type type)
 		{
-			string idPart;
 			var converter = IdentityTypeConvertors.FirstOrDefault(x=>x.CanConvertFrom(id.GetType()));
-			if(converter != null)
+			var tag = GetTypeTagName(type);
+			if (tag != null)
+				tag += IdentityPartsSeparator;
+			if (converter != null)
 			{
-				idPart = converter.ConvertFrom(id);
+				return converter.ConvertFrom(tag, id);
 			}
-			else
-			{
-				idPart = id.ToString();
-			}
-			return GetTypeTagName(type) + IdentityPartsSeparator + idPart;
+			return tag + id;
 		}
 
 

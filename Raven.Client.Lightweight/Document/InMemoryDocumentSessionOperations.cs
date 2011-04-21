@@ -576,7 +576,10 @@ more responsive application.
 					var converter = Conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(value.GetType()));
 					if(converter == null)
 						throw new ArgumentException("Cannot use type " + value.GetType() + " as an identity without having a type converter registered for it in the conventions' IdentityTypeConvertors");
-					id = converter.ConvertFrom(value);
+					var tag = Conventions.GetTypeTagName(entity.GetType());
+					if(tag != null)
+						tag += Conventions.IdentityPartsSeparator;
+					id = converter.ConvertFrom(tag, value);
 				}
 				return true;
 			}

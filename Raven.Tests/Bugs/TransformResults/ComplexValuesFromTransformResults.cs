@@ -120,6 +120,8 @@ namespace Raven.Tests.Bugs.TransformResults
         {
             using (EmbeddableDocumentStore documentStore = NewDocumentStore())
             {
+            	documentStore.Conventions.FindFullDocumentKeyFromValueTypeIdentifier = (id, type) => id.ToString();
+
                 IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
                 var questionId = Guid.NewGuid();
                 var answerId = Guid.NewGuid();

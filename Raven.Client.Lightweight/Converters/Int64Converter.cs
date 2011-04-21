@@ -34,12 +34,12 @@ namespace Raven.Client.Converters
         /// </returns>
         /// <param name="value">The <see cref="T:System.Object"/> to convert. </param>
         /// <exception cref="T:System.NotSupportedException">The conversion cannot be performed. </exception>
-        public  string ConvertFrom(object value)
+        public  string ConvertFrom(string tag, object value)
         {
             var val = (long) value;
             if (val == 0)
                 return null;
-            return value.ToString();
+            return tag + value.ToString();
         }
 
         /// <summary>
