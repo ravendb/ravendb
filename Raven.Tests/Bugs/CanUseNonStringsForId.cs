@@ -27,7 +27,7 @@ namespace Raven.Tests.Bugs
 
                 using(var s = store.OpenSession())
                 {
-                    var userInt32 = s.Load<UserInt32>("3");
+                    var userInt32 = s.Load<UserInt32>("userint32s/3");
                     Assert.Equal(3, userInt32.Id);
                     Assert.Equal("Ayende", userInt32.Name);
                 }

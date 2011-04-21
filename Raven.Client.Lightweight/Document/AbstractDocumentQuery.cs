@@ -1334,10 +1334,9 @@ If you really want to do in memory filtering on the data returned from the query
 				return DateTools.DateToString(((DateTimeOffset)whereEqualsParams.Value).DateTime, DateTools.Resolution.MILLISECOND);
 			}
 
-			if(whereEqualsParams.FieldName == Constants.DocumentIdFieldName && whereEqualsParams.Value is ValueType)
+			if(whereEqualsParams.FieldName == Constants.DocumentIdFieldName && whereEqualsParams.Value is string == false)
 			{
-				var id = (ValueType) whereEqualsParams.Value;
-				return theSession.Conventions.FindFullDocumentKeyFromValueTypeIdentifier(id,typeof (T));
+				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereEqualsParams.Value, typeof(T));
 			}
 
     		var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),

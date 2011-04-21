@@ -42,7 +42,7 @@ namespace Raven.Client.Document
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
 			FindClrType = (id, doc, metadata) => metadata.Value<string>(Abstractions.Data.Constants.RavenClrType);
-			FindFullDocumentKeyFromValueTypeIdentifier = DefaultFindFullDocumentKeyFromValueTypeIdentifier;
+			FindFullDocumentKeyFromNonStringIdentifier = DefaultFindFullDocumentKeyFromNonStringIdentifier;
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => prop;
@@ -61,7 +61,7 @@ namespace Raven.Client.Document
 		/// for generating a document key
 		///</summary>
 		///<returns></returns>
-		public string DefaultFindFullDocumentKeyFromValueTypeIdentifier(ValueType id, Type type)
+		public string DefaultFindFullDocumentKeyFromNonStringIdentifier(object id, Type type)
 		{
 			var converter = IdentityTypeConvertors.FirstOrDefault(x=>x.CanConvertFrom(id.GetType()));
 			var tag = GetTypeTagName(type);
@@ -193,7 +193,7 @@ namespace Raven.Client.Document
 		/// Gets or sets the function to find the full document key based on the type of a document
 		/// and the value type identifier (just the numeric part of the id).
 		/// </summary>
-		public Func<ValueType, Type, string> FindFullDocumentKeyFromValueTypeIdentifier { get; set; }
+		public Func<object, Type, string> FindFullDocumentKeyFromNonStringIdentifier { get; set; }
 
 		/// <summary>
 		/// Gets or sets the json contract resolver.
@@ -260,12 +260,12 @@ namespace Raven.Client.Document
 						new JsonDateTimeISO8601Converter(),
                         new JsonDateTimeOffsetConverter(),
 						new JsonLuceneDateTimeConverter(),
-                        new JsonValueTypeConverter<int>(int.TryParse),
-                        new JsonValueTypeConverter<long>(long.TryParse),
-                        new JsonValueTypeConverter<decimal>(decimal.TryParse),
-                        new JsonValueTypeConverter<double>(double.TryParse),
-                        new JsonValueTypeConverter<float>(float.TryParse),
-                        new JsonValueTypeConverter<short>(short.TryParse),
+                        new JsonNumericConverter<int>(int.TryParse),
+                        new JsonNumericConverter<long>(long.TryParse),
+                        new JsonNumericConverter<decimal>(decimal.TryParse),
+                        new JsonNumericConverter<double>(double.TryParse),
+                        new JsonNumericConverter<float>(float.TryParse),
+                        new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
 #if !NET_3_5 && !SILVERLIGHT
 						new JsonDynamicConverter()

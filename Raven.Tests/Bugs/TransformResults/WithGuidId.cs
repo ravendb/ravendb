@@ -27,11 +27,11 @@ namespace Raven.Tests.Bugs.TransformResults
 
 				using (var s = store.OpenSession())
 				{
-					var objects = s.Query<dynamic>("ThorIndex")
+					var objects = s.Query<Thor>("ThorIndex")
 						.Customize(x=>x.WaitForNonStaleResults())
 						.ToArray();
 
-					Assert.DoesNotThrow(() => new Guid(objects[0].Id));
+					Assert.NotEqual(Guid.Empty,objects[0].Id);
 				}
 			}
 		}

@@ -461,7 +461,8 @@ more responsive application.
 					throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
 					                            " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-				setIdenitifer(converter.ConvertTo(id));
+				var value = id.Split(new[] { Conventions.IdentityPartsSeparator },StringSplitOptions.RemoveEmptyEntries).Last();
+				setIdenitifer(converter.ConvertTo(value));
 			}
 		}
 
@@ -573,15 +574,10 @@ more responsive application.
 				id = value as string;
 				if(id == null && value != null) // need convertion
 				{
-					var converter = Conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(value.GetType()));
-					if(converter == null)
-						throw new ArgumentException("Cannot use type " + value.GetType() + " as an identity without having a type converter registered for it in the conventions' IdentityTypeConvertors");
-					var tag = Conventions.GetTypeTagName(entity.GetType());
-					if(tag != null)
-						tag += Conventions.IdentityPartsSeparator;
-					id = converter.ConvertFrom(tag, value);
+					id = Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType());
+					return true;
 				}
-				return true;
+				return id != null;
 			}
 			id = null;
 			return false;

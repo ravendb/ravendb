@@ -1,21 +1,22 @@
 ﻿using System;
 using System.Globalization;
 using Newtonsoft.Json;
+using System.Linq;
 
 namespace Raven.Abstractions.Json
 {
-    public class JsonValueTypeConverter<T> : JsonConverter
+    public class JsonNumericConverter<T> : JsonConverter where T : struct
     {
         public delegate bool TryParse(string s, NumberStyles styles, IFormatProvider provider, out T val);
 
-        private TryParse tryParse;
+        private readonly TryParse tryParse;
 
-        public JsonValueTypeConverter(TryParse tryParse)
+    	public JsonNumericConverter(TryParse tryParse)
         {
-            this.tryParse = tryParse;
+        	this.tryParse = tryParse;
         }
 
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+    	public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             writer.WriteValue(value);
         }
@@ -23,9 +24,14 @@ namespace Raven.Abstractions.Json
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             var s = reader.Value as string;
-            T val;
-            if (s != null && tryParse(s, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out val))
-                return val;
+
+        	if (s != null)
+            {
+            	T val;
+            	if (tryParse(s, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture,
+						 out val))
+					return val;
+            }
         	if (reader.Value == null)
         		return null;
         	return Convert.ChangeType(reader.Value, typeof(T), CultureInfo.InvariantCulture);
@@ -33,7 +39,7 @@ namespace Raven.Abstractions.Json
 
         public override bool CanConvert(Type objectType)
         {
-            return typeof (T) == objectType;
+        	return typeof (T) == objectType || typeof (T?) == objectType;
         }
 
         public override bool CanWrite

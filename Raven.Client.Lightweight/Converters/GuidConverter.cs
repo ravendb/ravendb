@@ -51,8 +51,7 @@ namespace Raven.Client.Converters
 		/// <param name="value">The <see cref="T:System.Object"/> to convert. </param>
 		public object ConvertTo(string value)
 		{
-			var val = value.Split(new[] { '/', '-' }, StringSplitOptions.RemoveEmptyEntries).Last();
-			return new Guid(val);
+			return new Guid(value);
 		}
 	}
 }
