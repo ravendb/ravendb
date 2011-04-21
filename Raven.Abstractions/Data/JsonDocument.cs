@@ -45,26 +45,19 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// 	Gets or sets a value indicating whether this document is non authoritive (modified by uncommitted transaction).
 		/// </summary>
-		public bool NonAuthoritiveInformation { get; set; }
+		public bool? NonAuthoritiveInformation { get; set; }
 
 		/// <summary>
 		/// Gets or sets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
-		public Guid Etag { get; set; }
+		public Guid? Etag { get; set; }
 
 		/// <summary>
 		/// 	Gets or sets the last modified date for the document
 		/// </summary>
 		/// <value>The last modified.</value>
-		public DateTime LastModified { get; set; }
-
-		/// <summary>
-		/// 	Gets or sets the projection for this document. The projection is used when loading the data directly from the index.
-		/// 	Either <see cref = "Projection" /> or <see cref = "DataAsJson" /> are valid, never both.
-		/// </summary>
-		/// <value>The projection.</value>
-		public RavenJObject Projection { get; set; }
+		public DateTime? LastModified { get; set; }
 
 		/// <summary>
 		/// 	Translate the json document to a <see cref = "RavenJObject" />
@@ -72,16 +65,18 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		public RavenJObject ToJson()
 		{
-			if (Projection != null)
-				return Projection;
-
 
 			var doc = (RavenJObject)DataAsJson.CloneToken();
 			var metadata = (RavenJObject)Metadata.CloneToken();
-			metadata["Last-Modified"] = LastModified.ToString("r");
-			metadata["@etag"] = Etag.ToString();
+
+			if (LastModified != null)
+				metadata["Last-Modified"] = LastModified.Value.ToString("r");
+			if(Etag != null)
+				metadata["@etag"] = Etag.Value.ToString();
+			if (NonAuthoritiveInformation != null)
+				metadata["Non-Authoritive-Information"] = NonAuthoritiveInformation.Value;
+
 			doc["@metadata"] = metadata;
-			metadata["Non-Authoritive-Information"] = NonAuthoritiveInformation;
 
 			return doc;
 		}

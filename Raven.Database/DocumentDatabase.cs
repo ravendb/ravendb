@@ -604,7 +604,8 @@ namespace Raven.Database
 
 					var transformerErrors = new List<string>();
 					IEnumerable<RavenJObject> results;
-					if (query.SkipTransformResults == false &&
+					if (query.SkipTransformResults == false && 
+						query.PageSize > 0 && // maybe they just want the stats?
 						viewGenerator.TransformResultsDefinition != null)
 					{
 						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
@@ -626,7 +627,8 @@ namespace Raven.Database
 						results = collection.Select(x => x.ToJson());
 					}
 
-					list.AddRange(results);
+					if (query.PageSize > 0) // maybe they just want the query stats?
+						list.AddRange(results);
 
 					if (transformerErrors.Count > 0)
 					{
@@ -903,9 +905,10 @@ namespace Raven.Database
 				}
 				else if (etag != null && doc.Etag != etag.Value)
 				{
+					Debug.Assert(doc.Etag != null);
 					throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
 					{
-						ActualETag = doc.Etag,
+						ActualETag = doc.Etag.Value,
 						ExpectedETag = etag.Value,
 					};
 				}

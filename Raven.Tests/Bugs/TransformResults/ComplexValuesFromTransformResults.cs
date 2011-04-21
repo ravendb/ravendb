@@ -120,6 +120,8 @@ namespace Raven.Tests.Bugs.TransformResults
         {
             using (EmbeddableDocumentStore documentStore = NewDocumentStore())
             {
+				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type) => id.ToString();
+
                 IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
                 var questionId = Guid.NewGuid();
                 var answerId = Guid.NewGuid();
@@ -138,6 +140,7 @@ namespace Raven.Tests.Bugs.TransformResults
                                        };
                     session.Store(question);
 
+
                     var answer = new AnswerEntity2()
                     {
                         Id = answerId,
@@ -146,12 +149,19 @@ namespace Raven.Tests.Bugs.TransformResults
                         UserId = user.Id
                     };
 
+                    //session.Store(new Answer2
+                    //{
+                    //    Id = answer.Id,
+                    //    UserId = answer.UserId,
+                    //    QuestionId = answer.Question.Id,
+                    //    Content = answer.Content
+                    //}
                     session.Store(new Answer2
                     {
-                        Id = answer.Id,
-                        UserId = answer.UserId,
-                        QuestionId = answer.Question.Id,
-                        Content = answer.Content
+                        Id = answerId,
+                        UserId = user.Id,
+                        QuestionId = question.Id,
+                        Content =  "This is doable"
                     });
                     session.SaveChanges();
                 }

@@ -73,23 +73,23 @@ namespace Raven.Client.Document
         /// <summary>
         ///   The cutoff date to use for detecting staleness in the index
         /// </summary>
-        public DateTime? cutoff;
+        protected DateTime? cutoff;
 
         /// <summary>
         ///   The fields to order the results by
         /// </summary>
-        public string[] orderByFields = new string[0];
+        protected string[] orderByFields = new string[0];
 
 
         /// <summary>
         ///   The types to sort the fields by (NULL if not specified)
         /// </summary>
-        public HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
+        protected HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
 
         /// <summary>
         ///   The page size to use when querying the index
         /// </summary>
-        public int pageSize = 128;
+        protected int? pageSize;
 
         private QueryResult queryResult;
 
@@ -1214,7 +1214,7 @@ If you really want to do in memory filtering on the data returned from the query
                 GroupBy = groupByFields,
                 AggregationOperation = aggregationOp,
                 Query = query,
-                PageSize = pageSize,
+                PageSize = pageSize ?? 128,
                 Start = start,
                 Cutoff = cutoff,
                 SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
@@ -1238,11 +1238,13 @@ If you really want to do in memory filtering on the data returned from the query
         private T Deserialize(RavenJObject result)
         {
             var metadata = result.Value<RavenJObject>("@metadata");
-            if (projectionFields != null && projectionFields.Length > 0
-                // we asked for a projection directly from the index
-                || metadata == null)
-            // we aren't querying a document, we are probably querying a map reduce index result
-            {
+            if (
+				// we asked for a projection directly from the index
+				projectionFields != null && projectionFields.Length > 0 
+				// we got a document without an @id
+                // we aren't querying a document, we are probably querying a map reduce index result or a projection
+			   || metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id")))
+			{  
                 if (typeof(T) == typeof(RavenJObject))
                     return (T)(object)result;
 
@@ -1282,7 +1284,7 @@ If you really want to do in memory filtering on the data returned from the query
         {
 			// Implant a property with "id" value ... if not exists
         	var metadata = result.Value<RavenJObject>("@metadata");
-        	if (metadata == null) 
+			if (metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id"))) 
         	{
 				// if the item has metadata, then nested items will not have it, so we can skip recursing down
 				foreach (var nested in result.Select(property => property.Value))
@@ -1332,10 +1334,9 @@ If you really want to do in memory filtering on the data returned from the query
 				return DateTools.DateToString(((DateTimeOffset)whereEqualsParams.Value).DateTime, DateTools.Resolution.MILLISECOND);
 			}
 
-			if(whereEqualsParams.FieldName == Constants.DocumentIdFieldName && whereEqualsParams.Value is ValueType)
+			if(whereEqualsParams.FieldName == Constants.DocumentIdFieldName && whereEqualsParams.Value is string == false)
 			{
-				var id = (ValueType) whereEqualsParams.Value;
-				return theSession.Conventions.FindFullDocumentKeyFromValueTypeIdentifier(id,typeof (T));
+				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereEqualsParams.Value, typeof(T));
 			}
 
     		var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),

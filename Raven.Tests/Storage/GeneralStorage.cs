@@ -196,7 +196,7 @@ namespace Raven.Tests.Storage
             db.TransactionalStorage.Batch(actions =>
             {
                 var doc = actions.Documents.DocumentByKey("a",null);
-                var documents = actions.Documents.GetDocumentsAfter(doc.Etag).Select(x => x.Key).ToArray();
+                var documents = actions.Documents.GetDocumentsAfter(doc.Etag.Value).Select(x => x.Key).ToArray();
                 Assert.Equal(2, documents.Length);
                 Assert.Equal("b", documents[0]);
                 Assert.Equal("c", documents[1]);
@@ -217,7 +217,7 @@ namespace Raven.Tests.Storage
             db.TransactionalStorage.Batch(actions =>
             {
                 var doc = actions.Documents.DocumentByKey("a", null);
-                guid = doc.Etag;
+                guid = doc.Etag.Value;
                 actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject());
             });
 
@@ -274,7 +274,7 @@ namespace Raven.Tests.Storage
 					docs.AddRange(jsonDocuments.Select(x=>x.Key));
 			        total += jsonDocuments.Length;
 			    	if (jsonDocuments.Length > 0)
-			    		lastEtag = jsonDocuments.Last().Etag;
+			    		lastEtag = jsonDocuments.Last().Etag.Value;
 			    	if (stop)
                         break;
                     if (threads.All(x => !x.IsAlive))

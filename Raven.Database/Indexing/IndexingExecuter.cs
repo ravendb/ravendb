@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -88,8 +89,12 @@ namespace Raven.Database.Indexing
                 if (jsonDocs != null && jsonDocs.Length > 0)
                 {
                     var last = jsonDocs.Last();
-                    var lastEtag = last.Etag;
-                    var lastModified = last.LastModified;
+                	
+					Debug.Assert(last.Etag != null);
+                	Debug.Assert(last.LastModified != null);
+
+                	var lastEtag = last.Etag.Value;
+                	var lastModified = last.LastModified.Value;
 
                     var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
                     // whatever we succeeded in indexing or not, we have to update this
@@ -119,7 +124,7 @@ namespace Raven.Database.Indexing
             if (viewGenerator == null)
                 return; // index was deleted, probably
 
-            var dateTime = jsonDocs.Min(x => x.LastModified);
+            var dateTime = jsonDocs.Min(x => x.LastModified) ?? DateTime.MinValue;
 
             var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
             try

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -83,12 +84,13 @@ namespace Raven.Database.Server.Responders
 						context.SetStatusToNotFound();
 						return;
 					}
-					if (context.MatchEtag(documentMetadata.Etag))
+					Debug.Assert(documentMetadata.Etag != null);
+					if (context.MatchEtag(documentMetadata.Etag.Value))
 					{
 						context.SetStatusToNotModified();
 						return;
 					}
-					if (documentMetadata.NonAuthoritiveInformation)
+					if (documentMetadata.NonAuthoritiveInformation != null && documentMetadata.NonAuthoritiveInformation.Value)
 					{
 						context.SetStatusToNonAuthoritiveInformation();
 					}
@@ -105,12 +107,13 @@ namespace Raven.Database.Server.Responders
 				context.SetStatusToNotFound();
 				return;
 			}
-			if (doc.NonAuthoritiveInformation)
+			if (doc.NonAuthoritiveInformation != null && doc.NonAuthoritiveInformation.Value)
 			{
 				context.SetStatusToNonAuthoritiveInformation();
 			}
+			Debug.Assert(doc.Etag != null);
 			doc.Metadata["Last-Modified"] = doc.LastModified;
-			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
+			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag.Value);
 		}
 
 		private void Put(IHttpContext context, string docId)

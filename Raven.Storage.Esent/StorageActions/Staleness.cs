@@ -40,12 +40,15 @@ namespace Raven.Storage.Esent.StorageActions
                     if (cutOff.Value >= lastIndexedTimestamp)
                         return true;
 
-                	lastIndexedTimestamp =
-                		Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
-                		                             tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ??
-                		DateTime.MinValue;
-                    if (hasReduce && cutOff.Value >= lastIndexedTimestamp)
-                        return true;
+					if (hasReduce)
+					{
+						lastIndexedTimestamp =
+							Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
+							                             tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ??
+							DateTime.MinValue;
+						if (cutOff.Value >= lastIndexedTimestamp)
+							return true;
+					}
                 }
                 else
                 {

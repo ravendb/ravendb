@@ -114,6 +114,8 @@ namespace Raven.Abstractions.Extensions
 			var metadata = new RavenJObject();
 			foreach (var header in self)
 			{
+				if(header.Key.StartsWith("Temp"))
+					continue;
 				if (HeadersToIgnoreClient.Contains(header.Key))
 					continue;
 				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
@@ -136,6 +138,8 @@ namespace Raven.Abstractions.Extensions
 			  var metadata = new RavenJObject();
             foreach (var header in self)
             {
+				if (header.Key.StartsWith("Temp"))
+					continue;
                 if (HeadersToIgnoreClient.Contains(header.Key))
                     continue;
 				if(isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
@@ -163,6 +167,8 @@ namespace Raven.Abstractions.Extensions
             {
                 try
                 {
+					if(header.StartsWith("Temp"))
+						continue;
                     if (HeadersToIgnoreClient.Contains(header))
                         continue;
                     if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
@@ -184,7 +190,7 @@ namespace Raven.Abstractions.Extensions
         }
 #endif
 
-      private static string CaptureHeaderName(string header)
+		private static string CaptureHeaderName(string header)
         {
             var lastWasDash = true;
             var sb = new StringBuilder(header.Length);

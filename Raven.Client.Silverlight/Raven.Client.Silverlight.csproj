@@ -93,11 +93,11 @@
     <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeOffsetConverter.cs">
       <Link>Imports\Json\JsonDateTimeOffsetConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\JsonNumericConverter.cs">
+      <Link>Imports\Json\JsonNumericConverter.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonToJsonConverter.cs">
       <Link>Imports\Json\JsonToJsonConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\JsonValueTypeConverter.cs">
-      <Link>Imports\Json\JsonValueTypeConverter.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\RavenJsonConverter.cs">
       <Link>Imports\Json\RavenJsonConverter.cs</Link>

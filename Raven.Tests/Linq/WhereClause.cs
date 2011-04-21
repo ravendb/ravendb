@@ -50,6 +50,66 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
+		public void CanCompareValueThenPropertyGT()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from user in indexedUsers
+					where 15 > user.Age 
+					select user;
+			Assert.Equal("Age_Range:[* TO 0x0000000F]", q.ToString());
+		}
+
+		[Fact]
+		public void CanCompareValueThenPropertyGE()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from user in indexedUsers
+					where 15 >= user.Age
+					select user;
+			Assert.Equal("Age_Range:{* TO 0x0000000F}", q.ToString());
+		}
+
+		[Fact]
+		public void CanCompareValueThenPropertyLT()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from user in indexedUsers
+					where 15 < user.Age
+					select user;
+			Assert.Equal("Age_Range:[0x0000000F TO NULL]", q.ToString());
+		}
+
+		[Fact]
+		public void CanCompareValueThenPropertyLE()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from user in indexedUsers
+					where 15 <= user.Age
+					select user;
+			Assert.Equal("Age_Range:{0x0000000F TO NULL}", q.ToString());
+		}
+
+		[Fact]
+		public void CanCompareValueThenPropertyEQ()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from user in indexedUsers
+					where 15 == user.Age
+					select user;
+			Assert.Equal("Age:15", q.ToString());
+		}
+
+		[Fact]
+		public void CanCompareValueThenPropertyNE()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from user in indexedUsers
+					where 15 != user.Age
+					select user;
+			Assert.Equal("-Age:15 AND Age:*", q.ToString());
+		}
+
+		[Fact]
 		public void CanUnderstandSimpleEquality()
 		{
 			var indexedUsers = GetRavenQueryInspector();

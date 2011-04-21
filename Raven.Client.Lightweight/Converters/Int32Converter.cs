@@ -34,12 +34,12 @@ namespace Raven.Client.Converters
         /// </returns>
         /// <param name="value">The <see cref="T:System.Object"/> to convert. </param>
         /// <exception cref="T:System.NotSupportedException">The conversion cannot be performed. </exception>
-        public  string ConvertFrom(object value)
+        public  string ConvertFrom(string tag, object value)
         {
             var val = (int) value;
             if (val == 0)
                 return null;
-            return value.ToString();
+            return tag + value;
         }
 
         /// <summary>
@@ -51,8 +51,7 @@ namespace Raven.Client.Converters
         /// <param name="value">The <see cref="T:System.Object"/> to convert. </param>
         public  object ConvertTo(string value)
         {
-            var val = value.Split(new[] { '/', '-' }, StringSplitOptions.RemoveEmptyEntries).Last();
-            return int.Parse(val);
+            return int.Parse(value);
         }
     }
 }

@@ -58,18 +58,20 @@ namespace Raven.Client.Document
         /// <returns></returns>
         protected override IndexQuery GenerateIndexQuery(string query)
         {
-            return new SpatialIndexQuery
-            {
-                Query = query,
-                PageSize = pageSize,
-                Start = start,
-                Cutoff = cutoff,
-                SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-                FieldsToFetch = projectionFields,
-                Latitude = lat,
-                Longitude = lng,
-                Radius = radius,
-            };
+        	var generateIndexQuery = new SpatialIndexQuery
+        	{
+        		Query = query,
+        		Start = start,
+        		Cutoff = cutoff,
+        		SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+        		FieldsToFetch = projectionFields,
+        		Latitude = lat,
+        		Longitude = lng,
+        		Radius = radius,
+        	};
+			if (pageSize != null)
+				generateIndexQuery.PageSize = pageSize.Value;
+        	return generateIndexQuery;
         }
     }
 }

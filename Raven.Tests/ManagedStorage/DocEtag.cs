@@ -31,7 +31,7 @@ namespace Raven.Tests.ManagedStorage
 				{
 					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
 					var doc2 = viewer.Documents.DocumentByKey("Oren", null);
-					Assert.Equal(1, doc2.Etag.CompareTo(doc1.Etag));
+					Assert.Equal(1, doc2.Etag.Value.CompareTo(doc1.Etag));
 
 				});
 			}
@@ -57,9 +57,9 @@ namespace Raven.Tests.ManagedStorage
 				{
 					Assert.Equal(2, viewer.Documents.GetDocumentsAfter(Guid.Empty).Count());
 					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
-					Assert.Equal(1, viewer.Documents.GetDocumentsAfter(doc1.Etag).Count());
+					Assert.Equal(1, viewer.Documents.GetDocumentsAfter(doc1.Etag.Value).Count());
                     var doc2 = viewer.Documents.DocumentByKey("Oren", null);
-                    Assert.Equal(0, viewer.Documents.GetDocumentsAfter(doc2.Etag).Count());
+                    Assert.Equal(0, viewer.Documents.GetDocumentsAfter(doc2.Etag.Value).Count());
 				});
 			}
 		}
