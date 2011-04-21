@@ -21,7 +21,7 @@ namespace Raven.Json.Linq
             get { return JTokenType.Object; }
         }
 
-    	private DictionaryWithParentSnapshot Properties { get; set; }
+    	internal DictionaryWithParentSnapshot Properties { get; set; }
 
         public int Count
     	{
@@ -266,19 +266,6 @@ namespace Raven.Json.Linq
 					return false;
 			}
 			return true;
-		}
-
-		internal override int GetDeepHashCode()
-		{
-			int hashCode = 0;
-			if (Properties != null)
-			{
-				foreach (RavenJToken item in Properties.Values)
-				{
-					hashCode ^= item.GetDeepHashCode();
-				}
-			}
-			return hashCode;
 		}
 
 		#region IEnumerable<KeyValuePair<string,RavenJToken>> Members
