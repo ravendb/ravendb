@@ -40,6 +40,7 @@ namespace Raven.Tests.Bugs
             var id = Guid.NewGuid();
             using (var store = NewDocumentStore())
             {
+            	store.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (o, type) => o.ToString();
                 using (var s = store.OpenSession())
                 {
                     s.Store(new UserGuid()

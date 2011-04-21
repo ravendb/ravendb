@@ -38,7 +38,7 @@ namespace Raven.Client.Converters
 		{
 			var val = (Guid)value;
 			if (val == Guid.Empty)
-				return null;
+				return tag + Guid.NewGuid().ToString();
 			return tag + value;
 		}
 
