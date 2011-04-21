@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Embedded;
@@ -113,6 +114,59 @@ namespace Raven.Tests.Bugs.TransformResults
 				}
 			}
 		}
+
+        [Fact]
+        public void write_then_read_from_complex_entity_types_with_Guids_as_keys()
+        {
+            using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+            {
+                IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
+                var questionId = Guid.NewGuid();
+                var answerId = Guid.NewGuid();
+
+                using (var session = documentStore.OpenSession())
+                {
+                    var user = new User {Id = @"user\222", DisplayName = "John Doe"};
+                    session.Store(user);
+
+                    var question = new Question2
+                                       {
+                                           Id = questionId,
+                                           Title = "How to do this in RavenDb?",
+                                           Content = "I'm trying to find how to model documents for better DDD support.",
+                                           UserId = @"user\222"
+                                       };
+                    session.Store(question);
+
+                    var answer = new AnswerEntity2()
+                    {
+                        Id = answerId,
+                        Question = question,
+                        Content = "This is doable",
+                        UserId = user.Id
+                    };
+
+                    session.Store(new Answer2
+                    {
+                        Id = answer.Id,
+                        UserId = answer.UserId,
+                        QuestionId = answer.Question.Id,
+                        Content = answer.Content
+                    });
+                    session.SaveChanges();
+                }
+                using (var session = documentStore.OpenSession())
+                {
+                    var answerInfo = session.Query<Answer2, Answers_ByAnswerEntity2>()
+                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Where(x => x.Id == answerId)
+                        .As<AnswerEntity2>()
+                        .SingleOrDefault();
+                    Assert.NotNull(answerInfo);
+                    Assert.NotNull(answerInfo.Question);
+                }               
+            }
+        }
 
     	public static string CreateEntities(IDocumentStore documentStore)
         {

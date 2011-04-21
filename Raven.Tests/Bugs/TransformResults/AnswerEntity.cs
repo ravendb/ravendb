@@ -1,10 +1,19 @@
-﻿namespace Raven.Tests.Bugs.TransformResults
+﻿using System;
+
+namespace Raven.Tests.Bugs.TransformResults
 {
     public class AnswerEntity
     {
         public string Id { get; set; }
         public string UserId { get; set; }
         public Question Question { get; set; }
+        public string Content { get; set; }
+    }
+    public class AnswerEntity2
+    {
+        public Guid Id { get; set; }
+        public string UserId { get; set; }
+        public Question2 Question { get; set; }
         public string Content { get; set; }
     }
 }
