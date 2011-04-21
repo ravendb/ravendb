@@ -174,11 +174,6 @@ namespace Raven.Json.Linq
 			return !Items.Where((t1, i) => !t1.DeepEquals(t.Items[i])).Any();
 		}
 
-		internal override int GetDeepHashCode()
-		{
-			return Items.Aggregate(0, (current, item) => current ^ item.GetDeepHashCode());
-		}
-
     	#region IEnumerable<RavenJToken> Members
 
 		public IEnumerator<RavenJToken> GetEnumerator()
