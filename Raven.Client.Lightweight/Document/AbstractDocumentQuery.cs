@@ -1238,11 +1238,13 @@ If you really want to do in memory filtering on the data returned from the query
         private T Deserialize(RavenJObject result)
         {
             var metadata = result.Value<RavenJObject>("@metadata");
-            if (projectionFields != null && projectionFields.Length > 0
-                // we asked for a projection directly from the index
-                || metadata == null)
-            // we aren't querying a document, we are probably querying a map reduce index result
-            {
+            if (
+				// we asked for a projection directly from the index
+				projectionFields != null && projectionFields.Length > 0 
+				// we got a document without an @id
+                // we aren't querying a document, we are probably querying a map reduce index result or a projection
+			   || metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id")))
+			{  
                 if (typeof(T) == typeof(RavenJObject))
                     return (T)(object)result;
 
@@ -1282,7 +1284,7 @@ If you really want to do in memory filtering on the data returned from the query
         {
 			// Implant a property with "id" value ... if not exists
         	var metadata = result.Value<RavenJObject>("@metadata");
-        	if (metadata == null) 
+			if (metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id"))) 
         	{
 				// if the item has metadata, then nested items will not have it, so we can skip recursing down
 				foreach (var nested in result.Select(property => property.Value))

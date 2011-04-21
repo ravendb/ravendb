@@ -28,7 +28,7 @@ namespace Raven.Tests.Bugs
 				{
 					var users = s.Query<User>("test")
 						.Customize(x => x.WaitForNonStaleResults())
-						.Where(x => x.Name == "door")
+						.Where(x => x.Name == "doors")
 						.ToList();
 					Assert.Equal(2, users.Count);
 					foreach (var user in users)
