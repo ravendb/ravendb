@@ -139,8 +139,7 @@ namespace Raven.Studio.Framework.Extensions
 
 		public static void ExecuteInSequence(this IEnumerable<Task> tasks, Action<bool> callback, Action<Exception> handleException = null)
 		{
-			using (var enumerator = tasks.GetEnumerator())
-				ExecuteNextTask(enumerator, callback, handleException);
+			ExecuteNextTask(tasks.GetEnumerator(), callback, handleException);
 		}
 
 		static void ExecuteNextTask(IEnumerator<Task> enumerator, Action<bool> callback, Action<Exception> handleException)
@@ -151,23 +150,41 @@ namespace Raven.Studio.Framework.Extensions
 
 				if (!moveNextSucceeded)
 				{
-					if (callback != null) callback(true);
+					enumerator.Dispose();
+					if (callback != null) 
+						callback(true);
 					return;
 				}
 			
 				enumerator
 					.Current
-					.ContinueWith(x => ExecuteNextTask(enumerator, callback, handleException));
+					.ContinueWith(x =>
+					{
+						if (x.Exception != null)
+						{
+							enumerator.Dispose(); 
+							HandleError(callback, handleException, x.Exception);
+							return;
+						}
+						ExecuteNextTask(enumerator, callback, handleException);
+					});
 			}
 			catch (Exception e)
 			{
-				if(handleException != null)
-				{
-					handleException(e);
-					if (callback != null) callback(false);
-				}
-				else throw;
+				enumerator.Dispose(); 
+				HandleError(callback, handleException, e);
 			}
+		}
+
+		private static void HandleError(Action<bool> callback, Action<Exception> handleException, Exception e)
+		{
+			if (handleException != null)
+			{
+				handleException(e);
+				if (callback != null)
+					callback(false);
+			}
+			else new TargetInvocationException("Could not execute a set of tasks properly", e);
 		}
 	}
 }
