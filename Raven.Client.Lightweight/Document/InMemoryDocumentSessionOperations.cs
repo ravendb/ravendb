@@ -488,8 +488,11 @@ more responsive application.
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
-			
-			string id = null;
+
+			if (entitiesAndMetadata.ContainsKey(entity))
+				return;
+
+			string id;
 #if !NET_3_5
 			if (entity is IDynamicMetaObjectProvider)
 			{
