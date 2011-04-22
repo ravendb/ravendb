@@ -123,16 +123,12 @@ namespace Raven.Studio.Features.Database
             using (var sampleData = typeof(SummaryViewModel).Assembly.GetManifestResourceStream("Raven.Studio.SampleData.MvcMusicStore_Dump.json"))
             using (var streamReader = new StreamReader(sampleData))
             {
-                var securityCheckId = "forceAuth_" + Guid.NewGuid();
-                var putTask = documentSession.Advanced.AsyncDatabaseCommands
-                    .PutAsync(securityCheckId, null, new RavenJObject(), null);
+            	var putTask = documentSession.Advanced.AsyncDatabaseCommands
+                    .DeleteDocumentAsync("forceAuth_" + Guid.NewGuid());
 
                 yield return putTask;
 
                 if (putTask.Exception != null) yield break;
-
-                yield return documentSession.Advanced.AsyncDatabaseCommands
-                    .DeleteDocumentAsync(securityCheckId);
 
 				var musicStoreData = (RavenJObject)RavenJToken.ReadFrom(new JsonTextReader(streamReader));
                 foreach (var index in musicStoreData.Value<RavenJArray>("Indexes"))
