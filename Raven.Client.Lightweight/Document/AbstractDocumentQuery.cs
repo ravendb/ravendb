@@ -73,23 +73,23 @@ namespace Raven.Client.Document
         /// <summary>
         ///   The cutoff date to use for detecting staleness in the index
         /// </summary>
-        public DateTime? cutoff;
+        protected DateTime? cutoff;
 
         /// <summary>
         ///   The fields to order the results by
         /// </summary>
-        public string[] orderByFields = new string[0];
+        protected string[] orderByFields = new string[0];
 
 
         /// <summary>
         ///   The types to sort the fields by (NULL if not specified)
         /// </summary>
-        public HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
+        protected HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
 
         /// <summary>
         ///   The page size to use when querying the index
         /// </summary>
-        public int pageSize = 128;
+        protected int? pageSize;
 
         private QueryResult queryResult;
 
@@ -633,9 +633,9 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public void WhereEquals(WhereEqualsParams whereEqualsParams)
         {
-            var fieldName = EnsureValidFieldName(whereEqualsParams);
+            EnsureValidFieldName(whereEqualsParams);
             var transformToEqualValue = TransformToEqualValue(whereEqualsParams);
-            lastEquality = new KeyValuePair<string, string>(fieldName, transformToEqualValue);
+			lastEquality = new KeyValuePair<string, string>(whereEqualsParams.FieldName, transformToEqualValue);
             if (theQueryText.Length > 0 && theQueryText[theQueryText.Length - 1] != '(')
             {
                 theQueryText.Append(" ");
@@ -643,25 +643,21 @@ If you really want to do in memory filtering on the data returned from the query
 
             NegateIfNeeded();
 
-            theQueryText.Append(fieldName);
+            theQueryText.Append(whereEqualsParams.FieldName);
             theQueryText.Append(":");
             theQueryText.Append(transformToEqualValue);
         }
 
         private string EnsureValidFieldName(WhereEqualsParams whereEqualsParams)
         {
-            if (theSession == null)
-                return whereEqualsParams.FieldName;
-            if (theSession.Conventions == null)
-                return whereEqualsParams.FieldName;
-            if (whereEqualsParams.IsNestedPath)
-                return whereEqualsParams.FieldName;
+			if (theSession == null || theSession.Conventions == null || whereEqualsParams.IsNestedPath)
+				return whereEqualsParams.FieldName;
+
             var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
-            if (identityProperty != null && identityProperty.Name == whereEqualsParams.FieldName)
-            {
-				return Constants.DocumentIdFieldName;
-            }
-            return whereEqualsParams.FieldName;
+			if (identityProperty == null || identityProperty.Name != whereEqualsParams.FieldName)
+				return whereEqualsParams.FieldName;
+        	
+			return whereEqualsParams.FieldName = Constants.DocumentIdFieldName;
         }
 
         ///<summary>
@@ -1218,7 +1214,7 @@ If you really want to do in memory filtering on the data returned from the query
                 GroupBy = groupByFields,
                 AggregationOperation = aggregationOp,
                 Query = query,
-                PageSize = pageSize,
+                PageSize = pageSize ?? 128,
                 Start = start,
                 Cutoff = cutoff,
                 SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
@@ -1242,11 +1238,13 @@ If you really want to do in memory filtering on the data returned from the query
         private T Deserialize(RavenJObject result)
         {
             var metadata = result.Value<RavenJObject>("@metadata");
-            if (projectionFields != null && projectionFields.Length > 0
-                // we asked for a projection directly from the index
-                || metadata == null)
-            // we aren't querying a document, we are probably querying a map reduce index result
-            {
+            if (
+				// we asked for a projection directly from the index
+				projectionFields != null && projectionFields.Length > 0 
+				// we got a document without an @id
+                // we aren't querying a document, we are probably querying a map reduce index result or a projection
+			   || metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id")))
+			{  
                 if (typeof(T) == typeof(RavenJObject))
                     return (T)(object)result;
 
@@ -1286,7 +1284,7 @@ If you really want to do in memory filtering on the data returned from the query
         {
 			// Implant a property with "id" value ... if not exists
         	var metadata = result.Value<RavenJObject>("@metadata");
-        	if (metadata == null) 
+			if (metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id"))) 
         	{
 				// if the item has metadata, then nested items will not have it, so we can skip recursing down
 				foreach (var nested in result.Select(property => property.Value))
@@ -1314,7 +1312,7 @@ If you really want to do in memory filtering on the data returned from the query
 			result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
         }
 
-    	private static string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
+    	private string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
         {
             if (whereEqualsParams.Value == null)
             {
@@ -1333,10 +1331,15 @@ If you really want to do in memory filtering on the data returned from the query
 			
 			if (whereEqualsParams.Value is DateTimeOffset)
 			{
-				return DateTools.DateToString(((DateTimeOffset)whereEqualsParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTimeOffset)whereEqualsParams.Value).DateTime, DateTools.Resolution.MILLISECOND);
 			}
 
-            var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),
+			if(whereEqualsParams.FieldName == Constants.DocumentIdFieldName && whereEqualsParams.Value is string == false)
+			{
+				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereEqualsParams.Value, typeof(T));
+			}
+
+    		var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),
                                             whereEqualsParams.AllowWildcards && whereEqualsParams.IsAnalyzed);
 
             if (whereEqualsParams.Value is string == false)
@@ -1363,7 +1366,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (value is DateTime)
                 return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 			if (value is DateTimeOffset)
-				return DateTools.DateToString(((DateTimeOffset)value).UtcDateTime, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTimeOffset)value).DateTime, DateTools.Resolution.MILLISECOND);
 
             return RavenQuery.Escape(value.ToString(), false);
         }

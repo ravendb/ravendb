@@ -120,7 +120,8 @@ namespace Raven.Client.Document
 					return default(T);
 
 			} while (
-				documentFound.NonAuthoritiveInformation &&
+				documentFound.NonAuthoritiveInformation.HasValue &&
+			documentFound.NonAuthoritiveInformation.Value &&
 				AllowNonAuthoritiveInformation == false &&
 #if !SILVERLIGHT
 				sp.Elapsed < NonAuthoritiveInformationTimeout
@@ -153,6 +154,24 @@ namespace Raven.Client.Document
 			return LoadInternal<T>(ids.ToArray(), null);
 		}
 
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public T Load<T>(ValueType id)
+		{
+			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T));
+			return Load<T>(documentKey);
+		}
+
 		internal T[] LoadInternal<T>(string[] ids, string[] includes)
 		{
 			if(ids.Length == 0)
@@ -176,7 +195,7 @@ namespace Raven.Client.Document
 				results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
 			} while (
 				AllowNonAuthoritiveInformation == false &&
-				results.Any(x => x.NonAuthoritiveInformation) &&
+				results.Any(x => x.NonAuthoritiveInformation ?? false) &&
 #if !SILVERLIGHT
 				sp.Elapsed < NonAuthoritiveInformationTimeout
 #else 
@@ -320,9 +339,19 @@ namespace Raven.Client.Document
                 if (data.Commands.Count == 0)
                     return; // nothing to do here
                 IncrementRequestCount();
-                Debug.WriteLine(string.Format("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier));
+		    	LogBatch(data);
                 UpdateBatchResults(DatabaseCommands.Batch(data.Commands), data.Entities);
             }
+		}
+
+		[Conditional("DEBUG")]
+		private void LogBatch(SaveChangesData data)
+		{
+			Debug.WriteLine(string.Format("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier));
+			foreach (var commandData in data.Commands)
+			{
+				Debug.WriteLine(string.Format("\t{0} {1}", commandData.Method, commandData.Key));
+			}
 		}
 
 

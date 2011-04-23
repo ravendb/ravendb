@@ -100,6 +100,10 @@ select new {
 	            if (q.IsStale)
 	                Thread.Sleep(100);
 	        } while (q.IsStale && count++ < 100);
+	    	foreach (var result in q.Results)
+	    	{
+	    		result.Remove("@metadata");
+	    	}
 	        return q;
 	    }
 

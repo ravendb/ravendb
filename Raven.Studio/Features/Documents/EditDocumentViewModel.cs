@@ -185,11 +185,11 @@ namespace Raven.Studio.Features.Documents
 
 			metadata = ParseJsonToDictionary(document.Metadata);
 
-			LastModified = document.LastModified;
+			LastModified = document.LastModified ?? DateTime.MinValue;
 			CollectionType = DocumentViewModel.DetermineCollectionType(document.Metadata);
-			ClrType = metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
+			ClrType = metadata.IfPresent<string>(Constants.RavenClrType);
 			Etag = document.Etag.ToString();
-			NonAuthoritiveInformation = document.NonAuthoritiveInformation;
+			NonAuthoritiveInformation = document.NonAuthoritiveInformation ?? false;
 		}
 
 		public void PrepareForSave()

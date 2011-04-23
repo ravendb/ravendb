@@ -95,6 +95,7 @@ select new {
                     Thread.Sleep(100);
                 } while (q.IsStale);
             }
+        	q.Results[0].Remove("@metadata");
             Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""14""}", q.Results[0].ToString(Formatting.None));
         }
 

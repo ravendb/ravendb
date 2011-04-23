@@ -21,7 +21,7 @@ namespace Raven.Studio.Features.Documents
         {
             this.inner = inner;
             Id = inner.Metadata.IfPresent<string>("@id");
-            LastModified = inner.LastModified;
+            LastModified = inner.LastModified ?? DateTime.MinValue;
 			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
             CollectionType = DetermineCollectionType();
         }

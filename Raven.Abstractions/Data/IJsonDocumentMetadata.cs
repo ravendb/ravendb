@@ -23,18 +23,18 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// 	Gets or sets a value indicating whether this document is non authoritive (modified by uncommitted transaction).
 		/// </summary>
-		bool NonAuthoritiveInformation { get; set; }
+		bool? NonAuthoritiveInformation { get; set; }
 
 		/// <summary>
 		/// Gets or sets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
-		Guid Etag { get; set; }
+		Guid? Etag { get; set; }
 
 		/// <summary>
 		/// 	Gets or sets the last modified date for the document
 		/// </summary>
 		/// <value>The last modified.</value>
-		DateTime LastModified { get; set; }
+		DateTime? LastModified { get; set; }
 	}
 }

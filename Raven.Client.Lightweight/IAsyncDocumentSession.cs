@@ -47,6 +47,20 @@ namespace Raven.Client
 		Task<T> LoadAsync<T>(string id);
 
 		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		Task<T> LoadAsync<T>(ValueType id);
+
+		/// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
 		/// <param name="ids">The ids.</param>

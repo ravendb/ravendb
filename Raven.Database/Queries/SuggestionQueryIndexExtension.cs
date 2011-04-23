@@ -17,6 +17,7 @@ namespace Raven.Database.Queries
 		private readonly Directory directory = new RAMDirectory();
 		private readonly SpellChecker.Net.Search.Spell.SpellChecker spellChecker;
 
+		[CLSCompliant(false)]
 		public SuggestionQueryIndexExtension(StringDistance distance, string field, float accuracy)
 		{
 			this.field = field;

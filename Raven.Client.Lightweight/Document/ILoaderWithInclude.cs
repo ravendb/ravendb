@@ -43,6 +43,20 @@ namespace Raven.Client.Document
         /// <returns></returns>
         T Load(string id);
 
+    	/// <summary>
+    	/// Loads the specified entities with the specified id after applying
+    	/// conventions on the provided id to get the real document id.
+    	/// </summary>
+    	/// <remarks>
+    	/// This method allows you to call:
+    	/// Load{Post}(1)
+    	/// And that call will internally be translated to 
+    	/// Load{Post}("posts/1");
+    	/// 
+    	/// Or whatever your conventions specify.
+    	/// </remarks>
+    	T Load(ValueType id);
+
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
@@ -57,6 +71,20 @@ namespace Raven.Client.Document
         /// <param name="id">The id.</param>
         /// <returns></returns>
         TResult Load<TResult>(string id);
+
+    	/// <summary>
+    	/// Loads the specified entities with the specified id after applying
+    	/// conventions on the provided id to get the real document id.
+    	/// </summary>
+    	/// <remarks>
+    	/// This method allows you to call:
+    	/// Load{Post}(1)
+    	/// And that call will internally be translated to 
+    	/// Load{Post}("posts/1");
+    	/// 
+    	/// Or whatever your conventions specify.
+    	/// </remarks>
+    	TResult Load<TResult>(ValueType id);
     }
 }
 #endif

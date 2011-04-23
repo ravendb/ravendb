@@ -18,8 +18,11 @@ namespace Raven.Storage.Esent
 		public IDictionary<string, JET_COLUMNID> FilesColumns { get; set; }
 
 		public IDictionary<string, JET_COLUMNID> IndexesStatsColumns { get; set; }
+
 		public IDictionary<string, JET_COLUMNID> IndexesStatsReduceColumns { get; set; }
 
+		public IDictionary<string, JET_COLUMNID> IndexesEtagsColumns { get; set; }
+		
 		public IDictionary<string, JET_COLUMNID> MappedResultsColumns { get; set; }
 
 		public IDictionary<string, JET_COLUMNID> DocumentsModifiedByTransactionsColumns { get; set; }
@@ -50,8 +53,9 @@ namespace Raven.Storage.Esent
 	                    IndexesStatsColumns = Api.GetColumnDictionary(session, indexStats);
 					using (var indexStatsReduce = new Table(session, dbid, "indexes_stats_reduce", OpenTableGrbit.None))
 						IndexesStatsReduceColumns = Api.GetColumnDictionary(session, indexStatsReduce);
-
-	                using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
+					using (var indexEtags = new Table(session, dbid, "indexes_etag", OpenTableGrbit.None))
+						IndexesEtagsColumns = Api.GetColumnDictionary(session, indexEtags);
+					using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
 	                    MappedResultsColumns = Api.GetColumnDictionary(session, mappedResults);
 	                using (
 	                    var documentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction",

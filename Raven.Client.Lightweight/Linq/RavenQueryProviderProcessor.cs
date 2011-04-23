@@ -202,6 +202,12 @@ namespace Raven.Client.Linq
 				return;
 			}
 
+			if(expression.Left.NodeType!= ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			{
+				VisitEquals(Expression.Equal(expression.Right, expression.Left));
+				return;
+			}
+
 			var memberInfo = GetMember(expression.Left);
 
 			luceneQuery.WhereEquals(new WhereEqualsParams
@@ -239,6 +245,12 @@ namespace Raven.Client.Linq
 						AllowWildcards = true
 					});
 
+				return;
+			}
+
+			if (expression.Left.NodeType != ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			{
+				VisitNotEquals(Expression.NotEqual(expression.Right, expression.Left));
 				return;
 			}
 
@@ -370,6 +382,11 @@ namespace Raven.Client.Linq
 
 		private void VisitGreaterThan(BinaryExpression expression)
 		{
+			if (expression.Left.NodeType != ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			{
+				VisitLessThanOrEqual(Expression.LessThanOrEqual(expression.Right, expression.Left));
+				return;
+			}
 			var memberInfo = GetMember(expression.Left);
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
@@ -380,6 +397,12 @@ namespace Raven.Client.Linq
 
 		private void VisitGreaterThanOrEqual(BinaryExpression expression)
 		{
+			if (expression.Left.NodeType != ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			{
+				VisitLessThan(Expression.LessThan(expression.Right, expression.Left));
+				return;
+			}
+
 			var memberInfo = GetMember(expression.Left);
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
@@ -390,6 +413,11 @@ namespace Raven.Client.Linq
 
 		private void VisitLessThan(BinaryExpression expression)
 		{
+			if (expression.Left.NodeType != ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			{
+				VisitGreaterThanOrEqual(Expression.GreaterThanOrEqual(expression.Right, expression.Left));
+				return;
+			}
 			var memberInfo = GetMember(expression.Left);
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
@@ -400,6 +428,11 @@ namespace Raven.Client.Linq
 
 		private void VisitLessThanOrEqual(BinaryExpression expression)
 		{
+			if (expression.Left.NodeType != ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			{
+				VisitGreaterThan(Expression.GreaterThan(expression.Right, expression.Left));
+				return;
+			}
 			var memberInfo = GetMember(expression.Left);
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
@@ -687,7 +720,6 @@ namespace Raven.Client.Linq
 				case ExpressionType.New:                
 					var newExpression = ((NewExpression) body);
 			        newExpressionType = newExpression.Type;
-                    var idProperty = luceneQuery.DocumentConvention.GetIdentityProperty(newExpressionType);
                     foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
                     {
 						AddToFieldsToFetch(field);

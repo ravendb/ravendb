@@ -98,6 +98,16 @@ namespace Raven.Storage.Managed
                 );
         }
 
+		public int GetIndexTouchCount(string name)
+		{
+			var readResult = storage.IndexingStats.Read(name);
+
+			if (readResult == null)
+				throw new IndexDoesNotExistsException("Could not find index named: " + name);
+
+			return readResult.Key.Value<int>("touches");
+		}
+
         public Guid GetMostRecentDocumentEtag()
         {
             foreach (var doc in storage.Documents["ByEtag"].SkipFromEnd(0))

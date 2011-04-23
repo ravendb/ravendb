@@ -55,11 +55,19 @@ task Init -depends Verify40, Clean {
 					Where { $_ -notmatch [regex]::Escape($lib_dir) } | 
 					Where { $_ -notmatch [regex]::Escape($tools_dir) }
 	
+	$notclsCompliant = @("Raven.Silverlight.Client", "Raven.Studio", "Raven.Tests.Silverlight")
+	
 	foreach($projectFile in $projectFiles) {
 		
 		$projectDir = [System.IO.Path]::GetDirectoryName($projectFile)
 		$projectName = [System.IO.Path]::GetFileName($projectDir)
 		$asmInfo = [System.IO.Path]::Combine($projectDir, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
+		
+		$clsComliant = "true"
+		
+		if([System.Array]::IndexOf($notclsCompliant, $projectName) -ne -1) {
+      $clsComliant = "false"
+		}
 		
 		Generate-Assembly-Info `
 			-file $asmInfo `
@@ -70,7 +78,7 @@ task Init -depends Verify40, Clean {
 			-version "$version.0" `
 			-fileversion "1.0.0.$env:buildlabel" `
 			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
-			-clsCompliant "true"
+			-clsCompliant $clsComliant
 	}
 	
 	new-item $release_dir -itemType directory -ErrorAction SilentlyContinue

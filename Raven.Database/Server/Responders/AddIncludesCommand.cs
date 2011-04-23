@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
@@ -70,7 +71,10 @@ namespace Raven.Database.Server.Responders
 						return;
 					var includedDoc = Database.Get(value, TransactionInformation);
 					if (includedDoc != null)
-						Add(includedDoc.Etag,includedDoc.ToJson());
+					{
+						Debug.Assert(includedDoc.Etag != null);
+						Add(includedDoc.Etag.Value,includedDoc.ToJson());
+					}
 					break;
 				default:
 					// here we ignore everything else

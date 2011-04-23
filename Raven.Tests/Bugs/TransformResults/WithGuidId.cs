@@ -13,6 +13,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		{
 			using(var store = NewDocumentStore())
 			{
+				store.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (o, type) => o.ToString();
 				new ThorIndex().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);
 
 				using(var s = store.OpenSession())
@@ -27,11 +28,11 @@ namespace Raven.Tests.Bugs.TransformResults
 
 				using (var s = store.OpenSession())
 				{
-					var objects = s.Query<dynamic>("ThorIndex")
+					var objects = s.Query<Thor>("ThorIndex")
 						.Customize(x=>x.WaitForNonStaleResults())
 						.ToArray();
 
-					Assert.DoesNotThrow(() => new Guid(objects[0].Id));
+					Assert.NotEqual(Guid.Empty,objects[0].Id);
 				}
 			}
 		}

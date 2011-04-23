@@ -108,6 +108,8 @@ namespace Raven.Storage.Managed
                     continue;
                 yield return new IndexStats
                 {
+					TouchCount = readResult.Key.Value<int>("touches"),
+                    
                     IndexingAttempts = readResult.Key.Value<int>("attempts"),
                     IndexingErrors = readResult.Key.Value<int>("failures"),
                     IndexingSuccesses = readResult.Key.Value<int>("successes"),
@@ -137,6 +139,7 @@ namespace Raven.Storage.Managed
                 {"attempts", 0},
                 {"successes", 0},
                 {"failures", 0},
+				{"touches", 0},
 				{"lastEtag", Guid.Empty.ToByteArray()},
                 {"lastTimestamp", DateTime.MinValue},
                 
@@ -171,7 +174,17 @@ namespace Raven.Storage.Managed
             return indexFailureInformation;
         }
 
-        public void UpdateLastIndexed(string index, Guid etag, DateTime timestamp)
+    	public void TouchIndexEtag(string index)
+    	{
+			var readResult = storage.IndexingStats.Read(index);
+			if (readResult == null)
+				throw new ArgumentException("There is no index with the name: " + currentIndex.Value);
+			var key = (RavenJObject)readResult.Key;
+			key["touches"] = key.Value<int>("touches") + 1;
+			storage.IndexingStats.UpdateKey(key);
+    	}
+
+    	public void UpdateLastIndexed(string index, Guid etag, DateTime timestamp)
         {
             var readResult = storage.IndexingStats.Read(index);
             if (readResult == null)

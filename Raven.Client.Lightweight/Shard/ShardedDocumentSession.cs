@@ -282,6 +282,24 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public T Load<T>(ValueType id)
+		{
+			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T));
+			return Load<T>(documentKey);
+		}
+
+		/// <summary>
 		/// Begin a load while including the specified path
 		/// </summary>
 		/// <param name="path">The path.</param>

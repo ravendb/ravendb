@@ -155,7 +155,7 @@ namespace Raven.Database.Indexing
 			}
 			else if (value is DateTimeOffset)
 			{
-				yield return new Field(name, DateTools.DateToString(((DateTimeOffset)value).UtcDateTime, DateTools.Resolution.MILLISECOND),
+				yield return new Field(name, DateTools.DateToString(((DateTimeOffset)value).DateTime, DateTools.Resolution.MILLISECOND),
 					indexDefinition.GetStorage(name, defaultStorage),
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 			}

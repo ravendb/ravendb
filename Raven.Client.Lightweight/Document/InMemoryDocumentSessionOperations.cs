@@ -248,6 +248,7 @@ namespace Raven.Client.Document
 		}
 
 
+
 		/// <summary>
 		/// Determines whether the specified entity has changed.
 		/// </summary>
@@ -299,7 +300,9 @@ more responsive application.
 			{
 				documentFound.Metadata["Last-Modified"] = documentFound.LastModified;
 			}
-			if(documentFound.NonAuthoritiveInformation && AllowNonAuthoritiveInformation == false)
+			if(documentFound.NonAuthoritiveInformation.HasValue 
+				&& documentFound.NonAuthoritiveInformation.Value
+				&& AllowNonAuthoritiveInformation == false)
 			{
 				throw new NonAuthoritiveInformationException("Document " + documentFound.Key +
 				" returned Non Authoritive Information (probably modified by a transaction in progress) and AllowNonAuthoritiveInformation  is set to false");
@@ -372,6 +375,7 @@ more responsive application.
 				throw new InvalidOperationException(entity+" is not associated with the session, cannot delete unknown entity instance");
 			deletedEntities.Add(entity);
 		}
+
 
 		/// <summary>
 		/// Converts the json document to an entity.
@@ -457,7 +461,8 @@ more responsive application.
 					throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
 					                            " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-				setIdenitifer(converter.ConvertTo(id));
+				var value = id.Split(new[] { Conventions.IdentityPartsSeparator },StringSplitOptions.RemoveEmptyEntries).Last();
+				setIdenitifer(converter.ConvertTo(value));
 			}
 		}
 
@@ -569,12 +574,10 @@ more responsive application.
 				id = value as string;
 				if(id == null && value != null) // need convertion
 				{
-					var converter = Conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(value.GetType()));
-					if(converter == null)
-						throw new ArgumentException("Cannot use type " + value.GetType() + " as an identity without having a type converter registered for it in the conventions' IdentityTypeConvertors");
-					id = converter.ConvertFrom(value);
+					id = Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType());
+					return true;
 				}
-				return true;
+				return id != null;
 			}
 			id = null;
 			return false;

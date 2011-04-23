@@ -40,12 +40,15 @@ namespace Raven.Storage.Esent.StorageActions
                     if (cutOff.Value >= lastIndexedTimestamp)
                         return true;
 
-                    lastIndexedTimestamp =
-                       Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
-                                                    tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"])
-                           .Value;
-                    if (hasReduce && cutOff.Value >= lastIndexedTimestamp)
-                        return true;
+					if (hasReduce)
+					{
+						lastIndexedTimestamp =
+							Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
+							                             tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ??
+							DateTime.MinValue;
+						if (cutOff.Value >= lastIndexedTimestamp)
+							return true;
+					}
                 }
                 else
                 {
@@ -73,7 +76,7 @@ namespace Raven.Storage.Esent.StorageActions
             if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
                 return false;// not a map/reduce index
 
-            var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
+            var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]) ?? Guid.Empty.ToByteArray();
 
             var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
             if (mostRecentReducedEtag == null)
@@ -126,7 +129,18 @@ namespace Raven.Storage.Esent.StorageActions
             return new Guid(lastEtag);
         }
 
-        public Guid? GetMostRecentReducedEtag(string name)
+		public int GetIndexTouchCount(string name)
+		{
+			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
+			Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false) // find the next greater view
+				return -1;
+
+			return Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value;
+		}
+
+
+    	public Guid? GetMostRecentReducedEtag(string name)
         {
             Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
             Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);

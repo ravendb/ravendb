@@ -209,7 +209,7 @@ namespace Raven.Abstractions.Linq
 		public object GetDocumentId()
 		{
 			var metadata = inner["@metadata"] as RavenJObject;
-			if (metadata != null)
+			if (metadata != null && string.IsNullOrEmpty(metadata.Value<string>("@id")) == false)
 			{
 				var id = metadata.Value<string>("@id");
 				return string.IsNullOrEmpty(id) ? (object)new DynamicNullObject() : id;

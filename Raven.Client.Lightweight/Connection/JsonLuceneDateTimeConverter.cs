@@ -51,7 +51,7 @@ namespace Raven.Client.Connection
 				var stringToDate = DateTools.StringToDate(input);
 				if (objectType == typeof(DateTimeOffset) || objectType == typeof(DateTimeOffset?))
 					return new DateTimeOffset(stringToDate, DateTimeOffset.Now.Offset);
-				return stringToDate.ToLocalTime();
+				return DateTime.SpecifyKind(stringToDate, DateTimeKind.Local);
 			}
 			return reader.Value;
 		}

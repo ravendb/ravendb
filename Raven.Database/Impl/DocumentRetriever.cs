@@ -76,7 +76,10 @@ namespace Raven.Database.Impl
 				// duplicate document, filter it out
 				if (loadedIds.Add(queryResult.Key) == false)
 					return null;
-				return GetDocumentWithCaching(queryResult.Key);
+				var document = GetDocumentWithCaching(queryResult.Key);
+				if (document != null)
+					document.Metadata[Constants.TemporaryScoreValue] = queryResult.Score;
+				return document;
 			}
 
 			if (fieldsToFetch.IsProjection)
@@ -116,7 +119,8 @@ namespace Raven.Database.Impl
 			return new JsonDocument
 			{
 				Key = queryResult.Key,
-				Projection = queryResult.Projection,
+				DataAsJson = queryResult.Projection,
+				Metadata = new RavenJObject{{Constants.TemporaryScoreValue, queryResult.Score}}
 			};
 		}
 
@@ -166,7 +170,10 @@ namespace Raven.Database.Impl
 					case ReadVetoResult.ReadAllow.Deny:
 						return new T
 						       	{
-						       		Metadata = new RavenJObject
+									Etag = Guid.Empty,
+									LastModified = DateTime.MinValue,
+						       		NonAuthoritiveInformation = false,
+									Metadata = new RavenJObject
 						       		           	{
 						       		           		{
 						       		           			"Raven-Read-Veto", new RavenJObject
