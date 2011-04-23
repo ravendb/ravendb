@@ -39,18 +39,28 @@ namespace Raven.Tests.Bugs.TransformResults
                               AnswerId = doc.Id,
                               UserId = doc.UserId,
                               QuestionId = doc.QuestionId,
-                              Content = doc.Content
+                              Content = doc.Content,
+                              doc.Votes
                           };
 
             TransformResults = (database, results) =>
                 from result in results
                 let question = database.Load<Question2>(result.QuestionId.ToString())
-                select new // AnswerEntity
+                select new // AnswerEntity2
                 {
                     Id = result.Id,
                     Question = question,
                     Content = result.Content,
-                    UserId = result.UserId
+                    UserId = result.UserId,
+                    Votes = from vote in result.Votes
+                            let anwser = database.Load<Answer2>(vote.AnswerId.ToString())
+                            select new // AnswerVote2
+                                       {
+                                         vote.Id,
+                                         vote.Delta,
+                                         vote.QuestionId,
+                                         Answer = anwser
+                                        }
                 };
         }
     }
