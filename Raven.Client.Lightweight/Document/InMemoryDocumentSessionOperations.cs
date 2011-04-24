@@ -610,6 +610,17 @@ more responsive application.
 		/// <returns></returns>
 		protected ICommandData CreatePutEntityCommand(object entity, DocumentMetadata documentMetadata)
 		{
+			string id;
+			if(TryGetIdFromInstance(entity, out id) && 
+				documentMetadata.Key != null && 
+				documentMetadata.Key.Equals(id, StringComparison.InvariantCultureIgnoreCase) == false)
+			{
+				throw new InvalidOperationException("Entity " + entity.GetType().FullName + " had document key '" +
+				                                    documentMetadata.Key + "' but now has document key property '" + id + "'." +
+				                                    Environment.NewLine +
+				                                    "You cannot change the document key property of a entity loaded into the session");
+			}
+
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
 			var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
