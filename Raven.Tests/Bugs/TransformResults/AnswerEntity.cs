@@ -15,5 +15,7 @@ namespace Raven.Tests.Bugs.TransformResults
         public string UserId { get; set; }
         public Question2 Question { get; set; }
         public string Content { get; set; }
+        public AnswerVoteEntity2[] Votes { get; set; }
+
     }
 }
