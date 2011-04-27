@@ -1187,7 +1187,7 @@ namespace Raven.Client.Indexes
 			if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
 			{
 				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
-				if (expression.NodeType == ExpressionType.Parameter)
+				if (ShouldAvoidCastingToLambda(expression))
 					return;
 				switch (node.Method.Name)
 				{
@@ -1212,7 +1212,7 @@ namespace Raven.Client.Indexes
 				if (argPos == 0)
 					return;
 				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
-				if (expression.NodeType == ExpressionType.Parameter)
+				if (ShouldAvoidCastingToLambda(expression))
 					return;
 				switch (node.Method.Name)
 				{
@@ -1222,6 +1222,23 @@ namespace Raven.Client.Indexes
 				}
 			}
 #endif
+		}
+
+		private static bool ShouldAvoidCastingToLambda(Expression expression)
+		{
+			if (expression.NodeType == ExpressionType.Parameter)
+				return true;
+
+			if (expression.NodeType == ExpressionType.MemberAccess)
+				return false;
+
+			if (expression.NodeType == ExpressionType.Call)
+			{
+				var name = ((MethodCallExpression)expression).Method.Name;
+				return name != "Select" && name != "SelectMany";
+			}
+
+			return true;
 		}
 
 		private void VisitHierarchy(MethodCallExpression node, Expression expression)
