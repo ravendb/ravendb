@@ -41,17 +41,5 @@ namespace Raven.Client
 		QueryResult QueryResult { get; }
 #endif
 
-#if !NET_3_5
-		/// <summary>
-		/// Gets the query result
-		/// </summary>
-		/// <value>The query result.</value>
-		Task<IList<T>> ToListAsync();
-
-		/// <summary>
-		/// Gets the total count of records for this query
-		/// </summary>
-		Task<int> CountAsync();
-#endif
 	}
 }

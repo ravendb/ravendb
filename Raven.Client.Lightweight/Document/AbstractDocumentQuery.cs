@@ -404,25 +404,18 @@ namespace Raven.Client.Document
             sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
         }
 
+#if !SILVERLIGHT
         /// <summary>
         ///   Gets the enumerator.
         /// </summary>
         public IEnumerator<T> GetEnumerator()
         {
-#if !SILVERLIGHT
-            var sp = Stopwatch.StartNew();
-#else
-			var startTime = DateTime.Now;
-#endif
+			var sp = Stopwatch.StartNew();
             do
             {
                 try
                 {
-#if !SILVERLIGHT
                     queryResult = QueryResult;
-#else
-                    queryResult = QueryResultAsync.Result;
-#endif
                     foreach (var include in queryResult.Includes)
                     {
                         var metadata = include.Value<RavenJObject>("@metadata");
@@ -438,14 +431,8 @@ namespace Raven.Client.Document
                 }
                 catch (NonAuthoritiveInformationException)
                 {
-#if !SILVERLIGHT
                     if (sp.Elapsed > theSession.NonAuthoritiveInformationTimeout)
                         throw;
-#else
-					if ((DateTime.Now - startTime) > theSession.NonAuthoritiveInformationTimeout)
-						throw;
-
-#endif
                     queryResult = null;
                     // we explicitly do NOT want to consider retries for non authoritive information as 
                     // additional request counted against the session quota
@@ -453,8 +440,53 @@ namespace Raven.Client.Document
                 }
             } while (true);
         }
-
+#else
         /// <summary>
+        ///   Gets the enumerator.
+        /// </summary>
+        public Task<IEnumerator<T>> GetEnumeratorAsync()
+        {
+			var startTime = DateTime.Now;
+        	return QueryResultAsync
+				.ContinueWith(t => PrcoessEnumerator(t, startTime))
+				.Unwrap();
+        }
+
+		private Task<IEnumerator<T>> PrcoessEnumerator(Task<QueryResult> t, DateTime startTime)
+		{
+			try
+			{
+				queryResult = t.Result;
+                foreach (var include in queryResult.Includes)
+                {
+                    var metadata = include.Value<RavenJObject>("@metadata");
+
+                    theSession.TrackEntity<object>(metadata.Value<string>("@id"),
+                                                include,
+                                                metadata);
+                }
+                var list = queryResult.Results
+                    .Select(Deserialize)
+                    .ToList();
+				return TaskEx.Run(() => (IEnumerator<T>)list.GetEnumerator());
+			}
+            catch (NonAuthoritiveInformationException)
+            {
+                if ((DateTime.Now - startTime) > theSession.NonAuthoritiveInformationTimeout)
+                    throw;
+                queryResult = null;
+                // we explicitly do NOT want to consider retries for non authoritive information as 
+                // additional request counted against the session quota
+                theSession.DecrementRequestCount();
+
+            	return QueryResultAsync
+					.ContinueWith(t2 => PrcoessEnumerator(t2, startTime))
+					.Unwrap();
+            }
+		}
+
+#endif
+		/// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
         /// </summary>
         /// <param name = "path">The path.</param>
@@ -1399,7 +1431,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Returns a list of results for a query asynchronously. 
         /// </summary>
-        public Task<IList<T>> ToListAsync()
+        public Task<Tuple<QueryResult,IList<T>>> ToListAsync()
         {
             return QueryResultAsync
                 .ContinueWith(r =>
@@ -1412,7 +1444,7 @@ If you really want to do in memory filtering on the data returned from the query
                         theSession.TrackEntity<object>(metadata.Value<string>("@id"), include, metadata);
                     }
 
-                    return (IList<T>)result.Results.Select(Deserialize).ToList();
+                	return Tuple.Create(r.Result, (IList<T>) result.Results.Select(Deserialize).ToList());
                 });
         }
 
@@ -1423,13 +1455,8 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			Take(0);
 			return QueryResultAsync
-				.ContinueWith(r =>
-				{
-					return r.Result.TotalResults;
-				});
+				.ContinueWith(r => r.Result.TotalResults);
 		}
-
-
 #endif
     }
 }

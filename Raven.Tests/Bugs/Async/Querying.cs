@@ -28,8 +28,9 @@ namespace Raven.Tests.Bugs.Async
 
                     queryResultAsync.Wait();
 
-                    Assert.Equal("Ayende",
-                        queryResultAsync.Result[0].Name);
+                	var result = queryResultAsync.Result.Item2;
+                	Assert.Equal("Ayende",
+                        result[0].Name);
                 }
             }
         }

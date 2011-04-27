@@ -24,6 +24,11 @@ namespace Raven.Client.Linq
 		void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);
 
 		/// <summary>
+		/// Called externally to raise the after query executed callback
+		/// </summary>
+		void InvokeAfterQueryExecuted(QueryResult result);
+
+		/// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
 		void Customize(Action<IDocumentQueryCustomization> action);
@@ -48,12 +53,11 @@ namespace Raven.Client.Linq
 		/// Convert the Linq query to a Lucene query
 		/// </summary>
 		/// <returns></returns>
-		IDocumentQuery<T> ToLuceneQuery<T>(Expression expression);
+		IAsyncDocumentQuery<T> ToAsyncLuceneQuery<T>(Expression expression);
 
 		/// <summary>
 		/// Set the fields to fetch
 		/// </summary>
 		HashSet<string> FieldsToFetch { get; }
-
 	}
 }

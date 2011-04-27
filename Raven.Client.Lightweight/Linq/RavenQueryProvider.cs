@@ -184,6 +184,15 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
+		/// Called externally to raise the after query executed callback
+		/// </summary>
+		public void InvokeAfterQueryExecuted(QueryResult result)
+		{
+			if(afterQueryExecuted!=null)
+				afterQueryExecuted(result);
+		}
+
+		/// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
 		/// <param name="action">The action.</param>
@@ -197,10 +206,10 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the expression to a Lucene query
 		/// </summary>
-		public IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression)
+		public IAsyncDocumentQuery<TResult> ToAsyncLuceneQuery<TResult>(Expression expression)
 		{
 			var processor = GetQueryProviderProcessor();
-			return (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
+			return (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
 		}
 
 		RavenQueryProviderProcessor<T> GetQueryProviderProcessor()

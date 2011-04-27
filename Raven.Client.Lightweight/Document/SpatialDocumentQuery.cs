@@ -6,9 +6,8 @@
 using System;
 using System.Linq;
 using Raven.Abstractions.Data;
-#if !NET_3_5
+#if !SILVERLIGHT
 
-#endif
 
 namespace Raven.Client.Document
 {
@@ -75,3 +74,5 @@ namespace Raven.Client.Document
         }
     }
 }
+
+#endif

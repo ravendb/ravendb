@@ -43,25 +43,25 @@ namespace Raven.Client.Document.Async
 	    /// <summary>
 	    /// Query the specified index using Lucene syntax
 	    /// </summary>
-	    public IDocumentQuery<T> AsyncLuceneQuery<T>(string index)
+	    public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index)
 	    {
-	        return new DocumentQuery<T>(this, 
+	        return new AsyncDocumentQuery<T>(this, 
 #if !SILVERLIGHT
-                null, 
+					null,
 #endif
-                AsyncDatabaseCommands, index, new string[0], queryListeners);
+				AsyncDatabaseCommands, index, new string[0], queryListeners);
 	    }
 
 	    /// <summary>
 	    /// Dynamically query RavenDB using Lucene syntax
 	    /// </summary>
-	    public IDocumentQuery<T> AsyncLuceneQuery<T>()
+		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
 	    {
-            return new DocumentQuery<T>(this,
+            return new AsyncDocumentQuery<T>(this, 
 #if !SILVERLIGHT
- null,
+					null,
 #endif
-    AsyncDatabaseCommands, "dynamic", new string[0], queryListeners);
+					AsyncDatabaseCommands, "dynamic", new string[0], queryListeners);
 	    }
 
 	    /// <summary>
@@ -228,12 +228,20 @@ namespace Raven.Client.Document.Async
 
 		IRavenQueryable<T> IAsyncDocumentSession.Query<T>(string indexName)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException();
 		}
 
 		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
 		{
-			return Advanced.AsyncLuceneQuery<T>(indexName);
+			throw new NotSupportedException();
+		}
+
+		/// <summary>
+		/// Create a new query for <typeparam name="T"/>
+		/// </summary>
+		public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName)
+		{
+			return AsyncLuceneQuery<T>(indexName);
 		}
 	}
 }

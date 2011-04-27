@@ -16,5 +16,11 @@ namespace Raven.Client.Linq
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
 		IDocumentQuery<T> Query<T>(string indexName);
+
+		/// <summary>
+		/// Create a new query for <typeparam name="T"/>
+		/// </summary>
+		IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName);
 	}
+
 }

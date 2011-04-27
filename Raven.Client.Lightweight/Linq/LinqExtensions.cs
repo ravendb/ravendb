@@ -132,7 +132,13 @@ namespace Raven.Client.Linq
 		public static Task<IList<T>> ToListAsync<T>(this IRavenQueryable<T> source)
 		{
 			var provider = (IRavenQueryProvider)source.Provider;
-			return provider.ToLuceneQuery<T>(source.Expression).ToListAsync();
+			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
+			return documentQuery.ToListAsync()
+				.ContinueWith(task =>
+				{
+					provider.InvokeAfterQueryExecuted(task.Result.Item1);
+					return task.Result.Item2;
+				});
 		}
 
 		/// <summary>
@@ -141,7 +147,15 @@ namespace Raven.Client.Linq
 		public static Task<int> CountAsync<T>(this IRavenQueryable<T> source)
 		{
 			var provider = (IRavenQueryProvider)source.Provider;
-			return provider.ToLuceneQuery<T>(source.Expression).CountAsync();
+			var documentQuery = provider
+				.ToAsyncLuceneQuery<T>(source.Expression)
+				.Take(0);
+			return documentQuery.ToListAsync()
+				.ContinueWith(task =>
+				{
+					provider.InvokeAfterQueryExecuted(task.Result.Item1);
+					return task.Result.Item1.TotalResults;
+				});
 		} 
 #endif
 

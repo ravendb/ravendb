@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -442,7 +443,7 @@ namespace Raven.Client.Document
             }; 
         }
 
-        /// <summary>
+    	/// <summary>
         /// Selects the specified fields directly from the index
         /// </summary>
         /// <typeparam name="TProjection">The type of the projection.</typeparam>

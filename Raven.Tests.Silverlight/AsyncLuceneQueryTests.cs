@@ -41,7 +41,7 @@ namespace Raven.Tests.Silverlight
 
 				yield return queryResultAsync;
 
-				Assert.AreEqual("Ayende", queryResultAsync.Result[0].Name);
+				Assert.AreEqual("Ayende", queryResultAsync.Result.Item2[0].Name);
 			}
 		}
 
@@ -70,7 +70,7 @@ namespace Raven.Tests.Silverlight
 					.ToListAsync();
 				yield return query;
 
-				Assert.AreEqual("Hello", query.Result[0].Note);
+				Assert.AreEqual("Hello", query.Result.Item2[0].Note);
 
 				// NOTE: this call should not hit the server 
 				var load = session.LoadAsync<Customer>(customer.Id);

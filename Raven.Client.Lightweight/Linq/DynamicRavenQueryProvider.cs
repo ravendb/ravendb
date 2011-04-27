@@ -107,7 +107,7 @@ namespace Raven.Client.Linq
 			ravenQueryProvider.Customize(customizeQuery);
 			return ravenQueryProvider;
 		}
-		
+
 		/// <summary>
 		/// Set the fields to fetch
 		/// </summary>
@@ -120,6 +120,15 @@ namespace Raven.Client.Linq
 		{
 			var processor = GetQueryProviderProcessor();
 			return (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
+		}
+
+		/// <summary>
+		/// Convert the expression to a Lucene query
+		/// </summary>
+		public IAsyncDocumentQuery<TResult> ToAsyncLuceneQuery<TResult>(Expression expression)
+		{
+			var processor = GetQueryProviderProcessor();
+			return (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
 		}
 
 		/// <summary>
@@ -203,6 +212,16 @@ namespace Raven.Client.Linq
 		public void AfterQueryExecuted(Action<QueryResult> afterQueryExecutedCallback)
 		{
 			this.afterQueryExecuted = afterQueryExecutedCallback;
+		}
+
+
+		/// <summary>
+		/// Called externally to raise the after query executed callback
+		/// </summary>
+		public void InvokeAfterQueryExecuted(QueryResult result)
+		{
+			if (afterQueryExecuted != null)
+				afterQueryExecuted(result);
 		}
 
 		/// <summary>

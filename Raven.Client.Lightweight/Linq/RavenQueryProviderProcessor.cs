@@ -933,7 +933,24 @@ namespace Raven.Client.Linq
 
 			return luceneQuery;
 		}
+
+
+		/// <summary>
+		/// Gets the lucene query.
+		/// </summary>
+		/// <value>The lucene query.</value>
+		public IAsyncDocumentQuery<T> GetAsyncLuceneQueryFor(Expression expression)
+		{
+			var asyncLuceneQuery = queryGenerator.AsyncQuery<T>(indexName);
+			VisitExpression(expression);
+
+			if (customizeQuery != null)
+				customizeQuery((IDocumentQueryCustomization)asyncLuceneQuery);
+
+			return asyncLuceneQuery;
+		}
 		
+
 		/// <summary>
 		/// Executes the specified expression.
 		/// </summary>
@@ -951,6 +968,7 @@ namespace Raven.Client.Linq
 			var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
 			return executeQueryWithProjectionType.Invoke(this, new object[0]);
 		}
+
 #if !SILVERLIGHT
 		private object ExecuteQuery<TProjection>()
 		{

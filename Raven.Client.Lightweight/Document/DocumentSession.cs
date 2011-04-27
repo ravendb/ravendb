@@ -475,6 +475,14 @@ namespace Raven.Client.Document
 		{
 			return Advanced.LuceneQuery<T>(indexName);
 		}
+
+		/// <summary>
+		/// Create a new query for <typeparam name="T"/>
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
+		{
+			throw new NotSupportedException();
+		}
 	}
 #endif
 }

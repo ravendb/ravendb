@@ -1,6 +1,8 @@
 ﻿#if !NET_3_5
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using System;
 
 namespace Raven.Client
 {
@@ -23,6 +25,12 @@ namespace Raven.Client
         /// </summary>
         /// <value>The query result.</value>
         Task<QueryResult> QueryResultAsync { get; }
+
+		/// <summary>
+		/// Gets the query result
+		/// </summary>
+		/// <value>The query result.</value>
+		Task<Tuple<QueryResult, IList<T>>> ToListAsync();
     }
 }
 #endif
