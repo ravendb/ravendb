@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
+using Raven.Client.Document;
 
 namespace Raven.Client
 {
@@ -11,6 +12,11 @@ namespace Raven.Client
     public interface IDocumentQueryBase<T, out TSelf>
         where TSelf : IDocumentQueryBase<T, TSelf>
     {
+		/// <summary>
+		/// Gets the document convention from the query session
+		/// </summary>
+		DocumentConvention DocumentConvention { get; }
+
         /// <summary>
         ///   Negate the next operation
         /// </summary>

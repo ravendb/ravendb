@@ -117,6 +117,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\FailoverBehavior.cs">
       <Link>Imports\Document\FailoverBehavior.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\IAbstractDocumentQuery.cs">
+      <Link>Imports\Document\IAbstractDocumentQuery.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>

@@ -81,14 +81,6 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
-        /// Gets the document convention from the query session
-        /// </summary>
-        public DocumentConvention DocumentConvention
-        {
-            get { return this.theSession.Conventions; }
-        }
-
-        /// <summary>
         /// EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
         /// This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>

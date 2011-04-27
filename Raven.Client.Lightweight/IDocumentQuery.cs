@@ -27,10 +27,6 @@ namespace Raven.Client
         /// <param name="fields">The fields.</param>
         IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
 
-        /// <summary>
-        /// Gets the document convention from the query session
-        /// </summary>
-	    DocumentConvention DocumentConvention { get; }
 
 #if !SILVERLIGHT
 		/// <summary>

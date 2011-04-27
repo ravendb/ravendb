@@ -26,11 +26,10 @@ using Raven.Abstractions.Linq;
 
 namespace Raven.Client.Document
 {
-    /// <summary>
+	/// <summary>
     ///   A query against a Raven index
     /// </summary>
-    public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector
-        where TSelf : AbstractDocumentQuery<T, TSelf>
+    public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T> where TSelf : AbstractDocumentQuery<T, TSelf>
     {
         /// <summary>
         /// Whatever to negate the next operation
@@ -154,6 +153,14 @@ namespace Raven.Client.Document
             get { return theAsyncDatabaseCommands; }
         }
 #endif
+
+		/// <summary>
+		/// Gets the document convention from the query session
+		/// </summary>
+		public DocumentConvention DocumentConvention
+		{
+			get { return this.theSession.Conventions; }
+		}
 
 #if !SILVERLIGHT
         /// <summary>

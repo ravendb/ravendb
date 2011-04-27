@@ -18,8 +18,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Smuggler", "Raven.Smu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Storage.Esent", "Raven.Storage.Esent\Raven.Storage.Esent.csproj", "{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "Raven.Client.VisualBasic.Tests", "Raven.Client.VisualBasic.Tests\Raven.Client.VisualBasic.Tests.vbproj", "{F4D4FDE0-BE9B-4139-A76C-7848A641324A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Storage.Managed", "Raven.Storage.Managed\Raven.Storage.Managed.csproj", "{DA99A419-E137-40DB-9495-0C363B479D4B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Http", "Raven.Http\Raven.Http.csproj", "{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}"
@@ -42,7 +40,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Studio", "Raven.Studi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Json", "Raven.Json\Raven.Json.csproj", "{31740175-3254-489D-AD59-73EF096BA64D}"
 EndProject
-
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -123,16 +120,6 @@ Global
 		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Release|x86.ActiveCfg = Release|Any CPU
-		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Release|x86.ActiveCfg = Release|Any CPU
 		{DA99A419-E137-40DB-9495-0C363B479D4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DA99A419-E137-40DB-9495-0C363B479D4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DA99A419-E137-40DB-9495-0C363B479D4B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -243,7 +230,6 @@ Global
 		{31740175-3254-489D-AD59-73EF096BA64D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{31740175-3254-489D-AD59-73EF096BA64D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{31740175-3254-489D-AD59-73EF096BA64D}.Release|x86.ActiveCfg = Release|Any CPU
-
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
