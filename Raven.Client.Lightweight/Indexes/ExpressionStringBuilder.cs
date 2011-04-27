@@ -1187,7 +1187,7 @@ namespace Raven.Client.Indexes
 			if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
 			{
 				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
-				if (expression.NodeType != ExpressionType.MemberAccess)
+				if (expression.NodeType == ExpressionType.Parameter)
 					return;
 				switch (node.Method.Name)
 				{
@@ -1212,7 +1212,7 @@ namespace Raven.Client.Indexes
 				if (argPos == 0)
 					return;
 				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
-				if (expression.NodeType != ExpressionType.MemberAccess)
+				if (expression.NodeType == ExpressionType.Parameter)
 					return;
 				switch (node.Method.Name)
 				{

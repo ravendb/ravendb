@@ -10,6 +10,15 @@ namespace Raven.Tests.Bugs.TransformResults
 {
     public class ComplexValuesFromTransformResults : LocalClientTest
     {
+		[Fact]
+		public void CanCreateQueriesWithNestedSelected()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				new Answers_ByAnswerEntity2().Execute(documentStore);
+			}
+		}
+
         [Fact]
         public void write_then_read_from_stack_over_flow_types()
         {

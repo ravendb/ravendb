@@ -133,7 +133,7 @@ namespace Raven.Database.Linq
             if (targetObject.MemberName != "Select" && targetObject.MemberName != "SelectMany")
                 throw new InvalidOperationException("Variable initializer must end with a select call");
 
-            var lambdaExpression = ((InvocationExpression)variable.Initializer).Arguments.Last() as LambdaExpression;
+            var lambdaExpression = GetLambdaExpression(((InvocationExpression)variable.Initializer).Arguments.Last());
             if (lambdaExpression == null)
                 throw new InvalidOperationException("Variable initializer select must have a lambda expression");
 
@@ -148,8 +148,28 @@ namespace Raven.Database.Linq
 			return variable;
         }
 
+    	private static LambdaExpression GetLambdaExpression(Expression expression)
+    	{
+    		var lambdaExpression = expression as LambdaExpression;
+			if(lambdaExpression != null)
+				return lambdaExpression;
 
-        public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
+			var castExpression = expression as CastExpression;
+			if(castExpression != null)
+			{
+				return GetLambdaExpression(castExpression.Expression);
+			}
+
+    		var parenthesizedExpression = expression as ParenthesizedExpression;
+			if(parenthesizedExpression != null)
+			{
+				return GetLambdaExpression(parenthesizedExpression.Expression);
+			}
+    		return null;
+    	}
+
+
+    	public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
         {
             var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
             var assemblies = new HashSet<string>
