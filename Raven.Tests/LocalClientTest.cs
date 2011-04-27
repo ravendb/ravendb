@@ -9,6 +9,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using log4net.Appender;
+using log4net.Config;
+using log4net.Layout;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
@@ -25,6 +28,14 @@ namespace Raven.Tests
     {
         private string path;
         
+		protected void EnableDebugLog()
+		{
+			BasicConfigurator.Configure(new TraceAppender
+			{
+				Layout = new SimpleLayout()
+			});
+		}
+
 		public EmbeddableDocumentStore NewDocumentStore()
         {
             return NewDocumentStore("munin", true, null);
