@@ -28,7 +28,7 @@ This release contains the following:
 	* Under each sample application folder there is a "Start Raven.cmd" file which will
 	  starts Raven with all the data and indexes required to run the sample successfully.
 	
-/Raven.Smuggler.exe
+/Smuggler
 	- The Import/Export utility for Raven
 		  
 You can start the Raven Service by executing /server/raven.server.exe, you can then visit

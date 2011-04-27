@@ -122,21 +122,9 @@ task Compile -depends Init {
 	} finally { 
 		ExecuteTask("AfterCompile")
 	}
-   
-	
-    Write-Host "Merging..."
-    $old = pwd
-    cd $build_dir
-     
-    exec { ..\Utilities\Binaries\Raven.Merger.exe }
-    
-    cd $old
-    
-    Write-Host "Finished merging"
-    
-    exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
-    exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }
-    
+      
+  exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
+  exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }  
 }
 
 task Test -depends Compile{
@@ -221,6 +209,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	mkdir $build_dir\Output\Client
 	mkdir $build_dir\Output\Bundles
 	mkdir $build_dir\Output\Samples
+	mkdir $build_dir\Output\Smuggler
 }
 
 task CleanOutputDirectory { 
@@ -242,7 +231,9 @@ task CopySilverlight{
 }
 
 task CopySmuggler { 
-	cp $build_dir\RavenSmuggler.??? $build_dir\Output
+	cp $build_dir\RavenSmuggler.??? $build_dir\Output\Smuggler
+	cp $build_dir\Raven.Json.??? $build_dir\Output\Smuggler
+	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Smuggler
 }
 
 task CopyClient {
