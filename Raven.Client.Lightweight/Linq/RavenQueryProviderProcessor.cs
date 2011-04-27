@@ -934,7 +934,7 @@ namespace Raven.Client.Linq
 			return luceneQuery;
 		}
 
-
+#if !NET_3_5
 		/// <summary>
 		/// Gets the lucene query.
 		/// </summary>
@@ -949,7 +949,7 @@ namespace Raven.Client.Linq
 
 			return asyncLuceneQuery;
 		}
-		
+#endif
 
 		/// <summary>
 		/// Executes the specified expression.

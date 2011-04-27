@@ -122,6 +122,7 @@ namespace Raven.Client.Linq
 			return (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
 		}
 
+#if !NET_3_5
 		/// <summary>
 		/// Convert the expression to a Lucene query
 		/// </summary>
@@ -130,6 +131,7 @@ namespace Raven.Client.Linq
 			var processor = GetQueryProviderProcessor();
 			return (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
 		}
+#endif
 
 		/// <summary>
 		/// Executes the query represented by a specified expression tree.

@@ -49,11 +49,13 @@ namespace Raven.Client.Linq
 		/// </summary>
 		IRavenQueryProvider For<S>();
 
+#if !NET_3_5
 		/// <summary>
 		/// Convert the Linq query to a Lucene query
 		/// </summary>
 		/// <returns></returns>
 		IAsyncDocumentQuery<T> ToAsyncLuceneQuery<T>(Expression expression);
+#endif
 
 		/// <summary>
 		/// Set the fields to fetch

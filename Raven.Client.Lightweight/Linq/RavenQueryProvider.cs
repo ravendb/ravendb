@@ -203,6 +203,7 @@ namespace Raven.Client.Linq
 			customizeQuery += action;
 		}
 
+#if !NET_3_5
 		/// <summary>
 		/// Convert the expression to a Lucene query
 		/// </summary>
@@ -211,6 +212,7 @@ namespace Raven.Client.Linq
 			var processor = GetQueryProviderProcessor();
 			return (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
 		}
+#endif
 
 		RavenQueryProviderProcessor<T> GetQueryProviderProcessor()
 		{

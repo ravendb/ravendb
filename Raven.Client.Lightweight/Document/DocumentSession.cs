@@ -476,6 +476,8 @@ namespace Raven.Client.Document
 			return Advanced.LuceneQuery<T>(indexName);
 		}
 
+#if !NET_3_5
+
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
@@ -483,6 +485,7 @@ namespace Raven.Client.Document
 		{
 			throw new NotSupportedException();
 		}
+#endif
 	}
 #endif
 }
