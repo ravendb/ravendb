@@ -34,12 +34,12 @@ namespace Raven.Database.Linq
                 case "Select":
                     if (invocationExpression.Arguments.Count != 1)
                         return base.VisitInvocationExpression(invocationExpression, data);
-                    lambdaExpression = invocationExpression.Arguments[0] as LambdaExpression;
+                    lambdaExpression = invocationExpression.Arguments[0].AsLambdaExpression();
                     break;
                 case "SelectMany":
                     if (invocationExpression.Arguments.Count != 2)
                         return base.VisitInvocationExpression(invocationExpression, data);
-                    lambdaExpression = invocationExpression.Arguments[1] as LambdaExpression;
+					lambdaExpression = invocationExpression.Arguments[1].AsLambdaExpression();
                     break;
                 default:
                     return base.VisitInvocationExpression(invocationExpression, data);
