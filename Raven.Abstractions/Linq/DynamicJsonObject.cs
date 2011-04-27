@@ -388,7 +388,7 @@ namespace Raven.Abstractions.Linq
 
 			public IEnumerable<object> Select(Func<object,object > func)
 			{
-				return inner.Select(item => func(item));
+				return new DynamicList(inner.Select(func).ToArray());
 			}
 		}
 	}
