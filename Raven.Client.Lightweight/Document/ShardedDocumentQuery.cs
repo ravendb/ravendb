@@ -538,6 +538,14 @@ namespace Raven.Client.Document
 		{
 			throw new NotImplementedException();
 		}
+
+		/// <summary>
+		/// Gets the total count of records for this query
+		/// </summary>
+		public Task<int> CountAsync()
+		{
+			throw new NotImplementedException();
+		}
 #endif
 
 		/// <summary>

@@ -1415,6 +1415,21 @@ If you really want to do in memory filtering on the data returned from the query
                     return (IList<T>)result.Results.Select(Deserialize).ToList();
                 });
         }
+
+		/// <summary>
+		/// Gets the total count of records for this query
+		/// </summary>
+		public Task<int> CountAsync()
+		{
+			Take(0);
+			return QueryResultAsync
+				.ContinueWith(r =>
+				{
+					return r.Result.TotalResults;
+				});
+		}
+
+
 #endif
     }
 }

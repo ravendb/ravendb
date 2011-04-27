@@ -133,6 +133,15 @@ namespace Raven.Client.Linq
 		{
 			var provider = (IRavenQueryProvider)source.Provider;
 			return provider.ToLuceneQuery<T>(source.Expression).ToListAsync();
+		}
+
+		/// <summary>
+		/// Returns the total count of results for a query asynchronously. 
+		/// </summary>
+		public static Task<int> CountAsync<T>(this IRavenQueryable<T> source)
+		{
+			var provider = (IRavenQueryProvider)source.Provider;
+			return provider.ToLuceneQuery<T>(source.Expression).CountAsync();
 		} 
 #endif
 

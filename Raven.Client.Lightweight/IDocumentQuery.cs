@@ -47,6 +47,11 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The query result.</value>
 		Task<IList<T>> ToListAsync();
+
+		/// <summary>
+		/// Gets the total count of records for this query
+		/// </summary>
+		Task<int> CountAsync();
 #endif
 	}
 }
