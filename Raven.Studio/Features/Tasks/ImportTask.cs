@@ -129,7 +129,7 @@ namespace Raven.Studio.Features.Tasks
 				{
 					var json = JToken.ReadFrom(jsonReader);
 					var indexName = json.Value<string>("name");
-					if (indexName.StartsWith("Raven/"))
+					if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
 						continue;
 
 					var index = JsonConvert.DeserializeObject<IndexDefinition>(json.Value<JObject>("definition").ToString());

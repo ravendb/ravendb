@@ -195,7 +195,7 @@ Usage:
                     {
                         var index = RavenJToken.ReadFrom(jsonReader);
                         var indexName = index.Value<string>("name");
-                        if(indexName.StartsWith("Raven/"))
+                        if(indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
                             continue;
                         using (var streamWriter = new StreamWriter(webClient.OpenWrite(instanceUrl + "indexes/" + indexName, "PUT")))
                         using (var jsonTextWriter = new JsonTextWriter(streamWriter))
