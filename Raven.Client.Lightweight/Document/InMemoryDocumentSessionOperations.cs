@@ -740,6 +740,9 @@ more responsive application.
 		private void TryEnlistInAmbientTransaction()
 		{
 #if !SILVERLIGHT
+			if (documentStore.EnlistInDistributedTransactions == false)
+				return;
+			
 			if (hasEnlisted || Transaction.Current == null) 
 				return;
 

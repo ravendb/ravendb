@@ -124,6 +124,7 @@ namespace Raven.Client.Document
 			ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
 
 #if !SILVERLIGHT
+			EnlistInDistributedTransactions = true;
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
 #else
 			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string,string>();
@@ -219,6 +220,9 @@ namespace Raven.Client.Document
 		{
 			switch (key)
 			{
+				case "enlist":
+					EnlistInDistributedTransactions = bool.Parse(value);
+					break;
 				case "resourcemanagerid":
 					ResourceManagerId = new Guid(value);
 					break;
@@ -242,6 +246,11 @@ namespace Raven.Client.Document
 					throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed, unknown option: " + key);
 			}
 		}
+
+		///<summary>
+		/// Whatever or not we will automatically enlist in distributed transactions
+		///</summary>
+		public bool EnlistInDistributedTransactions { get; set; }
 #endif
 
 
