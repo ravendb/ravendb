@@ -127,7 +127,12 @@ namespace Raven.Munin.Tree
             return false;
         }
 
-        public bool TryGetValue(TKey key, out TValue value)
+    	public IBinarySearchTree<TKey, TValue> LocateNearest(TKey key, Predicate<TValue> isMatch)
+    	{
+    		return this;
+    	}
+
+    	public bool TryGetValue(TKey key, out TValue value)
         {
             value = default(TValue);
             return false;

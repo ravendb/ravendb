@@ -42,5 +42,6 @@ namespace Raven.Munin.Tree
         // IMap
         bool Contains(TKey key);
         bool TryGetValue(TKey key, out TValue value);
+		IBinarySearchTree<TKey, TValue> LocateNearest(TKey key, Predicate<TValue> isMatch);
     }
 }

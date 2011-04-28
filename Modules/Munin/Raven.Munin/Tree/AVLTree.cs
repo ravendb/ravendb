@@ -118,6 +118,17 @@ namespace Raven.Munin.Tree
             get { return right; }
         }
 
+		public IBinarySearchTree<TKey, TValue> LocateNearest(TKey key, Predicate<TValue> isMatch)
+		{
+			if (isMatch(Value))
+				return this;
+			int compare = comparer.Compare(key, theKey);
+			if (compare == 0)
+				return this;
+			if (compare > 0)
+				return Right.LocateNearest(key, isMatch);
+			return Left.LocateNearest(key, isMatch);
+		}
         public IBinarySearchTree<TKey, TValue> Search(TKey key)
         {
             int compare = comparer.Compare(key, theKey);

@@ -104,11 +104,19 @@ namespace Raven.Munin
         }
 
 
-        public IEnumerable<RavenJToken> SkipToAndThenBack(RavenJObject key)
+        public RavenJToken LowestEqual(RavenJObject key, Predicate<RavenJToken> predicate)
         {
-            return persistentSource.Read(
-                       () =>
-                       Index.LessThanOrEqual(transform(key)).Select(tree => tree.Value));
+        	return persistentSource.Read(
+        		() =>
+        		{
+        			var nearest = Index.LocateNearest(transform(key), tree => predicate(tree.Value));
+					if (nearest.IsEmpty)
+						return null;
+
+					while (nearest.Left.IsEmpty == false && predicate(nearest.Left.Value.Value))
+						nearest = nearest.Left;
+        			return nearest.Value.Value;
+        		});
         }
 
 		public IEnumerable<RavenJToken> SkipTo(RavenJToken key)

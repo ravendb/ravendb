@@ -55,6 +55,7 @@
     <Compile Include="Database.cs" />
     <Compile Include="IComparerAndEquality.cs" />
     <Compile Include="RavenJTokenCloner.cs" />
+    <Compile Include="ReverseComparableByteArrayWhichIgnoresNull.cs" />
     <Compile Include="Tree\AVLTree.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandType.cs" />
