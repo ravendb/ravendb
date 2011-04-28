@@ -80,7 +80,7 @@ namespace Raven.Storage.Esent.StorageActions
 
             var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
             if (mostRecentReducedEtag == null)
-                return false;
+            	return true;
             return CompareArrays(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
         }
 

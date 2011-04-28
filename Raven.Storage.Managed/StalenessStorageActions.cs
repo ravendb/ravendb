@@ -4,8 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Database.Exceptions;
+using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Munin;
@@ -52,19 +54,20 @@ namespace Raven.Storage.Managed
 
         public bool IsReduceStale(string name)
         {
+			if(name=="SavedInventoryIndex" && new StackTrace().GetFrames().Any(x=>x.GetMethod().DeclaringType == typeof(ReducingExecuter)))
+			{
+				
+			}
             var readResult = storage.IndexingStats.Read(name);
 
             if (readResult == null)
                 return false;// index does not exists
 
-            var lastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag");
-
-            if (lastReducedEtag == null)
-                return false;
+        	var lastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag") ?? Guid.Empty.ToByteArray();
 
             var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
             if (mostRecentReducedEtag == null)
-                return false;
+                return true;
 
             return CompareArrays(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
    
