@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using log4net;
 using Raven.Abstractions.Data;
 using Raven.Database.Storage;
+using System.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -61,11 +62,8 @@ namespace Raven.Database.Indexing
             var indexesToWorkOn = new List<IndexToWorkOn>();
             transactionalStorage.Batch(actions =>
             {
-                foreach (var indexesStat in actions.Indexing.GetIndexesStats())
+                foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
                 {
-                    if (IsValidIndex(indexesStat) == false)
-                        continue;
-
                     var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
                     if (failureRate.IsInvalidIndex)
                     {
