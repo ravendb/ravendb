@@ -28,7 +28,7 @@ namespace Raven.Database.Indexing
 
                     if(log.IsDebugEnabled)
                     {
-                        log.DebugFormat("Found {0} reduce keys [{1}]",reduceKeyAndEtags.Count, string.Join(", ", reduceKeyAndEtags.Select(x=>x.ReduceKey)));
+                        log.DebugFormat("Found {0} reduce keys [{1}] for index {2}",reduceKeyAndEtags.Count, string.Join(", ", reduceKeyAndEtags.Select(x=>x.ReduceKey)),indexToWorkOn.IndexName);
                     }
 
                     new ReduceTask
