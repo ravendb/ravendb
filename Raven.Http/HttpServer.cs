@@ -200,7 +200,8 @@ namespace Raven.Http
             catch (Exception e)
             {
                 HandleException(ctx, e);
-                logger.Warn("Error on request", e);
+				if (ShouldLogException(e))
+					logger.Warn("Error on request", e);
             }
             finally
             {
@@ -214,6 +215,11 @@ namespace Raven.Http
             	}
             }
         }
+
+		protected virtual bool ShouldLogException(Exception exception)
+		{
+			return true;
+		}
 
 		private void FinalizeRequestProcessing(IHttpContext ctx, Stopwatch sw, bool ravenUiRequest)
 		{

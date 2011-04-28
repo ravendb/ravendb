@@ -38,6 +38,12 @@ namespace Raven.Database.Server
         	ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
         }
 
+		protected override bool ShouldLogException(Exception exception)
+		{
+			return exception is IndexDisabledException == false &&
+			       exception is IndexDoesNotExistsException == false;
+		}
+
         protected override bool TryHandleException(IHttpContext ctx, Exception e)
         {
             if (e is IndexDisabledException)
