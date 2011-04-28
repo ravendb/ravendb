@@ -19,6 +19,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Listeners;
 
 #else
+using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
 

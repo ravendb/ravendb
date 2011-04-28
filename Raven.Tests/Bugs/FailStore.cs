@@ -12,7 +12,7 @@ namespace Raven.Tests.Bugs
 {
     public class FailStore : IDocumentStoreListener
     {
-        public void BeforeStore(string key, object entityInstance, RavenJObject metadata)
+        public bool BeforeStore(string key, object entityInstance, RavenJObject metadata)
         {
             throw new NotImplementedException();
         }
