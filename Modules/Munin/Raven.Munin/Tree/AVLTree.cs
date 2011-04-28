@@ -153,23 +153,17 @@ namespace Raven.Munin.Tree
         public IEnumerable<TValue> LessThan(TKey ltKey)
         {
             int compare = comparer.Compare(theKey, ltKey);
-            if (compare > 0)
-            {
-                foreach (var value in Left.LessThan(ltKey))
-                {
-                    yield return value;
-                }
-                yield break;
-            }
-            foreach (var value in Left.LessThan(ltKey))
-            {
-                yield return value;
-            }
-            if(compare == 0)
-                yield break;
+			if(compare < 0)
+			{
+				foreach (var value in Right.LessThan(ltKey))
+				{
+					yield return value;
+				}
+			}
+			if (compare <= 0)
+				yield return Value;
 
-            yield return Value;
-            foreach (var value in Right.LessThan(ltKey))
+            foreach (var value in Left.LessThan(ltKey))
             {
                 yield return value;
             }
@@ -178,24 +172,19 @@ namespace Raven.Munin.Tree
         public IEnumerable<TValue> LessThanOrEqual(TKey ltKey)
         {
             int compare = comparer.Compare(theKey, ltKey);
-            if (compare > 0)
-            {
-				foreach (var value in Left.LessThanOrEqual(ltKey))
-                {
-                    yield return value;
-                }
-                yield break;
-            }
-			foreach (var value in Left.LessThanOrEqual(ltKey))
-            {
-                yield return value;
-            }
-            yield return Value;
-            
-            if (compare == 0)
-                yield break;
+			if (compare < 0)
+			{
+				foreach (var value in Right.LessThanOrEqual(ltKey))
+				{
+					yield return value;
+				}
+			}
+			if (compare <= 0)
+			{
+				yield return Value;
+			}
 
-			foreach (var value in Right.LessThanOrEqual(ltKey))
+			foreach (var value in Left.LessThanOrEqual(ltKey))
             {
                 yield return value;
             }

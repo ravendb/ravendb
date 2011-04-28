@@ -100,7 +100,7 @@ namespace Raven.Munin
             return
                 persistentSource.Read(
                     () =>
-                    Index.LessThan(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInReverseOrder));
+                    Index.LessThan(transform(key)).Select(binarySearchTree => binarySearchTree.Value));
         }
 
 
@@ -108,7 +108,7 @@ namespace Raven.Munin
         {
             return persistentSource.Read(
                        () =>
-                       Index.LessThanOrEqual(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInReverseOrder));
+                       Index.LessThanOrEqual(transform(key)).Select(tree => tree.Value));
         }
 
 		public IEnumerable<RavenJToken> SkipTo(RavenJToken key)
