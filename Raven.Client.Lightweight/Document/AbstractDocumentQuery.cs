@@ -455,11 +455,11 @@ namespace Raven.Client.Document
         {
 			var startTime = DateTime.Now;
         	return QueryResultAsync
-				.ContinueWith(t => PrcoessEnumerator(t, startTime))
+				.ContinueWith(t => ProcessEnumerator(t, startTime))
 				.Unwrap();
         }
 
-		private Task<IEnumerator<T>> PrcoessEnumerator(Task<QueryResult> t, DateTime startTime)
+		private Task<IEnumerator<T>> ProcessEnumerator(Task<QueryResult> t, DateTime startTime)
 		{
 			try
 			{
@@ -487,7 +487,7 @@ namespace Raven.Client.Document
                 theSession.DecrementRequestCount();
 
             	return QueryResultAsync
-					.ContinueWith(t2 => PrcoessEnumerator(t2, startTime))
+					.ContinueWith(t2 => ProcessEnumerator(t2, startTime))
 					.Unwrap();
             }
 		}
