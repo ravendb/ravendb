@@ -63,11 +63,14 @@ namespace Raven.Storage.Managed
             if (readResult == null)
                 return false;// index does not exists
 
-        	var lastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag") ?? Guid.Empty.ToByteArray();
+        	var lastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag") ;
 
             var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
-            if (mostRecentReducedEtag == null)
-                return true;
+			if (mostRecentReducedEtag == null)
+				return false;// there are no mapped results, maybe there are documents to be indexed, not stale
+
+			if (lastReducedEtag == null)
+				return true; // first reduce did not happen
 
             return CompareArrays(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
    

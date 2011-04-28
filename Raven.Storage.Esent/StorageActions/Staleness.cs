@@ -76,11 +76,15 @@ namespace Raven.Storage.Esent.StorageActions
             if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
                 return false;// not a map/reduce index
 
-            var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]) ?? Guid.Empty.ToByteArray();
+            var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
 
             var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
             if (mostRecentReducedEtag == null)
-            	return true;
+            	return false;// there are no mapped results, maybe there are documents to be indexed, not stale
+
+			if (lastReducedEtag == null)
+				return true; // first reduce did not happen
+
             return CompareArrays(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
         }
 
