@@ -22,5 +22,10 @@ namespace Raven.Abstractions.Data
         public int? ReduceIndexingErrors { get; set; }
         public Guid? LastReducedEtag { get; set; }
         public DateTime? LastReducedTimestamp { get; set; }
+
+		public override string ToString()
+		{
+			return Name;
+		}
     }
 }
