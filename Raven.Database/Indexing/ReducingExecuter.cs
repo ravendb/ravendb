@@ -22,14 +22,16 @@ namespace Raven.Database.Indexing
             {
                 transactionalStorage.Batch(actions =>
                 {
-                    reduceKeyAndEtags = actions.MappedResults.GetMappedResultsReduceKeysAfter(indexToWorkOn.IndexName,
-                                                                                           indexToWorkOn.LastIndexedEtag)
-                        .ToList();
+                    reduceKeyAndEtags = actions.MappedResults.GetMappedResultsReduceKeysAfter
+						(
+							indexToWorkOn.IndexName,
+							indexToWorkOn.LastIndexedEtag
+						).ToList();
 
                     if(log.IsDebugEnabled)
                     {
 						if (reduceKeyAndEtags.Count > 0)
-							log.DebugFormat("Found {0} reduce keys [{1}] for index {2}", reduceKeyAndEtags.Count, string.Join(", ", reduceKeyAndEtags.Select(x => x.ReduceKey)), indexToWorkOn.IndexName);
+							log.DebugFormat("Found {0} mapped results for keys [{1}] for index {2}", reduceKeyAndEtags.Count, string.Join(", ", reduceKeyAndEtags.Select(x => x.ReduceKey).Distinct()), indexToWorkOn.IndexName);
 						else
 							log.DebugFormat("No reduce keys found for {0}", indexToWorkOn.IndexName);
                     }

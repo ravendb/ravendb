@@ -122,26 +122,13 @@ namespace Raven.Storage.Managed
 
         public Guid? GetMostRecentReducedEtag(string name)
         {
-            using(var enumerable = storage.MappedResults["ByViewAndEtag"]
-				.SkipToAndThenBack(new RavenJObject{{"view", name}})
-				.GetEnumerator())
-            {
-				if (enumerable.MoveNext() == false)
-					return null;
-				// did we find the last item on the view?
-				if (enumerable.Current.Value<string>("view") == name)
-					return new Guid(enumerable.Current.Value<byte[]>("etag"));
+        	var keyWithHighestEqualTo = storage.MappedResults["ByViewAndEtag"]
+        		.LowestEqual(new RavenJObject {{"view", name}}, token => token.Value<string>("view") == name);
 
-				// maybe we are at another view?
-				if (enumerable.MoveNext() == false)
-					return null;
+			if(keyWithHighestEqualTo == null)
+				return null;
 
-				//could't find the name in the table 
-				if (enumerable.Current.Value<string>("view") != name)
-					return null;
-
-				return new Guid(enumerable.Current.Value<byte[]>("etag"));
-            }
+			return new Guid(keyWithHighestEqualTo.Value<byte[]>("etag"));
         }
 
         private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
