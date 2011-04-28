@@ -129,9 +129,11 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		public static Task<IList<T>> ToListAsync<T>(this IRavenQueryable<T> source)
+		public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source)
 		{
-			var provider = (IRavenQueryProvider)source.Provider;
+			var provider = source.Provider as IRavenQueryProvider;
+			if(provider == null)
+				throw new ArgumentException("You can only use Raven Queryable with ToListAsync");
 			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
 			return documentQuery.ToListAsync()
 				.ContinueWith(task =>
@@ -144,9 +146,12 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Returns the total count of results for a query asynchronously. 
 		/// </summary>
-		public static Task<int> CountAsync<T>(this IRavenQueryable<T> source)
+		public static Task<int> CountAsync<T>(this IQueryable<T> source)
 		{
-			var provider = (IRavenQueryProvider)source.Provider;
+			var provider = source.Provider as IRavenQueryProvider;
+			if (provider == null)
+				throw new ArgumentException("You can only use Raven Queryable with CountAsync");
+			
 			var documentQuery = provider
 				.ToAsyncLuceneQuery<T>(source.Expression)
 				.Take(0);
