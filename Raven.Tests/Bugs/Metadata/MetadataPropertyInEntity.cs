@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using Raven.Client;
+using Raven.Client.Listeners;
 using Raven.Json.Linq;
 using Xunit;
 

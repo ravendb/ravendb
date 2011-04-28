@@ -16,6 +16,8 @@ using Raven.Client.Document.Async;
 using System.Linq;
 #if !SILVERLIGHT
 using Raven.Client.Extensions;
+using Raven.Client.Listeners;
+
 #else
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;

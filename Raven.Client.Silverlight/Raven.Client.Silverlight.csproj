@@ -132,9 +132,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\ExceptionExtensions.cs">
       <Link>Imports\Extensions\ExceptionExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
-      <Link>Imports\IDocumentQueryListener.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs">
       <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
     </Compile>
@@ -149,6 +146,18 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs">
       <Link>Imports\Indexes\IndexDefinitionHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConversionListener.cs">
+      <Link>Imports\Listeners\IDocumentConversionListener.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentDeleteListener.cs">
+      <Link>Imports\Listeners\IDocumentDeleteListener.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentQueryListener.cs">
+      <Link>Imports\Listeners\IDocumentQueryListener.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentStoreListener.cs">
+      <Link>Imports\Listeners\IDocumentStoreListener.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
@@ -473,12 +482,6 @@
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentSession.cs">
       <Link>Imports\IAsyncDocumentSession.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDocumentConversionListener.cs">
-      <Link>Imports\IDocumentConversionListener.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDocumentDeleteListener.cs">
-      <Link>Imports\IDocumentDeleteListener.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQuery.cs">
       <Link>Imports\IDocumentQuery.cs</Link>
     </Compile>
@@ -490,9 +493,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentStore.cs">
       <Link>Imports\IDocumentStore.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDocumentStoreListener.cs">
-      <Link>Imports\IDocumentStoreListener.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractIndexCreationTask.cs">
       <Link>Imports\Indexes\AbstractIndexCreationTask.cs</Link>

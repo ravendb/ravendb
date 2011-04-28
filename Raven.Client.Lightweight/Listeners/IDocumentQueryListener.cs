@@ -1,4 +1,4 @@
-﻿namespace Raven.Client
+﻿namespace Raven.Client.Listeners
 {
 	/// <summary>
 	/// Hook for users to modify all queries globally

@@ -17,6 +17,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Client.Listeners;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document

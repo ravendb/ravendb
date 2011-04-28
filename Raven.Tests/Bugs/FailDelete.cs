@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Client;
+using Raven.Client.Listeners;
 using Raven.Json.Linq;
 
 namespace Raven.Tests.Bugs

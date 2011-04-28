@@ -11,6 +11,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Client.Listeners;
 
 namespace Raven.Client.Document.Async
 {

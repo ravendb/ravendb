@@ -9,6 +9,8 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
+using Raven.Client.Listeners;
+
 #endif
 
 namespace Raven.Client.Document

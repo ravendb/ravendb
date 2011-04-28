@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
+using Raven.Client.Listeners;
 using Raven.Json.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
