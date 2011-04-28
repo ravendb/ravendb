@@ -122,7 +122,10 @@ namespace Raven.Database.Config
 
 		public string ServerUrl
 		{
-			get { return "http://" + (HostName ?? Environment.MachineName) + ":" + Port + VirtualDirectory; }
+			get
+			{
+				return new UriBuilder("http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
+			}
 		}
 
 #region Core settings
