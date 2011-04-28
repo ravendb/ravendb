@@ -54,10 +54,6 @@ namespace Raven.Storage.Managed
 
         public bool IsReduceStale(string name)
         {
-			if(name=="SavedInventoryIndex" && new StackTrace().GetFrames().Any(x=>x.GetMethod().DeclaringType == typeof(ReducingExecuter)))
-			{
-				
-			}
             var readResult = storage.IndexingStats.Read(name);
 
             if (readResult == null)
