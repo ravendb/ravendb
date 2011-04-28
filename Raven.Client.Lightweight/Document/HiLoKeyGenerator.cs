@@ -60,7 +60,7 @@ namespace Raven.Client.Document
 								 NextId());
 		}
 
-		private long NextId()
+		public long NextId()
 		{
 			long incrementedCurrentLow = Interlocked.Increment(ref currentLo);
 			if (incrementedCurrentLow > capacity)
