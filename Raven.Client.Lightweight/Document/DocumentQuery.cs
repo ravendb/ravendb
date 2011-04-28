@@ -7,9 +7,9 @@ using System.Linq.Expressions;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Listeners;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
-using Raven.Client.Listeners;
 
 #endif
 
