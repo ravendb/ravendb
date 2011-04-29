@@ -22,14 +22,18 @@ namespace Raven.Database.Impl
 
         public void SetCachedDocument(string key, Guid etag, RavenJObject doc, RavenJObject metadata)
         {
-            cachedSerializedDocuments["Doc/" + key + "/" + etag] = new CachedDocument
+        	var documentClone = ((RavenJObject)doc.CloneToken());
+			documentClone.EnsureSnapshot();
+        	var metadataClone = ((RavenJObject)metadata.CloneToken());
+			metadataClone.EnsureSnapshot();
+        	cachedSerializedDocuments["Doc/" + key + "/" + etag] = new CachedDocument
             {
-                Document = ((RavenJObject)doc.CloneToken()).EnsureSnapshot(),
-                Metadata = ((RavenJObject)metadata.CloneToken()).EnsureSnapshot()
+                Document = documentClone,
+                Metadata = metadataClone
             };
         }
 
-        public void Dispose()
+    	public void Dispose()
         {
             cachedSerializedDocuments.Dispose();
         }

@@ -360,7 +360,11 @@ namespace Raven.Client.Document
         /// <value>The query result.</value>
         public QueryResult QueryResult
         {
-            get { return queryResult ?? (queryResult = GetQueryResult()); }
+            get
+            {
+            	var currentQueryResults = queryResult ?? (queryResult = GetQueryResult());
+            	return currentQueryResults.CreateSnapshot();
+            }
         }
 #endif
 
@@ -372,7 +376,12 @@ namespace Raven.Client.Document
         /// <value>The query result.</value>
         public Task<QueryResult> QueryResultAsync
         {
-            get { return queryResultTask ?? (queryResultTask = GetQueryResultAsync()); }
+            get
+            {
+            	var currentQueryResultTask = queryResultTask ?? (queryResultTask = GetQueryResultAsync());
+            	return currentQueryResultTask
+            		.ContinueWith(x => x.Result.CreateSnapshot());
+            }
         }
 #endif
 
@@ -423,8 +432,8 @@ namespace Raven.Client.Document
             {
                 try
                 {
-                    queryResult = QueryResult;
-                    foreach (var include in queryResult.Includes)
+                    var currentQueryResults = QueryResult;
+                    foreach (var include in currentQueryResults.Includes)
                     {
                         var metadata = include.Value<RavenJObject>("@metadata");
 
@@ -432,7 +441,7 @@ namespace Raven.Client.Document
                                                     include,
                                                     metadata);
                     }
-                    var list = queryResult.Results
+                    var list = currentQueryResults.Results
                         .Select(Deserialize)
                         .ToList();
                     return list.GetEnumerator();
@@ -1169,6 +1178,7 @@ If you really want to do in memory filtering on the data returned from the query
 
                     Debug.WriteLine(string.Format("Query returned {0}/{1} results", task.Result.Results.Count,
                                                   task.Result.TotalResults));
+					task.Result.EnsureSnapshot();
                     return task;
                 }).Unwrap();
         }
@@ -1217,6 +1227,7 @@ If you really want to do in memory filtering on the data returned from the query
                 }
                 Debug.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count,
                                               result.TotalResults));
+            	result.EnsureSnapshot();
                 return result;
             }
         }
