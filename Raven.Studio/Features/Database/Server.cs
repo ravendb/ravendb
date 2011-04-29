@@ -1,5 +1,9 @@
+using System.Reflection;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Silverlight.Connection;
+using Raven.Json.Linq;
+using Raven.Studio.Shell;
 
 namespace Raven.Studio.Features.Database
 {
@@ -89,6 +93,14 @@ namespace Raven.Studio.Features.Database
 			using (var session = Store.OpenAsyncSession())
 				session.Advanced.AsyncDatabaseCommands
 					.GetDatabaseNamesAsync()
+					.ContinueWith(t =>
+					{
+						if (t.IsFaulted)
+							return t;
+						CheckForSystemErrors();
+						return t;
+					})
+					.Unwrap()
 					.ContinueWith(
 						task =>
 						{
@@ -114,6 +126,31 @@ namespace Raven.Studio.Features.Database
 							events.Publish(new NotificationRaised(error, NotificationLevel.Error));
 							callback();
 						});
+		}
+
+		private void CheckForSystemErrors()
+		{
+			using(var session = this.OpenSession())
+			{
+				session.Advanced.AsyncDatabaseCommands.GetAsync("Raven/WarningMessages")
+					.ContinueWith(task =>
+					{
+						if (task.Exception != null)
+							return;
+						if (task.Result == null)
+							return;
+
+						var msg = string.Join(Environment.NewLine, task.Result.DataAsJson.Value<RavenJArray>().Values<string>());
+
+						IoC.Get<IWindowManager>()
+							.ShowDialog(new ErrorViewModel
+							{
+								CurrentErrorSource = (MethodInfo)MethodBase.GetCurrentMethod(),
+								Message = "Global system issue!",
+								Details = msg
+							});
+					});
+			}
 		}
 
 		void LoadPlugins()
