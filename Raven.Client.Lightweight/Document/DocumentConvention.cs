@@ -66,7 +66,10 @@ namespace Raven.Client.Document
 			var converter = IdentityTypeConvertors.FirstOrDefault(x=>x.CanConvertFrom(id.GetType()));
 			var tag = GetTypeTagName(type);
 			if (tag != null)
+			{
 				tag += IdentityPartsSeparator;
+				tag = tag.ToLowerInvariant();
+			}
 			if (converter != null)
 			{
 				return converter.ConvertFrom(tag, id);
