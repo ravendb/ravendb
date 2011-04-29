@@ -293,17 +293,51 @@ namespace Raven.Client.Linq
 			{
 				return new ExpressionInfo(CurrentPath, parameterExpression.Type, false);
 			}
-			
-			MemberExpression memberExpression = GetMemberExpression(expression);
+
+			string fullPath;
+			Type memberType;
+			bool isNestedPath;
+			GetPath(expression, out fullPath, out memberType, out isNestedPath);
 
 			//for stnadard queries, we take just the last part. But for dynamic queries, we take the whole part
-			var fullPath = memberExpression.ToString();
 			var prop = fullPath.Substring(fullPath.LastIndexOf('.') + 1);
 			var path = fullPath.Substring(fullPath.IndexOf('.') + 1);
 
 			return new ExpressionInfo(
 				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, path, prop), 
-				memberExpression.Member.GetMemberType(), memberExpression.Expression is MemberExpression);
+				memberType, isNestedPath);
+		}
+
+		/// <summary>
+		/// Get the path from the expression, including considering dictionary calls
+		/// </summary>
+		protected void GetPath(Expression expression, out string path, out Type memberType, out bool isNestedPath)
+		{
+			var callExpression = expression as MethodCallExpression;
+			if (callExpression != null)
+			{
+				if (callExpression.Method.Name != "get_Item")
+					throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+
+				string parentPath;
+				Type ignoredType;
+				bool ignoredNestedPath;
+				GetPath(callExpression.Object, out parentPath, out ignoredType, out ignoredNestedPath);
+
+
+				memberType = callExpression.Method.ReturnType;
+				isNestedPath = false;
+				path = parentPath + "." +
+				       GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType);
+
+			}
+			else
+			{
+				var memberExpression = GetMemberExpression(expression);
+				path = memberExpression.ToString();
+				isNestedPath = memberExpression.Expression is MemberExpression;
+				memberType = memberExpression.Member.GetMemberType();
+			}
 		}
 
 		/// <summary>
@@ -314,6 +348,8 @@ namespace Raven.Client.Linq
 			var unaryExpression = expression as UnaryExpression;
 			if(unaryExpression != null)
 				expression = unaryExpression.Operand;
+
+			
 
 			return (MemberExpression)expression;
 		}
@@ -819,7 +855,10 @@ namespace Raven.Client.Linq
 			return expression.Path;
 		}
 
-		private static object GetValueFromExpression(Expression expression, Type type)
+		/// <summary>
+		/// Get the actual value from the expression
+		/// </summary>
+		protected static object GetValueFromExpression(Expression expression, Type type)
 		{
 			if (expression == null)
 				throw new ArgumentNullException("expression");

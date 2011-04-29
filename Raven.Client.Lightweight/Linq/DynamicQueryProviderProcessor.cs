@@ -43,19 +43,20 @@ namespace Raven.Client.Linq
 				return new ExpressionInfo(CurrentPath, parameterExpression.Type, false);
 			}
 
-			var memberExpression = GetMemberExpression(expression);
+			string path;
+			Type memberType;
+			bool isNestedPath;
+			GetPath(expression, out path, out memberType, out isNestedPath);
 
 			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
-			var path = memberExpression.ToString();
 			path = path.Substring(path.IndexOf('.') + 1);
 
 			return new ExpressionInfo(
 				queryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, CurrentPath, path), 
-				memberExpression.Member.GetMemberType(),
-				memberExpression.Expression is MemberExpression);
+				memberType,
+				isNestedPath);
 		}
- 
-		
-	
+
+		 
 	}
 }
