@@ -60,6 +60,9 @@ namespace Raven.Client.Document
 								 NextId());
 		}
 
+		///<summary>
+		/// Create the next id (numeric)
+		///</summary>
 		public long NextId()
 		{
 			long incrementedCurrentLow = Interlocked.Increment(ref currentLo);
