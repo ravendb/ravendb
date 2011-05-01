@@ -10,6 +10,7 @@ namespace Raven.Abstractions.Data
 		public const string ReduceKeyFieldName = "__reduce_key";
 		public const string RavenClrType = "Raven-Clr-Type";
 		public const string RavenEntityName = "Raven-Entity-Name";
+		public const string RavenDocumentDoesNotExists = "Raven-Document-Does-Not-Exists";
 		public const string Metadata = "@metadata";
 	}
 }

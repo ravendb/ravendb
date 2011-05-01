@@ -30,8 +30,8 @@ namespace Raven.Tests.ManagedStorage
 				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
-                tx.Batch(viewer => 
-					Assert.Null(viewer.Documents.DocumentByKey("Ayende", null)));
+                tx.Batch(viewer =>
+					Assert.True(viewer.Documents.DocumentByKey("Ayende", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists)));
 			}
 		}
 

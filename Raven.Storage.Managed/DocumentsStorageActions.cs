@@ -148,8 +148,20 @@ namespace Raven.Storage.Managed
     		}
 
 			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
-    		if (readResult == null)
-    			return null;
+			if (readResult == null)
+			{
+				if(resultInTx != null)
+				{
+					return createResult(Tuple.Create<MemoryStream,RavenJObject>(null, new RavenJObject()), new JsonDocumentMetadata
+					{
+						Key = key,
+						Etag = Guid.Empty,
+						Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
+						NonAuthoritiveInformation = true
+					});
+				}
+				return null;
+			}
 
     		var etag = new Guid(readResult.Key.Value<byte[]>("etag"));
     		var result = ReadMetadata(key, etag, readResult.Data, out metadata);
