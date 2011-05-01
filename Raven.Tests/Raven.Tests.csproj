@@ -287,6 +287,7 @@
     <Compile Include="Bugs\QueryingFromIndex.cs" />
     <Compile Include="Bugs\QueryWithPercentageSignp.cs" />
     <Compile Include="Bugs\QueryWithReservedCharacters.cs" />
+    <Compile Include="Bugs\RavenDBQuery.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\ReportQueryCount.cs" />
     <Compile Include="Bugs\ResettingIndex.cs" />
@@ -301,6 +302,7 @@
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\SpatialQueries.cs" />
     <Compile Include="Bugs\TakeQueries.cs" />
+    <Compile Include="Bugs\tjbsb.cs" />
     <Compile Include="Bugs\Transaction.cs" />
     <Compile Include="Bugs\TransformResults\Answer.cs" />
     <Compile Include="Bugs\TransformResults\AnswerEntity.cs" />
