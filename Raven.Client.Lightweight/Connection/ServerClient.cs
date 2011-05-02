@@ -377,7 +377,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			}
 			if (etag != null)
 			{
-				webRequest.Headers[" If-None-Match"] = etag.Value.ToString();
+				webRequest.Headers["If-None-Match"] = etag.Value.ToString();
 			}
 			using (var stream = webRequest.GetRequestStream())
 			{
@@ -468,7 +468,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			webRequest.Credentials = credentials;
 			if (etag != null)
 			{
-				webRequest.Headers[" If-None-Match"] = etag.Value.ToString();
+				webRequest.Headers["If-None-Match"] = etag.Value.ToString();
 			}
 
 			using (webRequest.GetResponse())
