@@ -19,8 +19,8 @@ namespace Raven.ProjectRewriter
             if (args.Length == 1 && args[0] == "commercial")
                 MarkDatabaseProjectAsCommercial(xmlns);
 
-			Generate35(@"Raven.Json\Raven.Json.csproj",
-				@"Raven.Json\Raven.Json.g.3.5.csproj");
+			Generate35(@"Modules\Json\Raven.Json\Raven.Json.csproj",
+				@"Modules\Json\Raven.Json\Raven.Json.g.3.5.csproj");
 			Generate35(@"Raven.Abstractions\Raven.Abstractions.csproj",
 				@"Raven.Abstractions\Raven.Abstractions.g.3.5.csproj",
 				"Raven.Json");
