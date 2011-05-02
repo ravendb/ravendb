@@ -62,7 +62,7 @@
     <Compile Include="ToDoRepository.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Raven.Json\Raven.Json.csproj">
+    <ProjectReference Include="..\..\Json\Raven.Json\Raven.Json.g.3.5.csproj">
       <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
       <Name>Raven.Json</Name>
     </ProjectReference>
