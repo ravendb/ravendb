@@ -136,6 +136,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Modules\Json\Raven.Json\Raven.Json.csproj">
+      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
@@ -143,10 +147,6 @@
     <ProjectReference Include="..\Raven.Http\Raven.Http.csproj">
       <Project>{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}</Project>
       <Name>Raven.Http</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Json\Raven.Json.csproj">
-      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
-      <Name>Raven.Json</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
       <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>
