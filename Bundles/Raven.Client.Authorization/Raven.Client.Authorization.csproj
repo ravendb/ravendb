@@ -53,13 +53,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Json\Raven.Json\Raven.Json.csproj">
+      <Project>{B9DD0239-3476-48CB-A541-1B3EC6679BB6}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Raven.Json\Raven.Json.csproj">
-      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
-      <Name>Raven.Json</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
       <Project>{034FFD8F-F917-4A45-B920-9C460CD66BAF}</Project>
