@@ -210,7 +210,6 @@
     <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Data\ServerRequestError.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="FromMono\TaskExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Raven.Database\RavenDB.snk">

@@ -4,6 +4,7 @@ namespace Raven.Studio.Features.Statistics
 {
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
+	using System.Linq;
 	using Caliburn.Micro;
 	using Plugins;
 
@@ -21,9 +22,9 @@ namespace Raven.Studio.Features.Statistics
 			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange( ()=> Errors );};
 		}
 
-		public IEnumerable<ServerError> Errors
+        public IEnumerable<Error> Errors
 		{
-			get { return server.Errors; }
+			get { return server.Errors.Select( x => new Error(x)); }
 		}
 
 		public IServer Server
@@ -31,4 +32,16 @@ namespace Raven.Studio.Features.Statistics
 			get { return server; }
 		}
 	}
+
+    public class Error
+    {
+        private readonly ServerError inner;
+
+        public Error(ServerError inner)
+        {
+            this.inner = inner;
+        }
+
+        public ServerError Inner { get { return inner; } }
+    }
 }

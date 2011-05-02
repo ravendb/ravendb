@@ -22,7 +22,7 @@
 
 			<TextBlock Style="{StaticResource Instruction}"
 					   Text="The database contains no errors."
-					   Visibility="{Binding Server.Errors, Converter={StaticResource visibleWhenEmpty}}" />
+					   Visibility="{Binding Errors, Converter={StaticResource visibleWhenEmpty}}" />
 		</tk:DockPanel>
 
 		<Grid Grid.Row="1">
@@ -34,7 +34,7 @@
 			<ScrollViewer BorderThickness="0"
 						  VerticalScrollBarVisibility="Auto">
 				<ItemsControl BorderThickness="0"
-							  ItemsSource="{Binding Server.Errors}">
+							  ItemsSource="{Binding Errors}">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
 							<ContentControl cm:View.Model="{Binding}" />

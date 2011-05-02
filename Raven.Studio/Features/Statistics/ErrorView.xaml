@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Raven.Studio.Data.ServerErrorView"
+﻿<UserControl x:Class="Raven.Studio.Features.Statistics.ErrorView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -24,6 +24,7 @@
 
     <Border d:DesignWidth="420"
             d:DesignHeight="120"
+            DataContext="{Binding Inner}"
             Style="{StaticResource Grouping}"
             Margin="0,0,0,6">
         <tk:DockPanel d:DataContext="{d:DesignData /SampleData/ServerErrorSampleData.xaml}">
