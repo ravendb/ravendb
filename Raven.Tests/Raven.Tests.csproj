@@ -106,6 +106,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Modules\Json\Raven.Json.Tests\CloningTests.cs">
+      <Link>Json\CloningTests.cs</Link>
+    </Compile>
+    <Compile Include="..\Modules\Json\Raven.Json.Tests\RavenJObjects.cs">
+      <Link>Json\RavenJObjects.cs</Link>
+    </Compile>
     <Compile Include="..\Modules\Munin\Raven.Munin.Tests\Bugs\Compaction.cs">
       <Link>Munin\Bugs\Compaction.cs</Link>
     </Compile>
@@ -416,8 +422,6 @@
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="IndexQueryUrl.cs" />
-    <Compile Include="Json\CloningTests.cs" />
-    <Compile Include="Json\RavenJObjects.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
     <Compile Include="Linq\SampleGeoLocation.cs" />
@@ -542,6 +546,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Modules\Json\Raven.Json\Raven.Json.csproj">
+      <Project>{B9DD0239-3476-48CB-A541-1B3EC6679BB6}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Modules\Munin\Raven.Munin\Raven.Munin.csproj">
       <Project>{486537C2-EDF7-404F-9CFB-EEE25996DF5F}</Project>
       <Name>Raven.Munin</Name>
