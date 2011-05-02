@@ -46,7 +46,7 @@ namespace Raven.Tests.Transactions
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
             db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
-            Assert.Null(db.Get("ayende", null));
+			Assert.True(db.Get("ayende", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
         }
 
 

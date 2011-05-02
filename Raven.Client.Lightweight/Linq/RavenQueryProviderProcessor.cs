@@ -202,7 +202,7 @@ namespace Raven.Client.Linq
 				return;
 			}
 
-			if(expression.Left.NodeType!= ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			if (IsMemberAccess(expression.Left) == false && IsMemberAccess(expression.Right))
 			{
 				VisitEquals(Expression.Equal(expression.Right, expression.Left));
 				return;
@@ -218,6 +218,14 @@ namespace Raven.Client.Linq
 				AllowWildcards = false,
 				IsNestedPath = memberInfo.IsNestedPath 
 			});
+		}
+
+		private bool IsMemberAccess(Expression node)
+		{
+			if (node.NodeType != ExpressionType.MemberAccess)
+				return false;
+			var memberExpression = ((MemberExpression)node);
+			return memberExpression.Expression.NodeType != ExpressionType.Constant;
 		}
 
 		private void VisitNotEquals(BinaryExpression expression)
@@ -250,7 +258,7 @@ namespace Raven.Client.Linq
 				return;
 			}
 
-			if (expression.Left.NodeType != ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			if (IsMemberAccess(expression.Left) == false && IsMemberAccess(expression.Right))
 			{
 				VisitNotEquals(Expression.NotEqual(expression.Right, expression.Left));
 				return;
@@ -421,7 +429,7 @@ namespace Raven.Client.Linq
 
 		private void VisitGreaterThan(BinaryExpression expression)
 		{
-			if (expression.Left.NodeType != ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			if (IsMemberAccess(expression.Left) == false && IsMemberAccess(expression.Right))
 			{
 				VisitLessThanOrEqual(Expression.LessThanOrEqual(expression.Right, expression.Left));
 				return;
@@ -436,7 +444,7 @@ namespace Raven.Client.Linq
 
 		private void VisitGreaterThanOrEqual(BinaryExpression expression)
 		{
-			if (expression.Left.NodeType != ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			if (IsMemberAccess(expression.Left) == false && IsMemberAccess(expression.Right))
 			{
 				VisitLessThan(Expression.LessThan(expression.Right, expression.Left));
 				return;
@@ -452,7 +460,7 @@ namespace Raven.Client.Linq
 
 		private void VisitLessThan(BinaryExpression expression)
 		{
-			if (expression.Left.NodeType != ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			if (IsMemberAccess(expression.Left) == false && IsMemberAccess(expression.Right))
 			{
 				VisitGreaterThanOrEqual(Expression.GreaterThanOrEqual(expression.Right, expression.Left));
 				return;
@@ -467,7 +475,7 @@ namespace Raven.Client.Linq
 
 		private void VisitLessThanOrEqual(BinaryExpression expression)
 		{
-			if (expression.Left.NodeType != ExpressionType.MemberAccess && expression.Right.NodeType == ExpressionType.MemberAccess)
+			if (IsMemberAccess(expression.Left) == false && IsMemberAccess(expression.Right))
 			{
 				VisitGreaterThan(Expression.GreaterThan(expression.Right, expression.Left));
 				return;

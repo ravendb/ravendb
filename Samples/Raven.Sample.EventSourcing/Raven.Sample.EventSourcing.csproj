@@ -54,6 +54,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Json\Raven.Json\Raven.Json.csproj">
+      <Project>{B9DD0239-3476-48CB-A541-1B3EC6679BB6}</Project>
+      <Name>Raven.Json</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
@@ -65,10 +69,6 @@
     <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Raven.Json\Raven.Json.csproj">
-      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
-      <Name>Raven.Json</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator\Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator.csproj">
       <Project>{B09A78D9-B609-459F-9AE1-319799330C6B}</Project>

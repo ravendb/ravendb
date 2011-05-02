@@ -318,3 +318,4 @@ VERSION
 ClientBin/
 /Raven.Tests.Silverlight.Results.xml
 /Raven.Json/Raven.Json.g.3.5.csproj
+/Modules/Json/Raven.Json/Raven.Json.g.3.5.csproj

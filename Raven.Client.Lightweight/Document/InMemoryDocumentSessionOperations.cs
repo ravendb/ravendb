@@ -293,6 +293,10 @@ more responsive application.
 		/// <returns></returns>
 		protected T TrackEntity<T>(JsonDocument documentFound)
 		{
+			if (documentFound.Metadata.Value<bool?>(Constants.RavenDocumentDoesNotExists) == true)
+			{
+				return default(T); // document is not really there.
+			}
 			if (!documentFound.Metadata.ContainsKey("@etag"))
 			{
 				documentFound.Metadata["@etag"] = documentFound.Etag.ToString();

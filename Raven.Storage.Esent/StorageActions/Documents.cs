@@ -55,13 +55,14 @@ namespace Raven.Storage.Esent.StorageActions
 		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<JsonDocumentMetadata, Func<string, Guid, RavenJObject, RavenJObject>, T> createResult)
 			where T : class
 		{
-			RavenJObject metadata;
+			bool existsInTx = false;
 			if (transactionInformation != null)
 			{
 				Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
 				Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ))
 				{
+					existsInTx = true;
 					var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
 					if (new Guid(txId) == transactionInformation.Id)
 					{
@@ -72,7 +73,7 @@ namespace Raven.Storage.Esent.StorageActions
 						}
 						var etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
 
-						metadata = ReadDocumentMetadataInTransaction(key, etag);
+						RavenJObject metadata = ReadDocumentMetadataInTransaction(key, etag);
 
 
 						logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
@@ -92,6 +93,17 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
+				if(existsInTx)
+				{
+					logger.DebugFormat("Committed document with key '{0}' was not found, but exists in a separate transaction", key);
+					return createResult(new JsonDocumentMetadata
+					{
+						Etag = Guid.Empty,
+						Key = key,
+						Metadata = new RavenJObject{{Constants.RavenDocumentDoesNotExists, true}},
+						NonAuthoritiveInformation = true
+					}, (docKey, etag, metadata) => new RavenJObject());
+				}
 				logger.DebugFormat("Document with key '{0}' was not found", key);
 				return null;
 			}

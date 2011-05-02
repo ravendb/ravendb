@@ -1,21 +1,47 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Json.Linq;
-using Raven.Tests.Bugs;
 using Xunit;
 
 namespace Raven.Tests.Json
 {
     public class CloningTests
     {
+
+
+		public class Blog
+		{
+			public string Title
+			{
+				get;
+				set;
+			}
+
+			public string Category
+			{
+				get;
+				set;
+			}
+
+			public BlogTag[] Tags
+			{
+				get;
+				set;
+			}
+		}
+
+		public class BlogTag
+		{
+			public string Name { get; set; }
+		}
+
 		[Fact]
 		public void WhenCloningWillRetainAllValues()
 		{
-			var newBlog = new UsingStartsWith.Blog()
+			var newBlog = new Blog()
 			{
 				Tags = new[]{
-			          new UsingStartsWith.BlogTag() { Name = "SuperCallaFragalisticExpealadocious" }
+			          new BlogTag() { Name = "SuperCallaFragalisticExpealadocious" }
 			     }
 			};
 

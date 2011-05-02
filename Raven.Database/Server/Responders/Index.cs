@@ -209,6 +209,8 @@ namespace Raven.Database.Server.Responders
 				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
 			});
 			var indexDefinition = Database.GetIndexDefinition(indexName);
+			if (indexDefinition == null)
+				return Guid.NewGuid(); // this ensures that we will get the normal reaction of IndexNotFound later on.
 			using(var md5 = MD5.Create())
 			{
 				var list = new List<byte>();

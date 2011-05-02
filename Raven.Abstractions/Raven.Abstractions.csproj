@@ -126,7 +126,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Json\Raven.Json.csproj">
+    <ProjectReference Include="..\Modules\Json\Raven.Json\Raven.Json.csproj">
       <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
       <Name>Raven.Json</Name>
     </ProjectReference>

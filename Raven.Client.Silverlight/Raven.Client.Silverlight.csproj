@@ -162,46 +162,46 @@
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Linq\DictionaryWithParentSnapshot.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Linq\DictionaryWithParentSnapshot.cs">
       <Link>Imports\Raven.Json\Linq\DictionaryWithParentSnapshot.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Linq\Extensions.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Linq\Extensions.cs">
       <Link>Imports\Raven.Json\Linq\Extensions.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Linq\RavenJArray.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Linq\RavenJArray.cs">
       <Link>Imports\Raven.Json\Linq\RavenJArray.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Linq\RavenJObject.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Linq\RavenJObject.cs">
       <Link>Imports\Raven.Json\Linq\RavenJObject.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Linq\RavenJPath.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Linq\RavenJPath.cs">
       <Link>Imports\Raven.Json\Linq\RavenJPath.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Linq\RavenJToken.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Linq\RavenJToken.cs">
       <Link>Imports\Raven.Json\Linq\RavenJToken.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Linq\RavenJTokenEqualityComparer.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Linq\RavenJTokenEqualityComparer.cs">
       <Link>Imports\Raven.Json\Linq\RavenJTokenEqualityComparer.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Linq\RavenJTokenReader.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Linq\RavenJTokenReader.cs">
       <Link>Imports\Raven.Json\Linq\RavenJTokenReader.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Linq\RavenJTokenWriter.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Linq\RavenJTokenWriter.cs">
       <Link>Imports\Raven.Json\Linq\RavenJTokenWriter.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Linq\RavenJValue.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Linq\RavenJValue.cs">
       <Link>Imports\Raven.Json\Linq\RavenJValue.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Utilities\MathUtils.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Utilities\MathUtils.cs">
       <Link>Imports\Raven.Json\Utilities\MathUtils.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Utilities\MiscellaneousUtils.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Utilities\MiscellaneousUtils.cs">
       <Link>Imports\Raven.Json\Utilities\MiscellaneousUtils.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Utilities\StringUtils.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Utilities\StringUtils.cs">
       <Link>Imports\Raven.Json\Utilities\StringUtils.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Json\Utilities\ValidationUtils.cs">
+    <Compile Include="..\Modules\Json\Raven.Json\Utilities\ValidationUtils.cs">
       <Link>Imports\Raven.Json\Utilities\ValidationUtils.cs</Link>
     </Compile>
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
