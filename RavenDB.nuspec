@@ -3,6 +3,7 @@
  <metadata>
    <id>RavenDB</id>
    <version>1.0</version>
+   <title>RavenDB</title>
    <authors>Hibernating Rhinos</authors>
    <description>Raven is a document database for the .NET/Windows platform, offering a flexible data model design to fit the needs of real world systems.</description>
    <language>en-US</language>
@@ -10,5 +11,10 @@
    <projectUrl>http://www.ravendb.net/</projectUrl>
    <requireLicenseAcceptance>true</requireLicenseAcceptance>
    <tags>nosql ravendb raven document database</tags>
+   <dependencies>
+      <dependency id="Log4Net" />
+      <dependency id="Newtonsoft.Json" />
+   </dependencies>
+   <iconUrl />
  </metadata>
 </package>
