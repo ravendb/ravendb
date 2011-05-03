@@ -496,7 +496,7 @@ task CreateNugetPackage {
   $writer.Flush()
   $writer.Close()
   
-  & "$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB-Embedded.nuspec
+  & "$tools_dir\nuget.exe" pack $build_dir\NuPack-Embedded\RavenDB-Embedded.nuspec
   
   # Push to nuget repository
   & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB.$version.$env:buildlabel.nupkg" $accessKey
