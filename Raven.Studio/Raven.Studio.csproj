@@ -141,6 +141,7 @@
     <Compile Include="Features\Statistics\StatisticsItem.xaml.cs">
       <DependentUpon>StatisticsItem.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Framework\EventArgs.cs" />
     <Compile Include="Framework\IBindablePagedQuery.cs" />
     <Compile Include="Impl\DotNetZip\Adler.cs" />
     <Compile Include="Impl\DotNetZip\BlockState.cs" />
@@ -307,10 +308,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
-    <Page Include="Data\ServerErrorView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Features\Collections\CollectionsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -358,6 +355,10 @@
     <Page Include="Features\Statistics\IndexesView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Statistics\ErrorView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Statistics\StatisticsItem.xaml">
       <SubType>Designer</SubType>

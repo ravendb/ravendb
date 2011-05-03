@@ -283,10 +283,9 @@ namespace Raven.Json.Linq
             return new RavenJObject(Properties.CreateSnapshot());
         }
 
-        public RavenJObject EnsureSnapshot()
+        public void EnsureSnapshot()
         {
             Properties.EnsureSnapshot();
-            return this;
         }
 
 		public override IEnumerable<RavenJToken> Values()

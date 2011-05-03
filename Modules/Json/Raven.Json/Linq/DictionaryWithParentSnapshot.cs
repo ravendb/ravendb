@@ -100,22 +100,21 @@ namespace Raven.Json.Linq
                 throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
 
 			count = -1;
-		    bool parentHasIt = false;
 			RavenJToken token;
 			if (!LocalChanges.TryGetValue(key, out token))
 			{
-			    parentHasIt = parentSnapshot == null || !parentSnapshot.TryGetValue(key, out token);
+				bool parentHasIt = parentSnapshot == null || parentSnapshot.TryGetValue(key, out token);
 				if (parentHasIt == false)
 					return false;
+
+				if (token == DeletedMarker)
+					return false;
+
+				LocalChanges[key] = DeletedMarker;
+				return true;
 			}
 
-			if (token == DeletedMarker)
-				return false;
-
-            if(parentHasIt)
-			    LocalChanges[key] = DeletedMarker;
-
-		    return LocalChanges.Remove(key);
+			return LocalChanges.Remove(key);
 		}
 
     	public bool TryGetValue(string key, out RavenJToken value)

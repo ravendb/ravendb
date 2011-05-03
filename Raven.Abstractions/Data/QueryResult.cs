@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Abstractions.Data
 {
@@ -65,6 +66,39 @@ namespace Raven.Abstractions.Data
 		{
 			Results = new List<RavenJObject>();
 			Includes = new List<RavenJObject>();
+		}
+
+		/// <summary>
+		/// Ensures that the query results can be used in snapshots
+		/// </summary>
+		public void EnsureSnapshot()
+		{
+			foreach (var result in Results)
+			{
+				result.EnsureSnapshot();
+			}
+			foreach (var result in Includes)
+			{
+				result.EnsureSnapshot();
+			}
+		}
+
+		/// <summary>
+		/// Creates a snapshot of the query results
+		/// </summary>
+		public QueryResult CreateSnapshot()
+		{
+			return new QueryResult
+			{
+				Results = new List<RavenJObject>(Results.Select(x => x.CreateSnapshot())),
+				Includes = new List<RavenJObject>(Includes.Select(x => x.CreateSnapshot())),
+				IndexEtag = IndexEtag,
+				IndexName = IndexName,
+				IndexTimestamp = IndexTimestamp,
+				IsStale = IsStale,
+				SkippedResults = SkippedResults,
+				TotalResults = TotalResults,
+			};
 		}
 	}
 }
