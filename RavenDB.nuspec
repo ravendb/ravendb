@@ -15,6 +15,6 @@
       <dependency id="Log4Net" />
       <dependency id="Newtonsoft.Json" />
    </dependencies>
-   <iconUrl />
+   <iconUrl>http://ravendb.net/raven.png</iconUrl>
  </metadata>
 </package>
