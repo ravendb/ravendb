@@ -165,6 +165,7 @@
     <Compile Include="Bugs\Iulian\CanReadEntityWithUrlId.cs" />
     <Compile Include="Bugs\LinqOnDictionary.cs" />
     <Compile Include="Bugs\MassivelyMultiTenant.cs" />
+    <Compile Include="Bugs\MultipleRangeQueries.cs" />
     <Compile Include="Bugs\QueryingDateTime.cs" />
     <Compile Include="Bugs\QueryingOnMetadata.cs" />
     <Compile Include="Bugs\RavenDbAnyOfPropertyCollection.cs" />

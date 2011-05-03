@@ -127,7 +127,7 @@ namespace Raven.Database.Data
 
 			foreach (var descriptor in SortDescriptors)
 			{
-				index.SortOptions.Add(descriptor.Field, (SortOptions)Enum.Parse(typeof(SortOptions), descriptor.FieldType));
+				index.SortOptions[descriptor.Field] =  (SortOptions)Enum.Parse(typeof(SortOptions), descriptor.FieldType);
 			}
 			return index;
 		}
