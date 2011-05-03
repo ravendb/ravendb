@@ -12,7 +12,7 @@
    <requireLicenseAcceptance>true</requireLicenseAcceptance>
    <tags>nosql ravendb raven document database</tags>
    <dependencies>
-      <dependency id="Newtonsoft.Json" />
+      <dependency id="Newtonsoft.Json" version="4.0" />
    </dependencies>
    <iconUrl>http://ravendb.net/raven.png</iconUrl>
  </metadata>
