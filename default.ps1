@@ -391,6 +391,7 @@ task CreateNugetPackage {
   
   if( $global:uploadCategory -ne "RavenDB") # we only publish the stable version out
   {
+    Write-Host "Not a stable build, skipping nuget package creation"
     return
   }
   
@@ -407,33 +408,59 @@ task CreateNugetPackage {
 	mkdir $build_dir\NuPack
 	mkdir $build_dir\NuPack\content
 	mkdir $build_dir\NuPack\lib
-	mkdir $build_dir\NuPack\lib\embedded
-	mkdir $build_dir\NuPack\lib\3.5
-	mkdir $build_dir\NuPack\lib\4.0
+	mkdir $build_dir\NuPack\lib\net35
+	mkdir $build_dir\NuPack\lib\net40
+	mkdir $build_dir\NuPack\lib\sl40
 	mkdir $build_dir\NuPack\tools
 	mkdir $build_dir\NuPack\server
+
+	# package for RavenDB embedded is separate and requires .NET 4.0
+	remove-item $build_dir\NuPack-Embedded -force -recurse -erroraction silentlycontinue
+	mkdir $build_dir\NuPack-Embedded
+	mkdir $build_dir\NuPack-Embedded\content
+	mkdir $build_dir\NuPack-Embedded\lib\
+	mkdir $build_dir\NuPack-Embedded\lib\net40
+	mkdir $build_dir\NuPack-Embedded\tools
 	
 	foreach($client_dll in $client_dlls_3_5) {
-    cp "$build_dir\$client_dll" $build_dir\NuPack\lib\3.5
+    cp "$build_dir\$client_dll" $build_dir\NuPack\lib\net35
   }
 
 	foreach($client_dll in $client_dlls) {
-    cp "$build_dir\$client_dll" $build_dir\NuPack\lib\4.0
-  }	
+    cp "$build_dir\$client_dll" $build_dir\NuPack\lib\net40
+  }
+
+	foreach($sl_dll in $silverlight_dlls) {
+    cp "$build_dir\$sl_dll" $build_dir\NuPack\lib\sl40
+  }
   
   foreach($client_dll in $all_client_dlls) {
-    cp "$build_dir\$client_dll" $build_dir\NuPack\lib\embedded
+    cp "$build_dir\$client_dll" $build_dir\NuPack-Embedded\lib\net40
   }
- foreach($server_file in $server_files) {
+
+  # Remove files that are obtained as dependencies
+  del $build_dir\NuPack\lib\net35\Newtonsoft.Json.*
+  del $build_dir\NuPack\lib\net40\Newtonsoft.Json.*
+  del $build_dir\NuPack\lib\sl40\Newtonsoft.Json.*
+  del $build_dir\NuPack-Embedded\lib\net40\Newtonsoft.Json.*
+  del $build_dir\NuPack-Embedded\lib\net40\log4net.*
+
+  # The Server folder is used as a tool, and therefore needs the dependency DLLs in it (can't depend on Nuget for that)
+ 	foreach($server_file in $server_files) {
     cp "$build_dir\$server_file" $build_dir\NuPack\server
   }
 	
   cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\server\Raven.Server.exe.config
   
   cp $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack\content\Web.config.transform
+  cp $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack-Embedded\content\Web.config.transform
   
   cp $build_dir\RavenSmuggler.??? $build_dir\NuPack\Tools
+  cp $build_dir\RavenSmuggler.??? $build_dir\NuPack-Embedded\Tools
   
+
+########### First pass - RavenDB.nupkg
+
   $nupack = [xml](get-content $base_dir\RavenDB.nuspec)
 	
   $nupack.package.metadata.version = "$version.$env:buildlabel"
@@ -450,8 +477,30 @@ task CreateNugetPackage {
   $writer.Close()
   
   & "$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
+
+
+########### Second pass - RavenDB-Embedded.nupkg
+
+  $nupack = [xml](get-content $base_dir\RavenDB-Embedded.nuspec)
+	
+  $nupack.package.metadata.version = "$version.$env:buildlabel"
+
+  $writerSettings = new-object System.Xml.XmlWriterSettings
+  $writerSettings.OmitXmlDeclaration = $true
+  $writerSettings.NewLineOnAttributes = $true
+  $writerSettings.Indent = $true
+	
+  $writer = [System.Xml.XmlWriter]::Create("$build_dir\Nupack-Embedded\RavenDB-Embedded.nuspec", $writerSettings)
+	
+  $nupack.WriteTo($writer)
+  $writer.Flush()
+  $writer.Close()
   
+  & "$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB-Embedded.nuspec
+  
+  # Push to nuget repository
   & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB.$version.$env:buildlabel.nupkg" $accessKey
+  & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB-Embedded.$version.$env:buildlabel.nupkg" $accessKey
   
   
   # This is prune to failure since the previous package may not exists
