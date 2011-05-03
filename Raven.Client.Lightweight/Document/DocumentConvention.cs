@@ -61,7 +61,7 @@ namespace Raven.Client.Document
 		/// for generating a document key
 		///</summary>
 		///<returns></returns>
-		public string DefaultFindFullDocumentKeyFromNonStringIdentifier(object id, Type type)
+		public string DefaultFindFullDocumentKeyFromNonStringIdentifier(object id, Type type, bool allowNull)
 		{
 			var converter = IdentityTypeConvertors.FirstOrDefault(x=>x.CanConvertFrom(id.GetType()));
 			var tag = GetTypeTagName(type);
@@ -72,7 +72,7 @@ namespace Raven.Client.Document
 			}
 			if (converter != null)
 			{
-				return converter.ConvertFrom(tag, id);
+				return converter.ConvertFrom(tag, id, allowNull);
 			}
 			return tag + id;
 		}
@@ -196,7 +196,7 @@ namespace Raven.Client.Document
 		/// Gets or sets the function to find the full document key based on the type of a document
 		/// and the value type identifier (just the numeric part of the id).
 		/// </summary>
-		public Func<object, Type, string> FindFullDocumentKeyFromNonStringIdentifier { get; set; }
+		public Func<object, Type, bool, string> FindFullDocumentKeyFromNonStringIdentifier { get; set; }
 
 		/// <summary>
 		/// Gets or sets the json contract resolver.

@@ -73,7 +73,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public T Load(ValueType id)
 		{
-			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof (T));
+			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof (T), false);
 			return Load(idAsStr);
 		}
 
@@ -120,7 +120,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public TResult Load<TResult>(ValueType id)
 		{
-			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T));
+			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
 			return Load<TResult>(new[] { idAsStr }).FirstOrDefault();
 		}
     }

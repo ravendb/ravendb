@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		{
 			using(var store = NewDocumentStore())
 			{
-				store.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (o, type) => o.ToString();
+				store.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (o, type, allowNull) => o.ToString();
 				new ThorIndex().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);
 
 				using(var s = store.OpenSession())

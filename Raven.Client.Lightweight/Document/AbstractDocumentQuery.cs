@@ -1376,7 +1376,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if(whereEqualsParams.FieldName == Constants.DocumentIdFieldName && whereEqualsParams.Value is string == false)
 			{
-				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereEqualsParams.Value, typeof(T));
+				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereEqualsParams.Value, typeof(T), false);
 			}
 
     		var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),

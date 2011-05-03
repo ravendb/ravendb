@@ -582,7 +582,7 @@ more responsive application.
 				id = value as string;
 				if(id == null && value != null) // need convertion
 				{
-					id = Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType());
+					id = Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
 					return true;
 				}
 				return id != null;

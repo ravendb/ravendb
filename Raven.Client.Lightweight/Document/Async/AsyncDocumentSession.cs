@@ -91,7 +91,7 @@ namespace Raven.Client.Document.Async
 		/// </remarks>
 		public Task<T> LoadAsync<T>(ValueType id)
 		{
-			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T));
+			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
 			return LoadAsync<T>(documentKey);
 		}
 

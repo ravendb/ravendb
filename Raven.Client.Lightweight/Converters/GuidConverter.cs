@@ -32,13 +32,12 @@ namespace Raven.Client.Converters
 		/// <returns>
 		/// An <see cref="T:System.Object"/> that represents the converted value.
 		/// </returns>
-		/// <param name="value">The <see cref="T:System.Object"/> to convert. </param>
 		/// <exception cref="T:System.NotSupportedException">The conversion cannot be performed. </exception>
-		public string ConvertFrom(string tag, object value)
+		public string ConvertFrom(string tag, object value, bool allowNull)
 		{
 			var val = (Guid)value;
 			if (val == Guid.Empty)
-				return tag + Guid.NewGuid().ToString();
+				return tag + Guid.NewGuid();
 			return tag + value;
 		}
 

@@ -31,8 +31,9 @@ namespace Raven.Client.Converters
         /// </returns>
         /// <param name="tag">The tag prefix to use</param>
         /// <param name="value">The <see cref="T:System.Object"/> to convert. </param>
+        /// <param name="allowNull">Whatever null is a valid value</param>
         /// <exception cref="T:System.NotSupportedException">The conversion cannot be performed. </exception>
-        string ConvertFrom(string tag, object value);
+        string ConvertFrom(string tag, object value, bool allowNull);
 
         /// <summary>
         /// Converts the given value object to the specified type, using the specified context and culture information.

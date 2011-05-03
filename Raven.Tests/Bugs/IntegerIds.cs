@@ -28,6 +28,21 @@ namespace Raven.Tests.Bugs
 			
 		}
 
+
+		[Fact]
+		public void CanLoadUsingZero()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Load<WithIntKey>(0);
+				}
+			}
+
+		}
+
+
 		[Fact]
 		public void CanSaveAndQuery()
 		{

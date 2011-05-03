@@ -219,7 +219,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		{
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
-				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type) => id.ToString();
+				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
 				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
 				Guid questionId = Guid.NewGuid();
@@ -283,7 +283,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		{
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
-				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type) => id.ToString();
+				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
 				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
 				Guid questionId = Guid.NewGuid();
