@@ -12,6 +12,8 @@ using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Http;
+using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
 
@@ -32,7 +34,13 @@ namespace Raven.Tests.Bugs
         private void CreateServer(bool initDocStore = false)
         {
             IOExtensions.DeleteDirectory("HiLoData");
-            server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = "HiLoData", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true });
+            server = new RavenDbServer(new RavenConfiguration
+            {
+            	Port = 8080, 
+				DataDirectory = "HiLoData", 
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				AnonymousUserAccessMode = AnonymousUserAccessMode.All
+            });
 
             if (initDocStore) {
                 documentStore = new DocumentStore() { Url = "http://localhost:8080/" };
@@ -53,7 +61,7 @@ namespace Raven.Tests.Bugs
 
             if (File.Exists("hilo-export.dump"))
 				File.Delete("hilo-export.dump");
-			Smuggler.Smuggler.ExportData("http://localhost:8080/", "hilo-export.dump", false);
+			Smuggler.Smuggler.ExportData(new Smuggler.Smuggler.ExportSpec("http://localhost:8080/", "hilo-export.dump", false, false));
 			Assert.True(File.Exists("hilo-export.dump"));
 
             using (var session = documentStore.OpenSession()) {
@@ -73,6 +81,26 @@ namespace Raven.Tests.Bugs
 				Assert.Equal(2, hilo.ServerHi);
 			}
         }
+
+		[Fact]
+		public void Export_And_Import_Retains_Attachment_Metadata()
+		{
+			documentStore.DatabaseCommands.PutAttachment("test", null, new byte[]{1,2,3}, new RavenJObject{{"Test", true}});
+
+			if (File.Exists("hilo-export.dump"))
+				File.Delete("hilo-export.dump");
+			Smuggler.Smuggler.ExportData(new Smuggler.Smuggler.ExportSpec("http://localhost:8080/", "hilo-export.dump", false, true));
+			Assert.True(File.Exists("hilo-export.dump"));
+
+			server.Dispose();
+			CreateServer();
+
+			Smuggler.Smuggler.ImportData("http://localhost:8080/", "hilo-export.dump");
+
+			var attachment = documentStore.DatabaseCommands.GetAttachment("test");
+			Assert.Equal(new byte[]{1,2,3}, attachment.Data);
+			Assert.True(attachment.Metadata.Value<bool>("Test"));
+		}
 
         public class Foo
         {
