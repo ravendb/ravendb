@@ -65,38 +65,21 @@ Usage:
 
         public class ExportSpec
         {
-            string instanceUrl;
-            string file;
-            bool exportIndexesOnly;
-            bool includeAttachments;
-
-            public ExportSpec(string instanceUrl, string file, bool exportIndexesOnly, bool includeAttachments)
+        	public ExportSpec(string instanceUrl, string file, bool exportIndexesOnly, bool includeAttachments)
             {
-                this.instanceUrl = instanceUrl;
-                this.file = file;
-                this.exportIndexesOnly = exportIndexesOnly;
-                this.includeAttachments = includeAttachments;
+                InstanceUrl = instanceUrl;
+                File = file;
+                ExportIndexesOnly = exportIndexesOnly;
+                IncludeAttachments = includeAttachments;
             }
 
-            public string InstanceUrl
-            {
-                get { return instanceUrl; }
-            }
+        	public string InstanceUrl { get; private set; }
 
-            public string File
-            {
-                get { return file; }
-            }
+        	public string File { get; private set; }
 
-            public bool ExportIndexesOnly
-            {
-                get { return exportIndexesOnly; }
-            }
+        	public bool ExportIndexesOnly { get; private set; }
 
-            public bool IncludeAttachments
-            {
-                get { return includeAttachments; }
-            }
+        	public bool IncludeAttachments { get; private set; }
         }
 
         public static void ExportData(ExportSpec exportSpec)
@@ -140,33 +123,7 @@ Usage:
 
                 if (!exportSpec.ExportIndexesOnly)
                 {
-                    using (var webClient = new WebClient())
-                    {
-                        webClient.UseDefaultCredentials = true;
-                        webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
-
-                        var lastEtag = Guid.Empty;
-                        int totalCount = 0;
-                        while (true)
-                        {
-                            var documents =
-                                GetString(webClient.DownloadData(exportSpec.InstanceUrl + "docs?pageSize=128&etag=" + lastEtag));
-                            var array = RavenJArray.Parse(documents);
-                            if (array.Length == 0)
-                            {
-                                Console.WriteLine("Done with reading documents, total: {0}", totalCount);
-                                break;
-                            }
-                            totalCount += array.Length;
-                            Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Length,
-                                              totalCount);
-                            foreach (RavenJToken item in array)
-                            {
-                                item.WriteTo(jsonWriter);
-                            }
-                            lastEtag = new Guid(array.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
-                        }
-                    }
+                    ExportDocuments(exportSpec, jsonWriter);
                 }
                 jsonWriter.WriteEndArray();
                 
@@ -186,32 +143,75 @@ Usage:
 
         }
 
-        static void ExportAttachments(JsonTextWriter jsonWriter, ExportSpec exportSpec)
+    	private static void ExportDocuments(ExportSpec exportSpec, JsonTextWriter jsonWriter)
+    	{
+    		using (var webClient = new WebClient())
+    		{
+    			webClient.UseDefaultCredentials = true;
+    			webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
+
+    			var lastEtag = Guid.Empty;
+    			int totalCount = 0;
+    			while (true)
+    			{
+    				var documents =
+    					GetString(webClient.DownloadData(exportSpec.InstanceUrl + "docs?pageSize=128&etag=" + lastEtag));
+    				var array = RavenJArray.Parse(documents);
+    				if (array.Length == 0)
+    				{
+    					Console.WriteLine("Done with reading documents, total: {0}", totalCount);
+    					break;
+    				}
+    				totalCount += array.Length;
+    				Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Length,
+    				                  totalCount);
+    				foreach (RavenJToken item in array)
+    				{
+    					item.WriteTo(jsonWriter);
+    				}
+    				lastEtag = new Guid(array.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
+    			}
+    		}
+    	}
+
+    	static void ExportAttachments(JsonTextWriter jsonWriter, ExportSpec exportSpec)
         {
             using(var webClient = new WebClient())
             {
-                var attachmentInfo =
-                    GetString(webClient.DownloadData(exportSpec.InstanceUrl + "/static/?"));
-                var array = RavenJArray.Parse(attachmentInfo);
+            	webClient.UseDefaultCredentials = true;
+            	webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
 
-                if (array.Length == 0)
-                {
-                    Console.WriteLine("Done with reading attachments, total: {0}", array.Length);
-                    return;
-                }
+				var lastEtag = Guid.Empty;
+    			int totalCount = 0;
+				while (true)
+				{
+					var attachmentInfo = GetString(webClient.DownloadData(exportSpec.InstanceUrl + "/static/?pageSize=128&etag=" + lastEtag));
+					var array = RavenJArray.Parse(attachmentInfo);
 
+					if (array.Length == 0)
+					{
+						Console.WriteLine("Done with reading attachments, total: {0}", totalCount);
+						break;
+					}
 
-                foreach (var item in array)
-                {
-                    var attachmentData = webClient.DownloadData(exportSpec.InstanceUrl + "/static/" + item.Value<string>("Key"));
-                    RavenJObject.FromObject(
-                        new
-                            {
-                                Data = attachmentData,
-                                Etag = item.Value<string>("Etag"),
-                                Key = item.Value<string>("Key")
-                            }).WriteTo(jsonWriter);
-                }
+					totalCount += array.Length;
+					Console.WriteLine("Reading batch of {0,3} attachments, read so far: {1,10:#,#}", array.Length,
+									  totalCount);
+					foreach (var item in array)
+					{
+						Console.WriteLine("Downloading attachment: {0}", item.Value<string>("Key"));
+						var attachmentData = webClient.DownloadData(exportSpec.InstanceUrl + "/static/" + item.Value<string>("Key"));
+						RavenJObject.FromObject(
+							new
+							{
+								Data = attachmentData,
+								Etag = item.Value<string>("Etag"),
+								Key = item.Value<string>("Key")
+							}).WriteTo(jsonWriter);
+					}
+				
+					lastEtag = new Guid(array.Last().Value<string>("@etag"));
+				}
             }
         }
 
