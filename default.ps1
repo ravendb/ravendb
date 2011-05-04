@@ -143,7 +143,7 @@ task TestSilverlight {
 	try{
     start "$build_dir\Raven.Server.exe" "/ram"
     exec { 
-      & ".\Tools\StatLight\StatLight.exe" "-x=.\Raven.Tests.Silverlight\Bin\Debug\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
+      & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
     }
 	}
 	finally{
