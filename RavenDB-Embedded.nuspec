@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package>
  <metadata>
-   <id>RavenDB</id>
+   <id>RavenDB-Embedded</id>
    <version>1.0</version>
-   <title>RavenDB</title>
+   <title>RavenDB (Embedded)</title>
    <authors>Hibernating Rhinos</authors>
    <description>Raven is a document database for the .NET/Windows platform, offering a flexible data model design to fit the needs of real world systems.</description>
    <language>en-US</language>
    <licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
    <projectUrl>http://www.ravendb.net/</projectUrl>
    <requireLicenseAcceptance>true</requireLicenseAcceptance>
-   <tags>nosql ravendb raven document database</tags>
+   <tags>nosql ravendb raven document database embedded</tags>
    <dependencies>
+      <dependency id="Log4Net" version="1.2.10" />
       <dependency id="Newtonsoft.Json" version="4.0" />
    </dependencies>
    <iconUrl>http://ravendb.net/raven.png</iconUrl>
