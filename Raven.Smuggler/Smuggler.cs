@@ -32,6 +32,7 @@ Usage:
 
       Optional arguments (after required arguments): 
             --only-indexes : exports only index definitions
+            --include-attachments : also export attachments
 ");
 
                 Environment.Exit(-1);
@@ -50,7 +51,8 @@ Usage:
                         break;
                     case "out":
                         bool exportIndexesOnly = args.Any(arg => arg.Equals("--only-indexes"));
-                        ExportData(instanceUrl, file, exportIndexesOnly);
+                        bool inlcudeAttachments = args.Any(arg => arg.Equals("--include-attachments"));
+                        ExportData(new ExportSpec(instanceUrl, file, exportIndexesOnly, inlcudeAttachments));
                         break;
                 }
             }
@@ -61,9 +63,45 @@ Usage:
             }
         }
 
-    	public static void ExportData(string instanceUrl, string file, bool exportIndexesOnly)
+        public class ExportSpec
         {
-            using (var streamWriter = new StreamWriter(new GZipStream(File.Create(file), CompressionMode.Compress)))
+            string instanceUrl;
+            string file;
+            bool exportIndexesOnly;
+            bool includeAttachments;
+
+            public ExportSpec(string instanceUrl, string file, bool exportIndexesOnly, bool includeAttachments)
+            {
+                this.instanceUrl = instanceUrl;
+                this.file = file;
+                this.exportIndexesOnly = exportIndexesOnly;
+                this.includeAttachments = includeAttachments;
+            }
+
+            public string InstanceUrl
+            {
+                get { return instanceUrl; }
+            }
+
+            public string File
+            {
+                get { return file; }
+            }
+
+            public bool ExportIndexesOnly
+            {
+                get { return exportIndexesOnly; }
+            }
+
+            public bool IncludeAttachments
+            {
+                get { return includeAttachments; }
+            }
+        }
+
+        public static void ExportData(ExportSpec exportSpec)
+        {
+            using (var streamWriter = new StreamWriter(new GZipStream(File.Create(exportSpec.File), CompressionMode.Compress)))
             {
                 var jsonWriter = new JsonTextWriter(streamWriter)
                 {
@@ -80,7 +118,7 @@ Usage:
                     int totalCount = 0;
                     while (true)
                     {
-						var documents = GetString(webClient.DownloadData(instanceUrl + "indexes?pageSize=128&start=" + totalCount));
+						var documents = GetString(webClient.DownloadData(exportSpec.InstanceUrl + "indexes?pageSize=128&start=" + totalCount));
                         var array = RavenJArray.Parse(documents);
                         if (array.Length == 0)
                         {
@@ -100,7 +138,7 @@ Usage:
                 jsonWriter.WritePropertyName("Docs");
                 jsonWriter.WriteStartArray();
 
-                if (!exportIndexesOnly)
+                if (!exportSpec.ExportIndexesOnly)
                 {
                     using (var webClient = new WebClient())
                     {
@@ -112,7 +150,7 @@ Usage:
                         while (true)
                         {
                             var documents =
-                                GetString(webClient.DownloadData(instanceUrl + "docs?pageSize=128&etag=" + lastEtag));
+                                GetString(webClient.DownloadData(exportSpec.InstanceUrl + "docs?pageSize=128&etag=" + lastEtag));
                             var array = RavenJArray.Parse(documents);
                             if (array.Length == 0)
                             {
@@ -131,8 +169,49 @@ Usage:
                     }
                 }
                 jsonWriter.WriteEndArray();
+                
+                jsonWriter.WritePropertyName("Attachments");
+                jsonWriter.WriteStartArray();
+                if(exportSpec.IncludeAttachments)
+                {
+                    ExportAttachments(jsonWriter,exportSpec);
+                }
+                jsonWriter.WriteEndArray();
+
                 jsonWriter.WriteEndObject();
                 streamWriter.Flush();
+            }
+
+            
+
+        }
+
+        static void ExportAttachments(JsonTextWriter jsonWriter, ExportSpec exportSpec)
+        {
+            using(var webClient = new WebClient())
+            {
+                var attachmentInfo =
+                    GetString(webClient.DownloadData(exportSpec.InstanceUrl + "/static/?"));
+                var array = RavenJArray.Parse(attachmentInfo);
+
+                if (array.Length == 0)
+                {
+                    Console.WriteLine("Done with reading attachments, total: {0}", array.Length);
+                    return;
+                }
+
+
+                foreach (var item in array)
+                {
+                    var attachmentData = webClient.DownloadData(exportSpec.InstanceUrl + "/static/" + item.Value<string>("Key"));
+                    RavenJObject.FromObject(
+                        new
+                            {
+                                Data = attachmentData,
+                                Etag = item.Value<string>("Etag"),
+                                Key = item.Value<string>("Key")
+                            }).WriteTo(jsonWriter);
+                }
             }
         }
 
@@ -228,7 +307,38 @@ Usage:
                         FlushBatch(instanceUrl, batch);
                 }
                 FlushBatch(instanceUrl, batch);
-            	Console.WriteLine("Imported {0:#,#} documents in {1:#,#} ms", totalCount, sw.ElapsedMilliseconds);
+
+                var attachmentCount = 0;
+                if (jsonReader.Read() == false)
+                    return;
+                if (jsonReader.TokenType != JsonToken.PropertyName)
+                    throw new InvalidDataException("PropertyName was expected");
+                if (Equals("Attachments", jsonReader.Value) == false)
+                    throw new InvalidDataException("Attachment property was expected");
+                if (jsonReader.Read() == false)
+                    return;
+                if (jsonReader.TokenType != JsonToken.StartArray)
+                    throw new InvalidDataException("StartArray was expected");
+                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+                {
+                    using (var client = new WebClient())
+                    {
+                        attachmentCount += 1;
+                        var item = RavenJToken.ReadFrom(jsonReader);
+
+                        client.Headers.Add("Etag", item.Value<string>("Etag"));
+                        
+                        using(var writer = client.OpenWrite(instanceUrl + "static/" + item.Value<string>("Key"),"PUT"))
+                        {
+                            var data = item.Value<byte[]>("Data");
+                            writer.Write(data,0,data.Length);
+                        }
+                    }
+                }
+           
+
+
+            	Console.WriteLine("Imported {0:#,#} documents and {1:#,#} attachments in {2:#,#} ms", totalCount,attachmentCount, sw.ElapsedMilliseconds);
             }
         }
 
