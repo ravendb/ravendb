@@ -324,7 +324,7 @@ Usage:
                     {
                         attachmentCount += 1;
                         var item = RavenJToken.ReadFrom(jsonReader);
-
+						Console.WriteLine("Importing attachment {0}", item.Value<string>("Key"));
                         using(var writer = client.OpenWrite(instanceUrl + "static/" + item.Value<string>("Key"),"PUT"))
                         {
                             var data = item.Value<byte[]>("Data");
