@@ -205,7 +205,6 @@ Usage:
 							new
 							{
 								Data = attachmentData,
-								Etag = item.Value<string>("Etag"),
 								Key = item.Value<string>("Key")
 							}).WriteTo(jsonWriter);
 					}
@@ -326,18 +325,14 @@ Usage:
                         attachmentCount += 1;
                         var item = RavenJToken.ReadFrom(jsonReader);
 
-                        client.Headers.Add("Etag", item.Value<string>("Etag"));
-                        
                         using(var writer = client.OpenWrite(instanceUrl + "static/" + item.Value<string>("Key"),"PUT"))
                         {
                             var data = item.Value<byte[]>("Data");
                             writer.Write(data,0,data.Length);
+							writer.Flush();
                         }
                     }
                 }
-           
-
-
             	Console.WriteLine("Imported {0:#,#} documents and {1:#,#} attachments in {2:#,#} ms", totalCount,attachmentCount, sw.ElapsedMilliseconds);
             }
         }
