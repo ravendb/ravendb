@@ -17,13 +17,14 @@ namespace Raven.Abstractions.Json
 				writer.WriteNull();
 			else
 				((DynamicJsonObject)value).Inner.WriteTo(writer);
+#else
+			throw new NotImplementedException();
 #endif
 		}
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
 			// NOTE: THIS DOESN'T SUPPORT READING OF DynamicJsonObject !!!
-			//throw new NotImplementedException();
 
 			var o = RavenJToken.Load(reader);
 			return (o.Type == JTokenType.Null || o.Type == JTokenType.Undefined) ? null : o;
