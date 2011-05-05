@@ -1,4 +1,5 @@
 ﻿
+using System;
 using System.Linq;
 using Xunit;
 
@@ -31,6 +32,30 @@ namespace Raven.Tests.Linq
 							   where ar.StringArray.Any(ac => ac == otherDoc.SomeProperty)
 							   select ar).FirstOrDefault();
 					Assert.NotNull(doc);
+				}
+			}
+		}
+
+		private class OrderableEntity
+		{
+			public DateTime Order { get; set; }
+		}
+
+		[Fact]
+		public void NullRefWhenQuerying()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+
+					var query = from a in session.Query<OrderableEntity>()
+													.Customize(x => x.WaitForNonStaleResultsAsOfNow())
+								where DateTime.Now < a.Order
+								select a;
+
+					query.ToList();
+
 				}
 			}
 		}
