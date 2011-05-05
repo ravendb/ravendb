@@ -225,7 +225,11 @@ namespace Raven.Client.Linq
 			if (node.NodeType != ExpressionType.MemberAccess)
 				return false;
 			var memberExpression = ((MemberExpression)node);
-			return memberExpression.Expression.NodeType != ExpressionType.Constant;
+			if (memberExpression.Expression == null)// static call
+				return true;
+			if (memberExpression.Expression.NodeType == ExpressionType.Constant)
+				return false;
+			return IsMemberAccess(memberExpression.Expression);
 		}
 
 		private void VisitNotEquals(BinaryExpression expression)
@@ -884,55 +888,45 @@ namespace Raven.Client.Linq
 
 		private static bool GetValueFromExpressionWithoutConversion(Expression expression, out object value)
 		{
-			if (expression.NodeType == ExpressionType.Constant)
+			switch (expression.NodeType)
 			{
-				value = ((ConstantExpression) expression).Value;
-				return true;
-			}
-			if (expression.NodeType == ExpressionType.MemberAccess)
-			{
-				value = GetMemberValue(((MemberExpression) expression));
-				return true;
-			}
-			if (expression.NodeType == ExpressionType.New)
-			{
-				var newExpression = ((NewExpression) expression);
-				value = Activator.CreateInstance(newExpression.Type, newExpression.Arguments.Select(e =>
-				{
-					object o;
-					if (GetValueFromExpressionWithoutConversion(e, out o))
-						return o;
-					throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
-				}).ToArray());
-				return true;
-			}
-			if (expression.NodeType == ExpressionType.Lambda)
-			{
-				value = ((LambdaExpression) expression).Compile().DynamicInvoke();
-				return true;
-			}
-			if (expression.NodeType == ExpressionType.Call)
-			{
-				value = Expression.Lambda(expression).Compile().DynamicInvoke();
-				return true;
-			}
-			if (expression.NodeType == ExpressionType.Convert)
-			{
-				value = Expression.Lambda(((UnaryExpression) expression).Operand).Compile().DynamicInvoke();
-				return true;
-			}
-			if (expression.NodeType == ExpressionType.NewArrayInit)
-			{
-				var expressions = ((NewArrayExpression)expression).Expressions;
-				var values = new object[expressions.Count];
-				value = null;
-				if (expressions.Where((t, i) => !GetValueFromExpressionWithoutConversion(t, out values[i])).Any())
+				case ExpressionType.Constant:
+					value = ((ConstantExpression) expression).Value;
+					return true;
+				case ExpressionType.MemberAccess:
+					value = GetMemberValue(((MemberExpression) expression));
+					return true;
+				case ExpressionType.New:
+					var newExpression = ((NewExpression) expression);
+					value = Activator.CreateInstance(newExpression.Type, newExpression.Arguments.Select(e =>
+					{
+						object o;
+						if (GetValueFromExpressionWithoutConversion(e, out o))
+							return o;
+						throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
+					}).ToArray());
+					return true;
+				case ExpressionType.Lambda:
+					value = ((LambdaExpression) expression).Compile().DynamicInvoke();
+					return true;
+				case ExpressionType.Call:
+					value = Expression.Lambda(expression).Compile().DynamicInvoke();
+					return true;
+				case ExpressionType.Convert:
+					value = Expression.Lambda(((UnaryExpression) expression).Operand).Compile().DynamicInvoke();
+					return true;
+				case ExpressionType.NewArrayInit:
+					var expressions = ((NewArrayExpression) expression).Expressions;
+					var values = new object[expressions.Count];
+					value = null;
+					if (expressions.Where((t, i) => !GetValueFromExpressionWithoutConversion(t, out values[i])).Any())
+						return false;
+					value = values;
+					return true;
+				default:
+					value = null;
 					return false;
-				value = values;
-				return true;
 			}
-			value = null;
-			return false;
 		}
 
 		private static object GetMemberValue(MemberExpression memberExpression)
