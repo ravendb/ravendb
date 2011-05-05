@@ -231,7 +231,7 @@ task CopySilverlight{
 }
 
 task CopySmuggler { 
-	cp $build_dir\RavenSmuggler.??? $build_dir\Output\Smuggler
+	cp $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
 	cp $build_dir\Raven.Json.??? $build_dir\Output\Smuggler
 	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Smuggler
 }
