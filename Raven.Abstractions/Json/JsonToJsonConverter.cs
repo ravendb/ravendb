@@ -1,5 +1,4 @@
-﻿#if !NET_3_5
-using System;
+﻿using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Linq;
@@ -11,17 +10,20 @@ namespace Raven.Abstractions.Json
 	{
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
-			if(value is DynamicNullObject)
-				writer.WriteNull();
-			else if (value is RavenJObject)
+			if (value is RavenJObject)
 				((RavenJObject)value).WriteTo(writer);
+#if !NET_3_5
+			else if(value is DynamicNullObject)
+				writer.WriteNull();
 			else
 				((DynamicJsonObject)value).Inner.WriteTo(writer);
+#endif
 		}
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
 			// NOTE: THIS DOESN'T SUPPORT READING OF DynamicJsonObject !!!
+			//throw new NotImplementedException();
 
 			var o = RavenJToken.Load(reader);
 			return (o.Type == JTokenType.Null || o.Type == JTokenType.Undefined) ? null : o;
@@ -29,8 +31,11 @@ namespace Raven.Abstractions.Json
 
 		public override bool CanConvert(Type objectType)
 		{
-			return objectType == typeof(RavenJObject) || objectType == typeof(DynamicJsonObject) || objectType == typeof(DynamicNullObject);
+			return objectType == typeof(RavenJObject)
+#if !NET_3_5
+				|| objectType == typeof(DynamicJsonObject) || objectType == typeof(DynamicNullObject)
+#endif
+				;
 		}
 	}
 }
-#endif

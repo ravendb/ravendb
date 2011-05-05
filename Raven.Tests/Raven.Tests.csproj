@@ -425,6 +425,7 @@
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="IndexQueryUrl.cs" />
+    <Compile Include="Linq\Any.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
     <Compile Include="Linq\SampleGeoLocation.cs" />
