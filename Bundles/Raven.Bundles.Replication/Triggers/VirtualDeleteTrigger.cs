@@ -23,16 +23,21 @@ namespace Raven.Bundles.Replication.Triggers
 	[ExportMetadata("Order", 10000)]
 	public class VirtualDeleteTrigger : AbstractDeleteTrigger
     {
-        readonly ThreadLocal<RavenJToken> deletedSource = new ThreadLocal<RavenJToken>();
-        readonly ThreadLocal<RavenJToken> deletedVersion = new ThreadLocal<RavenJToken>();
+		readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
 
         public override void OnDelete(string key, TransactionInformation transactionInformation)
         {
             var document = Database.Get(key, transactionInformation);
             if (document == null)
                 return;
-            deletedSource.Value = document.Metadata[ReplicationConstants.RavenReplicationSource];
-            deletedVersion.Value = document.Metadata[ReplicationConstants.RavenReplicationVersion];
+			deletedHistory.Value = document.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ??
+			                       new RavenJArray();
+			deletedHistory.Value.Add(
+				new RavenJObject
+				{
+					{ReplicationConstants.RavenReplicationVersion, document.Metadata[ReplicationConstants.RavenReplicationVersion]},
+					{ReplicationConstants.RavenReplicationSource, document.Metadata[ReplicationConstants.RavenReplicationSource]}
+				});
         }
 
         public override void AfterDelete(string key, TransactionInformation transactionInformation)
@@ -40,11 +45,11 @@ namespace Raven.Bundles.Replication.Triggers
 			var metadata = new RavenJObject
         	{
         		{"Raven-Delete-Marker", true},
-        		{ReplicationConstants.RavenReplicationParentSource, deletedSource.Value},
-        		{ReplicationConstants.RavenReplicationParentVersion, deletedVersion.Value}
+        		{
+        			ReplicationConstants.RavenReplicationHistory, deletedHistory.Value
+        		}
         	};
-            deletedVersion.Value = null;
-            deletedSource.Value = null;
+            deletedHistory.Value = null;
             Database.Put(key, null, new RavenJObject(), metadata,transactionInformation);
         }
     }

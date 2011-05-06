@@ -29,13 +29,24 @@ namespace Raven.Bundles.Replication.Triggers
             if (key.StartsWith("Raven/")) // we don't deal with system documents
                 return;
             var doc = Database.Get(key, null);
-            if (doc != null)
-            {
-                metadata[ReplicationConstants.RavenReplicationParentVersion] =
-                    doc.Metadata[ReplicationConstants.RavenReplicationVersion];
-                metadata[ReplicationConstants.RavenReplicationParentSource] =
-                doc.Metadata[ReplicationConstants.RavenReplicationSource];
-            }
+			if (doc != null)
+			{
+				var history = metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory);
+				if (history == null)
+					metadata[ReplicationConstants.RavenReplicationHistory] = history = new RavenJArray();
+
+				history.Add(new RavenJObject
+				{
+					{ReplicationConstants.RavenReplicationVersion, doc.Metadata[ReplicationConstants.RavenReplicationVersion]},
+					{ReplicationConstants.RavenReplicationSource, doc.Metadata[ReplicationConstants.RavenReplicationSource]}
+
+				});
+
+				if (history.Length > ReplicationConstants.ChangeHistoryLength)
+				{
+					history.RemoveAt(0);
+				}
+			}
             metadata[ReplicationConstants.RavenReplicationVersion] = RavenJToken.FromObject(hiLo.NextId());
 			metadata[ReplicationConstants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
         }

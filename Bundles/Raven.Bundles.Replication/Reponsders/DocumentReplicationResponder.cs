@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Linq;
 using log4net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -138,10 +139,17 @@ namespace Raven.Bundles.Replication.Reponsders
 
         private static bool IsDirectChildOfCurrentDocument(JsonDocument existingDoc, RavenJObject metadata)
         {
-            return RavenJToken.DeepEquals(existingDoc.Metadata[ReplicationConstants.RavenReplicationVersion],
-                                     metadata[ReplicationConstants.RavenReplicationParentVersion]) && 
-                   RavenJToken.DeepEquals(existingDoc.Metadata[ReplicationConstants.RavenReplicationSource],
-                                     metadata[ReplicationConstants.RavenReplicationParentSource]);
+			var version = new RavenJObject
+        	{
+        		{ReplicationConstants.RavenReplicationSource, existingDoc.Metadata[ReplicationConstants.RavenReplicationSource]},
+        		{ReplicationConstants.RavenReplicationVersion, existingDoc.Metadata[ReplicationConstants.RavenReplicationVersion]},
+        	};
+
+			var history = metadata[ReplicationConstants.RavenReplicationHistory];
+			if (history == null) // no history, not a parent
+				return false;
+
+			return history.Values().Contains(version, new RavenJTokenEqualityComparer());
         }
 
         public override string UrlPattern

@@ -20,28 +20,34 @@ namespace Raven.Bundles.Replication.Triggers
 	[ExportMetadata("Order", 10000)]
 	public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
     {
-        readonly ThreadLocal<RavenJToken> deletedSource = new ThreadLocal<RavenJToken>();
-        readonly ThreadLocal<RavenJToken> deletedVersion = new ThreadLocal<RavenJToken>();
+		readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
 
         public override void OnDelete(string key)
         {
-            var document = Database.GetStatic(key);
-            if (document == null)
+            var attachment = Database.GetStatic(key);
+            if (attachment == null)
                 return;
-            deletedSource.Value = document.Metadata[ReplicationConstants.RavenReplicationSource];
-            deletedVersion.Value = document.Metadata[ReplicationConstants.RavenReplicationVersion];
-        }
+			deletedHistory.Value = attachment.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ??
+								   new RavenJArray();
+
+			deletedHistory.Value.Add(
+				new RavenJObject
+				{
+					{ReplicationConstants.RavenReplicationVersion, attachment.Metadata[ReplicationConstants.RavenReplicationVersion]},
+					{ReplicationConstants.RavenReplicationSource, attachment.Metadata[ReplicationConstants.RavenReplicationSource]}
+				});
+		}
 
         public override void AfterDelete(string key)
         {
         	var metadata = new RavenJObject
         	{
         		{"Raven-Delete-Marker", true},
-        		{ReplicationConstants.RavenReplicationParentSource, deletedSource.Value},
-        		{ReplicationConstants.RavenReplicationParentVersion, deletedVersion.Value}
+        		{
+        			ReplicationConstants.RavenReplicationHistory, deletedHistory.Value
+        		}
         	};
-            deletedVersion.Value = null;
-            deletedSource.Value = null;
+            deletedHistory.Value = null;
             Database.PutStatic(key, null, new byte[0], metadata);
         }
     }

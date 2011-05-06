@@ -15,6 +15,7 @@ using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 using Raven.Database.Json;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Bundles.Replication.Reponsders
 {
@@ -135,15 +136,22 @@ namespace Raven.Bundles.Replication.Reponsders
 								});
         }
 
-        private static bool IsDirectChildOfCurrentAttachment(Attachment existingDoc, RavenJObject metadata)
+        private static bool IsDirectChildOfCurrentAttachment(Attachment existingAttachment, RavenJObject metadata)
         {
-            return RavenJToken.DeepEquals(existingDoc.Metadata[ReplicationConstants.RavenReplicationVersion],
-                                     metadata[ReplicationConstants.RavenReplicationParentVersion]) &&
-				   RavenJToken.DeepEquals(existingDoc.Metadata[ReplicationConstants.RavenReplicationSource],
-                                     metadata[ReplicationConstants.RavenReplicationParentSource]);
+        	var version = new RavenJObject
+        	{
+        		{ReplicationConstants.RavenReplicationSource, existingAttachment.Metadata[ReplicationConstants.RavenReplicationSource]},
+        		{ReplicationConstants.RavenReplicationVersion, existingAttachment.Metadata[ReplicationConstants.RavenReplicationVersion]},
+        	};
+
+			var history = metadata[ReplicationConstants.RavenReplicationHistory];
+			if (history == null) // no history, not a parent
+				return false;
+
+        	return history.Values().Contains(version, new RavenJTokenEqualityComparer());
         }
 
-        public override string UrlPattern
+    	public override string UrlPattern
         {
             get { return "^/replication/replicateAttachments$"; }
         }
