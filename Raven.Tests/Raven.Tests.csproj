@@ -161,6 +161,7 @@
     <Compile Include="Bugs\ComplexDynamicQuery.cs" />
     <Compile Include="Bugs\ConnectionStringParsing.cs" />
     <Compile Include="Bugs\DuplicatedFiledNames.cs" />
+    <Compile Include="Bugs\Indexing\CanIndexNestedObjects.cs" />
     <Compile Include="Bugs\IntegerIds.cs" />
     <Compile Include="Bugs\IteratingTwice.cs" />
     <Compile Include="Bugs\Iulian\CanReadEntityWithUrlId.cs" />
