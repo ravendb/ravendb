@@ -29,6 +29,26 @@ namespace Raven.Tests.Linq
 			documentSession = documentStore.OpenSession();
 		}
 
+
+		[Fact]
+		public void BracesOverrideOperatorPrecedence_second_method()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name == "ayende" && (user.Name == "rob" || user.Name == "dave"));
+
+			Assert.Equal("Name:ayende AND (Name:rob OR Name:dave)", q.ToString());
+		}
+
+		[Fact]
+		public void BracesOverrideOperatorPrecedence_third_method()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name == "ayende");
+			q = q.Where(user => (user.Name == "rob" || user.Name == "dave"));
+
+			Assert.Equal("(Name:ayende) AND (Name:rob OR Name:dave)", q.ToString());
+		}
+
 		[Fact]
 		public void CanForceUsingIgnoreCase()
 		{
@@ -402,7 +422,7 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers
 				.Where(x => x.Age == 3)
 				.Where(x => x.Name == "ayende");
-			Assert.Equal("(Age:3) AND Name:ayende", q.ToString());
+			Assert.Equal("(Age:3) AND (Name:ayende)", q.ToString());
 		}
 
 		[Fact]

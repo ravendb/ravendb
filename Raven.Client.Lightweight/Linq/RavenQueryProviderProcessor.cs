@@ -635,11 +635,17 @@ namespace Raven.Client.Linq
 					{
 						insideWhere++;
 						VisitExpression(expression.Arguments[0]);
-						if (chainedWhere) luceneQuery.AndAlso();
-						if (insideWhere > 1)
+						if (chainedWhere)
+						{
+							luceneQuery.AndAlso();
+							luceneQuery.OpenSubclause();
+						}
+						if (chainedWhere == false && insideWhere > 1)
 							luceneQuery.OpenSubclause();
 						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
-						if (insideWhere > 1)
+						if (chainedWhere == false && insideWhere > 1)
+							luceneQuery.CloseSubclause();
+						if (chainedWhere)
 							luceneQuery.CloseSubclause();
 						chainedWhere = true;
 						insideWhere--;
