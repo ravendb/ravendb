@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs.Vlko
 						.Where(x=> x.Age == 19)
 						.ToString();
 
-					Assert.Equal("((__document_id:1 OR __document_id:2) OR __document_id:3) AND Age:19", query);
+					Assert.Equal("((__document_id:1 OR __document_id:2) OR __document_id:3) AND (Age:19)", query);
 				}
 			}
 		}

@@ -86,7 +86,7 @@ namespace Raven.Tests.Bugs.Indexing
 				//  the index has two objects
 				using (var s = store.OpenSession())
 				{
-					var result = s.Query<IndexEntry, NestedObjectIndex>()
+					var result = s.Query<ContainerObject, NestedObjectIndex>()
 						.Customize(q => q.WaitForNonStaleResultsAsOfNow())
 						.Count();
 
@@ -96,7 +96,7 @@ namespace Raven.Tests.Bugs.Indexing
 				//  and the index can be queried
 				using (var s = store.OpenSession())
 				{
-					var result = s.Query<IndexEntry, NestedObjectIndex>()
+					var result = s.Query<ContainerObject, NestedObjectIndex>()
 						.Customize(q => q.WaitForNonStaleResultsAsOfNow())
 						.AsProjection<IndexEntry>()
 						.Where(o => o.Name == expectedItemName)
