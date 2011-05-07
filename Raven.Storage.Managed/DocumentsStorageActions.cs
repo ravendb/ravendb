@@ -157,7 +157,8 @@ namespace Raven.Storage.Managed
 						Key = key,
 						Etag = Guid.Empty,
 						Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
-						NonAuthoritiveInformation = true
+						NonAuthoritiveInformation = true,
+						LastModified = DateTime.MinValue
 					});
 				}
 				return null;

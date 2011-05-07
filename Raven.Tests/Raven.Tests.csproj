@@ -338,6 +338,7 @@
     <Compile Include="Bugs\QueryWithReservedCharacters.cs" />
     <Compile Include="Bugs\RavenDBQuery.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
+    <Compile Include="Bugs\RemoteTx.cs" />
     <Compile Include="Bugs\ReportQueryCount.cs" />
     <Compile Include="Bugs\ResettingIndex.cs" />
     <Compile Include="Bugs\ReuseQuery.cs" />

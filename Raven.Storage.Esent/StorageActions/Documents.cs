@@ -101,7 +101,8 @@ namespace Raven.Storage.Esent.StorageActions
 						Etag = Guid.Empty,
 						Key = key,
 						Metadata = new RavenJObject{{Constants.RavenDocumentDoesNotExists, true}},
-						NonAuthoritiveInformation = true
+						NonAuthoritiveInformation = true,
+						LastModified = DateTime.MinValue,
 					}, (docKey, etag, metadata) => new RavenJObject());
 				}
 				logger.DebugFormat("Document with key '{0}' was not found", key);
