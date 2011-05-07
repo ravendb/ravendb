@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -1092,6 +1093,25 @@ namespace Raven.Database
 			var old = disableAllTriggers.Value;
 			disableAllTriggers.Value = true;
 			return new DisposableAction(() => disableAllTriggers.Value = old);
+		}
+
+		/// <summary>
+		/// Get the total size taken by the database on the disk.
+		/// This explicitly does NOT include in memory indexes or in memory database.
+		/// It does include any reserved space on the file system, which may significantly increase
+		/// the database size.
+		/// </summary>
+		/// <remarks>
+		/// This is a potentially a very expensive call, avoid making it if possible.
+		/// </remarks>
+		public long GetTotalSizeOnDisk()
+		{
+			if (Configuration.RunInMemory)
+				return 0;
+			var allFiles = Directory.GetFiles(Configuration.DataDirectory, "*.*", SearchOption.AllDirectories);
+			var totalSize = allFiles.Sum(file => new FileInfo(file).Length);
+
+			return totalSize;
 		}
 	}
 }
