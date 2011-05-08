@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Client.Linq;
 
 namespace Raven.Client
 {
@@ -334,5 +335,15 @@ If you really want to do in memory filtering on the data returned from the query
         ///  This is only valid on dynamic indexes queries
         ///</remarks>
         TSelf GroupBy (AggregationOperation aggregationOperation, params string[] fieldsToGroupBy);
+
+		/// <summary>
+		/// Callback to get the results of the query
+		/// </summary>
+		void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);
+
+		/// <summary>
+		/// Called externally to raise the after query executed callback
+		/// </summary>
+		void InvokeAfterQueryExecuted(QueryResult result);
     }
 }
