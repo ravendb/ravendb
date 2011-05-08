@@ -12,8 +12,8 @@
    <requireLicenseAcceptance>true</requireLicenseAcceptance>
    <tags>nosql ravendb raven document database embedded</tags>
    <dependencies>
-      <dependency id="Log4Net" version="1.2.10" />
-      <dependency id="Newtonsoft.Json" version="4.0" />
+      <dependency id="Log4Net" version="[1.2.10]" />
+      <dependency id="Newtonsoft.Json" version="[4.0.2]" />
    </dependencies>
    <iconUrl>http://ravendb.net/raven.png</iconUrl>
  </metadata>
