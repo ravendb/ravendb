@@ -67,6 +67,7 @@
     <Compile Include="Expiration\Expiration.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
+    <Compile Include="Replication\Bugs\MultipleWritesInReplicationWindow.cs" />
     <Compile Include="Replication\Bugs\ReplicatingDanish.cs" />
     <Compile Include="Replication\Bugs\SameEtagFromDifferentServers.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />

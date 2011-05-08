@@ -31,9 +31,8 @@ namespace Raven.Bundles.Replication.Triggers
             var doc = Database.Get(key, null);
 			if (doc != null)
 			{
-				var history = metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory);
-				if (history == null)
-					metadata[ReplicationConstants.RavenReplicationHistory] = history = new RavenJArray();
+				var history = doc.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ?? new RavenJArray();
+				metadata[ReplicationConstants.RavenReplicationHistory] = history;
 
 				history.Add(new RavenJObject
 				{
