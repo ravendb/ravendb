@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 #endif
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Client.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -642,6 +643,36 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			ApplyForAll(x => x.GroupBy(aggregationOperation, fieldsToGroupBy));
 			return this;
+		}
+
+		/// <summary>
+		/// Callback to get the results of the query
+		/// </summary>
+		public void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted)
+		{
+			foreach (var query in queries)
+			{
+				query.AfterQueryExecuted(afterQueryExecuted);				
+			}
+		}
+
+		/// <summary>
+		/// Called externally to raise the after query executed callback
+		/// </summary>
+		public void InvokeAfterQueryExecuted(QueryResult result)
+		{
+			foreach (var query in queries)
+			{
+				query.InvokeAfterQueryExecuted(result);
+			}
+		}
+
+		/// <summary>
+		/// Provide statistics about the query, such as total count of matching records
+		/// </summary>
+		public IDocumentQuery<T> Statistics(out RavenQueryStatistics stats)
+		{
+			throw new NotImplementedException();
 		}
 
 		/// <summary>

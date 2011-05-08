@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
+using Raven.Client.Linq;
 
 namespace Raven.Client
 {

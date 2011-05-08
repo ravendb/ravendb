@@ -7,6 +7,7 @@ using System.Linq.Expressions;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Linq;
 using Raven.Client.Listeners;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -156,8 +157,17 @@ namespace Raven.Client.Document
             return this;
         }
 
+    	/// <summary>
+    	/// Provide statistics about the query, such as total count of matching records
+    	/// </summary>
+    	IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Statistics(out RavenQueryStatistics stats)
+    	{
+			Statistics(out stats);
+    		return this;
+    	}
 
-        /// <summary>
+
+    	/// <summary>
         /// Includes the specified path in the query, loading the document specified in that path
         /// </summary>
         /// <param name="path">The path.</param>

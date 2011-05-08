@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+using Raven.Client.Linq;
 using Raven.Client.Listeners;
 
 namespace Raven.Client.Document
@@ -509,7 +510,16 @@ namespace Raven.Client.Document
             return this;
         }
 
-        /// <summary>
+    	/// <summary>
+    	/// Provide statistics about the query, such as total count of matching records
+    	/// </summary>
+    	IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Statistics(out RavenQueryStatistics stats)
+    	{
+    		Statistics(out stats);
+    		return this;
+    	}
+
+    	/// <summary>
         /// Filter matches to be inside the specified radius
         /// </summary>
         /// <param name="radius">The radius.</param>

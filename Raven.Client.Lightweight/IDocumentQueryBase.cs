@@ -345,5 +345,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Called externally to raise the after query executed callback
 		/// </summary>
 		void InvokeAfterQueryExecuted(QueryResult result);
+
+		/// <summary>
+		/// Provide statistics about the query, such as total count of matching records
+		/// </summary>
+		TSelf Statistics(out RavenQueryStatistics stats);
     }
 }

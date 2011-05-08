@@ -32,7 +32,6 @@ namespace Raven.Client.Document
     ///   A query against a Raven index
     /// </summary>
     public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
-		where TSelf : AbstractDocumentQuery<T, TSelf>
     {
         /// <summary>
         /// Whatever to negate the next operation
@@ -132,7 +131,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Holds the query stats
 		/// </summary>
-		protected readonly RavenQueryStatistics queryStats;
+		protected readonly RavenQueryStatistics queryStats = new RavenQueryStatistics();
 
         /// <summary>
         ///   Get the name of the index being queried
@@ -240,16 +239,8 @@ namespace Raven.Client.Document
 #if !NET_3_5
             this.theAsyncDatabaseCommands = asyncDatabaseCommands;
 #endif
-			this.AfterQueryExecuted(UpdateQueryStats);
+			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
         }
-
-		protected virtual void UpdateQueryStats(QueryResult obj)
-		{
-			queryStats.IsStale = obj.IsStale;
-			queryStats.TotalResults = obj.TotalResults;
-			queryStats.SkippedResults = obj.SkippedResults;
-			queryStats.Timestamp = obj.IndexTimestamp;
-		}
 
         /// <summary>
         ///   Initializes a new instance of the <see cref = "DocumentQuery&lt;T&gt;" /> class.
@@ -379,8 +370,13 @@ namespace Raven.Client.Document
         {
             get
             {
-            	var currentQueryResults = queryResult ?? (queryResult = GetQueryResult());
-            	return currentQueryResults.CreateSnapshot();
+            	if (queryResult == null)
+            	{
+            		queryResult = GetQueryResult();
+					InvokeAfterQueryExecuted(queryResult);
+            	}
+
+            	return queryResult.CreateSnapshot();
             }
         }
 #endif
@@ -395,8 +391,17 @@ namespace Raven.Client.Document
         {
             get
             {
-            	var currentQueryResultTask = queryResultTask ?? (queryResultTask = GetQueryResultAsync());
-            	return currentQueryResultTask
+            	if (queryResultTask == null)
+            	{
+            		queryResultTask = GetQueryResultAsync()
+            			.ContinueWith(task =>
+            			{
+            				var result = task.Result;
+							InvokeAfterQueryExecuted(result);
+            				return result;
+            			});
+            	}
+            	return queryResultTask
             		.ContinueWith(x => x.Result.CreateSnapshot());
             }
         }
@@ -1151,10 +1156,9 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Provide statistics about the query, such as total count of matching records
 		/// </summary>
-		public IDocumentQueryBase<T, TSelf> Statistics(out RavenQueryStatistics stats)
+		public void Statistics(out RavenQueryStatistics stats)
 		{
 			stats = queryStats;
-			return this;
 		}
 
 		/// <summary>
@@ -1170,11 +1174,12 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void InvokeAfterQueryExecuted(QueryResult result)
 		{
-			if (afterQueryExecuted != null)
-				afterQueryExecuted(result);
+			var queryExecuted = afterQueryExecuted;
+			if (queryExecuted != null)
+				queryExecuted(result);
 		}
 
-        #endregion
+		#endregion
 
 #if !NET_3_5
         private Task<QueryResult> GetQueryResultAsync()

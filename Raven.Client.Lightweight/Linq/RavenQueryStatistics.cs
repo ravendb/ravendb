@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.ComponentModel;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client.Linq
 {
@@ -32,5 +34,34 @@ namespace Raven.Client.Linq
         /// The time when the query results were unstale.
         /// </summary>
         public DateTime Timestamp { get; set; }
+
+		/// <summary>
+		/// The name of the index queried
+		/// </summary>
+    	public string IndexName { get; set; }
+
+    	/// <summary>
+		/// The timestamp of the queried index
+		/// </summary>
+    	public DateTime IndexTimestamp { get; set; }
+
+    	/// <summary>
+		/// The etag of the queried index
+		/// </summary>
+    	public Guid IndexEtag { get; set; }
+
+    	/// <summary>
+    	/// Update the query stats from the query results
+    	/// </summary>
+    	internal void UpdateQueryStats(QueryResult qr)
+    	{
+    		IsStale = qr.IsStale;
+    		TotalResults = qr.TotalResults;
+    		SkippedResults = qr.SkippedResults;
+    		Timestamp = qr.IndexTimestamp;
+    		IndexName = qr.IndexName;
+    		IndexTimestamp = qr.IndexTimestamp;
+    		IndexEtag = qr.IndexEtag;
+    	}
     }
 }

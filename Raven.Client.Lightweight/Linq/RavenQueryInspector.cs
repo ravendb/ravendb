@@ -61,17 +61,11 @@ namespace Raven.Client.Linq
 #if !NET_3_5
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 #endif
-			this.provider.AfterQueryExecuted(UpdateQueryStats);
+			this.provider.AfterQueryExecuted(queryStats.UpdateQueryStats);
 			this.expression = expression ?? Expression.Constant(this);
 		}
 
-		private void UpdateQueryStats(QueryResult obj)
-		{
-			queryStats.IsStale = obj.IsStale;
-			queryStats.TotalResults = obj.TotalResults;
-			queryStats.SkippedResults = obj.SkippedResults;
-			queryStats.Timestamp = obj.IndexTimestamp;
-		}
+		
 
 		#region IOrderedQueryable<T> Members
 
