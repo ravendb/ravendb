@@ -82,38 +82,46 @@ namespace Raven.Storage.Esent.SchemaUpdates
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "indexes_stats_reduce", 16, 100, out tableid);
-			JET_COLUMNID columnid;
-
-			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+			try
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
-				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnTagged
-			}, null, 0, out columnid);
+				JET_COLUMNID columnid;
 
-			var defaultValue = BitConverter.GetBytes(0);
-			Api.JetAddColumn(session, tableid, "reduce_successes", new JET_COLUMNDEF
+				Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+				{
+					cbMax = 255,
+					coltyp = JET_coltyp.Text,
+					cp = JET_CP.Unicode,
+					grbit = ColumndefGrbit.ColumnTagged
+				}, null, 0, out columnid);
+
+				var defaultValue = BitConverter.GetBytes(0);
+				Api.JetAddColumn(session, tableid, "reduce_successes", new JET_COLUMNDEF
+				{
+					coltyp = JET_coltyp.Long,
+					grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
+				}, defaultValue, defaultValue.Length, out columnid);
+
+				Api.JetAddColumn(session, tableid, "reduce_attempts", new JET_COLUMNDEF
+				{
+					coltyp = JET_coltyp.Long,
+					grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
+				}, defaultValue, defaultValue.Length, out columnid);
+
+				Api.JetAddColumn(session, tableid, "reduce_errors", new JET_COLUMNDEF
+				{
+					coltyp = JET_coltyp.Long,
+					grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
+				}, defaultValue, defaultValue.Length, out columnid);
+
+				const string indexDef = "+key\0\0";
+				Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+								   100);
+
+			}
+			finally
 			{
-				coltyp = JET_coltyp.Long,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
-			}, defaultValue, defaultValue.Length, out columnid);
-
-			Api.JetAddColumn(session, tableid, "reduce_attempts", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Long,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
-			}, defaultValue, defaultValue.Length, out columnid);
-
-			Api.JetAddColumn(session, tableid, "reduce_errors", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Long,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
-			}, defaultValue, defaultValue.Length, out columnid);
-
-			const string indexDef = "+key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-			                   100);
+				Api.JetCloseTable(session, tableid);
+			}
 		}
 
 		#endregion
