@@ -136,8 +136,8 @@ namespace Raven.Storage.Esent.StorageActions
 		public int GetIndexTouchCount(string name)
 		{
 			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
-			Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false) // find the next greater view
+			Api.MakeKey(session, IndexesEtags, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ) == false) // find the next greater view
 				return -1;
 
 			return Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value;
