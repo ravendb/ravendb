@@ -24,8 +24,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 			Transaction tx;
 			using (tx = new Transaction(session))
 			{
-                using (var tbl = new Table(session, dbid, "indexes_stats_reduce",
-					OpenTableGrbit.PermitDDL | OpenTableGrbit.DenyRead | OpenTableGrbit.DenyWrite))
+                using (var tbl = new Table(session, dbid, "indexes_stats_reduce",OpenTableGrbit.None))
 				{
 				    JET_COLUMNID columnid;
 				    Api.JetAddColumn(session, tbl, "last_reduced_etag", new JET_COLUMNDEF
