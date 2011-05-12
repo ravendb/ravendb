@@ -137,5 +137,5 @@ namespace Raven.Client.Indexes
     /// <summary>
 	/// This class provides a way to define a strongly typed index on the client.
 	/// </summary>
-	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, object> { }
+	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, TDocument> { }
 }
