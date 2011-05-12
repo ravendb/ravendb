@@ -189,12 +189,12 @@ namespace Raven.Database.Indexing
 			{
 				bool shouldRecreateSearcher;
 				var toDispose = new List<Action>();
-				Analyzer analyzer = null;
+				Analyzer searchAnalyzer = null;
 				try
 				{
 					try
 					{
-						analyzer = CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
+						searchAnalyzer = CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
 					}
 					catch (Exception e)
 					{
@@ -209,7 +209,7 @@ namespace Raven.Database.Indexing
 
 					try
 					{
-						shouldRecreateSearcher = action(indexWriter, analyzer);
+						shouldRecreateSearcher = action(indexWriter, searchAnalyzer);
 						foreach (IIndexExtension indexExtension in indexExtensions.Values)
 						{
 							indexExtension.OnDocumentsIndexed(currentlyIndexDocumented);
@@ -226,8 +226,8 @@ namespace Raven.Database.Indexing
 				finally
 				{
 					currentlyIndexDocumented.Clear();
-					if (analyzer != null)
-						analyzer.Close();
+					if (searchAnalyzer != null)
+						searchAnalyzer.Close();
 					foreach (Action dispose in toDispose)
 					{
 						dispose();
@@ -274,7 +274,6 @@ namespace Raven.Database.Indexing
 				switch (fieldIndexing.Value)
 				{
 					case FieldIndexing.NotAnalyzed:
-					case FieldIndexing.NotAnalyzedNoNorms:
 						if (keywordAnalyzer == null)
 						{
 							keywordAnalyzer = new KeywordAnalyzer();
@@ -575,11 +574,11 @@ namespace Raven.Database.Indexing
 				{
 					logQuerying.DebugFormat("Issuing query on index {0} for: {1}", parent.name, query);
 					var toDispose = new List<Action>();
-					PerFieldAnalyzerWrapper analyzer = null;
+					PerFieldAnalyzerWrapper searchAnalyzer = null;
 					try
 					{
-						analyzer = parent.CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
-						analyzer = parent.AnalyzerGenerators.Aggregate(analyzer, (currentAnalyzer, generator) =>
+						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
+						searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
 						{
 							Analyzer newAnalyzer = generator.GenerateAnalzyerForQuerying(parent.name, indexQuery.Query, currentAnalyzer);
 							if (newAnalyzer != currentAnalyzer)
@@ -587,13 +586,12 @@ namespace Raven.Database.Indexing
 								DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
 							}
 							return parent.CreateAnalyzer(newAnalyzer, toDispose);
-							;
 						});
-						luceneQuery = QueryBuilder.BuildQuery(query, analyzer);
+						luceneQuery = QueryBuilder.BuildQuery(query, searchAnalyzer);
 					}
 					finally
 					{
-						DisposeAnalyzerAndFriends(toDispose, analyzer);
+						DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
 					}
 				}
 				return luceneQuery;
