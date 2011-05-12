@@ -76,30 +76,6 @@ namespace Raven.Client.Embedded
         public DocumentDatabase DocumentDatabase { get; private set; }
 
         /// <summary>
-        /// Parse the connection string option
-        /// </summary>
-        protected override void ProcessConnectionStringOption(NetworkCredential neworkCredentials, string key,
-                                                             string value)
-        {
-            switch (key)
-            {
-                case "memory":
-                    bool result;
-                    if (bool.TryParse(value, out result) == false)
-                        throw new ConfigurationErrorsException("Could not understand memory setting: " +
-                                                               value);
-                    RunInMemory = result;
-                    break;
-                case "datadir":
-                    DataDirectory = value;
-                    break;
-                default:
-                    base.ProcessConnectionStringOption(neworkCredentials, key, value);
-                    break;
-            }
-        }
-
-        /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public override void Dispose()
@@ -119,7 +95,25 @@ namespace Raven.Client.Embedded
 				onDisposed();
         }
 
-        /// <summary>
+    	/// <summary>
+    	/// Create the connection string parser
+    	/// </summary>
+    	protected override Abstractions.Data.ConnectionStringParser CreateConnectionStringParser(string connectionString)
+		{
+			var connectionStringParser = base.CreateConnectionStringParser(connectionString);
+			connectionStringParser.AllowEmbeddedOptions = true;
+			return connectionStringParser;
+		}
+
+		protected override void GetConnectionStringSettings(Abstractions.Data.ConnectionStringParser connectionStringParser)
+		{
+			base.GetConnectionStringSettings(connectionStringParser);
+			RunInMemory = connectionStringParser.RunInMemory;
+			DataDirectory = connectionStringParser.DataDirectory;
+		}
+
+
+    	/// <summary>
         /// Initialize the document store access method to RavenDB
         /// </summary>
         protected override void InitializeInternal()

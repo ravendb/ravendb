@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -32,16 +33,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentStore : IDocumentStore
 	{
-		private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)", 
-#if !SILVERLIGHT
-			RegexOptions.Compiled|
-#endif
-			 RegexOptions.IgnorePatternWhitespace);
-		private static readonly Regex connectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
-#if !SILVERLIGHT
-			RegexOptions.Compiled|
-#endif
-					RegexOptions.IgnorePatternWhitespace);
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -194,60 +185,30 @@ namespace Raven.Client.Document
 		///</summary>
 		public void ParseConnectionString(string connectionString)
 		{
-			var strings = connectionStringArgumentsSplitterRegex.Split(connectionString);
-			var networkCredential = new NetworkCredential();
-			foreach (var str in strings)
-			{
-				var arg = str.Trim(';');
-				var match = connectionStringRegex.Match(arg);
-				if (match.Success == false)
-					throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
-				ProcessConnectionStringOption(networkCredential, match.Groups[1].Value.ToLower(), match.Groups[2].Value.Trim());
-			}
+			var connectionStringParser = CreateConnectionStringParser(connectionString);
+			connectionStringParser.Parse();
 
-			if (setupUsernameInConnectionString == false && setupPasswordInConnectionString == false) 
-				return;
-
-			if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
-				throw new ArgumentException("User and Password must both be specified in the connection string: " + connectionStringName);
-			Credentials = networkCredential;
+			GetConnectionStringSettings(connectionStringParser);
 		}
 
-		private bool setupUsernameInConnectionString;
-		private bool setupPasswordInConnectionString;
+		/// <summary>
+		/// Copy the relevant connection string settings
+		/// </summary>
+		protected virtual void GetConnectionStringSettings(ConnectionStringParser connectionStringParser)
+		{
+			ResourceManagerId = connectionStringParser.ResourceManagerId;
+			Credentials = connectionStringParser.Credentials;
+			Url = connectionStringParser.Url;
+			DefaultDatabase = connectionStringParser.DefaultDatabase;
+			EnlistInDistributedTransactions= connectionStringParser.EnlistInDistributedTransactions;
+		}
 
 		/// <summary>
-		/// Parse the connection string option
+		/// Create the connection string parser
 		/// </summary>
-		protected virtual void ProcessConnectionStringOption(NetworkCredential neworkCredentials, string key, string value)
+		protected virtual ConnectionStringParser CreateConnectionStringParser(string connectionString)
 		{
-			switch (key)
-			{
-				case "enlist":
-					EnlistInDistributedTransactions = bool.Parse(value);
-					break;
-				case "resourcemanagerid":
-					ResourceManagerId = new Guid(value);
-					break;
-				case "url":
-					Url = value;
-					break;
-				case "database":
-				case "defaultdatabase":
-					DefaultDatabase = value;
-					break;
-				case "user":
-					neworkCredentials.UserName = value;
-					setupUsernameInConnectionString = true;
-					break;
-				case "password":
-					neworkCredentials.Password = value;
-					setupPasswordInConnectionString = true;
-					break;
-
-				default:
-					throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed, unknown option: " + key);
-			}
+			return new ConnectionStringParser(connectionString, connectionStringName);
 		}
 
 		///<summary>
