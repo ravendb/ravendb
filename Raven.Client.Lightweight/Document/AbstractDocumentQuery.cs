@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
+using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
 using Newtonsoft.Json.Linq;
@@ -30,7 +31,7 @@ namespace Raven.Client.Document
 	/// <summary>
     ///   A query against a Raven index
     /// </summary>
-    public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T> where TSelf : AbstractDocumentQuery<T, TSelf>
+    public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
     {
         /// <summary>
         /// Whatever to negate the next operation
@@ -127,6 +128,11 @@ namespace Raven.Client.Document
         private Task<QueryResult> queryResultTask;
 #endif
 
+		/// <summary>
+		/// Holds the query stats
+		/// </summary>
+		protected readonly RavenQueryStatistics queryStats = new RavenQueryStatistics();
+
         /// <summary>
         ///   Get the name of the index being queried
         /// </summary>
@@ -181,6 +187,7 @@ namespace Raven.Client.Document
             get { return theQueryText; }
         }
 
+		private Action<QueryResult> afterQueryExecuted;
 
 #if !SILVERLIGHT && !NET_3_5
         /// <summary>
@@ -232,6 +239,7 @@ namespace Raven.Client.Document
 #if !NET_3_5
             this.theAsyncDatabaseCommands = asyncDatabaseCommands;
 #endif
+			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
         }
 
         /// <summary>
@@ -362,8 +370,13 @@ namespace Raven.Client.Document
         {
             get
             {
-            	var currentQueryResults = queryResult ?? (queryResult = GetQueryResult());
-            	return currentQueryResults.CreateSnapshot();
+            	if (queryResult == null)
+            	{
+            		queryResult = GetQueryResult();
+					InvokeAfterQueryExecuted(queryResult);
+            	}
+
+            	return queryResult.CreateSnapshot();
             }
         }
 #endif
@@ -378,8 +391,17 @@ namespace Raven.Client.Document
         {
             get
             {
-            	var currentQueryResultTask = queryResultTask ?? (queryResultTask = GetQueryResultAsync());
-            	return currentQueryResultTask
+            	if (queryResultTask == null)
+            	{
+            		queryResultTask = GetQueryResultAsync()
+            			.ContinueWith(task =>
+            			{
+            				var result = task.Result;
+							InvokeAfterQueryExecuted(result);
+            				return result;
+            			});
+            	}
+            	return queryResultTask
             		.ContinueWith(x => x.Result.CreateSnapshot());
             }
         }
@@ -1131,7 +1153,33 @@ If you really want to do in memory filtering on the data returned from the query
             WaitForNonStaleResults(TimeSpan.FromSeconds(15));
         }
 
-        #endregion
+		/// <summary>
+		/// Provide statistics about the query, such as total count of matching records
+		/// </summary>
+		public void Statistics(out RavenQueryStatistics stats)
+		{
+			stats = queryStats;
+		}
+
+		/// <summary>
+		/// Callback to get the results of the query
+		/// </summary>
+		public void AfterQueryExecuted(Action<QueryResult> afterQueryExecutedCallback)
+		{
+			this.afterQueryExecuted = afterQueryExecutedCallback;
+		}
+
+		/// <summary>
+		/// Called externally to raise the after query executed callback
+		/// </summary>
+		public void InvokeAfterQueryExecuted(QueryResult result)
+		{
+			var queryExecuted = afterQueryExecuted;
+			if (queryExecuted != null)
+				queryExecuted(result);
+		}
+
+		#endregion
 
 #if !NET_3_5
         private Task<QueryResult> GetQueryResultAsync()
@@ -1233,7 +1281,7 @@ If you really want to do in memory filtering on the data returned from the query
         }
 #endif
 
-        private SortOptions FromPrimitiveTypestring(string type)
+        private static SortOptions FromPrimitiveTypestring(string type)
         {
             switch (type)
             {
@@ -1251,7 +1299,6 @@ If you really want to do in memory filtering on the data returned from the query
                     return SortOptions.String;
             }
         }
-
 
         /// <summary>
         ///   Generates the index query.

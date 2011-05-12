@@ -3,14 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 #if !NET_3_5
 using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
-using Raven.Client.Document;
+using Raven.Client.Linq;
 
 namespace Raven.Client
 {
