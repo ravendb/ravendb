@@ -199,7 +199,6 @@ task CopySamples {
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
 	mkdir $build_dir\Output
-	mkdir $build_dir\Output\lib
 	mkdir $build_dir\Output\Web
 	mkdir $build_dir\Output\Web\bin
 	mkdir $build_dir\Output\Server
@@ -230,10 +229,10 @@ task CopySilverlight{
   }
 }
 
-task CopySmuggler { 
-	cp $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
+task CopySmuggler {
 	cp $build_dir\Raven.Json.??? $build_dir\Output\Smuggler
 	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Smuggler
+	cp $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
 task CopyClient {
@@ -312,7 +311,7 @@ task ZipOutput {
 			EmbeddedClient\*.* `
 			Client\*.* `
 			Samples\*.* `
-			Samples\*.* `
+			Smuggler\*.* `
 			Client-3.5\*.* `
 			Web\*.* `
 			Bundles\*.* `
@@ -455,8 +454,8 @@ task CreateNugetPackage {
   cp $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack\content\Web.config.transform
   cp $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack-Embedded\content\Web.config.transform
   
-  cp $build_dir\RavenSmuggler.??? $build_dir\NuPack\Tools
-  cp $build_dir\RavenSmuggler.??? $build_dir\NuPack-Embedded\Tools
+  cp $build_dir\Raven.Smuggler.??? $build_dir\NuPack\Tools
+  cp $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Embedded\Tools
   
 
 ########### First pass - RavenDB.nupkg
