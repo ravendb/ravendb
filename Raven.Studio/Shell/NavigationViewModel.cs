@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Studio.Features.Database;
+using Raven.Studio.Framework;
 
 namespace Raven.Studio.Shell
 {
@@ -30,7 +31,18 @@ namespace Raven.Studio.Shell
 
 		public BindableCollection<IScreen> Breadcrumbs { get; private set; }
 
-		public void SetGoHome(Action action)
+	    public BindableCollection<IMenuItemMetadata> Items
+	    {
+	        get
+	        {
+                var itemMetadatas = history
+                    .Select((historyItem, i)  => (IMenuItemMetadata)new MenuItemMetadata(historyItem.Name , i))
+                    .Reverse();
+	            return new BindableCollection<IMenuItemMetadata>(itemMetadatas);
+	        }
+	    }
+
+	    public void SetGoHome(Action action)
 		{
 			goHomeAction = action;
 		}
@@ -54,6 +66,7 @@ namespace Raven.Studio.Shell
 		    item.Reverse();
 
 			NotifyOfPropertyChange(() => CanGoBack);
+            NotifyOfPropertyChange(() => Items);
 		}
         public void SetGoBack(Action<string> action)
         {
@@ -65,6 +78,7 @@ namespace Raven.Studio.Shell
 			history.Push(message);
 			if(history.Count > 20) history.Pop();
 			NotifyOfPropertyChange(() => CanGoBack);
+            NotifyOfPropertyChange(() => Items);
 		}
 	}
 }
