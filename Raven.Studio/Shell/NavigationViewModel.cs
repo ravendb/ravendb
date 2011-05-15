@@ -43,7 +43,7 @@
 
 		public void GoBack()
 		{
-			if (CanGoBack) return;
+			if (CanGoBack == false) return;
 
 			history.Pop().Reverse();
 
