@@ -1,4 +1,7 @@
-﻿namespace Raven.Studio.Shell
+﻿using System;
+using Raven.Studio.Features.Database;
+
+namespace Raven.Studio.Shell
 {
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
@@ -14,7 +17,8 @@
 		readonly IEventAggregator events;
 		readonly Stack<NavigationOccurred> history = new Stack<NavigationOccurred>();
 
-		Action goHomeAction;
+        Action goHomeAction;
+        Action<string> goBackAction;
 
 		[ImportingConstructor]
 		public NavigationViewModel(IEventAggregator events)
@@ -45,10 +49,16 @@
 		{
 			if (CanGoBack == false) return;
 
-			history.Pop().Reverse();
+		    var item = history.Pop();
+		    goBackAction(item.Name);
+		    item.Reverse();
 
 			NotifyOfPropertyChange(() => CanGoBack);
 		}
+        public void SetGoBack(Action<string> action)
+        {
+            goBackAction = action;
+        }
 
 		void IHandle<NavigationOccurred>.Handle(NavigationOccurred message)
 		{
