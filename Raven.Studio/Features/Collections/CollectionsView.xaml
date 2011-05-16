@@ -146,8 +146,11 @@
 						 ItemsSource="{Binding ActiveCollectionDocuments}"
 						 PageContainer="{Binding ElementName=ActiveCollectionDocuments}" />
 
-				<ItemsControl x:Name="ActiveCollectionDocuments"
+				<ListBox x:Name="ActiveCollectionDocuments"
 							  ItemsPanel="{StaticResource FluidWrapPanel}"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              SelectionMode="Multiple"
 							  Margin="0 0 0 6"
 							  Grid.Row="1" />
 
