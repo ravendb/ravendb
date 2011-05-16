@@ -21,12 +21,12 @@
 		{
 			var old = conductor.ActiveItem as IScreen;
 
-			if(old != null)
-			events.Publish(new NavigationOccurred(old.DisplayName, () =>
-			{
-				if (setContext != null) setContext();
-				conductor.ActivateItem(old);
-			}));
+			if (old != null && old != newScreen)
+				events.Publish(new NavigationOccurred(old.DisplayName, () =>
+				{
+					if (setContext != null) setContext();
+					conductor.ActivateItem(old);
+				}));
 
 			conductor.ActivateItem(newScreen);
 		}
