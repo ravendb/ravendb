@@ -18,8 +18,8 @@ namespace Raven.Studio.Shell
 		readonly IEventAggregator events;
 		readonly Stack<NavigationOccurred> history = new Stack<NavigationOccurred>();
 
-        Action goHomeAction;
-        Action<string> goBackAction;
+		Action goHomeAction;
+		Action<string> goBackAction;
 
 		[ImportingConstructor]
 		public NavigationViewModel(IEventAggregator events)
@@ -31,18 +31,18 @@ namespace Raven.Studio.Shell
 
 		public BindableCollection<IScreen> Breadcrumbs { get; private set; }
 
-        public BindableCollection<IMenuItemMetadata> GoBackMenu
-	    {
-	        get
-	        {
-                var itemMetadatas = history
-                    .Select((historyItem, i)  => (IMenuItemMetadata)new MenuItemMetadata(historyItem.Name , i))
-                    .Reverse();
-	            return new BindableCollection<IMenuItemMetadata>(itemMetadatas);
-	        }
-	    }
+		public BindableCollection<IMenuItemMetadata> GoBackMenu
+		{
+			get
+			{
+				var itemMetadatas = history
+					.Select((historyItem, i)  => (IMenuItemMetadata)new MenuItemMetadata(historyItem.Name , i))
+					.Reverse();
+				return new BindableCollection<IMenuItemMetadata>(itemMetadatas);
+			}
+		}
 
-	    public void SetGoHome(Action action)
+		public void SetGoHome(Action action)
 		{
 			goHomeAction = action;
 		}
@@ -61,24 +61,24 @@ namespace Raven.Studio.Shell
 		{
 			if (CanGoBack == false) return;
 
-		    var item = history.Pop();
-		    goBackAction(item.Name);
-		    item.Reverse();
+			var item = history.Pop();
+			goBackAction(item.Name);
+			item.Reverse();
 
 			NotifyOfPropertyChange(() => CanGoBack);
-            NotifyOfPropertyChange(() => GoBackMenu);
+			NotifyOfPropertyChange(() => GoBackMenu);
 		}
-        public void SetGoBack(Action<string> action)
-        {
-            goBackAction = action;
-        }
+		public void SetGoBack(Action<string> action)
+		{
+			goBackAction = action;
+		}
 
 		void IHandle<NavigationOccurred>.Handle(NavigationOccurred message)
 		{
 			history.Push(message);
 			if(history.Count > 20) history.Pop();
 			NotifyOfPropertyChange(() => CanGoBack);
-            NotifyOfPropertyChange(() => GoBackMenu);
+			NotifyOfPropertyChange(() => GoBackMenu);
 		}
 	}
 }
