@@ -31,7 +31,7 @@ namespace Raven.Studio.Shell
 
 		public BindableCollection<IScreen> Breadcrumbs { get; private set; }
 
-	    public BindableCollection<IMenuItemMetadata> Items
+        public BindableCollection<IMenuItemMetadata> GoBackMenu
 	    {
 	        get
 	        {
@@ -66,7 +66,7 @@ namespace Raven.Studio.Shell
 		    item.Reverse();
 
 			NotifyOfPropertyChange(() => CanGoBack);
-            NotifyOfPropertyChange(() => Items);
+            NotifyOfPropertyChange(() => GoBackMenu);
 		}
         public void SetGoBack(Action<string> action)
         {
@@ -78,7 +78,7 @@ namespace Raven.Studio.Shell
 			history.Push(message);
 			if(history.Count > 20) history.Pop();
 			NotifyOfPropertyChange(() => CanGoBack);
-            NotifyOfPropertyChange(() => Items);
+            NotifyOfPropertyChange(() => GoBackMenu);
 		}
 	}
 }

@@ -17,7 +17,7 @@
 				Margin="5"
 				Style="{StaticResource BackButton}">
 			<i:ContextMenuService.ContextMenu>
-				<i:ContextMenu ItemsSource="{Binding Items}"
+                <i:ContextMenu x:Name="GoBackMenu" ItemsSource="{Binding GoBackMenu}"
 							   HorizontalContentAlignment="Stretch">
 					<i:ContextMenu.ItemContainerStyle>
 						<Style TargetType="i:MenuItem">
