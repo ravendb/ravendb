@@ -80,5 +80,16 @@ namespace Raven.Studio.Shell
 			NotifyOfPropertyChange(() => CanGoBack);
 			NotifyOfPropertyChange(() => GoBackMenu);
 		}
+
+		public void GoBackMenuClick(int index)
+		{
+			NavigationOccurred navigationOccurred = null;
+			for (int i = 0; i <= index; i++)
+			{
+				navigationOccurred = history.Pop();
+			}
+			if (navigationOccurred != null)
+				navigationOccurred.Reverse();
+		}
 	}
 }

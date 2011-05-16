@@ -23,6 +23,8 @@
 						<Style TargetType="i:MenuItem">
 							<Setter Property="tk:DockPanel.Dock"
 									Value="Bottom" />
+                            <Setter Property="cm:Message.Attach"
+									Value="[Event Click]=[Action GoBackMenuClick]" />
 						</Style>
 					</i:ContextMenu.ItemContainerStyle>
 					<i:ContextMenu.ItemTemplate>
