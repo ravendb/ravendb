@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Stress
@@ -21,18 +19,11 @@ namespace Raven.Tests.Stress
 
 			using (var documentStore = NewDocumentStore("munin", true, text.Length * 102))
 			{
-				JObject dummy = null;
-
 				using (var session = documentStore.OpenSession())
 				{
 					for (int i = 0; i < 100; i++)
 					{
-						dummy = new JObject();
-						var property = new JProperty("Content", text);
-						dummy.Add(property);
-						dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
-						// Create
-						session.Store(dummy);
+						session.Store(new RavenJObject {{"Content", text}, {"Id", RavenJToken.FromObject(Guid.NewGuid())}});
 					}
 					session.SaveChanges();
 				}
@@ -46,20 +37,35 @@ namespace Raven.Tests.Stress
 
 			using (var documentStore = NewDocumentStore("munin", false))
 			{
-				JObject dummy = null;
-
 				using (var session = documentStore.OpenSession())
 				{
 					for (int i = 0; i < 100; i++)
 					{
-						dummy = new JObject();
-						var property = new JProperty("Content", text);
-						dummy.Add(property);
-						dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
-						// Create
-						session.Store(dummy);
+						session.Store(new RavenJObject {{"Content", text}, {"Id", RavenJToken.FromObject(Guid.NewGuid())}});
 					}
 					session.SaveChanges();
+				}
+				Assert.True(true);
+			}
+		}
+
+		public void munin_stress_testing_ravendb_simple_object_in_filesystem()
+		{
+			const string text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla convallis urna eget enim venenatis condimentum. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Suspendisse eget lectus justo, quis condimentum libero. Cras dictum consequat scelerisque. Pellentesque lectus nisi, porttitor id posuere et, dignissim sed orci. Vivamus sollicitudin gravida massa faucibus feugiat";
+
+			using (var documentStore = NewDocumentStore("munin", false))
+			{
+				for (int j = 0; j < 100; j++)
+				{
+					using (var session = documentStore.OpenSession())
+					{
+						for (int i = 0; i < 100; i++)
+						{
+							session.Store(new RavenJObject { { "Content", text }, { "Id", RavenJToken.FromObject(Guid.NewGuid()) } });
+						}
+						session.SaveChanges();
+					}
+					Console.WriteLine(j);
 				}
 				Assert.True(true);
 			}
@@ -71,21 +77,13 @@ namespace Raven.Tests.Stress
 
 			using (var documentStore = NewDocumentStore("munin", false))
 			{
-				JObject dummy = null;
-
 				for (int i = 0; i < 100; i++)
 				{
 					using (var session = documentStore.OpenSession())
 					{
 						for (int j = 0; j < 100; j++)
 						{
-							var id = Guid.NewGuid().ToString();
-							dummy = new JObject();
-							var property = new JProperty("Content", text);
-							dummy.Add(property);
-							dummy.Add("Id", id);
-							// Create
-							session.Store(dummy);
+							session.Store(new RavenJObject {{"Content", text}, {"Id", RavenJToken.FromObject(Guid.NewGuid().ToString())}});
 						}
 						session.SaveChanges();
 					}
@@ -105,20 +103,13 @@ namespace Raven.Tests.Stress
 
 			using (var documentStore = NewDocumentStore("munin", false))
 			{
-				JObject dummy = null;
-
 				for (int j = 0; j < 100; j++)
 				{
 					using (var session = documentStore.OpenSession())
 					{
 						for (int i = 0; i < 100; i++)
 						{
-							dummy = new JObject();
-							var property = new JProperty("Content", text);
-							dummy.Add(property);
-							dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
-							// Create
-							session.Store(dummy);
+							session.Store(new RavenJObject {{"Content", text}, {"Id", RavenJToken.FromObject(Guid.NewGuid())}});
 						}
 						session.SaveChanges();
 					}
@@ -133,21 +124,13 @@ namespace Raven.Tests.Stress
 
 			using (var documentStore = NewDocumentStore("esent", false))
 			{
-
-				JObject dummy = null;
-
 				for (int j = 0; j < 100; j++)
 				{
 					using (var session = documentStore.OpenSession())
 					{
 						for (int i = 0; i < 100; i++)
 						{
-							dummy = new JObject();
-							var property = new JProperty("Content", text);
-							dummy.Add(property);
-							dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
-							// Create
-							session.Store(dummy);
+							session.Store(new RavenJObject {{"Content", text}, {"Id", RavenJToken.FromObject(Guid.NewGuid())}});
 						}
 						session.SaveChanges();
 					}
@@ -162,21 +145,13 @@ namespace Raven.Tests.Stress
 
 			using (var documentStore = NewDocumentStore("esent", false))
 			{
-
-				JObject dummy = null;
-
 				for (int j = 0; j < 1000; j++)
 				{
 					using (var session = documentStore.OpenSession())
 					{
 						for (int i = 0; i < 10; i++)
 						{
-							dummy = new JObject();
-							var property = new JProperty("Content", text);
-							dummy.Add(property);
-							dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
-							// Create
-							session.Store(dummy);
+							session.Store(new RavenJObject {{"content", text}, {"Id", RavenJToken.FromObject(Guid.NewGuid())}});
 						}
 						session.SaveChanges();
 					}
@@ -191,24 +166,38 @@ namespace Raven.Tests.Stress
 
 			using (var documentStore = NewDocumentStore("esent", false))
 			{
-
-				JObject dummy = null;
-
 				for (int j = 0; j < 100; j++)
 				{
 					using (var session = documentStore.OpenSession())
 					{
 						for (int i = 0; i < 100; i++)
 						{
-							dummy = new JObject();
-							var property = new JProperty("Content", text);
-							dummy.Add(property);
-							dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
-							// Create
-							session.Store(dummy);
+							session.Store(new RavenJObject {{"Content", text}, {"Id", RavenJToken.FromObject(Guid.NewGuid())}});
 						}
 						session.SaveChanges();
 					}
+				}
+				Assert.True(true);
+			}
+		}
+
+		public void esent_stress_testing_ravendb_simple_object_in_filesystem()
+		{
+			const string text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla convallis urna eget enim venenatis condimentum. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Suspendisse eget lectus justo, quis condimentum libero. Cras dictum consequat scelerisque. Pellentesque lectus nisi, porttitor id posuere et, dignissim sed orci. Vivamus sollicitudin gravida massa faucibus feugiat";
+
+			using (var documentStore = NewDocumentStore("esent", false))
+			{
+				for (int j = 0; j < 100; j++)
+				{
+					using (var session = documentStore.OpenSession())
+					{
+						for (int i = 0; i < 100; i++)
+						{
+							session.Store(new RavenJObject { { "Content", text }, { "Id", RavenJToken.FromObject(Guid.NewGuid()) } });
+						}
+						session.SaveChanges();
+					}
+					Console.WriteLine(j);
 				}
 				Assert.True(true);
 			}
@@ -220,25 +209,17 @@ namespace Raven.Tests.Stress
 
 			using (var documentStore = NewDocumentStore("esent", false))
 			{
-
-				JObject dummy = null;
-
 				for (int j = 0; j < 100; j++)
 				{
 					using (var session = documentStore.OpenSession())
 					{
 						for (int i = 0; i < 100; i++)
 						{
-							dummy = new JObject();
-							var property = new JProperty("Content", text);
-							dummy.Add(property);
-							dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
-							// Create
-							session.Store(dummy);
+							session.Store(new RavenJObject {{"Content", text}, {"Id", RavenJToken.FromObject(Guid.NewGuid())}});
 						}
 						session.SaveChanges();
 						// Force indexing
-						var stored = session.Query<JObject>().Customize(x => x.WaitForNonStaleResults()).ToArray();
+						var stored = session.Query<RavenJObject>().Customize(x => x.WaitForNonStaleResults()).ToArray();
 						Assert.NotNull(stored);
 						Assert.NotEmpty(stored);
 					}
@@ -256,27 +237,20 @@ namespace Raven.Tests.Stress
 			using (var documentStore = NewDocumentStore("esent", false))
 			{
 
-				JObject dummy = null;
-
 				for (int j = 0; j < 100; j++)
 				{
 					using (var session = documentStore.OpenSession())
 					{
 						for (int i = 0; i < 100; i++)
 						{
-							dummy = new JObject();
-							var property = new JProperty("Content", text);
-							dummy.Add(property);
-							dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
-							// Create
-							session.Store(dummy);
+							session.Store(new RavenJObject {{"Content", text}, {"Id", RavenJToken.FromObject(Guid.NewGuid())}});
 						}
 						session.SaveChanges();
 					}
 					// Force indexing
 					using (var session = documentStore.OpenSession())
 					{
-						var stored = session.Query<JObject>().Customize(x => x.WaitForNonStaleResults()).ToArray();
+						var stored = session.Query<RavenJObject>().Customize(x => x.WaitForNonStaleResults()).ToArray();
 						Assert.NotNull(stored);
 						Assert.NotEmpty(stored);
 					}
