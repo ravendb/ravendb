@@ -46,7 +46,6 @@
 										this.TrackNavigationTo(start, events);
 										navigation.Breadcrumbs.Clear();
 									});
-            navigation.SetGoBack(name => databaseScreen.SelectedItem = name);
 			this.binder = binder;
 			this.events = events;
 			this.server = server;

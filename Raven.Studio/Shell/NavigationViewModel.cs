@@ -19,7 +19,6 @@ namespace Raven.Studio.Shell
 		readonly Stack<NavigationOccurred> history = new Stack<NavigationOccurred>();
 
 		Action goHomeAction;
-		Action<string> goBackAction;
 
 		[ImportingConstructor]
 		public NavigationViewModel(IEventAggregator events)
@@ -62,15 +61,10 @@ namespace Raven.Studio.Shell
 			if (CanGoBack == false) return;
 
 			var item = history.Pop();
-			goBackAction(item.Name);
 			item.Reverse();
 
 			NotifyOfPropertyChange(() => CanGoBack);
 			NotifyOfPropertyChange(() => GoBackMenu);
-		}
-		public void SetGoBack(Action<string> action)
-		{
-			goBackAction = action;
 		}
 
 		void IHandle<NavigationOccurred>.Handle(NavigationOccurred message)
