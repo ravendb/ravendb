@@ -230,7 +230,7 @@ namespace Raven.Database.Indexing
 					string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
 
 					var luceneDoc = new Document();
-					luceneDoc.Add(new Field(Raven.Abstractions.Data.Constants.ReduceKeyFieldName, reduceKeyAsString.ToLowerInvariant(), Field.Store.NO, Field.Index.NOT_ANALYZED));
+					luceneDoc.Add(new Field(Raven.Abstractions.Data.Constants.ReduceKeyFieldName, reduceKeyAsString.ToLowerInvariant(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
 					foreach (var field in fields)
 					{
 						luceneDoc.Add(field);
