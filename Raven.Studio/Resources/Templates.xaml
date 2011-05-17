@@ -413,9 +413,12 @@
 										Margin="0,0,4,4">
 									<!--
 										TODO: this causes an odd error, uncomment and run to see
-										<Image Source="/Resources/Images/pencil.png"
-											   Height="16"
-											   Width="16" />-->
+										<StackPanel Orientation="Horizontal">
+											<TextBlock>edit</TextBlock>
+											<Image Source="/Resources/Images/pencil.png"
+												   Height="16"
+												   Width="16" />
+										</StackPanel>-->
 								</Button>
 							</StackPanel>
 						</Grid>
