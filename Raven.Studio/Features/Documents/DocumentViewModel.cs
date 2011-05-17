@@ -10,7 +10,7 @@ namespace Raven.Studio.Features.Documents
     using Newtonsoft.Json.Linq;
 
     /// <summary>
-    /// This view model is for displaying documents in bulk. There is no change notification and no behaviours related to editing
+    /// This view model is for displaying documents in bulk. There is no change notification and no behaviors related to editing
     /// </summary>
     public class DocumentViewModel : ISupportDocumentTemplate
     {
