@@ -438,6 +438,8 @@
 				Value="Disabled" />
 		<Setter Property="SelectionMode"
 				Value="Extended" />
+		<Setter Property="BorderThickness"
+				Value="0" />
 	</Style>
 
 </ResourceDictionary>

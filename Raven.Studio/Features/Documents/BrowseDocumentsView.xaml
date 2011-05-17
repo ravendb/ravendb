@@ -92,17 +92,9 @@
 						   d:IsHidden="True"
 						   d:IsLocked="True" />
 
-				<ItemsControl x:Name="DocumentPageContainer"
-							  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-							  BorderThickness="0"
-							  ItemsPanel="{StaticResource FluidWrapPanel}"
-							  ItemsSource="{Binding Documents}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<Documents:DocumentView DataContext="{Binding}" />
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
+				<ListBox x:Name="DocumentPageContainer"
+						 ItemsSource="{Binding Documents}"
+						 Style="{StaticResource DocumentList}" />
 
 			</Grid>
 		</tk:DockPanel>
