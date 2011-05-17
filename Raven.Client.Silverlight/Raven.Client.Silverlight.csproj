@@ -201,9 +201,6 @@
     <Compile Include="..\Modules\Json\Raven.Json\Utilities\StringUtils.cs">
       <Link>Imports\Raven.Json\Utilities\StringUtils.cs</Link>
     </Compile>
-    <Compile Include="..\Modules\Json\Raven.Json\Utilities\ValidationUtils.cs">
-      <Link>Imports\Raven.Json\Utilities\ValidationUtils.cs</Link>
-    </Compile>
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />

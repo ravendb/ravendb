@@ -33,8 +33,6 @@ namespace Raven.Json.Linq
 		/// <returns>A converted value.</returns>
 		public static U Value<T, U>(this IEnumerable<T> value) where T : RavenJToken
 		{
-			ValidationUtils.ArgumentNotNull(value, "source");
-
 			var token = value as RavenJToken;
 			if (token == null)
 				throw new ArgumentException("Source value must be a RavenJToken.");
@@ -76,8 +74,6 @@ namespace Raven.Json.Linq
 
 		internal static IEnumerable<U> Values<U>(this IEnumerable<RavenJToken> source, string key)
 		{
-			ValidationUtils.ArgumentNotNull(source, "source");
-
 			foreach (RavenJToken token in source)
 			{
 				if (token is RavenJValue)
@@ -122,8 +118,6 @@ namespace Raven.Json.Linq
 
 		internal static IEnumerable<U> Convert<U>(this IEnumerable<RavenJToken> source)
 		{
-			ValidationUtils.ArgumentNotNull(source, "source");
-
 			bool cast = typeof(RavenJToken).IsAssignableFrom(typeof(U));
 
 			return source.Select(token => Convert<U>(token, cast));

@@ -15,13 +15,6 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		No,
 		/// <summary>
-		/// Expert: Index the field's value without an Analyzer, and also disable the storing of norms. 
-		/// No norms means that index-time field and document boosting and field length normalization are disabled. 
-		/// The benefit is less memory usage as norms take up one byte of RAM per indexed field for every document 
-		/// in the index, during searching. 
-		/// </summary>
-		NotAnalyzedNoNorms,
-		/// <summary>
 		/// Index the tokens produced by running the field's value through an Analyzer. This is useful for common text.
 		/// </summary>
 		Analyzed,
