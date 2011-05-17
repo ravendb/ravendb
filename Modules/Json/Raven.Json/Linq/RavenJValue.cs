@@ -199,7 +199,8 @@ namespace Raven.Json.Linq
 		// Taken from Newtonsoft's Json.NET JsonSerializer
 		internal static JsonConverter GetMatchingConverter(IList<JsonConverter> converters, Type objectType)
 		{
-			ValidationUtils.ArgumentNotNull(objectType, "objectType");
+			if (objectType == null)
+				throw new ArgumentNullException("objectType");
 
 			if (converters != null)
 			{

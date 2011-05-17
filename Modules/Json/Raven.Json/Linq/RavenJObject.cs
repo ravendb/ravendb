@@ -74,7 +74,6 @@ namespace Raven.Json.Linq
 		{
 			get
 			{
-				ValidationUtils.ArgumentNotNull(propertyName, "propertyName");
 				RavenJToken ret;
 				Properties.TryGetValue(propertyName, out ret);
 				return ret;
@@ -125,8 +124,6 @@ namespace Raven.Json.Linq
         /// <returns>A <see cref="RavenJObject"/> that contains the JSON that was read from the specified <see cref="JsonReader"/>.</returns>
         public new static RavenJObject Load(JsonReader reader)
         {
-            ValidationUtils.ArgumentNotNull(reader, "reader");
-
             if (reader.TokenType == JsonToken.None)
             {
                 if (!reader.Read())
