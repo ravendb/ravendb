@@ -147,16 +147,11 @@
 						 PageContainer="{Binding ElementName=ActiveCollectionDocuments}" />
 
 				<ListBox x:Name="ActiveCollectionDocuments"
-							  ItemsPanel="{StaticResource FluidWrapPanel}"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                              SelectionMode="Extended"
-							  Margin="0 0 0 6"
-							  Grid.Row="1" />
+						 Style="{StaticResource DocumentList}"
+						 Margin="0 0 0 6"
+						 Grid.Row="1" />
 
 			</tk:DockPanel>
-
-
 		</Grid>
 
 	</Grid>
