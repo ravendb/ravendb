@@ -17,14 +17,16 @@
 				Margin="5"
 				Style="{StaticResource BackButton}">
 			<i:ContextMenuService.ContextMenu>
-                <i:ContextMenu x:Name="GoBackMenu" ItemsSource="{Binding GoBackMenu}"
+                <i:ContextMenu x:Name="GoBackMenu"
+							   ItemsSource="{Binding GoBackMenu}"
+							   cm:Action.TargetWithoutContext="{Binding}"
 							   HorizontalContentAlignment="Stretch">
 					<i:ContextMenu.ItemContainerStyle>
 						<Style TargetType="i:MenuItem">
 							<Setter Property="tk:DockPanel.Dock"
 									Value="Bottom" />
                             <Setter Property="cm:Message.Attach"
-									Value="[Event Click]=[Action GoBackMenuClick]" />
+									Value="[Event Click]=[Action GoBackMenuClick($dataContext)]" />
 						</Style>
 					</i:ContextMenu.ItemContainerStyle>
 					<i:ContextMenu.ItemTemplate>

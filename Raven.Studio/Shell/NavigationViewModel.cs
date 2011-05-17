@@ -81,10 +81,10 @@ namespace Raven.Studio.Shell
 			NotifyOfPropertyChange(() => GoBackMenu);
 		}
 
-		public void GoBackMenuClick(int index)
+		public void GoBackMenuClick(IMenuItemMetadata item)
 		{
 			NavigationOccurred navigationOccurred = null;
-			for (int i = 0; i <= index; i++)
+			for (int i = 0; i <= item.Index; i++)
 			{
 				navigationOccurred = history.Pop();
 			}
