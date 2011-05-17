@@ -45,6 +45,7 @@ namespace Raven.Studio.Features.Database
             {
                 Collections = new BindableCollection<Collection>();
                 RecentDocuments = new BindableCollection<DocumentViewModel>();
+                RetrieveSummary();
 
                 CollectionsStatus = "Retrieving collections.";
                 RecentDocumentsStatus = "Retrieving recent documents.";
