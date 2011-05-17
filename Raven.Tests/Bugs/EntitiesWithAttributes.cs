@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs
 
 	public class EntitiesWithAttributes : LocalClientTest
 	{
-		[Fact]
+		[Fact(Skip = "http://json.codeplex.com/workitem/20784, http://json.codeplex.com/workitem/20749")]
 		public void EntitiesSerializeCorrectlyWithAttributes()
 		{
 			using (var store = NewDocumentStore())
@@ -28,7 +28,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[Fact(Skip = "http://json.codeplex.com/workitem/20784, http://json.codeplex.com/workitem/20749")]
 		public void PropertiesCanHaveAttributes()
 		{
 			using (var store = NewDocumentStore())
