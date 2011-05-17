@@ -13,13 +13,13 @@
 			"ItemHeight",
 			typeof (double),
 			typeof (Pager),
-			new PropertyMetadata(66.0));
+			new PropertyMetadata(70.0));
 
 		public static readonly DependencyProperty ItemWidthProperty = DependencyProperty.Register(
 			"ItemWidth",
 			typeof (double),
 			typeof (Pager),
-			new PropertyMetadata(126.0));
+			new PropertyMetadata(130.0));
 
 		public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(
 			"ItemsSource",
