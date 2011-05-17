@@ -84,6 +84,9 @@ namespace Raven.Studio.Shell
 			}
 			if (navigationOccurred != null)
 				navigationOccurred.Reverse();
+
+			NotifyOfPropertyChange(() => CanGoBack);
+			NotifyOfPropertyChange(() => GoBackMenu);
 		}
 	}
 }
