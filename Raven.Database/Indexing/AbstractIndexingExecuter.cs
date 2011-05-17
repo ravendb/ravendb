@@ -54,10 +54,12 @@ namespace Raven.Database.Indexing
             if (lastFlushedWorkCounter == workCounter || context.DoWork == false)
                 return;
             lastFlushedWorkCounter = workCounter;
-            context.IndexStorage.FlushAllIndexes();
+            FlushAllIndexes();
         }
 
-        protected bool ExecuteIndexing()
+    	protected abstract void FlushAllIndexes();
+
+    	protected bool ExecuteIndexing()
         {
             var indexesToWorkOn = new List<IndexToWorkOn>();
             transactionalStorage.Batch(actions =>

@@ -248,10 +248,22 @@ namespace Raven.Database.Indexing
 			return result;
 		}
 
-		public void FlushAllIndexes()
+		public void FlushMapIndexes()
 		{
 			foreach (var value in indexes.Values)
 			{
+				if(value.IsMapReduce)
+					continue;
+				value.Flush();
+			}
+		}
+
+		public void FlushReduceIndexes()
+		{
+			foreach (var value in indexes.Values)
+			{
+				if (value.IsMapReduce)
+					continue;
 				value.Flush();
 			}
 		}

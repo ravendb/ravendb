@@ -32,6 +32,11 @@ namespace Raven.Database.Indexing
 		{
 		}
 
+		public override bool IsMapReduce
+		{
+			get { return true; }
+		}
+
 		public override void IndexDocuments(
 			AbstractViewGenerator viewGenerator,
 			IEnumerable<dynamic> documents,

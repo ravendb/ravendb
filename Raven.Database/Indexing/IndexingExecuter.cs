@@ -29,7 +29,12 @@ namespace Raven.Database.Indexing
             return actions.Staleness.IsMapStale(indexesStat.Name);
         }
 
-		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
+    	protected override void FlushAllIndexes()
+    	{
+    		context.IndexStorage.FlushMapIndexes();
+    	}
+
+    	protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
 		{
 			return new IndexToWorkOn
 			{

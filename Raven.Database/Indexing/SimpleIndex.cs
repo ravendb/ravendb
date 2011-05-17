@@ -30,7 +30,12 @@ namespace Raven.Database.Indexing
         {
         }
 
-        public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
+    	public override bool IsMapReduce
+    	{
+			get { return false; }
+    	}
+
+    	public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;

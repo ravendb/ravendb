@@ -77,7 +77,12 @@ namespace Raven.Database.Indexing
 		[ImportMany]
 		public OrderedPartCollection<AbstractAnalyzerGenerator> AnalyzerGenerators { get; set; }
 
-        /// <summary>
+		/// <summary>
+		/// Whatever this is a map reduce index or not
+		/// </summary>
+		public abstract bool IsMapReduce { get; }
+
+		/// <summary>
         /// if you are calling this method, you _have_ to call 
         /// searcher.GetIndexReader().DecRef();
         /// when you are done searching
