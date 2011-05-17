@@ -1,7 +1,12 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 					xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+					xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+					xmlns:f="clr-namespace:Raven.Studio.Framework"
 					xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+					xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
+					xmlns:docs="clr-namespace:Raven.Studio.Features.Documents"
 					xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Layout;assembly=Microsoft.Expression.Interactions">
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Styles.xaml" />
@@ -315,5 +320,124 @@
 			</i:Interaction.Behaviors>
 		</toolkit:WrapPanel>
 	</ItemsPanelTemplate>
+
+	<Style TargetType="ListBoxItem"
+		   x:Name="DocumentListItem">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ListBoxItem">
+					<Border x:Name="frame"
+							Margin="0 0 6 6"
+							Padding="2"
+							cm:Action.TargetWithoutContext="EditDocument"
+							f:DoubleClickEvent.AttachAction="Execute($dataContext)"
+							CornerRadius="2"
+							Background="#0333"
+							BorderThickness="2"
+							BorderBrush="#0999">
+
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.3" />
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<ColorAnimation To="#F999"
+														Storyboard.TargetProperty="(Panel.BorderBrush).(SolidColorBrush.Color)"
+														Storyboard.TargetName="frame"
+														Duration="0" />
+										<DoubleAnimation To="1"
+														 Storyboard.TargetProperty="(UIElement.Opacity)"
+														 Storyboard.TargetName="overlay"
+														 Duration="0" />
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Normal" />
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="SelectionStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.3" />
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Selected">
+									<Storyboard>
+										<ColorAnimation To="#F666"
+														Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+														Storyboard.TargetName="frame"
+														Duration="0" />
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Unselected" />
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						
+						<ToolTipService.ToolTip>
+							<ContentControl cm:View.Model="{Binding}"
+											cm:View.Context="Tooltip" />
+						</ToolTipService.ToolTip>
+						<ti:ContextMenuService.ContextMenu>
+							<ti:ContextMenu>
+								<ti:MenuItem Header="Edit Document"
+											 cm:Action.TargetWithoutContext="EditDocument"
+											 cm:Message.Attach="[Click]=[Execute($dataContext)]" />
+
+								<ti:MenuItem Header="Copy Document Id to Clipboard"
+											 Tag="{Binding Id}"
+											 cm:Action.TargetWithoutContext="CopyDocumentIdToClipboard"
+											 cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
+
+								<ti:Separator />
+
+								<ti:MenuItem Header="Delete Document"
+											 Tag="{Binding Id}"
+											 cm:Action.TargetWithoutContext="DeleteDocument"
+											 cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
+							</ti:ContextMenu>
+						</ti:ContextMenuService.ContextMenu>
+
+						<Grid Width="120"
+							  Height="60">
+							<docs:DocumentTemplateSelector Content="{Binding Mode=OneTime}"
+														   VerticalContentAlignment="Stretch"
+														   HorizontalContentAlignment="Stretch" />
+							<StackPanel x:Name="overlay"
+										Opacity="0"
+										Orientation="Horizontal"
+										HorizontalAlignment="Right"
+										VerticalAlignment="Bottom">
+								<Button Content="edit"
+										cm:Action.TargetWithoutContext="EditDocument"
+										cm:Message.Attach="Execute($dataContext)"
+										Style="{StaticResource SmallIconButton}"
+										ToolTipService.ToolTip="click here to edit the document"
+										Margin="0,0,4,4">
+									<!--
+										TODO: this causes an odd error, uncomment and run to see
+										<Image Source="/Resources/Images/pencil.png"
+											   Height="16"
+											   Width="16" />-->
+								</Button>
+							</StackPanel>
+						</Grid>
+
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style TargetType="ListBox"
+		   x:Name="DocumentList">
+		<Setter Property="ItemContainerStyle"
+				Value="{StaticResource DocumentListItem}" />
+		<Setter Property="ItemsPanel"
+				Value="{StaticResource FluidWrapPanel}" />
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Auto" />
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Disabled" />
+		<Setter Property="SelectionMode"
+				Value="Extended" />
+	</Style>
 
 </ResourceDictionary>
