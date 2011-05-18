@@ -20,15 +20,16 @@ namespace Raven.Studio.Controls
 					break;
 				case Key.Right:
 				case Key.Left:
-					HandleRightLeft(key, e);
+					HandleRightLeft(key);
+					e.Handled = true;
 					break;
-				default:
-					base.OnKeyDown(e);
-					return;
 			}
+
+			if (e.Handled == false)
+				base.OnKeyDown(e);
 		}
 
-		private void HandleRightLeft(Key key, KeyEventArgs e)
+		private void HandleRightLeft(Key key)
 		{
 			if (key == Key.Right)
 			{
