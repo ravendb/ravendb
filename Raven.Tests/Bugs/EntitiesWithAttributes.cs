@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Runtime.Serialization;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -10,12 +11,12 @@ namespace Raven.Tests.Bugs
 	[DataContract]
 	public class Item
 	{
+		[DataMember]
 		public string Version { get; set; }
 	}
 
 	public class EntitiesWithAttributes : LocalClientTest
 	{
-		[Fact(Skip = "http://json.codeplex.com/workitem/20784, http://json.codeplex.com/workitem/20749")]
 		public void EntitiesSerializeCorrectlyWithAttributes()
 		{
 			using (var store = NewDocumentStore())
@@ -28,7 +29,6 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		[Fact(Skip = "http://json.codeplex.com/workitem/20784, http://json.codeplex.com/workitem/20749")]
 		public void PropertiesCanHaveAttributes()
 		{
 			using (var store = NewDocumentStore())
