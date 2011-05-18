@@ -213,8 +213,25 @@ namespace Raven.Studio.Features.Database
 			using (var session = OpenSession())
 				session.Advanced.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync();
 
+			SetBuildNumber();
+
 			callback();
 		}
+
+		private void SetBuildNumber()
+		{
+			var request = Store.JsonRequestFactory.CreateHttpJsonRequest(this, Address + "/build/version", "GET", null, Store.Conventions);
+			request.ReadResponseStringAsync()
+				.ContinueOnSuccess(task =>
+				                   	{
+				                   		var result = RavenJObject.Parse(task.Result);
+										var ravenJToken = result["BuildVersion"];
+										BuildNumber = ravenJToken.Value<string>();
+										NotifyOfPropertyChange(() => BuildNumber);
+				                   	});
+		}
+
+		public string BuildNumber { get; private set; }
 
 		public IEnumerable<string> Databases
 		{

@@ -17,6 +17,7 @@
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto" />
 				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
 			</Grid.ColumnDefinitions>
 
 			<Viewbox x:Name="network_icon"
@@ -69,6 +70,13 @@
 					   Foreground="{StaticResource LightTextBrush}"
 					   FontSize="{StaticResource FooterFontSize}"
 					   Grid.Column="1" />
+
+			<TextBlock Text="{Binding BuildNumber}"
+					   ToolTipService.ToolTip="The build number of the currently connected server."
+					   VerticalAlignment="Center"
+					   Foreground="{StaticResource LightTextBrush}"
+					   FontSize="{StaticResource FooterFontSize}"
+					   Grid.Column="2" />
 
 		</Grid>
 

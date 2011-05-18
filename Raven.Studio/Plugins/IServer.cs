@@ -13,6 +13,11 @@ namespace Raven.Studio.Plugins
 		/// The address (url) of the server.
 		/// </summary>
 		string Address { get; }
+		
+		/// <summary>
+		/// The build number of the server.
+		/// </summary>
+		string BuildNumber { get; }
 
 		/// <summary>
 		/// A list of the names of the databases that are available on the server.
