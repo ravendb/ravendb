@@ -326,7 +326,8 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ListBoxItem">
-					<Grid Margin="0 0 6 6">
+					<Grid Margin="0 0 6 6"
+						  cm:Action.TargetWithoutContext="EditDocument">
 						
 						<VisualStateManager.VisualStateGroups>
 							<VisualStateGroup x:Name="CommonStates">
@@ -368,7 +369,7 @@
 											cm:View.Context="Tooltip" />
 						</ToolTipService.ToolTip>
 						<ti:ContextMenuService.ContextMenu>
-							<ti:ContextMenu cm:Action.TargetWithoutContext="{Binding}">
+							<ti:ContextMenu>
 								<ti:MenuItem Header="Edit Document"
 											 cm:Action.TargetWithoutContext="EditDocument"
 											 cm:Message.Attach="[Click]=[Execute($dataContext)]" />
@@ -382,7 +383,8 @@
 
 								<ti:MenuItem Header="Delete Document"
 											 Tag="{Binding Id}"
-											 cm:Message.Attach="[Click]=[DeleteDocuments($this.Tag)]" />
+											 cm:Action.TargetWithoutContext="DeleteDocument"
+											 cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
 							</ti:ContextMenu>
 						</ti:ContextMenuService.ContextMenu>
 
@@ -392,7 +394,6 @@
 								BorderBrush="#0333" />
 
 						<Border x:Name="SelectionHighlight"
-								cm:Action.TargetWithoutContext="EditDocument"
 								f:DoubleClickEvent.AttachAction="Execute($dataContext)"
 								CornerRadius="2"
 								BorderThickness="2"
