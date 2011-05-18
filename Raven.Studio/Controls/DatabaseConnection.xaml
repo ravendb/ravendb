@@ -71,12 +71,14 @@
 					   FontSize="{StaticResource FooterFontSize}"
 					   Grid.Column="1" />
 
-			<TextBlock Text="{Binding BuildNumber}"
-					   ToolTipService.ToolTip="The build number of the currently connected server."
+			<TextBlock ToolTipService.ToolTip="The build number of the currently connected server."
 					   VerticalAlignment="Center"
 					   Foreground="{StaticResource LightTextBrush}"
 					   FontSize="{StaticResource FooterFontSize}"
-					   Grid.Column="2" />
+					   Grid.Column="2">
+				<Run Text="Build #" />
+				<Run Text="{Binding BuildNumber}" />
+			</TextBlock>
 
 		</Grid>
 
