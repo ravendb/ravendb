@@ -146,10 +146,10 @@
 						 ItemsSource="{Binding ActiveCollectionDocuments}"
 						 PageContainer="{Binding ElementName=ActiveCollectionDocuments}" />
 
-				<ListBox x:Name="ActiveCollectionDocuments"
-						 Style="{StaticResource DocumentList}"
-						 Margin="0 0 0 6"
-						 Grid.Row="1" />
+				<c:DocumentsListBox x:Name="ActiveCollectionDocuments"
+									Style="{StaticResource DocumentList}"
+									Margin="0 0 0 6"
+									Grid.Row="1" />
 
 			</tk:DockPanel>
 		</Grid>
