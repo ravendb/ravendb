@@ -83,7 +83,7 @@ namespace Raven.Database.Indexing
 			if (value == null)
 			{
 				yield return new Field(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
-								 Field.Index.NOT_ANALYZED);
+								 Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield break;
 			}
 			if (value is DynamicNullObject)
@@ -91,7 +91,7 @@ namespace Raven.Database.Indexing
 				if(((DynamicNullObject)value ).IsExplicitNull)
 				{
 					yield return new Field(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
-							 Field.Index.NOT_ANALYZED);
+							 Field.Index.NOT_ANALYZED_NO_NORMS);
 				}
 				yield break;
 			}
@@ -117,24 +117,25 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
-            if (indexDefinition.GetIndex(name, null) == Field.Index.NOT_ANALYZED)// explicitly not analyzed
+			var fieldIndexingOptions = indexDefinition.GetIndex(name, null);
+			if (fieldIndexingOptions == Field.Index.NOT_ANALYZED || fieldIndexingOptions == Field.Index.NOT_ANALYZED_NO_NORMS)// explicitly not analyzed
             {
 				if (value is DateTime)
 				{
 				    var val = (DateTime) value;
 					yield return new Field(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
-									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				else if(value is DateTimeOffset)
 				{
 					var val = (DateTimeOffset)value;
 					yield return new Field(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
-									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				else
 				{
 					yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
-					                       indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+										   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
             	yield break;
 			    
@@ -151,38 +152,38 @@ namespace Raven.Database.Indexing
 			{
 				yield return new Field(name, DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND),
 					indexDefinition.GetStorage(name, defaultStorage),
-					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else if (value is DateTimeOffset)
 			{
 				yield return new Field(name, DateTools.DateToString(((DateTimeOffset)value).DateTime, DateTools.Resolution.MILLISECOND),
 					indexDefinition.GetStorage(name, defaultStorage),
-					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
             else if(value is bool)
             {
                 yield return new Field(name, ((bool) value) ? "true" : "false", indexDefinition.GetStorage(name, defaultStorage),
-                              indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 
             }
 			else if(value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
 				var convert = ((IConvertible) value);
 				yield return new Field(name, convert.ToString(CultureInfo.InvariantCulture), indexDefinition.GetStorage(name, defaultStorage),
-				                       indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else if (value is DynamicJsonObject)
 			{
 				var inner = ((DynamicJsonObject)value).Inner;
 				yield return new Field(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield return new Field(name, inner.ToString(), indexDefinition.GetStorage(name, defaultStorage),
-                                       indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else 
 			{
 				yield return new Field(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield return new Field(name, RavenJToken.FromObject(value).ToString(), indexDefinition.GetStorage(name, defaultStorage),
-                                       indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 
 

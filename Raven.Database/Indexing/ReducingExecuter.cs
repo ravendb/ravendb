@@ -82,7 +82,12 @@ namespace Raven.Database.Indexing
             return actions.Staleness.IsReduceStale(indexesStat.Name);
         }
 
-		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
+    	protected override void FlushAllIndexes()
+    	{
+    		context.IndexStorage.FlushReduceIndexes();
+    	}
+
+    	protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
 		{
 			return new IndexToWorkOn
 			{

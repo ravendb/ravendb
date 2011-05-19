@@ -30,7 +30,12 @@ namespace Raven.Database.Indexing
         {
         }
 
-        public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
+    	public override bool IsMapReduce
+    	{
+			get { return false; }
+    	}
+
+    	public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;
@@ -80,7 +85,7 @@ namespace Raven.Database.Indexing
                     {
                         var luceneDoc = new Document();
 						luceneDoc.Add(new Field(Constants.DocumentIdFieldName, indexingResult.NewDocId.ToLowerInvariant(), Field.Store.YES,
-                                                Field.Index.NOT_ANALYZED));
+												Field.Index.NOT_ANALYZED_NO_NORMS));
 
                         madeChanges = true;
                         CopyFieldsToDocument(luceneDoc, indexingResult.Fields);

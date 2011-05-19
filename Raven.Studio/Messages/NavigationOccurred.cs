@@ -11,7 +11,12 @@
 			this.undo = undo;
 		}
 
-		public void Reverse()
+	    public string Name
+	    {
+	        get { return name; }
+	    }
+
+	    public void Reverse()
 		{
 			undo();
 		}

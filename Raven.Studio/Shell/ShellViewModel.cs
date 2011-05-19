@@ -37,6 +37,7 @@
 			IKeyboardShortcutBinder binder,
 			IEventAggregator events)
 		{
+            this.databaseScreen = databaseScreen;
 			this.navigation = navigation;
 			this.notifications = notifications;
 			this.busyStatus = busyStatus;
@@ -45,7 +46,6 @@
 										this.TrackNavigationTo(start, events);
 										navigation.Breadcrumbs.Clear();
 									});
-			this.databaseScreen = databaseScreen;
 			this.binder = binder;
 			this.events = events;
 			this.server = server;

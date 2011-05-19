@@ -98,5 +98,14 @@ namespace Raven.Studio.Features.Database
 			var first = (IScreen)AvailableItems.First(_ => _.Metadata.DisplayName == SelectedItem).Value;
 			Show(first);
 		}
+
+		public override void ActivateItem(object item)
+		{
+			base.ActivateItem(item);
+
+			var screen = item as IScreen;
+			if (screen != null) 
+				SelectedItem = screen.DisplayName;
+		}
 	}
 }

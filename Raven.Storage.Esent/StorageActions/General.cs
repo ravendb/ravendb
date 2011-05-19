@@ -33,7 +33,7 @@ namespace Raven.Storage.Esent.StorageActions
 		private readonly IDocumentCacher cacher;
 		protected readonly JET_DBID dbid;
 
-		protected readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
+		protected static readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
 		protected readonly Session session;
 		private readonly Transaction transaction;
 
