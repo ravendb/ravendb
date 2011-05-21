@@ -132,6 +132,7 @@
     <Compile Include="Controls\Editors\LinqEditor.cs" />
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
     <Compile Include="Controls\Editors\XamlEditor.cs" />
+    <Compile Include="Controls\NoKeyListBox.cs" />
     <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
     <Compile Include="Converters\NotificationLevelToColorConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
@@ -146,6 +147,7 @@
     <Compile Include="Framework\EventArgs.cs" />
     <Compile Include="Framework\IBindablePagedQuery.cs" />
     <Compile Include="Framework\MenuItemMetadata.cs" />
+    <Compile Include="Framework\CustomActionMessage.cs" />
     <Compile Include="Impl\DotNetZip\Adler.cs" />
     <Compile Include="Impl\DotNetZip\BlockState.cs" />
     <Compile Include="Impl\DotNetZip\CompressionLevel.cs" />

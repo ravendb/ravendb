@@ -45,7 +45,7 @@
             string message;
             
             if(list != null) {
-                if(list.Count > 0)
+                if(list.Count > 1)
                     message = string.Format("Are you sure you want to delete these {0} documents?", list.Count);
                 else message = "Are you sure that you want to do this document? (" + ((DocumentViewModel)list[0]).Id + ")";
             }

@@ -1,20 +1,24 @@
 ﻿<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
-			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
-			 xmlns:cm="http://www.caliburnproject.org"
-			 xmlns:c="clr-namespace:Raven.Studio.Controls" xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" x:Class="Raven.Studio.Features.Documents.BrowseDocumentsView"
-			 mc:Ignorable="d"
-			 d:DesignWidth="640"
-			 d:DesignHeight="480"
-			 d:DataContext="{d:DesignData /SampleData/BrowseDocumentsViewModelSampleData.xaml}">
-    <UserControl.Resources>
-        <ContentControl x:Key="contextBridge"
-                        Content="{Binding}" />
-    </UserControl.Resources>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+             xmlns:local="clr-namespace:Raven.Studio.Behaviors"
+             xmlns:cm="http://www.caliburnproject.org"
+             xmlns:c="clr-namespace:Raven.Studio.Controls"
+             xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+             xmlns:Input="clr-namespace:Microsoft.Expression.Interactivity.Input;assembly=Microsoft.Expression.Interactions"
+             xmlns:f="clr-namespace:Raven.Studio.Framework"
+             x:Class="Raven.Studio.Features.Documents.BrowseDocumentsView"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="480"
+             d:DataContext="{d:DesignData /SampleData/BrowseDocumentsViewModelSampleData.xaml}">
+	<UserControl.Resources>
+		<ContentControl x:Key="contextBridge"
+		                Content="{Binding}" />
+	</UserControl.Resources>
 
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>
@@ -24,53 +28,53 @@
 
 		<tk:DockPanel>
 			<TextBlock Text="Documents"
-					   tk:DockPanel.Dock="Left"
-					   Style="{StaticResource Header}" />
+			           tk:DockPanel.Dock="Left"
+			           Style="{StaticResource Header}" />
 			<Border tk:DockPanel.Dock="Right"
-					HorizontalAlignment="Right"
-					Margin="0,0,0,10"
-					VerticalAlignment="Bottom"
-					BorderThickness="1"
-					BorderBrush="{StaticResource PanelBorderBrush}"
-					CornerRadius="4">
+			        HorizontalAlignment="Right"
+			        Margin="0,0,0,10"
+			        VerticalAlignment="Bottom"
+			        BorderThickness="1"
+			        BorderBrush="{StaticResource PanelBorderBrush}"
+			        CornerRadius="4">
 
 				<StackPanel Orientation="Horizontal"
-							Height="22"
-							Width="375">
+				            Height="22"
+				            Width="375">
 					<TextBox MinWidth="350"
-							 x:Name="documentId"
-							 BorderThickness="0">
+					         x:Name="documentId"
+					         BorderThickness="0">
 						<i:Interaction.Behaviors>
 							<local:Watermark Text="Search by Document Id"
-											 Foreground="LightGray" />
+							                 Foreground="LightGray" />
 						</i:Interaction.Behaviors>
 					</TextBox>
 					<Button cm:Action.TargetWithoutContext="EditDocumentById"
-							cm:Message.Attach="Execute(documentId)"
-							Margin="0">
+					        cm:Message.Attach="Execute(documentId)"
+					        Margin="0">
 						<Grid Width="14"
-							  Height="16"
-							  HorizontalAlignment="Center"
-							  VerticalAlignment="Center"
-							  Margin="3,2,0,0">
+						      Height="16"
+						      HorizontalAlignment="Center"
+						      VerticalAlignment="Center"
+						      Margin="3,2,0,0">
 							<Rectangle Fill="#FF767676"
-									   HorizontalAlignment="Right"
-									   Height="8"
-									   Margin="0,0,-0.164,-0.334"
-									   RadiusY="0.5"
-									   RadiusX="0.5"
-									   RenderTransformOrigin="0.5,0.5"
-									   Stroke="#FF767676"
-									   UseLayoutRounding="False"
-									   VerticalAlignment="Bottom"
-									   Width="4">
+							           HorizontalAlignment="Right"
+							           Height="8"
+							           Margin="0,0,-0.164,-0.334"
+							           RadiusY="0.5"
+							           RadiusX="0.5"
+							           RenderTransformOrigin="0.5,0.5"
+							           Stroke="#FF767676"
+							           UseLayoutRounding="False"
+							           VerticalAlignment="Bottom"
+							           Width="4">
 								<Rectangle.RenderTransform>
 									<RotateTransform Angle="-45" />
 								</Rectangle.RenderTransform>
 							</Rectangle>
 							<Ellipse Fill="Transparent"
-									 Margin="0,0,1,3"
-									 Stroke="#FF767676" />
+							         Margin="0,0,1,3"
+							         Stroke="#FF767676" />
 						</Grid>
 					</Button>
 				</StackPanel>
@@ -80,60 +84,77 @@
 		<tk:DockPanel Grid.Row="1">
 
 			<StackPanel tk:DockPanel.Dock="Top"
-						Orientation="Horizontal">
+			            Orientation="Horizontal">
 				<Button Content="New Document"
-						Style="{StaticResource FormButton}"
-						cm:Message.Attach="CreateNewDocument" />
+				        Style="{StaticResource FormButton}"
+				        cm:Message.Attach="CreateNewDocument" />
 			</StackPanel>
 
 			<c:Pager tk:DockPanel.Dock="Top"
-					 ItemsSource="{Binding Documents}"
-					 PageContainer="{Binding ElementName=DocumentPageContainer}" />
+			         ItemsSource="{Binding Documents}"
+			         PageContainer="{Binding ElementName=DocumentPageContainer}">
+			</c:Pager>
 
 			<Grid>
 				<TextBlock Style="{StaticResource Instruction}"
-						   Text="{Binding Status}"
-						   d:IsHidden="True"
-						   d:IsLocked="True" />
+				           Text="{Binding Status}"
+				           d:IsHidden="True"
+				           d:IsLocked="True" />
 
-                <ListBox x:Name="DocumentPageContainer"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         BorderThickness="0"
-                         ItemsPanel="{StaticResource FluidWrapPanel}"
-                         ItemsSource="{Binding Documents}" 
-                         SelectionMode="Extended">
-                    <i:Interaction.Behaviors>
-                        <local:SelectItemOnRightClick />
-                    </i:Interaction.Behaviors>
-                    <ListBox.Resources>
-
-                    </ListBox.Resources>
-                    <ListBox.ItemTemplate>
+				<c:NoKeyListBox x:Name="DocumentPageContainer"
+				                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+				                BorderThickness="0"
+				                ItemsPanel="{StaticResource FluidWrapPanel}"
+				                ItemsSource="{Binding Documents}"
+				                SelectionMode="Extended">
+					<i:Interaction.Behaviors>
+						<local:SelectItemOnRightClick />
+					</i:Interaction.Behaviors>
+					<i:Interaction.Triggers>
+						<Input:KeyTrigger Key="PageUp">
+							<f:CustomActionMessage Target="{Binding Documents}"
+                                                   IgnoreAvailability="True"
+							                       MethodName="MovePrevious" />
+						</Input:KeyTrigger>
+						<Input:KeyTrigger Key="PageDown">
+							<f:CustomActionMessage Target="{Binding Documents}"
+                                                   IgnoreAvailability="True"
+							                       MethodName="MoveNext" />
+						</Input:KeyTrigger>
+						<Input:KeyTrigger Key="Delete">
+							<f:CustomActionMessage Target="DeleteDocument"
+							                       IgnoreAvailability="True"
+							                       MethodName="Execute">
+								<cm:Parameter Value="$selectedItems" />
+							</f:CustomActionMessage>
+						</Input:KeyTrigger>
+					</i:Interaction.Triggers>
+					<ListBox.ItemTemplate>
 						<DataTemplate>
 							<Documents:DocumentView DataContext="{Binding}" />
 						</DataTemplate>
-                    </ListBox.ItemTemplate>
-                    <tk:ContextMenuService.ContextMenu>
-                        <tk:ContextMenu>
-                            <tk:MenuItem Header="Edit Document"
-                                         cm:Action.TargetWithoutContext="EditDocument"
-                                         Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
-                                         cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
+					</ListBox.ItemTemplate>
+					<tk:ContextMenuService.ContextMenu>
+						<tk:ContextMenu>
+							<tk:MenuItem Header="Edit Document"
+							             cm:Action.TargetWithoutContext="EditDocument"
+							             Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
+							             cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
 
-                            <tk:MenuItem Header="Copy Document Id(s) to Clipboard"
-                                         cm:Action.TargetWithoutContext="CopyDocumentIdToClipboard"
-                                         Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
-                                         cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
+							<tk:MenuItem Header="Copy Document Id(s) to Clipboard"
+							             cm:Action.TargetWithoutContext="CopyDocumentIdToClipboard"
+							             Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
+							             cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
 
-                            <tk:Separator />
+							<tk:Separator />
 
-                            <tk:MenuItem Header="Delete Document(s)"
-                                         cm:Action.TargetWithoutContext="DeleteDocument"
-                                         Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
-                                         cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
-                        </tk:ContextMenu>
-                    </tk:ContextMenuService.ContextMenu>
-                </ListBox>
+							<tk:MenuItem Header="Delete Document(s)"
+							             cm:Action.TargetWithoutContext="DeleteDocument"
+							             Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
+							             cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
+						</tk:ContextMenu>
+					</tk:ContextMenuService.ContextMenu>
+				</c:NoKeyListBox>
 
 			</Grid>
 		</tk:DockPanel>

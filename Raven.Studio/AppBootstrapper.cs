@@ -89,9 +89,16 @@ namespace Raven.Studio
 			ViewLocator.LocateForModelType = (t, v, c) => { return StudioViewLocator.LocateForModelType(t, v, c, original); };
 
 		    MessageBinder.SpecialValues["$selecteditems"] = context => {
-		        var viewAware = (ViewAware)context.Source.Tag;
-		        var parentView = (FrameworkElement)viewAware.GetView();
-                var listBox = (ListBox)parentView.FindName("DocumentPageContainer");
+                ListBox listBox;
+
+                if (context.Source is ListBox)
+                    listBox = (ListBox)context.Source;
+                else {
+                    var viewAware = (ViewAware)context.Source.Tag;
+                    var parentView = (FrameworkElement)viewAware.GetView();
+                    listBox = (ListBox)parentView.FindName("DocumentPageContainer");
+                }
+
 		        return listBox.SelectedItems;
 		    };
 		}
