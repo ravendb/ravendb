@@ -11,6 +11,10 @@
 			 d:DesignWidth="640"
 			 d:DesignHeight="480"
 			 d:DataContext="{d:DesignData /SampleData/BrowseDocumentsViewModelSampleData.xaml}">
+    <UserControl.Resources>
+        <ContentControl x:Key="contextBridge"
+                        Content="{Binding}" />
+    </UserControl.Resources>
 
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>
@@ -92,17 +96,44 @@
 						   d:IsHidden="True"
 						   d:IsLocked="True" />
 
-				<ItemsControl x:Name="DocumentPageContainer"
-							  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-							  BorderThickness="0"
-							  ItemsPanel="{StaticResource FluidWrapPanel}"
-							  ItemsSource="{Binding Documents}">
-					<ItemsControl.ItemTemplate>
+                <ListBox x:Name="DocumentPageContainer"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         BorderThickness="0"
+                         ItemsPanel="{StaticResource FluidWrapPanel}"
+                         ItemsSource="{Binding Documents}" 
+                         SelectionMode="Extended">
+                    <i:Interaction.Behaviors>
+                        <local:SelectItemOnRightClick />
+                    </i:Interaction.Behaviors>
+                    <ListBox.Resources>
+
+                    </ListBox.Resources>
+                    <ListBox.ItemTemplate>
 						<DataTemplate>
 							<Documents:DocumentView DataContext="{Binding}" />
 						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
+                    </ListBox.ItemTemplate>
+                    <tk:ContextMenuService.ContextMenu>
+                        <tk:ContextMenu>
+                            <tk:MenuItem Header="Edit Document"
+                                         cm:Action.TargetWithoutContext="EditDocument"
+                                         Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
+                                         cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
+
+                            <tk:MenuItem Header="Copy Document Id(s) to Clipboard"
+                                         cm:Action.TargetWithoutContext="CopyDocumentIdToClipboard"
+                                         Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
+                                         cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
+
+                            <tk:Separator />
+
+                            <tk:MenuItem Header="Delete Document(s)"
+                                         cm:Action.TargetWithoutContext="DeleteDocument"
+                                         Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
+                                         cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
+                        </tk:ContextMenu>
+                    </tk:ContextMenuService.ContextMenu>
+                </ListBox>
 
 			</Grid>
 		</tk:DockPanel>

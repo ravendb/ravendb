@@ -1,9 +1,12 @@
 ﻿namespace Raven.Studio.Commands
 {
-	using System.ComponentModel.Composition;
-	using Caliburn.Micro;
+    using System.Collections;
+    using System.ComponentModel.Composition;
+    using System.Linq;
+    using Caliburn.Micro;
 	using Features.Database;
-	using Messages;
+    using Features.Documents;
+    using Messages;
 	using Plugins;
 	using Shell.MessageBox;
 
@@ -21,21 +24,51 @@
 			this.showMessageBox = showMessageBox;
 		}
 
-		public void Execute(string documentId)
+        public bool CanExecute(object listOrId)
+        {
+            if (listOrId == null)
+                return false;
+
+            var list = listOrId as IList;
+            if (list != null)
+            {
+                return list.Count > 0;
+            }
+
+            var viewModel = listOrId as string;
+            return !string.IsNullOrWhiteSpace(viewModel);
+        }
+
+        public void Execute(object listOrId)
 		{
+            var list = listOrId as IList;
+            string message;
+            
+            if(list != null) {
+                if(list.Count > 0)
+                    message = string.Format("Are you sure you want to delete these {0} documents?", list.Count);
+                else message = "Are you sure that you want to do this document? (" + ((DocumentViewModel)list[0]).Id + ")";
+            }
+            else message = "Are you sure that you want to do this document? (" + listOrId + ")";
+
+
 			showMessageBox(
-				"Are you sure that you want to do this document? (" + documentId + ")",
+				message,
 				"Confirm Deletion",
 				MessageBoxOptions.OkCancel,
-				box => { if (box.WasSelected(MessageBoxOptions.Ok)) ExecuteDeletion(documentId); });
+				box => {
+				    if (box.WasSelected(MessageBoxOptions.Ok)) {
+				        if(list != null) {
+				            list.OfType<DocumentViewModel>().Apply(x => ExecuteDeletion(x.Id)); //Is this the most efficient way?
+				        }
+                        else {
+				            ExecuteDeletion(listOrId.ToString());
+				        }
+				    }
+				});
 		}
 
-		public bool CanExecute(string documentId)
-		{
-			return !string.IsNullOrEmpty(documentId);
-		}
-
-		void ExecuteDeletion(string documentId)
+        void ExecuteDeletion(string documentId)
 		{
 			using (var session = server.OpenSession())
 			session.Advanced.AsyncDatabaseCommands.DeleteDocumentAsync(documentId);

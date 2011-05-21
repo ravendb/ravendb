@@ -74,7 +74,8 @@
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="Caliburn.Micro">
+    <Reference Include="Caliburn.Micro, Version=1.0.0.0, Culture=neutral, PublicKeyToken=8e5891231f2ed21f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\Caliburn.Micro.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
@@ -121,6 +122,7 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
+    <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
     <Compile Include="Commands\CopyServerError.cs" />

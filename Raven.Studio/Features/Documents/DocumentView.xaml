@@ -54,26 +54,6 @@
 			<ContentControl cm:View.Model="{Binding}"
 							cm:View.Context="Tooltip" />
 		</ToolTipService.ToolTip>
-		<ti:ContextMenuService.ContextMenu>
-			<ti:ContextMenu>
-				<ti:MenuItem Header="Edit Document"
-							 cm:Action.TargetWithoutContext="EditDocument"
-							 cm:Message.Attach="[Click]=[Execute($dataContext)]" />
-
-				<ti:MenuItem Header="Copy Document Id to Clipboard"
-							 Tag="{Binding Id}"
-							 cm:Action.TargetWithoutContext="CopyDocumentIdToClipboard"
-							 cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
-
-				<ti:Separator />
-
-				<ti:MenuItem Header="Delete Document"
-							 Tag="{Binding Id}"
-							 cm:Action.TargetWithoutContext="DeleteDocument"
-							 cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
-			</ti:ContextMenu>
-		</ti:ContextMenuService.ContextMenu>
-
 		<Grid Width="120"
 			  Height="60">
 			<docs:DocumentTemplateSelector Content="{Binding Mode=OneTime}"
