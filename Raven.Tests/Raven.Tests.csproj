@@ -171,6 +171,7 @@
     <Compile Include="Bugs\MassivelyMultiTenant.cs" />
     <Compile Include="Bugs\MultipleRangeQueries.cs" />
     <Compile Include="Bugs\ProjectionFromDynamicIndex.cs" />
+    <Compile Include="Bugs\Queries\Floats.cs" />
     <Compile Include="Bugs\Queries\Generics.cs" />
     <Compile Include="Bugs\QueryingDateTime.cs" />
     <Compile Include="Bugs\QueryingOnMetadata.cs" />
