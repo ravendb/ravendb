@@ -4,8 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Configuration;
-using System.Net;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
@@ -76,30 +75,6 @@ namespace Raven.Client.Embedded
         public DocumentDatabase DocumentDatabase { get; private set; }
 
         /// <summary>
-        /// Parse the connection string option
-        /// </summary>
-        protected override void ProcessConnectionStringOption(NetworkCredential neworkCredentials, string key,
-                                                             string value)
-        {
-            switch (key)
-            {
-                case "memory":
-                    bool result;
-                    if (bool.TryParse(value, out result) == false)
-                        throw new ConfigurationErrorsException("Could not understand memory setting: " +
-                                                               value);
-                    RunInMemory = result;
-                    break;
-                case "datadir":
-                    DataDirectory = value;
-                    break;
-                default:
-                    base.ProcessConnectionStringOption(neworkCredentials, key, value);
-                    break;
-            }
-        }
-
-        /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public override void Dispose()
@@ -119,7 +94,33 @@ namespace Raven.Client.Embedded
 				onDisposed();
         }
 
-        /// <summary>
+    	/// <summary>
+    	/// Create the connection string parser
+    	/// </summary>
+    	protected override RavenConnectionStringOptions GetConnectionStringOptions()
+		{
+			var parser = ConnectionStringParser<EmbeddedRavenConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
+			parser.Parse();
+			return parser.ConnectionStringOptions;
+		}
+
+    	/// <summary>
+    	/// Copy the relevant connection string settings
+    	/// </summary>
+    	protected override void SetConnectionStringSettings(RavenConnectionStringOptions options)
+		{
+			var embeddedRavenConnectionStringOptions = options as EmbeddedRavenConnectionStringOptions;
+
+			if (embeddedRavenConnectionStringOptions == null)
+				return;
+
+			DataDirectory = embeddedRavenConnectionStringOptions.DataDirectory;
+			RunInMemory = embeddedRavenConnectionStringOptions.RunInMemory;
+
+		}
+
+
+    	/// <summary>
         /// Initialize the document store access method to RavenDB
         /// </summary>
         protected override void InitializeInternal()

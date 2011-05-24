@@ -43,6 +43,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -59,6 +60,7 @@
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\BatchResult.cs" />
     <Compile Include="Data\Collection.cs" />
+    <Compile Include="Data\ConnectionStringParser.cs" />
     <Compile Include="Data\Constants.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />

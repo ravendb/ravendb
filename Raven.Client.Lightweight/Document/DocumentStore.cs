@@ -4,10 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Configuration;
 using System.Net;
-using System.Text.RegularExpressions;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -32,16 +30,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentStore : IDocumentStore
 	{
-		private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)", 
-#if !SILVERLIGHT
-			RegexOptions.Compiled|
-#endif
-			 RegexOptions.IgnorePatternWhitespace);
-		private static readonly Regex connectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
-#if !SILVERLIGHT
-			RegexOptions.Compiled|
-#endif
-					RegexOptions.IgnorePatternWhitespace);
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -182,72 +170,30 @@ namespace Raven.Client.Document
 			set
 			{
 				connectionStringName = value;
-				var connectionString = ConfigurationManager.ConnectionStrings[connectionStringName];
-				if(connectionString == null)
-					throw new ArgumentException("Could not find connection string name: " + connectionStringName);
-				ParseConnectionString(connectionString.ConnectionString);
+				SetConnectionStringSettings(GetConnectionStringOptions());
 			}
 		}
-
-		///<summary>
-		/// Parse a given connection string
-		///</summary>
-		public void ParseConnectionString(string connectionString)
-		{
-			var strings = connectionStringArgumentsSplitterRegex.Split(connectionString);
-			var networkCredential = new NetworkCredential();
-			foreach (var str in strings)
-			{
-				var arg = str.Trim(';');
-				var match = connectionStringRegex.Match(arg);
-				if (match.Success == false)
-					throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
-				ProcessConnectionStringOption(networkCredential, match.Groups[1].Value.ToLower(), match.Groups[2].Value.Trim());
-			}
-
-			if (setupUsernameInConnectionString == false && setupPasswordInConnectionString == false) 
-				return;
-
-			if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
-				throw new ArgumentException("User and Password must both be specified in the connection string: " + connectionStringName);
-			Credentials = networkCredential;
-		}
-
-		private bool setupUsernameInConnectionString;
-		private bool setupPasswordInConnectionString;
 
 		/// <summary>
-		/// Parse the connection string option
+		/// Copy the relevant connection string settings
 		/// </summary>
-		protected virtual void ProcessConnectionStringOption(NetworkCredential neworkCredentials, string key, string value)
+		protected virtual void SetConnectionStringSettings(RavenConnectionStringOptions options)
 		{
-			switch (key)
-			{
-				case "enlist":
-					EnlistInDistributedTransactions = bool.Parse(value);
-					break;
-				case "resourcemanagerid":
-					ResourceManagerId = new Guid(value);
-					break;
-				case "url":
-					Url = value;
-					break;
-				case "database":
-				case "defaultdatabase":
-					DefaultDatabase = value;
-					break;
-				case "user":
-					neworkCredentials.UserName = value;
-					setupUsernameInConnectionString = true;
-					break;
-				case "password":
-					neworkCredentials.Password = value;
-					setupPasswordInConnectionString = true;
-					break;
+			ResourceManagerId = options.ResourceManagerId;
+			Credentials = options.Credentials;
+			Url = options.Url;
+			DefaultDatabase = options.DefaultDatabase;
+			EnlistInDistributedTransactions= options.EnlistInDistributedTransactions;
+		}
 
-				default:
-					throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed, unknown option: " + key);
-			}
+		/// <summary>
+		/// Create the connection string parser
+		/// </summary>
+		protected virtual RavenConnectionStringOptions GetConnectionStringOptions()
+		{
+			var connectionStringOptions = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionStringName(connectionStringName);
+			connectionStringOptions.Parse();
+			return connectionStringOptions.ConnectionStringOptions;
 		}
 
 		///<summary>
