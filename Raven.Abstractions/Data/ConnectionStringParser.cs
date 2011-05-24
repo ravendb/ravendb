@@ -5,8 +5,41 @@ using System.Text.RegularExpressions;
 
 namespace Raven.Abstractions.Data
 {
-	public class ConnectionStringParser
+	public class RavenConnectionStringOptions
 	{
+		public NetworkCredential Credentials { get; set; }
+		public bool EnlistInDistributedTransactions { get; set; }
+		public string DefaultDatabase { get; set; }
+		public Guid ResourceManagerId { get; set; }
+		public string Url { get; set; }
+	}
+
+	public class EmbeddedRavenConnectionStringOptions : RavenConnectionStringOptions
+	{
+		public bool AllowEmbeddedOptions { get; set; }
+
+		public string DataDirectory { get; set; }
+
+		public bool RunInMemory { get; set; }
+	}
+
+	public class ConnectionStringParser<TConnectionString> where TConnectionString : RavenConnectionStringOptions, new()
+	{
+		public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
+		{
+			var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
+			if (connectionStringSettings == null)
+				throw new ArgumentException("Could not find connection string name: " + connectionStringName);
+
+		
+			return new ConnectionStringParser<TConnectionString>(connectionStringName, connectionStringSettings.ConnectionString);
+		}
+
+		public static ConnectionStringParser<TConnectionString> FromConnectionString(string connectionString)
+		{
+			return new ConnectionStringParser<TConnectionString>("code", connectionString);
+		}
+
 		private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)",
 #if !SILVERLIGHT
 		                                                                RegexOptions.Compiled |
@@ -25,56 +58,50 @@ namespace Raven.Abstractions.Data
 		private bool setupPasswordInConnectionString;
 		private bool setupUsernameInConnectionString;
 
-		public ConnectionStringParser(string connectionString, string connectionStringName)
+		public TConnectionString ConnectionStringOptions { get; set; }
+
+		private ConnectionStringParser(string connectionStringName, string connectionString)
 		{
+			ConnectionStringOptions = new TConnectionString();
 			this.connectionString = connectionString;
 			this.connectionStringName = connectionStringName;
 		}
-
-		public NetworkCredential Credentials { get; set; }
-		
-		public bool EnlistInDistributedTransactions { get; set; }
-
-		public string DefaultDatabase { get; set; }
-
-		public Guid ResourceManagerId { get; set; }
-
-		public string Url { get; set; }
 
 		/// <summary>
 		/// Parse the connection string option
 		/// </summary>
 		protected virtual void ProcessConnectionStringOption(NetworkCredential neworkCredentials, string key, string value)
 		{
+			var embeddedRavenConnectionStringOptions = ConnectionStringOptions as EmbeddedRavenConnectionStringOptions;
 			switch (key)
 			{
 				case "memory":
-					if(AllowEmbeddedOptions == false)
+					if(embeddedRavenConnectionStringOptions  == null)
 						goto default;
 					bool result;
 					if (bool.TryParse(value, out result) == false)
 						throw new ConfigurationErrorsException("Could not understand memory setting: " +
 															   value);
-					RunInMemory = result;
+					embeddedRavenConnectionStringOptions.RunInMemory = result;
 					break;
 				case "datadir":
-					if(AllowEmbeddedOptions == false)
+					if(embeddedRavenConnectionStringOptions  == null)
 						goto default;
-					
-						DataDirectory = value;
+
+					embeddedRavenConnectionStringOptions.DataDirectory = value;
 					break;
 				case "enlist":
-					EnlistInDistributedTransactions = bool.Parse(value);
+					ConnectionStringOptions.EnlistInDistributedTransactions = bool.Parse(value);
 					break;
 				case "resourcemanagerid":
-					ResourceManagerId = new Guid(value);
+					ConnectionStringOptions.ResourceManagerId = new Guid(value);
 					break;
 				case "url":
-					Url = value;
+					ConnectionStringOptions.Url = value;
 					break;
 				case "database":
 				case "defaultdatabase":
-					DefaultDatabase = value;
+					ConnectionStringOptions.DefaultDatabase = value;
 					break;
 				case "user":
 					neworkCredentials.UserName = value;
@@ -90,12 +117,6 @@ namespace Raven.Abstractions.Data
 					                            " could not be parsed, unknown option: " + key);
 			}
 		}
-
-		public bool AllowEmbeddedOptions { get; set; }
-
-		public string DataDirectory { get; set; }
-
-		public bool RunInMemory { get; set; }
 
 		public void Parse()
 		{
@@ -116,7 +137,7 @@ namespace Raven.Abstractions.Data
 			if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
 				throw new ArgumentException("User and Password must both be specified in the connection string: " +
 				                            connectionStringName);
-			Credentials = networkCredential;
+			ConnectionStringOptions.Credentials = networkCredential;
 		}
 	}
 }

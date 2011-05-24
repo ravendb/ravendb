@@ -1,3 +1,4 @@
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Xunit;
 
@@ -8,11 +9,12 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void EnsureWellFormedConnectionStrings_ParsingWithEndingSemicolons_Successful()
 		{
-			var documentStore = new DocumentStore();
-			documentStore.ParseConnectionString("Url=http://localhost:10301;");
-			Assert.DoesNotContain(";", documentStore.Url);
-			documentStore.ParseConnectionString("Url=http://localhost:10301/;");
-			Assert.DoesNotContain(";", documentStore.Url);
+			var connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("Url=http://localhost:10301;");
+			connectionStringParser.Parse();
+			Assert.DoesNotContain(";", connectionStringParser.ConnectionStringOptions.Url);
+			connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("Url=http://localhost:10301/;");
+			connectionStringParser.Parse();
+			Assert.DoesNotContain(";", connectionStringParser.ConnectionStringOptions.Url);
 		}
 	}
 }

@@ -11,6 +11,11 @@ namespace Raven.Abstractions.Replication
     public class ReplicationDestination
     {
 		/// <summary>
+		/// The name of the connection string specified in the 
+		/// </summary>
+		public string ConnectionStringName { get; set; }
+
+		/// <summary>
 		/// Gets or sets the URL of the replication destination
 		/// </summary>
 		/// <value>The URL.</value>

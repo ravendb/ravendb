@@ -4,8 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Configuration;
-using System.Net;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
@@ -98,18 +97,26 @@ namespace Raven.Client.Embedded
     	/// <summary>
     	/// Create the connection string parser
     	/// </summary>
-    	protected override Abstractions.Data.ConnectionStringParser CreateConnectionStringParser(string connectionString)
+    	protected override RavenConnectionStringOptions GetConnectionStringOptions()
 		{
-			var connectionStringParser = base.CreateConnectionStringParser(connectionString);
-			connectionStringParser.AllowEmbeddedOptions = true;
-			return connectionStringParser;
+			var parser = ConnectionStringParser<EmbeddedRavenConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
+			parser.Parse();
+			return parser.ConnectionStringOptions;
 		}
 
-		protected override void GetConnectionStringSettings(Abstractions.Data.ConnectionStringParser connectionStringParser)
+    	/// <summary>
+    	/// Copy the relevant connection string settings
+    	/// </summary>
+    	protected override void SetConnectionStringSettings(RavenConnectionStringOptions options)
 		{
-			base.GetConnectionStringSettings(connectionStringParser);
-			RunInMemory = connectionStringParser.RunInMemory;
-			DataDirectory = connectionStringParser.DataDirectory;
+			var embeddedRavenConnectionStringOptions = options as EmbeddedRavenConnectionStringOptions;
+
+			if (embeddedRavenConnectionStringOptions == null)
+				return;
+
+			DataDirectory = embeddedRavenConnectionStringOptions.DataDirectory;
+			RunInMemory = embeddedRavenConnectionStringOptions.RunInMemory;
+
 		}
 
 

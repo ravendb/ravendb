@@ -4,10 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Configuration;
 using System.Net;
-using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 #if !NET_3_5
@@ -173,42 +170,30 @@ namespace Raven.Client.Document
 			set
 			{
 				connectionStringName = value;
-				var connectionString = ConfigurationManager.ConnectionStrings[connectionStringName];
-				if(connectionString == null)
-					throw new ArgumentException("Could not find connection string name: " + connectionStringName);
-				ParseConnectionString(connectionString.ConnectionString);
+				SetConnectionStringSettings(GetConnectionStringOptions());
 			}
-		}
-
-		///<summary>
-		/// Parse a given connection string
-		///</summary>
-		public void ParseConnectionString(string connectionString)
-		{
-			var connectionStringParser = CreateConnectionStringParser(connectionString);
-			connectionStringParser.Parse();
-
-			GetConnectionStringSettings(connectionStringParser);
 		}
 
 		/// <summary>
 		/// Copy the relevant connection string settings
 		/// </summary>
-		protected virtual void GetConnectionStringSettings(ConnectionStringParser connectionStringParser)
+		protected virtual void SetConnectionStringSettings(RavenConnectionStringOptions options)
 		{
-			ResourceManagerId = connectionStringParser.ResourceManagerId;
-			Credentials = connectionStringParser.Credentials;
-			Url = connectionStringParser.Url;
-			DefaultDatabase = connectionStringParser.DefaultDatabase;
-			EnlistInDistributedTransactions= connectionStringParser.EnlistInDistributedTransactions;
+			ResourceManagerId = options.ResourceManagerId;
+			Credentials = options.Credentials;
+			Url = options.Url;
+			DefaultDatabase = options.DefaultDatabase;
+			EnlistInDistributedTransactions= options.EnlistInDistributedTransactions;
 		}
 
 		/// <summary>
 		/// Create the connection string parser
 		/// </summary>
-		protected virtual ConnectionStringParser CreateConnectionStringParser(string connectionString)
+		protected virtual RavenConnectionStringOptions GetConnectionStringOptions()
 		{
-			return new ConnectionStringParser(connectionString, connectionStringName);
+			var connectionStringOptions = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionStringName(connectionStringName);
+			connectionStringOptions.Parse();
+			return connectionStringOptions.ConnectionStringOptions;
 		}
 
 		///<summary>
