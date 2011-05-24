@@ -14,13 +14,14 @@ using System.Threading.Tasks;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
-using Raven.Database.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Tasks
@@ -88,7 +89,7 @@ namespace Raven.Bundles.Replication.Tasks
                             foreach (var dest in destinationForReplication)
                             {
                                 var destination = dest;
-                                var holder = activeReplicationTasks.GetOrAdd(destination, new IntHolder());
+                                var holder = activeReplicationTasks.GetOrAdd(destination.Url, new IntHolder());
                                 if (Thread.VolatileRead(ref holder.Value) == 1)
                                     continue;
                                 Thread.VolatileWrite(ref holder.Value, 1);
@@ -115,7 +116,7 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool IsNotFailing(string dest, int currentReplicationAttempts)
+        private bool IsNotFailing(RavenConnectionStringOptions dest, int currentReplicationAttempts)
         {
 			var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(dest), null);
             if (jsonDocument == null)
@@ -145,9 +146,9 @@ namespace Raven.Bundles.Replication.Tasks
             return true;
         }
 
-    	private static string EscapeDestinationName(string dest)
+    	private static string EscapeDestinationName(RavenConnectionStringOptions dest)
     	{
-    		return Uri.EscapeDataString(dest.Replace("http://", "").Replace("/", "").Replace(":",""));
+    		return Uri.EscapeDataString(dest.Url.Replace("http://", "").Replace("/", "").Replace(":",""));
     	}
 
     	private void WarnIfNoReplicationTargetsWereFound()
@@ -160,7 +161,7 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool ReplicateTo(string destination)
+        private bool ReplicateTo(RavenConnectionStringOptions destination)
         {
             try
             {
@@ -203,12 +204,12 @@ namespace Raven.Bundles.Replication.Tasks
             }
             finally 
             {
-                var holder = activeReplicationTasks.GetOrAdd(destination, new IntHolder());
+                var holder = activeReplicationTasks.GetOrAdd(destination.Url, new IntHolder());
                 Thread.VolatileWrite(ref holder.Value, 0);
             }
         }
 
-        private bool? ReplicateAttachments(string destination, SourceReplicationInformation sourceReplicationInformation)
+        private bool? ReplicateAttachments(RavenConnectionStringOptions destination, SourceReplicationInformation sourceReplicationInformation)
         {
             var attachments = GetAttachments(sourceReplicationInformation.LastAttachmentEtag);
 
@@ -232,7 +233,7 @@ namespace Raven.Bundles.Replication.Tasks
             return true;
         }
 
-        private bool? ReplicateDocuments(string destination, SourceReplicationInformation sourceReplicationInformation)
+        private bool? ReplicateDocuments(RavenConnectionStringOptions destination, SourceReplicationInformation sourceReplicationInformation)
         {
             var jsonDocuments = GetJsonDocuments(sourceReplicationInformation.LastDocumentEtag);
             if (jsonDocuments == null || jsonDocuments.Length == 0)
@@ -253,10 +254,10 @@ namespace Raven.Bundles.Replication.Tasks
             return true;
         }
 
-        private void IncrementFailureCount(string destination)
+        private void IncrementFailureCount(RavenConnectionStringOptions destination)
         {
 			var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
-            var failureInformation = new DestinationFailureInformation {Destination = destination};
+            var failureInformation = new DestinationFailureInformation {Destination = destination.Url};
             if (jsonDocument != null)
             {
                 failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
@@ -266,7 +267,7 @@ namespace Raven.Bundles.Replication.Tasks
                       RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
         }
 
-        private bool IsFirstFailue(string destination)
+        private bool IsFirstFailue(RavenConnectionStringOptions destination)
         {
 			var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
             if (jsonDocument == null)
@@ -275,13 +276,13 @@ namespace Raven.Bundles.Replication.Tasks
             return failureInformation.FailureCount == 0;
         }
 
-        private bool TryReplicationAttachments(string destination, RavenJArray jsonAttachments)
+        private bool TryReplicationAttachments(RavenConnectionStringOptions destination, RavenJArray jsonAttachments)
         {
             try
             {
-				var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl());
+				var request = (HttpWebRequest)WebRequest.Create(destination.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl());
                 request.UseDefaultCredentials = true;
-                request.Credentials = CredentialCache.DefaultNetworkCredentials;
+                request.Credentials = destination.Credentials ?? CredentialCache.DefaultNetworkCredentials;
                 request.Method = "POST";
                 using (var stream = request.GetRequestStream())
                 {
@@ -318,15 +319,15 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool TryReplicationDocuments(string destination, RavenJArray jsonDocuments)
+        private bool TryReplicationDocuments(RavenConnectionStringOptions destination, RavenJArray jsonDocuments)
         {
             try
             {
             	log.DebugFormat("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
-				var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateDocs?from=" + UrlEncodedServerUrl());
+				var request = (HttpWebRequest)WebRequest.Create(destination.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl());
                 request.UseDefaultCredentials = true;
             	request.ContentType = "application/json; charset=utf-8";
-                request.Credentials = CredentialCache.DefaultNetworkCredentials;
+                request.Credentials = destination.Credentials ?? CredentialCache.DefaultNetworkCredentials;
                 request.Method = "POST";
                 using (var stream = request.GetRequestStream())
                 using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
@@ -424,14 +425,14 @@ namespace Raven.Bundles.Replication.Tasks
             return jsonAttachments;
         }
 
-        private SourceReplicationInformation GetLastReplicatedEtagFrom(string destination)
+        private SourceReplicationInformation GetLastReplicatedEtagFrom(RavenConnectionStringOptions destination)
         {
             try
             {
-                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/lastEtag?from=" + UrlEncodedServerUrl());
+                var request = (HttpWebRequest)WebRequest.Create(destination.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl());
+            	request.Credentials = destination.Credentials ?? CredentialCache.DefaultNetworkCredentials;
                 request.UseDefaultCredentials = true;
                 request.Timeout = replicationRequestTimeoutInMs;
-                request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 using (var response = request.GetResponse())
                 using (var stream = response.GetResponseStream())
                 {
@@ -459,7 +460,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return Uri.EscapeDataString(docDb.Configuration.ServerUrl);
     	}
 
-    	private string[] GetReplicationDestinations()
+		private RavenConnectionStringOptions[] GetReplicationDestinations()
         {
             var document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
             if (document == null)
@@ -468,8 +469,46 @@ namespace Raven.Bundles.Replication.Tasks
                 document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
             }
             return document.DataAsJson.JsonDeserialization<ReplicationDocument>()
-                .Destinations.Select(x => x.Url)
+                .Destinations.Select(GetConnectionOptionsSafe)
+				.Where(x=>x!=null)
                 .ToArray();
         }
+
+		private RavenConnectionStringOptions GetConnectionOptionsSafe(ReplicationDestination x)
+		{
+			try
+			{
+				return GetConnectionOptions(x);
+			}
+			catch (Exception e)
+			{
+				log.ErrorFormat(e, "IGNORING BAD REPLICATION CONFIG!{0}Could not figure out connection options for [Url: {1}, ConnectionStringName: {2}]", 
+					Environment.NewLine, x.Url, x.ConnectionStringName);
+
+				return null;
+			}
+		}
+
+		private RavenConnectionStringOptions GetConnectionOptions(ReplicationDestination x)
+    	{
+			if (string.IsNullOrEmpty(x.ConnectionStringName))
+				return new RavenConnectionStringOptions
+				{
+					Url = x.Url
+				};
+
+    		var connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionStringName(x.ConnectionStringName);
+			connectionStringParser.Parse();
+			var options = connectionStringParser.ConnectionStringOptions;
+			if (string.IsNullOrEmpty(options.Url))
+				throw new InvalidOperationException("Could not figure out what the replication URL is");
+			if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
+			{
+				if (options.Url.EndsWith("/") == false)
+					options.Url += "/";
+				options.Url += "databases/" + options.DefaultDatabase;
+			}
+			return options;
+    	}
     }
 }
