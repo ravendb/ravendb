@@ -64,8 +64,8 @@ namespace Raven.Database.Indexing
 
 		public static IEnumerable<AbstractField> Generate(double lat, double lng)
 		{
-			yield return new Field("latitude", Lat(lat),Field.Store.YES, Field.Index.NOT_ANALYZED);
-			yield return new Field("longitude", Lng(lng), Field.Store.YES, Field.Index.NOT_ANALYZED);
+			yield return new Field("latitude", Lat(lat), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+			yield return new Field("longitude", Lng(lng), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 
 			for (var id = MinTier; id <= MaxTier; ++id)
 			{

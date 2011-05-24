@@ -78,19 +78,17 @@ namespace Raven.Database.Extensions
             {
                 string ignored;
                 if (self.Analyzers.TryGetValue(name, out ignored))
-                    return Field.Index.ANALYZED;// if there is a custom analyzer, the value should be analyzer
+                    return Field.Index.ANALYZED;// if there is a custom analyzer, the value should be analyzed
                 return defaultIndex;
             }
             switch (value)
             {
                 case FieldIndexing.No:
                     return Field.Index.NO;
-                case FieldIndexing.NotAnalyzedNoNorms:
-                    return Field.Index.NOT_ANALYZED_NO_NORMS;
                 case FieldIndexing.Analyzed:
-                    return Field.Index.ANALYZED;
+                    return Field.Index.ANALYZED_NO_NORMS;
                 case FieldIndexing.NotAnalyzed:
-                    return Field.Index.NOT_ANALYZED;
+                    return Field.Index.NOT_ANALYZED_NO_NORMS;
                 default:
                     throw new ArgumentOutOfRangeException();
             }

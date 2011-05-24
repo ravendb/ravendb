@@ -143,6 +143,7 @@
     </Compile>
     <Compile Include="Framework\EventArgs.cs" />
     <Compile Include="Framework\IBindablePagedQuery.cs" />
+    <Compile Include="Framework\MenuItemMetadata.cs" />
     <Compile Include="Impl\DotNetZip\Adler.cs" />
     <Compile Include="Impl\DotNetZip\BlockState.cs" />
     <Compile Include="Impl\DotNetZip\CompressionLevel.cs" />

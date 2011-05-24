@@ -13,9 +13,7 @@ using Raven.Client.Document;
 namespace Raven.Client.Indexes
 {
 	/// <summary>
-	/// This class attempts to provide a strongly typed index definition on the client.
-	/// It is here solely as a convenience, and it is _expected_ to fail in some scenarios.
-	/// The recommended way is to define indexes outside your code, using the Web UI.
+	/// This class provides a way to define a strongly typed index on the client.
 	/// </summary>
 	public class IndexDefinitionBuilder<TDocument, TReduceResult> 
 	{
@@ -137,9 +135,7 @@ namespace Raven.Client.Indexes
 	}
 
     /// <summary>
-	/// This class attempts to provide a strongly typed index definition on the client.
-	/// It is here solely as a convenience, and it is _expected_ to fail in some scenarios.
-	/// The recommended way is to define indexes outside your code, using the Web UI.
+	/// This class provides a way to define a strongly typed index on the client.
 	/// </summary>
-	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, object> { }
+	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, TDocument> { }
 }

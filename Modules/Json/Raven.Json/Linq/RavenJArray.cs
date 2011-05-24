@@ -87,8 +87,6 @@ namespace Raven.Json.Linq
 
     	public new static RavenJArray Load(JsonReader reader)
         {
-			ValidationUtils.ArgumentNotNull(reader, "reader");
-
 			if (reader.TokenType == JsonToken.None)
 			{
 				if (!reader.Read())

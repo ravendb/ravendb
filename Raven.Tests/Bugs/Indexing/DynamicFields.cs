@@ -63,7 +63,7 @@ namespace Raven.Tests.Bugs.Indexing
 					from p in products
 					select new
 					{
-						_ = Project(p.Attributes, attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.NO, Field.Index.NOT_ANALYZED))
+						_ = Project(p.Attributes, attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS))
 					};
 			}
 		}

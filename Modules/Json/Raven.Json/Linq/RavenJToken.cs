@@ -55,9 +55,6 @@ namespace Raven.Json.Linq
 
     	internal static RavenJToken FromObjectInternal(object o, JsonSerializer jsonSerializer)
         {
-			ValidationUtils.ArgumentNotNull(o, "o");
-            ValidationUtils.ArgumentNotNull(jsonSerializer, "jsonSerializer");
-
 			var ravenJToken = o as RavenJToken;
 			if (ravenJToken != null)
 				return ravenJToken;
@@ -141,8 +138,6 @@ namespace Raven.Json.Linq
 		/// </returns>
 		public static RavenJToken ReadFrom(JsonReader reader)
 		{
-			ValidationUtils.ArgumentNotNull(reader, "reader");
-
 			if (reader.TokenType == JsonToken.None)
 			{
 				if (!reader.Read())
