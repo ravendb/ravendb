@@ -20,14 +20,6 @@
 			f:DoubleClickEvent.AttachAction="Execute($dataContext)"
 			CornerRadius="2"
 			Background="#0999">
-		<i:Interaction.Triggers>
-			<i:EventTrigger EventName="MouseEnter">
-				<ei:GoToStateAction StateName="MouseOver" />
-			</i:EventTrigger>
-			<i:EventTrigger EventName="MouseLeave">
-				<ei:GoToStateAction StateName="Normal" />
-			</i:EventTrigger>
-		</i:Interaction.Triggers>
 		<VisualStateManager.VisualStateGroups>
 			<VisualStateGroup x:Name="Common">
 				<VisualStateGroup.Transitions>
