@@ -530,7 +530,9 @@
     <Compile Include="Triggers\ReadTriggers.cs" />
     <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
+    <Compile Include="Util\RavenDBDriver.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
+    <Compile Include="Util\RunExternalProcess.cs" />
     <Compile Include="Views\MapReduce.cs" />
     <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
