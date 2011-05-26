@@ -101,7 +101,7 @@
 				           d:IsHidden="True"
 				           d:IsLocked="True" />
 
-				<c:NoKeyListBox x:Name="DocumentPageContainer"
+				<c:WrapListBox x:Name="DocumentPageContainer"
 				                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 				                BorderThickness="0"
 				                ItemsPanel="{StaticResource FluidWrapPanel}"
@@ -154,7 +154,7 @@
 							             cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
 						</tk:ContextMenu>
 					</tk:ContextMenuService.ContextMenu>
-				</c:NoKeyListBox>
+				</c:WrapListBox>
 
 			</Grid>
 		</tk:DockPanel>

@@ -132,7 +132,7 @@
     <Compile Include="Controls\Editors\LinqEditor.cs" />
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
     <Compile Include="Controls\Editors\XamlEditor.cs" />
-    <Compile Include="Controls\NoKeyListBox.cs" />
+    <Compile Include="Controls\WrapListBox.cs" />
     <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
     <Compile Include="Converters\NotificationLevelToColorConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
