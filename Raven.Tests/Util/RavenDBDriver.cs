@@ -99,6 +99,7 @@ namespace Raven.Tests.Util
         {
             var documentStore = new DocumentStore()
             {
+                Identifier = _shardName,
                 Url = this.Url,
                 Conventions = _conventions
             };
@@ -106,6 +107,14 @@ namespace Raven.Tests.Util
             documentStore.Initialize();
 
             return documentStore;
+        }
+
+        public void TraceExistingOutput()
+        {
+            Console.WriteLine("Console output:");
+            Console.WriteLine(_process.StandardOutput.ReadToEnd());
+            Console.WriteLine("Error output:");
+            Console.WriteLine(_process.StandardError.ReadToEnd());
         }
 
         public void Should_finish_without_error()

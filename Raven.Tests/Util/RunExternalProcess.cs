@@ -107,6 +107,9 @@ namespace Raven.Tests.Util
                 }
                 catch (WebException e)
                 {
+                    driver.Should_finish_without_error();
+                    driver.TraceExistingOutput();
+
                     Console.WriteLine(new StreamReader(e.Response.GetResponseStream()).ReadToEnd());
                     throw;
                 }
