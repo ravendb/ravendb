@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Commands;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Xunit;
@@ -35,14 +36,11 @@ namespace Raven.Tests.Util
                         session.Store(new Tuple<string, string>("hello", "world"));
                         session.SaveChanges();
                     }
+                }
 
-                    using (var session = store.OpenSession())
-                    {
-                        var result = session.Query<Tuple<string, string>>().Customize(q => q.WaitForNonStaleResultsAsOfNow()).Single();
-
-                        Assert.Equal("hello", result.Item1);
-                        Assert.Equal("world", result.Item2);
-                    }
+                using (var store = driver.GetDocumentStore())
+                {
+                    should_find_expected_value_in(store);
                 }
             }
         }
@@ -67,18 +65,14 @@ namespace Raven.Tests.Util
 
                     using (var session = store.OpenSession())
                     {
-                        session.Advanced.DatabaseCommands.Batch(new[] {GetPutCommand()
-                        });
+                        session.Advanced.DatabaseCommands.Batch(new[] {GetPutCommand()});
                         session.SaveChanges();
                     }
+                }
 
-                    using (var session = store.OpenSession())
-                    {
-                        var result = session.Query<Tuple<string, string>>().Customize(q => q.WaitForNonStaleResultsAsOfNow()).Single();
-
-                        Assert.Equal("hello", result.Item1);
-                        Assert.Equal("world", result.Item2);
-                    }
+                using (var store = driver.GetDocumentStore())
+                {
+                    should_find_expected_value_in(store);
                 }
             }
         }
@@ -117,21 +111,9 @@ namespace Raven.Tests.Util
                     throw;
                 }
 
-                using (var store = new DocumentStore()
+                using (var store = driver.GetDocumentStore()) 
                 {
-                    Url = driver.Url,
-                    Conventions = documentConvention
-                })
-                {
-                    store.Initialize();
-
-                    using (var session = store.OpenSession())
-                    {
-                        var result = session.Query<Tuple<string, string>>().Customize(q => q.WaitForNonStaleResultsAsOfNow()).Single();
-
-                        Assert.Equal("hello", result.Item1);
-                        Assert.Equal("world", result.Item2);
-                    }
+                    should_find_expected_value_in(store);
                 }
             }
         }
@@ -147,6 +129,17 @@ namespace Raven.Tests.Util
                     new KeyValuePair<string, RavenJToken>("Raven-Clr-Type", new RavenJValue("System.Tuple`2[[System.String, mscorlib][System.String, mscorlib]], mscorlib")), 
                 })
             };
+        }
+
+        void should_find_expected_value_in(IDocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                var result = session.Query<Tuple<string, string>>().Customize(q => q.WaitForNonStaleResultsAsOfNow()).Single();
+
+                Assert.Equal("hello", result.Item1);
+                Assert.Equal("world", result.Item2);
+            }
         }
     }
 }
