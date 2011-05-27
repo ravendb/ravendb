@@ -396,6 +396,7 @@
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
     <Compile Include="Bugs\Zhang\UseMaxForDateTimeTypeInReduce.cs" />
     <Compile Include="Bugs\Zhang\UseMaxForLongTypeInReduce.cs" />
+    <Compile Include="ConnectionStrings.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\CasingIssue.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />
