@@ -21,9 +21,17 @@ namespace Raven.Bundles.Versioning.Triggers
 
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
-			if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
-				return VetoResult.Deny("Modifying a historical revision is not allowed");
-			return VetoResult.Allowed;
+			var jsonDocument = Database.Get(key, transactionInformation);
+			if (jsonDocument == null)
+				return VetoResult.Allowed;
+
+			switch (jsonDocument.Metadata.Value<string>(RavenDocumentRevisionStatus))
+			{
+				case "Historical":
+					return VetoResult.Deny("Modifying a historical revision is not allowed");
+				default:
+					return VetoResult.Allowed;
+			}
         }
 
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
