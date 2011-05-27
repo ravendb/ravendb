@@ -173,6 +173,8 @@
     <Compile Include="Bugs\MixingIdentityAndAssignedIds.cs" />
     <Compile Include="Bugs\MultipleRangeQueries.cs" />
     <Compile Include="Bugs\ProjectionFromDynamicIndex.cs" />
+    <Compile Include="Bugs\Queries\Floats.cs" />
+    <Compile Include="Bugs\Queries\Generics.cs" />
     <Compile Include="Bugs\QueryingDateTime.cs" />
     <Compile Include="Bugs\QueryingOnMetadata.cs" />
     <Compile Include="Bugs\RavenDbAnyOfPropertyCollection.cs" />
@@ -400,6 +402,7 @@
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
     <Compile Include="Bugs\Zhang\UseMaxForDateTimeTypeInReduce.cs" />
     <Compile Include="Bugs\Zhang\UseMaxForLongTypeInReduce.cs" />
+    <Compile Include="ConnectionStrings.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\CasingIssue.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />

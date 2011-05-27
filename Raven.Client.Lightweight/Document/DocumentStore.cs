@@ -175,6 +175,17 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Set document store settings based on a given connection string.
+		/// </summary>
+		/// <param name="connString">The connection string to parse</param>
+		public void ParseConnectionString(string connString)
+		{
+			var connectionStringOptions = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString(connString);
+			connectionStringOptions.Parse();
+			SetConnectionStringSettings(connectionStringOptions.ConnectionStringOptions);
+		}
+
+		/// <summary>
 		/// Copy the relevant connection string settings
 		/// </summary>
 		protected virtual void SetConnectionStringSettings(RavenConnectionStringOptions options)

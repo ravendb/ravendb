@@ -7,6 +7,12 @@ namespace Raven.Abstractions.Data
 {
 	public class RavenConnectionStringOptions
 	{
+		public RavenConnectionStringOptions()
+		{
+			Credentials = new NetworkCredential();
+			EnlistInDistributedTransactions = true;
+		}
+
 		public NetworkCredential Credentials { get; set; }
 		public bool EnlistInDistributedTransactions { get; set; }
 		public string DefaultDatabase { get; set; }
