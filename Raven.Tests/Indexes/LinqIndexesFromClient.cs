@@ -148,6 +148,21 @@ namespace Raven.Tests.Indexes
 			Assert.Equal(original, generated);
 		}
 
+		[Fact]
+		public void Convert_simple_query_with_char_literal()
+		{
+			IndexDefinition generated = new IndexDefinitionBuilder<User> {
+				Map = users => from user in users
+							   where user.Name.Contains('C')
+							   select user
+			}.ToIndexDefinition(new DocumentConvention());
+			var original = new IndexDefinition {
+				Map = @"docs.Users
+	.Where(user => user.Name.Contains('C'))"
+			};
+			Assert.Equal(original, generated);
+		}
+
         [Fact]
         public void Convert_map_reduce_query()
         {
