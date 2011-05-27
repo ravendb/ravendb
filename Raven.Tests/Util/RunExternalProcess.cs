@@ -93,7 +93,7 @@ namespace Raven.Tests.Util
                 {
                     requestStream.Write("[");
 
-                    requestStream.Write(RavenJValue.FromObject(GetPutCommand()).ToString());
+                    requestStream.Write(GetPutCommand().ToJson().ToString());
 
                     requestStream.Write("]");
                 }
@@ -121,7 +121,7 @@ namespace Raven.Tests.Util
             }
         }
 
-        PutCommandData GetPutCommand()
+		PutCommandData GetPutCommand()
         {
             return new PutCommandData()
             {
