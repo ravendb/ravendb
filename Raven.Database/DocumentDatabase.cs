@@ -362,7 +362,7 @@ namespace Raven.Database
 				{
 					if (key.EndsWith("/"))
 					{
-						key += actions.General.GetNextIdentityValue(key);
+						key += GetNextIdentityValueWithoutOverritingOnExistingDocuments(key, actions, transactionInformation);
 					}
 					if (transactionInformation == null)
 					{
@@ -390,6 +390,17 @@ namespace Raven.Database
 				Key = key,
 				ETag = newEtag
 			};
+		}
+
+		private long GetNextIdentityValueWithoutOverritingOnExistingDocuments(string key, IStorageActionsAccessor actions, TransactionInformation transactionInformation)
+		{
+			long nextIdentityValue;
+
+			do
+			{
+				nextIdentityValue = actions.General.GetNextIdentityValue(key);
+			} while (actions.Documents.DocumentMetadataByKey(key + nextIdentityValue, transactionInformation) != null);
+			return nextIdentityValue;
 		}
 
 		private void AddIndexingTask(IStorageActionsAccessor actions, RavenJToken metadata, Func<Task> taskGenerator)
