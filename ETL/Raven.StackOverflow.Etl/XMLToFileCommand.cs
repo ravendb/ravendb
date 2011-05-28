@@ -57,13 +57,17 @@ namespace Raven.StackOverflow.Etl
             }
         }
 
-        public void LoadArgs(IEnumerable<string> remainingArgs)
+        public void LoadArgs(string[] remainingArgs)
         {
             if (remainingArgs.Count() != 2)
                 throw new ArgumentException("Incorrect number of arguments");
 
+            InputDirectory = remainingArgs[0];
+
             if (!Directory.Exists(InputDirectory))
                 throw new ArgumentException("Input directory was missing");
+
+            OutputDirectory = remainingArgs[1];
 
             if (!Force && Directory.Exists(OutputDirectory))
             {

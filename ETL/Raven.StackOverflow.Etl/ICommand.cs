@@ -8,7 +8,7 @@ namespace Raven.StackOverflow.Etl
         string CommandText { get; }
         void Run();
 
-        void LoadArgs(IEnumerable<string> remainingArgs);
+        void LoadArgs(string[] remainingArgs);
         void WriteHelp(TextWriter tw);
     }
 }

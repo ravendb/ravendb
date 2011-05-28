@@ -21,67 +21,48 @@ namespace Raven.StackOverflow.Etl
             get { return "file"; }
         }
 
+        public string InputDirectory { get; private set; }
+        public string OutputRavenUrl { get; private set; }
+
         public void Run()
         {
-            LoadIntoRaven();
+            ExecuteAndWaitAll(
+                LoadDataFor("Users*.json")
+                //,LoadDataFor("Posts*.json")
+                );
+            ExecuteAndWaitAll(
+                LoadDataFor("Badges*.json")
+                //,LoadDataFor("Votes*.json"),
+                //LoadDataFor("Comments*.json")
+                );
         }
 
-        public void LoadArgs(IEnumerable<string> remainingArgs)
+        public void LoadArgs(string[] remainingArgs)
         {
+            if (remainingArgs.Count() != 2)
+                throw new Exception("");
+
+            InputDirectory = remainingArgs[0];
+
+            if (!Directory.Exists(InputDirectory))
+                throw new ArgumentException("Input directory not found.");
+
+            OutputRavenUrl = remainingArgs[1];
+
+            if (!new Uri(OutputRavenUrl).Scheme.Equals("http", StringComparison.InvariantCultureIgnoreCase))
+                throw new ArgumentException("RavenDB url expected as second parameter");
         }
 
         public void WriteHelp(TextWriter tw)
         {
-            Console.WriteLine("Raven.StackOverflow.Etl.exe file");
+            Console.WriteLine("Raven.StackOverflow.Etl.exe file <inputDirectory> <outputRavenUrl>");
         }
 
-        public static void LoadIntoRaven()
-        {
-            const string dataDirectory = @"C:\Work\ravendb\ETL\Raven.StackOverflow.Etl\bin\Debug\Data";
-            if (Directory.Exists(dataDirectory))
-                Directory.Delete(dataDirectory, true);
-
-            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(9090);
-            using (var ravenDbServer = new RavenDbServer(new RavenConfiguration
-            {
-                DataDirectory = dataDirectory,
-                Port = 9090,
-                AnonymousUserAccessMode = AnonymousUserAccessMode.All
-            }))
-            {
-                ExecuteAndWaitAll(
-                    LoadDataFor("Users*.json")
-                    //,LoadDataFor("Posts*.json")
-                    );
-                ExecuteAndWaitAll(
-                    LoadDataFor("Badges*.json")
-                    //,LoadDataFor("Votes*.json"),
-                    //LoadDataFor("Comments*.json")
-                    );
-
-                var indexing = Stopwatch.StartNew();
-                Console.WriteLine("Waiting for indexing");
-                while (ravenDbServer.Database.HasTasks)
-                {
-                    Console.Write(".");
-                    Thread.Sleep(50);
-                }
-                Console.WriteLine();
-                Console.WriteLine("Finishing indexing took: {0}", indexing.Elapsed);
-            }
-
-
-            foreach (var duration in Program.durations.GroupBy(x => x.Item1))
-            {
-                Console.WriteLine("{0} {1}", duration.Key, duration.Average(x => x.Item2.TotalMilliseconds));
-            }
-        }
-
-        public static IEnumerable<Action> LoadDataFor(string searchPattern)
+        public IEnumerable<Action> LoadDataFor(string searchPattern)
         {
             Console.WriteLine("Loading for {0}", searchPattern);
             var timeSpans = new List<TimeSpan>();
-            foreach (var fileModifable in Directory.GetFiles(@"C:\Work\ravendb\ETL\Raven.StackOverflow.Etl\bin\Debug\Docs", searchPattern))
+            foreach (var fileModifable in Directory.GetFiles(InputDirectory, searchPattern))
             {
                 var file = fileModifable;
                 yield return () =>
@@ -90,7 +71,7 @@ namespace Raven.StackOverflow.Etl
                     HttpWebResponse webResponse;
                     while (true)
                     {
-                        var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://localhost:9090/bulk_docs");
+                        var httpWebRequest = (HttpWebRequest)WebRequest.Create(OutputRavenUrl);
                         httpWebRequest.Method = "POST";
                         using (var requestStream = httpWebRequest.GetRequestStream())
                         {

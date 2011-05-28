@@ -54,7 +54,7 @@ namespace Raven.StackOverflow.Etl
                 if (selectedCommand== null)
                     throw new Exception("");
 
-                selectedCommand.LoadArgs(args.Skip(1));
+                selectedCommand.LoadArgs(args.Skip(1).ToArray());
             }
 
 		    catch (Exception e)
