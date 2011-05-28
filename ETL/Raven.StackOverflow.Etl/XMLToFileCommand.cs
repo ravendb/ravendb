@@ -17,12 +17,17 @@ namespace Raven.StackOverflow.Etl
 
         public string InputDirectory { get; private set; }
         public string OutputDirectory { get; set; }
+        public bool Force { get; set; }
 
         public void Run()
         {
-            if (Directory.Exists("Docs"))
-                Directory.Delete("Docs", true);
-            Directory.CreateDirectory("Docs");
+            if (Directory.Exists(OutputDirectory) && Force)
+            {
+                Directory.Delete(OutputDirectory, true);
+            }
+
+            if (!Directory.Exists(OutputDirectory))
+                Directory.CreateDirectory(OutputDirectory);
 
             var processes = new EtlProcess[]
             {
@@ -54,11 +59,24 @@ namespace Raven.StackOverflow.Etl
 
         public void LoadArgs(IEnumerable<string> remainingArgs)
         {
+            if (remainingArgs.Count() != 2)
+                throw new ArgumentException("Incorrect number of arguments");
+
+            if (!Directory.Exists(InputDirectory))
+                throw new ArgumentException("Input directory was missing");
+
+            if (!Force && Directory.Exists(OutputDirectory))
+            {
+                if (Directory.GetDirectories(OutputDirectory, "*").Any() || Directory.GetFiles(OutputDirectory, "*").Any())
+                {
+                    throw new ArgumentException("Output directory should be empty");
+                }
+            }
         }
 
         public void WriteHelp(TextWriter tw)
         {
-            Console.WriteLine("Raven.StackOverflow.Etl.exe xml");
+            Console.WriteLine("Raven.StackOverflow.Etl.exe xml <inputDirectory> <outputDirectory>");
         }
     }
 }
