@@ -6,8 +6,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Commands;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Raven.StackOverflow.Etl.Generic;

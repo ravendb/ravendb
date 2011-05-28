@@ -8,6 +8,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Database;
+using Raven.Database.Config;
+using Raven.Http;
 using Raven.Server;
 
 namespace Raven.StackOverflow.Etl
@@ -39,7 +41,7 @@ namespace Raven.StackOverflow.Etl
             if (Directory.Exists(dataDirectory))
                 Directory.Delete(dataDirectory, true);
 
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(9090);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(9090);
             using (var ravenDbServer = new RavenDbServer(new RavenConfiguration
             {
                 DataDirectory = dataDirectory,

@@ -6,9 +6,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Commands;
 using Raven.Database.Data;
+using Raven.Json.Linq;
 using Rhino.Etl.Core;
 using Rhino.Etl.Core.Operations;
 using System.Linq;
@@ -20,11 +20,11 @@ namespace Raven.StackOverflow.Etl.Generic
 	public class RowToDatabase : AbstractOperation
 	{
 		private readonly string collection;
-		private readonly Func<JObject, string> generateKey;
+		private readonly Func<RavenJObject, string> generateKey;
 
 		public RowToDatabase(
 			string collection,
-			Func<JObject, string> generateKey)
+            Func<RavenJObject, string> generateKey)
 		{
 			this.collection = collection;
 			this.generateKey = generateKey;
@@ -36,10 +36,9 @@ namespace Raven.StackOverflow.Etl.Generic
 			foreach (var partitionedRows in rows.Partition(Constants.BatchSize))
 			{
 				var jsons = partitionedRows.Select(row =>
-					  new JObject(row.Cast<DictionaryEntry>()
-							.Select(x => new JProperty(x.Key.ToString(), x.Value is JToken ? x.Value : new JValue(x.Value)))
-						)
-					);
+                      new RavenJObject(row.Cast<KeyValuePair<string,RavenJToken>>()
+							.Select(x => new KeyValuePair<string, RavenJToken>(x.Key, RavenJToken.FromObject(x.Value)))));
+                                
 				var putCommandDatas = jsons.Select(document => new PutCommandData
 				{
 					Document = document,

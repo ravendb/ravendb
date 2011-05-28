@@ -17,7 +17,7 @@ namespace Raven.StackOverflow.Etl
 
         public string CommandText { get { return "xml"; } }
 
-            public void Run()
+        public void Run()
         {
             if (Directory.Exists("Docs"))
                 Directory.Delete("Docs", true);

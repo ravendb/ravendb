@@ -15,10 +15,8 @@ using log4net.Appender;
 using log4net.Config;
 using log4net.Core;
 using log4net.Layout;
-using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
 using Raven.Database.Storage;
-using Raven.Server;
 using Raven.StackOverflow.Etl.Posts;
 using Raven.StackOverflow.Etl.Users;
 using Rhino.Etl.Core;
@@ -82,6 +80,9 @@ namespace Raven.StackOverflow.Etl
 
 			Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 			Trace.WriteLine("Starting...");
+
+            //selectedCommand.ToJson();
+
 			var sp = Stopwatch.StartNew();
 
             selectedCommand.Run();
@@ -89,6 +90,7 @@ namespace Raven.StackOverflow.Etl
 			Console.WriteLine("Total execution time {0}", sp.Elapsed);
 		}
 
+        /*
 	    private static void WaitForIndexingToComplete(DocumentDatabase documentDatabase)
 		{
 			Console.WriteLine("Waiting for indexing to complete");
@@ -109,6 +111,7 @@ namespace Raven.StackOverflow.Etl
 				Thread.Sleep(1000);
 			}
 		}
+        */
 
 	}
 }

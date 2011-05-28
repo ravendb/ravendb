@@ -44,8 +44,20 @@
     <Reference Include="log4net">
       <HintPath>..\SharedLibs\log4net.dll</HintPath>
     </Reference>
-    <Reference Include="RavenDb">
-      <HintPath>..\SharedLibs\RavenDb.exe</HintPath>
+    <Reference Include="Raven.Abstractions">
+      <HintPath>..\..\build\Raven.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Database">
+      <HintPath>..\..\build\Raven.Database.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Http">
+      <HintPath>..\..\build\Raven.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Json">
+      <HintPath>..\..\build\Raven.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Server">
+      <HintPath>..\..\build\Raven.Server.exe</HintPath>
     </Reference>
     <Reference Include="Rhino.Etl.Core">
       <HintPath>..\SharedLibs\Rhino.Etl.Core.dll</HintPath>
