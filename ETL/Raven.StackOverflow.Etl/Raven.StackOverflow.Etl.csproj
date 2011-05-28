@@ -60,6 +60,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
+    <Compile Include="FileToRavenCommand.cs" />
+    <Compile Include="ICommand.cs" />
+    <Compile Include="XMLToFileCommand.cs" />
     <Compile Include="Posts\AddVotesToPost.cs" />
     <Compile Include="Posts\AddCommentsToPost.cs" />
     <Compile Include="Posts\CommentsProcess.cs" />
