@@ -71,8 +71,8 @@ namespace Raven.StackOverflow.Etl
                 {
                     command.WriteHelp(Console.Out);
                 }
-    	        
-		        throw;
+
+                return;
 		    }
 
             

@@ -13,7 +13,7 @@ namespace Raven.StackOverflow.Etl
 {
     public class XMLToFileCommand : ICommand
     {
-        public string CommandText { get { return "xml"; } }
+        public string CommandText { get { return "xml2file"; } }
 
         public string InputDirectory { get; private set; }
         public string OutputDirectory { get; set; }
@@ -80,7 +80,7 @@ namespace Raven.StackOverflow.Etl
 
         public void WriteHelp(TextWriter tw)
         {
-            Console.WriteLine("Raven.StackOverflow.Etl.exe xml <inputDirectory> <outputDirectory>");
+            Console.WriteLine("Raven.StackOverflow.Etl.exe " + CommandText + " <inputDirectory> <outputDirectory>");
         }
     }
 }

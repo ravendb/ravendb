@@ -18,7 +18,7 @@ namespace Raven.StackOverflow.Etl
     {
         public string CommandText
         {
-            get { return "file"; }
+            get { return "file2raven"; }
         }
 
         public string InputDirectory { get; private set; }
@@ -55,7 +55,7 @@ namespace Raven.StackOverflow.Etl
 
         public void WriteHelp(TextWriter tw)
         {
-            Console.WriteLine("Raven.StackOverflow.Etl.exe file <inputDirectory> <outputRavenUrl>");
+            Console.WriteLine("Raven.StackOverflow.Etl.exe " + CommandText + " <inputDirectory> <outputRavenUrl>");
         }
 
         public IEnumerable<Action> LoadDataFor(string searchPattern)
