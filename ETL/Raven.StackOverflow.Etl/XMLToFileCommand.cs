@@ -13,9 +13,10 @@ namespace Raven.StackOverflow.Etl
 {
     public class XMLToFileCommand : ICommand
     {
-        public const string InputDirectory = @"C:\Users\Ayende\Downloads\Stack Overflow Data Dump - Mar 10\Content\Export-030110\032010 SO";
-
         public string CommandText { get { return "xml"; } }
+
+        public string InputDirectory { get; private set; }
+        public string OutputDirectory { get; set; }
 
         public void Run()
         {
@@ -25,22 +26,13 @@ namespace Raven.StackOverflow.Etl
 
             var processes = new EtlProcess[]
             {
-                new UsersProcess(InputDirectory),
-                new BadgesProcess(InputDirectory),
-                new PostsProcess(InputDirectory),
-                new VotesProcess(InputDirectory),
-                new CommentsProcess(InputDirectory)
+                new UsersProcess(InputDirectory, OutputDirectory),
+                new BadgesProcess(InputDirectory, OutputDirectory),
+                new PostsProcess(InputDirectory, OutputDirectory),
+                new VotesProcess(InputDirectory, OutputDirectory),
+                new CommentsProcess(InputDirectory, OutputDirectory)
             };
             Parallel.ForEach(processes, GenerateJsonDocuments);
-        }
-
-        public void LoadArgs(IEnumerable<string> remainingArgs)
-        {
-        }
-
-        public void WriteHelp(TextWriter tw)
-        {
-            Console.WriteLine("Raven.StackOverflow.Etl.exe xml");
         }
 
         private void GenerateJsonDocuments(EtlProcess process)
@@ -58,6 +50,15 @@ namespace Raven.StackOverflow.Etl
             {
                 throw new InvalidOperationException("Failed to execute process: " + process);
             }
+        }
+
+        public void LoadArgs(IEnumerable<string> remainingArgs)
+        {
+        }
+
+        public void WriteHelp(TextWriter tw)
+        {
+            Console.WriteLine("Raven.StackOverflow.Etl.exe xml");
         }
     }
 }

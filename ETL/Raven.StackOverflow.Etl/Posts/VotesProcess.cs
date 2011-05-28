@@ -13,18 +13,20 @@ namespace Raven.StackOverflow.Etl.Posts
 {
 	public class VotesProcess : EtlProcess
 	{
-		private readonly string path;
+		private readonly string _inputPath;
+		private readonly string _outputPath;
 
-		public VotesProcess(string path)
+		public VotesProcess(string inputPath, string outputPath)
 		{
-			this.path = path;
+			_inputPath = inputPath;
+			_outputPath = outputPath;
 		}
 
 		protected override void Initialize()
 		{
 			PipelineExecuter = new SingleThreadedPipelineExecuter();
-			Register(new XmlRowOperationFile(Path.Combine(path, "votes.xml")));
-			Register(new AddVotesToPost());
+			Register(new XmlRowOperationFile(Path.Combine(_inputPath, "votes.xml")));
+			Register(new AddVotesToPost(_outputPath));
 		}
 	}
 }

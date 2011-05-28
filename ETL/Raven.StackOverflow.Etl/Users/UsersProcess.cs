@@ -13,18 +13,20 @@ namespace Raven.StackOverflow.Etl.Users
 {
 	public class UsersProcess : EtlProcess
 	{
-		private readonly string path;
+		private readonly string _inputDirectory;
+		private readonly string _outputDirectory;
 
-		public UsersProcess(string path)
+		public UsersProcess(string inputDirectory, string outputDirectory)
 		{
-			this.path = path;
+			_inputDirectory = inputDirectory;
+			_outputDirectory = outputDirectory;
 		}
 
 		protected override void Initialize()
 		{
 			PipelineExecuter = new SingleThreadedPipelineExecuter();
-			Register(new XmlRowOperationFile(Path.Combine(path, "users.xml")));
-			Register(new RowToDatabase("Users", doc => "users/" + doc["Id"]));
+			Register(new XmlRowOperationFile(Path.Combine(_inputDirectory, "users.xml")));
+			Register(new RowToDatabase("Users", doc => "users/" + doc["Id"], _outputDirectory));
 		}
 	}
 }

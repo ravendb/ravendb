@@ -9,6 +9,7 @@ using System.IO;
 using Raven.Abstractions.Commands;
 using Raven.Database.Data;
 using Raven.Json.Linq;
+using Raven.StackOverflow.Etl.Posts;
 using Rhino.Etl.Core;
 using Rhino.Etl.Core.Operations;
 using System.Linq;
@@ -17,14 +18,16 @@ using System;
 
 namespace Raven.StackOverflow.Etl.Generic
 {
-	public class RowToDatabase : AbstractOperation
+	public class RowToDatabase : BatchFileWritingProcess
 	{
 		private readonly string collection;
 		private readonly Func<RavenJObject, string> generateKey;
 
 		public RowToDatabase(
 			string collection,
-			Func<RavenJObject, string> generateKey)
+			Func<RavenJObject, string> generateKey, 
+			string outputDirectory)
+			: base(outputDirectory)
 		{
 			this.collection = collection;
 			this.generateKey = generateKey;
@@ -50,7 +53,7 @@ namespace Raven.StackOverflow.Etl.Generic
 				}).ToArray();
 
 				count++;
-				File.WriteAllText(Path.Combine("Docs", collection + " #" + count.ToString("00000") + ".json"),
+				File.WriteAllText(GetOutputPath("Docs", collection + " #" + count.ToString("00000") + ".json"),
 					"[" + putCommandDatas.Select(c => c.ToJson() + ",") + "]");
 
 			}

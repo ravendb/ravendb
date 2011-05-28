@@ -20,8 +20,12 @@ using Rhino.Etl.Core.Operations;
 
 namespace Raven.StackOverflow.Etl.Posts
 {
-	public class AddCommentsToPost : AbstractOperation
+	public class AddCommentsToPost : BatchFileWritingProcess
 	{
+		public AddCommentsToPost(string outputDirectory) : base(outputDirectory)
+		{
+		}
+
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
 			int count = 0;
@@ -36,12 +40,12 @@ namespace Raven.StackOverflow.Etl.Posts
 					{
 						comments.Add(new RavenJObject(new []
 						{
-                            new KeyValuePair<string, RavenJToken>("Score", new RavenJValue(row["Score"])),
-                            new KeyValuePair<string, RavenJToken>("CreationDate", new RavenJValue(row["CreationDate"])), 
-                            new KeyValuePair<string, RavenJToken>("Text", new RavenJValue(row["Text"])), 
-                            new KeyValuePair<string, RavenJToken>("UserId", new RavenJValue(row["UserId"])), 
+							new KeyValuePair<string, RavenJToken>("Score", new RavenJValue(row["Score"])),
+							new KeyValuePair<string, RavenJToken>("CreationDate", new RavenJValue(row["CreationDate"])), 
+							new KeyValuePair<string, RavenJToken>("Text", new RavenJValue(row["Text"])), 
+							new KeyValuePair<string, RavenJToken>("UserId", new RavenJValue(row["UserId"])), 
 						}));
-                            
+							
 					}
 					cmds.Add(new PatchCommandData
 					{
@@ -60,8 +64,8 @@ namespace Raven.StackOverflow.Etl.Posts
 
 				count++;
 
-				File.WriteAllText(Path.Combine("Docs", "Comments #" + count.ToString("00000") + ".json"),
-                    "[" + cmds.Select(c => c.ToJson() + ",") + "]");
+				File.WriteAllText(GetOutputPath("Docs", "Comments #" + count.ToString("00000") + ".json"),
+					"[" + cmds.Select(c => c.ToJson() + ",") + "]");
 			}
 
 			yield break;

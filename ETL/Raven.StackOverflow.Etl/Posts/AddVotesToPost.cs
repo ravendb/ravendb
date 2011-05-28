@@ -20,12 +20,15 @@ using Raven.Database.Json;
 using Raven.Json.Linq;
 using Raven.StackOverflow.Etl.Generic;
 using Rhino.Etl.Core;
-using Rhino.Etl.Core.Operations;
 
 namespace Raven.StackOverflow.Etl.Posts
 {
-	public class AddVotesToPost : AbstractOperation
+	public class AddVotesToPost : BatchFileWritingProcess
 	{
+		public AddVotesToPost(string outputDirectory) : base(outputDirectory)
+		{
+		}
+
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
 			int count = 0;
@@ -73,7 +76,7 @@ namespace Raven.StackOverflow.Etl.Posts
 				count++;
 
 				File.WriteAllText(
-					Path.Combine("Docs", "Votes #" + count.ToString("00000") + ".json"),
+					GetOutputPath("Docs","Votes #" + count.ToString("00000") + ".json"),
 					"[" + cmds.Select(c => c.ToJson() + ",") + "]");
 			}
 			yield break;

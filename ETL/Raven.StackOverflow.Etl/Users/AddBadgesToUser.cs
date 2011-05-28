@@ -12,14 +12,19 @@ using Raven.Database.Data;
 using Raven.Database.Json;
 using Raven.Json.Linq;
 using Raven.StackOverflow.Etl.Generic;
+using Raven.StackOverflow.Etl.Posts;
 using Rhino.Etl.Core;
 using Rhino.Etl.Core.Operations;
 using System.Linq;
 
 namespace Raven.StackOverflow.Etl.Users
 {
-	public class AddBadgesToUser : AbstractOperation
+	public class AddBadgesToUser : BatchFileWritingProcess
 	{
+		public AddBadgesToUser(string outputDirectory) : base(outputDirectory)
+		{
+		}
+
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
 			int count = 0;
@@ -64,7 +69,7 @@ namespace Raven.StackOverflow.Etl.Users
 
 				count++;
 
-				File.WriteAllText(Path.Combine("Docs", "Badges #" + count.ToString("00000") + ".json"),
+				File.WriteAllText(GetOutputPath("Docs", "Badges #" + count.ToString("00000") + ".json"),
 					"[" + cmds.Select(c => c.ToJson() + ",") + "]");
 			}
 			yield break;
