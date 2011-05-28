@@ -37,20 +37,54 @@ namespace Raven.StackOverflow.Etl
 		        new FileToRavenCommand()
 		        };
 
-		    ServicePointManager.DefaultConnectionLimit = int.MaxValue;
+            ICommand selectedCommand = null;
+
+		    try
+		    {
+                if (args.Count() == 0)
+                    throw new ArgumentException("");
+
+                foreach (var command in commands)
+                {
+                    if (command.CommandText.Equals(args[0], StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        selectedCommand = command;
+                        break;
+                    }
+                }
+
+                if (selectedCommand== null)
+                    throw new Exception("");
+
+                selectedCommand.LoadArgs(args.Skip(1));
+            }
+
+		    catch (Exception e)
+		    {
+                if (!String.IsNullOrEmpty(e.Message))
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Error message: " + e.Message);
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("Expected parameters:");
+                foreach(var command in commands)
+                {
+                    command.WriteHelp(Console.Out);
+                }
+    	        
+		        throw;
+		    }
+
+            
+            ServicePointManager.DefaultConnectionLimit = int.MaxValue;
 
 			Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 			Trace.WriteLine("Starting...");
 			var sp = Stopwatch.StartNew();
 
-            foreach(var command in commands)
-            {
-                if (command.CommandText.Equals(args[0], StringComparison.InvariantCultureIgnoreCase))
-                {
-                    command.Run();
-                    break;
-                }
-            }
+            selectedCommand.Run();
 
 			Console.WriteLine("Total execution time {0}", sp.Elapsed);
 		}

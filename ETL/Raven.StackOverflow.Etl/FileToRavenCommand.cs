@@ -24,6 +24,15 @@ namespace Raven.StackOverflow.Etl
             LoadIntoRaven();
         }
 
+        public void LoadArgs(IEnumerable<string> remainingArgs)
+        {
+        }
+
+        public void WriteHelp(TextWriter tw)
+        {
+            Console.WriteLine("Raven.StackOverflow.Etl.exe file");
+        }
+
         public static void LoadIntoRaven()
         {
             const string dataDirectory = @"C:\Work\ravendb\ETL\Raven.StackOverflow.Etl\bin\Debug\Data";

@@ -34,6 +34,15 @@ namespace Raven.StackOverflow.Etl
             Parallel.ForEach(processes, GenerateJsonDocuments);
         }
 
+        public void LoadArgs(IEnumerable<string> remainingArgs)
+        {
+        }
+
+        public void WriteHelp(TextWriter tw)
+        {
+            Console.WriteLine("Raven.StackOverflow.Etl.exe xml");
+        }
+
         private void GenerateJsonDocuments(EtlProcess process)
         {
             Console.WriteLine("Executing {0}", process);
