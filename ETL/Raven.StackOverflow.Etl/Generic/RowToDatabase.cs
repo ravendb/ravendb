@@ -24,7 +24,7 @@ namespace Raven.StackOverflow.Etl.Generic
 
 		public RowToDatabase(
 			string collection,
-            Func<RavenJObject, string> generateKey)
+			Func<RavenJObject, string> generateKey)
 		{
 			this.collection = collection;
 			this.generateKey = generateKey;
@@ -36,19 +36,22 @@ namespace Raven.StackOverflow.Etl.Generic
 			foreach (var partitionedRows in rows.Partition(Constants.BatchSize))
 			{
 				var jsons = partitionedRows.Select(row =>
-                      new RavenJObject(row.Cast<KeyValuePair<string,RavenJToken>>()
+					  new RavenJObject(row.Cast<KeyValuePair<string,RavenJToken>>()
 							.Select(x => new KeyValuePair<string, RavenJToken>(x.Key, RavenJToken.FromObject(x.Value)))));
-                                
+								
 				var putCommandDatas = jsons.Select(document => new PutCommandData
 				{
 					Document = document,
-					Metadata = new JObject(new JProperty("Raven-Entity-Name", new JValue(collection))),
+					Metadata = new RavenJObject(new []
+					{
+						new KeyValuePair<string, RavenJToken>("Raven-Entity-Name", new RavenJValue(collection)), 
+					}),
 					Key = generateKey(document)
 				}).ToArray();
 
 				count++;
 				File.WriteAllText(Path.Combine("Docs", collection + " #" + count.ToString("00000") + ".json"),
-								  new JArray(putCommandDatas.Select(x => x.ToJson())).ToString(Formatting.Indented));
+					"[" + putCommandDatas.Select(c => c.ToJson() + ",") + "]");
 
 			}
 			yield break;

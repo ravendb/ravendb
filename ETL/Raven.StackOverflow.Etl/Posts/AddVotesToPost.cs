@@ -10,9 +10,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
+using Raven.Json;
+using Raven.Json.Utilities;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Json;
+using Raven.Json.Linq;
 using Raven.StackOverflow.Etl.Generic;
 using Rhino.Etl.Core;
 using Rhino.Etl.Core.Operations;
@@ -26,23 +31,26 @@ namespace Raven.StackOverflow.Etl.Posts
 			int count = 0;
 			foreach (var votesForPosts in rows.GroupBy(row => row["PostId"]).Partition(Constants.BatchSize))
 			{
+				List<RavenJToken> votes = new List<RavenJToken>();
+
 				var cmds = new List<ICommandData>();
 				foreach (var votesForPost in votesForPosts)
 				{
-					var votes = new JArray();
 					foreach (var row in votesForPost)
 					{
-						var vote = new JObject(
-							new JProperty("VoteTypeId", new JValue(row["VoteTypeId"])),
-							new JProperty("CreationDate", new JValue(row["CreationDate"]))
-							);
+						var vote = new RavenJObject(new[]
+							{
+								new KeyValuePair<string, RavenJToken>("VoteTypeId", new RavenJValue(row["VoteTypeId"])),
+								new KeyValuePair<string, RavenJToken>("CreationDate", new RavenJValue(row["CreationDate"]))
+							});
+
 						switch ((long)row["VoteTypeId"])
 						{
 							case 5L:
-								vote.Add("UserId", new JValue("users/" + row["UserId"]));
+								vote.Add("UserId", new RavenJValue("users/" + row["UserId"]));
 								break;
 							case 9L:
-								vote.Add("BountyAmount", new JValue(row["BountyAmount"]));
+								vote.Add("BountyAmount", new RavenJValue(row["BountyAmount"]));
 								break;
 						}
 						votes.Add(vote);
@@ -55,8 +63,8 @@ namespace Raven.StackOverflow.Etl.Posts
 								new PatchRequest
 								{
 									Name = "Votes",
-									Type = "Set",
-									Value = votes
+									Type = PatchCommandType.Set,
+									Value = new RavenJArray( votes)
 								},
 							}
 					});
@@ -64,9 +72,9 @@ namespace Raven.StackOverflow.Etl.Posts
 
 				count++;
 
-				File.WriteAllText(Path.Combine("Docs", "Votes #" + count.ToString("00000") + ".json"),
-								  new JArray(cmds.Select(x => x.ToJson())).ToString(Formatting.Indented));
-
+				File.WriteAllText(
+					Path.Combine("Docs", "Votes #" + count.ToString("00000") + ".json"),
+					"[" + cmds.Select(c => c.ToJson() + ",") + "]");
 			}
 			yield break;
 		}
