@@ -1,8 +1,7 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using Rhino.Etl.Core.Operations;
 
-namespace Raven.StackOverflow.Etl.Posts
+namespace Raven.StackOverflow.Etl.Generic
 {
 	public abstract class BatchFileWritingProcess : AbstractOperation
 	{
