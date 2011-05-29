@@ -75,9 +75,7 @@ namespace Raven.StackOverflow.Etl.Posts
 
 				count++;
 
-				File.WriteAllText(
-					GetOutputPath("Docs","Votes #" + count.ToString("00000") + ".json"),
-					"[" + cmds.Select(c => c.ToJson() + ",") + "]");
+				WriteCommandsTo(cmds, "Docs","Votes #" + count.ToString("00000") + ".json");
 			}
 			yield break;
 		}

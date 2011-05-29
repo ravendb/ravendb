@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -69,8 +70,7 @@ namespace Raven.StackOverflow.Etl.Users
 
 				count++;
 
-				File.WriteAllText(GetOutputPath("Docs", "Badges #" + count.ToString("00000") + ".json"),
-					"[" + cmds.Select(c => c.ToJson() + ",") + "]");
+				WriteCommandsTo(cmds, "Docs", "Badges #" + count.ToString("00000") + ".json");
 			}
 			yield break;
 		}

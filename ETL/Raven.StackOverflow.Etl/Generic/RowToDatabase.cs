@@ -38,23 +38,29 @@ namespace Raven.StackOverflow.Etl.Generic
 			int count = 0;
 			foreach (var partitionedRows in rows.Partition(Constants.BatchSize))
 			{
-				var jsons = partitionedRows.Select(row =>
-					  new RavenJObject(row.Cast<KeyValuePair<string,RavenJToken>>()
-							.Select(x => new KeyValuePair<string, RavenJToken>(x.Key, RavenJToken.FromObject(x.Value)))));
-								
-				var putCommandDatas = jsons.Select(document => new PutCommandData
-				{
-					Document = document,
-					Metadata = new RavenJObject(new []
-					{
-						new KeyValuePair<string, RavenJToken>("Raven-Entity-Name", new RavenJValue(collection)), 
-					}),
-					Key = generateKey(document)
-				}).ToArray();
+				List<PutCommandData> commands = new List<PutCommandData>();
 
+				foreach(var row in partitionedRows)
+				{
+					RavenJObject obj = new RavenJObject();
+					
+					foreach(object key in row.Keys)
+					{
+						obj.Add((string)key, RavenJToken.FromObject(row[key]));
+					}
+					 
+					commands.Add(new PutCommandData()
+					{
+						Document = obj,
+						Metadata = new RavenJObject(new[]
+					{
+						new KeyValuePair<string, RavenJToken>("Raven-Entity-Name", new RavenJValue(collection)), }),
+						Key = generateKey(obj)
+					});
+				}
+								
 				count++;
-				File.WriteAllText(GetOutputPath("Docs", collection + " #" + count.ToString("00000") + ".json"),
-					"[" + putCommandDatas.Select(c => c.ToJson() + ",") + "]");
+				WriteCommandsTo(commands, "Docs", collection + " #" + count.ToString("00000") + ".json");
 
 			}
 			yield break;
