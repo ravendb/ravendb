@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using ETL;
 using Raven.Database;
 using Raven.StackOverflow.Etl.Generic;
 using Rhino.Etl.Core;
@@ -25,7 +26,7 @@ namespace Raven.StackOverflow.Etl.Posts
 
 		protected override void Initialize()
 		{
-			PipelineExecuter = new SingleThreadedPipelineExecuter();
+			PipelineExecuter = new SimplePipelineExecutor();
 			Register(new XmlRowOperationFile(Path.Combine(_inputDirectory, "comments.xml")));
 			Register(new AddCommentsToPost(_outputDirectory));
 		}

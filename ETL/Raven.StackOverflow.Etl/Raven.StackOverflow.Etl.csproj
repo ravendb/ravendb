@@ -77,6 +77,7 @@
     <Compile Include="Constants.cs" />
     <Compile Include="FileToRavenCommand.cs" />
     <Compile Include="Generic\BatchFileWritingProcess.cs" />
+    <Compile Include="Generic\SimplePipelineExecutor.cs" />
     <Compile Include="ICommand.cs" />
     <Compile Include="XMLToFileCommand.cs" />
     <Compile Include="Posts\AddVotesToPost.cs" />

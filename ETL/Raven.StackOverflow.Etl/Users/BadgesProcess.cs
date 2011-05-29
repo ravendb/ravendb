@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using ETL;
 using Raven.StackOverflow.Etl.Generic;
 using Rhino.Etl.Core;
 using Rhino.Etl.Core.Pipelines;
@@ -24,7 +25,7 @@ namespace Raven.StackOverflow.Etl.Users
 
 		protected override void Initialize()
 		{
-			PipelineExecuter = new SingleThreadedPipelineExecuter(); 
+			PipelineExecuter = new SimplePipelineExecutor(); 
 			Register(new XmlRowOperationFile(Path.Combine(_inputDirectory, "badges.xml")));
 			Register(new AddBadgesToUser(_outputDirectory));
 		}
