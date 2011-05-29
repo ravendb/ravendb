@@ -42,6 +42,9 @@ namespace Raven.Database.Queries
 						if (abstractViewGenerator.ViewText.Contains("where")) // without a where clause
 							return false;
 
+						if (abstractViewGenerator.ViewText.Contains("IEnumerable")) // we can't choose an index that flattens the document
+							return false;
+
 						if (abstractViewGenerator.ForEntityName != entityName) // for the specified entity name
 							return false;
 						var items = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2);
