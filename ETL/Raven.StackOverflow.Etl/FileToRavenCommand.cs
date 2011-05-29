@@ -37,30 +37,9 @@ namespace Raven.StackOverflow.Etl
                 );
         }
 
-        public void LoadArgs(string[] remainingArgs)
-        {
-            if (remainingArgs.Count() != 2)
-                throw new Exception("");
-
-            InputDirectory = remainingArgs[0];
-
-            if (!Directory.Exists(InputDirectory))
-                throw new ArgumentException("Input directory not found.");
-
-            OutputRavenUrl = remainingArgs[1];
-
-            if (!new Uri(OutputRavenUrl).Scheme.Equals("http", StringComparison.InvariantCultureIgnoreCase))
-                throw new ArgumentException("RavenDB url expected as second parameter");
-        }
-
-        public void WriteHelp(TextWriter tw)
-        {
-            Console.WriteLine("Raven.StackOverflow.Etl.exe " + CommandText + " <inputDirectory> <outputRavenUrl>");
-        }
-
         public IEnumerable<Action> LoadDataFor(string searchPattern)
         {
-            Console.WriteLine("Loading for {0}", searchPattern);
+            Console.WriteLine("Loading {0}.", Path.Combine(InputDirectory, searchPattern ?? "*"));
             var timeSpans = new List<TimeSpan>();
             foreach (var fileModifable in Directory.GetFiles(InputDirectory, searchPattern))
             {
@@ -71,7 +50,7 @@ namespace Raven.StackOverflow.Etl
                     HttpWebResponse webResponse;
                     while (true)
                     {
-                        var httpWebRequest = (HttpWebRequest)WebRequest.Create(OutputRavenUrl);
+                        var httpWebRequest = (HttpWebRequest)WebRequest.Create(new Uri(new Uri(OutputRavenUrl), "bulk_docs"));
                         httpWebRequest.Method = "POST";
                         using (var requestStream = httpWebRequest.GetRequestStream())
                         {
@@ -134,6 +113,27 @@ namespace Raven.StackOverflow.Etl
             //{
             //    act();
             //}
+        }
+
+        public void LoadArgs(string[] remainingArgs)
+        {
+            if (remainingArgs.Count() != 2)
+                throw new Exception("");
+
+            InputDirectory = remainingArgs[0];
+
+            if (!Directory.Exists(InputDirectory))
+                throw new ArgumentException("Input directory not found.");
+
+            OutputRavenUrl = remainingArgs[1];
+
+            if (!new Uri(OutputRavenUrl).Scheme.Equals("http", StringComparison.InvariantCultureIgnoreCase))
+                throw new ArgumentException("RavenDB url expected as second parameter");
+        }
+
+		public void WriteHelp(TextWriter tw)
+        {
+            Console.WriteLine("Raven.StackOverflow.Etl.exe " + CommandText + " <inputDirectory> <outputRavenUrl>");
         }
     }
 }
