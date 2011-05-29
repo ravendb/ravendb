@@ -50,6 +50,7 @@ namespace Raven.StackOverflow.Etl
                     HttpWebResponse webResponse;
                     while (true)
                     {
+
                         var httpWebRequest = (HttpWebRequest)WebRequest.Create(new Uri(new Uri(OutputRavenUrl), "bulk_docs"));
                         httpWebRequest.Method = "POST";
                         using (var requestStream = httpWebRequest.GetRequestStream())

@@ -60,7 +60,7 @@ namespace Raven.StackOverflow.Etl.Generic
 				}
 								
 				count++;
-				WriteCommandsTo(commands, "Docs", collection + " #" + count.ToString("00000") + ".json");
+				WriteCommandsTo(collection + " #" + count.ToString("00000") + ".json", commands);
 
 			}
 			yield break;

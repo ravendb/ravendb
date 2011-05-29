@@ -70,7 +70,7 @@ namespace Raven.StackOverflow.Etl.Users
 
 				count++;
 
-				WriteCommandsTo(cmds, "Docs", "Badges #" + count.ToString("00000") + ".json");
+				WriteCommandsTo("Badges #" + count.ToString("00000") + ".json", cmds);
 			}
 			yield break;
 		}

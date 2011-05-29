@@ -31,9 +31,9 @@ namespace Raven.StackOverflow.Etl.Generic
 			return result;
 		}
 
-		public void WriteCommandsTo(IEnumerable<ICommandData> commands, params string[] pathElements)
+		public void WriteCommandsTo(string filename, IEnumerable<ICommandData> commands)
 		{
-			File.WriteAllText(GetOutputPath(pathElements),
+			File.WriteAllText(GetOutputPath(filename),
 				"[" + String.Join(",\n", commands.Select(c => c.ToJson().ToString())) + "]");
 		}
 	}
