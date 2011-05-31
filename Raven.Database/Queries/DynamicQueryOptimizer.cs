@@ -1,7 +1,5 @@
-using System;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Data;
 using System.Linq;
 using Raven.Database.Indexing;
 
@@ -20,7 +18,7 @@ namespace Raven.Database.Queries
 		{
 			// There isn't much point for query optimizer of aggregation indexes
 			// the main reason is that we must always aggregate on the same items, and using the same 
-			// aggregation. Therefor we can't reuse one aggregate index for another query.
+			// aggregation. Therefore we can't reuse one aggregate index for another query.
 			// We decline to suggest an index here and choose to use the default index created for this
 			// sort of query, which is what we would have to choose anyway.
 			if(indexQuery.AggregationOperation != AggregationOperation.None)
