@@ -249,15 +249,9 @@
 						 PageContainer="{Binding ElementName=QueryResultsContainer}"
 						 ItemsSource="{Binding QueryResults}" />
 
-				<ItemsControl x:Name="QueryResultsContainer"
-							  ItemsSource="{Binding QueryResults}"
-							  ItemsPanel="{StaticResource FluidWrapPanel}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<ContentControl cm:View.Model="{Binding}" />
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
+				<ListBox x:Name="QueryResultsContainer"
+						 ItemsSource="{Binding QueryResults}"
+						 Style="{StaticResource DocumentList}" />
 			</tk:DockPanel>
 
 			<tk:DockPanel Grid.Row="3"

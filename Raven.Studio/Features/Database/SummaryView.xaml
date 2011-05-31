@@ -90,14 +90,8 @@
 			<TextBlock Text="Recent Documents"
 					   Style="{StaticResource SectionHeader}" />
 
-			<ItemsControl x:Name="RecentDocuments"
-						  ItemsPanel="{StaticResource FluidWrapPanel}">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<ContentControl cm:View.Model="{Binding}" />
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
+			<ListBox x:Name="RecentDocuments"
+					 Style="{StaticResource DocumentList}" />
 
 			<TextBlock Text="{Binding RecentDocumentsStatus}"
 					   Style="{StaticResource Instruction}" />
@@ -112,7 +106,7 @@
 							   Margin="4 0 0 0" />
 				</StackPanel>
 
-                <Button x:Name="BeginCreateSampleData"
+				<Button x:Name="BeginCreateSampleData"
 						Visibility="{Binding ShowCreateSampleData, Converter={StaticResource visibleWhenTrue}}"
 						Content="Create sample data" />
 			</Grid>
