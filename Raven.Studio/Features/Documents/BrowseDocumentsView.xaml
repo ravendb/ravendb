@@ -102,11 +102,8 @@
 				           d:IsLocked="True" />
 
 				<c:WrapListBox x:Name="DocumentPageContainer"
-				                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-				                BorderThickness="0"
-				                ItemsPanel="{StaticResource FluidWrapPanel}"
-				                ItemsSource="{Binding Documents}"
-				                SelectionMode="Extended">
+							   Style="{StaticResource DocumentList}"
+				               ItemsSource="{Binding Documents}">
 					<i:Interaction.Behaviors>
 						<local:SelectItemOnRightClick />
 					</i:Interaction.Behaviors>
