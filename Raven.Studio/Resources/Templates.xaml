@@ -321,18 +321,4 @@
 		</toolkit:WrapPanel>
 	</ItemsPanelTemplate>
 
-	<Style TargetType="ListBox"
-		   x:Name="DocumentList">
-		<Setter Property="ItemsPanel"
-				Value="{StaticResource FluidWrapPanel}" />
-		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
-				Value="Disabled" />
-		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
-				Value="Disabled" />
-		<Setter Property="SelectionMode"
-				Value="Extended" />
-		<Setter Property="BorderThickness"
-				Value="0" />
-	</Style>
-
 </ResourceDictionary>
