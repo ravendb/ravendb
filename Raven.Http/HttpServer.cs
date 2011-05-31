@@ -29,11 +29,11 @@ namespace Raven.Http
 	public abstract class HttpServer : IDisposable
     {
         protected readonly IResourceStore DefaultResourceStore;
-        protected readonly IRaveHttpnConfiguration DefaultConfiguration;
+        protected readonly IRavenHttpConfiguration DefaultConfiguration;
 
         private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
         private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
-        private readonly ThreadLocal<IRaveHttpnConfiguration> currentConfiguration = new ThreadLocal<IRaveHttpnConfiguration>();
+        private readonly ThreadLocal<IRavenHttpConfiguration> currentConfiguration = new ThreadLocal<IRavenHttpConfiguration>();
 
         protected readonly ConcurrentDictionary<string, IResourceStore> ResourcesStoresCache =
             new ConcurrentDictionary<string, IResourceStore>(StringComparer.InvariantCultureIgnoreCase);
@@ -44,7 +44,7 @@ namespace Raven.Http
         [ImportMany]
 		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
-        public IRaveHttpnConfiguration Configuration
+        public IRavenHttpConfiguration Configuration
         {
             get
             {
@@ -66,7 +66,7 @@ namespace Raven.Http
         private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(192);
         private Timer databasesCleanupTimer;
 
-        protected HttpServer(IRaveHttpnConfiguration configuration, IResourceStore resourceStore)
+        protected HttpServer(IRavenHttpConfiguration configuration, IResourceStore resourceStore)
         {
             DefaultResourceStore = resourceStore;
             DefaultConfiguration = configuration;

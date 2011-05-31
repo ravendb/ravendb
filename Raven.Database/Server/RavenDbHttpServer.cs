@@ -28,7 +28,7 @@ namespace Raven.Database.Server
             get { return databaseQuery; }
         }
 
-        public RavenDbHttpServer(IRaveHttpnConfiguration configuration, IResourceStore database)
+        public RavenDbHttpServer(IRavenHttpConfiguration configuration, IResourceStore database)
             : base(configuration, database)
         {
         }

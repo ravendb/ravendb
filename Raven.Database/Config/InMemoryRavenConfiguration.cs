@@ -18,7 +18,7 @@ using Raven.Http;
 
 namespace Raven.Database.Config
 {
-	public class InMemoryRavenConfiguration : IRaveHttpnConfiguration
+	public class InMemoryRavenConfiguration : IRavenHttpConfiguration
 	{
 		private CompositionContainer container;
 		private bool containerExternallySet;

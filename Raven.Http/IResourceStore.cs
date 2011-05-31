@@ -12,7 +12,7 @@ namespace Raven.Http
 {
     public interface IResourceStore : IDisposable
     {
-        IRaveHttpnConfiguration Configuration { get; }
+        IRavenHttpConfiguration Configuration { get; }
 		ConcurrentDictionary<string, object> ExternalState { get; set; }
     }
 }

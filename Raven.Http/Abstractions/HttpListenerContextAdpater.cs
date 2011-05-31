@@ -15,9 +15,9 @@ namespace Raven.Http.Abstractions
 	public class HttpListenerContextAdpater : IHttpContext
 	{
 		private readonly HttpListenerContext ctx;
-        private readonly IRaveHttpnConfiguration configuration;
+        private readonly IRavenHttpConfiguration configuration;
 
-        public HttpListenerContextAdpater(HttpListenerContext ctx, IRaveHttpnConfiguration configuration)
+        public HttpListenerContextAdpater(HttpListenerContext ctx, IRavenHttpConfiguration configuration)
 		{
 			this.ctx = ctx;
 			this.configuration = configuration;
@@ -25,7 +25,7 @@ namespace Raven.Http.Abstractions
 			ResponseInternal = new HttpListenerResponseAdapter(ctx.Response);
 		}
 
-        public IRaveHttpnConfiguration Configuration
+        public IRavenHttpConfiguration Configuration
 		{
 			get { return configuration; }
 		}

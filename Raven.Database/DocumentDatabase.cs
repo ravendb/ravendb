@@ -226,7 +226,7 @@ namespace Raven.Database
 			}
 		}
 
-		IRaveHttpnConfiguration IResourceStore.Configuration
+		IRavenHttpConfiguration IResourceStore.Configuration
 		{
 			get { return Configuration; }
 		}

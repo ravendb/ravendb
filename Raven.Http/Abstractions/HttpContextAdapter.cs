@@ -17,9 +17,9 @@ namespace Raven.Http.Abstractions
 		private readonly HttpContext context;
 		private readonly HttpRequestAdapter request;
 		private readonly HttpResponseAdapter response;
-        private readonly IRaveHttpnConfiguration configuration;
+        private readonly IRavenHttpConfiguration configuration;
 
-        public HttpContextAdapter(HttpContext context, IRaveHttpnConfiguration configuration)
+        public HttpContextAdapter(HttpContext context, IRavenHttpConfiguration configuration)
 		{
 			this.context = context;
 			this.configuration = configuration;
@@ -27,7 +27,7 @@ namespace Raven.Http.Abstractions
 			response = new HttpResponseAdapter(context.Response);
 		}
 
-        public IRaveHttpnConfiguration Configuration
+        public IRavenHttpConfiguration Configuration
 		{
 			get { return configuration; }
 		}
