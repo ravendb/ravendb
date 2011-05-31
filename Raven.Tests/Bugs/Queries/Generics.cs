@@ -36,10 +36,9 @@ namespace Raven.Tests.Bugs.Queries
 		[Fact]
 		public void TestWithoutGenerics()
 		{
-			using (var documentStore = new Raven.Client.Document.DocumentStore { Url = "http://localhost:8080" })
+			using (var dataStore = NewDocumentStore())
 			{
-				documentStore.Initialize();
-				using (var session = documentStore.OpenSession())
+				using (var session = dataStore.OpenSession())
 				{
 					var node = new TestNode
 								{

@@ -164,11 +164,13 @@
     <Compile Include="Bugs\DuplicatedFiledNames.cs" />
     <Compile Include="Bugs\EntitiesWithAttributes.cs" />
     <Compile Include="Bugs\Indexing\CanIndexNestedObjects.cs" />
+    <Compile Include="Bugs\Indexing\CanIndexWithCharLiteral.cs" />
     <Compile Include="Bugs\IntegerIds.cs" />
     <Compile Include="Bugs\IteratingTwice.cs" />
     <Compile Include="Bugs\Iulian\CanReadEntityWithUrlId.cs" />
     <Compile Include="Bugs\LinqOnDictionary.cs" />
     <Compile Include="Bugs\MassivelyMultiTenant.cs" />
+    <Compile Include="Bugs\MixingIdentityAndAssignedIds.cs" />
     <Compile Include="Bugs\MultipleRangeQueries.cs" />
     <Compile Include="Bugs\ProjectionFromDynamicIndex.cs" />
     <Compile Include="Bugs\Queries\Floats.cs" />
@@ -533,7 +535,9 @@
     <Compile Include="Triggers\ReadTriggers.cs" />
     <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
+    <Compile Include="Util\RavenDBDriver.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
+    <Compile Include="Util\RunExternalProcess.cs" />
     <Compile Include="Views\MapReduce.cs" />
     <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />

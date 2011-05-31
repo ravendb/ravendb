@@ -729,6 +729,13 @@ namespace Raven.Client.Indexes
 					this.Out(node.Value.ToString().ToLower());
 					return node;
 				}
+				if (node.Value is char) 
+				{
+					this.Out("'");
+					this.Out(s);
+					this.Out("'");
+					return node;
+				}
 				this.Out(s);
 				return node;
 			}
