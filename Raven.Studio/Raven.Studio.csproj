@@ -137,6 +137,9 @@
     <Compile Include="Converters\NotificationLevelToColorConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
+    <Compile Include="Features\Documents\BrowseDocumentsView.xaml.cs">
+      <DependentUpon>BrowseDocumentsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
@@ -329,6 +332,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Documents\BrowseDocumentsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Documents\EditDocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -384,10 +391,6 @@
     <Page Include="Controls\ErrorWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Features\Documents\BrowseDocumentsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Indexes\BrowseIndexesView.xaml">
       <SubType>Designer</SubType>
