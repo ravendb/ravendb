@@ -47,7 +47,7 @@ namespace Raven.Client.Connection
 		{
 			var request = new HttpJsonRequest(url, method, metadata, credentials, this);
 			ConfigureCaching(url, method, convention, request);
-			ConfigureRequest(self, new WebRequestEventArgs { Request = request.WebRequest });
+			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
 			return request;
 		}
 
@@ -61,7 +61,7 @@ namespace Raven.Client.Connection
 			if (cachedRequest == null)
 				return;
 			request.CachedRequestDetails = cachedRequest;
-			request.WebRequest.Headers["If-None-Match"] = cachedRequest.Headers["ETag"];
+			request.webRequest.Headers["If-None-Match"] = cachedRequest.Headers["ETag"];
 		}
 
 
