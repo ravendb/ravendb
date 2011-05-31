@@ -41,6 +41,21 @@ namespace Raven.Tests.Json
 			var o = RavenJObject.FromObject(blogOne);
 		}
 
+		[Fact]
+		public void can_read_array_into_ravenjobject()
+		{
+			const string json =
+				@"[{""Username"":""user3"",""Email"":""user3@hotmail.com"",""IsActive"":true,""@metadata"":{""Raven-Entity-Name"":""UserDbs"",
+""Raven-Clr-Type"":""Persistence.Models.UserDb, Infrastructure""}},
+{""Username"":""user4"",""Email"":""user3@hotmail.com"",""IsActive"":true,""@metadata"":{""Raven-Entity-Name"":""UserDbs"",
+""Raven-Clr-Type"":""Persistence.Models.UserDb, Infrastructure""}}]
+";
+
+			var obj = RavenJToken.Parse(json);
+
+			Assert.NotNull(obj);
+		}
+
 		public class Blog
 		{
 			public User User
