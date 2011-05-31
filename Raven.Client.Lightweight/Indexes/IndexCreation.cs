@@ -3,15 +3,17 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET_3_5
+
 using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
+using Raven.Client.Document;
+#if !NET_3_5
+using System.ComponentModel.Composition.Hosting;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document;
+using System.Threading.Tasks;
+#endif
 
 namespace Raven.Client.Indexes
 {
@@ -20,6 +22,8 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public static class IndexCreation
 	{
+#if !NET_3_5
+
 #if !SILVERLIGHT
 		/// <summary>
 		/// Creates the indexes found in the specified assembly.
@@ -91,6 +95,27 @@ namespace Raven.Client.Indexes
 			indexesAsync.Start();
 			return indexesAsync;
 		}
+
+#else //NET_3_5
+
+		/// <summary>
+		/// Creates the indexes found in the specified assembly.
+		/// </summary>
+		/// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
+		/// <param name="documentStore">The document store.</param>
+		public static void CreateIndexes(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore)
+		{
+			var tasks = assemblyToScanForIndexingTasks.GetTypes()
+				.Where(x => typeof (AbstractIndexCreationTask).IsAssignableFrom(x))
+				.Where(x => !x.IsAbstract)
+				.Select(x => (AbstractIndexCreationTask)System.Activator.CreateInstance(x))
+				.ToArray();
+
+			foreach (var task in tasks)
+			{
+				task.Execute(documentStore.DatabaseCommands, documentStore.Conventions);
+			}
+		}
+#endif
 	}
 }
-#endif
