@@ -228,7 +228,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public string Url
 		{
-			get { throw new NotImplementedException("There isn't a single url wen"); }
+			get { throw new NotImplementedException("There isn't a singular url when using sharding"); }
 		}
 
 		/// <summary>
