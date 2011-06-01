@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Specialized;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 
@@ -13,6 +13,7 @@ namespace Raven.Http.Abstractions
     public class HttpListenerResponseAdapter : IHttpResponse
     {
         private readonly HttpListenerResponse response;
+    	private readonly Dictionary<string, string> delayedHeaders = new Dictionary<string, string>();
 
         public HttpListenerResponseAdapter(HttpListenerResponse response)
         {
@@ -29,13 +30,31 @@ namespace Raven.Http.Abstractions
     	public void AddHeader(string name, string value)
     	{
 			if(name == "ETag")
-				response.AddHeader("Expires", "Sat, 01 Jan 2000 00:00:00 GMT");
+				delayedHeaders["Expires"] = "Sat, 01 Jan 2000 00:00:00 GMT";
     		response.AddHeader(name, value);
     	}
 
-    	public Stream OutputStream { get; set; }
+    	private Stream outputStream;
+    	public Stream OutputStream
+    	{
+    		get
+    		{
+    			FlushHeaders();
+    			return outputStream;
+    		}
+    		set { outputStream = value; }
+    	}
 
-        public long ContentLength64
+    	private void FlushHeaders()
+    	{
+    		foreach (var delayedHeader in delayedHeaders)
+    		{
+    			response.AddHeader(delayedHeader.Key, delayedHeader.Value);
+    		}
+			delayedHeaders.Clear();
+    	}
+
+    	public long ContentLength64
         {
             get { return response.ContentLength64; }
             set { response.ContentLength64 = value; }

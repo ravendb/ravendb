@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Web;
@@ -13,7 +14,8 @@ namespace Raven.Http.Abstractions
 	public class HttpResponseAdapter : IHttpResponse
 	{
 		private readonly HttpResponse response;
-
+		private readonly Dictionary<string, string> delayedHeaders = new Dictionary<string, string>();
+        
 		public HttpResponseAdapter(HttpResponse response)
 		{
 			this.response = response;
@@ -24,13 +26,28 @@ namespace Raven.Http.Abstractions
 		public void AddHeader(string name, string value)
 		{
 			if (name == "ETag")
-				response.AddHeader("Expires", "Sat, 01 Jan 2000 00:00:00 GMT");
+				delayedHeaders["Expires"] = "Sat, 01 Jan 2000 00:00:00 GMT";
+    		
 			response.AddHeader(name, value);
 		}
 
 		public Stream OutputStream
 		{
-			get { return response.OutputStream; }
+			get
+			{
+				FlushHeaders();
+				return response.OutputStream;
+			}
+		}
+
+
+		private void FlushHeaders()
+		{
+			foreach (var delayedHeader in delayedHeaders)
+			{
+				response.AddHeader(delayedHeader.Key, delayedHeader.Value);
+			}
+			delayedHeaders.Clear();
 		}
 
 		public long ContentLength64

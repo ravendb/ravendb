@@ -25,6 +25,11 @@ namespace Raven.Http.Abstractions
 			this.configuration = configuration;
 			request = new HttpRequestAdapter(context.Request);
 			response = new HttpResponseAdapter(context.Response);
+
+			if(string.IsNullOrEmpty(context.Request.Headers["Cache-Control"]) == false)
+			{
+				context.Response.CacheControl = request.Headers["Cache-Control"];
+			}
 		}
 
         public IRavenHttpConfiguration Configuration

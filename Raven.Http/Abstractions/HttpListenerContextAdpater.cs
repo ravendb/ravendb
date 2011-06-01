@@ -23,6 +23,11 @@ namespace Raven.Http.Abstractions
 			this.configuration = configuration;
 			Request = new HttpListenerRequestAdapter(ctx.Request);
 			ResponseInternal = new HttpListenerResponseAdapter(ctx.Response);
+
+			if (string.IsNullOrEmpty(ctx.Request.Headers["Cache-Control"]) == false)
+			{
+				ctx.Response.AddHeader("Cache-Control", ctx.Request.Headers["Cache-Control"]);
+			}
 		}
 
         public IRavenHttpConfiguration Configuration
