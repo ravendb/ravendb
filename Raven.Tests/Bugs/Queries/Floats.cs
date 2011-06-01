@@ -12,8 +12,8 @@ namespace Raven.Tests.Bugs.Queries
 			public float Value { get; set; }
 		}
 
-		[Fact(Skip = "Json.NET doesn't support floats")]
-		public void FloatTest()
+		[Fact]
+		public void Query()
 		{
 			using (var documentStore = NewDocumentStore())
 			{
@@ -35,6 +35,29 @@ namespace Raven.Tests.Bugs.Queries
 						.Customize(x => x.WaitForNonStaleResults());
 
 					Assert.True(results.Count() == 1);
+				}
+			}
+		}
+
+		[Fact]
+		public void Persistence()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				using (var session = documentStore.OpenSession())
+				{
+					session.Store(new FloatValue
+					{
+						Id = 1,
+						Value = 3.3f
+					});
+					session.SaveChanges();
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					var value = session.Load<FloatValue>(1);
+					Assert.Equal(3.3f, value.Value);
 				}
 			}
 		}

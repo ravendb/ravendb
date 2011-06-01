@@ -263,11 +263,11 @@ namespace Raven.Client.Document
 						new JsonDateTimeISO8601Converter(),
                         new JsonDateTimeOffsetConverter(),
 						new JsonLuceneDateTimeConverter(),
+						new JsonFloatConverter(),
                         new JsonNumericConverter<int>(int.TryParse),
                         new JsonNumericConverter<long>(long.TryParse),
                         new JsonNumericConverter<decimal>(decimal.TryParse),
                         new JsonNumericConverter<double>(double.TryParse),
-                        new JsonNumericConverter<float>(float.TryParse),
                         new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
 #if !NET_3_5 && !SILVERLIGHT
