@@ -1201,9 +1201,15 @@ If you really want to do in memory filtering on the data returned from the query
 
         private Task<QueryResult> GetQueryResultTaskResult(string query, IndexQuery indexQuery, DateTime startTime)
         {
+        	IDisposable disposable = null;
+			if (theWaitForNonStaleResults)
+				disposable = theSession.DocumentStore.DisableAggressiveCaching();
             return theAsyncDatabaseCommands.QueryAsync(indexName, indexQuery, includes.ToArray())
                 .ContinueWith(task =>
                 {
+					if (disposable != null)
+						disposable.Dispose();
+
                     if (theWaitForNonStaleResults && task.Result.IsStale)
                     {
                         var elapsed1 = DateTime.Now - startTime;
@@ -1217,7 +1223,6 @@ If you really want to do in memory filtering on the data returned from the query
                             string.Format(
                                 "Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
                                 query, indexName, theSession.StoreIdentifier));
-
 
                         return TaskEx.Delay(100)
                             .ContinueWith(_ => GetQueryResultTaskResult(query, indexQuery, startTime))
@@ -1247,36 +1252,43 @@ If you really want to do in memory filtering on the data returned from the query
             var sp = Stopwatch.StartNew();
             while (true)
             {
-                var query = theQueryText.ToString();
+            	var query = theQueryText.ToString();
 
-                Debug.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
-                                              query, indexName, theSession.StoreIdentifier));
+            	Debug.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
+            	                              query, indexName, theSession.StoreIdentifier));
 
-                var indexQuery = GenerateIndexQuery(query);
+            	var indexQuery = GenerateIndexQuery(query);
 
-                AddOperationHeaders(theDatabaseCommands.OperationsHeaders.Add);
+            	AddOperationHeaders(theDatabaseCommands.OperationsHeaders.Add);
 
-                var result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
-                if (theWaitForNonStaleResults && result.IsStale)
-                {
-                    if (sp.Elapsed > timeout)
-                    {
-                        sp.Stop();
-                        throw new TimeoutException(
-                            string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
-                                          sp.ElapsedMilliseconds));
-                    }
-                    Debug.WriteLine(
-                        string.Format(
-                            "Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
-                            query, indexName, theSession.StoreIdentifier));
-                    Thread.Sleep(100);
-                    continue;
-                }
-                Debug.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count,
-                                              result.TotalResults));
-            	result.EnsureSnapshot();
-                return result;
+            	using (
+					theWaitForNonStaleResults ?
+						Session.Advanced.DocumentStore.DisableAggressiveCaching() : 
+						null)
+            	{
+            		QueryResult result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
+
+            		if (theWaitForNonStaleResults && result.IsStale)
+            		{
+            			if (sp.Elapsed > timeout)
+            			{
+            				sp.Stop();
+            				throw new TimeoutException(
+            					string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
+            					              sp.ElapsedMilliseconds));
+            			}
+            			Debug.WriteLine(
+            				string.Format(
+            					"Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
+            					query, indexName, theSession.StoreIdentifier));
+            			Thread.Sleep(100);
+            			continue;
+            		}
+            		Debug.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count,
+            		                              result.TotalResults));
+            		result.EnsureSnapshot();
+            		return result;
+            	}
             }
         }
 #endif

@@ -147,6 +147,27 @@ namespace Raven.Client.Shard
 			});
 		}
 
+		/// <summary>
+		/// Setup the context for no aggresive caching
+		/// </summary>
+		/// <remarks>
+		/// This is mainly useful for internal use inside RavenDB, when we are executing
+		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
+		/// aggresive caching.
+		/// </remarks>
+		public IDisposable DisableAggressiveCaching()
+		{
+			var disposables = shards.Select(shard => shard.DisableAggressiveCaching()).ToList();
+
+			return new DisposableAction(() =>
+			{
+				foreach (var disposable in disposables)
+				{
+					disposable.Dispose();
+				}
+			});
+		}
+
 #if !SILVERLIGHT
 		
 		/// <summary>

@@ -37,6 +37,16 @@ namespace Raven.Client
 		IDisposable AggresivelyCacheFor(TimeSpan cahceDuration);
 
 		/// <summary>
+		/// Setup the context for no aggresive caching
+		/// </summary>
+		/// <remarks>
+		/// This is mainly useful for internal use inside RavenDB, when we are executing
+		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
+		/// aggresive caching.
+		/// </remarks>
+		IDisposable DisableAggressiveCaching();
+
+		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>

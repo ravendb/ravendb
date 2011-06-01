@@ -446,6 +446,27 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+
+		/// <summary>
+		/// Setup the context for no aggresive caching
+		/// </summary>
+		/// <remarks>
+		/// This is mainly useful for internal use inside RavenDB, when we are executing
+		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
+		/// aggresive caching.
+		/// </remarks>
+		public IDisposable DisableAggressiveCaching()
+		{
+#if !SILVERLIGHT
+			var old = jsonRequestFactory.AggresiveCacheDuration;
+			jsonRequestFactory.AggresiveCacheDuration = null;
+			return new DisposableAction(() => jsonRequestFactory.AggresiveCacheDuration = old);
+#else
+			// TODO: with silverlight, we don't currently support aggresive caching
+			return new DisposableAction(() => { });
+#endif
+		}
+
 		/// <summary>
 		/// Setup the context for aggresive caching.
 		/// </summary>
@@ -465,7 +486,7 @@ namespace Raven.Client.Document
 
 			return new DisposableAction(() => jsonRequestFactory.AggresiveCacheDuration = null);
 #else
-			// with silverlight, we rely on the native SL caching mechanism to do our work for us
+			// TODO: with silverlight, we don't currently support aggresive caching
 			return new DisposableAction(() => { });
 #endif
 		}
