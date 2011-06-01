@@ -28,7 +28,8 @@ namespace Raven.Http
 {
 	public abstract class HttpServer : IDisposable
     {
-        protected readonly IResourceStore DefaultResourceStore;
+		private const int MaxConcurrentRequests = 192;
+		protected readonly IResourceStore DefaultResourceStore;
         protected readonly IRavenHttpConfiguration DefaultConfiguration;
 
         private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
@@ -43,7 +44,7 @@ namespace Raven.Http
 
 		public int NumberOfRequests
 		{
-			get { return reqNum; }
+			get { return Thread.VolatileRead(ref reqNum); }
 		}
 
 		[ImportMany]
@@ -68,10 +69,15 @@ namespace Raven.Http
 
         // concurrent requests
         // we set 1/4 aside for handling background tasks
-        private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(192);
+        private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(MaxConcurrentRequests);
         private Timer databasesCleanupTimer;
 
-        protected HttpServer(IRavenHttpConfiguration configuration, IResourceStore resourceStore)
+		public bool HasPendingRequests
+		{
+			get { return concurretRequestSemaphore.CurrentCount != MaxConcurrentRequests; }
+		}
+
+		protected HttpServer(IRavenHttpConfiguration configuration, IResourceStore resourceStore)
         {
             DefaultResourceStore = resourceStore;
             DefaultConfiguration = configuration;
@@ -484,7 +490,7 @@ namespace Raven.Http
 
 		public void ResetNumberOfRequests()
 		{
-			reqNum = 0;
+			Interlocked.Exchange(ref reqNum, 0);
 		}
     }
 }
