@@ -25,7 +25,7 @@ namespace Raven.Tests.Bugs
 			                                                                      	};
 
 
-			var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode(query, new DocumentConvention(), "docs", false);
+			var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<Coin>(query, new DocumentConvention(), "docs", false);
 
 			Assert.Equal("docs\r\n\t.GroupBy(y => y.Denomination)\r\n\t.Select(g => new {Denomination = g.Key, Cost = g.Sum(z => ((double)z.Cost))})", code);
 		}
@@ -44,7 +44,7 @@ namespace Raven.Tests.Bugs
                                                                                         };
 
 
-            var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode(query, new DocumentConvention(), "docs", false);
+			var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<Coin>(query, new DocumentConvention(), "docs", false);
 
             Assert.Equal("docs\r\n\t.GroupBy(y => y.Denomination)\r\n\t.Select(g => new {Denomination = g.Key, Cost = ((double)g.First().Cost).ToString()})", code);
         } 

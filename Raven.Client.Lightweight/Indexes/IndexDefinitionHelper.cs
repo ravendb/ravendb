@@ -15,7 +15,7 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Perform the actual generation
 		/// </summary>
-		public static string PruneToFailureLinqQueryAsStringToWorkableCode(
+		public static string PruneToFailureLinqQueryAsStringToWorkableCode<TQueryRoot>(
 			LambdaExpression expr,
 			DocumentConvention convention,
 			string querySource, bool translateIdentityProperty)
@@ -25,7 +25,6 @@ namespace Raven.Client.Indexes
 			var expression = expr.Body;
 
 			string queryRootName = null;
-
 			switch (expression.NodeType)
 			{
 				case ExpressionType.ConvertChecked:
@@ -47,7 +46,7 @@ namespace Raven.Client.Indexes
 			}
 
 #if !NET_3_5
-			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, translateIdentityProperty, queryRootName, expression);
+			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, translateIdentityProperty, typeof(TQueryRoot), queryRootName, expression);
 #else
             var linqQuery =expression.ToString();
 #endif
