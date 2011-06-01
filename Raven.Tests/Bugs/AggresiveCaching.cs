@@ -1,10 +1,7 @@
 using System;
-using log4net.Appender;
-using log4net.Config;
-using log4net.Filter;
-using log4net.Layout;
+using System.Threading;
 using Raven.Client.Document;
-using Raven.Http;
+using Raven.Server;
 using Xunit;
 using System.Linq;
 
@@ -24,6 +21,7 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 				}
 
+				WaitForAllRequestsToComplete(server);
 				server.Server.ResetNumberOfRequests();
 
 				for (int i = 0; i < 5; i++)
@@ -37,8 +35,16 @@ namespace Raven.Tests.Bugs
 					}
 
 				}
+			
+				WaitForAllRequestsToComplete(server);
 				Assert.Equal(1, server.Server.NumberOfRequests);
 			}
+		}
+
+		private void WaitForAllRequestsToComplete(RavenDbServer server)
+		{
+			while(server.Server.HasPendingRequests)
+				Thread.Sleep(25);
 		}
 
 		[Fact]
@@ -53,6 +59,7 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 				}
 
+				WaitForAllRequestsToComplete(server);
 				server.Server.ResetNumberOfRequests();
 
 				for (int i = 0; i < 5; i++)
@@ -66,6 +73,8 @@ namespace Raven.Tests.Bugs
 					}
 
 				}
+				
+				WaitForAllRequestsToComplete(server);
 				Assert.Equal(1, server.Server.NumberOfRequests);
 			}
 		}
@@ -82,6 +91,7 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 				}
 
+				WaitForAllRequestsToComplete(server);
 				server.Server.ResetNumberOfRequests();
 
 				for (int i = 0; i < 5; i++)
@@ -97,6 +107,8 @@ namespace Raven.Tests.Bugs
 					}
 
 				}
+			
+				WaitForAllRequestsToComplete(server);
 				Assert.NotEqual(1, server.Server.NumberOfRequests);
 			}
 		}

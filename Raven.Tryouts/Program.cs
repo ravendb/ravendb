@@ -1,5 +1,10 @@
 ﻿using System;
 using log4net.Appender;
+using log4net.Config;
+using log4net.Filter;
+using log4net.Layout;
+using Raven.Http;
+using Raven.Tests.Bugs;
 using Raven.Tests.Stress;
 
 namespace Raven.Tryouts
@@ -8,8 +13,25 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			var tester = new StressTester();
-			tester.munin_stress_testing_ravendb_simple_object_in_filesystem();
+			//var appender = new ConsoleAppender
+			//{
+			//    Layout = new SimpleLayout()
+			//};
+			//appender.AddFilter(new LoggerMatchFilter
+			//{
+			//    AcceptOnMatch = true,
+			//    LoggerToMatch = typeof(HttpServer).FullName
+			//});
+			//appender.AddFilter(new DenyAllFilter());
+
+			//BasicConfigurator.Configure(appender);
+
+			for (int i = 0; i < 100; i++)
+			{
+				Console.WriteLine(i);
+				new AggresiveCaching().CanAggresivelyCacheLoads();
+
+			}
 		}
 	}
 }
