@@ -113,5 +113,10 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The conventions.</value>
 		DocumentConvention Conventions { get; }
+
+		/// <summary>
+		/// Gets or sets the URL.
+		/// </summary>
+		string Url { get; }
 	}
 }

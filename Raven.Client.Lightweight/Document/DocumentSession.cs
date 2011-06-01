@@ -312,11 +312,11 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GetDocumentUrl(object entity)
 		{
-			if (string.IsNullOrEmpty(documentStore.Url))
+			if (string.IsNullOrEmpty(DocumentStore.Url))
 				throw new InvalidOperationException("Could not provide document url for embedded instance");
 
 			DocumentMetadata value;
-			string baseUrl = documentStore.Url.EndsWith("/") ? documentStore.Url + "docs/" : documentStore.Url + "/docs/";
+			string baseUrl = DocumentStore.Url.EndsWith("/") ? DocumentStore.Url + "docs/" : DocumentStore.Url + "/docs/";
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
 			{
 				string id;

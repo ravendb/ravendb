@@ -217,7 +217,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Gets or sets the URL.
 		/// </summary>
-		/// <value>The URL.</value>
 		public string Url { get; set; }
 
 		/// <summary>

@@ -16,6 +16,11 @@ namespace Raven.Client
     /// </summary>
     public interface IAdvancedDocumentSessionOperations
     {
+		/// <summary>
+		/// The document store associated with this session
+		/// </summary>
+		IDocumentStore DocumentStore { get; }
+
         /// <summary>
         /// Returns whatever a document with the specified id is loaded in the 
         /// current session

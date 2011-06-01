@@ -62,10 +62,16 @@ namespace Raven.Client.Document
 		/// Translate between a key and its associated entity
 		/// </summary>
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
-		/// <summary>
+		
+		private readonly DocumentStore documentStore;
+
+		///<summary>
 		/// The document store associated with this session
-		/// </summary>
-		protected DocumentStore documentStore;
+		///</summary>
+		public IDocumentStore DocumentStore
+		{
+			get { return documentStore; }
+		}
 
 		/// <summary>
 		/// The query listeners allow to modify queries before it is executed

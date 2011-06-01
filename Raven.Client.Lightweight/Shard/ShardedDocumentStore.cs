@@ -132,7 +132,7 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession()).ToArray());
+			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession()).ToArray(), this);
 		}
 
 		/// <summary>
@@ -140,7 +140,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public IDocumentSession OpenSession(string database)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database)).ToArray());
+			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database)).ToArray(), this);
 		}
 
 		/// <summary>
@@ -148,7 +148,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database, credentialsForSession)).ToArray());
+			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database, credentialsForSession)).ToArray(), this);
 		}
 
 		/// <summary>
@@ -157,7 +157,7 @@ namespace Raven.Client.Shard
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(credentialsForSession)).ToArray());
+			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(credentialsForSession)).ToArray(), this);
 		}
 
 		/// <summary>
@@ -177,6 +177,14 @@ namespace Raven.Client.Shard
 		public DocumentConvention Conventions
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a database conventions. you need to explicitly use the shard instances to get access to the database commands"); }
+		}
+
+		/// <summary>
+		/// Gets or sets the URL.
+		/// </summary>
+		public string Url
+		{
+			get { throw new NotImplementedException("There isn't a single url when using sharding"); }
 		}
 
 		/// <summary>

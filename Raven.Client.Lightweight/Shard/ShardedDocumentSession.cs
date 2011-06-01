@@ -179,10 +179,12 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <param name="shardStrategy">The shard strategy.</param>
 		/// <param name="shardSessions">The shard sessions.</param>
-		public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
+		/// <param name="documentStore"></param>
+		public ShardedDocumentSession(IShardStrategy shardStrategy, IDocumentSession[] shardSessions, ShardedDocumentStore documentStore)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardSessions = shardSessions;
+			this.documentStore = documentStore;
 
 			foreach (var shardSession in shardSessions)
 			{
@@ -194,6 +196,7 @@ namespace Raven.Client.Shard
 
 		private readonly IShardStrategy shardStrategy;
 		private readonly IDocumentSession[] shardSessions;
+		private readonly ShardedDocumentStore documentStore;
 
 		/// <summary>
 		/// Gets the database commands.
@@ -259,6 +262,14 @@ namespace Raven.Client.Shard
 		public T[] Load<T>(params string[] ids)
 		{
 			return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
+		}
+
+		/// <summary>
+		/// The document store associated with this session
+		/// </summary>
+		public IDocumentStore DocumentStore
+		{
+			get { return documentStore; }
 		}
 
 		/// <summary>
