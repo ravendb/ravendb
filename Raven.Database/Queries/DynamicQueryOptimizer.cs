@@ -42,7 +42,11 @@ namespace Raven.Database.Queries
 						if (abstractViewGenerator.ViewText.Contains("where")) // without a where clause
 							return false;
 
-						if (abstractViewGenerator.ViewText.Contains("IEnumerable")) // we can't choose an index that flattens the document
+						// we can't select an index that has SelectMany in it, because it result in invalid results when
+						// you query it for things like Count, see https://github.com/ravendb/ravendb/issues/250
+						// for indexes with internal projections, we use the exact match based on the generated index name
+						// rather than selecting the optimal one
+						if (abstractViewGenerator.CountOfSelectMany > 1) 
 							return false;
 
 						if (abstractViewGenerator.ForEntityName != entityName) // for the specified entity name
