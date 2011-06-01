@@ -23,6 +23,14 @@ namespace Raven.Client.Connection
 
 		internal int NumOfCachedRequests;
 
+		///<summary>
+		/// Create a new instace of the http json request factory
+		///</summary>
+		public HttpJsonRequestFactory()
+		{
+			AggresiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
+		}
+
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
@@ -60,6 +68,16 @@ namespace Raven.Client.Connection
 			var cachedRequest = (CachedRequest)cache.Get(url);
 			if (cachedRequest == null)
 				return;
+			if (AggresiveCacheDuration.Value != null)
+			{
+				var duraion = AggresiveCacheDuration.Value.Value;
+				if(duraion.Seconds > 0)
+					request.webRequest.Headers["Cache-Control"] = "max-age=" + duraion.Seconds;
+
+				if ((DateTimeOffset.Now - cachedRequest.Time) < duraion) // can serve directly from local cache
+					request.SkipServerCheck = true;
+			}
+
 			request.CachedRequestDetails = cachedRequest;
 			request.webRequest.Headers["If-None-Match"] = cachedRequest.Headers["ETag"];
 		}
@@ -71,6 +89,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public void ResetCache()
 		{
+			if (cache != null)
+				cache.Dispose();
+
 			cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
 			NumOfCachedRequests = 0;
 		}
@@ -85,6 +106,11 @@ namespace Raven.Client.Connection
 		{
 			get { return NumOfCachedRequests; }
 		}
+
+		///<summary>
+		/// The aggresive cache duration
+		///</summary>
+		public ThreadLocal<TimeSpan?> AggresiveCacheDuration { get; private set; }
 
 		internal string GetCachedResponse(HttpJsonRequest httpJsonRequest)
 		{
@@ -104,6 +130,7 @@ namespace Raven.Client.Connection
 				cache.Set(httpJsonRequest.Url, new CachedRequest
 				{
 					Data = text,
+					Time = DateTimeOffset.Now,
 					Headers = response.Headers
 				}, new CacheItemPolicy()); // cache as much as possible, for as long as possible, using the default cache limits
 			}
@@ -116,6 +143,13 @@ namespace Raven.Client.Connection
 		public void Dispose()
 		{
 			cache.Dispose();
+		}
+
+		internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)
+		{
+			if (httpJsonRequest.CachedRequestDetails == null)
+				throw new InvalidOperationException("Cannot update cached response from a request that has no cached infomration");
+			httpJsonRequest.CachedRequestDetails.Time = DateTimeOffset.Now;
 		}
 	}
 }

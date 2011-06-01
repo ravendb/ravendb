@@ -9,6 +9,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
@@ -59,6 +60,13 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IAsyncResult BeginReadResponseString(AsyncCallback callback, object state)
 		{
+			if (SkipServerCheck)
+			{
+				var taskCompletionSource = new TaskCompletionSource<HttpJsonRequest>();
+				taskCompletionSource.SetResult(this);
+				return taskCompletionSource.Task;
+			}
+
 			return webRequest.BeginGetResponse(callback, state);
 		}
 
@@ -69,6 +77,14 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string EndReadResponseString(IAsyncResult result)
 		{
+			if (SkipServerCheck)
+			{
+				var disposable = result as IDisposable;
+				if(disposable!=null)
+					disposable.Dispose();
+				return factory.GetCachedResponse(this);
+			}
+
 			return ReadStringInternal(() => webRequest.EndGetResponse(result));
 		}
 
@@ -78,6 +94,9 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string ReadResponseString()
 		{
+			if (SkipServerCheck)
+				return factory.GetCachedResponse(this);
+
 			return ReadStringInternal(webRequest.GetResponse);
 		}
 
@@ -99,6 +118,7 @@ namespace Raven.Client.Connection
 				if (httpWebResponse.StatusCode == HttpStatusCode.NotModified
 					&& CachedRequestDetails != null)
 				{
+					factory.UpdateCacheTime(this);
 					return factory.GetCachedResponse(this);
 				}
 
@@ -125,6 +145,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <value>The response status code.</value>
 		public HttpStatusCode ResponseStatusCode { get; set; }
+
+		///<summary>
+		/// Whatever we can skip the server check and directly return the cached result
+		///</summary>
+		public bool SkipServerCheck { get; set; }
 
 		private void WriteMetadata(RavenJObject metadata)
 		{
@@ -180,7 +205,9 @@ namespace Raven.Client.Connection
 							webRequest.Connection = value;
 							break;
 					}
-				} else {
+				} 
+				else 
+				{
 					webRequest.Headers[headerName] = value;
 				}
 			}
