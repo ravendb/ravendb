@@ -33,25 +33,7 @@ namespace Raven.Http.Abstractions
     		response.AddHeader(name, value);
     	}
 
-    	private Stream outputStream;
-    	public Stream OutputStream
-    	{
-    		get
-    		{
-    			FlushHeaders();
-    			return outputStream;
-    		}
-    		set { outputStream = value; }
-    	}
-
-    	private void FlushHeaders()
-    	{
-    		foreach (var delayedHeader in delayedHeaders)
-    		{
-    			response.AddHeader(delayedHeader.Key, delayedHeader.Value);
-    		}
-			delayedHeaders.Clear();
-    	}
+    	public Stream OutputStream { get; set; }
 
     	public long ContentLength64
         {
