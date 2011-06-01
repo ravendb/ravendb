@@ -41,7 +41,12 @@ namespace Raven.Http
         private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>();
 
 
-        [ImportMany]
+		public int NumberOfRequests
+		{
+			get { return reqNum; }
+		}
+
+		[ImportMany]
 		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
         public IRavenHttpConfiguration Configuration
@@ -476,5 +481,10 @@ namespace Raven.Http
             }
             return true;
         }
+
+		public void ResetNumberOfRequests()
+		{
+			reqNum = 0;
+		}
     }
 }

@@ -458,6 +458,9 @@ namespace Raven.Client.Document
 		public IDisposable AggresivelyCacheFor(TimeSpan cacheDuration)
 		{
 #if !SILVERLIGHT
+			if(cacheDuration.TotalSeconds < 1)
+				throw new ArgumentException("cacheDuration must be longer than a single second");
+
 			jsonRequestFactory.AggresiveCacheDuration = cacheDuration;
 
 			return new DisposableAction(() => jsonRequestFactory.AggresiveCacheDuration = null);
