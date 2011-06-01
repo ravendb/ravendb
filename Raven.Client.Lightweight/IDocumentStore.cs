@@ -26,6 +26,17 @@ namespace Raven.Client
 	public interface IDocumentStore : IDisposable
 	{
 		/// <summary>
+		/// Setup the context for aggresive caching.
+		/// </summary>
+		/// <param name="cahceDuration">Specify the aggresive cache duration</param>
+		/// <remarks>
+		/// Aggresive caching means that we will not check the server to see whatever the response
+		/// we provide is current or not, but will serve the information directly from the local cache
+		/// without touching the server.
+		/// </remarks>
+		IDisposable AggresivelyCacheFor(TimeSpan cahceDuration);
+
+		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>

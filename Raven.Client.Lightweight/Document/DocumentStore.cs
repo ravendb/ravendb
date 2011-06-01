@@ -6,6 +6,7 @@
 using System;
 using System.Net;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -45,6 +46,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value>The shared operations headers.</value>
 #if !SILVERLIGHT
+	
 		public System.Collections.Specialized.NameValueCollection SharedOperationsHeaders { get; private set; }
 #else
 		public System.Collections.Generic.IDictionary<string,string> SharedOperationsHeaders { get; private set; }
@@ -442,6 +444,27 @@ namespace Raven.Client.Document
 		{
 			conversionListeners = conversionListeners.Concat(new[] {conversionListener,}).ToArray();
 			return this;
+		}
+
+		/// <summary>
+		/// Setup the context for aggresive caching.
+		/// </summary>
+		/// <param name="cacheDuration">Specify the aggresive cache duration</param>
+		/// <remarks>
+		/// Aggresive caching means that we will not check the server to see whatever the response
+		/// we provide is current or not, but will serve the information directly from the local cache
+		/// without touching the server.
+		/// </remarks>
+		public IDisposable AggresivelyCacheFor(TimeSpan cacheDuration)
+		{
+#if !SILVERLIGHT
+			jsonRequestFactory.AggresiveCacheDuration.Value = cacheDuration;
+
+			return new DisposableAction(() => jsonRequestFactory.AggresiveCacheDuration.Value = null);
+#else
+			// with silverlight, we rely on the native SL caching mechanism to do our work for us
+			return new DisposableAction(() => { });
+#endif
 		}
 
 #if !NET_3_5

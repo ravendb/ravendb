@@ -12,6 +12,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 #if !NET_3_5
+using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
@@ -124,6 +125,28 @@ namespace Raven.Client.Shard
 
 #endif
 
+		/// <summary>
+		/// Setup the context for aggresive caching.
+		/// </summary>
+		/// <param name="cacheDuration">Specify the aggresive cache duration</param>
+		/// <remarks>
+		/// Aggresive caching means that we will not check the server to see whatever the response
+		/// we provide is current or not, but will serve the information directly from the local cache
+		/// without touching the server.
+		/// </remarks>
+		public IDisposable AggresivelyCacheFor(TimeSpan cacheDuration)
+		{
+			var disposables = shards.Select(shard => shard.AggresivelyCacheFor(cacheDuration)).ToList();
+
+			return new DisposableAction(() =>
+			{
+				foreach (var disposable in disposables)
+				{
+					disposable.Dispose();
+				}
+			});
+		}
+
 #if !SILVERLIGHT
 		
 		/// <summary>
@@ -184,7 +207,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public string Url
 		{
-			get { throw new NotImplementedException("There isn't a single url when using sharding"); }
+			get { throw new NotImplementedException("There isn't a single url wen"); }
 		}
 
 		/// <summary>
