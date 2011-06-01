@@ -13,18 +13,20 @@ namespace Raven.StackOverflow.Etl.Posts
 {
 	public class PostsProcess : EtlProcess
 	{
-		private readonly string path;
+		private readonly string inputPath;
+		private readonly string _outputPath;
 
-		public PostsProcess(string path)
+		public PostsProcess(string inputPath, string outputPath)
 		{
-			this.path = path;
+			inputPath = inputPath;
+			_outputPath = outputPath;
 		}
 
 		protected override void Initialize()
 		{
 			PipelineExecuter = new SingleThreadedPipelineExecuter();
-			Register(new XmlRowOperationFile(Path.Combine(path, "posts.xml")));
-			Register(new RowToDatabase("Posts", doc => "posts/" + doc["Id"]));
+			Register(new XmlRowOperationFile(Path.Combine(inputPath, "posts.xml")));
+			Register(new RowToDatabase("Posts", doc => "posts/" + doc["Id"], _outputPath));
 		}
 	}
 }

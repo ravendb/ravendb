@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using ETL;
 using Raven.Database;
 using Raven.StackOverflow.Etl.Generic;
 using Rhino.Etl.Core;
@@ -14,18 +15,20 @@ namespace Raven.StackOverflow.Etl.Posts
 {
 	public class CommentsProcess : EtlProcess
 	{
-		private readonly string path;
+		private readonly string _inputDirectory;
+		private readonly string _outputDirectory;
 
-		public CommentsProcess(string path)
+		public CommentsProcess(string inputDirectory, string outputDirectory)
 		{
-			this.path = path;
+			_inputDirectory = inputDirectory;
+			_outputDirectory = outputDirectory;
 		}
 
 		protected override void Initialize()
 		{
-			PipelineExecuter = new SingleThreadedPipelineExecuter();
-			Register(new XmlRowOperationFile(Path.Combine(path, "comments.xml")));
-			Register(new AddCommentsToPost());
+			PipelineExecuter = new SimplePipelineExecutor();
+			Register(new XmlRowOperationFile(Path.Combine(_inputDirectory, "comments.xml")));
+			Register(new AddCommentsToPost(_outputDirectory));
 		}
 	}
 }

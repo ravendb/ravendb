@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using ETL;
 using Raven.StackOverflow.Etl.Generic;
 using Rhino.Etl.Core;
 using Rhino.Etl.Core.Pipelines;
@@ -13,18 +14,20 @@ namespace Raven.StackOverflow.Etl.Users
 {
 	public class BadgesProcess : EtlProcess
 	{
-		private readonly string path;
+		private readonly string _inputDirectory;
+		private readonly string _outputDirectory;
 
-		public BadgesProcess(string path)
+		public BadgesProcess(string inputDirectory, string outputDirectory)
 		{
-			this.path = path;
+			_inputDirectory = inputDirectory;
+			_outputDirectory = outputDirectory;
 		}
 
 		protected override void Initialize()
 		{
-			PipelineExecuter = new SingleThreadedPipelineExecuter(); 
-			Register(new XmlRowOperationFile(Path.Combine(path, "badges.xml")));
-			Register(new AddBadgesToUser());
+			PipelineExecuter = new SimplePipelineExecutor(); 
+			Register(new XmlRowOperationFile(Path.Combine(_inputDirectory, "badges.xml")));
+			Register(new AddBadgesToUser(_outputDirectory));
 		}
 	}
 }
