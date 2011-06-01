@@ -23,7 +23,9 @@ namespace Raven.Database.Queries
 			// sort of query, which is what we would have to choose anyway.
 			if(indexQuery.AggregationOperation != AggregationOperation.None)
 				return null;
-			
+
+			var items = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2);
+
 			return database.IndexDefinitionStorage.IndexNames
 					.Where(indexName =>
 					{
@@ -42,7 +44,6 @@ namespace Raven.Database.Queries
 
 						if (abstractViewGenerator.ForEntityName != entityName) // for the specified entity name
 							return false;
-						var items = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2);
 
 						return items.All(abstractViewGenerator.ContainsFieldOnMap);
 					})
