@@ -39,7 +39,7 @@ namespace Raven.Database.Queries
 						if (abstractViewGenerator.TransformResultsDefinition != null)// we can't choose an index with transform results
 							return false;
 
-						if (abstractViewGenerator.ViewText.Contains("where")) // without a where clause
+						if (abstractViewGenerator.HasWhereClause) // without a where clause
 							return false;
 
 						// we can't select an index that has SelectMany in it, because it result in invalid results when

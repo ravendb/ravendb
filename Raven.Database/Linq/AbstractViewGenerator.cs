@@ -27,6 +27,7 @@ namespace Raven.Database.Linq
         private readonly HashSet<string> fields = new HashSet<string>();
         private bool? containsProjection;
 		private int? countOfSelectMany;
+		private bool? hasWhereClause;
 		private readonly HashSet<string> mapFields = new HashSet<string>();
 		private readonly HashSet<string> reduceFields = new HashSet<string>();
 
@@ -68,7 +69,19 @@ namespace Raven.Database.Linq
     		get { return fields.ToArray(); }
     	}
 
-    	protected AbstractViewGenerator()
+		public bool HasWhereClause
+		{
+			get
+			{
+				if(hasWhereClause == null)
+				{
+					hasWhereClause = ViewText.Contains("where");
+				}
+				return hasWhereClause.Value;
+			}
+		}
+
+		protected AbstractViewGenerator()
         {
             Stores = new Dictionary<string, FieldStorage>();
             Indexes = new Dictionary<string, FieldIndexing>();
