@@ -13,7 +13,6 @@ namespace Raven.Http.Abstractions
     public class HttpListenerResponseAdapter : IHttpResponse
     {
         private readonly HttpListenerResponse response;
-    	private readonly Dictionary<string, string> delayedHeaders = new Dictionary<string, string>();
 
         public HttpListenerResponseAdapter(HttpListenerResponse response)
         {
@@ -29,8 +28,8 @@ namespace Raven.Http.Abstractions
 
     	public void AddHeader(string name, string value)
     	{
-			if(name == "ETag")
-				delayedHeaders["Expires"] = "Sat, 01 Jan 2000 00:00:00 GMT";
+			if (name == "ETag" && string.IsNullOrEmpty(response.Headers["Cache-Control"]))
+				response.AddHeader("Expires", "Sat, 01 Jan 2000 00:00:00 GMT");
     		response.AddHeader(name, value);
     	}
 

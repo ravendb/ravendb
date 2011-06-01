@@ -3,9 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Web;
 
@@ -14,7 +11,6 @@ namespace Raven.Http.Abstractions
 	public class HttpResponseAdapter : IHttpResponse
 	{
 		private readonly HttpResponse response;
-		private readonly Dictionary<string, string> delayedHeaders = new Dictionary<string, string>();
         
 		public HttpResponseAdapter(HttpResponse response)
 		{
@@ -25,8 +21,8 @@ namespace Raven.Http.Abstractions
 
 		public void AddHeader(string name, string value)
 		{
-			if (name == "ETag")
-				delayedHeaders["Expires"] = "Sat, 01 Jan 2000 00:00:00 GMT";
+			if (name == "ETag" && string.IsNullOrEmpty(response.CacheControl))
+				response.AddHeader("Expires", "Sat, 01 Jan 2000 00:00:00 GMT");
     		
 			response.AddHeader(name, value);
 		}
@@ -35,19 +31,8 @@ namespace Raven.Http.Abstractions
 		{
 			get
 			{
-				FlushHeaders();
 				return response.OutputStream;
 			}
-		}
-
-
-		private void FlushHeaders()
-		{
-			foreach (var delayedHeader in delayedHeaders)
-			{
-				response.AddHeader(delayedHeader.Key, delayedHeader.Value);
-			}
-			delayedHeaders.Clear();
 		}
 
 		public long ContentLength64
