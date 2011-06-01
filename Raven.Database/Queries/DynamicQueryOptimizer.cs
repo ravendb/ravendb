@@ -24,7 +24,7 @@ namespace Raven.Database.Queries
 			if(indexQuery.AggregationOperation != AggregationOperation.None)
 				return null;
 
-			var items = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2);
+			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2);
 
 			return database.IndexDefinitionStorage.IndexNames
 					.Where(indexName =>
@@ -45,7 +45,7 @@ namespace Raven.Database.Queries
 						if (abstractViewGenerator.ForEntityName != entityName) // for the specified entity name
 							return false;
 
-						return items.All(abstractViewGenerator.ContainsFieldOnMap);
+						return fieldsQueriedUpon.All(abstractViewGenerator.ContainsFieldOnMap);
 					})
 					.Where(indexName =>
 					{
@@ -61,6 +61,13 @@ namespace Raven.Database.Queries
 								if (indexDefinition.SortOptions.TryGetValue(sortedField.Field, out value) == false)
 									return false;
 							}
+						}
+
+						if(indexDefinition.Analyzers != null)
+						{
+							// none of the fields have custom analyzers
+							if (fieldsQueriedUpon.Any(indexDefinition.Analyzers.ContainsKey)) 
+								return false;
 						}
 
 						return true;
