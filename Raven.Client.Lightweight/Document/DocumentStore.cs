@@ -458,9 +458,9 @@ namespace Raven.Client.Document
 		public IDisposable AggresivelyCacheFor(TimeSpan cacheDuration)
 		{
 #if !SILVERLIGHT
-			jsonRequestFactory.AggresiveCacheDuration.Value = cacheDuration;
+			jsonRequestFactory.AggresiveCacheDuration = cacheDuration;
 
-			return new DisposableAction(() => jsonRequestFactory.AggresiveCacheDuration.Value = null);
+			return new DisposableAction(() => jsonRequestFactory.AggresiveCacheDuration = null);
 #else
 			// with silverlight, we rely on the native SL caching mechanism to do our work for us
 			return new DisposableAction(() => { });

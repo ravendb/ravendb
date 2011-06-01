@@ -9,7 +9,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
@@ -62,9 +62,7 @@ namespace Raven.Client.Connection
 		{
 			if (SkipServerCheck)
 			{
-				var taskCompletionSource = new TaskCompletionSource<HttpJsonRequest>();
-				taskCompletionSource.SetResult(this);
-				return taskCompletionSource.Task;
+				return new ImmedateCompletionResult();
 			}
 
 			return webRequest.BeginGetResponse(callback, state);
@@ -290,5 +288,49 @@ namespace Raven.Client.Connection
 				webRequest.Headers[kvp.Key] = operationsHeaders[kvp.Value];
 			}
 		}
+
+		private class ImmedateCompletionResult : IAsyncResult, IDisposable
+		{
+			private ManualResetEvent manualResetEvent;
+
+			public bool IsCompleted
+			{
+				get { return true; }
+			}
+
+			public WaitHandle AsyncWaitHandle
+			{
+				get
+				{
+					if (manualResetEvent == null)
+					{
+						lock (this)
+						{
+							if (manualResetEvent == null)
+								manualResetEvent = new ManualResetEvent(true);
+						}
+					}
+					return manualResetEvent;
+				}
+			}
+
+			public object AsyncState
+			{
+				get { return null; }
+			}
+
+			public bool CompletedSynchronously
+			{
+				get { return true; }
+			}
+
+			public void Dispose()
+			{
+				if (manualResetEvent != null)
+					manualResetEvent.Close();
+			}
+		}
+
+		
 	}
 }

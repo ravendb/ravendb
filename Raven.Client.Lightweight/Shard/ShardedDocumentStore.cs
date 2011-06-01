@@ -11,8 +11,8 @@ using System.Collections.Specialized;
 #endif
 using System.Linq;
 using System.Net;
-#if !NET_3_5
 using Raven.Abstractions.Extensions;
+#if !NET_3_5
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;

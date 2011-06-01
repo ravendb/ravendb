@@ -23,14 +23,6 @@ namespace Raven.Client.Connection
 
 		internal int NumOfCachedRequests;
 
-		///<summary>
-		/// Create a new instace of the http json request factory
-		///</summary>
-		public HttpJsonRequestFactory()
-		{
-			AggresiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
-		}
-
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
@@ -70,7 +62,7 @@ namespace Raven.Client.Connection
 				return;
 			if (AggresiveCacheDuration.Value != null)
 			{
-				var duraion = AggresiveCacheDuration.Value.Value;
+				var duraion = AggresiveCacheDuration.Value;
 				if(duraion.Seconds > 0)
 					request.webRequest.Headers["Cache-Control"] = "max-age=" + duraion.Seconds;
 
@@ -107,10 +99,29 @@ namespace Raven.Client.Connection
 			get { return NumOfCachedRequests; }
 		}
 
+#if !NET_3_5
 		///<summary>
 		/// The aggresive cache duration
 		///</summary>
-		public ThreadLocal<TimeSpan?> AggresiveCacheDuration { get; private set; }
+		public TimeSpan? AggresiveCacheDuration
+		{
+			get { return aggresiveCacheDuration.Value; }
+			set { aggresiveCacheDuration.Value = value; }
+		}
+
+		private readonly ThreadLocal<TimeSpan?> aggresiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
+#else
+		[ThreadStatic] private static TimeSpan? aggresiveCacheDuration;
+
+		///<summary>
+		/// The aggresive cache duration
+		///</summary>
+		public TimeSpan? AggresiveCacheDuration
+		{
+			get { return aggresiveCacheDuration; }
+			set { aggresiveCacheDuration = value; }
+		}
+#endif
 
 		internal string GetCachedResponse(HttpJsonRequest httpJsonRequest)
 		{
