@@ -60,7 +60,7 @@ namespace Raven.Client.Connection
 			var cachedRequest = (CachedRequest)cache.Get(url);
 			if (cachedRequest == null)
 				return;
-			if (AggresiveCacheDuration.Value != null)
+			if (AggresiveCacheDuration != null)
 			{
 				var duraion = AggresiveCacheDuration.Value;
 				if(duraion.Seconds > 0)
