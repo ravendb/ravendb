@@ -43,7 +43,7 @@ namespace Raven.Client.Connection
 			this.Url = url;
 			this.factory = factory;
 			this.Method = method;
-			webRequest = WebRequest.Create(url) as HttpWebRequest;
+			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
 			WriteMetadata(metadata);
 			webRequest.Method = method;
