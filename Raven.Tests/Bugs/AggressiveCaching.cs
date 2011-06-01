@@ -7,10 +7,10 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class AggresiveCaching : RemoteClientTest
+	public class AggressiveCaching : RemoteClientTest
 	{
 		[Fact]
-		public void CanAggresivelyCacheLoads()
+		public void CanAggressivelyCacheLoads()
 		{
 			using(var server = GetNewServer())
 			using(var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
@@ -28,7 +28,7 @@ namespace Raven.Tests.Bugs
 				{
 					using (var session = store.OpenSession())
 					{
-						using (session.Advanced.DocumentStore.AggresivelyCacheFor(TimeSpan.FromMinutes(5)))
+						using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 						{
 							session.Load<User>("users/1");
 						}
@@ -48,7 +48,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void CanAggresivelyCacheQueries()
+		public void CanAggressivelyCacheQueries()
 		{
 			using (var server = GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
@@ -66,7 +66,7 @@ namespace Raven.Tests.Bugs
 				{
 					using (var session = store.OpenSession())
 					{
-						using (session.Advanced.DocumentStore.AggresivelyCacheFor(TimeSpan.FromMinutes(5)))
+						using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 						{
 							session.Query<User>().ToList();
 						}
@@ -80,7 +80,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void WaitForUnstaleResultIgnoresAggresiveCaching()
+		public void WaitForUnstaleResultIgnoresAggressiveCaching()
 		{
 			using (var server = GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
@@ -98,7 +98,7 @@ namespace Raven.Tests.Bugs
 				{
 					using (var session = store.OpenSession())
 					{
-						using (session.Advanced.DocumentStore.AggresivelyCacheFor(TimeSpan.FromMinutes(5)))
+						using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 						{
 							session.Query<User>()
 								.Customize(x=>x.WaitForNonStaleResults())

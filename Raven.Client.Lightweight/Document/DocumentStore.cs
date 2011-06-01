@@ -448,45 +448,45 @@ namespace Raven.Client.Document
 
 
 		/// <summary>
-		/// Setup the context for no aggresive caching
+		/// Setup the context for no aggressive caching
 		/// </summary>
 		/// <remarks>
 		/// This is mainly useful for internal use inside RavenDB, when we are executing
 		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
-		/// aggresive caching.
+		/// aggressive caching.
 		/// </remarks>
 		public IDisposable DisableAggressiveCaching()
 		{
 #if !SILVERLIGHT
-			var old = jsonRequestFactory.AggresiveCacheDuration;
-			jsonRequestFactory.AggresiveCacheDuration = null;
-			return new DisposableAction(() => jsonRequestFactory.AggresiveCacheDuration = old);
+			var old = jsonRequestFactory.AggressiveCacheDuration;
+			jsonRequestFactory.AggressiveCacheDuration = null;
+			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);
 #else
-			// TODO: with silverlight, we don't currently support aggresive caching
+			// TODO: with silverlight, we don't currently support aggressive caching
 			return new DisposableAction(() => { });
 #endif
 		}
 
 		/// <summary>
-		/// Setup the context for aggresive caching.
+		/// Setup the context for aggressive caching.
 		/// </summary>
-		/// <param name="cacheDuration">Specify the aggresive cache duration</param>
+		/// <param name="cacheDuration">Specify the aggressive cache duration</param>
 		/// <remarks>
-		/// Aggresive caching means that we will not check the server to see whatever the response
+		/// Aggressive caching means that we will not check the server to see whatever the response
 		/// we provide is current or not, but will serve the information directly from the local cache
 		/// without touching the server.
 		/// </remarks>
-		public IDisposable AggresivelyCacheFor(TimeSpan cacheDuration)
+		public IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
 #if !SILVERLIGHT
 			if(cacheDuration.TotalSeconds < 1)
 				throw new ArgumentException("cacheDuration must be longer than a single second");
 
-			jsonRequestFactory.AggresiveCacheDuration = cacheDuration;
+			jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
 
-			return new DisposableAction(() => jsonRequestFactory.AggresiveCacheDuration = null);
+			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = null);
 #else
-			// TODO: with silverlight, we don't currently support aggresive caching
+			// TODO: with silverlight, we don't currently support aggressive caching
 			return new DisposableAction(() => { });
 #endif
 		}

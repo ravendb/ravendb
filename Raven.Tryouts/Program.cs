@@ -29,7 +29,7 @@ namespace Raven.Tryouts
 			for (int i = 0; i < 100; i++)
 			{
 				Console.WriteLine(i);
-				new AggresiveCaching().CanAggresivelyCacheLoads();
+				new aggressiveCaching().CanaggressivelyCacheLoads();
 
 			}
 		}

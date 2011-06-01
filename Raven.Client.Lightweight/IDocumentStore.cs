@@ -26,23 +26,23 @@ namespace Raven.Client
 	public interface IDocumentStore : IDisposable
 	{
 		/// <summary>
-		/// Setup the context for aggresive caching.
+		/// Setup the context for aggressive caching.
 		/// </summary>
-		/// <param name="cahceDuration">Specify the aggresive cache duration</param>
+		/// <param name="cahceDuration">Specify the aggressive cache duration</param>
 		/// <remarks>
-		/// Aggresive caching means that we will not check the server to see whatever the response
+		/// Aggressive caching means that we will not check the server to see whatever the response
 		/// we provide is current or not, but will serve the information directly from the local cache
 		/// without touching the server.
 		/// </remarks>
-		IDisposable AggresivelyCacheFor(TimeSpan cahceDuration);
+		IDisposable AggressivelyCacheFor(TimeSpan cahceDuration);
 
 		/// <summary>
-		/// Setup the context for no aggresive caching
+		/// Setup the context for no aggressive caching
 		/// </summary>
 		/// <remarks>
 		/// This is mainly useful for internal use inside RavenDB, when we are executing
 		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
-		/// aggresive caching.
+		/// aggressive caching.
 		/// </remarks>
 		IDisposable DisableAggressiveCaching();
 

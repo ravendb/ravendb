@@ -60,9 +60,9 @@ namespace Raven.Client.Connection
 			var cachedRequest = (CachedRequest)cache.Get(url);
 			if (cachedRequest == null)
 				return;
-			if (AggresiveCacheDuration != null)
+			if (AggressiveCacheDuration != null)
 			{
-				var duraion = AggresiveCacheDuration.Value;
+				var duraion = AggressiveCacheDuration.Value;
 				if(duraion.Seconds > 0)
 					request.webRequest.Headers["Cache-Control"] = "max-age=" + duraion.Seconds;
 
@@ -101,25 +101,25 @@ namespace Raven.Client.Connection
 
 #if !NET_3_5
 		///<summary>
-		/// The aggresive cache duration
+		/// The aggressive cache duration
 		///</summary>
-		public TimeSpan? AggresiveCacheDuration
+		public TimeSpan? AggressiveCacheDuration
 		{
-			get { return aggresiveCacheDuration.Value; }
-			set { aggresiveCacheDuration.Value = value; }
+			get { return aggressiveCacheDuration.Value; }
+			set { aggressiveCacheDuration.Value = value; }
 		}
 
-		private readonly ThreadLocal<TimeSpan?> aggresiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
+		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 #else
-		[ThreadStatic] private static TimeSpan? aggresiveCacheDuration;
+		[ThreadStatic] private static TimeSpan? aggressiveCacheDuration;
 
 		///<summary>
-		/// The aggresive cache duration
+		/// The aggressive cache duration
 		///</summary>
-		public TimeSpan? AggresiveCacheDuration
+		public TimeSpan? AggressiveCacheDuration
 		{
-			get { return aggresiveCacheDuration; }
-			set { aggresiveCacheDuration = value; }
+			get { return aggressiveCacheDuration; }
+			set { aggressiveCacheDuration = value; }
 		}
 #endif
 

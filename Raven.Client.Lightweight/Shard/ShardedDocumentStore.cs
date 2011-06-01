@@ -126,17 +126,17 @@ namespace Raven.Client.Shard
 #endif
 
 		/// <summary>
-		/// Setup the context for aggresive caching.
+		/// Setup the context for aggressive caching.
 		/// </summary>
-		/// <param name="cacheDuration">Specify the aggresive cache duration</param>
+		/// <param name="cacheDuration">Specify the aggressive cache duration</param>
 		/// <remarks>
-		/// Aggresive caching means that we will not check the server to see whatever the response
+		/// aggressive caching means that we will not check the server to see whatever the response
 		/// we provide is current or not, but will serve the information directly from the local cache
 		/// without touching the server.
 		/// </remarks>
-		public IDisposable AggresivelyCacheFor(TimeSpan cacheDuration)
+		public IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
-			var disposables = shards.Select(shard => shard.AggresivelyCacheFor(cacheDuration)).ToList();
+			var disposables = shards.Select(shard => shard.AggressivelyCacheFor(cacheDuration)).ToList();
 
 			return new DisposableAction(() =>
 			{
@@ -148,12 +148,12 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Setup the context for no aggresive caching
+		/// Setup the context for no aggressive caching
 		/// </summary>
 		/// <remarks>
 		/// This is mainly useful for internal use inside RavenDB, when we are executing
 		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
-		/// aggresive caching.
+		/// aggressive caching.
 		/// </remarks>
 		public IDisposable DisableAggressiveCaching()
 		{
