@@ -34,7 +34,7 @@ namespace Raven.Tests.Silverlight
 
 			using (var session_for_loading = documentStore.OpenAsyncSession(dbname))
 			{
-				var task = session_for_loading.MultiLoadAsync<Company>(new[] {entity1.Id, entity2.Id});
+				var task = session_for_loading.LoadAsync<Company>(new[] {entity1.Id, entity2.Id});
 				yield return task;
 
 				Assert.AreEqual(entity1.Name, task.Result[0].Name);

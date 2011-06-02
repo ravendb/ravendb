@@ -139,7 +139,7 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <returns></returns>
-		public Task<T[]> MultiLoadAsync<T>(string[] ids)
+		public Task<T[]> LoadAsync<T>(string[] ids)
 		{
 			IncrementRequestCount();
 			return AsyncDatabaseCommands.MultiGetAsync(ids)

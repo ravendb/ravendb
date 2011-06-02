@@ -65,7 +65,7 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <returns></returns>
-		Task<T[]> MultiLoadAsync<T>(string[] ids);
+		Task<T[]> LoadAsync<T>(string[] ids);
 		
 		/// <summary>
 		/// Begins the async save changes operation
