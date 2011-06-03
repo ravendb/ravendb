@@ -11,6 +11,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
 using Raven.Client.Converters;
@@ -259,9 +260,6 @@ namespace Raven.Client.Document
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
 				Converters =
 					{
-						new JsonEnumConverter(),
-						new JsonDateTimeISO8601Converter(),
-                        new JsonDateTimeOffsetConverter(),
 						new JsonLuceneDateTimeConverter(),
 						new JsonFloatConverter(),
                         new JsonNumericConverter<int>(int.TryParse),
@@ -275,6 +273,12 @@ namespace Raven.Client.Document
 #endif
 					}
 			};
+
+			for (var i = Default.Converters.Length -1; i >= 0; i--)
+			{
+				jsonSerializer.Converters.Insert(0, Default.Converters[i]);
+			}
+
 			CustomizeJsonSerializer(jsonSerializer);
 			return jsonSerializer;
 		}
