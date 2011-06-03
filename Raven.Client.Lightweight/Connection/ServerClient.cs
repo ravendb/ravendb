@@ -1118,6 +1118,35 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return json.Values<string>();
 		}
 
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		public void Patch(string key, PatchRequest[] patches)
+		{
+			Patch(key, patches, null);
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		public void Patch(string key, PatchRequest[] patches, Guid? etag)
+		{
+			Batch(new[]
+			      	{
+			      		new PatchCommandData
+			      			{
+			      				Key = key,
+			      				Patches = patches,
+			      				Etag = etag
+			      			}
+			      	});
+		}
+
 		#endregion
 	}
 }

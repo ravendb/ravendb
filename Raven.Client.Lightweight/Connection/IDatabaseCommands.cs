@@ -252,6 +252,21 @@ namespace Raven.Client.Connection
 		///</summary>
 		///<returns></returns>
 		IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		void Patch(string key, PatchRequest[] patches);
+
+		/// <summary>
+		/// Sends a patch request for a specific document
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		void Patch(string key, PatchRequest[] patches, Guid? etag);
 	}
 }
 #endif
