@@ -30,7 +30,7 @@ namespace Raven.Database.Queries
 					.Where(indexName =>
 					{
 						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
-						if (abstractViewGenerator == null) // there is a matching view generator
+						if (abstractViewGenerator == null) // there is no matching view generator
 							return false;
 
 						if (abstractViewGenerator.ReduceDefinition != null) // we can't choose a map/reduce index

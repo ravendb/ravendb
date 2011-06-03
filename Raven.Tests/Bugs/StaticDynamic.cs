@@ -10,19 +10,25 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void IfStaticQueryHasWhere_SeparateDynamicQueryCreated()
 		{
-			var store = NewDocumentStore();
-			new Docs_Flagged().Execute(store);
-			const int docsCount = 10;
+			using (var store = NewDocumentStore())
+			{
+				new Docs_Flagged().Execute(store);
+				const int docsCount = 10;
 
-			CreateDocs(store, docsCount);
+				CreateDocs(store, docsCount);
 
-			var session = store.OpenSession();
+				using (var session = store.OpenSession())
+				{
+					var docsByDynamicIndex = session.Advanced.LuceneQuery<TestDoc>().WaitForNonStaleResults().ToList();
+					Assert.Equal(docsCount, docsByDynamicIndex.Count);
+				}
 
-			var docsByDynamicIndex = session.Advanced.LuceneQuery<TestDoc>().WaitForNonStaleResults().ToList();
-			Assert.Equal(docsCount, docsByDynamicIndex.Count);
-
-			var docsByStaticIndex = session.Advanced.LuceneQuery<TestDoc, Docs_Flagged>().WaitForNonStaleResults().ToList();
-			Assert.Equal(docsCount / 2, docsByStaticIndex.Count);
+				using (var session = store.OpenSession())
+				{
+					var docsByStaticIndex = session.Advanced.LuceneQuery<TestDoc, Docs_Flagged>().WaitForNonStaleResults().ToList();
+					Assert.Equal(docsCount/2, docsByStaticIndex.Count);
+				}
+			}
 		}
 
 		[Fact]
