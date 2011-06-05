@@ -740,6 +740,13 @@ namespace Raven.Client.Indexes
 					this.Out("'");
 					return node;
 				}
+				if(node.Value is Enum)
+				{
+					this.Out(node.Value.GetType().FullName);
+					this.Out('.');
+					this.Out(s);
+					return node;
+				}
 				this.Out(s);
 				return node;
 			}

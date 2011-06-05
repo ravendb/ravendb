@@ -162,6 +162,7 @@
     <Compile Include="Bugs\CanReadLuceneProjectedDateTimeOffset.cs" />
     <Compile Include="Bugs\ComplexDynamicQuery.cs" />
     <Compile Include="Bugs\ConnectionStringParsing.cs" />
+    <Compile Include="Bugs\DateFilter.cs" />
     <Compile Include="Bugs\DuplicatedFiledNames.cs" />
     <Compile Include="Bugs\EntitiesWithAttributes.cs" />
     <Compile Include="Bugs\Indexing\CanIndexNestedObjects.cs" />
