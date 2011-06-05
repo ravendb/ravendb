@@ -7,11 +7,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
-using Raven.Database.Indexing;
 using System.Linq;
 
 namespace Raven.Database.Linq

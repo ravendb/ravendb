@@ -30,7 +30,7 @@ namespace Raven.Database.Queries
 					.Where(indexName =>
 					{
 						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
-						if (abstractViewGenerator == null) // there is a matching view generator
+						if (abstractViewGenerator == null) // there is no matching view generator
 							return false;
 
 						if (abstractViewGenerator.ReduceDefinition != null) // we can't choose a map/reduce index
@@ -39,7 +39,7 @@ namespace Raven.Database.Queries
 						if (abstractViewGenerator.TransformResultsDefinition != null)// we can't choose an index with transform results
 							return false;
 
-						if (abstractViewGenerator.HasWhereClause) // without a where clause
+						if (!abstractViewGenerator.HasWhereClause) // without a where clause
 							return false;
 
 						// we can't select an index that has SelectMany in it, because it result in invalid results when

@@ -380,6 +380,29 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Perform a set based update using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchRequests">The patch requests.</param>
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests)
+		{
+			UpdateByIndex(indexName, queryToUpdate, patchRequests, false);
+		}
+
+		/// <summary>
+		/// Perform a set based deletes using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToDelete">The query to delete.</param>
+		public void DeleteByIndex(string indexName, IndexQuery queryToDelete)
+		{
+			DeleteByIndex(indexName, queryToDelete, false);
+		}
+
+		/// <summary>
 		/// Perform a set based deletes using the specified index.
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
@@ -448,6 +471,35 @@ namespace Raven.Client.Embedded
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database.ExecuteGetTermsQuery(index, field, fromValue, pageSize);
 	 
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		public void Patch(string key, PatchRequest[] patches)
+		{
+			Patch(key, patches, null);
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		public void Patch(string key, PatchRequest[] patches, Guid? etag)
+		{
+			Batch(new[]
+			      	{
+			      		new PatchCommandData
+			      			{
+			      				Key = key,
+			      				Patches = patches,
+			      				Etag = etag
+			      			}
+			      	});
 		}
 
 		#endregion

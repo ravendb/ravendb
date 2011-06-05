@@ -361,6 +361,7 @@
     <Compile Include="Bugs\SortingOnLong.cs" />
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\SpatialQueries.cs" />
+    <Compile Include="Bugs\StaticDynamic.cs" />
     <Compile Include="Bugs\TakeQueries.cs" />
     <Compile Include="Bugs\tjbsb.cs" />
     <Compile Include="Bugs\Transaction.cs" />
