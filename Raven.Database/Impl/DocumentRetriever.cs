@@ -71,6 +71,11 @@ namespace Raven.Database.Impl
 			FieldsToFetch fieldsToFetch, 
 			IndexDefinition indexDefinition)
 		{
+			var queryScore = queryResult.Score;
+
+			if (float.IsNaN(queryScore))
+				queryScore = 0f;
+
 			if (queryResult.Projection == null)
 			{
 				// duplicate document, filter it out
@@ -78,7 +83,7 @@ namespace Raven.Database.Impl
 					return null;
 				var document = GetDocumentWithCaching(queryResult.Key);
 				if (document != null)
-					document.Metadata[Constants.TemporaryScoreValue] = queryResult.Score;
+					document.Metadata[Constants.TemporaryScoreValue] = queryScore;
 				return document;
 			}
 
@@ -120,7 +125,7 @@ namespace Raven.Database.Impl
 			{
 				Key = queryResult.Key,
 				DataAsJson = queryResult.Projection,
-				Metadata = new RavenJObject{{Constants.TemporaryScoreValue, queryResult.Score}}
+				Metadata = new RavenJObject{{Constants.TemporaryScoreValue, queryScore}}
 			};
 		}
 

@@ -364,6 +364,7 @@
     <Compile Include="Bugs\SpatialQueries.cs" />
     <Compile Include="Bugs\StaticDynamic.cs" />
     <Compile Include="Bugs\TakeQueries.cs" />
+    <Compile Include="Bugs\TempIndexScore.cs" />
     <Compile Include="Bugs\tjbsb.cs" />
     <Compile Include="Bugs\Transaction.cs" />
     <Compile Include="Bugs\TransformResults\Answer.cs" />
