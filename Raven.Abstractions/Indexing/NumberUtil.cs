@@ -50,6 +50,9 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public static object StringToNumber(string number)
 		{
+			if (number == null)
+				return null;
+
 			if ("NULL".Equals(number, StringComparison.InvariantCultureIgnoreCase) || 
 				"*".Equals(number,StringComparison.InvariantCultureIgnoreCase))
 				return null;
