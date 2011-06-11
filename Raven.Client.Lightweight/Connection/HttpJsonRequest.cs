@@ -11,6 +11,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Connection;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
