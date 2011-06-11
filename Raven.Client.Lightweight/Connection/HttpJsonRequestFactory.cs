@@ -63,8 +63,8 @@ namespace Raven.Client.Connection
 			if (AggressiveCacheDuration != null)
 			{
 				var duraion = AggressiveCacheDuration.Value;
-				if(duraion.Seconds > 0)
-					request.webRequest.Headers["Cache-Control"] = "max-age=" + duraion.Seconds;
+				if(duraion.TotalSeconds > 0)
+					request.webRequest.Headers["Cache-Control"] = "max-age=" + duraion.TotalSeconds;
 
 				if ((DateTimeOffset.Now - cachedRequest.Time) < duraion) // can serve directly from local cache
 					request.SkipServerCheck = true;

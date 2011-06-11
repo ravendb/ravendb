@@ -162,6 +162,7 @@
     <Compile Include="Bugs\CanReadLuceneProjectedDateTimeOffset.cs" />
     <Compile Include="Bugs\ComplexDynamicQuery.cs" />
     <Compile Include="Bugs\ConnectionStringParsing.cs" />
+    <Compile Include="Bugs\DateFilter.cs" />
     <Compile Include="Bugs\DuplicatedFiledNames.cs" />
     <Compile Include="Bugs\EntitiesWithAttributes.cs" />
     <Compile Include="Bugs\Indexing\CanIndexNestedObjects.cs" />
@@ -174,6 +175,7 @@
     <Compile Include="Bugs\MassivelyMultiTenant.cs" />
     <Compile Include="Bugs\MixingIdentityAndAssignedIds.cs" />
     <Compile Include="Bugs\MultipleRangeQueries.cs" />
+    <Compile Include="Bugs\NullableDateTime.cs" />
     <Compile Include="Bugs\ProjectionFromDynamicIndex.cs" />
     <Compile Include="Bugs\Queries\Floats.cs" />
     <Compile Include="Bugs\Queries\Generics.cs" />
@@ -362,6 +364,7 @@
     <Compile Include="Bugs\SpatialQueries.cs" />
     <Compile Include="Bugs\StaticDynamic.cs" />
     <Compile Include="Bugs\TakeQueries.cs" />
+    <Compile Include="Bugs\TempIndexScore.cs" />
     <Compile Include="Bugs\tjbsb.cs" />
     <Compile Include="Bugs\Transaction.cs" />
     <Compile Include="Bugs\TransformResults\Answer.cs" />
