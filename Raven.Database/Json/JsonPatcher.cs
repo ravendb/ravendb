@@ -272,7 +272,8 @@ namespace Raven.Database.Json
 			else
 				val.Value = RavenJToken.FromObject(val.Value<int>() + valToSet.Value<int>()).Value<int>();
 		}
-		private void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
+
+		private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
 		{
 			var prevVal = patchCmd.PrevVal;
 			if (prevVal == null)
