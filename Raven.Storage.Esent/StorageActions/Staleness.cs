@@ -17,7 +17,7 @@ namespace Raven.Storage.Esent.StorageActions
 {
     public partial class DocumentStorageActions : IStalenessStorageActions
     {
-        public bool IsIndexStale(string name, DateTime? cutOff, string entityName)
+        public bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag)
         {
             Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
             Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -51,6 +51,14 @@ namespace Raven.Storage.Esent.StorageActions
 							return true;
 					}
                 }
+				else if(cutoffEtag != null)
+				{
+					var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
+												  tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
+
+					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.Value.ToByteArray()) < 0)
+						return true;
+				}
                 else
                 {
                     return true;

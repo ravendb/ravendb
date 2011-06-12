@@ -25,7 +25,7 @@ namespace Raven.Storage.Managed
             this.storage = storage;
         }
 
-        public bool IsIndexStale(string name, DateTime? cutOff, string entityName)
+        public bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag)
         {
             var readResult = storage.IndexingStats.Read(name);
 
@@ -35,17 +35,29 @@ namespace Raven.Storage.Managed
 
             if (IsMapStale(name) || IsReduceStale(name))
             {
-                if (cutOff == null)
-                    return true;
-                var lastIndexedTime = readResult.Key.Value<DateTime>("lastTimestamp");
-                if (cutOff.Value >= lastIndexedTime)
-                    return true;
-                
-                var lastReducedTime = readResult.Key.Value<DateTime?>("lastReducedTimestamp");
-                if(lastReducedTime != null && cutOff.Value >= lastReducedTime.Value)
-                    return true;
-            }
+            	if (cutOff != null)
+            	{
+            		var lastIndexedTime = readResult.Key.Value<DateTime>("lastTimestamp");
+            		if (cutOff.Value >= lastIndexedTime)
+            			return true;
 
+            		var lastReducedTime = readResult.Key.Value<DateTime?>("lastReducedTimestamp");
+            		if (lastReducedTime != null && cutOff.Value >= lastReducedTime.Value)
+            			return true;
+            	}
+				else if (cutoffEtag != null)
+				{
+					var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
+
+					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.Value.ToByteArray()) < 0)
+						return true;
+				}
+            	else
+            	{
+            		return true;
+            	}
+            }
+            
             var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(new RavenJObject{{"index", name}});
             if (cutOff != null)
                 tasksAfterCutoffPoint = tasksAfterCutoffPoint

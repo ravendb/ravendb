@@ -211,15 +211,7 @@ namespace Raven.Database
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 					result.StaleIndexes = IndexStorage.Indexes
-						.Where(s =>
-						{
-							string entityName = null;
-							var abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(s);
-							if (abstractViewGenerator != null)
-								entityName = abstractViewGenerator.ForEntityName;
-
-							return actions.Staleness.IsIndexStale(s, null, entityName);
-						}).ToArray();
+						.Where(s => actions.Staleness.IsIndexStale(s, null, null)).ToArray();
 					result.Indexes = actions.Indexing.GetIndexesStats().ToArray();
 				});
 				return result;
@@ -586,16 +578,12 @@ namespace Raven.Database
 			TransactionalStorage.Batch(
 				actions =>
 				{
-					string entityName = null;
-
 
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
 					if (viewGenerator == null)
 						throw new InvalidOperationException("Could not find index named: " + index);
 
-					entityName = viewGenerator.ForEntityName;
-
-					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, entityName);
+					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
 					indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
 					var indexFailureInformation = actions.Indexing.GetFailureRate(index);
 					if (indexFailureInformation.IsInvalidIndex)
