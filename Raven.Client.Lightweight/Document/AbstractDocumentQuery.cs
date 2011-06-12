@@ -242,7 +242,8 @@ namespace Raven.Client.Document
 #endif
 			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
 
-			if(this.theSession.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			if (this.theSession != null &&  // tests may decide to send null here
+				this.theSession.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
 				WaitForNonStaleResultsAsOfLastWrite();
         }
 

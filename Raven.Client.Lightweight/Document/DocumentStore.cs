@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -21,7 +20,6 @@ using Raven.Client.Listeners;
 using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
-
 #endif
 
 namespace Raven.Client.Document
