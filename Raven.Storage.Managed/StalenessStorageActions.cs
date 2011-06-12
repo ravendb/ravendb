@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
@@ -68,7 +69,7 @@ namespace Raven.Storage.Managed
 			if (lastReducedEtag == null)
 				return true; // first reduce did not happen
 
-            return CompareArrays(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
+			return Buffers.Compare(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
    
         }
 
@@ -83,7 +84,7 @@ namespace Raven.Storage.Managed
 
             return storage.Documents["ByEtag"].SkipFromEnd(0)
                 .Select(doc => doc.Value<byte[]>("etag"))
-                .Select(docEtag => CompareArrays(docEtag, lastIndexedEtag) > 0)
+				.Select(docEtag => Buffers.Compare(docEtag, lastIndexedEtag) > 0)
                 .FirstOrDefault();
         }
 
@@ -129,18 +130,6 @@ namespace Raven.Storage.Managed
 				return null;
 
 			return new Guid(keyWithHighestEqualTo.Value<byte[]>("etag"));
-        }
-
-        private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
-        {
-            for (int i = 0; i < docEtagBinary.Length; i++)
-            {
-                if (docEtagBinary[i].CompareTo(indexEtagBinary[i]) != 0)
-                {
-                    return docEtagBinary[i].CompareTo(indexEtagBinary[i]);
-                }
-            }
-            return 0;
         }
     }
 }

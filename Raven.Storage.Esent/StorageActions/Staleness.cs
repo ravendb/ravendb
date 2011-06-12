@@ -6,6 +6,7 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
 using Raven.Database.Storage;
@@ -85,7 +86,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (lastReducedEtag == null)
 				return true; // first reduce did not happen
 
-            return CompareArrays(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
+            return Buffers.Compare(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
         }
 
         public bool IsMapStale(string name)
@@ -103,7 +104,7 @@ namespace Raven.Storage.Esent.StorageActions
         		return false;
         	}
         	var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
-            return CompareArrays(lastEtag, lastIndexedEtag) > 0;
+			return Buffers.Compare(lastEtag, lastIndexedEtag) > 0;
         }
 
         public Tuple<DateTime, Guid> IndexLastUpdatedAt(string name)
@@ -166,17 +167,7 @@ namespace Raven.Storage.Esent.StorageActions
             return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
         }
 
-    	private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
-        {
-            for (int i = 0; i < docEtagBinary.Length; i++)
-            {
-                if (docEtagBinary[i].CompareTo(indexEtagBinary[i]) != 0)
-                {
-                    return docEtagBinary[i].CompareTo(indexEtagBinary[i]);
-                }
-            }
-            return 0;
-        }
+    	
 
     }
 }

@@ -87,6 +87,9 @@
     <Compile Include="..\Raven.Abstractions\Default.cs">
       <Link>Imports\Default.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
+      <Link>Imports\Extensions\Buffers.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeISO8601Converter.cs">
       <Link>Imports\Json\JsonDateTimeISO8601Converter.cs</Link>
     </Compile>
