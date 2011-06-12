@@ -21,6 +21,7 @@ namespace Raven.Database.Extensions
                 Query = context.Request.QueryString["query"] ?? "",
                 Start = context.GetStart(),
                 Cutoff = context.GetCutOff(),
+				CutoffEtag = context.GetCutOffEtag(),
                 PageSize = context.GetPageSize(maxPageSize),
                 SkipTransformResults = context.GetSkipTransformResults(),
                 FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
