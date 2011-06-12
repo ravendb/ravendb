@@ -37,13 +37,9 @@ namespace Raven.Studio.Features.Documents
             {
                 if (string.IsNullOrEmpty(Id)) return string.Empty;
 
-                var collectionType = CollectionType + "/";
-                var display = Id
-                    .Replace(collectionType, string.Empty)
-                    .Replace(collectionType.ToLower(), string.Empty)
-                    .Replace("Raven/", string.Empty);
+            	var display = GetIdWithoutPrefixes();
 
-                Guid guid;
+            	Guid guid;
                 if (Guid.TryParse(display, out guid))
                 {
                     display = display.Substring(0, 8);
@@ -52,7 +48,26 @@ namespace Raven.Studio.Features.Documents
             }
         }
 
-        public RavenJObject Contents
+    	private string GetIdWithoutPrefixes()
+    	{
+    		var display = Id;
+
+    		var prefixToRemoves = new[]
+    		{
+    			"Raven/",
+    			CollectionType + "/",
+    			CollectionType + "-"
+    		};
+
+    		foreach (var prefixToRemove in prefixToRemoves)
+    		{
+    			if (display.StartsWith(prefixToRemove, StringComparison.InvariantCultureIgnoreCase))
+    				display = display.Substring(prefixToRemove.Length);
+    		}
+    		return display;
+    	}
+
+    	public RavenJObject Contents
         {
             get { return JsonDocument.DataAsJson; }
         }
