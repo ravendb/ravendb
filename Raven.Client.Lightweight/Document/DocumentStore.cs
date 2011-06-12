@@ -552,7 +552,11 @@ namespace Raven.Client.Document
 			}
 		}
 
-		internal Guid? GetLastWrittenEtag()
+		///<summary>
+		/// Gets the etag of the last document written by any session belonging to this 
+		/// document store
+		///</summary>
+		public Guid? GetLastWrittenEtag()
 		{
 			var etagHolder = lastEtag;
 			if (etagHolder == null)

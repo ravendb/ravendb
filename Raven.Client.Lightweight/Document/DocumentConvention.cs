@@ -39,6 +39,7 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
+			DefaultQueryingConsistency = ConsistencyOptions.MonotonicRead;
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
@@ -107,6 +108,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value>The max number of requests per session.</value>
 		public int MaxNumberOfRequestsPerSession { get; set; }
+
+		/// <summary>
+		/// The consistency options used when querying the database by default
+		/// Note that this option impact only queries, since we have Strong Consistency model for the documents
+		/// </summary>
+		public ConsistencyOptions DefaultQueryingConsistency { get; set; }
 
 		/// <summary>
 		/// Generates the document key using identity.
@@ -290,5 +297,26 @@ namespace Raven.Client.Document
 		{
 			return FindClrType(id, document, metadata);
 		}
+	}
+
+
+	/// <summary>
+	/// The consistency options for all queries, fore more details about the consistency options, see:
+	/// http://www.allthingsdistributed.com/2008/12/eventually_consistent.html
+	/// 
+	/// Note that this option impact only queries, since we have Strong Consistency model for the documents
+	/// </summary>
+	public enum ConsistencyOptions
+	{
+		/// <summary>
+		/// Ensures that after querying an index at time T, you will never see the results
+		/// of the index at a time prior to T.
+		/// This is ensured by the server, and require no action from the client
+		/// </summary>
+		MonotonicRead,
+		/// <summary>
+		///  After updating a documents, will only accept queries which already indexed the updated value.
+		/// </summary>
+		QueryYourWrites,
 	}
 }

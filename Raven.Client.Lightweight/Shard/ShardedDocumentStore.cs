@@ -231,6 +231,15 @@ namespace Raven.Client.Shard
 			get { throw new NotImplementedException("There isn't a singular url when using sharding"); }
 		}
 
+		///<summary>
+		/// Gets the etag of the last document written by any session belonging to this 
+		/// document store
+		///</summary>
+		public Guid? GetLastWrittenEtag()
+		{
+			throw new NotImplementedException("This isn't a single last written etag when sharding");
+		}
+
 		/// <summary>
 		/// Initializes this instance.
 		/// </summary>
