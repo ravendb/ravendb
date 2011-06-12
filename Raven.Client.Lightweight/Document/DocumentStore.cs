@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -16,7 +17,6 @@ using System.Linq;
 #if !SILVERLIGHT
 using Raven.Client.Extensions;
 using Raven.Client.Listeners;
-
 #else
 using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
@@ -520,5 +520,50 @@ namespace Raven.Client.Document
             return session;
         }
 #endif
+
+		private volatile EtagHolder lastEtag;
+		private readonly object lastEtagLocker = new object();
+		internal void UpdateLastWrittenEtag(Guid? etag)
+		{
+			if (etag == null)
+				return;
+
+			var newEtag = etag.Value.ToByteArray();
+
+			// not the most recent etag
+			if (Buffers.Compare(lastEtag.Bytes, newEtag) <= 0)
+			{
+				return;
+			}
+
+			lock (lastEtagLocker)
+			{
+				// not the most recent etag
+				if (Buffers.Compare(lastEtag.Bytes, newEtag) <= 0)
+				{
+					return;
+				}
+
+				lastEtag = new EtagHolder
+				{
+					Etag = etag.Value,
+					Bytes = etag.Value.ToByteArray()
+				};
+			}
+		}
+
+		internal Guid? GetLastWrittenEtag()
+		{
+			var etagHolder = lastEtag;
+			if (etagHolder == null)
+				return null;
+			return etagHolder.Etag;
+		}
+
+		private class EtagHolder
+		{
+			public Guid Etag;
+			public byte[] Bytes;
+		}
 	}
 }

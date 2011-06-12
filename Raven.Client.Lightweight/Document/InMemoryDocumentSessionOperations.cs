@@ -663,7 +663,7 @@ more responsive application.
 				var batchResult = batchResults[i];
 				if (batchResult.Method != "PUT")
 					continue;
-
+				
 				var entity = entities[i];
 				DocumentMetadata documentMetadata;
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
@@ -687,6 +687,12 @@ more responsive application.
 					documentStoreListener.AfterStore(batchResult.Key, entity, batchResult.Metadata);
 				}
 			}
+
+			var lastPut = batchResults.LastOrDefault(x=>x.Method == "PUT");
+			if (lastPut == null)
+				return;
+
+			documentStore.UpdateLastWrittenEtag(lastPut.Etag);
 		}
 
 		/// <summary>
