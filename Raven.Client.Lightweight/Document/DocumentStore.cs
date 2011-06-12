@@ -530,8 +530,24 @@ namespace Raven.Client.Document
 
 			var newEtag = etag.Value.ToByteArray();
 
+			if(lastEtag == null)
+			{
+				lock(lastEtagLocker)
+				{
+					if (lastEtag == null)
+					{
+						lastEtag = new EtagHolder
+						{
+							Bytes = newEtag,
+							Etag = etag.Value
+						};
+						return;
+					}
+				}
+			}
+
 			// not the most recent etag
-			if (Buffers.Compare(lastEtag.Bytes, newEtag) <= 0)
+			if (Buffers.Compare(lastEtag.Bytes, newEtag) >= 0)
 			{
 				return;
 			}
@@ -539,7 +555,7 @@ namespace Raven.Client.Document
 			lock (lastEtagLocker)
 			{
 				// not the most recent etag
-				if (Buffers.Compare(lastEtag.Bytes, newEtag) <= 0)
+				if (Buffers.Compare(lastEtag.Bytes, newEtag) >= 0)
 				{
 					return;
 				}
@@ -547,7 +563,7 @@ namespace Raven.Client.Document
 				lastEtag = new EtagHolder
 				{
 					Etag = etag.Value,
-					Bytes = etag.Value.ToByteArray()
+					Bytes = newEtag
 				};
 			}
 		}
