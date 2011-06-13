@@ -8,22 +8,15 @@
 					xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
 					xmlns:docs="clr-namespace:Raven.Studio.Features.Documents"
 					xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Layout;assembly=Microsoft.Expression.Interactions"
-                    mc:Ignorable="d">
+					mc:Ignorable="d">
 
 	<Style x:Name="DocumentListItem"
 		   TargetType="ListBoxItem">
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ListBoxItem">
-					<Border x:Name="frame"
-							Margin="0 0 6 6"
-							Padding="2"
-							cm:Action.TargetWithoutContext="EditDocument"
-							f:DoubleClickEvent.AttachAction="Execute($dataContext)"
-							CornerRadius="2"
-							Background="#0333"
-							BorderThickness="2"
-							BorderBrush="#0999">
+					<Grid Margin="0 0 6 6"
+						  cm:Action.TargetWithoutContext="EditDocument">
 
 						<VisualStateManager.VisualStateGroups>
 							<VisualStateGroup x:Name="CommonStates">
@@ -33,8 +26,8 @@
 								<VisualState x:Name="MouseOver">
 									<Storyboard>
 										<ColorAnimation To="#F999"
-														Storyboard.TargetProperty="(Panel.BorderBrush).(SolidColorBrush.Color)"
-														Storyboard.TargetName="frame"
+														Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+														Storyboard.TargetName="HoverHighlight"
 														Duration="0" />
 										<DoubleAnimation To="1"
 														 Storyboard.TargetProperty="(UIElement.Opacity)"
@@ -51,8 +44,8 @@
 								<VisualState x:Name="Selected">
 									<Storyboard>
 										<ColorAnimation To="#F666"
-														Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-														Storyboard.TargetName="frame"
+														Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+														Storyboard.TargetName="SelectionHighlight"
 														Duration="0" />
 									</Storyboard>
 								</VisualState>
@@ -84,8 +77,21 @@
 							</ti:ContextMenu>
 						</ti:ContextMenuService.ContextMenu>
 
+						<Border x:Name="HoverHighlight"
+								CornerRadius="2"
+								BorderThickness="2"
+								BorderBrush="#0333" />
+
+						<Border x:Name="SelectionHighlight"
+								f:DoubleClickEvent.AttachAction="Execute($dataContext)"
+								CornerRadius="2"
+								BorderThickness="2"
+								BorderBrush="#0999" />
+
 						<Grid Width="120"
-							  Height="60">
+							  Height="60"
+							  Margin="2">
+
 							<docs:DocumentTemplateSelector Content="{Binding Mode=OneTime}"
 														   VerticalContentAlignment="Stretch"
 														   HorizontalContentAlignment="Stretch" />
@@ -102,14 +108,16 @@
 										Margin="0,0,4,4">
 									<!--
 										TODO: this causes an odd error, uncomment and run to see
-										<Image Source="/Resources/Images/pencil.png"
-											   Height="16"
-											   Width="16" />-->
+										<StackPanel Orientation="Horizontal">
+											<TextBlock>edit</TextBlock>
+											<Image Source="/Resources/Images/pencil.png"
+													Height="16"
+													Width="16" />
+										</StackPanel>-->
 								</Button>
 							</StackPanel>
 						</Grid>
-
-					</Border>
+					</Grid>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>

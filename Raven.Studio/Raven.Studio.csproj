@@ -140,9 +140,6 @@
     <Compile Include="Features\Documents\BrowseDocumentsView.xaml.cs">
       <DependentUpon>BrowseDocumentsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Documents\DocumentView.xaml.cs">
-      <DependentUpon>DocumentView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Features\Documents\IDocumentTemplateProvider.cs" />
     <Compile Include="Features\Statistics\StatisticsItem.xaml.cs">
       <DependentUpon>StatisticsItem.xaml</DependentUpon>
@@ -351,10 +348,6 @@
     <Page Include="Data\JsonDocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Documents\DocumentView.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Documents\Document\Tooltip.xaml">
       <Generator>MSBuild:Compile</Generator>

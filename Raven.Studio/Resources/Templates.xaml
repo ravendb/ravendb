@@ -12,6 +12,7 @@
 		<ResourceDictionary Source="Styles.xaml" />
 		<ResourceDictionary Source="ControlTemplates/Menu.xaml" />
 		<ResourceDictionary Source="ControlTemplates/Indexes.xaml" />
+		<ResourceDictionary Source="../Features/Documents/DocumentTemplates.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style x:Key="BackButton"
@@ -333,6 +334,8 @@
 				Value="Extended" />
 		<Setter Property="BorderThickness"
 				Value="0" />
+		<Setter Property="ItemContainerStyle"
+				Value="{StaticResource DocumentListItem}" />
 	</Style>
 
 </ResourceDictionary>
