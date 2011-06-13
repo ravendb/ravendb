@@ -21,7 +21,7 @@ properties {
      
   $client_dlls = @( "Newtonsoft.Json.???","Raven.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
   
-  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "Newtonsoft.Json.Silverlight.???");   
+  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json.Silverlight.???");   
   
   $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Json.???", `
       "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "log4net.???", "Newtonsoft.Json.???", `

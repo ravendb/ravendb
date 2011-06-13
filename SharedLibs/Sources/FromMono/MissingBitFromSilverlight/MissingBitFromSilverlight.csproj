@@ -45,6 +45,12 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
     <Reference Include="System.Windows" />
@@ -67,6 +73,9 @@
     <Compile Include="System.Collections\CollectionDebuggerView.cs" />
     <Compile Include="System.Threading\SpinWait.cs" />
     <Compile Include="System.Threading\Watch.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="RavenDB.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <ProjectExtensions>
