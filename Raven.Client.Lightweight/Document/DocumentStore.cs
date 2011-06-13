@@ -8,10 +8,10 @@ using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Async;
-using Raven.Client.Connection.Profiling;
 #endif
 using System.Linq;
 #if !SILVERLIGHT

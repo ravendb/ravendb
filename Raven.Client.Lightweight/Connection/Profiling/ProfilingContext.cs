@@ -1,3 +1,5 @@
+#if !NET_3_5
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -45,3 +47,5 @@ namespace Raven.Client.Connection.Profiling
 		}
 	}
 }
+
+#endif
