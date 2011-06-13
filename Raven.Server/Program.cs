@@ -83,6 +83,7 @@ namespace Raven.Server
         	string backupLocation = null;
         	string restoreLocation = null;
         	Action actionToTake = null;
+        	bool launchBrowser = false;
 
         	OptionSet optionSet = null;
         	optionSet = new OptionSet
@@ -100,12 +101,13 @@ namespace Raven.Server
 							{
 								{"Raven/RunInMemory","true"} 
 							}
-					});		
+					}, launchBrowser);		
         		}},
         		{"debug", "Runs RavenDB in debug mode", key =>
         		{
-					actionToTake = () => RunInDebugMode(null, new RavenConfiguration());
+					actionToTake = () => RunInDebugMode(null, new RavenConfiguration(), launchBrowser);
         		}},
+				{"browser|launchbrowser", "After the server starts, launches the browser", key => launchBrowser = true},
         		{"help", "Help about the command line interface", key =>
         		{
 					actionToTake = () => PrintUsage(optionSet);
@@ -132,8 +134,9 @@ namespace Raven.Server
 
         		optionSet.Parse(args);
         	}
-        	catch (Exception)
+        	catch (Exception e)
         	{
+        		Console.WriteLine(e.Message);
         		PrintUsage(optionSet);
         		return;
         	}
@@ -208,16 +211,16 @@ namespace Raven.Server
             return args[0].Substring(1);
         }
 
-        private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode, RavenConfiguration ravenConfiguration)
+        private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode, RavenConfiguration ravenConfiguration, bool lauchBrowser)
         {
         	ConfigureDebugLogging();
 
         	NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
             if (anonymousUserAccessMode.HasValue)
                 ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
-            while (RunServer(ravenConfiguration))
+			while (RunServerInDebugMode(ravenConfiguration, lauchBrowser))
             {
-                
+            	lauchBrowser = false;
             }
         }
 
@@ -254,7 +257,7 @@ namespace Raven.Server
     		loggerRepository.Configured = true;
     	}
 
-    	private static bool RunServer(RavenConfiguration ravenConfiguration)
+    	private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool lauchBrowser)
     	{
     		var sp = Stopwatch.StartNew();
             using (var server = new RavenDbServer(ravenConfiguration))
@@ -275,6 +278,17 @@ namespace Raven.Server
 					server.Database.TransactionalStorage.FriendlyName);
             	Console.WriteLine("Server Url: {0}", ravenConfiguration.ServerUrl);
                 Console.WriteLine("Press <enter> to stop or 'cls' and <enter> to clear the log");
+				if(lauchBrowser)
+				{
+					try
+					{
+						Process.Start(ravenConfiguration.ServerUrl);
+					}
+					catch (Exception e)
+					{
+						Console.WriteLine("Could not start browser: " + e.Message);
+					}
+				}
                 while (true)
                 {
                     var readLine = Console.ReadLine() ?? "";
