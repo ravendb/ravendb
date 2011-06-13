@@ -5,7 +5,9 @@
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 xmlns:converters="clr-namespace:Raven.Studio.Converters"
 			 xmlns:f="clr-namespace:Raven.Studio.Framework"
-			 x:Class="Raven.Studio.Features.Database.SummaryView"
+			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+             xmlns:local="clr-namespace:Raven.Studio.Behaviors" x:Class="Raven.Studio.Features.Database.SummaryView"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
@@ -91,7 +93,12 @@
 					   Style="{StaticResource SectionHeader}" />
 
 			<ListBox x:Name="RecentDocuments"
-					 Style="{StaticResource DocumentList}" />
+					 Style="{StaticResource DocumentList}">
+
+				<i:Interaction.Behaviors>
+					<local:SelectItemOnRightClick />
+				</i:Interaction.Behaviors>
+			</ListBox>
 
 			<TextBlock Text="{Binding RecentDocumentsStatus}"
 					   Style="{StaticResource Instruction}" />
