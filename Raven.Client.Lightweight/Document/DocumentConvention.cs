@@ -28,6 +28,8 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentConvention
 	{
+		private Dictionary<Type, PropertyInfo> idPropertyCache = new Dictionary<Type, PropertyInfo>();
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentConvention"/> class.
 		/// </summary>
@@ -191,7 +193,18 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public PropertyInfo GetIdentityProperty(Type type)
 		{
-			return type.GetProperties().FirstOrDefault(FindIdentityProperty);
+			PropertyInfo info;
+			if (idPropertyCache.TryGetValue(type, out info))
+				return info;
+
+			var identityProperty = type.GetProperties().FirstOrDefault(FindIdentityProperty);
+
+			idPropertyCache = new Dictionary<Type, PropertyInfo>(idPropertyCache)
+			{
+				{type, identityProperty}
+			};
+
+			return identityProperty;
 		}
 
 		/// <summary>
