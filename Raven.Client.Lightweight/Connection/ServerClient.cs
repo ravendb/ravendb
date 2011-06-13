@@ -21,6 +21,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
@@ -40,6 +41,8 @@ namespace Raven.Client.Connection
 		private readonly ICredentials credentials;
 		private readonly ReplicationInformer replicationInformer;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
+		private readonly ProfilingInformation profilingInformation = new ProfilingInformation();
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
 		/// </summary>
@@ -1148,6 +1151,14 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		}
 
 		#endregion
+
+		/// <summary>
+		/// The profiling information
+		/// </summary>
+		public ProfilingInformation ProfilingInformation
+		{
+			get { return profilingInformation; }
+		}
 	}
 }
 #endif

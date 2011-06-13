@@ -22,6 +22,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
@@ -33,6 +34,7 @@ namespace Raven.Client.Connection.Async
 	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands
 	{
+		private ProfilingInformation profilingInformation = new ProfilingInformation();
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
@@ -599,6 +601,14 @@ namespace Raven.Client.Connection.Async
         {
             throw new NotImplementedException();
         }
+
+		/// <summary>
+		/// The profiling information
+		/// </summary>
+		public ProfilingInformation ProfilingInformation
+		{
+			get { return profilingInformation; }
+		}
 	}
 }
 

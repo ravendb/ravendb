@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;

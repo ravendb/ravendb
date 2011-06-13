@@ -11,6 +11,7 @@ using System.Net;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -19,7 +20,7 @@ namespace Raven.Client.Connection
 	///<summary>
 	/// Expose the set of operations by the RavenDB server
 	///</summary>
-	public interface IDatabaseCommands
+	public interface IDatabaseCommands : IHoldProfilingInformation
 	{
 		/// <summary>
 		/// Gets or sets the operations headers.

@@ -11,6 +11,7 @@ using Raven.Client.Connection;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Async;
+using Raven.Client.Connection.Profiling;
 #endif
 using System.Linq;
 #if !SILVERLIGHT
@@ -348,6 +349,26 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Guid ResourceManagerId { get; set; }
 
+#if !NET_3_5
+		/// <summary>
+		/// Disable all profiling support
+		/// </summary>
+		public bool DisableProfiling { get; set; }
+
+		private readonly ProfilingContext profilingContext = new ProfilingContext();
+#endif
+
+		/// <summary>
+		///  Get the profiling information for the given id
+		/// </summary>
+		public ProfilingInformation GetProfilingInformationFor(Guid id)
+		{
+#if !NET_3_5
+			return profilingContext.TryGet(id);
+#else
+			return null;
+#endif
+		}
 
 		/// <summary>
 		/// Initializes this instance.
@@ -357,6 +378,12 @@ namespace Raven.Client.Document
 		{
 			try
 			{
+#if !NET_3_5
+				if(DisableProfiling == false)
+				{
+					jsonRequestFactory.LogRequest += profilingContext.RecordAction;
+				}
+#endif
 				InitializeInternal();
 				if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{

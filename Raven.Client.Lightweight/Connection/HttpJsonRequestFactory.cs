@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Threading;
 using FromMono.System.Runtime.Caching;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
@@ -19,6 +20,21 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
 
+		/// <summary>
+		/// Occurs when a json request is completed
+		/// </summary>
+		public event EventHandler<RequestResultArgs> LogRequest = delegate { };
+
+		/// <summary>
+		/// Invoke the LogRequest event
+		/// </summary>
+		internal void InvokeLogRequest(IHoldProfilingInformation sender, RequestResultArgs e)
+		{
+			var handler = LogRequest;
+			if (handler != null) 
+				handler(sender, e);
+		}
+
 		private MemoryCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
 
 		internal int NumOfCachedRequests;
@@ -26,7 +42,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials,
+		public HttpJsonRequest CreateHttpJsonRequest(IHoldProfilingInformation self, string url, string method, ICredentials credentials,
 													 DocumentConvention convention)
 		{
 			return CreateHttpJsonRequest(self, url, method, new RavenJObject(), credentials, convention);
@@ -35,17 +51,10 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="url">The URL.</param>
-		/// <param name="method">The method.</param>
-		/// <param name="metadata">The metadata.</param>
-		/// <param name="credentials">The credentials.</param>
-		/// <param name="convention">The document conventions governing this request</param>
-		/// <returns></returns>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, RavenJObject metadata,
+		public HttpJsonRequest CreateHttpJsonRequest(IHoldProfilingInformation self, string url, string method, RavenJObject metadata,
 													 ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, metadata, credentials, this);
+			var request = new HttpJsonRequest(url, method, metadata, credentials, this, self);
 			ConfigureCaching(url, method, convention, request);
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
 			return request;

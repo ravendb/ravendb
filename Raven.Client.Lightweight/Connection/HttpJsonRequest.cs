@@ -11,6 +11,8 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -31,7 +33,9 @@ namespace Raven.Client.Connection
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
 		private readonly HttpJsonRequestFactory factory;
+		private readonly IHoldProfilingInformation owner;
 		internal bool ShouldCacheRequest;
+		private string postedData;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -39,10 +43,11 @@ namespace Raven.Client.Connection
 		/// <value>The response headers.</value>
 		public NameValueCollection ResponseHeaders { get; set; }
 
-		internal HttpJsonRequest(string url, string method, RavenJObject metadata, ICredentials credentials, HttpJsonRequestFactory factory)
+		internal HttpJsonRequest(string url, string method, RavenJObject metadata, ICredentials credentials, HttpJsonRequestFactory factory, IHoldProfilingInformation owner)
 		{
 			this.Url = url;
 			this.factory = factory;
+			this.owner = owner;
 			this.Method = method;
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
@@ -111,18 +116,57 @@ namespace Raven.Client.Connection
 				if (httpWebResponse == null || 
 					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
 						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+				{
+					int httpResult = -1;
+					if (httpWebResponse != null)
+						httpResult = (int) httpWebResponse.StatusCode;
+
+					factory.InvokeLogRequest(owner, new RequestResultArgs
+					{
+						Method = webRequest.Method,
+						HttpResult = httpResult,
+						Status = RequestStatus.Cached,
+						Result = e.Message,
+						Url = webRequest.RequestUri,
+						PostedData = postedData
+					});
 					throw;
+				}
 
 				if (httpWebResponse.StatusCode == HttpStatusCode.NotModified
 					&& CachedRequestDetails != null)
 				{
 					factory.UpdateCacheTime(this);
-					return factory.GetCachedResponse(this);
+					var result = factory.GetCachedResponse(this);
+
+					factory.InvokeLogRequest(owner, new RequestResultArgs
+					{
+						Method = webRequest.Method,
+						HttpResult = (int) httpWebResponse.StatusCode,
+						Status = RequestStatus.Cached,
+						Result = result,
+						Url = webRequest.RequestUri,
+						PostedData = postedData
+					});
+
+					return result;
 				}
 
 				using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
 				{
-					throw new InvalidOperationException(sr.ReadToEnd(), e);
+					var readToEnd = sr.ReadToEnd();
+
+					factory.InvokeLogRequest(owner, new RequestResultArgs
+					{
+						Method = webRequest.Method,
+						HttpResult = (int)httpWebResponse.StatusCode,
+						Status = RequestStatus.Cached,
+						Result = readToEnd,
+						Url = webRequest.RequestUri,
+						PostedData = postedData
+					});
+
+					throw new InvalidOperationException(readToEnd, e);
 				}
 			}
 			
@@ -134,6 +178,18 @@ namespace Raven.Client.Connection
 				var text = reader.ReadToEnd();
 				reader.Close();
 				factory.CacheResponse(response, text, this);
+
+
+				factory.InvokeLogRequest(owner, new RequestResultArgs
+				{
+					Method = webRequest.Method,
+					HttpResult = (int)ResponseStatusCode,
+					Status = RequestStatus.SentToServer,
+					Result = text,
+					Url = webRequest.RequestUri,
+					PostedData = postedData
+				});
+
 				return text;
 			}
 		}
@@ -217,17 +273,10 @@ namespace Raven.Client.Connection
 		/// <param name="data">The data.</param>
 		public void Write(string data)
 		{
+			postedData = data;
+
 			var byteArray = Encoding.UTF8.GetBytes(data);
 
-			Write(byteArray);
-		}
-
-		/// <summary>
-		/// Writes the specified byte array.
-		/// </summary>
-		/// <param name="byteArray">The byte array.</param>
-		public void Write(byte[] byteArray)
-		{
 			webRequest.ContentLength = byteArray.Length;
 
 			using (var dataStream = webRequest.GetRequestStream())
@@ -240,12 +289,14 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Begins the write operation
 		/// </summary>
-		/// <param name="byteArray">The byte array.</param>
+		/// <param name="dataToWrite">The byte array.</param>
 		/// <param name="callback">The callback.</param>
 		/// <param name="state">The state.</param>
 		/// <returns></returns>
-		public IAsyncResult BeginWrite(byte[] byteArray, AsyncCallback callback, object state)
+		public IAsyncResult BeginWrite(string dataToWrite, AsyncCallback callback, object state)
 		{
+			postedData = dataToWrite;
+			var byteArray = Encoding.UTF8.GetBytes(dataToWrite);
 			bytesForNextWrite = byteArray;
 			webRequest.ContentLength = byteArray.Length;
 			return webRequest.BeginGetRequestStream(callback, state);

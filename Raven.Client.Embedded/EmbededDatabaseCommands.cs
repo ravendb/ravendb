@@ -12,6 +12,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database;
@@ -31,6 +32,7 @@ namespace Raven.Client.Embedded
 	{
 		private readonly DocumentDatabase database;
 		private readonly DocumentConvention convention;
+		private readonly ProfilingInformation profilingInformation = new ProfilingInformation();
 
 		///<summary>
 		/// Create a new instance
@@ -510,6 +512,14 @@ namespace Raven.Client.Embedded
 		public void SpinBackgroundWorkers()
 		{
 			database.SpinBackgroundWorkers();
+		}
+
+		/// <summary>
+		/// The profiling information
+		/// </summary>
+		public ProfilingInformation ProfilingInformation
+		{
+			get { return profilingInformation; }
 		}
 	}
 }

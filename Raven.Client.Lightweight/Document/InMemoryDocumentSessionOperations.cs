@@ -18,6 +18,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Exceptions;
 using Raven.Client.Listeners;
 using Raven.Client.Util;
@@ -89,6 +90,11 @@ namespace Raven.Client.Document
 	    private IDictionary<object, RavenJObject> cachedJsonDocs;
 
 		/// <summary>
+		/// The session information for this session, used for profiling
+		/// </summary>
+		public ProfilingInformation ProfilingInformation { get; private set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
 		/// <param name="documentStore">The document store.</param>
@@ -109,6 +115,7 @@ namespace Raven.Client.Document
 			AllowNonAuthoritiveInformation = true;
 			NonAuthoritiveInformationTimeout = TimeSpan.FromSeconds(15);
 			MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
+			ProfilingInformation = new ProfilingInformation();
 		}
 
 		/// <summary>

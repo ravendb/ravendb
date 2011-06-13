@@ -20,6 +20,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Exceptions;
 using Raven.Client.Silverlight.Data;
 using Raven.Client.Document;
@@ -41,6 +42,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		private readonly ICredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly DocumentConvention convention;
+		private readonly ProfilingInformation profilingInformation = new ProfilingInformation();
 
 		/// <summary>
 		/// Get the current json request factory
@@ -911,6 +913,14 @@ namespace Raven.Client.Silverlight.Connection.Async
                     }
                 });
 	    }
+
+    	/// <summary>
+    	/// The profiling information
+    	/// </summary>
+    	public ProfilingInformation ProfilingInformation
+    	{
+    		get { return profilingInformation; }
+    	}
 	}
 }
 
