@@ -140,8 +140,7 @@ namespace Raven.Client.Connection.Async
 					var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 					request.AddOperationHeaders(OperationsHeaders);
 					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
-					byte[] bytes = Encoding.UTF8.GetBytes(serializeObject);
-					return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite,bytes, null)
+					return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite,serializeObject, null)
 						.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
 													.ContinueWith(readStrTask =>
 													{
@@ -187,8 +186,8 @@ namespace Raven.Client.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, method, metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
-			var bytes = Encoding.UTF8.GetBytes(document.ToString());
-			return Task.Factory.FromAsync(request.BeginWrite,request.EndWrite,bytes, null)
+			
+			return Task.Factory.FromAsync(request.BeginWrite,request.EndWrite,document.ToString(), null)
 				.ContinueWith(task =>
 				{
 					if (task.Exception != null)
@@ -321,8 +320,8 @@ namespace Raven.Client.Connection.Async
 		public Task<JsonDocument[]> MultiGetAsync(string[] keys)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
-			var array = Encoding.UTF8.GetBytes(new RavenJArray(keys).ToString(Formatting.None));
-			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, array, null)
+			var data = new RavenJArray(keys).ToString(Formatting.None);
+			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, data, null)
 				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null))
 				.Unwrap()
 				.ContinueWith(task =>
@@ -463,7 +462,7 @@ namespace Raven.Client.Connection.Async
 			AddTransactionInformation(metadata);
 			var req = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-			var data = Encoding.UTF8.GetBytes(jArray.ToString(Formatting.None));
+			var data = jArray.ToString(Formatting.None);
 
 			return Task.Factory.FromAsync(req.BeginWrite, req.EndWrite, data, null)
 				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(req.BeginReadResponseString, req.EndReadResponseString, null))

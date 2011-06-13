@@ -75,6 +75,7 @@
     <Compile Include="Connection\IRavenQueryInspector.cs" />
     <Compile Include="Connection\JsonExtensions.cs" />
     <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
+    <Compile Include="Connection\Profiling\ServerRequest.cs" />
     <Compile Include="Connection\RavenQuery.cs" />
     <Compile Include="Connection\RavenTransactionAccessor.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
