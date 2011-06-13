@@ -106,6 +106,8 @@ namespace Raven.Database
 
 			ExtensionsState = new ConcurrentDictionary<object, object>();
 			Configuration = configuration;
+			
+			ExecuteAlterConfiguration();
 
 			configuration.Container.SatisfyImportsOnce(this);
 
@@ -181,6 +183,14 @@ namespace Raven.Database
 			IndexUpdateTriggers
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+		}
+
+		private void ExecuteAlterConfiguration()
+		{
+			foreach (var alterConfiguration in Configuration.Container.GetExportedValues<IAlterConfiguration>())
+			{
+				alterConfiguration.AlterConfiguration(Configuration);
+			}
 		}
 
 		private void ExecuteStartupTasks()
