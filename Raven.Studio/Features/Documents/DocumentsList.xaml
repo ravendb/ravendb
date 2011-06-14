@@ -12,17 +12,17 @@
 			 d:DesignWidth="400">
 
 	<Grid>
-		<ListBox x:Name="_list"
+		<ListBox x:Name="list"
 				 ItemsSource="{Binding}"
 				 Style="{StaticResource DocumentList}">
 
 			<i:Interaction.Behaviors>
 				<local:SelectItemOnRightClick />
-				<local:AttachMenu TargetMenu="{Binding ElementName=_menu}" />
+				<local:AttachMenu TargetMenu="{Binding ElementName=menu}" />
 			</i:Interaction.Behaviors>
 		</ListBox>
 
-		<popupMenu:PopupMenu x:Name="_menu">
+		<popupMenu:PopupMenu x:Name="menu">
 			<ListBox>
 				<popupMenu:PopupMenuItem Header="Edit Docuemnt"
 										 cm:Action.TargetWithoutContext="EditDocument"
