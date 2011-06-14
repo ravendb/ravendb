@@ -104,11 +104,6 @@ namespace Raven.Client.Document
 #endif
 
 		/// <summary>
-		/// Occurs when an entity is stored inside any session opened from this instance
-		/// </summary>
-		public event EventHandler<StoredEntityEventArgs> Stored;
-
-		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentStore"/> class.
 		/// </summary>
 		public DocumentStore()
@@ -240,7 +235,6 @@ namespace Raven.Client.Document
 		public virtual void Dispose()
 		{
 			jsonRequestFactory.Dispose();
-			Stored = null;
 			WasDisposed = true;
 			var afterDispose = AfterDispose;
 			if(afterDispose!=null)
@@ -314,7 +308,6 @@ namespace Raven.Client.Document
 		
 		private void AfterSessionCreated(DocumentSession session)
 		{
-			session.Stored += OnSessionStored;
 			foreach (var documentConvertionListener in conversionListeners)
 			{
 				session.Advanced.OnDocumentConverted += documentConvertionListener.DocumentToEntity;
@@ -322,17 +315,6 @@ namespace Raven.Client.Document
 			}
 		}
 #endif
-
-		private void OnSessionStored(object entity)
-		{
-			var copy = Stored;
-			if (copy != null)
-				copy(this, new StoredEntityEventArgs
-				{
-					SessionIdentifier = Identifier, EntityInstance = entity
-				});
-		}
-
 		/// <summary>
 		/// Registers the store listener.
 		/// </summary>
@@ -531,7 +513,6 @@ namespace Raven.Client.Document
 				throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
 			var session = new AsyncDocumentSession(this, AsyncDatabaseCommands, queryListeners, storeListeners, deleteListeners);
-			session.Stored += OnSessionStored;
 			return session;
 		}
 
@@ -545,7 +526,6 @@ namespace Raven.Client.Document
                 throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
             var session = new AsyncDocumentSession(this, AsyncDatabaseCommands.ForDatabase(databaseName), queryListeners, storeListeners, deleteListeners);
-            session.Stored += OnSessionStored;
             return session;
         }
 #endif

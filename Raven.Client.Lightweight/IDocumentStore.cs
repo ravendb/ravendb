@@ -63,11 +63,6 @@ namespace Raven.Client
         HttpJsonRequestFactory JsonRequestFactory { get; }
 
 		/// <summary>
-		/// Occurs when an entity is stored inside any session opened from this instance
-		/// </summary>
-		event EventHandler<StoredEntityEventArgs> Stored;
-
-		/// <summary>
 		/// Gets or sets the identifier for this store.
 		/// </summary>
 		/// <value>The identifier.</value>

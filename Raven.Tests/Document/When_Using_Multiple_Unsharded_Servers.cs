@@ -35,8 +35,6 @@ namespace Raven.Tests.Document
         [Fact]
         public void Can_insert_into_two_servers_running_simultaneously_without_sharding()
         {
-            var serversStoredUpon = new List<string>();
-
             using (var server1 = GetNewServer(port1, path1))
             using (var server2 = GetNewServer(port2, path2))
             {
@@ -45,8 +43,6 @@ namespace Raven.Tests.Document
                     using (var documentStore = new DocumentStore { Url = "http://localhost:"+ port }.Initialize())
                     using (var session = documentStore.OpenSession())
                     {
-                        documentStore.Stored += (sender, args) => serversStoredUpon.Add(args.SessionIdentifier);
-
                         var entity = new Company { Name = "Company" };
                         session.Store(entity);
 						session.SaveChanges();
@@ -54,9 +50,6 @@ namespace Raven.Tests.Document
                     }
                 }
             }
-
-            Assert.Contains(port1.ToString(), serversStoredUpon[0]);
-            Assert.Contains(port2.ToString(), serversStoredUpon[1]);
         }
 
         #region IDisposable Members

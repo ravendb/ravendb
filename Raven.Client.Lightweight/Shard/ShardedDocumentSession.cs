@@ -111,10 +111,6 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Occurs when an entity is stored in the session
-		/// </summary>
-		public event EntityStored Stored;
-		/// <summary>
 		/// Occurs when an entity is converted to a document and metadata.
 		/// Changes made to the document / metadata instances passed to this event will be persisted.
 		/// </summary>
@@ -188,7 +184,6 @@ namespace Raven.Client.Shard
 
 			foreach (var shardSession in shardSessions)
 			{
-				shardSession.Advanced.Stored += Stored;
 				shardSession.Advanced.OnEntityConverted += OnEntityConverted;
 				shardSession.Advanced.OnDocumentConverted += OnDocumentConverted;
 			}
@@ -527,8 +522,6 @@ namespace Raven.Client.Shard
 			foreach (var shardSession in shardSessions)
 				shardSession.Dispose();
 
-			//dereference all event listeners
-			Stored = null;
 			OnEntityConverted = null;
 			OnDocumentConverted = null;
 		}

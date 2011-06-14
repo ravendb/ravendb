@@ -125,6 +125,7 @@
     <Compile Include="IAsyncAdvancedSessionOperations.cs" />
     <Compile Include="IAsyncDocumentQuery.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
+    <Compile Include="IDisposalNotification.cs" />
     <Compile Include="Listeners\IDocumentConversionListener.cs" />
     <Compile Include="Listeners\IDocumentDeleteListener.cs" />
     <Compile Include="IDocumentQuery.cs" />

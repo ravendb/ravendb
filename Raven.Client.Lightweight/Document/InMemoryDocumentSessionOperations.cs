@@ -168,10 +168,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value></value>
 		public bool UseOptimisticConcurrency { get; set; }
-		/// <summary>
-		/// Occurs when an entity is stored in the session
-		/// </summary>
-		public virtual event EntityStored Stored;
+		
 		/// <summary>
 		/// Occurs when an entity is converted to a document and metadata.
 		/// Changes made to the document / metadata instances passed to this event will be persisted.
@@ -664,7 +661,6 @@ more responsive application.
 		/// <param name="entities">The entities.</param>
 		protected void UpdateBatchResults(IList<BatchResult> batchResults, IList<object> entities)
 		{
-			var stored = Stored;
 			for (var i = 0; i < batchResults.Count; i++)
 			{
 				var batchResult = batchResults[i];
@@ -685,9 +681,6 @@ more responsive application.
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
 				TrySetIdentity(entity, batchResult.Key);
-
-				if (stored != null)
-					stored(entity);
 
 				foreach (var documentStoreListener in storeListeners)
 				{

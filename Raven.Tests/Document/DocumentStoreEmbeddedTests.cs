@@ -440,13 +440,11 @@ namespace Raven.Tests.Document
 			{
 				var company = new Company { Name = "Company Name" };
 				var session = documentStore.OpenSession();
-                session.Advanced.Stored += o => stored++;
 				session.Store(company);
-				Assert.Equal(0, stored);
 				session.SaveChanges();
-				Assert.Equal(1, stored);
 				session.SaveChanges();
-				Assert.Equal(1, stored);
+
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
 			}
 		}
 
@@ -463,13 +461,11 @@ namespace Raven.Tests.Document
 				session.SaveChanges();
 
 				var sessions2 = documentStore.OpenSession();
-                sessions2.Advanced.Stored += o => stored++;
 				var c2 = sessions2.Load<Company>(company.Id);
 				sessions2.SaveChanges();
-				Assert.Equal(0, stored);
 				c2.Phone = 1;
 				sessions2.SaveChanges();
-				Assert.Equal(1, stored);
+				Assert.Equal(2, session.Advanced.NumberOfRequests);
 			}
 		}
 

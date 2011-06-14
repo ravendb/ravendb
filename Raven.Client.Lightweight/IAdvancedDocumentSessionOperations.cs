@@ -96,12 +96,6 @@ namespace Raven.Client
         int NumberOfRequests { get; }
 
         /// <summary>
-        /// Occurs after an entity is stored in RavenDB.
-        /// This event is raised for new and updated entities.
-        /// </summary>
-        event EntityStored Stored;
-
-        /// <summary>
         /// Occurs when an entity is converted to a document and metadata.
         /// Changes made to the document / metadata instances passed to this event will be persisted.
         /// </summary>

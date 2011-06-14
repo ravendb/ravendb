@@ -50,11 +50,6 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Occurs when an entity is stored inside any session opened from this instance
-		/// </summary>
-		public event EventHandler<StoredEntityEventArgs> Stored;
-
-		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentStore"/> class.
 		/// </summary>
 		/// <param name="shardStrategy">The shard strategy.</param>
@@ -86,8 +81,6 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public void Dispose()
 		{
-			Stored = null;
-
 			foreach (var shard in shards)
 				shard.Dispose();
 
@@ -258,7 +251,6 @@ namespace Raven.Client.Shard
 				foreach (var shard in shards)
 				{
 					var currentShard = shard;
-					currentShard.Stored += Stored;
 					var defaultKeyGeneration = currentShard.Conventions.DocumentKeyGenerator == null;
 					currentShard.Initialize();
 					if(defaultKeyGeneration == false)
