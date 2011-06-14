@@ -1,0 +1,36 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Documents.DocumentsList"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:popupMenu="clr-namespace:SL4PopupMenu;assembly=SL4PopupMenu"
+			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 mc:Ignorable="d"
+			 d:DesignHeight="300"
+			 d:DesignWidth="400">
+
+	<Grid>
+		<ListBox x:Name="_list"
+				 ItemsSource="{Binding}"
+				 Style="{StaticResource DocumentList}">
+
+			<i:Interaction.Behaviors>
+				<local:SelectItemOnRightClick />
+				<local:AttachMenu TargetMenu="{Binding ElementName=_menu}" />
+			</i:Interaction.Behaviors>
+		</ListBox>
+
+		<popupMenu:PopupMenu x:Name="_menu">
+			<ListBox>
+				<popupMenu:PopupMenuItem Header="Edit Docuemnt"
+										 cm:Action.TargetWithoutContext="EditDocument"
+										 cm:Message.Attach="[Click]=[EditDocument($selectedItems)]" />
+				<popupMenu:PopupMenuItem Header="Copy Document Id to Clipboard" />
+				<popupMenu:PopupMenuSeparator />
+				<popupMenu:PopupMenuItem Header="Delete Document" />
+			</ListBox>
+		</popupMenu:PopupMenu>
+	</Grid>
+</UserControl>
