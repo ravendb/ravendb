@@ -66,6 +66,11 @@ namespace Raven.Client.Document
 		
 		private readonly DocumentStore documentStore;
 
+		/// <summary>
+		/// all the listeners for this session
+		/// </summary>
+		protected readonly DocumentSessionListeners listeners;
+
 		///<summary>
 		/// The document store associated with this session
 		///</summary>
@@ -74,19 +79,13 @@ namespace Raven.Client.Document
 			get { return documentStore; }
 		}
 
-		/// <summary>
-		/// The query listeners allow to modify queries before it is executed
-		/// </summary>
-		protected readonly IDocumentQueryListener[] queryListeners;
-
+		
 		/// <summary>
 		/// Gets the number of requests for this session
 		/// </summary>
 		/// <value></value>
 		public int NumberOfRequests { get; private set; }
 
-		private readonly IDocumentDeleteListener[] deleteListeners;
-		private readonly IDocumentStoreListener[] storeListeners;
 	    private IDictionary<object, RavenJObject> cachedJsonDocs;
 
 		/// <summary>
@@ -97,19 +96,12 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
-		/// <param name="documentStore">The document store.</param>
-		/// <param name="storeListeners">The store listeners.</param>
-		/// <param name="deleteListeners">The delete listeners.</param>
 		protected InMemoryDocumentSessionOperations(
 			DocumentStore documentStore, 
-			IDocumentQueryListener[] queryListeners,
-			IDocumentStoreListener[] storeListeners, 
-			IDocumentDeleteListener[] deleteListeners)
+			DocumentSessionListeners listeners)
 		{
 			this.documentStore = documentStore;
-			this.queryListeners = queryListeners;
-			this.deleteListeners = deleteListeners;
-			this.storeListeners = storeListeners;
+			this.listeners = listeners;
 			ResourceManagerId = documentStore.ResourceManagerId;
 			UseOptimisticConcurrency = false;
 			AllowNonAuthoritiveInformation = true;
@@ -169,17 +161,6 @@ namespace Raven.Client.Document
 		/// <value></value>
 		public bool UseOptimisticConcurrency { get; set; }
 		
-		/// <summary>
-		/// Occurs when an entity is converted to a document and metadata.
-		/// Changes made to the document / metadata instances passed to this event will be persisted.
-		/// </summary>
-		public virtual event EntityToDocument OnEntityConverted;
-		
-		/// <summary>
-		/// Occurs when a document and metadata are converted to an entity
-		/// </summary>
-		public event DocumentToEntity OnDocumentConverted;
-
 		/// <summary>
 		/// Gets the metadata for the specified entity.
 		/// </summary>
@@ -426,9 +407,12 @@ more responsive application.
 #endif
 			}
 			TrySetIdentity(entity, id);
-			var documentToEntity = OnDocumentConverted;
-			if (documentToEntity != null)
-				documentToEntity(entity, documentFound, metadata);
+
+			foreach (var documentConversionListener in listeners.ConversionListeners)
+			{
+				documentConversionListener.DocumentToEntity(entity, documentFound, metadata);
+			}
+
 			return entity;
 		}
 
@@ -682,7 +666,7 @@ more responsive application.
 
 				TrySetIdentity(entity, batchResult.Key);
 
-				foreach (var documentStoreListener in storeListeners)
+				foreach (var documentStoreListener in listeners.StoreListeners)
 				{
 					documentStoreListener.AfterStore(batchResult.Key, entity, batchResult.Metadata);
 				}
@@ -727,7 +711,7 @@ more responsive application.
 				etag = UseOptimisticConcurrency ? etag : null;
 				result.Entities.Add(existingEntity);
 
-				foreach (var deleteListener in deleteListeners)
+				foreach (var deleteListener in listeners.DeleteListeners)
 				{
 					deleteListener.BeforeDelete(key, existingEntity, metadata != null ? metadata.Metadata : null);
 				}
@@ -741,7 +725,7 @@ more responsive application.
 			deletedEntities.Clear();
 			foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
 			{
-				foreach (var documentStoreListener in storeListeners)
+				foreach (var documentStoreListener in listeners.StoreListeners)
 				{
 					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata))
 						cachedJsonDocs.Remove(entity.Key);
@@ -835,9 +819,11 @@ more responsive application.
 #else
 			metadata[Raven.Abstractions.Data.Constants.RavenClrType] =  RavenJToken.FromObject(entityType.AssemblyQualifiedName);
 #endif
-			var entityConverted = OnEntityConverted;
-			if (entityConverted != null)
-				entityConverted(entity, objectAsJson, metadata);
+
+			foreach (var documentConversionListener in listeners.ConversionListeners)
+			{
+				documentConversionListener.EntityToDocument(entity, objectAsJson, metadata);
+			}
 
 			return objectAsJson;
 		}

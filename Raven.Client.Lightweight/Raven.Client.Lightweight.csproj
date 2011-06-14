@@ -105,6 +105,7 @@
     <Compile Include="Document\IAbstractDocumentQuery.cs" />
     <Compile Include="Document\ILoaderWithInclude.cs" />
     <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
+    <Compile Include="Document\DocumentSessionListeners.cs" />
     <Compile Include="Document\MultiLoaderWithInclude.cs" />
     <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\PromotableRavenClientEnlistment.cs" />

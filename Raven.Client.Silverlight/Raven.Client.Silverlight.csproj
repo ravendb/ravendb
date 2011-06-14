@@ -138,6 +138,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\AsyncSpatialDocumentQuery.cs">
       <Link>Imports\Document\AsyncSpatialDocumentQuery.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSessionListeners.cs">
+      <Link>Imports\Document\DocumentSessionListeners.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\FailoverBehavior.cs">
       <Link>Imports\Document\FailoverBehavior.cs</Link>
     </Compile>

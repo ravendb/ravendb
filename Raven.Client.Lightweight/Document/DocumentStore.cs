@@ -120,10 +120,7 @@ namespace Raven.Client.Document
 		}
 
 		private string identifier;
-		private IDocumentDeleteListener[] deleteListeners = new IDocumentDeleteListener[0];
-		private IDocumentStoreListener[] storeListeners = new IDocumentStoreListener[0];
-		private IDocumentConversionListener[] conversionListeners = new IDocumentConversionListener[0];
-		private IDocumentQueryListener[] queryListeners = new IDocumentQueryListener[0];
+		DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 #if !SILVERLIGHT
 		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
@@ -250,7 +247,7 @@ namespace Raven.Client.Document
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
-			var session = new DocumentSession(this, queryListeners, storeListeners, deleteListeners, DatabaseCommands.With(credentialsForSession)
+			var session = new DocumentSession(this, listeners, DatabaseCommands.With(credentialsForSession)
 #if !NET_3_5
 				, AsyncDatabaseCommands.With(credentialsForSession)
 #endif
@@ -265,7 +262,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
 		{
-			var session = new DocumentSession(this, queryListeners, storeListeners, deleteListeners, DatabaseCommands
+			var session = new DocumentSession(this, listeners, DatabaseCommands
 #if !NET_3_5
 				, AsyncDatabaseCommands
 #endif
@@ -279,7 +276,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentSession OpenSession(string database)
 		{
-			var session = new DocumentSession(this, queryListeners, storeListeners, deleteListeners, DatabaseCommands.ForDatabase(database)
+			var session = new DocumentSession(this, listeners, DatabaseCommands.ForDatabase(database)
 #if !NET_3_5
 				, AsyncDatabaseCommands.ForDatabase(database)
 #endif
@@ -293,7 +290,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
-			var session = new DocumentSession(this, queryListeners, storeListeners, deleteListeners, DatabaseCommands
+			var session = new DocumentSession(this, listeners, DatabaseCommands
 					.ForDatabase(database)
 					.With(credentialsForSession)
 #if !NET_3_5
@@ -308,11 +305,7 @@ namespace Raven.Client.Document
 		
 		private void AfterSessionCreated(DocumentSession session)
 		{
-			foreach (var documentConvertionListener in conversionListeners)
-			{
-				session.Advanced.OnDocumentConverted += documentConvertionListener.DocumentToEntity;
-				session.Advanced.OnEntityConverted += documentConvertionListener.EntityToDocument;
-			}
+			
 		}
 #endif
 		/// <summary>
@@ -322,7 +315,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
 		{
-			storeListeners = storeListeners.Concat(new[] {documentStoreListener}).ToArray();
+			listeners.StoreListeners = listeners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
 			return this;
 		}
 
@@ -436,7 +429,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener)
 		{
-			deleteListeners = deleteListeners.Concat(new[] {deleteListener}).ToArray();
+			listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] { deleteListener }).ToArray();
 			return this;
 		}
 
@@ -445,7 +438,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentStore RegisterListener(IDocumentQueryListener queryListener)
 		{
-			queryListeners = queryListeners.Concat(new[] { queryListener }).ToArray();
+			listeners.QueryListeners = listeners.QueryListeners.Concat(new[] { queryListener }).ToArray();
 			return this;
 		}
 		/// <summary>
@@ -453,7 +446,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentStore RegisterListener(IDocumentConversionListener conversionListener)
 		{
-			conversionListeners = conversionListeners.Concat(new[] {conversionListener,}).ToArray();
+			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
 			return this;
 		}
 
@@ -512,7 +505,7 @@ namespace Raven.Client.Document
 			if (AsyncDatabaseCommands == null)
 				throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-			var session = new AsyncDocumentSession(this, AsyncDatabaseCommands, queryListeners, storeListeners, deleteListeners);
+			var session = new AsyncDocumentSession(this, AsyncDatabaseCommands, listeners);
 			return session;
 		}
 
@@ -525,7 +518,7 @@ namespace Raven.Client.Document
             if (AsyncDatabaseCommands == null)
                 throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-            var session = new AsyncDocumentSession(this, AsyncDatabaseCommands.ForDatabase(databaseName), queryListeners, storeListeners, deleteListeners);
+            var session = new AsyncDocumentSession(this, AsyncDatabaseCommands.ForDatabase(databaseName), listeners);
             return session;
         }
 #endif

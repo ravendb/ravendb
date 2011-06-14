@@ -27,10 +27,8 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public AsyncDocumentSession(DocumentStore documentStore, 
             IAsyncDatabaseCommands asyncDatabaseCommands, 
-            IDocumentQueryListener[] queryListeners, 
-            IDocumentStoreListener[] storeListeners, 
-            IDocumentDeleteListener[] deleteListeners)
-			: base(documentStore, queryListeners, storeListeners, deleteListeners)
+            DocumentSessionListeners listeners)
+			: base(documentStore, listeners)
 		{
 			AsyncDatabaseCommands = asyncDatabaseCommands;
 		}
@@ -50,7 +48,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 					null,
 #endif
-				AsyncDatabaseCommands, index, new string[0], queryListeners);
+				AsyncDatabaseCommands, index, new string[0], listeners.QueryListeners);
 	    }
 
 	    /// <summary>
@@ -67,7 +65,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 					null,
 #endif
-					AsyncDatabaseCommands, indexName, new string[0], queryListeners);
+					AsyncDatabaseCommands, indexName, new string[0], listeners.QueryListeners);
 	    }
 
 	    /// <summary>

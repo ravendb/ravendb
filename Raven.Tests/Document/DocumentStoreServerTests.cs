@@ -499,13 +499,11 @@ namespace Raven.Tests.Document
 				documentStore.Initialize();
 
 				var session = documentStore.OpenSession();
-				session.Advanced.OnEntityConverted += (entity, document, metadata) =>
-				{
-					metadata["Raven-Allowed-Users"] = new RavenJArray("ayende", "oren", "rob");
-				};
-
 				var company = new Company { Name = "Company" };
 				session.Store(company);
+				var metadata = session.Advanced.GetMetadataFor(company);
+				metadata["Raven-Allowed-Users"] = new RavenJArray("ayende", "oren", "rob");
+
 				session.SaveChanges();
 				var metadataFromServer = session.Advanced.GetMetadataFor(session.Load<Company>(company.Id));
 				var users = ((RavenJArray)metadataFromServer["Raven-Allowed-Users"]).Cast<RavenJValue>().Select(x => (string)x.Value).ToArray();
