@@ -57,7 +57,7 @@
 							<ContentControl cm:View.Model="{Binding}"
 											cm:View.Context="Tooltip" />
 						</ToolTipService.ToolTip>
-						<ti:ContextMenuService.ContextMenu>
+						<!--<ti:ContextMenuService.ContextMenu>
 							<ti:ContextMenu>
 								<ti:MenuItem Header="Edit Document"
 											 cm:Action.TargetWithoutContext="EditDocument"
@@ -75,7 +75,7 @@
 											 cm:Action.TargetWithoutContext="DeleteDocument"
 											 cm:Message.Attach="[Click]=[Execute($this.Tag)]" />
 							</ti:ContextMenu>
-						</ti:ContextMenuService.ContextMenu>
+						</ti:ContextMenuService.ContextMenu>-->
 
 						<Border x:Name="HoverHighlight"
 								CornerRadius="2"

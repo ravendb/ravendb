@@ -126,11 +126,6 @@
 							</f:CustomActionMessage>
 						</Input:KeyTrigger>
 					</i:Interaction.Triggers>
-					<ListBox.ItemTemplate>
-						<DataTemplate>
-							<Documents:DocumentView DataContext="{Binding}" />
-						</DataTemplate>
-					</ListBox.ItemTemplate>
 					<tk:ContextMenuService.ContextMenu>
 						<tk:ContextMenu>
 							<tk:MenuItem Header="Edit Document"
