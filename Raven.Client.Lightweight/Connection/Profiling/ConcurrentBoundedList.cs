@@ -23,7 +23,6 @@ namespace Raven.Client.Connection.Profiling
 
 		public T Push(T item)
 		{
-			var spinWait = new SpinWait();
 			T result = default(T);
 			do
 			{
@@ -42,8 +41,6 @@ namespace Raven.Client.Connection.Profiling
 
 				if (Interlocked.CompareExchange(ref items, newList, current) == current)
 					break;
-
-				spinWait.SpinOnce();
 
 			} while (true);
 

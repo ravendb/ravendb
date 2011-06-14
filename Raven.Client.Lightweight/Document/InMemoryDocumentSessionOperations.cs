@@ -317,6 +317,8 @@ more responsive application.
 		/// <returns></returns>
 		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata)
 		{
+			document.Remove("@metadata");
+
 			object entity;
 			if (entitiesByKey.TryGetValue(key, out entity) == false)
 			{
@@ -329,7 +331,6 @@ more responsive application.
 				return (T) entity;
 			}
 			var etag = metadata.Value<string>("@etag");
-			document.Remove("@metadata");
 			if(metadata.Value<bool>("Non-Authoritive-Information") && 
 				AllowNonAuthoritiveInformation == false)
 			{
@@ -385,7 +386,7 @@ more responsive application.
 		protected object ConvertToEntity<T>(string id, RavenJObject documentFound, RavenJObject metadata)
 		{
 			if(typeof(T) == typeof(RavenJObject))
-				return (T) (object) documentFound;
+				return (T) (object) documentFound.CloneToken();
 
 			var entity = default(T);
 			EnsureNotReadVetoed(metadata);
@@ -815,11 +816,8 @@ more responsive application.
 			{
 				objectAsJson.Remove(identityProperty.Name);
 			}
-#if !SILVERLIGHT
-			metadata[Raven.Abstractions.Data.Constants.RavenClrType] =  RavenJToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
-#else
-			metadata[Raven.Abstractions.Data.Constants.RavenClrType] =  RavenJToken.FromObject(entityType.AssemblyQualifiedName);
-#endif
+
+			SetClrType(entityType, metadata);
 
 			foreach (var documentConversionListener in listeners.ConversionListeners)
 			{
@@ -827,6 +825,25 @@ more responsive application.
 			}
 
 			return objectAsJson;
+		}
+
+		private static void SetClrType(Type entityType, RavenJObject metadata)
+		{
+			if(
+#if !NET_3_5
+				entityType == typeof(DynamicJsonObject) || 
+#endif
+				entityType == typeof(RavenJObject)) // dynamic types
+			{
+				if (metadata.ContainsKey(Raven.Abstractions.Data.Constants.RavenClrType))
+					return;// do not overwrite the value
+			}
+
+#if !SILVERLIGHT
+			metadata[Raven.Abstractions.Data.Constants.RavenClrType] =  RavenJToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
+#else
+			metadata[Raven.Abstractions.Data.Constants.RavenClrType] =  RavenJToken.FromObject(entityType.AssemblyQualifiedName);
+#endif
 		}
 
 		private RavenJObject GetObjectAsJson(object entity)

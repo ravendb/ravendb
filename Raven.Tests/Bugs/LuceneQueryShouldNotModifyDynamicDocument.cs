@@ -16,6 +16,11 @@ namespace Raven.Tests.Bugs
                     session.SaveChanges();
                 }
 
+				using (var session = store.OpenSession())
+				{
+					Assert.Equal("Test", session.Load<dynamic>("test").Property);
+				}
+
                 using (var session = store.OpenSession())
                 {
                     var doc = session.Advanced.LuceneQuery<dynamic>().First();
@@ -25,7 +30,8 @@ namespace Raven.Tests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Equal("Test", session.Load<dynamic>("test").Property);
+                	var load = session.Load<dynamic>("test");
+                	Assert.Equal("Test", load.Property);
                 }
             }
         }
