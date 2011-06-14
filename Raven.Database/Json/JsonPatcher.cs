@@ -249,7 +249,7 @@ namespace Raven.Database.Json
 				document[propName] = patchCmd.Value;
 				return;
 			}
-			property.Value = (patchCmd.Value as RavenJValue).Value;
+			property.Value = ((RavenJValue) patchCmd.Value).Value;
 		}
 
 

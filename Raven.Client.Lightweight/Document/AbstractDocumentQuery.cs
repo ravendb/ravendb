@@ -1419,8 +1419,7 @@ If you really want to do in memory filtering on the data returned from the query
 #endif
                 HandleInternalMetadata(result);
 
-                var deserializedResult =
-                    (T)theSession.Conventions.CreateSerializer().Deserialize(new RavenJTokenReader(result), typeof(T));
+                var deserializedResult = DeserializedResult(result);
 
                 var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
                 if (string.IsNullOrEmpty(documentId) == false)
@@ -1443,7 +1442,20 @@ If you really want to do in memory filtering on the data returned from the query
                                           metadata);
         }
 
-        private void HandleInternalMetadata(RavenJObject result)
+		private T DeserializedResult(RavenJObject result)
+		{
+			if(projectionFields != null && projectionFields.Length == 1) // we only select a single field
+			{
+				var type = typeof(T);
+				if(type == typeof(string) || typeof(T).IsValueType|| typeof(T).IsEnum)
+				{
+					return result.Value<T>(projectionFields[0]);
+				}
+			}
+			return (T)theSession.Conventions.CreateSerializer().Deserialize(new RavenJTokenReader(result), typeof(T));
+		}
+
+		private void HandleInternalMetadata(RavenJObject result)
         {
 			// Implant a property with "id" value ... if not exists
         	var metadata = result.Value<RavenJObject>("@metadata");

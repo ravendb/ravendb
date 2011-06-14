@@ -921,7 +921,7 @@ namespace Raven.Client.Linq
 					value = Expression.Lambda(expression).Compile().DynamicInvoke();
 					return true;
 				case ExpressionType.Convert:
-					value = Expression.Lambda(((UnaryExpression) expression).Operand).Compile().DynamicInvoke();
+					value = Expression.Lambda(expression).Compile().DynamicInvoke();
 					return true;
 				case ExpressionType.NewArrayInit:
 					var expressions = ((NewArrayExpression) expression).Expressions;
