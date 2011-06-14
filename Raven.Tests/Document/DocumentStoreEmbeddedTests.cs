@@ -451,13 +451,11 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Will_store_if_entity_changed()
 		{
-			var stored = 0;
 			using (var documentStore = NewDocumentStore())
 			{
 				var company = new Company { Name = "Company Name" };
 				var session = documentStore.OpenSession();
 				session.Store(company);
-				Assert.Equal(0, stored);
 				session.SaveChanges();
 
 				var sessions2 = documentStore.OpenSession();
@@ -465,7 +463,7 @@ namespace Raven.Tests.Document
 				sessions2.SaveChanges();
 				c2.Phone = 1;
 				sessions2.SaveChanges();
-				Assert.Equal(2, session.Advanced.NumberOfRequests);
+				Assert.Equal(2, sessions2.Advanced.NumberOfRequests);
 			}
 		}
 
