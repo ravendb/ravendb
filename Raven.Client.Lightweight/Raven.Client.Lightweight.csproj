@@ -75,6 +75,7 @@
     <Compile Include="Connection\IRavenQueryInspector.cs" />
     <Compile Include="Connection\JsonExtensions.cs" />
     <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
+    <Compile Include="Connection\Profiling\ConcurrentBoundedList.cs" />
     <Compile Include="Connection\Profiling\IHoldProfilingInformation.cs" />
     <Compile Include="Connection\Profiling\ProfilingContext.cs" />
     <Compile Include="Connection\Profiling\RequestStatus.cs" />

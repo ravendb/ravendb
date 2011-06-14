@@ -14,9 +14,9 @@ namespace Raven.Client.Connection.Profiling
 	/// </summary>
 	public class ProfilingContext
 	{
-		private readonly ConcurrentQueue<ProfilingInformation> lastRecentlyUsed = new ConcurrentQueue<ProfilingInformation>();
+		private readonly ConcurrentLruLSet<ProfilingInformation> leastRecentlyUsedCache = new ConcurrentLruLSet<ProfilingInformation>(NumberOfSessionsToTrack);
 
-		private const int NumberOfSessionsToTrack = 25;
+		private const int NumberOfSessionsToTrack = 50;
 
 		/// <summary>
 		/// Register the action as associated with <param name="sender"/>
@@ -29,13 +29,7 @@ namespace Raven.Client.Connection.Profiling
 
 			profilingInformationHolder.ProfilingInformation.Requests.Add(requestResultArgs);
 
-			lastRecentlyUsed.Enqueue(profilingInformationHolder.ProfilingInformation);
-
-			if (lastRecentlyUsed.Count <= NumberOfSessionsToTrack) 
-				return;
-
-			ProfilingInformation _;
-			lastRecentlyUsed.TryDequeue(out _);
+			leastRecentlyUsedCache.Push(profilingInformationHolder.ProfilingInformation);
 		}
 
 		/// <summary>
@@ -43,7 +37,7 @@ namespace Raven.Client.Connection.Profiling
 		/// </summary>
 		public ProfilingInformation TryGet(Guid id)
 		{
-			return lastRecentlyUsed.FirstOrDefault(x => x.Id == id);
+			return leastRecentlyUsedCache.FirstOrDefault(x => x.Id == id);
 		}
 	}
 }
