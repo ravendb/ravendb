@@ -34,22 +34,26 @@ namespace Raven.Client.Connection.Async
 	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands
 	{
-		private ProfilingInformation profilingInformation = new ProfilingInformation();
+		private ProfilingInformation profilingInformation;
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
 		private readonly IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
+		private readonly Guid? sessionId;
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
 		/// <param name="url">The URL.</param>
 		/// <param name="convention">The convention.</param>
 		/// <param name="credentials">The credentials.</param>
-		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory)
+		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId)
 		{
+			profilingInformation = new ProfilingInformation(sessionId);
 			this.url = url;
 			this.jsonRequestFactory = jsonRequestFactory;
+			this.sessionId = sessionId;
 			this.convention = convention;
 			this.credentials = credentials;
 		}
@@ -67,7 +71,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory);
+			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory, sessionId);
 		}
 
 		/// <summary>
@@ -236,7 +240,7 @@ namespace Raven.Client.Connection.Async
 			if (databaseUrl.EndsWith("/") == false)
 				databaseUrl += "/";
 			databaseUrl = databaseUrl + "databases/" + database + "/";
-			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory);
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId);
 		}
 
 		/// <summary>
@@ -249,7 +253,7 @@ namespace Raven.Client.Connection.Async
 			if (indexOfDatabases == -1)
 				return this;
 
-			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials, jsonRequestFactory);
+			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials, jsonRequestFactory, sessionId);
 		}
 
 		/// <summary>

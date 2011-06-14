@@ -27,8 +27,9 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public AsyncDocumentSession(DocumentStore documentStore, 
             IAsyncDatabaseCommands asyncDatabaseCommands, 
-            DocumentSessionListeners listeners)
-			: base(documentStore, listeners)
+            DocumentSessionListeners listeners, 
+			Guid id)
+			: base(documentStore, listeners, id)
 		{
 			AsyncDatabaseCommands = asyncDatabaseCommands;
 		}

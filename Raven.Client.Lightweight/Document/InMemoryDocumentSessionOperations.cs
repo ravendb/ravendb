@@ -38,6 +38,11 @@ namespace Raven.Client.Document
 	public abstract class InMemoryDocumentSessionOperations : IDisposable
 	{
 		/// <summary>
+		/// The session id 
+		/// </summary>
+		public Guid Id { get; private set; }
+
+		/// <summary>
 		/// The entities waiting to be deleted
 		/// </summary>
 		protected readonly HashSet<object> deletedEntities = new HashSet<object>();
@@ -89,17 +94,14 @@ namespace Raven.Client.Document
 	    private IDictionary<object, RavenJObject> cachedJsonDocs;
 
 		/// <summary>
-		/// The session information for this session, used for profiling
-		/// </summary>
-		public ProfilingInformation ProfilingInformation { get; private set; }
-
-		/// <summary>
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
 		protected InMemoryDocumentSessionOperations(
 			DocumentStore documentStore, 
-			DocumentSessionListeners listeners)
+			DocumentSessionListeners listeners, 
+			Guid id)
 		{
+			Id = id;
 			this.documentStore = documentStore;
 			this.listeners = listeners;
 			ResourceManagerId = documentStore.ResourceManagerId;
@@ -107,7 +109,6 @@ namespace Raven.Client.Document
 			AllowNonAuthoritiveInformation = true;
 			NonAuthoritiveInformationTimeout = TimeSpan.FromSeconds(15);
 			MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
-			ProfilingInformation = new ProfilingInformation();
 		}
 
 		/// <summary>

@@ -30,6 +30,10 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentStore : IDocumentStore
 	{
+		/// <summary>
+		/// The current session id - only used during contsruction
+		/// </summary>
+		[ThreadStatic] protected static Guid? currentSessionId;
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -247,13 +251,22 @@ namespace Raven.Client.Document
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
-			var session = new DocumentSession(this, listeners, DatabaseCommands.With(credentialsForSession)
+			var sessionId = Guid.NewGuid();
+			currentSessionId = sessionId;
+			try
+			{
+				var session = new DocumentSession(this, listeners, sessionId, DatabaseCommands.With(credentialsForSession)
 #if !NET_3_5
-				, AsyncDatabaseCommands.With(credentialsForSession)
+, AsyncDatabaseCommands.With(credentialsForSession)
 #endif
-			);
-			AfterSessionCreated(session);
-			return session;
+);
+				AfterSessionCreated(session);
+				return session;
+			}
+			finally
+			{
+				currentSessionId = null;
+			}
 		}
 
 		/// <summary>
@@ -262,13 +275,22 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
 		{
-			var session = new DocumentSession(this, listeners, DatabaseCommands
+			var sessionId = Guid.NewGuid();
+			currentSessionId = sessionId;
+			try
+			{
+				var session = new DocumentSession(this, listeners, sessionId, DatabaseCommands
 #if !NET_3_5
-				, AsyncDatabaseCommands
+, AsyncDatabaseCommands
 #endif
 );
-			AfterSessionCreated(session);
-			return session;
+				AfterSessionCreated(session);
+				return session;
+			}
+			finally
+			{
+				currentSessionId = null;
+			}
 		}
 
 		/// <summary>
@@ -276,13 +298,22 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentSession OpenSession(string database)
 		{
-			var session = new DocumentSession(this, listeners, DatabaseCommands.ForDatabase(database)
+			var sessionId = Guid.NewGuid();
+			currentSessionId = sessionId;
+			try
+			{
+				var session = new DocumentSession(this, listeners, sessionId, DatabaseCommands.ForDatabase(database)
 #if !NET_3_5
-				, AsyncDatabaseCommands.ForDatabase(database)
+, AsyncDatabaseCommands.ForDatabase(database)
 #endif
-			);
-			AfterSessionCreated(session);
-			return session;
+);
+				AfterSessionCreated(session);
+				return session;
+			}
+			finally
+			{
+				currentSessionId = null;
+			}
 		}
 
 		/// <summary>
@@ -290,23 +321,28 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
-			var session = new DocumentSession(this, listeners, DatabaseCommands
+			var sessionId = Guid.NewGuid();
+			currentSessionId = sessionId;
+			try
+			{
+				var session = new DocumentSession(this, listeners, sessionId, DatabaseCommands
 					.ForDatabase(database)
 					.With(credentialsForSession)
 #if !NET_3_5
-				,AsyncDatabaseCommands
+, AsyncDatabaseCommands
 					.ForDatabase(database)
 					.With(credentialsForSession)
 #endif
-			);
-			AfterSessionCreated(session); 
-			return session;
+);
+				AfterSessionCreated(session);
+				return session;
+			}
+			finally
+			{
+				currentSessionId = null;
+			}
 		}
-		
-		private void AfterSessionCreated(DocumentSession session)
-		{
-			
-		}
+
 #endif
 		/// <summary>
 		/// Registers the store listener.
@@ -319,7 +355,17 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		
+		private void AfterSessionCreated(InMemoryDocumentSessionOperations session)
+		{
+			var onSessionCreatedInternal = SessionCreatedInternal;
+			if(onSessionCreatedInternal!=null)
+				onSessionCreatedInternal(session);
+		}
+
+		///<summary>
+		/// Internal notification for integaration tools, mainly
+		///</summary>
+		public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
 
 		/// <summary>
 		/// The resource manager id for the document store.
@@ -405,7 +451,7 @@ namespace Raven.Client.Document
 			var replicationInformer = new ReplicationInformer(Conventions);
 			databaseCommandsGenerator = () =>
 			{
-				var serverClient = new ServerClient(Url, Conventions, credentials, replicationInformer, jsonRequestFactory);
+				var serverClient = new ServerClient(Url, Conventions, credentials, replicationInformer, jsonRequestFactory, currentSessionId);
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return serverClient;
 				return serverClient.ForDatabase(DefaultDatabase);
@@ -414,7 +460,7 @@ namespace Raven.Client.Document
 #if !NET_3_5
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId);
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
 				return asyncServerClient.ForDatabase(DefaultDatabase);
@@ -502,11 +548,21 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IAsyncDocumentSession OpenAsyncSession()
 		{
-			if (AsyncDatabaseCommands == null)
-				throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
+			var sessionId = Guid.NewGuid();
+			currentSessionId = sessionId;
+			try
+			{
+				if (AsyncDatabaseCommands == null)
+					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-			var session = new AsyncDocumentSession(this, AsyncDatabaseCommands, listeners);
-			return session;
+				var session = new AsyncDocumentSession(this, AsyncDatabaseCommands, listeners, sessionId);
+				AfterSessionCreated(session);
+				return session;
+			}
+			finally
+			{
+				currentSessionId = null;
+			}
 		}
 
         /// <summary>
@@ -515,11 +571,21 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public IAsyncDocumentSession OpenAsyncSession(string databaseName)
         {
-            if (AsyncDatabaseCommands == null)
-                throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
+        	var sessionId = Guid.NewGuid();
+        	currentSessionId = sessionId;
+        	try
+        	{
+				if (AsyncDatabaseCommands == null)
+					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-            var session = new AsyncDocumentSession(this, AsyncDatabaseCommands.ForDatabase(databaseName), listeners);
-            return session;
+				var session = new AsyncDocumentSession(this, AsyncDatabaseCommands.ForDatabase(databaseName), listeners, sessionId);
+				AfterSessionCreated(session);
+				return session;
+        	}
+        	finally
+        	{
+        		currentSessionId = null;
+        	}
         }
 #endif
 

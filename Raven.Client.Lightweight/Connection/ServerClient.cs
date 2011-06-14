@@ -41,7 +41,8 @@ namespace Raven.Client.Connection
 		private readonly ICredentials credentials;
 		private readonly ReplicationInformer replicationInformer;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
-		private readonly ProfilingInformation profilingInformation = new ProfilingInformation();
+		private readonly Guid? currentSessionId;
+		private readonly ProfilingInformation profilingInformation;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
@@ -50,10 +51,14 @@ namespace Raven.Client.Connection
 		/// <param name="convention">The convention.</param>
 		/// <param name="credentials">The credentials.</param>
 		/// <param name="replicationInformer">The replication informer.</param>
-		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, ReplicationInformer replicationInformer, HttpJsonRequestFactory jsonRequestFactory)
+		/// <param name="jsonRequestFactory"></param>
+		/// <param name="currentSessionId"></param>
+		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, ReplicationInformer replicationInformer, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId)
 		{
+			profilingInformation = new ProfilingInformation(currentSessionId);
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
+			this.currentSessionId = currentSessionId;
 			this.replicationInformer = replicationInformer;
 			this.url = url;
 			this.convention = convention;
@@ -910,7 +915,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <returns></returns>
 		public IDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new ServerClient(url, convention, credentialsForSession, replicationInformer, jsonRequestFactory);
+			return new ServerClient(url, convention, credentialsForSession, replicationInformer, jsonRequestFactory, currentSessionId);
 		}
 
 		/// <summary>
@@ -926,7 +931,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			if (databaseUrl.EndsWith("/") == false)
 				databaseUrl += "/";
 			databaseUrl = databaseUrl + "databases/" + database + "/";
-			return new ServerClient(databaseUrl, convention, credentials, replicationInformer, jsonRequestFactory);
+			return new ServerClient(databaseUrl, convention, credentials, replicationInformer, jsonRequestFactory, currentSessionId);
 		}
 
 		/// <summary>
@@ -939,7 +944,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			if (indexOfDatabases == -1)
 				return this;
 
-			return new ServerClient(url.Substring(0, indexOfDatabases), convention, credentials, replicationInformer, jsonRequestFactory);
+			return new ServerClient(url.Substring(0, indexOfDatabases), convention, credentials, replicationInformer, jsonRequestFactory, currentSessionId);
 		}
 
 		/// <summary>

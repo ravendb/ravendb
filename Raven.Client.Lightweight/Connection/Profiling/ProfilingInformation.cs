@@ -16,11 +16,19 @@ namespace Raven.Client.Connection.Profiling
 		/// <summary>
 		/// Uniquely identify the session
 		/// </summary>
-		public Guid Id = Guid.NewGuid();
+		public Guid Id;
 
 		/// <summary>
 		/// The time when the session was created
 		/// </summary>
 		public DateTime At = DateTime.Now;
+
+		///<summary>
+		/// Create a new instance of this class
+		///</summary>
+		public ProfilingInformation(Guid? sessionId)
+		{
+			Id = sessionId ?? Guid.NewGuid();
+		}
 	}
 }

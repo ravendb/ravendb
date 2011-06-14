@@ -32,13 +32,14 @@ namespace Raven.Client.Embedded
 	{
 		private readonly DocumentDatabase database;
 		private readonly DocumentConvention convention;
-		private readonly ProfilingInformation profilingInformation = new ProfilingInformation();
+		private readonly ProfilingInformation profilingInformation;
 
 		///<summary>
 		/// Create a new instance
 		///</summary>
-		public EmbeddedDatabaseCommands(DocumentDatabase database, DocumentConvention convention)
+		public EmbeddedDatabaseCommands(DocumentDatabase database, DocumentConvention convention, Guid? sessionId)
 		{
+			profilingInformation = new ProfilingInformation(sessionId);
 			this.database = database;
 			this.convention = convention;
 			OperationsHeaders = new NameValueCollection();

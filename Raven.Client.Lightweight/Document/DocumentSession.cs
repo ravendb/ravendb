@@ -54,12 +54,13 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentSession(DocumentStore documentStore, 
 			DocumentSessionListeners listeners,
+			Guid id,
 			IDatabaseCommands databaseCommands
 #if !NET_3_5
 			, IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
 			)
-			: base(documentStore, listeners)
+			: base(documentStore, listeners, id)
 		{
 #if !NET_3_5
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
