@@ -7,7 +7,9 @@
 			 xmlns:f="clr-namespace:Raven.Studio.Framework"
 			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
-             xmlns:local="clr-namespace:Raven.Studio.Behaviors" x:Class="Raven.Studio.Features.Database.SummaryView"
+             xmlns:local="clr-namespace:Raven.Studio.Behaviors"
+             xmlns:popupMenu="clr-namespace:SL4PopupMenu;assembly=SL4PopupMenu"
+             x:Class="Raven.Studio.Features.Database.SummaryView"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
@@ -100,6 +102,15 @@
 				</i:Interaction.Behaviors>
 			</ListBox>
 
+			<popupMenu:PopupMenu RightClickElements="RecentDocuments">
+				<ListBox>
+					<popupMenu:PopupMenuItem Header="Edit Docuemnt" />
+					<popupMenu:PopupMenuItem Header="Copy Document Id to Clipboard" />
+					<popupMenu:PopupMenuSeparator />
+					<popupMenu:PopupMenuItem Header="Delete Document" />
+				</ListBox>
+			</popupMenu:PopupMenu>
+			
 			<TextBlock Text="{Binding RecentDocumentsStatus}"
 					   Style="{StaticResource Instruction}" />
 
