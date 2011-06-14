@@ -90,6 +90,13 @@ namespace Raven.Client.Shard
 
 			foreach (var shard in shards)
 				shard.Dispose();
+
+			WasDisposed = true;
+
+			var afterDispose = AfterDispose;
+			if (afterDispose != null)
+				afterDispose(this, EventArgs.Empty);
+
 		}
 
 		#endregion
@@ -270,6 +277,16 @@ namespace Raven.Client.Shard
 
 			return this;
 		}
+
+		/// <summary>
+		/// Called after dispose is completed
+		/// </summary>
+		public event EventHandler AfterDispose;
+
+		/// <summary>
+		/// Whatever the instance has been disposed
+		/// </summary>
+		public bool WasDisposed { get; private set; }
 	}
 }
 #endif

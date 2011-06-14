@@ -24,7 +24,7 @@ namespace Raven.Client
 	/// <summary>
 	/// Interface for managing access to RavenDB and open sessions.
 	/// </summary>
-	public interface IDocumentStore : IDisposable
+	public interface IDocumentStore : IDisposalNotification
 	{
 		/// <summary>
 		/// Setup the context for aggressive caching.

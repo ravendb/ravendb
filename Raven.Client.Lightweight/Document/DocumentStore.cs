@@ -241,6 +241,10 @@ namespace Raven.Client.Document
 		{
 			jsonRequestFactory.Dispose();
 			Stored = null;
+			WasDisposed = true;
+			var afterDispose = AfterDispose;
+			if(afterDispose!=null)
+				afterDispose(this, EventArgs.Empty);
 		}
 
 		#endregion
@@ -610,5 +614,15 @@ namespace Raven.Client.Document
 			public Guid Etag;
 			public byte[] Bytes;
 		}
+
+		/// <summary>
+		/// Called after dispose is completed
+		/// </summary>
+		public event EventHandler AfterDispose;
+
+		/// <summary>
+		/// Whatever the instance has been disposed
+		/// </summary>
+		public bool WasDisposed { get; private set; }
 	}
 }
