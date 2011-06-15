@@ -88,7 +88,7 @@ namespace Raven.Studio
 			var original = ViewLocator.LocateForModelType;
 			ViewLocator.LocateForModelType = (t, v, c) => { return StudioViewLocator.LocateForModelType(t, v, c, original); };
 
-			MessageBinder.SpecialValues["$idsInTag"] = context =>
+			MessageBinder.SpecialValues["$idsintag"] = context =>
 			{
 			    var tag = context.Source.Tag as string;
 			    return tag.Split(',');

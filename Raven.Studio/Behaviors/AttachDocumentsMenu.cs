@@ -35,7 +35,7 @@ namespace Raven.Studio.Behaviors
 
 			var editDocument = (PopupMenuItem)menu.Items[0];
 			editDocument.SetValue(Caliburn.Micro.Action.TargetWithoutContextProperty, "EditDocument");
-			editDocument.SetValue(Message.AttachProperty, "Execute($idsInTag)");
+			editDocument.SetValue(Message.AttachProperty, "Execute($idsintag)");
 			
 			var canvas = menu.ItemsControl.Parent as Canvas;
 			if (canvas != null) canvas.MouseMove += (s, e) => { mousePosition = e.GetPosition(null); };
