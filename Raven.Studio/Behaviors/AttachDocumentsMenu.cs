@@ -71,6 +71,19 @@ namespace Raven.Studio.Behaviors
 		private void OnMenuOpening(object sender, RoutedEventArgs e)
 		{
 			OpenOnlyOnDocumentItem(e.OriginalSource);
+			if (menu.IsOpeningCancelled == false)
+			{
+				MultiItemsMenuOrSingleItemMenu();
+			}
+		}
+
+		private void MultiItemsMenuOrSingleItemMenu()
+		{
+			if (AssociatedObject.SelectionMode != SelectionMode.Single &&
+				AssociatedObject.SelectedItems.Count > 1)
+			{
+				
+			}
 		}
 
 		// Make sure that the menu opened only on a document item, 
