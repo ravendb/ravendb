@@ -44,17 +44,6 @@ namespace Raven.Studio.Behaviors
 			menu.Opening += OnMenuOpening;
 			menu.Closing += FocusTheClickOnItem;
 			menu.AddTrigger(TriggerTypes.RightClick, AssociatedObject);
-
-			//        <popupMenu:PopupMenu x:Name="menu">
-			//    <ListBox>
-			//        <popupMenu:PopupMenuItem Header="Edit Document"
-			//                                 cm:Action.TargetWithoutContext="EditDocument"
-			//                                 cm:Message.Attach="[Click]=[EditDocument($selectedItems)]" />
-			//        <popupMenu:PopupMenuItem Header="Copy Document Id to Clipboard" />
-			//        <popupMenu:PopupMenuSeparator />
-			//        <popupMenu:PopupMenuItem Header="Delete Document" />
-			//    </ListBox>
-			//</popupMenu:PopupMenu>
 		}
 
 		private void FocusTheClickOnItem(object sender, RoutedEventArgs e)
