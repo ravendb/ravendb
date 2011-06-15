@@ -47,13 +47,23 @@ namespace Raven.Studio.Behaviors
 
 		private void OpenOnlyOnDocumentItem(object sender, RoutedEventArgs e)
 		{
+			// Make sure that the menu opened only on a document item, 
+			// and not on an empty space.
 			var ele = e.OriginalSource as DependencyObject;		// ListBoxItem | ContentControl | Control | FrameworkElement
 			menu.IsOpeningCancelled = true;
 			while (ele != null && (ele is ScrollViewer) == false)
 			{
-				if (ele is ListBoxItem)
+				var item  = ele as ListBoxItem;
+				if (item != null)
 				{
 					menu.IsOpeningCancelled = false;
+
+					// Make the current element selected on right click
+					if (AssociatedObject.SelectedItems.Contains(item.DataContext) == false)
+					{
+						AssociatedObject.SelectedItems.Clear();
+						item.IsSelected = true;
+					}
 					break;
 				}
 				ele = VisualTreeHelper.GetParent(ele);
