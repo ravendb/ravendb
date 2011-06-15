@@ -15,6 +15,7 @@ namespace Raven.Studio.Behaviors
 	public class AttachDocumentsMenu : Behavior<ListBox>
 	{
 		private PopupMenu menu;
+		private Point mousePosition;
 
 		protected override void OnAttached()
 		{
@@ -23,8 +24,6 @@ namespace Raven.Studio.Behaviors
 			base.OnAttached();
 		}
 
-		public static Point MousePosition { get; set; }
-		
 		private void CreateMenu()
 		{
 			menu = new PopupMenu();
@@ -39,7 +38,7 @@ namespace Raven.Studio.Behaviors
 			editDocument.SetValue(Message.AttachProperty, "Execute($idsInTag)");
 			
 			var canvas = menu.ItemsControl.Parent as Canvas;
-			if (canvas != null) canvas.MouseMove += (s, e) => { MousePosition = e.GetPosition(null); };
+			if (canvas != null) canvas.MouseMove += (s, e) => { mousePosition = e.GetPosition(null); };
 
 			menu.Opening += OnMenuOpening;
 			menu.Closing += FocusTheClickOnItem;
@@ -49,7 +48,7 @@ namespace Raven.Studio.Behaviors
 		private void FocusTheClickOnItem(object sender, RoutedEventArgs e)
 		{
 
-			var elementsInHostCoordinates = VisualTreeHelper.FindElementsInHostCoordinates(MousePosition,
+			var elementsInHostCoordinates = VisualTreeHelper.FindElementsInHostCoordinates(mousePosition,
 																						   Application.Current.RootVisual);
 			elementsInHostCoordinates
 				.Where(element => element is ListBoxItem)
