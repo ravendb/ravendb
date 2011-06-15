@@ -1,10 +1,10 @@
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Interactivity;
 using System.Windows.Media;
-using System.Windows.Shapes;
+using Raven.Studio.Common;
 using SL4PopupMenu;
 
 namespace Raven.Studio.Behaviors
@@ -22,6 +22,8 @@ namespace Raven.Studio.Behaviors
 			base.OnAttached();
 		}
 
+		public static Point MousePosition { get; set; }
+		
 		private void CreateMenu()
 		{
 			menu = new PopupMenu();
@@ -30,7 +32,11 @@ namespace Raven.Studio.Behaviors
 			menu.AddSeparator();
 			menu.AddItem("Delete Document", null);
 
+			var canvas = menu.ItemsControl.Parent as Canvas;
+			if (canvas != null) canvas.MouseMove += (s, e) => { MousePosition = e.GetPosition(null); };
+
 			menu.Opening += OpenOnlyOnDocumentItem;
+			menu.Closing += FocusTheClickOnItem;
 			menu.AddTrigger(TriggerTypes.RightClick, AssociatedObject);
 
 			//        <popupMenu:PopupMenu x:Name="menu">
@@ -45,6 +51,18 @@ namespace Raven.Studio.Behaviors
 			//</popupMenu:PopupMenu>
 		}
 
+		private void FocusTheClickOnItem(object sender, RoutedEventArgs e)
+		{
+
+			var elementsInHostCoordinates = VisualTreeHelper.FindElementsInHostCoordinates(MousePosition,
+																						   Application.Current.RootVisual);
+			elementsInHostCoordinates
+				.Where(element => element is ListBoxItem)
+				.OfType<ListBoxItem>()
+				.ToList()
+				.ForEach(FocusClickOnItem);
+		}
+
 		private void OpenOnlyOnDocumentItem(object sender, RoutedEventArgs e)
 		{
 			// Make sure that the menu opened only on a document item, 
@@ -57,17 +75,26 @@ namespace Raven.Studio.Behaviors
 				if (item != null)
 				{
 					menu.IsOpeningCancelled = false;
-
-					// Make the current element selected on right click
-					if (AssociatedObject.SelectedItems.Contains(item.DataContext) == false)
-					{
-						AssociatedObject.SelectedItems.Clear();
-						item.IsSelected = true;
-					}
+					FocusClickOnItem(item, AssociatedObject);		// Make the current element selected on right click
 					break;
 				}
 				ele = VisualTreeHelper.GetParent(ele);
 			}
+		}
+
+		private static void FocusClickOnItem(ListBoxItem item, ListBox parent)
+		{
+			if (parent.SelectionMode != SelectionMode.Single && parent.SelectedItems.Contains(item.DataContext) == false)
+				parent.SelectedItems.Clear();
+			item.IsSelected = true;
+		}
+
+		private static void FocusClickOnItem(ListBoxItem item)
+		{
+			var parent = VisualTreeHelperExtensions.GetParentOfType<ListBox>(item);
+			if (parent == null)
+				throw new InvalidOperationException("ListBoxItem must have a ancestor of type listbox");
+			FocusClickOnItem(item, parent);
 		}
 
 		protected override void OnDetaching()
