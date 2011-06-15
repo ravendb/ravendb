@@ -10,27 +10,22 @@
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
+	
+	<UserControl.Resources>
+		<CollectionViewSource x:Name="viewSource"
+							  Source="{Binding}">
+		</CollectionViewSource>
+	</UserControl.Resources>
 
 	<Grid>
 		<ListBox x:Name="list"
-				 ItemsSource="{Binding}"
+				 ItemsSource="{Binding Source={StaticResource viewSource}}"
 				 Style="{StaticResource DocumentList}">
 
 			<i:Interaction.Behaviors>
 				<local:SelectItemOnRightClick />
-				<local:AttachMenu TargetMenu="{Binding ElementName=menu}" />
+				<local:AttachDocumentsMenu />
 			</i:Interaction.Behaviors>
 		</ListBox>
-
-		<popupMenu:PopupMenu x:Name="menu">
-			<ListBox>
-				<popupMenu:PopupMenuItem Header="Edit Docuemnt"
-										 cm:Action.TargetWithoutContext="EditDocument"
-										 cm:Message.Attach="[Click]=[EditDocument($selectedItems)]" />
-				<popupMenu:PopupMenuItem Header="Copy Document Id to Clipboard" />
-				<popupMenu:PopupMenuSeparator />
-				<popupMenu:PopupMenuItem Header="Delete Document" />
-			</ListBox>
-		</popupMenu:PopupMenu>
 	</Grid>
 </UserControl>
