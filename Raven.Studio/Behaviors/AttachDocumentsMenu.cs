@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Interactivity;
 using System.Windows.Media;
 using Raven.Studio.Common;
+using Raven.Studio.Features.Documents.Resources;
 using SL4PopupMenu;
 
 namespace Raven.Studio.Behaviors
@@ -17,8 +18,6 @@ namespace Raven.Studio.Behaviors
 		{
 			CreateMenu();
 
-			//TargetMenu.OpenNextTo(MenuOrientationTypes.MouseBottomRight, null, true, true);
-
 			base.OnAttached();
 		}
 
@@ -27,15 +26,15 @@ namespace Raven.Studio.Behaviors
 		private void CreateMenu()
 		{
 			menu = new PopupMenu();
-			menu.AddItem("Edit Document", null);
-			menu.AddItem("Copy Document Id to Clipboard", null);
+			menu.AddItem(DocumentsResources.DocumentMenu_EditDocument, null);
+			menu.AddItem(DocumentsResources.DocumentMenu_CopyId, null);
 			menu.AddSeparator();
-			menu.AddItem("Delete Document", null);
+			menu.AddItem(DocumentsResources.DocumentMenu_DeleteDocument, null);
 
 			var canvas = menu.ItemsControl.Parent as Canvas;
 			if (canvas != null) canvas.MouseMove += (s, e) => { MousePosition = e.GetPosition(null); };
 
-			menu.Opening += OpenOnlyOnDocumentItem;
+			menu.Opening += OnMenuOpening;
 			menu.Closing += FocusTheClickOnItem;
 			menu.AddTrigger(TriggerTypes.RightClick, AssociatedObject);
 
@@ -69,15 +68,20 @@ namespace Raven.Studio.Behaviors
 				         	});
 		}
 
-		private void OpenOnlyOnDocumentItem(object sender, RoutedEventArgs e)
+		private void OnMenuOpening(object sender, RoutedEventArgs e)
 		{
-			// Make sure that the menu opened only on a document item, 
-			// and not on an empty space.
-			var ele = e.OriginalSource as DependencyObject;		// ListBoxItem | ContentControl | Control | FrameworkElement
+			OpenOnlyOnDocumentItem(e.OriginalSource);
+		}
+
+		// Make sure that the menu opened only on a document item, 
+		// and not on an empty space.
+		private void OpenOnlyOnDocumentItem(object element)
+		{
+			var ele = element as DependencyObject;
 			menu.IsOpeningCancelled = true;
 			while (ele != null && (ele is ScrollViewer) == false)
 			{
-				var item  = ele as ListBoxItem;
+				var item = ele as ListBoxItem;
 				if (item != null)
 				{
 					menu.IsOpeningCancelled = false;
