@@ -60,7 +60,13 @@ namespace Raven.Studio.Behaviors
 				.Where(element => element is ListBoxItem)
 				.OfType<ListBoxItem>()
 				.ToList()
-				.ForEach(FocusClickOnItem);
+				.ForEach(item =>
+				         	{
+								var parent = VisualTreeHelperExtensions.GetParentOfType<ListBox>(item);
+								if (parent != null && parent.SelectionMode != SelectionMode.Single)
+									parent.SelectedItems.Clear();
+								item.IsSelected = true;
+				         	});
 		}
 
 		private void OpenOnlyOnDocumentItem(object sender, RoutedEventArgs e)
@@ -75,26 +81,16 @@ namespace Raven.Studio.Behaviors
 				if (item != null)
 				{
 					menu.IsOpeningCancelled = false;
-					FocusClickOnItem(item, AssociatedObject);		// Make the current element selected on right click
+
+					// Make the current element selected on right click
+					if (AssociatedObject.SelectionMode != SelectionMode.Single && AssociatedObject.SelectedItems.Contains(item.DataContext) == false)
+						AssociatedObject.SelectedItems.Clear();
+					item.IsSelected = true;
+
 					break;
 				}
 				ele = VisualTreeHelper.GetParent(ele);
 			}
-		}
-
-		private static void FocusClickOnItem(ListBoxItem item, ListBox parent)
-		{
-			if (parent.SelectionMode != SelectionMode.Single && parent.SelectedItems.Contains(item.DataContext) == false)
-				parent.SelectedItems.Clear();
-			item.IsSelected = true;
-		}
-
-		private static void FocusClickOnItem(ListBoxItem item)
-		{
-			var parent = VisualTreeHelperExtensions.GetParentOfType<ListBox>(item);
-			if (parent == null)
-				throw new InvalidOperationException("ListBoxItem must have a ancestor of type listbox");
-			FocusClickOnItem(item, parent);
 		}
 
 		protected override void OnDetaching()
