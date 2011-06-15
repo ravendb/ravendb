@@ -4,7 +4,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interactivity;
 using System.Windows.Media;
+using Caliburn.Micro;
 using Raven.Studio.Common;
+using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Documents.Resources;
 using SL4PopupMenu;
 
@@ -26,11 +28,16 @@ namespace Raven.Studio.Behaviors
 		private void CreateMenu()
 		{
 			menu = new PopupMenu();
-			menu.AddItem(DocumentsResources.DocumentMenu_EditDocument, null);
+			
+			menu.AddItem(new PopupMenuItem(null, DocumentsResources.DocumentMenu_EditDocument));
 			menu.AddItem(DocumentsResources.DocumentMenu_CopyId, null);
 			menu.AddSeparator();
 			menu.AddItem(DocumentsResources.DocumentMenu_DeleteDocument, null);
 
+			var editDocument = (PopupMenuItem)menu.Items[0];
+			editDocument.SetValue(Caliburn.Micro.Action.TargetWithoutContextProperty, "EditDocument");
+			editDocument.SetValue(Message.AttachProperty, "Execute($idsInTag)");
+			
 			var canvas = menu.ItemsControl.Parent as Canvas;
 			if (canvas != null) canvas.MouseMove += (s, e) => { MousePosition = e.GetPosition(null); };
 
@@ -71,10 +78,14 @@ namespace Raven.Studio.Behaviors
 		private void OnMenuOpening(object sender, RoutedEventArgs e)
 		{
 			OpenOnlyOnDocumentItem(e.OriginalSource);
-			if (menu.IsOpeningCancelled == false)
-			{
-				MultiItemsMenuOrSingleItemMenu();
-			}
+			if (menu.IsOpeningCancelled)
+				return;
+
+			((PopupMenuItem) menu.Items[0]).Tag = string.Join(",", AssociatedObject.SelectedItems
+			                                                        	.OfType<DocumentViewModel>()
+			                                                        	.Select(vm => vm.Id));
+
+			MultiItemsMenuOrSingleItemMenu();
 		}
 
 		private void MultiItemsMenuOrSingleItemMenu()
