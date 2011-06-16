@@ -345,7 +345,7 @@ namespace Raven.Database
         public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
-				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "key");
+				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters, key is: " + key, "key");
 
             log.DebugFormat("Putting a document with key: {0} and etag {1}", key, etag);
 
