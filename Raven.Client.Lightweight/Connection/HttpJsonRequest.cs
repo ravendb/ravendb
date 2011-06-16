@@ -282,7 +282,7 @@ namespace Raven.Client.Connection
 			using (var dataStream = webRequest.GetRequestStream())
 			{
 				dataStream.Write(byteArray, 0, byteArray.Length);
-				dataStream.Close();
+				dataStream.Flush();
 			}
 		}
 
