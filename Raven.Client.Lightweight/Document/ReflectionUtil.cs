@@ -26,7 +26,8 @@ namespace Raven.Client.Document
 		public static string GetFullNameWithoutVersionInformation(Type entityType)
 		{
 			string result;
-			if (fullnameCache.TryGetValue(entityType, out result))
+			var localFullName = fullnameCache;
+			if (localFullName.TryGetValue(entityType, out result))
 				return result;
 
 			var asmName = new AssemblyName(entityType.Assembly.FullName).Name;
@@ -50,7 +51,7 @@ namespace Raven.Client.Document
 				result = entityType.FullName + ", " + asmName;
 			}
 
-			fullnameCache = new Dictionary<Type, string>(fullnameCache)
+			fullnameCache = new Dictionary<Type, string>(localFullName)
 			{
 				{entityType, result}
 			};
