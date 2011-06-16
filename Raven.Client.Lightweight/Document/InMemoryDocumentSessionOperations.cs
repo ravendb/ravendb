@@ -45,7 +45,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// The entities waiting to be deleted
 		/// </summary>
-		protected readonly HashSet<object> deletedEntities = new HashSet<object>();
+		protected readonly HashSet<object> deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparerer<object>.Default);
 
 #if !SILVERLIGHT
 		private bool hasEnlisted;
@@ -694,10 +694,41 @@ more responsive application.
 				Commands = new List<ICommandData>()
 			};
 			TryEnlistInAmbientTransaction();
+			PrepareForEntitiesDeletion(result);
+			PrepareForEntitiesPuts(result);
+
+			return result;
+		}
+
+		private void PrepareForEntitiesPuts(SaveChangesData result)
+		{
+			foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
+			{
+				foreach (var documentStoreListener in listeners.StoreListeners)
+				{
+					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata))
+						cachedJsonDocs.Remove(entity.Key);
+				}
+				result.Entities.Add(entity.Key);
+				if (entity.Value.Key != null)
+					entitiesByKey.Remove(entity.Value.Key);
+				result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
+			}
+		}
+
+		private void PrepareForEntitiesDeletion(SaveChangesData result)
+		{
 			DocumentMetadata value = null;
-			foreach (var key in (from deletedEntity in deletedEntities
-								 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
-								 select value.Key))
+
+			var keysToDelete = new List<string>();
+
+			foreach (var deletedEntity in deletedEntities)
+			{
+				if(entitiesAndMetadata.TryGetValue(deletedEntity, out value))
+					keysToDelete.Add(value.Key);
+			}
+
+			foreach (var key in keysToDelete)
 			{
 				Guid? etag = null;
 				object existingEntity;
@@ -725,20 +756,6 @@ more responsive application.
 				});
 			}
 			deletedEntities.Clear();
-			foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
-			{
-				foreach (var documentStoreListener in listeners.StoreListeners)
-				{
-					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata))
-						cachedJsonDocs.Remove(entity.Key);
-				}
-				result.Entities.Add(entity.Key);
-				if (entity.Value.Key != null)
-					entitiesByKey.Remove(entity.Value.Key);
-				result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
-			}
-
-			return result;
 		}
 
 		private void TryEnlistInAmbientTransaction()
