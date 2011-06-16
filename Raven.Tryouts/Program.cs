@@ -26,10 +26,10 @@ namespace Raven.Tryouts
 
 			//BasicConfigurator.Configure(appender);
 
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 8462; i++)
 			{
 				Console.WriteLine(i);
-				new AggressiveCaching().CanAggressivelyCacheLoads();
+				new ManyDocumentsViaDTC().WouldBeIndexedProperly();
 
 			}
 		}

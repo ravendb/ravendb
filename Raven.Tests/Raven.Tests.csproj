@@ -176,6 +176,7 @@
     <Compile Include="Bugs\Iulian\CanReadEntityWithUrlId.cs" />
     <Compile Include="Bugs\LinqOnDictionary.cs" />
     <Compile Include="Bugs\LuceneQueryShouldNotModifyDynamicDocument.cs" />
+    <Compile Include="Bugs\ManyDocumentsViaDTC.cs" />
     <Compile Include="Bugs\MassivelyMultiTenant.cs" />
     <Compile Include="Bugs\MixingIdentityAndAssignedIds.cs" />
     <Compile Include="Bugs\MultipleRangeQueries.cs" />

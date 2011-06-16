@@ -511,22 +511,25 @@ namespace Raven.Database
 		{
 			try
 			{
-				TransactionalStorage.Batch(actions =>
+				lock (this)
 				{
-					actions.Transactions.CompleteTransaction(txId, doc =>
+					TransactionalStorage.Batch(actions =>
 					{
-						// doc.Etag - represent the _modified_ document etag, and we already
-						// checked etags on previous PUT/DELETE, so we don't pass it here
-						if (doc.Delete)
-							Delete(doc.Key, null, null);
-						else
-							Put(doc.Key, null,
-								doc.Data,
-								doc.Metadata, null);
+						actions.Transactions.CompleteTransaction(txId, doc =>
+						{
+							// doc.Etag - represent the _modified_ document etag, and we already
+							// checked etags on previous PUT/DELETE, so we don't pass it here
+							if (doc.Delete)
+								Delete(doc.Key, null, null);
+							else
+								Put(doc.Key, null,
+								    doc.Data,
+								    doc.Metadata, null);
+						});
+						actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
+						workContext.ShouldNotifyAboutWork();
 					});
-					actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
-					workContext.ShouldNotifyAboutWork();
-				});
+				}
 			}
 			catch (Exception e)
 			{
