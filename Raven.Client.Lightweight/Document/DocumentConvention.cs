@@ -194,12 +194,13 @@ namespace Raven.Client.Document
 		public PropertyInfo GetIdentityProperty(Type type)
 		{
 			PropertyInfo info;
-			if (idPropertyCache.TryGetValue(type, out info))
+			var currentIdPropertyCache = idPropertyCache;
+			if (currentIdPropertyCache.TryGetValue(type, out info))
 				return info;
 
 			var identityProperty = type.GetProperties().FirstOrDefault(FindIdentityProperty);
 
-			idPropertyCache = new Dictionary<Type, PropertyInfo>(idPropertyCache)
+			idPropertyCache = new Dictionary<Type, PropertyInfo>(currentIdPropertyCache)
 			{
 				{type, identityProperty}
 			};

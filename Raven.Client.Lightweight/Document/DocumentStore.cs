@@ -187,10 +187,15 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected virtual void SetConnectionStringSettings(RavenConnectionStringOptions options)
 		{
-			ResourceManagerId = options.ResourceManagerId;
-			Credentials = options.Credentials;
-			Url = options.Url;
-			DefaultDatabase = options.DefaultDatabase;
+			if (options.ResourceManagerId != Guid.Empty)
+				ResourceManagerId = options.ResourceManagerId;
+			if(options.Credentials != null)
+				Credentials = options.Credentials;
+			if (string.IsNullOrEmpty(options.Url) == false)
+				Url = options.Url;
+			if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
+				DefaultDatabase = options.DefaultDatabase;
+
 			EnlistInDistributedTransactions= options.EnlistInDistributedTransactions;
 		}
 
