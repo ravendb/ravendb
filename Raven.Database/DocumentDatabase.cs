@@ -1,5 +1,3 @@
-//-----------------------------------------------------------------------
-// <copyright file="DocumentDatabase.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -71,6 +69,11 @@ namespace Raven.Database
 		public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
 
 		private readonly WorkContext workContext;
+
+		/// <summary>
+		/// This is required to ensure serial generation of etags during puts
+		/// </summary>
+		private readonly object putSerialLock = new object();
 
 		/// <summary>
 		/// This is used to hold state associated with this instance by external extensions
@@ -358,7 +361,7 @@ namespace Raven.Database
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
-			lock (this)
+			lock (putSerialLock)
 			{
 				TransactionalStorage.Batch(actions =>
 				{
@@ -511,7 +514,7 @@ namespace Raven.Database
 		{
 			try
 			{
-				lock (this)
+				lock (putSerialLock)
 				{
 					TransactionalStorage.Batch(actions =>
 					{
@@ -947,7 +950,7 @@ namespace Raven.Database
 			var shouldLock = commandDatas.Any(x=>x is PutCommandData);
 
 			if(shouldLock)
-				Monitor.Enter(this);
+				Monitor.Enter(putSerialLock);
 			try
 			{
 				log.DebugFormat("Executing batched commands in a single transaction");
@@ -971,7 +974,7 @@ namespace Raven.Database
 			finally
 			{
 				if(shouldLock)
-					Monitor.Exit(this);
+					Monitor.Exit(putSerialLock);
 			}
 			return results.ToArray();
 		}
