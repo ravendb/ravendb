@@ -582,7 +582,7 @@ namespace Raven.Client.Document
 		private void EnsureNotClosed()
 		{
 			if (WasDisposed)
-				throw new ObjectDisposedException();
+				throw new ObjectDisposedException("DocumentStore", "The document store has already been disposed and cannot be used");
 		}
 
 		/// <summary>
