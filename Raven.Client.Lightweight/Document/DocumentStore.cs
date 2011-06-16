@@ -579,12 +579,6 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private void EnsureNotClosed()
-		{
-			if (WasDisposed)
-				throw new ObjectDisposedException("DocumentStore", "The document store has already been disposed and cannot be used");
-		}
-
 		/// <summary>
         /// Opens the async session.
         /// </summary>
@@ -668,6 +662,12 @@ namespace Raven.Client.Document
 			if (etagHolder == null)
 				return null;
 			return etagHolder.Etag;
+		}
+
+		private void EnsureNotClosed()
+		{
+			if (WasDisposed)
+				throw new ObjectDisposedException("DocumentStore", "The document store has already been disposed and cannot be used");
 		}
 
 		private class EtagHolder
