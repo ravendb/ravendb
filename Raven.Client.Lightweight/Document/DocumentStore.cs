@@ -256,6 +256,8 @@ namespace Raven.Client.Document
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
+			EnsureNotClosed();
+			
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -280,6 +282,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
 		{
+			EnsureNotClosed();
+			
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -303,6 +307,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentSession OpenSession(string database)
 		{
+			EnsureNotClosed();
+			
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -326,6 +332,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
+			EnsureNotClosed();
+			
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -553,6 +561,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IAsyncDocumentSession OpenAsyncSession()
 		{
+			EnsureNotClosed();
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -570,12 +579,20 @@ namespace Raven.Client.Document
 			}
 		}
 
-        /// <summary>
+		private void EnsureNotClosed()
+		{
+			if (WasDisposed)
+				throw new ObjectDisposedException();
+		}
+
+		/// <summary>
         /// Opens the async session.
         /// </summary>
         /// <returns></returns>
         public IAsyncDocumentSession OpenAsyncSession(string databaseName)
         {
+			EnsureNotClosed();
+			
         	var sessionId = Guid.NewGuid();
         	currentSessionId = sessionId;
         	try
