@@ -1155,6 +1155,14 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			      	});
 		}
 
+		/// <summary>
+		/// Disable all caching within the given scope
+		/// </summary>
+		public IDisposable DisableAllCaching()
+		{
+			return jsonRequestFactory.DisableAllCaching();
+		}
+
 		#endregion
 
 		/// <summary>

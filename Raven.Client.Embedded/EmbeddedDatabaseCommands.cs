@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
@@ -503,6 +504,15 @@ namespace Raven.Client.Embedded
 			      				Etag = etag
 			      			}
 			      	});
+		}
+
+		/// <summary>
+		/// Disable all caching within the given scope
+		/// </summary>
+		public IDisposable DisableAllCaching()
+		{
+			// nothing to do here, embedded doesn't support caching
+			return new DisposableAction(() => { });
 		}
 
 		#endregion

@@ -101,13 +101,20 @@ namespace Raven.Client.Document
 #else
 			var startTime = DateTime.Now;
 #endif
+			bool firstRequest = true;
 			JsonDocument documentFound;
 			do
 			{
 				try
 				{
 					Debug.WriteLine(string.Format("Loading document [{0}] from {1}", id, StoreIdentifier));
-					documentFound = DatabaseCommands.Get(id);
+					IDisposable disposable = null;
+
+					if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
+						disposable = DatabaseCommands.DisableAllCaching();
+
+					using (disposable)
+						documentFound = DatabaseCommands.Get(id);
 				}
 				catch (WebException ex)
 				{
@@ -116,6 +123,7 @@ namespace Raven.Client.Document
 						return default(T);
 					throw;
 				}
+				firstRequest = false;
 				if (documentFound == null)
 					return default(T);
 
@@ -187,10 +195,16 @@ namespace Raven.Client.Document
 #else
 			var startTime = DateTime.Now;
 #endif
+			bool firstRequest = true;
 			do
 			{
+				IDisposable disposable = null;
+				if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
+					disposable = DatabaseCommands.DisableAllCaching();
+				using (disposable)
+					multiLoadResult = DatabaseCommands.Get(ids, includes);
 
-				multiLoadResult = DatabaseCommands.Get(ids, includes);
+				firstRequest = false;
 				includeResults = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
 				results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
 			} while (

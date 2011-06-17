@@ -165,6 +165,7 @@
     <Compile Include="Bugs\CreateIndexesRemotely.cs" />
     <Compile Include="Bugs\DateFilter.cs" />
     <Compile Include="Bugs\DeletingDynamics.cs" />
+    <Compile Include="Bugs\DtcBlues.cs" />
     <Compile Include="Bugs\DuplicatedFiledNames.cs" />
     <Compile Include="Bugs\EntitiesWithAttributes.cs" />
     <Compile Include="Bugs\EnumsCastToInts.cs" />

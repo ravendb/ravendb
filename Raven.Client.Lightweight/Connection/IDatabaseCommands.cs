@@ -268,6 +268,11 @@ namespace Raven.Client.Connection
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		void Patch(string key, PatchRequest[] patches, Guid? etag);
+
+		/// <summary>
+		/// Disable all caching within the given scope
+		/// </summary>
+		IDisposable DisableAllCaching();
 	}
 }
 #endif
