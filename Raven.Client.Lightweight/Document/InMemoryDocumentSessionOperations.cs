@@ -285,6 +285,13 @@ more responsive application.
 		/// <returns></returns>
 		protected T TrackEntity<T>(JsonDocument documentFound)
 		{
+			if (documentFound.NonAuthoritiveInformation.HasValue
+				&& documentFound.NonAuthoritiveInformation.Value
+				&& AllowNonAuthoritiveInformation == false)
+			{
+				throw new NonAuthoritiveInformationException("Document " + documentFound.Key +
+				" returned Non Authoritive Information (probably modified by a transaction in progress) and AllowNonAuthoritiveInformation  is set to false");
+			}
 			if (documentFound.Metadata.Value<bool?>(Constants.RavenDocumentDoesNotExists) == true)
 			{
 				return default(T); // document is not really there.
@@ -297,13 +304,7 @@ more responsive application.
 			{
 				documentFound.Metadata["Last-Modified"] = documentFound.LastModified;
 			}
-			if(documentFound.NonAuthoritiveInformation.HasValue 
-				&& documentFound.NonAuthoritiveInformation.Value
-				&& AllowNonAuthoritiveInformation == false)
-			{
-				throw new NonAuthoritiveInformationException("Document " + documentFound.Key +
-				" returned Non Authoritive Information (probably modified by a transaction in progress) and AllowNonAuthoritiveInformation  is set to false");
-			}
+			
 			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);
 		}
 
