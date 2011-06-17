@@ -305,6 +305,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
+			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
+				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters, key is: " + key, "key");
+
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
