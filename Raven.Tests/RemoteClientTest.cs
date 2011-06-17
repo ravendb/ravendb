@@ -7,6 +7,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using log4net.Appender;
+using log4net.Config;
+using log4net.Layout;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
@@ -24,6 +27,15 @@ namespace Raven.Tests
 	{
 		protected const string DbDirectory = @".\TestDb\";
 		protected const string DbName = DbDirectory + @"DocDb.esb";
+
+		protected void EnableDebugLog()
+		{
+			BasicConfigurator.Configure(new TraceAppender
+			{
+				Layout = new SimpleLayout()
+			});
+		}
+
 
         protected RavenDbServer GetNewServer()
         {
