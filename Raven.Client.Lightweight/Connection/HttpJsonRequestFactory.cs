@@ -133,7 +133,7 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
 #else
 		[ThreadStatic] private static TimeSpan? aggressiveCacheDuration;
-		[ThreadStatic] private static bool? disableHttpCaching;
+		[ThreadStatic] private static bool disableHttpCaching;
 
 
 		
