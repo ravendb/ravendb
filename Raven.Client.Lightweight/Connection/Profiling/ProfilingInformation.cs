@@ -6,6 +6,9 @@ namespace Raven.Client.Connection.Profiling
 	/// <summary>
 	/// Information about a particular session
 	/// </summary>
+#if !SILVERLIGHT
+	[Serializable]
+#endif
 	public class ProfilingInformation
 	{
 		///<summary>

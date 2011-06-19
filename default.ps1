@@ -19,7 +19,7 @@ properties {
     
   $client_dlls_3_5 = @( "Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Json-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
      
-  $client_dlls = @( "Newtonsoft.Json.???","Raven.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
+  $client_dlls = @( "Newtonsoft.Json.???","Raven.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
   
   $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json.Silverlight.???");   
   
