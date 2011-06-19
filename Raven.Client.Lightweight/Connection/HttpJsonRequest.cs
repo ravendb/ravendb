@@ -148,7 +148,7 @@ namespace Raven.Client.Connection
 					{
 						Method = webRequest.Method,
 						HttpResult = httpResult,
-						Status = RequestStatus.Cached,
+						Status = RequestStatus.ErrorOnServer,
 						Result = e.Message,
 						Url = webRequest.RequestUri,
 						PostedData = postedData
