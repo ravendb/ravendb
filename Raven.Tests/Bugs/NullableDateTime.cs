@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Linq;
@@ -45,6 +46,7 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 
 				}
+				
 
 				using(var session = documentStore.OpenSession())
 				{
