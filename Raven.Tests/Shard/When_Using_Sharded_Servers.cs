@@ -76,12 +76,8 @@ namespace Raven.Tests.Shard
         [Fact]
         public void Can_insert_into_two_sharded_servers()
         {
-            var serverPortsStoredUpon = new List<string>();
-
             using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
             {
-				documentStore.Stored += (sender, args) => serverPortsStoredUpon.Add(args.SessionIdentifier);
-
                 documentStore.Initialize();
 
                 using (var session = documentStore.OpenSession())
@@ -91,9 +87,6 @@ namespace Raven.Tests.Shard
 					session.SaveChanges();
                 }
             }
-
-			Assert.Contains("Shard1", serverPortsStoredUpon[0]);
-			Assert.Contains("Shard2", serverPortsStoredUpon[1]);
         }
 
         [Fact]

@@ -22,6 +22,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
@@ -33,21 +34,26 @@ namespace Raven.Client.Connection.Async
 	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands
 	{
+		private ProfilingInformation profilingInformation;
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
 		private readonly IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
+		private readonly Guid? sessionId;
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
 		/// <param name="url">The URL.</param>
 		/// <param name="convention">The convention.</param>
 		/// <param name="credentials">The credentials.</param>
-		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory)
+		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId)
 		{
+			profilingInformation = new ProfilingInformation(sessionId);
 			this.url = url;
 			this.jsonRequestFactory = jsonRequestFactory;
+			this.sessionId = sessionId;
 			this.convention = convention;
 			this.credentials = credentials;
 		}
@@ -65,7 +71,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory);
+			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory, sessionId);
 		}
 
 		/// <summary>
@@ -140,8 +146,7 @@ namespace Raven.Client.Connection.Async
 					var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 					request.AddOperationHeaders(OperationsHeaders);
 					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
-					byte[] bytes = Encoding.UTF8.GetBytes(serializeObject);
-					return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite,bytes, null)
+					return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite,serializeObject, null)
 						.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
 													.ContinueWith(readStrTask =>
 													{
@@ -187,8 +192,8 @@ namespace Raven.Client.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, method, metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
-			var bytes = Encoding.UTF8.GetBytes(document.ToString());
-			return Task.Factory.FromAsync(request.BeginWrite,request.EndWrite,bytes, null)
+			
+			return Task.Factory.FromAsync(request.BeginWrite,request.EndWrite,document.ToString(), null)
 				.ContinueWith(task =>
 				{
 					if (task.Exception != null)
@@ -235,7 +240,7 @@ namespace Raven.Client.Connection.Async
 			if (databaseUrl.EndsWith("/") == false)
 				databaseUrl += "/";
 			databaseUrl = databaseUrl + "databases/" + database + "/";
-			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory);
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId);
 		}
 
 		/// <summary>
@@ -248,7 +253,7 @@ namespace Raven.Client.Connection.Async
 			if (indexOfDatabases == -1)
 				return this;
 
-			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials, jsonRequestFactory);
+			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials, jsonRequestFactory, sessionId);
 		}
 
 		/// <summary>
@@ -321,8 +326,8 @@ namespace Raven.Client.Connection.Async
 		public Task<JsonDocument[]> MultiGetAsync(string[] keys)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
-			var array = Encoding.UTF8.GetBytes(new RavenJArray(keys).ToString(Formatting.None));
-			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, array, null)
+			var data = new RavenJArray(keys).ToString(Formatting.None);
+			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, data, null)
 				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null))
 				.Unwrap()
 				.ContinueWith(task =>
@@ -463,7 +468,7 @@ namespace Raven.Client.Connection.Async
 			AddTransactionInformation(metadata);
 			var req = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-			var data = Encoding.UTF8.GetBytes(jArray.ToString(Formatting.None));
+			var data = jArray.ToString(Formatting.None);
 
 			return Task.Factory.FromAsync(req.BeginWrite, req.EndWrite, data, null)
 				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(req.BeginReadResponseString, req.EndReadResponseString, null))
@@ -600,6 +605,14 @@ namespace Raven.Client.Connection.Async
         {
             throw new NotImplementedException();
         }
+
+		/// <summary>
+		/// The profiling information
+		/// </summary>
+		public ProfilingInformation ProfilingInformation
+		{
+			get { return profilingInformation; }
+		}
 	}
 }
 

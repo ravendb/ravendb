@@ -477,16 +477,30 @@ namespace Raven.Http
 
         private bool AssertSecurityRights(IHttpContext ctx)
         {
-            if (DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
-                (ctx.User == null || ctx.User.Identity == null || ctx.User.Identity.IsAuthenticated == false) &&
-                    (ctx.Request.HttpMethod != "GET" && ctx.Request.HttpMethod != "HEAD")
-                )
+			if (DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx))
+			{
+				ctx.SetStatusToUnauthorized();
+				return false;
+			}
+            
+
+            if (DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get && IsInvalidUser(ctx) &&  IsNotGetRequest(ctx) )
             {
                 ctx.SetStatusToUnauthorized();
                 return false;
             }
             return true;
         }
+
+		private static bool IsNotGetRequest(IHttpContext ctx)
+		{
+			return (ctx.Request.HttpMethod != "GET" && ctx.Request.HttpMethod != "HEAD");
+		}
+
+		private static bool IsInvalidUser(IHttpContext ctx)
+		{
+			return (ctx.User == null || ctx.User.Identity == null || ctx.User.Identity.IsAuthenticated == false);
+		}
 
 		public void ResetNumberOfRequests()
 		{

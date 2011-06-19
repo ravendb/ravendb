@@ -20,6 +20,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Exceptions;
 using Raven.Client.Silverlight.Data;
 using Raven.Client.Document;
@@ -40,7 +41,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
-		private readonly DocumentConvention convention;
+    	private readonly Guid? sessionId;
+    	private readonly DocumentConvention convention;
+		private readonly ProfilingInformation profilingInformation;
 
 		/// <summary>
 		/// Get the current json request factory
@@ -53,12 +56,14 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
-		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory)
+		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId)
 		{
+			profilingInformation = new ProfilingInformation(sessionId);
 			this.url = url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url;
 			this.convention = convention;
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
+			this.sessionId = sessionId;
 		}
 
 		/// <summary>
@@ -81,7 +86,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			if (databaseUrl.EndsWith("/") == false)
 				databaseUrl += "/";
 			databaseUrl = databaseUrl + "databases/" + database + "/";
-			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory)
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
 			{
 				operationsHeaders = operationsHeaders
 			};
@@ -93,7 +98,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory);
+			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory, sessionId);
 		}
 
 		/// <summary>
@@ -106,7 +111,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			if (indexOfDatabases == -1)
 				return this;
 
-			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials, jsonRequestFactory);
+			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials, jsonRequestFactory, sessionId);
 		}
 
 		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
@@ -911,6 +916,14 @@ namespace Raven.Client.Silverlight.Connection.Async
                     }
                 });
 	    }
+
+    	/// <summary>
+    	/// The profiling information
+    	/// </summary>
+    	public ProfilingInformation ProfilingInformation
+    	{
+    		get { return profilingInformation; }
+    	}
 	}
 }
 

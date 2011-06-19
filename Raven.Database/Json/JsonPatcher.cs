@@ -248,7 +248,7 @@ namespace Raven.Database.Json
 				document[propName] = patchCmd.Value;
 				return;
 			}
-			property.Value = ((RavenJValue)patchCmd.Value).Value;
+			property.Value = ((RavenJValue) patchCmd.Value).Value;
 		}
 
 

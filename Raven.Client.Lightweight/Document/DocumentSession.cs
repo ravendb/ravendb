@@ -53,15 +53,14 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="DocumentSession"/> class.
 		/// </summary>
 		public DocumentSession(DocumentStore documentStore, 
-			IDocumentQueryListener[] queryListeners,
-			IDocumentStoreListener[] storeListeners, 
-			IDocumentDeleteListener[] deleteListeners, 
+			DocumentSessionListeners listeners,
+			Guid id,
 			IDatabaseCommands databaseCommands
 #if !NET_3_5
 			, IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
 			)
-			: base(documentStore, queryListeners, storeListeners, deleteListeners)
+			: base(documentStore, listeners, id)
 		{
 #if !NET_3_5
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
@@ -102,13 +101,20 @@ namespace Raven.Client.Document
 #else
 			var startTime = DateTime.Now;
 #endif
+			bool firstRequest = true;
 			JsonDocument documentFound;
 			do
 			{
 				try
 				{
 					Debug.WriteLine(string.Format("Loading document [{0}] from {1}", id, StoreIdentifier));
-					documentFound = DatabaseCommands.Get(id);
+					IDisposable disposable = null;
+
+					if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
+						disposable = DatabaseCommands.DisableAllCaching();
+
+					using (disposable)
+						documentFound = DatabaseCommands.Get(id);
 				}
 				catch (WebException ex)
 				{
@@ -117,6 +123,7 @@ namespace Raven.Client.Document
 						return default(T);
 					throw;
 				}
+				firstRequest = false;
 				if (documentFound == null)
 					return default(T);
 
@@ -188,10 +195,16 @@ namespace Raven.Client.Document
 #else
 			var startTime = DateTime.Now;
 #endif
+			bool firstRequest = true;
 			do
 			{
+				IDisposable disposable = null;
+				if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
+					disposable = DatabaseCommands.DisableAllCaching();
+				using (disposable)
+					multiLoadResult = DatabaseCommands.Get(ids, includes);
 
-				multiLoadResult = DatabaseCommands.Get(ids, includes);
+				firstRequest = false;
 				includeResults = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
 				results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
 			} while (
@@ -377,9 +390,9 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
 #if !NET_3_5
-			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, queryListeners);
+			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, listeners.QueryListeners);
 #else
-			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null, queryListeners);
+			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null, listeners.QueryListeners);
 #endif
 		}
 

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Linq;
@@ -15,6 +16,8 @@ namespace Raven.Client.Document
 	/// </summary>
 	public static class ReflectionUtil
 	{
+		private static Dictionary<Type, string> fullnameCache = new Dictionary<Type, string>();
+
 		/// <summary>
 		/// Gets the full name without version information.
 		/// </summary>
@@ -22,6 +25,11 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string GetFullNameWithoutVersionInformation(Type entityType)
 		{
+			string result;
+			var localFullName = fullnameCache;
+			if (localFullName.TryGetValue(entityType, out result))
+				return result;
+
 			var asmName = new AssemblyName(entityType.Assembly.FullName).Name;
 			if (entityType.IsGenericType)
 			{
@@ -36,9 +44,19 @@ namespace Raven.Client.Document
 				}
 				sb.Append("], ")
 					.Append(asmName);
-				return sb.ToString();
+				result = sb.ToString();
 			}
-			return entityType.FullName + ", " + asmName;
+			else
+			{
+				result = entityType.FullName + ", " + asmName;
+			}
+
+			fullnameCache = new Dictionary<Type, string>(localFullName)
+			{
+				{entityType, result}
+			};
+
+			return result;
 		}
 
 	}

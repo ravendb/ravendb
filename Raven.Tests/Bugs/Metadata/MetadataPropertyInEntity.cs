@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Raven.Client;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
@@ -36,29 +37,40 @@ namespace Raven.Tests.Bugs.Metadata
                     session.SaveChanges();
                 }
 
+            	store.RegisterListener(new MetadataToPropertyConvertionListener());
+
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.OnDocumentConverted += (entity, document, metadata) =>
-                    {
-                        if(entity is Account == false)
-                            return;
-                        ((Account) entity).Revision = metadata.Value<long>("Raven-Document-Revision");
-                    };
-
-                    session.Advanced.OnEntityConverted += (entity, document, metadata) =>
-                    {
-                        if (entity is Account == false)
-                            return;
-                        document.Remove("Revision");
-                    };
-
                     var account = session.Load<Account>("accounts/1");
                     Assert.Equal(1, account.Revision);
                 }
             }
         }
 
-        [Fact]
+		public class MetadataToPropertyConvertionListener : IDocumentConversionListener
+		{
+			/// <summary>
+			/// Called when converting an entity to a document and metadata
+			/// </summary>
+			public void EntityToDocument(object entity, RavenJObject document, RavenJObject metadata)
+			{
+				if (entity is Account == false)
+					return;
+				document.Remove("Revision");
+			}
+
+			/// <summary>
+			/// Called when converting a document and metadata to an entity
+			/// </summary>
+			public void DocumentToEntity(object entity, RavenJObject document, RavenJObject metadata)
+			{
+				if (entity is Account == false)
+					return;
+				((Account)entity).Revision = metadata.Value<long>("Raven-Document-Revision");
+			}
+		}
+
+    	[Fact]
         public void Can_use_entity_property_for_metadata_with_listener()
         {
             using(var store = NewDocumentStore())

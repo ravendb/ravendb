@@ -11,6 +11,7 @@ using System.Net;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -19,7 +20,7 @@ namespace Raven.Client.Connection
 	///<summary>
 	/// Expose the set of operations by the RavenDB server
 	///</summary>
-	public interface IDatabaseCommands
+	public interface IDatabaseCommands : IHoldProfilingInformation
 	{
 		/// <summary>
 		/// Gets or sets the operations headers.
@@ -267,6 +268,11 @@ namespace Raven.Client.Connection
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		void Patch(string key, PatchRequest[] patches, Guid? etag);
+
+		/// <summary>
+		/// Disable all caching within the given scope
+		/// </summary>
+		IDisposable DisableAllCaching();
 	}
 }
 #endif

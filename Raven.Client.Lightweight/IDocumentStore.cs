@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
@@ -23,7 +24,7 @@ namespace Raven.Client
 	/// <summary>
 	/// Interface for managing access to RavenDB and open sessions.
 	/// </summary>
-	public interface IDocumentStore : IDisposable
+	public interface IDocumentStore : IDisposalNotification
 	{
 		/// <summary>
 		/// Setup the context for aggressive caching.
@@ -60,11 +61,6 @@ namespace Raven.Client
 		/// Get the <see cref="HttpJsonRequestFactory"/> for this store
 		/// </summary>
         HttpJsonRequestFactory JsonRequestFactory { get; }
-
-		/// <summary>
-		/// Occurs when an entity is stored inside any session opened from this instance
-		/// </summary>
-		event EventHandler<StoredEntityEventArgs> Stored;
 
 		/// <summary>
 		/// Gets or sets the identifier for this store.
@@ -139,5 +135,11 @@ namespace Raven.Client
 		/// Gets the URL.
 		/// </summary>
 		string Url { get; }
+
+		///<summary>
+		/// Gets the etag of the last document written by any session belonging to this 
+		/// document store
+		///</summary>
+		Guid? GetLastWrittenEtag();
 	}
 }

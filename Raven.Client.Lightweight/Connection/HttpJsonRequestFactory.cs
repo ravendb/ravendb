@@ -3,6 +3,8 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Threading;
 using FromMono.System.Runtime.Caching;
+using Raven.Abstractions.Extensions;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
@@ -19,6 +21,21 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
 
+		/// <summary>
+		/// Occurs when a json request is completed
+		/// </summary>
+		public event EventHandler<RequestResultArgs> LogRequest = delegate { };
+
+		/// <summary>
+		/// Invoke the LogRequest event
+		/// </summary>
+		internal void InvokeLogRequest(IHoldProfilingInformation sender, RequestResultArgs e)
+		{
+			var handler = LogRequest;
+			if (handler != null) 
+				handler(sender, e);
+		}
+
 		private MemoryCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
 
 		internal int NumOfCachedRequests;
@@ -26,7 +43,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials,
+		public HttpJsonRequest CreateHttpJsonRequest(IHoldProfilingInformation self, string url, string method, ICredentials credentials,
 													 DocumentConvention convention)
 		{
 			return CreateHttpJsonRequest(self, url, method, new RavenJObject(), credentials, convention);
@@ -35,17 +52,10 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="url">The URL.</param>
-		/// <param name="method">The method.</param>
-		/// <param name="metadata">The metadata.</param>
-		/// <param name="credentials">The credentials.</param>
-		/// <param name="convention">The document conventions governing this request</param>
-		/// <returns></returns>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, RavenJObject metadata,
+		public HttpJsonRequest CreateHttpJsonRequest(IHoldProfilingInformation self, string url, string method, RavenJObject metadata,
 													 ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, metadata, credentials, this);
+			var request = new HttpJsonRequest(url, method, metadata, credentials, this, self);
 			ConfigureCaching(url, method, convention, request);
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
 			return request;
@@ -54,7 +64,7 @@ namespace Raven.Client.Connection
 		private void ConfigureCaching(string url, string method, DocumentConvention convention, HttpJsonRequest request)
 		{
 			request.ShouldCacheRequest = convention.ShouldCacheRequest(url);
-			if (!request.ShouldCacheRequest || method != "GET")
+			if (!request.ShouldCacheRequest || method != "GET" || DisableHttpCaching)
 				return;
 
 			var cachedRequest = (CachedRequest)cache.Get(url);
@@ -109,9 +119,32 @@ namespace Raven.Client.Connection
 			set { aggressiveCacheDuration.Value = value; }
 		}
 
+		/// <summary>
+		/// Disable the HTTP caching
+		/// </summary>
+		public bool DisableHttpCaching
+		{
+			get { return disableHttpCaching.Value; }
+			set { disableHttpCaching.Value = value; }
+		}
+
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
+
+		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
 #else
 		[ThreadStatic] private static TimeSpan? aggressiveCacheDuration;
+		[ThreadStatic] private static bool disableHttpCaching;
+
+
+		
+		/// <summary>
+		/// Disable the HTTP caching
+		/// </summary>
+		public bool DisableHttpCaching
+		{
+			get { return disableHttpCaching; }
+			set { disableHttpCaching = value; }
+		}
 
 		///<summary>
 		/// The aggressive cache duration
@@ -161,6 +194,24 @@ namespace Raven.Client.Connection
 			if (httpJsonRequest.CachedRequestDetails == null)
 				throw new InvalidOperationException("Cannot update cached response from a request that has no cached infomration");
 			httpJsonRequest.CachedRequestDetails.Time = DateTimeOffset.Now;
+		}
+
+		/// <summary>
+		/// Disable all caching within the given scope
+		/// </summary>
+		public IDisposable DisableAllCaching()
+		{
+			var oldAgressiveCaching = AggressiveCacheDuration;
+			var oldHttpCaching = DisableHttpCaching;
+
+			AggressiveCacheDuration = null;
+			DisableHttpCaching = true;
+
+			return new DisposableAction(() =>
+			{
+				AggressiveCacheDuration = oldAgressiveCaching;
+				DisableHttpCaching = oldHttpCaching;
+			});
 		}
 	}
 }

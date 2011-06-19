@@ -1,5 +1,3 @@
-//-----------------------------------------------------------------------
-// <copyright file="DocumentDatabase.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -73,6 +71,11 @@ namespace Raven.Database
 		private readonly WorkContext workContext;
 
 		/// <summary>
+		/// This is required to ensure serial generation of etags during puts
+		/// </summary>
+		private readonly object putSerialLock = new object();
+
+		/// <summary>
 		/// This is used to hold state associated with this instance by external extensions
 		/// </summary>
 		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
@@ -106,6 +109,8 @@ namespace Raven.Database
 
 			ExtensionsState = new ConcurrentDictionary<object, object>();
 			Configuration = configuration;
+			
+			ExecuteAlterConfiguration();
 
 			configuration.Container.SatisfyImportsOnce(this);
 
@@ -183,6 +188,14 @@ namespace Raven.Database
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
+		private void ExecuteAlterConfiguration()
+		{
+			foreach (var alterConfiguration in Configuration.Container.GetExportedValues<IAlterConfiguration>())
+			{
+				alterConfiguration.AlterConfiguration(Configuration);
+			}
+		}
+
 		private void ExecuteStartupTasks()
 		{
 			foreach (var task in Configuration.Container.GetExportedValues<IStartupTask>())
@@ -211,15 +224,7 @@ namespace Raven.Database
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 					result.StaleIndexes = IndexStorage.Indexes
-						.Where(s =>
-						{
-							string entityName = null;
-							var abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(s);
-							if (abstractViewGenerator != null)
-								entityName = abstractViewGenerator.ForEntityName;
-
-							return actions.Staleness.IsIndexStale(s, null, entityName);
-						}).ToArray();
+						.Where(s => actions.Staleness.IsIndexStale(s, null, null)).ToArray();
 					result.Indexes = actions.Indexing.GetIndexesStats().ToArray();
 				});
 				return result;
@@ -342,10 +347,7 @@ namespace Raven.Database
 
         public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
-				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "key");
-
-            log.DebugFormat("Putting a document with key: {0} and etag {1}", key, etag);
+			log.DebugFormat("Putting a document with key: {0} and etag {1}", key, etag);
 
 			if (string.IsNullOrEmpty(key))
 			{
@@ -356,7 +358,7 @@ namespace Raven.Database
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
-			lock (this)
+			lock (putSerialLock)
 			{
 				TransactionalStorage.Batch(actions =>
 				{
@@ -509,22 +511,25 @@ namespace Raven.Database
 		{
 			try
 			{
-				TransactionalStorage.Batch(actions =>
+				lock (putSerialLock)
 				{
-					actions.Transactions.CompleteTransaction(txId, doc =>
+					TransactionalStorage.Batch(actions =>
 					{
-						// doc.Etag - represent the _modified_ document etag, and we already
-						// checked etags on previous PUT/DELETE, so we don't pass it here
-						if (doc.Delete)
-							Delete(doc.Key, null, null);
-						else
-							Put(doc.Key, null,
-								doc.Data,
-								doc.Metadata, null);
+						actions.Transactions.CompleteTransaction(txId, doc =>
+						{
+							// doc.Etag - represent the _modified_ document etag, and we already
+							// checked etags on previous PUT/DELETE, so we don't pass it here
+							if (doc.Delete)
+								Delete(doc.Key, null, null);
+							else
+								Put(doc.Key, null,
+								    doc.Data,
+								    doc.Metadata, null);
+						});
+						actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
+						workContext.ShouldNotifyAboutWork();
 					});
-					actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
-					workContext.ShouldNotifyAboutWork();
-				});
+				}
 			}
 			catch (Exception e)
 			{
@@ -586,16 +591,12 @@ namespace Raven.Database
 			TransactionalStorage.Batch(
 				actions =>
 				{
-					string entityName = null;
-
 
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
 					if (viewGenerator == null)
 						throw new InvalidOperationException("Could not find index named: " + index);
 
-					entityName = viewGenerator.ForEntityName;
-
-					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, entityName);
+					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
 					indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
 					var indexFailureInformation = actions.Indexing.GetFailureRate(index);
 					if (indexFailureInformation.IsInvalidIndex)
@@ -946,7 +947,7 @@ namespace Raven.Database
 			var shouldLock = commandDatas.Any(x=>x is PutCommandData);
 
 			if(shouldLock)
-				Monitor.Enter(this);
+				Monitor.Enter(putSerialLock);
 			try
 			{
 				log.DebugFormat("Executing batched commands in a single transaction");
@@ -970,7 +971,7 @@ namespace Raven.Database
 			finally
 			{
 				if(shouldLock)
-					Monitor.Exit(this);
+					Monitor.Exit(putSerialLock);
 			}
 			return results.ToArray();
 		}
