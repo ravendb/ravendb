@@ -1,4 +1,5 @@
 using System.Transactions;
+using Raven.Client.Debug;
 using Raven.Client.Document;
 using Xunit;
 
@@ -42,6 +43,51 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanQueryDtcForUncommittedItem()
 		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				for (int i = 0; i < 150; i++)
+				{
+					string id;
+					using (var tx = new TransactionScope())
+					{
+						System.Transactions.Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
+																			  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+																			  EnlistmentOptions.None);
+
+						using (var session = store.OpenSession())
+						{
+							var entity = new User();
+							session.Store(entity);
+							session.SaveChanges();
+							id = entity.Id;
+						}
+
+
+						tx.Complete();
+					}
+					using (var session = store.OpenSession())
+					{
+						session.Advanced.AllowNonAuthoritiveInformation = false;
+						var user = session.Load<User>(id);
+						Assert.NotNull(user);
+					}
+				}
+			}
+		}
+
+	}
+
+	public class DtcBluesRemoteAndTouchingTheDisk : RemoteClientTest
+	{
+		protected override void ConfigureServer(Database.Config.RavenConfiguration ravenConfiguration)
+		{
+			ravenConfiguration.RunInMemory = false;
+		}
+
+		[Fact]
+		public void CanQueryDtcForUncommittedItem()
+		{
 			using(GetNewServer())
 			using (var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
 			{
@@ -69,6 +115,7 @@ namespace Raven.Tests.Bugs
 					{
 						session.Advanced.AllowNonAuthoritiveInformation = false;
 						var user = session.Load<User>(id);
+						DocumentSessionVisualizer.Display(session);
 						Assert.NotNull(user);
 					}
 				}
