@@ -49,6 +49,9 @@ namespace Raven.Tests
 
         	ConfigureServer(ravenConfiguration);
 
+			if(ravenConfiguration.RunInMemory == false)
+				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
+
         	var ravenDbServer = new RavenDbServer(ravenConfiguration);
 
 			using (var documentStore = new DocumentStore

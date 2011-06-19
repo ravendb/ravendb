@@ -115,7 +115,6 @@ namespace Raven.Tests.Bugs
 					{
 						session.Advanced.AllowNonAuthoritiveInformation = false;
 						var user = session.Load<User>(id);
-						DocumentSessionVisualizer.Display(session);
 						Assert.NotNull(user);
 					}
 				}
