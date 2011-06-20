@@ -55,37 +55,32 @@ namespace Raven.Storage.Esent.StorageActions
 		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<JsonDocumentMetadata, Func<string, Guid, RavenJObject, RavenJObject>, T> createResult)
 			where T : class
 		{
-			bool existsInTx = false;
-			if (transactionInformation != null)
+			bool existsInTx = IsDocumentModifiedInsideTransaction(key);
+			
+			if (transactionInformation != null && existsInTx)
 			{
-				Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
-				Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ))
+				var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
+				if (new Guid(txId) == transactionInformation.Id)
 				{
-					existsInTx = true;
-					var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
-					if (new Guid(txId) == transactionInformation.Id)
+					if (Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]) == true)
 					{
-						if (Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]) == true)
-						{
-							logger.DebugFormat("Document with key '{0}' was deleted in transaction: {1}", key, transactionInformation.Id);
-							return null;
-						}
-						var etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
-
-						RavenJObject metadata = ReadDocumentMetadataInTransaction(key, etag);
-
-
-						logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
-						return createResult(new JsonDocumentMetadata()
-						{
-							NonAuthoritiveInformation = false,// we are the transaction, therefor we are Authoritive
-							Etag = etag,
-							LastModified = Api.RetrieveColumnAsDateTime(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"]).Value,
-							Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
-							Metadata = metadata
-						}, ReadDocumentDataInTransaction);
+						logger.DebugFormat("Document with key '{0}' was deleted in transaction: {1}", key, transactionInformation.Id);
+						return null;
 					}
+					var etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
+
+					RavenJObject metadata = ReadDocumentMetadataInTransaction(key, etag);
+
+
+					logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
+					return createResult(new JsonDocumentMetadata()
+					{
+						NonAuthoritiveInformation = false,// we are the transaction, therefor we are Authoritive
+						Etag = etag,
+						LastModified = Api.RetrieveColumnAsDateTime(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"]).Value,
+						Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
+						Metadata = metadata
+					}, ReadDocumentDataInTransaction);
 				}
 			}
 
@@ -113,7 +108,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return createResult(new JsonDocumentMetadata()
 			{
 				Etag = existingEtag,
-				NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
+				NonAuthoritiveInformation = existsInTx,
 				LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
 				Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
 				Metadata = ReadDocumentMetadata(key, existingEtag)

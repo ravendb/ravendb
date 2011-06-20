@@ -85,7 +85,18 @@ namespace Raven.Client.Connection
 				var disposable = result as IDisposable;
 				if(disposable!=null)
 					disposable.Dispose();
-				return factory.GetCachedResponse(this);
+
+				var cachedResponse = factory.GetCachedResponse(this);
+				factory.InvokeLogRequest(owner, new RequestResultArgs
+				{
+					Method = webRequest.Method,
+					HttpResult = (int)ResponseStatusCode,
+					Status = RequestStatus.AggresivelyCached,
+					Result = cachedResponse,
+					Url = webRequest.RequestUri,
+					PostedData = postedData
+				});
+				return cachedResponse;
 			}
 
 			return ReadStringInternal(() => webRequest.EndGetResponse(result));
@@ -98,7 +109,19 @@ namespace Raven.Client.Connection
 		public string ReadResponseString()
 		{
 			if (SkipServerCheck)
-				return factory.GetCachedResponse(this);
+			{
+				var result = factory.GetCachedResponse(this);
+				factory.InvokeLogRequest(owner, new RequestResultArgs
+				{
+					Method = webRequest.Method,
+					HttpResult = (int)ResponseStatusCode,
+					Status = RequestStatus.AggresivelyCached,
+					Result = result,
+					Url = webRequest.RequestUri,
+					PostedData = postedData
+				});
+				return result;
+			}
 
 			return ReadStringInternal(webRequest.GetResponse);
 		}
@@ -125,7 +148,7 @@ namespace Raven.Client.Connection
 					{
 						Method = webRequest.Method,
 						HttpResult = httpResult,
-						Status = RequestStatus.Cached,
+						Status = RequestStatus.ErrorOnServer,
 						Result = e.Message,
 						Url = webRequest.RequestUri,
 						PostedData = postedData

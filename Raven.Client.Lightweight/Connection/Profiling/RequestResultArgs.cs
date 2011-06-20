@@ -5,6 +5,9 @@ namespace Raven.Client.Connection.Profiling
 	/// <summary>
 	/// The result of a request made to the server
 	/// </summary>
+#if !SILVERLIGHT
+	[Serializable]
+#endif
 	public class RequestResultArgs : EventArgs
 	{
 		/// <summary>
