@@ -90,5 +90,49 @@ namespace Raven.Tests.Bugs
 			}
 
 		}
+
+		[Fact]
+		public void CanLoadFromIndex_Remote()
+		{
+			var path =
+				System.IO.Path.GetDirectoryName(
+					System.Reflection.Assembly.GetAssembly(typeof (Raven.Tests.Document.DocumentStoreServerTests)).CodeBase);
+			path = System.IO.Path.Combine(path, "TestDb").Substring(6);
+
+			using (var server = new Raven.Server.RavenDbServer(new
+			                                                   	Raven.Database.Config.RavenConfiguration()
+			                                                   	{
+			                                                   		HostName = "localhost",
+			                                                   		DataDirectory = path,
+			                                                   		Port = 8088,
+			                                                   		AccessControlAllowOrigin = "*",
+			                                                   		AnonymousUserAccessMode = Http.AnonymousUserAccessMode.All
+			                                                   	}))
+			using (IDocumentStore documentStore = new
+				Raven.Client.Document.DocumentStore {Url = "http://localhost:8088/"}.Initialize())
+			{
+				using (IDocumentSession session = documentStore.OpenSession())
+				{
+					IndexCreation.CreateIndexes(typeof (Doc).Assembly, documentStore);
+					session.Store(new Doc
+					              	{
+					              		Id = "test/doc1",
+					              		Date = DateTime.UtcNow
+					              	});
+					session.Store(new Doc {Id = "test/doc2", Date = null});
+					session.SaveChanges();
+
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					session
+						.Query<Doc, UnsetDocs>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.AsProjection<DocSummary>()
+						.ToArray();
+				}
+			}
+		}
 	}
 }
