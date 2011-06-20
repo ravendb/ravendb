@@ -70,6 +70,8 @@ namespace Raven.Database
 
 		private readonly WorkContext workContext;
 
+		private readonly ConcurrentDictionary<Guid, CommittableTransaction> promotedTransactions = new ConcurrentDictionary<Guid, CommittableTransaction>();
+
 		/// <summary>
 		/// This is required to ensure serial generation of etags during puts
 		/// </summary>
@@ -530,6 +532,7 @@ namespace Raven.Database
 						workContext.ShouldNotifyAboutWork();
 					});
 				}
+				TryCompletePromotedTransaction(txId);
 			}
 			catch (Exception e)
 			{
@@ -537,6 +540,36 @@ namespace Raven.Database
 					return;
 				throw;
 			}
+		}
+
+		private void TryCompletePromotedTransaction(Guid txId)
+		{
+			CommittableTransaction transaction;
+			if (!promotedTransactions.TryRemove(txId, out transaction)) 
+				return;
+			System.Threading.Tasks.Task.Factory.FromAsync(transaction.BeginCommit, transaction.EndCommit, null)
+				.ContinueWith(task =>
+				{
+					if (task.Exception != null)
+						log.Warn("Could not commit dtc transaction", task.Exception);
+					try
+					{
+						transaction.Dispose();
+					}
+					catch (Exception e)
+					{
+						log.Warn("Could not dispose of dtc transaction");
+					}
+				});
+		}
+
+		private void TryUndoPromotedTransaction(Guid txId)
+		{
+			CommittableTransaction transaction;
+			if (!promotedTransactions.TryRemove(txId, out transaction))
+				return;
+			transaction.Rollback();
+			transaction.Dispose();
 		}
 
 		public void Rollback(Guid txId)
@@ -549,6 +582,7 @@ namespace Raven.Database
 					actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
 					workContext.ShouldNotifyAboutWork();
 				});
+				TryUndoPromotedTransaction(txId);
 			}
 			catch (Exception e)
 			{
@@ -1039,6 +1073,7 @@ namespace Raven.Database
 				actions =>
 					actions.Transactions.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
 												TransactionManager.DefaultTimeout));
+			promotedTransactions.TryAdd(fromTxId, committableTransaction);
 			return transmitterPropagationToken;
 		}
 
