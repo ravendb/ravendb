@@ -11,7 +11,7 @@ var RavenDBProfiler = (function ($) {
     var load = function () {
         if (options.id.length == 0)
             return;
-        $.get('/ravendb/profiling', { id: options.id.join(',') }, function (obj) {
+        $.get(options.url, { id: options.id.join(',') }, function (obj) {
             if (obj)
                 addResult(obj);
         }, 'json');
@@ -44,7 +44,7 @@ var RavenDBProfiler = (function ($) {
 
     return {
         initalize: function (opt) {
-            options = opt || {};
+            options = opt || { url: '/ravendb/profiling' };
             container = $('<div class="ravendb-profiler-results"></div>')
 							.appendTo('body');
             load();
