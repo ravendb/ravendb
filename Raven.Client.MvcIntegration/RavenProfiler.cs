@@ -39,13 +39,14 @@ namespace Raven.Client.MvcIntegration
 
 		public static HtmlString CurrentRequestSessions()
 		{
+			var script = UrlHelper.GenerateContentUrl("~/ravendb-profiler-scripts.js", new HttpContextWrapper(HttpContext.Current));
 			const string template =
-				@"<script type=""text/javascript"" src=""/ravendb-profiler-scripts.js""></script>
+				@"<script type=""text/javascript"" src=""{1}""></script>
 <script type=""text/javascript""> jQuery(function() {{ RavenDBProfiler.initalize({{ id:[{0}]}}); }} ); </script>";
 
 			var ids = string.Join(",", ContextualSessionList.Select(guid => "'" + guid + "'"));
 
-			return new HtmlString(string.Format(template, ids));
+			return new HtmlString(string.Format(template, ids, script));
 		}
 
 		internal static List<Guid> ContextualSessionList
