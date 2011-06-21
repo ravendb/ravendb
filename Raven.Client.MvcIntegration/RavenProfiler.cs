@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
-using System.Linq;
 
 namespace Raven.Client.MvcIntegration
 {
@@ -22,14 +22,15 @@ namespace Raven.Client.MvcIntegration
 			})
 				.OfType<RavenProfilingHandler>()
 				.FirstOrDefault();
-			if(existing != null)
+			if (existing != null)
 			{
 				existing.AddStore(store);
 				return;
 			}
 			var ravenProfilingHandler = new RavenProfilingHandler();
 			ravenProfilingHandler.AddStore(store);
-			RouteTable.Routes.Add("RavenDB Profiling", new Route("ravendb/profiling", ravenProfilingHandler));
+			RouteTable.Routes.Insert(0, new Route("ravendb-profiler-scripts.js", new RouteValueDictionary(new { controller = "RavenProfilingHandler", action = "ProcessRequest" }), ravenProfilingHandler));
+			RouteTable.Routes.Insert(0, new Route("ravendb/profiling", new RouteValueDictionary(new { controller = "RavenProfilingHandler", action = "ProcessRequest" }), ravenProfilingHandler));
 		}
 
 		public static HtmlString CurrentRequestSessions()
