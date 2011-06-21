@@ -94,7 +94,7 @@ namespace Raven.Client.Connection
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.AggresivelyCached,
 					Result = cachedResponse,
-					Url = webRequest.RequestUri,
+					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
 				return cachedResponse;
@@ -118,7 +118,7 @@ namespace Raven.Client.Connection
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.AggresivelyCached,
 					Result = result,
-					Url = webRequest.RequestUri,
+					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
 				return result;
@@ -151,7 +151,7 @@ namespace Raven.Client.Connection
 						HttpResult = httpResult,
 						Status = RequestStatus.ErrorOnServer,
 						Result = e.Message,
-						Url = webRequest.RequestUri,
+						Url = webRequest.RequestUri.PathAndQuery,
 						PostedData = postedData
 					});
 					throw;
@@ -169,7 +169,7 @@ namespace Raven.Client.Connection
 						HttpResult = (int) httpWebResponse.StatusCode,
 						Status = RequestStatus.Cached,
 						Result = result,
-						Url = webRequest.RequestUri,
+						Url = webRequest.RequestUri.PathAndQuery,
 						PostedData = postedData
 					});
 
@@ -186,7 +186,7 @@ namespace Raven.Client.Connection
 						HttpResult = (int)httpWebResponse.StatusCode,
 						Status = RequestStatus.Cached,
 						Result = readToEnd,
-						Url = webRequest.RequestUri,
+						Url = webRequest.RequestUri.PathAndQuery,
 						PostedData = postedData
 					});
 
@@ -210,7 +210,7 @@ namespace Raven.Client.Connection
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.SentToServer,
 					Result = text,
-					Url = webRequest.RequestUri,
+					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
 

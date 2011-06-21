@@ -25,7 +25,7 @@ var RavenDBProfiler = (function ($) {
             var resultContainer = $('<div class="resultContainer"><span>Id: ' + result.Id + '</span></div>')
 							.appendTo(container)
             result.Requests.forEach(function (request) {
-                $('<div>' + request.Url + '</div>')
+                $('<div>' + request.Status + ' ' + request.HttpResult + ' ' + request.Method + ' <span style="overflow:hidden; white-space:nowrap">' + request.Url + '</span> ' + '</div>')
 							.appendTo(resultContainer);
             });
         });

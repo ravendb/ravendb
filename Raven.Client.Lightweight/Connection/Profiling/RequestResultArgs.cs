@@ -29,7 +29,7 @@ namespace Raven.Client.Connection.Profiling
 		/// <summary>
 		/// The request Url
 		/// </summary>
-		public Uri Url { get; set; }
+		public string Url { get; set; }
 		/// <summary>
 		/// The request method
 		/// </summary>

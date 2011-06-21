@@ -115,6 +115,6 @@ namespace Raven.Client.MvcIntegration
 			stores.TryAdd(documentStore, null);
 		}
 
-		private static readonly string ravenDbProfilerScripts;
+		private static string ravenDbProfilerScripts;
 	}
 }
