@@ -47,12 +47,6 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
 		/// </summary>
-		/// <param name="url">The URL.</param>
-		/// <param name="convention">The convention.</param>
-		/// <param name="credentials">The credentials.</param>
-		/// <param name="replicationInformer">The replication informer.</param>
-		/// <param name="jsonRequestFactory"></param>
-		/// <param name="currentSessionId"></param>
 		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, ReplicationInformer replicationInformer, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId)
 		{
 			profilingInformation = new ProfilingInformation(currentSessionId);
@@ -61,6 +55,10 @@ namespace Raven.Client.Connection
 			this.currentSessionId = currentSessionId;
 			this.replicationInformer = replicationInformer;
 			this.url = url;
+
+			if (url.EndsWith("/"))
+				this.url = url.Substring(0, url.Length - 1);
+
 			this.convention = convention;
 			OperationsHeaders = new NameValueCollection();
 			replicationInformer.UpdateReplicationInformationIfNeeded(this);
@@ -930,7 +928,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
 			if (databaseUrl.EndsWith("/") == false)
 				databaseUrl += "/";
-			databaseUrl = databaseUrl + "databases/" + database + "/";
+			databaseUrl = databaseUrl + "databases/" + database;
 			return new ServerClient(databaseUrl, convention, credentials, replicationInformer, jsonRequestFactory, currentSessionId);
 		}
 
