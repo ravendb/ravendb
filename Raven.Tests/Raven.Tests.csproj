@@ -167,7 +167,6 @@
     <Compile Include="Bugs\ComplexDynamicQuery.cs" />
     <Compile Include="Bugs\ConnectionStringParsing.cs" />
     <Compile Include="Bugs\CreateIndexesRemotely.cs" />
-    <Compile Include="Bugs\DanTurner.cs" />
     <Compile Include="Bugs\DateFilter.cs" />
     <Compile Include="Bugs\DeletingDynamics.cs" />
     <Compile Include="Bugs\DtcBlues.cs" />
@@ -187,6 +186,7 @@
     <Compile Include="Bugs\MixingIdentityAndAssignedIds.cs" />
     <Compile Include="Bugs\MultipleRangeQueries.cs" />
     <Compile Include="Bugs\NullableDateTime.cs" />
+    <Compile Include="Bugs\NullableValuesRemote.cs" />
     <Compile Include="Bugs\Profiling.cs" />
     <Compile Include="Bugs\ProjectionFromDynamicIndex.cs" />
     <Compile Include="Bugs\Queries\Floats.cs" />
