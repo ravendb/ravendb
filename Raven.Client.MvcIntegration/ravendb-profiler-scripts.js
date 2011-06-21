@@ -25,7 +25,7 @@ var RavenDBProfiler = (function ($) {
             var resultContainer = $('<div class="resultContainer"><span>Id: ' + result.Id + '</span></div>')
 							.appendTo(container)
             result.Requests.forEach(function (request) {
-                $('<div>' + request.Status + ' ' + request.HttpResult + ' ' + request.Method + ' <span style="overflow:hidden; white-space:nowrap">' + request.Url + '</span> ' + '</div>')
+                $('<div>' + request.Status + ' ' + request.HttpResult + ' ' + request.Method + ' <span style="overflow:hidden; white-space:nowrap">' + unescape(unescape(request.Url)) + '</span> ' + '</div>')
 							.appendTo(resultContainer);
             });
         });
@@ -35,7 +35,7 @@ var RavenDBProfiler = (function ($) {
         $('<style>.rdbprofilerbutton { position:absolute; left: 0; top: 0; background: Orange; border: 1px solid black; cursor: pointer; border-radius: 2px; padding: 0.1em; } .ravendb-profiler-results { display: none; position:absolute; left: 0; top: 1em; border: 1px solid black; background: white; padding: 2em; border-radius: 5px; }</style>')
 		    .appendTo('body');
 
-        popupButton = $('<span class="rdbprofilerbutton">RavenDb</span>')
+        popupButton = $('<span class="rdbprofilerbutton">RavenDB Profiler</span>')
 						.appendTo('body')
 						.click(function () {
 						    container.toggle();
