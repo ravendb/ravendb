@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Web;
 using System.Web.Routing;
@@ -15,9 +16,12 @@ namespace Raven.Client.MvcIntegration
 	{
 		private readonly ConcurrentDictionary<DocumentStore, object> stores = new ConcurrentDictionary<DocumentStore, object>();
 
-		public RavenProfilingHandler()
+		static RavenProfilingHandler()
 		{
-			
+			using(var stream = typeof(RavenProfilingHandler).Assembly.GetManifestResourceStream("Raven.Client.MvcIntegration.ravendb-profiler-scripts.js"))
+			{
+				ravenDbProfilerScripts = new StreamReader(stream).ReadToEnd();
+			}
 		}
 
 		/// <summary>
@@ -42,7 +46,7 @@ namespace Raven.Client.MvcIntegration
 			{
 				context.Response.ContentType = "application/x-javascript";
 
-				context.Response.Output.Write(JS);
+				context.Response.Output.Write(ravenDbProfilerScripts);
 				context.Response.Output.Flush();
 			}
 			else
@@ -103,58 +107,6 @@ namespace Raven.Client.MvcIntegration
 			stores.TryAdd(documentStore, null);
 		}
 
-		const string JS = @"
-			if (!window.jQuery) {
-				alert('Please add a reference to jQuery to use RavenDB profiling');
-			}
-
-			var RavenDBProfiler = (function ($) {
-				var options,
-					container,
-					popupButton,
-					resultDialog;
-
-				var load = function () {
-					if (options.id.length == 0)
-						return;
-					$.get('/ravendb/profiling', { id: options.id.join(',') }, function (obj) {
-						if (obj)
-							addResult(obj);
-					}, 'json');
-				};
-
-				var addResult = function (resultList) {
-					if (!popupButton)
-						createUI();
-
-					resultList.forEach(function (result) {
-						var resultContainer = $('<div class=""resultContainer""><span>Id: ' + result.Id + '</span></div>')
-							.appendTo(container)
-						result.Requests.forEach(function (request) {
-							$('<div>' + request.Url + '</div>')
-							.appendTo(resultContainer);
-						});
-					});
-				};
-
-				var createUI = function () {
-					$('<style>.rdbprofilerbutton { position:absolute; left: 0; top: 0; background: PowderBlue; border: 1px solid black; cursor: pointer; border-radius: 2px; padding: 0.1em; } .ravendb-profiler-results { display: none; position:absolute; left: 0; top: 1em; border: 1px solid black; background: white; padding: 2em; border-radius: 5px; }</style>')
-						.appendTo('body');
-					popupButton = $('<span class=""rdbprofilerbutton"">RavenDb</span>')
-						.appendTo('body')
-						.click(function () {
-							container.toggle();
-						});
-				};
-
-				return {
-					initalize: function (opt) {
-						options = opt || {};
-						container = $('<div class=""ravendb-profiler-results""></div>')
-							.appendTo('body');
-						load();
-					}
-				}
-			})(jQuery);";
+		private static readonly string ravenDbProfilerScripts;
 	}
 }
