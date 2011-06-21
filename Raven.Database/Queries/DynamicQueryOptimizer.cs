@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;

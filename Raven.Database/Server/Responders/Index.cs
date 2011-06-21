@@ -166,7 +166,7 @@ namespace Raven.Database.Server.Responders
 			if (index.StartsWith("dynamic/"))
 				entityName = index.Substring("dynamic/".Length);
 
-			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery.Query);
+			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
 
 
 			if (Database.IndexStorage.HasIndex(dynamicIndexName))
