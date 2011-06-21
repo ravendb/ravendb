@@ -4,12 +4,14 @@ using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
 using System.Linq;
+using Raven.Client.Connection.Profiling;
 
 namespace Raven.Client.MvcIntegration
 {
 	public class RavenProfiler
 	{
-		public static void InitializeFor(IDocumentStore store)
+
+		public static void InitializeFor(IDocumentStore store, params string[] fieldsToFilter)
 		{
 			var existing = RouteTable.Routes.Select(x =>
 			{
@@ -27,7 +29,7 @@ namespace Raven.Client.MvcIntegration
 				existing.AddStore(store);
 				return;
 			}
-			var ravenProfilingHandler = new RavenProfilingHandler();
+			var ravenProfilingHandler = new RavenProfilingHandler(new HashSet<string>(fieldsToFilter ?? Enumerable.Empty<string>()));
 			ravenProfilingHandler.AddStore(store);
 			RouteTable.Routes.Add("RavenDB Profiling", new Route("ravendb/profiling", ravenProfilingHandler));
 		}

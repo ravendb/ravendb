@@ -13,11 +13,12 @@ namespace Raven.Client.MvcIntegration
 {
 	public class RavenProfilingHandler: IRouteHandler, IHttpHandler
 	{
+		private readonly JsonFormatterAndFieldsFilterer jsonFormatterAndFieldsFilterer;
 		private readonly ConcurrentDictionary<DocumentStore, object> stores = new ConcurrentDictionary<DocumentStore, object>();
 
-		public RavenProfilingHandler()
+		public RavenProfilingHandler(HashSet<string> fieldsToFilter)
 		{
-			
+			jsonFormatterAndFieldsFilterer = new JsonFormatterAndFieldsFilterer(fieldsToFilter);
 		}
 
 		/// <summary>
@@ -47,7 +48,7 @@ namespace Raven.Client.MvcIntegration
 			            from id in ids
 			            let profilingInformation = documentStore.GetProfilingInformationFor(id)
 			            where profilingInformation != null
-			            select profilingInformation;
+			            select jsonFormatterAndFieldsFilterer.Filter(profilingInformation);
 
 			var results = items.ToList();
 
