@@ -16,7 +16,7 @@ namespace Raven.Client.Connection.Profiling
 	{
 		private readonly ConcurrentLruLSet<ProfilingInformation> leastRecentlyUsedCache = new ConcurrentLruLSet<ProfilingInformation>(NumberOfSessionsToTrack);
 
-		private const int NumberOfSessionsToTrack = 50;
+		private const int NumberOfSessionsToTrack = 1024;
 
 		/// <summary>
 		/// Register the action as associated with <param name="sender"/>
