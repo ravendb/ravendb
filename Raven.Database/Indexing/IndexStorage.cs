@@ -108,6 +108,8 @@ namespace Raven.Database.Indexing
 
         public bool HasIndex(string index)
         {
+			if (index == null)
+				return false;
             return indexes.ContainsKey(index);
         }
 
