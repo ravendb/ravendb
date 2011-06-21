@@ -14,14 +14,21 @@ namespace Raven.Client.MvcIntegration
 {
 	public class RavenProfilingHandler : IRouteHandler, IHttpHandler
 	{
+		private readonly JsonFormatterAndFieldsFilterer jsonFormatterAndFieldsFilterer;
 		private readonly ConcurrentDictionary<DocumentStore, object> stores = new ConcurrentDictionary<DocumentStore, object>();
 
 		static RavenProfilingHandler()
 		{
-			using(var stream = typeof(RavenProfilingHandler).Assembly.GetManifestResourceStream("Raven.Client.MvcIntegration.ravendb-profiler-scripts.js"))
+			using (var stream = typeof(RavenProfilingHandler).Assembly.GetManifestResourceStream("Raven.Client.MvcIntegration.ravendb-profiler-scripts.js"))
 			{
 				ravenDbProfilerScripts = new StreamReader(stream).ReadToEnd();
 			}
+		}
+
+		public RavenProfilingHandler(HashSet<string> fieldsToFilter)
+		{
+		
+			jsonFormatterAndFieldsFilterer = new JsonFormatterAndFieldsFilterer(fieldsToFilter);
 		}
 
 		/// <summary>
@@ -57,10 +64,11 @@ namespace Raven.Client.MvcIntegration
 				var ids = rawIds.Select(Guid.Parse);
 
 				var items = from documentStore in stores.Keys
-							from id in ids
-							let profilingInformation = documentStore.GetProfilingInformationFor(id)
-							where profilingInformation != null
-							select profilingInformation;
+			            from id in ids
+			            let profilingInformation = documentStore.GetProfilingInformationFor(id)
+			            where profilingInformation != null
+			            select jsonFormatterAndFieldsFilterer.Filter(profilingInformation);
+
 
 				var results = items.ToList();
 
