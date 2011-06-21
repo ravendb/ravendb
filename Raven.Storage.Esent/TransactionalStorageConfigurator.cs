@@ -7,6 +7,7 @@ using System.IO;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent
 {
@@ -24,15 +25,20 @@ namespace Raven.Storage.Esent
 		public void ConfigureInstance(JET_INSTANCE jetInstance, string path)
 		{
 			path = Path.GetFullPath(path);
+			var logsPath = path;
+			if (string.IsNullOrEmpty(configuration.Settings["Raven/Esent/LogsPath"]) == false)
+			{
+				logsPath = configuration.Settings["Raven/Esent/LogsPath"].ToFullPath();
+			}
 			new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,
 				Recovery = true,
 				NoInformationEvent = false,
 				CreatePathIfNotExist = true,
-				TempDirectory = Path.Combine(path, "temp"),
-				SystemDirectory = Path.Combine(path, "system"),
-				LogFileDirectory = Path.Combine(path, "logs"),
+				TempDirectory = Path.Combine(logsPath, "temp"),
+				SystemDirectory = Path.Combine(logsPath, "system"),
+				LogFileDirectory = Path.Combine(logsPath, "logs"),
 				MaxVerPages = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 128)),
 				BaseName = "RVN",
 				EventSource = "Raven",
