@@ -303,16 +303,19 @@ namespace Raven.Storage.Esent.StorageActions
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
 				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters, key is: " + key, "key");
 
+			Guid existingEtag;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
 			if (isUpdate)
 			{
 				EnsureNotLockedByTransaction(key, null);
-				EnsureDocumentEtagMatch(key, etag, "PUT");
+				existingEtag = EnsureDocumentEtagMatch(key, etag, "PUT");
+
 			}
 			else
 			{
+				existingEtag = Guid.Empty;
 				EnsureDocumentIsNotCreatedInAnotherTransaction(key, Guid.NewGuid());
 				if (Api.TryMoveFirst(session, Details))
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
@@ -335,6 +338,7 @@ namespace Raven.Storage.Esent.StorageActions
 			logger.DebugFormat("Inserted a new document with key '{0}', update: {1}, ",
 							   key, isUpdate);
 
+			cacher.RemoveCachedDocument(key, newEtag);
 			return newEtag;
 		}
 
@@ -400,13 +404,16 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TryMoveFirst(session, Details))
 				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], -1);
 
-			EnsureDocumentEtagMatch(key, etag, "DELETE");
+			var existingEtag = EnsureDocumentEtagMatch(key, etag, "DELETE");
 			EnsureNotLockedByTransaction(key, null);
 
 			metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 
 			Api.JetDelete(session, Documents);
 			logger.DebugFormat("Document with key '{0}' was deleted", key);
+
+			cacher.RemoveCachedDocument(key, existingEtag);
+
 			return true;
 		}
 

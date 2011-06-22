@@ -19,7 +19,7 @@ namespace Raven.Storage.Esent.StorageActions
 	public partial class DocumentStorageActions
 	{
 
-		private void EnsureDocumentEtagMatch(string key, Guid? etag, string method)
+		private Guid EnsureDocumentEtagMatch(string key, Guid? etag, string method)
 		{
 			var existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 			if (existingEtag != etag && etag != null)
@@ -31,6 +31,7 @@ namespace Raven.Storage.Esent.StorageActions
 					ExpectedETag = existingEtag
 				};
 			}
+			return existingEtag;
 		}
 
 		private void EnsureDocumentEtagMatchInTransaction(string key, Guid? etag)

@@ -220,7 +220,7 @@ namespace Raven.Storage.Managed
 
     	public bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata)
         {
-            AssertValidEtag(key, etag, "DELETE", null);
+            var existingEtag = AssertValidEtag(key, etag, "DELETE", null);
 
             metadata = null;
 			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
@@ -231,14 +231,16 @@ namespace Raven.Storage.Managed
 
 			storage.Documents.Remove(new RavenJObject { { "key", key } });
 
+			documentCacher.RemoveCachedDocument(key, existingEtag);
+
             return true;
         }
 
 		public Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
         {
-            AssertValidEtag(key, etag, "PUT", null);
+			var existingEtag = AssertValidEtag(key, etag, "PUT", null);
 
-            var ms = new MemoryStream();
+			var ms = new MemoryStream();
 
             metadata.WriteTo(ms);
 
@@ -255,6 +257,8 @@ namespace Raven.Storage.Managed
                  {"id", GetNextDocumentId()},
                  {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
              }, ms.ToArray());
+
+			documentCacher.RemoveCachedDocument(key, existingEtag);
 
             return newEtag;
         }
@@ -273,17 +277,17 @@ namespace Raven.Storage.Managed
             return id;
         }
 
-        private void AssertValidEtag(string key, Guid? etag, string op, TransactionInformation transactionInformation)
+        private Guid AssertValidEtag(string key, Guid? etag, string op, TransactionInformation transactionInformation)
         {
 			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
 
             if (readResult != null)
             {
                 StorageHelper.AssertNotModifiedByAnotherTransaction(storage, transactionStorageActions, key, readResult, transactionInformation);
+				var existingEtag = new Guid(readResult.Key.Value<byte[]>("etag"));
 
                 if (etag != null)
                 {
-                    var existingEtag = new Guid(readResult.Key.Value<byte[]>("etag"));
                     if (existingEtag != etag)
                     {
                         throw new ConcurrencyException(op + " attempted on document '" + key +
@@ -294,15 +298,16 @@ namespace Raven.Storage.Managed
                         };
                     }
                 }
+            	return existingEtag;
             }
-            else
-            {
-            	readResult =
-            		storage.DocumentsModifiedByTransactions.Read(
-						new RavenJObject { { "key", key } });
-                StorageHelper.AssertNotModifiedByAnotherTransaction(storage, transactionStorageActions, key, readResult, transactionInformation);
 
-            }
+        	readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
+        	StorageHelper.AssertNotModifiedByAnotherTransaction(storage, transactionStorageActions, key, readResult, transactionInformation);
+
+			if(readResult == null)
+				return Guid.Empty;
+
+			return new Guid(readResult.Key.Value<byte[]>("etag"));
         }
 
     }
