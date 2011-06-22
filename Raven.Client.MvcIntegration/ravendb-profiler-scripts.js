@@ -26,12 +26,12 @@ var RavenDBProfiler = (function ($) {
         fetchResults(options.id);
     };
 
-    var fetchResults(ids) {
+    var fetchResults = function(ids) {
         $.get(options.url, { id: ids }, function (obj) {
             if (obj)
                 addResult(obj);
         }, 'json');
-    }
+    };
 
     var fixupTableColumnsWidth = function () {
         var firstRow = $('.session-table thead tr').first();
