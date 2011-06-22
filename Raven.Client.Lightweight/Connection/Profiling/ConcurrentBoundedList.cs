@@ -35,8 +35,8 @@ namespace Raven.Client.Connection.Profiling
 
 				if(newList.Count > maxCapacity)
 				{
-					result = newList[newList.Count - 1];
-					newList.RemoveAt(newList.Count - 1);
+					result = newList[0];
+					newList.RemoveAt(0);
 				}
 
 				if (Interlocked.CompareExchange(ref items, newList, current) == current)
