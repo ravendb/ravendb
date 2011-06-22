@@ -11,7 +11,7 @@ var RavenDBProfiler = (function ($) {
         popupButton,
         resultDialog;
 
-    var templates = ['ravendb-profiler', 'session-template'];
+    var templates = ['ravendb-profiler', 'session-template', 'request-details'];
 
     var load = function () {
         if (options.id.length == 0)
@@ -47,6 +47,20 @@ var RavenDBProfiler = (function ($) {
         });
     };
 
+    var templateOptions = {
+        url: function (str) {
+            return str.split('?')[0];
+        },
+        query: function (str) {
+            var results = str.split('?');
+            if (results.length > 1) {
+                var queryItems = results[1].split('&');
+                return unescape(unescape(queryItems.join('\r\n')));
+            }
+            return "";
+        }
+    };
+
     var addResult = function (resultList) {
         if (!popupButton)
             createUI();
@@ -56,10 +70,10 @@ var RavenDBProfiler = (function ($) {
 
 
     var createUI = function () {
-        $.get(options.url, { path: 'styles.css' }, function(result)  {
+        $.get(options.url, { path: 'styles.css' }, function (result) {
             $('<style>' + result + '</style>').appendTo('body');
         });
-           
+
 
         popupButton = $('<span class="rdbprofilerbutton">RavenDB Profiler</span>')
             .appendTo('body')
@@ -67,10 +81,30 @@ var RavenDBProfiler = (function ($) {
                 container.toggle();
             });
 
+
+        $(document).keyup(function (e) {
+            if (e.keyCode == 27) { // esc
+                $('.ravendb-close').first().click();
+            }
+        });
+
+        $(document).delegate('.ravendb-toggle', 'click', function () {
+            container.toggle();
+        });
         $("#ravendb-session-container")
-            .delegate('.copy-full-url', 'click', function () {
+            .delegate('.show-full-url', 'click', function () {
                 var item = $.tmplItem(this);
-                alert(item.data.Url);
+                var req = item.data.Requests[parseInt($(this).attr('request-index'))];
+                alert(req.Url);
+            })
+            .delegate('.show-request-details', 'click', function () {
+                var item = $.tmplItem(this);
+                var req = item.data.Requests[parseInt($(this).attr('request-index'))];
+                $.tmpl('request-details', req, templateOptions).appendTo($('#ravendb-session-container'));
+
+            })
+            .delegate('.ravendb-close', 'click', function () {
+                $(this).parent().remove();
             })
             .delegate(".toggle-request", "click", function () {
 
@@ -84,19 +118,7 @@ var RavenDBProfiler = (function ($) {
                 this.collapse = true;
                 var item = $.tmplItem(this);
 
-                $.tmpl('session-template', item.data, {
-                    url: function (str) {
-                        return str.split('?')[0];
-                    },
-                    query: function (str) {
-                        var results = str.split('?');
-                        if (results.length > 1) {
-                            var queryItems = results[1].split('&');
-                            return unescape(unescape(queryItems.join('\r\n')));
-                        }
-                        return "";
-                    }
-                }).appendTo($(this).parent());
+                $.tmpl('session-template', item.data, templateOptions).appendTo($(this).parent());
 
                 fixupTableColumnsWidth();
             });
@@ -105,7 +127,7 @@ var RavenDBProfiler = (function ($) {
     return {
         initalize: function (opt) {
             options = $.extend({}, opt, { url: '/ravendb/profiling', textRows: 15, textCols: 80 });
-            container = $('<div class="ravendb-profiler-results"><h2>Sessions</h2><ol id="ravendb-session-container"></ol></div>')
+            container = $('<div class="ravendb-profiler-results"><h2>Sessions</h2><ol id="ravendb-session-container"></ol><p/> <a href="#" class="ravendb-toggle ravendb-close">Close</a></div>')
                 .appendTo('body');
             load();
         }
