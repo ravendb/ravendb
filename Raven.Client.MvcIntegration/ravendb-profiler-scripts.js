@@ -89,7 +89,7 @@ var RavenDBProfiler = (function ($) {
         });
 
         $(document).delegate('.ravendb-toggle', 'click', function () {
-            container.toggle();
+            container.toggle(false);
         });
         $("#ravendb-session-container")
             .delegate('.show-full-url', 'click', function () {

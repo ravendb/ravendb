@@ -1,7 +1,6 @@
 <div class='request-details'>
     <div>
-        <h2>
-            Url: ${$item.url(Url)}</h2>
+        <h2>${Method} ${$item.url(Url)}</h2>
     </div>
     <p />
     <div>
@@ -11,9 +10,6 @@
                     Status
                 </th>
                 <th>
-                    Method
-                </th>
-                <th>
                     Http Result
                 </th>
             </thead>
@@ -21,9 +17,6 @@
                 <tr>
                     <td>
                         ${Status}
-                    </td>
-                    <td>
-                        ${Method}
                     </td>
                     <td>
                         ${HttpResult}

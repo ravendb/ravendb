@@ -55,7 +55,8 @@
     max-height: 600px;
     max-width: 100%;
     padding: 15px;
-    overflow: scroll;
+    overflow: auto;
+    
 }
 
 .request-details-table td
