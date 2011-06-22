@@ -45,9 +45,6 @@ var RavenDBProfiler = (function ($) {
                 $($('td', row)[i]).css('min-width', maxs[i]);
             }
         });
-
-
-
     };
 
     var addResult = function (resultList) {
@@ -59,8 +56,10 @@ var RavenDBProfiler = (function ($) {
 
 
     var createUI = function () {
-        $('<style>.session-table tr td { padding-left: 10px; } .rdbprofilerbutton { position:absolute; left: 0; top: 0; background: Orange; border: 1px solid black; cursor: pointer; border-radius: 2px; padding: 0.1em; } .ravendb-profiler-results { display: none; position:absolute; left: 0; top: 1em; border: 1px solid black; background: white; padding: 2em; border-radius: 5px; } .rdbResultHolder { padding-left: 1em; }</style>')
-            .appendTo('body');
+        $.get(options.url, { path: 'styles.css' }, function(result)  {
+            $('<style>' + result + '</style>').appendTo('body');
+        });
+           
 
         popupButton = $('<span class="rdbprofilerbutton">RavenDB Profiler</span>')
             .appendTo('body')

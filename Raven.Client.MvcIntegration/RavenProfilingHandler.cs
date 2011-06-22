@@ -84,6 +84,8 @@ namespace Raven.Client.MvcIntegration
 				context.Response.ContentType = "application/x-javascript";
 			else if (path.EndsWith(".tmpl.html"))
 				context.Response.ContentType = "text/html";
+			else if (path.EndsWith(".tmpl.html"))
+				context.Response.ContentType = "text/css";
 
 			if (string.IsNullOrEmpty(SourcePath))
 			{
