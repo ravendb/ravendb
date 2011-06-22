@@ -11,7 +11,11 @@ var RavenDBProfiler = (function ($) {
     var load = function () {
         if (options.id.length == 0)
             return;
-        $.get(options.url, { id: options.id.join(',') }, function (obj) {
+        fetchResults(options.id.join(','));
+    };
+
+    var fetchResults = function (idList) {
+        $.get(options.url, { id: idList }, function (obj) {
             if (obj)
                 addResult(obj);
         }, 'json');
@@ -51,7 +55,6 @@ var RavenDBProfiler = (function ($) {
         var resultHolder = $('<div class="rdbResultHolder" style="display:none;"></div>').html('<textarea rows=' + options.textRows + ' cols=' + options.textCols + '>' + text + '</textarea>').appendTo(requestHolder);
     };
 
-
     var createUI = function () {
         $('<style>.rdbprofilerbutton { position:absolute; left: 0; top: 0; background: Orange; border: 1px solid black; cursor: pointer; border-radius: 2px; padding: 0.1em; } .ravendb-profiler-results { display: none; position:absolute; left: 0; top: 1em; border: 1px solid black; background: white; padding: 2em; border-radius: 5px; } .rdbResultHolder { padding-left: 1em; }</style>')
             .appendTo('body');
@@ -63,12 +66,21 @@ var RavenDBProfiler = (function ($) {
             });
     };
 
+    var listenForAjax = function () {
+        $('body').ajaxComplete(function (event, xhrRequest, ajaxOptions) {
+            var id = xhrRequest.getResponseHeader('X-RavenDb-Profiling-Id');
+            if (id)
+                fetchResults(id);
+        });
+    };
+
     return {
         initalize: function (opt) {
             options = $.extend({}, opt, { url: '/ravendb/profiling', textRows: 15, textCols: 80 });
             container = $('<div class="ravendb-profiler-results"></div>')
                 .appendTo('body');
             load();
+            listenForAjax();
         }
     }
 })(jQuery);
