@@ -50,7 +50,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="credentials">The credentials.</param>
 		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId)
 		{
-			profilingInformation = new ProfilingInformation(sessionId);
+			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.url = url;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;

@@ -19,11 +19,11 @@ namespace Raven.Client.MvcIntegration
 
 		public ProfilingInformation Filter(ProfilingInformation information)
 		{
-			return new ProfilingInformation(information.Id)
-			{
-				At = information.At,
-				Requests = information.Requests.Select(FilterRequest).ToList()
-			};
+			var profilingInformation = ProfilingInformation.CreateProfilingInformation(information.Id);
+			profilingInformation.At = information.At;
+			profilingInformation.Context = information.Context;
+			profilingInformation.Requests = information.Requests.Select(FilterRequest).ToList();
+			return profilingInformation;
 		}
 
 		private RequestResultArgs FilterRequest(RequestResultArgs input)

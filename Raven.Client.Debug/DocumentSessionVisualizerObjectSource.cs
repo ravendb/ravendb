@@ -11,7 +11,7 @@ namespace Raven.Client.Debug
 		{
 			var session = (DocumentSession) target;
 			var profilingInformation = ((DocumentStore) session.DocumentStore).GetProfilingInformationFor(session.Id) ??
-			                           new ProfilingInformation(session.Id);
+			                           ProfilingInformation.CreateProfilingInformation(session.Id);
 			new BinaryFormatter().Serialize(outgoingData, profilingInformation);
 		}
 

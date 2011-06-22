@@ -58,7 +58,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// </summary>
 		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId)
 		{
-			profilingInformation = new ProfilingInformation(sessionId);
+			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.url = url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url;
 			this.convention = convention;
 			this.credentials = credentials;

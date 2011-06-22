@@ -49,7 +49,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, ReplicationInformer replicationInformer, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId)
 		{
-			profilingInformation = new ProfilingInformation(currentSessionId);
+			profilingInformation = ProfilingInformation.CreateProfilingInformation(currentSessionId);
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.currentSessionId = currentSessionId;

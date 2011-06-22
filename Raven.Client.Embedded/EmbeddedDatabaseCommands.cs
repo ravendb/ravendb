@@ -40,7 +40,7 @@ namespace Raven.Client.Embedded
 		///</summary>
 		public EmbeddedDatabaseCommands(DocumentDatabase database, DocumentConvention convention, Guid? sessionId)
 		{
-			profilingInformation = new ProfilingInformation(sessionId);
+			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.database = database;
 			this.convention = convention;
 			OperationsHeaders = new NameValueCollection();
