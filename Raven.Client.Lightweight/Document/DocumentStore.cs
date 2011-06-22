@@ -362,7 +362,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="documentStoreListener">The document store listener.</param>
 		/// <returns></returns>
-		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
+		public DocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
 		{
 			listeners.StoreListeners = listeners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
 			return this;
@@ -486,7 +486,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="deleteListener">The delete listener.</param>
 		/// <returns></returns>
-		public IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener)
+		public DocumentStore RegisterListener(IDocumentDeleteListener deleteListener)
 		{
 			listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] { deleteListener }).ToArray();
 			return this;
@@ -495,7 +495,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Registers the query listener.
 		/// </summary>
-		public IDocumentStore RegisterListener(IDocumentQueryListener queryListener)
+		public DocumentStore RegisterListener(IDocumentQueryListener queryListener)
 		{
 			listeners.QueryListeners = listeners.QueryListeners.Concat(new[] { queryListener }).ToArray();
 			return this;
@@ -503,7 +503,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Registers the convertion listener.
 		/// </summary>
-		public IDocumentStore RegisterListener(IDocumentConversionListener conversionListener)
+		public DocumentStore RegisterListener(IDocumentConversionListener conversionListener)
 		{
 			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
 			return this;
