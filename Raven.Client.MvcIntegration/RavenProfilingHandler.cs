@@ -22,7 +22,6 @@ namespace Raven.Client.MvcIntegration
 	
 		public RavenProfilingHandler(HashSet<string> fieldsToFilter)
 		{
-		
 			jsonFormatterAndFieldsFilterer = new JsonFormatterAndFieldsFilterer(fieldsToFilter);
 		}
 
@@ -69,7 +68,6 @@ namespace Raven.Client.MvcIntegration
 			            let profilingInformation = documentStore.GetProfilingInformationFor(id)
 			            where profilingInformation != null
 			            select jsonFormatterAndFieldsFilterer.Filter(profilingInformation);
-
 
 			var results = items.ToList();
 
@@ -138,9 +136,18 @@ namespace Raven.Client.MvcIntegration
 
 			object _;
 			documentStore.AfterDispose += (sender, args) => stores.TryRemove(documentStore, out _);
-			documentStore.SessionCreatedInternal += operations => RavenProfiler.ContextualSessionList.Add(operations.Id);
+			documentStore.SessionCreatedInternal += OnSessionCreated;
 
 			stores.TryAdd(documentStore, null);
 		}
+
+		private void OnSessionCreated(InMemoryDocumentSessionOperations operations)
+		{
+			RavenProfiler.ContextualSessionList.Add(operations.Id);
+			if (HttpContext.Current != null && HttpContext.Current.Response != null)
+				HttpContext.Current.Response.AddHeader("X-RavenDb-Profiling-Id", operations.Id.ToString());
+		}
+
+		private static string ravenDbProfilerScripts;
 	}
 }
