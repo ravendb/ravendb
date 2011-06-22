@@ -19,7 +19,6 @@ namespace Raven.Studio.Controls
 				case Key.PageDown:
 					e.Handled = false;
 					return;
-					break;
 				case Key.Right:
 				case Key.Down:
 				case Key.Left:
