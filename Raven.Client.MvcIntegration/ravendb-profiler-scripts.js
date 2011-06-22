@@ -126,7 +126,7 @@ var RavenDBProfiler = (function ($) {
 
     return {
         initalize: function (opt) {
-            options = $.extend({}, opt, { url: '/ravendb/profiling', textRows: 15, textCols: 80 });
+            options = $.extend({}, opt, { });
             container = $('<div class="ravendb-profiler-results"><h2>Sessions</h2><ol id="ravendb-session-container"></ol><p/> <a href="#" class="ravendb-toggle ravendb-close">Close</a></div>')
                 .appendTo('body');
             load();
