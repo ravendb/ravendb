@@ -17,36 +17,8 @@
 			this.events = events;
 		}
 
-        public bool CanExecute(object listOrViewModel)
-        {
-            if (listOrViewModel == null)
-                return false;
-
-            var list = listOrViewModel as IList;
-            if (list != null)
-            {
-                return list.Count > 0;
-            }
-
-            var viewModel = listOrViewModel as DocumentViewModel;
-            return viewModel != null;
-        }
-
-        public void Execute(object listOrViewModel) {
-            DocumentViewModel document;
-
-            var list = listOrViewModel as IList;
-            if (list != null) {
-                document = list.OfType<DocumentViewModel>()
-                .FirstOrDefault();
-            }
-            else {
-                document = listOrViewModel as DocumentViewModel;
-            }
-
-            if (document == null)
-                return;
-
+		public void Execute(DocumentViewModel document)
+		{
 			var editScreen = IoC.Get<EditDocumentViewModel>();
 			editScreen.Initialize(document.JsonDocument);
 

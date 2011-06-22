@@ -32,10 +32,6 @@ namespace Raven.Studio.Behaviors
 			menu.AddItem(DocumentsResources.DocumentMenu_CopyId, null);
 			menu.AddSeparator();
 			menu.AddItem(DocumentsResources.DocumentMenu_DeleteDocument, null);
-
-			var editDocument = (PopupMenuItem)menu.Items[0];
-			editDocument.SetValue(Caliburn.Micro.Action.TargetWithoutContextProperty, "EditDocument");
-			editDocument.SetValue(Message.AttachProperty, "Execute($idsintag)");
 			
 			var canvas = menu.ItemsControl.Parent as Canvas;
 			if (canvas != null) canvas.MouseMove += (s, e) => { mousePosition = e.GetPosition(null); };
@@ -69,19 +65,27 @@ namespace Raven.Studio.Behaviors
 			if (menu.IsOpeningCancelled)
 				return;
 
-			((PopupMenuItem) menu.Items[0]).Tag = string.Join(",", AssociatedObject.SelectedItems
-			                                                        	.OfType<DocumentViewModel>()
-			                                                        	.Select(vm => vm.Id));
+			var editDocument = (PopupMenuItem)menu.Items[0];
+			editDocument.SetValue(Caliburn.Micro.Action.TargetWithoutContextProperty, "EditDocument");
+			editDocument.SetValue(Message.AttachProperty, null);
+			editDocument.SetValue(Message.AttachProperty, "Execute($dataContext)");
+			editDocument.DataContext = AssociatedObject.SelectedItem;
 
 			MultiItemsMenuOrSingleItemMenu();
 		}
 
 		private void MultiItemsMenuOrSingleItemMenu()
 		{
+			var editDocument = (PopupMenuItem)menu.Items[0];
+
 			if (AssociatedObject.SelectionMode != SelectionMode.Single &&
 				AssociatedObject.SelectedItems.Count > 1)
 			{
-				
+				editDocument.Visibility = Visibility.Collapsed;
+			}
+			else
+			{
+				editDocument.Visibility = Visibility.Visible;
 			}
 		}
 
