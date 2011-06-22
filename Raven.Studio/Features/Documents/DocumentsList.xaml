@@ -12,16 +12,10 @@
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 	
-	<UserControl.Resources>
-		<CollectionViewSource x:Name="viewSource"
-							  Source="{Binding}">
-		</CollectionViewSource>
-	</UserControl.Resources>
-
 	<Grid>
 		<Controls:WrapListBox x:Name="list"
-				 ItemsSource="{Binding Source={StaticResource viewSource}}"
-				 Style="{StaticResource DocumentList}">
+							  ItemsSource="{Binding}"
+							  Style="{StaticResource DocumentList}">
 
 			<i:Interaction.Behaviors>
 				<local:SelectItemOnRightClick />
