@@ -33,7 +33,6 @@ namespace Raven.Client.MvcIntegration
 			var ravenProfilingHandler = new RavenProfilingHandler(new HashSet<string>(fieldsToFilter ?? Enumerable.Empty<string>()));
 			ravenProfilingHandler.AddStore(store);
 
-			RouteTable.Routes.Insert(0, new Route("ravendb-profiler-scripts.js", new RouteValueDictionary(new { controller = "RavenProfilingHandler", action = "ProcessRequest" }), ravenProfilingHandler));
 			RouteTable.Routes.Insert(0, new Route("ravendb/profiling", new RouteValueDictionary(new { controller = "RavenProfilingHandler", action = "ProcessRequest" }), ravenProfilingHandler));
 		}
 
@@ -41,7 +40,7 @@ namespace Raven.Client.MvcIntegration
 		{
 			var httpContextWrapper = new HttpContextWrapper(HttpContext.Current);
 			var root = UrlHelper.GenerateContentUrl("~/ravendb/profiling", httpContextWrapper);
-			var script = UrlHelper.GenerateContentUrl("~/ravendb-profiler-scripts.js", httpContextWrapper);
+			var script = UrlHelper.GenerateContentUrl("~/ravendb/profiling?path=ravendb-profiler-scripts.js", httpContextWrapper);
 			const string template =
 				@"<script type=""text/javascript"" src=""{1}""></script>
 <script type=""text/javascript""> jQuery(function() {{ RavenDBProfiler.initalize({{ id:[{0}], url: '{2}' }}); }} ); </script>";

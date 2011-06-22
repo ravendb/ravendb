@@ -16,15 +16,10 @@ namespace Raven.Client.MvcIntegration
 	{
 		private readonly JsonFormatterAndFieldsFilterer jsonFormatterAndFieldsFilterer;
 		private readonly ConcurrentDictionary<DocumentStore, object> stores = new ConcurrentDictionary<DocumentStore, object>();
+		public static string SourcePath;
 
-		static RavenProfilingHandler()
-		{
-			using (var stream = typeof(RavenProfilingHandler).Assembly.GetManifestResourceStream("Raven.Client.MvcIntegration.ravendb-profiler-scripts.js"))
-			{
-				ravenDbProfilerScripts = new StreamReader(stream).ReadToEnd();
-			}
-		}
-
+		private ConcurrentDictionary<string, string> cache = new ConcurrentDictionary<string, string>();
+	
 		public RavenProfilingHandler(HashSet<string> fieldsToFilter)
 		{
 		
@@ -49,33 +44,64 @@ namespace Raven.Client.MvcIntegration
 		/// <param name="context">An <see cref="T:System.Web.HttpContext"/> object that provides references to the intrinsic server objects (for example, Request, Response, Session, and Server) used to service HTTP requests. </param>
 		public void ProcessRequest(HttpContext context)
 		{
-			if (context.Request.AppRelativeCurrentExecutionFilePath == "~/ravendb-profiler-scripts.js")
+			var path = context.Request.QueryString["path"];
+			if(string.IsNullOrEmpty(path) == false)
 			{
-				context.Response.ContentType = "application/x-javascript";
-
-				context.Response.Output.Write(ravenDbProfilerScripts);
-				context.Response.Output.Flush();
+				HandlePathRequest(context, path);
 			}
 			else
 			{
-				context.Response.ContentType = "application/json";
+				HandleDataReuqest(context);
+			}
+		}
 
-				var rawIds = context.Request.QueryString.GetValues("id") ?? Enumerable.Empty<string>();
-				var ids = rawIds.Select(Guid.Parse);
+		private void HandleDataReuqest(HttpContext context)
+		{
+			context.Response.ContentType = "application/json";
 
-				var items = from documentStore in stores.Keys
+			var rawIds = context.Request.QueryString.GetValues("id") ?? 
+			             context.Request.QueryString.GetValues("id[]") ??
+			             Enumerable.Empty<string>();
+			var ids = rawIds.Select(Guid.Parse);
+
+			var items = from documentStore in stores.Keys
 			            from id in ids
 			            let profilingInformation = documentStore.GetProfilingInformationFor(id)
 			            where profilingInformation != null
 			            select jsonFormatterAndFieldsFilterer.Filter(profilingInformation);
 
 
-				var results = items.ToList();
+			var results = items.ToList();
 
-				CreateJsonSerializer().Serialize(context.Response.Output, results);
+			CreateJsonSerializer().Serialize(context.Response.Output, results);
 
-				context.Response.Output.Flush();
+			context.Response.Output.Flush();
+		}
+
+		private void HandlePathRequest(HttpContext context, string path)
+		{
+			if(path.EndsWith(".js"))
+				context.Response.ContentType = "application/x-javascript";
+			else if (path.EndsWith(".tmpl.html"))
+				context.Response.ContentType = "text/html";
+
+			if (string.IsNullOrEmpty(SourcePath))
+			{
+				var value = cache.GetOrAdd(path, s =>
+				{
+					using(var stream = typeof(RavenProfilingHandler).Assembly.GetManifestResourceStream("Raven.Client.MvcIntegration." + path.Replace("/",".")))
+					{
+						return new StreamReader(stream).ReadToEnd();
+					}
+				});
+				context.Response.Output.Write(value);
 			}
+			else  // debug mode, probably
+			{
+				var file = Path.Combine(SourcePath, path);
+				context.Response.Output.Write(File.ReadAllText(file));
+			}
+			context.Response.Output.Flush();
 		}
 
 		private static JsonSerializer CreateJsonSerializer()
@@ -114,7 +140,5 @@ namespace Raven.Client.MvcIntegration
 
 			stores.TryAdd(documentStore, null);
 		}
-
-		private static string ravenDbProfilerScripts;
 	}
 }
