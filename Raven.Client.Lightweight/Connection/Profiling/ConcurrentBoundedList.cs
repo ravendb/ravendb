@@ -8,7 +8,7 @@ namespace Raven.Client.Connection.Profiling
 	internal class ConcurrentLruLSet<T>
 	{
 		private readonly int maxCapacity;
-		private List<T> items = new List<T>();
+		private LinkedList<T> items = new LinkedList<T>();
 
 		public ConcurrentLruLSet(int maxCapacity)
 		{
@@ -21,30 +21,27 @@ namespace Raven.Client.Connection.Profiling
 			return current.FirstOrDefault(predicate);
 		}
 
-		public T Push(T item)
+		public void Push(T item)
 		{
-			T result = default(T);
 			do
 			{
 				var current = items;
-				var newList = new List<T>(current);
+				var newList = new LinkedList<T>(current);
 
 				// this ensures the item is at the head of the list
 				newList.Remove(item);
-				newList.Add(item);
+				newList.AddLast(item);
 
 				if(newList.Count > maxCapacity)
 				{
-					result = newList[0];
-					newList.RemoveAt(0);
+					newList.RemoveFirst();
 				}
 
 				if (Interlocked.CompareExchange(ref items, newList, current) == current)
-					break;
+					return;
 
 			} while (true);
 
-			return result;
 		}
 	}
 }
