@@ -70,15 +70,6 @@ namespace Raven.Studio.Features.Documents.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Copy Documents Ids to Clipboard.
-        /// </summary>
-        public static string DocumentMenu_CopyIds {
-            get {
-                return ResourceManager.GetString("DocumentMenu_CopyIds", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Delete Document.
         /// </summary>
         public static string DocumentMenu_DeleteDocument {
