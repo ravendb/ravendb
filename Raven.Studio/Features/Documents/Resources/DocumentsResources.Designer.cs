@@ -70,6 +70,15 @@ namespace Raven.Studio.Features.Documents.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Copy Projection to Clipboard.
+        /// </summary>
+        public static string DocumentMenu_CopyProjection {
+            get {
+                return ResourceManager.GetString("DocumentMenu_CopyProjection", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Delete Document.
         /// </summary>
         public static string DocumentMenu_DeleteDocument {

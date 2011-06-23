@@ -120,6 +120,9 @@
   <data name="DocumentMenu_CopyId" xml:space="preserve">
     <value>Copy Document Id to Clipboard</value>
   </data>
+  <data name="DocumentMenu_CopyProjection" xml:space="preserve">
+    <value>Copy Projection to Clipboard</value>
+  </data>
   <data name="DocumentMenu_DeleteDocument" xml:space="preserve">
     <value>Delete Document</value>
   </data>
