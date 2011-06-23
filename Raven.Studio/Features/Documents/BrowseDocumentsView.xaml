@@ -15,10 +15,6 @@
              d:DesignWidth="640"
              d:DesignHeight="480"
              d:DataContext="{d:DesignData /SampleData/BrowseDocumentsViewModelSampleData.xaml}">
-	<UserControl.Resources>
-		<ContentControl x:Key="contextBridge"
-		                Content="{Binding}" />
-	</UserControl.Resources>
 
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.RowDefinitions>
@@ -102,52 +98,36 @@
 				           d:IsLocked="True" />
 
 				<c:WrapListBox x:Name="DocumentPageContainer"
+							   ItemsSource="{Binding Documents}"
 							   Style="{StaticResource DocumentList}"
-				               ItemsSource="{Binding Documents}">
+							   Margin="0 0 0 6"
+							   Grid.Row="1">
+
 					<i:Interaction.Behaviors>
 						<local:SelectItemOnRightClick />
+						<local:AttachDocumentsMenu />
 					</i:Interaction.Behaviors>
 					<i:Interaction.Triggers>
 						<Input:KeyTrigger Key="PageUp">
 							<f:CustomActionMessage Target="{Binding Documents}"
-                                                   IgnoreAvailability="True"
-							                       MethodName="MovePrevious" />
+												   IgnoreAvailability="True"
+												   MethodName="MovePrevious" />
 						</Input:KeyTrigger>
 						<Input:KeyTrigger Key="PageDown">
 							<f:CustomActionMessage Target="{Binding Documents}"
-                                                   IgnoreAvailability="True"
-							                       MethodName="MoveNext" />
+												   IgnoreAvailability="True"
+												   MethodName="MoveNext" />
 						</Input:KeyTrigger>
 						<Input:KeyTrigger Key="Delete">
 							<f:CustomActionMessage Target="DeleteDocument"
-							                       IgnoreAvailability="True"
-							                       MethodName="Execute">
+												   IgnoreAvailability="True"
+												   MethodName="Execute">
 								<cm:Parameter Value="$selectedItems" />
 							</f:CustomActionMessage>
 						</Input:KeyTrigger>
 					</i:Interaction.Triggers>
-					<tk:ContextMenuService.ContextMenu>
-						<tk:ContextMenu>
-							<tk:MenuItem Header="Edit Document"
-							             cm:Action.TargetWithoutContext="EditDocument"
-							             Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
-							             cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
-
-							<tk:MenuItem Header="Copy Document Id(s) to Clipboard"
-							             cm:Action.TargetWithoutContext="CopyDocumentIdToClipboard"
-							             Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
-							             cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
-
-							<tk:Separator />
-
-							<tk:MenuItem Header="Delete Document(s)"
-							             cm:Action.TargetWithoutContext="DeleteDocument"
-							             Tag="{Binding Source={StaticResource contextBridge}, Path=Content}"
-							             cm:Message.Attach="[Click]=[Execute($selectedItems)]" />
-						</tk:ContextMenu>
-					</tk:ContextMenuService.ContextMenu>
 				</c:WrapListBox>
-
+				
 			</Grid>
 		</tk:DockPanel>
 
