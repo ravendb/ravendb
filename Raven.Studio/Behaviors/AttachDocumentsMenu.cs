@@ -17,6 +17,7 @@ namespace Raven.Studio.Behaviors
 	{
 		private PopupMenu menu;
 		private PopupMenuItem editDocumentMenuItem;
+		private PopupMenuItem copyIdMenuItem;
 		private Point mousePosition;
 
 		protected override void OnAttached()
@@ -28,13 +29,20 @@ namespace Raven.Studio.Behaviors
 
 		private void CreateMenu()
 		{
+			var viewModel = AssociatedObject.SelectedItem as DocumentViewModel;
+			if (viewModel == null)
+				return;
+
 			menu = new PopupMenu();
 
 			editDocumentMenuItem = new PopupMenuItem(null, DocumentsResources.DocumentMenu_EditDocument);
-			editDocumentMenuItem.Click += (s, ea) => IoC.Get<EditDocument>().Execute(AssociatedObject.SelectedItem as DocumentViewModel);
+			editDocumentMenuItem.Click += (s, ea) => IoC.Get<EditDocument>().Execute(viewModel);
 			menu.AddItem(editDocumentMenuItem);
 
-			menu.AddItem(DocumentsResources.DocumentMenu_CopyId, null);
+			copyIdMenuItem = new PopupMenuItem(null, DocumentsResources.DocumentMenu_CopyId);
+			copyIdMenuItem.Click += (s, ea) => IoC.Get<CopyDocumentIdToClipboard>().Execute(viewModel.Id);
+			menu.AddItem(copyIdMenuItem);
+
 			menu.AddSeparator();
 			menu.AddItem(DocumentsResources.DocumentMenu_DeleteDocument, null);
 			
@@ -78,10 +86,12 @@ namespace Raven.Studio.Behaviors
 				AssociatedObject.SelectedItems.Count > 1)
 			{
 				editDocumentMenuItem.Visibility = Visibility.Collapsed;
+				copyIdMenuItem.Visibility = Visibility.Collapsed;
 			}
 			else
 			{
 				editDocumentMenuItem.Visibility = Visibility.Visible;
+				copyIdMenuItem.Visibility = Visibility.Visible;
 			}
 		}
 
