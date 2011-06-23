@@ -7,6 +7,7 @@
 	using Features.Documents;
 	using Messages;
 
+	[Export]
 	public class EditDocument
 	{
 		readonly IEventAggregator events;

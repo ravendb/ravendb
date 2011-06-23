@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Interactivity;
 using System.Windows.Media;
 using Caliburn.Micro;
+using Raven.Studio.Commands;
 using Raven.Studio.Common;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Documents.Resources;
@@ -15,6 +16,7 @@ namespace Raven.Studio.Behaviors
 	public class AttachDocumentsMenu : Behavior<ListBox>
 	{
 		private PopupMenu menu;
+		private PopupMenuItem editDocumentMenuItem;
 		private Point mousePosition;
 
 		protected override void OnAttached()
@@ -27,8 +29,11 @@ namespace Raven.Studio.Behaviors
 		private void CreateMenu()
 		{
 			menu = new PopupMenu();
-			
-			menu.AddItem(new PopupMenuItem(null, DocumentsResources.DocumentMenu_EditDocument));
+
+			editDocumentMenuItem = new PopupMenuItem(null, DocumentsResources.DocumentMenu_EditDocument);
+			editDocumentMenuItem.Click += (s, ea) => IoC.Get<EditDocument>().Execute(AssociatedObject.SelectedItem as DocumentViewModel);
+			menu.AddItem(editDocumentMenuItem);
+
 			menu.AddItem(DocumentsResources.DocumentMenu_CopyId, null);
 			menu.AddSeparator();
 			menu.AddItem(DocumentsResources.DocumentMenu_DeleteDocument, null);
@@ -43,7 +48,6 @@ namespace Raven.Studio.Behaviors
 
 		private void FocusTheClickOnItem(object sender, RoutedEventArgs e)
 		{
-
 			var elementsInHostCoordinates = VisualTreeHelper.FindElementsInHostCoordinates(mousePosition,
 																						   Application.Current.RootVisual);
 			elementsInHostCoordinates
@@ -65,27 +69,19 @@ namespace Raven.Studio.Behaviors
 			if (menu.IsOpeningCancelled)
 				return;
 
-			var editDocument = (PopupMenuItem)menu.Items[0];
-			editDocument.SetValue(Caliburn.Micro.Action.TargetWithoutContextProperty, "EditDocument");
-			editDocument.SetValue(Message.AttachProperty, null);
-			editDocument.SetValue(Message.AttachProperty, "Execute($dataContext)");
-			editDocument.DataContext = AssociatedObject.SelectedItem;
-
 			MultiItemsMenuOrSingleItemMenu();
 		}
 
 		private void MultiItemsMenuOrSingleItemMenu()
 		{
-			var editDocument = (PopupMenuItem)menu.Items[0];
-
 			if (AssociatedObject.SelectionMode != SelectionMode.Single &&
 				AssociatedObject.SelectedItems.Count > 1)
 			{
-				editDocument.Visibility = Visibility.Collapsed;
+				editDocumentMenuItem.Visibility = Visibility.Collapsed;
 			}
 			else
 			{
-				editDocument.Visibility = Visibility.Visible;
+				editDocumentMenuItem.Visibility = Visibility.Visible;
 			}
 		}
 
