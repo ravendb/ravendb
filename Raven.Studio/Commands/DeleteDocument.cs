@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Studio.Features.Collections;
 
 namespace Raven.Studio.Commands
 {
@@ -27,15 +28,19 @@ namespace Raven.Studio.Commands
 			this.showMessageBox = showMessageBox;
 		}
 
-		public bool CanExecute(IList<string> documentsIds)
+		public bool CanExecute(IList<DocumentViewModel> documents)
 		{
-			return documentsIds != null && documentsIds.Count > 0 &&  string.IsNullOrWhiteSpace(documentsIds.First());
+			if (documents == null || documents.Count == 0)
+				return false;
+
+			var document = documents.First();
+			return document != null && document.CollectionType != BuiltinCollectionName.Projection;
 		}
 
-		public void Execute(IList<string> documentsIds)
+		public void Execute(IList<DocumentViewModel> documents)
 		{
-			string message = documentsIds.Count > 1 ? string.Format("Are you sure you want to delete these {0} documents?", documentsIds.Count) : 
-				string.Format("Are you sure that you want to do this document? ({0})", documentsIds.First());
+			string message = documents.Count > 1 ? string.Format("Are you sure you want to delete these {0} documents?", documents.Count) :
+				string.Format("Are you sure that you want to do this document? ({0})", documents.First().Id);
 
 			showMessageBox(
 				message,
@@ -44,7 +49,7 @@ namespace Raven.Studio.Commands
 				box => {
 					if (box.WasSelected(MessageBoxOptions.Ok))
 					{
-						documentsIds.Apply(ExecuteDeletion); // Is this the most efficient way?
+						documents.Apply(document => ExecuteDeletion(document.Id)); // Is this the most efficient way?
 					}
 				});
 		}
