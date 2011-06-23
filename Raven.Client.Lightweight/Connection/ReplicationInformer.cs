@@ -171,7 +171,11 @@ namespace Raven.Client.Connection
 				if (document == null)
 					return;
 				var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
-				replicationDestinations = replicationDocument.Destinations.Select(x => x.Url).ToList();
+				replicationDestinations = replicationDocument.Destinations.Select(x => x.Url)
+					// filter out replication destination that don't have the url setup, we don't know how to reach them
+					// so we might as well ignore them. Probably private replication destination (using connection string names only)
+					.Where(x=>x!=null) 
+					.ToList();
 				foreach (var replicationDestination in replicationDestinations)
 				{
 					IntHolder value;

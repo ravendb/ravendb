@@ -489,7 +489,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private RavenConnectionStringOptions GetConnectionOptions(ReplicationDestination x)
+		private static RavenConnectionStringOptions GetConnectionOptions(ReplicationDestination x)
     	{
 			if (string.IsNullOrEmpty(x.ConnectionStringName))
 				return new RavenConnectionStringOptions
