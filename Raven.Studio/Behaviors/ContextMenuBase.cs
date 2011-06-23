@@ -11,7 +11,7 @@ using SL4PopupMenu;
 
 namespace Raven.Studio.Behaviors
 {
-	public abstract class ContextMenuBase<T>
+	public abstract class ContextMenuBase<T> where T : class
 	{
 		protected readonly IList<T> SelectedItems;
 		protected readonly T SelectedItem;
@@ -26,12 +26,10 @@ namespace Raven.Studio.Behaviors
 			SelectedItems = selectedItems;
 			if (SelectedItems.Count > 1)
 				IsInMultiSelectedMode = true;
-			else
-			{
-				SelectedItem = SelectedItems.FirstOrDefault();
-				if (SelectedItem == null)
-					throw new InvalidOperationException("Selected items must contain at least one item");
-			}
+			
+			SelectedItem = SelectedItems.FirstOrDefault();
+			if (SelectedItem == null)
+				throw new InvalidOperationException("Selected items must contain at least one item");
 
 			Menu = new PopupMenu();
 
