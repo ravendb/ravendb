@@ -147,9 +147,6 @@
     <Compile Include="Features\Documents\BrowseDocumentsView.xaml.cs">
       <DependentUpon>BrowseDocumentsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Documents\DocumentsList.xaml.cs">
-      <DependentUpon>DocumentsList.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Features\Documents\IDocumentTemplateProvider.cs" />
     <Compile Include="Features\Documents\Resources\DocumentsResources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -346,10 +343,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\BrowseDocumentsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Documents\DocumentsList.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

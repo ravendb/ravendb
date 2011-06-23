@@ -7,8 +7,10 @@
 			 xmlns:f="clr-namespace:Raven.Studio.Framework"
 			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
-             xmlns:documents="clr-namespace:Raven.Studio.Features.Documents"
-             x:Class="Raven.Studio.Features.Database.SummaryView"
+			 xmlns:documents="clr-namespace:Raven.Studio.Features.Documents"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
+			 x:Class="Raven.Studio.Features.Database.SummaryView"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
 			 d:DesignWidth="640">
@@ -93,8 +95,17 @@
 			<TextBlock Text="Recent Documents"
 					   Style="{StaticResource SectionHeader}" />
 
-			<documents:DocumentsList DataContext="{Binding RecentDocuments}" />
+			<c:WrapListBox x:Name="RecentDocuments"
+						   Style="{StaticResource DocumentList}"
+						   Margin="0 0 0 6"
+						   Grid.Row="1">
 
+				<i:Interaction.Behaviors>
+					<local:SelectItemOnRightClick />
+					<local:AttachDocumentsMenu />
+				</i:Interaction.Behaviors>
+			</c:WrapListBox>
+			
 			<TextBlock Text="{Binding RecentDocumentsStatus}"
 					   Style="{StaticResource Instruction}" />
 
