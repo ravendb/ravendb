@@ -25,29 +25,29 @@ namespace Raven.StackOverflow.Etl.Posts
 {
 	public class AddVotesToPost : BatchFileWritingProcess
 	{
-		public AddVotesToPost(string outputDirectory) : base(outputDirectory)
+		public AddVotesToPost(string outputDirectory)
+			: base(outputDirectory)
 		{
 		}
 
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
 			int count = 0;
-			foreach (var votesForPosts in rows.GroupBy(row => row["PostId"]).Partition(Constants.BatchSize))
+			foreach (var partition in rows.Partition(Constants.BatchSize))
 			{
-				List<RavenJToken> votes = new List<RavenJToken>();
-
 				var cmds = new List<ICommandData>();
-				foreach (var votesForPost in votesForPosts)
+				foreach (var votesForPost in partition.GroupBy(row => row["PostId"]))
 				{
+					var votes = new List<RavenJToken>();
 					foreach (var row in votesForPost)
 					{
 						var vote = new RavenJObject(new[]
-							{
-								new KeyValuePair<string, RavenJToken>("VoteTypeId", new RavenJValue(row["VoteTypeId"])),
-								new KeyValuePair<string, RavenJToken>("CreationDate", new RavenJValue(row["CreationDate"]))
-							});
+						{
+							new KeyValuePair<string, RavenJToken>("VoteTypeId", new RavenJValue(row["VoteTypeId"])),
+							new KeyValuePair<string, RavenJToken>("CreationDate", new RavenJValue(row["CreationDate"]))
+						});
 
-						switch ((long)row["VoteTypeId"])
+						switch ((long) row["VoteTypeId"])
 						{
 							case 5L:
 								vote.Add("UserId", new RavenJValue("users/" + row["UserId"]));
@@ -62,20 +62,20 @@ namespace Raven.StackOverflow.Etl.Posts
 					{
 						Key = "posts/" + votesForPost.Key,
 						Patches = new[]
+						{
+							new PatchRequest
 							{
-								new PatchRequest
-								{
-									Name = "Votes",
-									Type = PatchCommandType.Set,
-									Value = new RavenJArray( votes)
-								},
-							}
+								Name = "Votes",
+								Type = PatchCommandType.Set,
+								Value = new RavenJArray(votes)
+							},
+						}
 					});
 				}
-
 				count++;
 
 				WriteCommandsTo("Votes #" + count.ToString("00000") + ".json", cmds);
+
 			}
 			yield break;
 		}
