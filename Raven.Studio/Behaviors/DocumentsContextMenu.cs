@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Caliburn.Micro;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
@@ -28,11 +29,15 @@ namespace Raven.Studio.Behaviors
 
 				Menu.AddSeparator();
 
-				Menu.AddItem(DocumentsResources.DocumentMenu_DeleteDocument, null);
+				var deleteDocumentMenuItem = new PopupMenuItem(null, DocumentsResources.DocumentMenu_DeleteDocument);
+				deleteDocumentMenuItem.Click += (s, ea) => IoC.Get<DeleteDocument>().Execute(SelectedItems.Select(item => item.Id).ToList());
+				Menu.AddItem(deleteDocumentMenuItem);
 			}
 			else
 			{
-				Menu.AddItem(string.Format(DocumentsResources.DocumentMenu_DeleteDocuments, SelectedItems.Count), null);
+				var deleteDocumentsMenuItem = new PopupMenuItem(null, string.Format(DocumentsResources.DocumentMenu_DeleteDocuments, SelectedItems.Count));
+				deleteDocumentsMenuItem.Click += (s, ea) => IoC.Get<DeleteDocument>().Execute(SelectedItems.Select(item => item.Id).ToList());
+				Menu.AddItem(deleteDocumentsMenuItem);
 			}
 		}
 	}
