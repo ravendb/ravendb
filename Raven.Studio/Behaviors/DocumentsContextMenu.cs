@@ -1,9 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
 using Caliburn.Micro;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
@@ -32,9 +27,13 @@ namespace Raven.Studio.Behaviors
 				Menu.AddItem(copyIdMenuItem);
 
 				Menu.AddSeparator();
-			}
 
-			Menu.AddItem(DocumentsResources.DocumentMenu_DeleteDocument, null);
+				Menu.AddItem(DocumentsResources.DocumentMenu_DeleteDocument, null);
+			}
+			else
+			{
+				Menu.AddItem(string.Format(DocumentsResources.DocumentMenu_DeleteDocuments, SelectedItems.Count), null);
+			}
 		}
 	}
 }
