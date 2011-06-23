@@ -144,8 +144,11 @@ namespace Raven.Client.MvcIntegration
 		private void OnSessionCreated(InMemoryDocumentSessionOperations operations)
 		{
 			RavenProfiler.ContextualSessionList.Add(operations.Id);
-			if (HttpContext.Current != null && HttpContext.Current.Response != null)
-				HttpContext.Current.Response.AddHeader("X-RavenDb-Profiling-Id", operations.Id.ToString());
+			if (HttpContext.Current != null && HttpContext.Current.Response != null) {
+				string ids = HttpContext.Current.Response.Headers["X-RavenDb-Profiling-Id"] ?? "";
+				ids = ids + (ids.Length == 0 ? "" : ",") + operations.Id.ToString();
+				HttpContext.Current.Response.Headers.Set("X-RavenDb-Profiling-Id", ids);
+			}
 		}
 
 		private static string ravenDbProfilerScripts;
