@@ -180,6 +180,7 @@
     <Compile Include="Bugs\IteratingTwice.cs" />
     <Compile Include="Bugs\Iulian\CanReadEntityWithUrlId.cs" />
     <Compile Include="Bugs\LinqOnDictionary.cs" />
+    <Compile Include="Bugs\LuceneIndexing.cs" />
     <Compile Include="Bugs\LuceneQueryShouldNotModifyDynamicDocument.cs" />
     <Compile Include="Bugs\ManyDocumentsViaDTC.cs" />
     <Compile Include="Bugs\MassivelyMultiTenant.cs" />

@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using Rhino.Etl.Core;
 using Rhino.Etl.Core.Enumerables;
 using Rhino.Etl.Core.Operations;
 using Rhino.Etl.Core.Pipelines;
 
-namespace ETL
+namespace Raven.StackOverflow.Etl.Generic
 {
 	public class SimplePipelineExecutor : AbstractPipelineExecuter
 	{

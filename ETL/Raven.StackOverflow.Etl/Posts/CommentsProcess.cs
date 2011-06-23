@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using ETL;
 using Raven.Database;
 using Raven.StackOverflow.Etl.Generic;
 using Rhino.Etl.Core;

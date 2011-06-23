@@ -24,7 +24,7 @@ namespace Raven.StackOverflow.Etl.Posts
 
 		protected override void Initialize()
 		{
-			PipelineExecuter = new SingleThreadedPipelineExecuter();
+			PipelineExecuter = new SimplePipelineExecutor();
 			Register(new XmlRowOperationFile(Path.Combine(inputPath, "posts.xml")));
 			Register(new RowToDatabase("Posts", doc => "posts/" + doc["Id"], _outputPath));
 		}
