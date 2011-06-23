@@ -18,7 +18,7 @@ namespace Raven.StackOverflow.Etl.Posts
 
 		public PostsProcess(string inputPath, string outputPath)
 		{
-			inputPath = inputPath;
+			this.inputPath = inputPath;
 			_outputPath = outputPath;
 		}
 

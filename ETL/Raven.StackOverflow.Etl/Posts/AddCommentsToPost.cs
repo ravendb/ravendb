@@ -29,11 +29,11 @@ namespace Raven.StackOverflow.Etl.Posts
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
 			int count = 0;
-			foreach (var commentsForPosts in rows.GroupBy(row => row["PostId"]).Partition(Constants.BatchSize))
+			foreach (var commentsForPosts in rows.Partition(Constants.BatchSize))
 			{
 				var cmds = new List<ICommandData>();
 
-				foreach (var commentsForPost in commentsForPosts)
+				foreach (var commentsForPost in commentsForPosts.GroupBy(row => row["PostId"]))
 				{
 					var comments = new RavenJArray();
 					foreach (var row in commentsForPost)
