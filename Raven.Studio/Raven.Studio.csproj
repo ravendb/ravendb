@@ -126,6 +126,7 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\AttachDocumentsMenu.cs" />
+    <Compile Include="Behaviors\ContextMenuBase.cs" />
     <Compile Include="Behaviors\DocumentsContextMenu.cs" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
