@@ -138,7 +138,7 @@ var RavenDBProfiler = (function ($) {
 			$('body').ajaxComplete(function (event, xhrRequest, ajaxOptions) {
 				var id = xhrRequest.getResponseHeader('X-RavenDb-Profiling-Id');
 				if (id)
-					fetchResults(id.split(','));
+					fetchResults(id.split(', '));
 			});
 			load();
 		}

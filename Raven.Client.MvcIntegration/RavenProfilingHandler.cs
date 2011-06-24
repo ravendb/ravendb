@@ -7,7 +7,6 @@ using System.Web;
 using System.Web.Routing;
 using Newtonsoft.Json;
 using Raven.Abstractions;
-using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 
 namespace Raven.Client.MvcIntegration
@@ -144,13 +143,10 @@ namespace Raven.Client.MvcIntegration
 		private void OnSessionCreated(InMemoryDocumentSessionOperations operations)
 		{
 			RavenProfiler.ContextualSessionList.Add(operations.Id);
-			if (HttpContext.Current != null && HttpContext.Current.Response != null) {
-				string ids = HttpContext.Current.Response.Headers["X-RavenDb-Profiling-Id"] ?? "";
-				ids = ids + (ids.Length == 0 ? "" : ",") + operations.Id.ToString();
-				HttpContext.Current.Response.Headers.Set("X-RavenDb-Profiling-Id", ids);
+			if (HttpContext.Current != null) 
+			{
+				HttpContext.Current.Response.AddHeader("X-RavenDb-Profiling-Id", operations.Id.ToString());
 			}
 		}
-
-		private static string ravenDbProfilerScripts;
 	}
 }
