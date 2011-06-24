@@ -36,7 +36,7 @@ namespace Raven.Studio.Behaviors
 			var canvas = Menu.ItemsControl.Parent as Canvas;
 			if (canvas != null) canvas.MouseMove += (s, e) => { Mouse.Position = e.GetPosition(null); };
 
-			Menu.Closing += FocusTheClickOnItem;
+			Menu.Closing += OnMneuClosing;
 		}
 
 		protected abstract void GenerateMenuItems();
@@ -44,10 +44,16 @@ namespace Raven.Studio.Behaviors
 		public void Open(FrameworkElement element, MouseButtonEventArgs e)
 		{
 			GenerateMenuItems();
+			if (Menu.Items.Count == 0)
+				return;
 			Menu.Open(Mouse.Position, MenuOrientationTypes.MouseBottomRight, 0, element, true, e);
 		}
 
-		private void FocusTheClickOnItem(object sender, RoutedEventArgs e)
+		private void OnMneuClosing(object sender, RoutedEventArgs e)
+		{
+			FocusTheClickOnItem();
+		}
+		private void FocusTheClickOnItem()
 		{
 			var elementsInHostCoordinates = VisualTreeHelper.FindElementsInHostCoordinates(Mouse.Position,
 																						   Application.Current.RootVisual);
