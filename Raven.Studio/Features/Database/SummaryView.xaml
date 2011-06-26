@@ -9,6 +9,7 @@
 			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
 			 xmlns:documents="clr-namespace:Raven.Studio.Features.Documents"
 			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 xmlns:Input="clr-namespace:Microsoft.Expression.Interactivity.Input;assembly=Microsoft.Expression.Interactions"
 			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
 			 x:Class="Raven.Studio.Features.Database.SummaryView"
 			 mc:Ignorable="d"
@@ -104,6 +105,16 @@
 					<local:SelectItemOnRightClick />
 					<local:AttachDocumentsMenu />
 				</i:Interaction.Behaviors>
+				<i:Interaction.Triggers>
+					<Input:KeyTrigger Key="Delete">
+						<f:CustomActionMessage Target="DeleteDocument"
+											   IgnoreAvailability="True"
+											   MethodName="Execute">
+							<cm:Parameter Value="{Binding RecentDocuments}" />
+						</f:CustomActionMessage>
+					</Input:KeyTrigger>
+				</i:Interaction.Triggers>
+
 			</c:WrapListBox>
 			
 			<TextBlock Text="{Binding RecentDocumentsStatus}"
