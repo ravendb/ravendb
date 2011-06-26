@@ -144,12 +144,23 @@ namespace Raven.Studio.Features.Collections
 
 						Collections = new BindableCollection<CollectionViewModel>(
 							x.Result.Select(item => new CollectionViewModel {Name = item.Name, Count = item.Count}));
-						if (ActiveCollection == null)
-							ActiveCollection = Collections.FirstOrDefault();
 
 						NotifyOfPropertyChange(() => LargestCollectionCount);
 						NotifyOfPropertyChange(() => Collections);
 						NotifyOfPropertyChange(() => HasCollections);
+
+						if (ActiveCollection == null)
+							ActiveCollection = Collections.FirstOrDefault();
+						else
+						{
+							if (Collections.Contains(activeCollection) == false)
+							{
+								activeCollection = Collections
+									.Where(collection => collection.Name == activeCollection.Name)
+									.FirstOrDefault();
+								NotifyOfPropertyChange(() => ActiveCollection);
+							}
+						}
 
 						Status = Collections.Any() ? string.Empty : "The database contains no collections.";
 					},
