@@ -378,6 +378,14 @@ namespace Raven.Abstractions.Linq
 			}
 
 			/// <summary>
+			/// Redirector for sum operation
+			/// </summary>
+			public int Sum(Func<dynamic, int> aggregator)
+			{
+				return inner.Sum(aggregator);
+			}
+
+			/// <summary>
 			/// Gets the length.
 			/// </summary>
 			/// <value>The length.</value>
