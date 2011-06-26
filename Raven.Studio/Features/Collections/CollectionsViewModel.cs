@@ -149,17 +149,16 @@ namespace Raven.Studio.Features.Collections
 						NotifyOfPropertyChange(() => Collections);
 						NotifyOfPropertyChange(() => HasCollections);
 
-						if (ActiveCollection == null)
-							ActiveCollection = Collections.FirstOrDefault();
-						else
+						if (ActiveCollection != null)
 						{
-							if (Collections.Contains(activeCollection) == false)
-							{
-								activeCollection = Collections
-									.Where(collection => collection.Name == activeCollection.Name)
-									.FirstOrDefault();
-								NotifyOfPropertyChange(() => ActiveCollection);
-							}
+							activeCollection = Collections
+								.Where(collection => collection.Name == activeCollection.Name)
+								.FirstOrDefault(); 
+							NotifyOfPropertyChange(() => ActiveCollection); 
+						}
+						else // select the first one if we weren't asked for one
+						{
+							ActiveCollection = Collections.FirstOrDefault();
 						}
 
 						Status = Collections.Any() ? string.Empty : "The database contains no collections.";
