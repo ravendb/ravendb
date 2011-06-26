@@ -10,7 +10,7 @@ namespace Raven.Studio.Features.Documents
     using Newtonsoft.Json.Linq;
 
     /// <summary>
-    /// This view model is for displaying documents in bulk. There is no change notification and no behaviours related to editing
+    /// This view model is for displaying documents in bulk. There is no change notification and no behaviors related to editing
     /// </summary>
     public class DocumentViewModel : ISupportDocumentTemplate
     {
@@ -21,7 +21,9 @@ namespace Raven.Studio.Features.Documents
         {
             this.inner = inner;
             Id = inner.Metadata.IfPresent<string>("@id");
-            LastModified = inner.LastModified ?? DateTime.MinValue;
+			LastModified = inner.LastModified ?? DateTime.MinValue;
+        	if (LastModified.Kind == DateTimeKind.Utc)
+        		LastModified = LastModified.ToLocalTime();
 			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
             CollectionType = DetermineCollectionType();
         }

@@ -4,7 +4,6 @@
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="/Raven.Studio;component/Resources/Brushes.xaml"/>
 		<ResourceDictionary Source="/Raven.Studio;component/Resources/Manifest.xaml"/>
-		<ResourceDictionary Source="/Raven.Studio;component/Resources/ControlTemplates/JeffWilcox.SyntaxHighlighting.xaml"/>
 	</ResourceDictionary.MergedDictionaries>
 	<!-- Resource dictionary entries should be defined here. -->
 </ResourceDictionary>

@@ -21,6 +21,11 @@ namespace Raven.Studio
 	{
 		CompositionContainer container;
 
+    	static AppBootstrapper()
+    	{
+			LogManager.GetLog = type => new DebugLogger(type);	
+    	}
+
 		protected override void Configure()
 		{
 			ConfigureConventions();

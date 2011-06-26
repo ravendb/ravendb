@@ -25,7 +25,7 @@
     <TestPageFileName>CaliburnMicroSilverlightTestPage.html</TestPageFileName>
     <CreateTestPage>true</CreateTestPage>
     <ValidateXaml>true</ValidateXaml>
-    <EnableOutOfBrowser>false</EnableOutOfBrowser>
+    <EnableOutOfBrowser>true</EnableOutOfBrowser>
     <OutOfBrowserSettingsFile>Properties\OutOfBrowserSettings.xml</OutOfBrowserSettingsFile>
     <UsePlatformExtensions>false</UsePlatformExtensions>
     <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
@@ -62,14 +62,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight">
-      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.1.111.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware\ActiproSoftware.Shared.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="ActiproSoftware.Text.Silverlight">
-      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Text.Silverlight.dll</HintPath>
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.1.111.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="ActiproSoftware.Shared.Silverlight">
-      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Shared.Silverlight.dll</HintPath>
+    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.1.111.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
@@ -88,6 +88,9 @@
     </Reference>
     <Reference Include="Raven.Studio.Controls.SyntaxHighlighting">
       <HintPath>..\SharedLibs\Silverlight\Raven.Studio.Controls.SyntaxHighlighting.dll</HintPath>
+    </Reference>
+    <Reference Include="SL4PopupMenu">
+      <HintPath>..\SharedLibs\Silverlight\SL4PopupMenu\SL4PopupMenu.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.ComponentModel.Composition.Initialization, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
@@ -122,32 +125,45 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
+    <Compile Include="Behaviors\AttachDocumentsMenu.cs" />
+    <Compile Include="Behaviors\ContextMenuBase.cs" />
+    <Compile Include="Behaviors\DocumentsContextMenu.cs" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
+    <Compile Include="Commands\CopyDocumentToClipboard.cs" />
     <Compile Include="Commands\CopyServerError.cs" />
     <Compile Include="Commands\EditIndex.cs" />
     <Compile Include="Commands\LoadDocument.cs" />
+    <Compile Include="Common\VisualTreeHelperExtensions.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
     <Compile Include="Controls\Editors\LinqEditor.cs" />
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
     <Compile Include="Controls\Editors\XamlEditor.cs" />
-    <Compile Include="Controls\NoKeyListBox.cs" />
+    <Compile Include="Controls\WrapListBox.cs" />
     <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
     <Compile Include="Converters\NotificationLevelToColorConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
+    <Compile Include="Features\Collections\CollectionViewModel.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
-    <Compile Include="Features\Documents\DocumentView.xaml.cs">
-      <DependentUpon>DocumentView.xaml</DependentUpon>
+    <Compile Include="Features\Documents\BrowseDocumentsView.xaml.cs">
+      <DependentUpon>BrowseDocumentsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\IDocumentTemplateProvider.cs" />
+    <Compile Include="Features\Documents\Resources\DocumentsResources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>DocumentsResources.resx</DependentUpon>
+    </Compile>
     <Compile Include="Features\Statistics\StatisticsItem.xaml.cs">
       <DependentUpon>StatisticsItem.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Framework\DebugLogger.cs" />
     <Compile Include="Framework\EventArgs.cs" />
     <Compile Include="Framework\IBindablePagedQuery.cs" />
     <Compile Include="Framework\MenuItemMetadata.cs" />
     <Compile Include="Framework\CustomActionMessage.cs" />
+    <Compile Include="Helpers\StateManager.cs" />
     <Compile Include="Impl\DotNetZip\Adler.cs" />
     <Compile Include="Impl\DotNetZip\BlockState.cs" />
     <Compile Include="Impl\DotNetZip\CompressionLevel.cs" />
@@ -329,6 +345,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Documents\BrowseDocumentsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Documents\EditDocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -344,10 +364,6 @@
     <Page Include="Data\JsonDocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Documents\DocumentView.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Documents\Document\Tooltip.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -385,10 +401,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Documents\BrowseDocumentsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Features\Indexes\BrowseIndexesView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -422,10 +434,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <ApplicationDefinition Include="Resources\Fonts.xaml">
+    <Resource Include="Resources\Fonts.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </ApplicationDefinition>
+    </Resource>
+    <Page Include="Features\Documents\DocumentTemplates.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Resources\Styles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -475,6 +491,11 @@
     <EmbeddedResource Include="Controls\Editors\Definitions\CSharp.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\JScript.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
+    <EmbeddedResource Include="Features\Documents\Resources\DocumentsResources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>DocumentsResources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <EmbeddedResource Include="SampleData\MvcMusicStore_Dump.json" />
     <None Include="Properties\AppManifest.xml" />
     <DesignTimeOnly Include="SampleData\PagerSampleData\PagerSampleData.xsd" />

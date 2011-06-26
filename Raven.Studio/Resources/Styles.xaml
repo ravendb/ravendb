@@ -3,6 +3,13 @@
 					xmlns:c="clr-namespace:Raven.Studio.Controls"
 					xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 					xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+					xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+					xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+					xmlns:f="clr-namespace:Raven.Studio.Framework"
+					xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+					xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
+					xmlns:docs="clr-namespace:Raven.Studio.Features.Documents"
+					xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Layout;assembly=Microsoft.Expression.Interactions"
 					mc:Ignorable="d">
 
 	<ResourceDictionary.MergedDictionaries>

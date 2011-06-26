@@ -22,7 +22,7 @@ namespace Raven.Studio.Features.Collections
 		IHandle<DocumentDeleted>
 	{
 		readonly IServer server;
-		Collection activeCollection;
+		CollectionViewModel activeCollection;
 
 		[ImportingConstructor]
 		public CollectionsViewModel(IServer server, IEventAggregator events)
@@ -44,7 +44,7 @@ namespace Raven.Studio.Features.Collections
 		{
 			Status = "Retrieving collections";
 
-			Collections = new BindableCollection<Collection>();
+			Collections = new BindableCollection<CollectionViewModel>();
 
 			NotifyOfPropertyChange(string.Empty);
 		}
@@ -54,7 +54,7 @@ namespace Raven.Studio.Features.Collections
 			Initialize();
 		}
 
-		public IEnumerable<Collection> Collections { get; private set; }
+		public IObservableCollection<CollectionViewModel> Collections { get; private set; }
 
 		BindablePagedQuery<DocumentViewModel> activeCollectionDocuments;
 		public BindablePagedQuery<DocumentViewModel> ActiveCollectionDocuments
@@ -69,7 +69,7 @@ namespace Raven.Studio.Features.Collections
 			set { status = value; NotifyOfPropertyChange(() => Status); }
 		}
 
-		public Collection ActiveCollection
+		public CollectionViewModel ActiveCollection
 		{
 			get { return activeCollection; }
 			set
@@ -133,7 +133,6 @@ namespace Raven.Studio.Features.Collections
 		{
 			WorkStarted("fetching collections");
 
-			var currentActiveCollection = ActiveCollection;
 			using (var session = server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
@@ -143,12 +142,25 @@ namespace Raven.Studio.Features.Collections
 					{
 						WorkCompleted("fetching collections");
 
-						Collections = x.Result;
+						Collections = new BindableCollection<CollectionViewModel>(
+							x.Result.Select(item => new CollectionViewModel {Name = item.Name, Count = item.Count}));
+
 						NotifyOfPropertyChange(() => LargestCollectionCount);
 						NotifyOfPropertyChange(() => Collections);
-
-						ActiveCollection = currentActiveCollection ?? Collections.FirstOrDefault();
 						NotifyOfPropertyChange(() => HasCollections);
+
+						if (ActiveCollection == null)
+							ActiveCollection = Collections.FirstOrDefault();
+						else
+						{
+							if (Collections.Contains(activeCollection) == false)
+							{
+								activeCollection = Collections
+									.Where(collection => collection.Name == activeCollection.Name)
+									.FirstOrDefault();
+								NotifyOfPropertyChange(() => ActiveCollection);
+							}
+						}
 
 						Status = Collections.Any() ? string.Empty : "The database contains no collections.";
 					},
@@ -165,7 +177,7 @@ namespace Raven.Studio.Features.Collections
 		public void EditTemplate()
 		{
 			var vm = IoC.Get<EditCollectionTemplateViewModel>();
-			vm.Collection = ActiveCollection;
+			vm.Collection = new Collection {Name = ActiveCollection.Name, Count = ActiveCollection.Count};
 			Events.Publish(new DatabaseScreenRequested(() => vm));
 		}
 
@@ -175,6 +187,12 @@ namespace Raven.Studio.Features.Collections
 				.Where(x => x.Id == message.DocumentId)
 				.ToList()
 				.Apply(x => ActiveCollectionDocuments.Remove(x));
+
+			ActiveCollection.Count -= 1;
+			if (ActiveCollection.Count == 0)
+			{
+				Collections.Remove(ActiveCollection);
+			}
 		}
 	}
 }
