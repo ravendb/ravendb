@@ -28,7 +28,7 @@ namespace Raven.Server
     {
         private static void Main(string[] args)
         {
-            if (true)
+            if (RunningInInteractiveMode())
             {
                 try
                 {
@@ -63,7 +63,14 @@ namespace Raven.Server
             }
         }
 
-        private static void WaitForUserInputAndExitWithError()
+    	private static bool RunningInInteractiveMode()
+    	{
+			if (Type.GetType("Mono.Runtime") != null) // running on mono, which doesn't support detecting this
+				return true;
+    		return Environment.UserInteractive;
+    	}
+
+    	private static void WaitForUserInputAndExitWithError()
         {
             Console.WriteLine("Press any key to continue...");
             Console.ReadKey(true);
