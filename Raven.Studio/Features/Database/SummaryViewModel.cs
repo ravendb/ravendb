@@ -180,7 +180,7 @@ namespace Raven.Studio.Features.Database
             events.Publish(new DatabaseScreenRequested(() =>
                                                         {
                                                             var vm = IoC.Get<CollectionsViewModel>();
-                                                            vm.ActiveCollection = collection;
+                                                            vm.ActiveCollection = new CollectionViewModel{Name = collection.Name, Count = collection.Count};
                                                             return vm;
                                                         }));
         }

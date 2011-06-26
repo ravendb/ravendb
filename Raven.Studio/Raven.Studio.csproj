@@ -144,6 +144,7 @@
     <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
     <Compile Include="Converters\NotificationLevelToColorConverter.cs" />
     <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
+    <Compile Include="Features\Collections\CollectionViewModel.cs" />
     <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
     <Compile Include="Features\Documents\BrowseDocumentsView.xaml.cs">
       <DependentUpon>BrowseDocumentsView.xaml</DependentUpon>
