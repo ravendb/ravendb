@@ -110,7 +110,7 @@
 						<f:CustomActionMessage Target="DeleteDocument"
 											   IgnoreAvailability="True"
 											   MethodName="Execute">
-							<cm:Parameter Value="{Binding RecentDocuments}" />
+							<cm:Parameter Value="$selectedItems" />
 						</f:CustomActionMessage>
 					</Input:KeyTrigger>
 				</i:Interaction.Triggers>
