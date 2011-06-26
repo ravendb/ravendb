@@ -901,7 +901,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		}
 
 		/// <summary>
-		/// Returns a new <see cref="IDatabaseCommands "/> using the specified credentials
+		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		/// <returns></returns>

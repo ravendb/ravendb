@@ -181,7 +181,7 @@ namespace Raven.Client.Connection
 		void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation);
 
 		/// <summary>
-		/// Returns a new <see cref="IDatabaseCommands "/> using the specified credentials
+		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		IDatabaseCommands With(ICredentials credentialsForSession);
