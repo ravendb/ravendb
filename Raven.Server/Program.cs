@@ -28,7 +28,7 @@ namespace Raven.Server
     {
         private static void Main(string[] args)
         {
-            if (Environment.UserInteractive)
+            if (true)
             {
                 try
                 {

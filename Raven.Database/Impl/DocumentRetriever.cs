@@ -223,7 +223,7 @@ namespace Raven.Database.Impl
 			{
 				items.Add(Load(itemId));
 			}
-			return new DynamicJsonObject.DynamicList(items.ToArray());
+			return new DynamicJsonObject.DynamicList(items.Select(x => (object) x).ToArray());
 		}
 	}
 }
