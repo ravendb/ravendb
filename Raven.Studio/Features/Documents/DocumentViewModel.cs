@@ -22,17 +22,17 @@ namespace Raven.Studio.Features.Documents
 
         public DocumentViewModel(JsonDocument inner)
         {
-        	SetFromJsonDocument(inner);
+        	Initialize(inner);
         }
 
-		private void SetFromJsonDocument(JsonDocument inner)
+		private void Initialize(JsonDocument jsonDocument)
     	{
-			this.inner = inner;
-			Id = inner.Metadata.IfPresent<string>("@id");
-			LastModified = inner.LastModified ?? DateTime.MinValue;
+			inner = jsonDocument;
+			Id = jsonDocument.Metadata.IfPresent<string>("@id");
+			LastModified = jsonDocument.LastModified ?? DateTime.MinValue;
 			if (LastModified.Kind == DateTimeKind.Utc)
 				LastModified = LastModified.ToLocalTime();
-			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
+			ClrType = jsonDocument.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
 			CollectionType = DetermineCollectionType();
     	}
 
@@ -149,7 +149,7 @@ namespace Raven.Studio.Features.Documents
 
     	public void Handle(DocumentUpdated message)
     	{
-			SetFromJsonDocument(message.Document.JsonDocument);
+			Initialize(message.Document.JsonDocument);
     	}
     }
 }
