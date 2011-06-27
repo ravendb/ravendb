@@ -24,13 +24,16 @@ namespace Raven.Client.Indexes
 				return null;
 			var expression = expr.Body;
 
+#if !NET_3_5
 			string queryRootName = null;
+#endif
 			switch (expression.NodeType)
 			{
 				case ExpressionType.ConvertChecked:
 				case ExpressionType.Convert:
 					expression = ((UnaryExpression)expression).Operand;
 					break;
+#if !NET_3_5
 				case ExpressionType.Call:
 					var methodCallExpression = ((MethodCallExpression)expression);
 					switch (methodCallExpression.Method.Name)
@@ -43,6 +46,7 @@ namespace Raven.Client.Indexes
 							break;
 					}
 					break;
+#endif
 			}
 
 #if !NET_3_5
