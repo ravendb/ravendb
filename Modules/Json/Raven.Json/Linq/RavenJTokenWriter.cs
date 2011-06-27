@@ -163,7 +163,14 @@ namespace Raven.Json.Linq
         public override void WriteValue(string value)
         {
             base.WriteValue(value);
-            AddValue(value ?? string.Empty, JsonToken.String);
+			if (value == null)
+			{
+				AddValue(new RavenJValue(null, JTokenType.Null), JsonToken.Null);
+			}
+			else
+			{
+				AddValue(value, JsonToken.String);
+			}
         }
 
         /// <summary>

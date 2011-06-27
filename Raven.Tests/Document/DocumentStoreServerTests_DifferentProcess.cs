@@ -7,7 +7,9 @@ using System;
 using System.Threading;
 using System.Transactions;
 using Raven.Client.Document;
+using Raven.Tests.Bugs;
 using Xunit;
+using Transaction = System.Transactions.Transaction;
 
 namespace Raven.Tests.Document
 {
@@ -29,13 +31,10 @@ namespace Raven.Tests.Document
 
 				Assert.Equal(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
 
-				using (var session3 = documentStore.OpenSession())
-				{
-					session3.Store(new Company {Name = "Another company"});
-					session3.SaveChanges(); // force a dtc promotion
+				Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
+				                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(), EnlistmentOptions.None);
 
-					Assert.NotEqual(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
-				}
+				Assert.NotEqual(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
 
 
 				tx.Complete();

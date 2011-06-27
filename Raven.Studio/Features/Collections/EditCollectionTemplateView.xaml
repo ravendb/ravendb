@@ -36,11 +36,11 @@
 				<StackPanel Orientation="Horizontal">
 					<Button Content="Save"
 							Style="{StaticResource FormButton}"
-							cm:Message.Attach="Click=Save" />
+							cm:Message.Attach="Save" />
 
 					<Button Content="Restore Default"
 							Style="{StaticResource FormButton}"
-							cm:Message.Attach="Click=RestoreDefault" />
+							cm:Message.Attach="RestoreDefault" />
 
 				</StackPanel>
 			</Grid>

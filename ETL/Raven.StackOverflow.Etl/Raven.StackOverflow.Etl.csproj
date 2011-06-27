@@ -1,6 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
+    <RavenIncludesPath>..\..\build</RavenIncludesPath>
+  </PropertyGroup>
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
@@ -44,8 +47,20 @@
     <Reference Include="log4net">
       <HintPath>..\SharedLibs\log4net.dll</HintPath>
     </Reference>
-    <Reference Include="RavenDb">
-      <HintPath>..\SharedLibs\RavenDb.exe</HintPath>
+    <Reference Include="Raven.Abstractions">
+      <HintPath>$(RavenIncludesPath)\Raven.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Database">
+      <HintPath>$(RavenIncludesPath)\Raven.Database.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Http">
+      <HintPath>$(RavenIncludesPath)\Raven.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Json">
+      <HintPath>$(RavenIncludesPath)\Raven.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Server">
+      <HintPath>$(RavenIncludesPath)\Raven.Server.exe</HintPath>
     </Reference>
     <Reference Include="Rhino.Etl.Core">
       <HintPath>..\SharedLibs\Rhino.Etl.Core.dll</HintPath>
@@ -60,6 +75,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
+    <Compile Include="FileToRavenCommand.cs" />
+    <Compile Include="Generic\BatchFileWritingProcess.cs" />
+    <Compile Include="Generic\SimplePipelineExecutor.cs" />
+    <Compile Include="ICommand.cs" />
+    <Compile Include="XMLToFileCommand.cs" />
     <Compile Include="Posts\AddVotesToPost.cs" />
     <Compile Include="Posts\AddCommentsToPost.cs" />
     <Compile Include="Posts\CommentsProcess.cs" />

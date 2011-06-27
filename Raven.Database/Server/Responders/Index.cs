@@ -53,16 +53,6 @@ namespace Raven.Database.Server.Responders
 					context.WriteJson(new {Reset = index});
 					break;
 				case "DELETE":
-					if(index.StartsWith("Raven/",StringComparison.InvariantCultureIgnoreCase))
-					{
-						context.SetStatusToForbidden();
-						context.WriteJson(new
-						{
-							Url = context.Request.RawUrl,
-							Error = "Builtin indexes cannot be deleted, attempt to delete index '" + index + "' was rejected"
-						});
-						return;
-					}
 					context.SetStatusToDeleted();
 					Database.DeleteIndex(index);
 					break;
@@ -166,10 +156,11 @@ namespace Raven.Database.Server.Responders
 			if (index.StartsWith("dynamic/"))
 				entityName = index.Substring("dynamic/".Length);
 
-			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery.Query);
+			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
 
 
-			if (Database.IndexStorage.HasIndex(dynamicIndexName))
+			if (dynamicIndexName != null && 
+				Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
 				indexEtag = GetIndexEtag(dynamicIndexName);
 				if (context.MatchEtag(indexEtag))

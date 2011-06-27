@@ -186,6 +186,8 @@ namespace Raven.Studio.Features.Documents
 			metadata = ParseJsonToDictionary(document.Metadata);
 
 			LastModified = document.LastModified ?? DateTime.MinValue;
+			if (LastModified.Kind == DateTimeKind.Utc)
+				LastModified = LastModified.ToLocalTime();
 			CollectionType = DocumentViewModel.DetermineCollectionType(document.Metadata);
 			ClrType = metadata.IfPresent<string>(Constants.RavenClrType);
 			Etag = document.Etag.ToString();

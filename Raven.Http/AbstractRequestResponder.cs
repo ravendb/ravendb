@@ -18,7 +18,7 @@ namespace Raven.Http
 	{
 		private readonly string[] supportedVerbsCached;
 		protected readonly Regex urlMatcher;
-        private Func<IRaveHttpnConfiguration> settings;
+        private Func<IRavenHttpConfiguration> settings;
         private Func<IResourceStore> database;
 
 	    protected AbstractRequestResponder()
@@ -31,10 +31,10 @@ namespace Raven.Http
 		public abstract string[] SupportedVerbs { get; }
 
         public IResourceStore ResourceStore { get { return database(); } }
-        public IRaveHttpnConfiguration Settings { get { return settings(); } }
+        public IRavenHttpConfiguration Settings { get { return settings(); } }
         public virtual bool IsUserInterfaceRequest { get { return false; } }
 
-        public void Initialize(Func<IResourceStore> databaseGetter, Func<IRaveHttpnConfiguration> settingsGetter)
+        public void Initialize(Func<IResourceStore> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter)
         {
             this.database = databaseGetter;
             this.settings = settingsGetter;

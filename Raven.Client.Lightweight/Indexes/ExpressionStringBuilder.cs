@@ -30,14 +30,16 @@ namespace Raven.Client.Indexes
 		ExpressionOperatorPrecedence _currentPrecedence;
 		private DocumentConvention convention;
 		private bool translateIdentityProperty;
-		private readonly string queryRoot;
+		private readonly Type queryRoot;
+		private readonly string queryRootName;
 
 		// Methods
-		private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty, string queryRoot)
+		private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot, string queryRootName)
 		{
 			this.convention = convention;
 			this.translateIdentityProperty = translateIdentityProperty;
 			this.queryRoot = queryRoot;
+			this.queryRootName = queryRootName;
 		}
 
 		private void AddLabel(LabelTarget label)
@@ -68,7 +70,7 @@ namespace Raven.Client.Indexes
 
 		internal string CatchBlockToString(CatchBlock node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
 			builder.VisitCatchBlock(node);
 			return builder.ToString();
 		}
@@ -87,7 +89,7 @@ namespace Raven.Client.Indexes
 
 		internal string ElementInitBindingToString(ElementInit node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
 			builder.VisitElementInit(node);
 			return builder.ToString();
 		}
@@ -95,9 +97,9 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Convert the expression to a string
 		/// </summary>
-		public static string ExpressionToString(DocumentConvention convention, bool translateIdentityProperty, string queryRoot, Expression node)
+		public static string ExpressionToString(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot, string queryRootName, Expression node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
 			builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
 			return builder.ToString();
 		}
@@ -198,7 +200,7 @@ namespace Raven.Client.Indexes
 
 		internal string MemberBindingToString(MemberBinding node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
 			builder.VisitMemberBinding(node);
 			return builder.ToString();
 		}
@@ -220,8 +222,10 @@ namespace Raven.Client.Indexes
 			if (translateIdentityProperty && 
 				convention.GetIdentityProperty(member.DeclaringType) == member && 
 				instance.NodeType == ExpressionType.Parameter &&
-				// only translate from the root one
-				(queryRoot == null || ((ParameterExpression)instance).Name == queryRoot) 
+				// only translate from the root type
+				(queryRoot == null || (member.DeclaringType == queryRoot)) &&
+				// only translate from the root alias
+				(queryRootName == null || ((ParameterExpression)instance).Name == queryRootName) 
 				)
 				name = Constants.DocumentIdFieldName;
 			if (instance != null)
@@ -308,7 +312,7 @@ namespace Raven.Client.Indexes
 
 		internal string SwitchCaseToString(SwitchCase node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
 			builder.VisitSwitchCase(node);
 			return builder.ToString();
 		}
@@ -727,6 +731,20 @@ namespace Raven.Client.Indexes
 				if(node.Value is bool)
 				{
 					this.Out(node.Value.ToString().ToLower());
+					return node;
+				}
+				if (node.Value is char) 
+				{
+					this.Out("'");
+					this.Out(s);
+					this.Out("'");
+					return node;
+				}
+				if(node.Value is Enum)
+				{
+					this.Out(node.Value.GetType().FullName);
+					this.Out('.');
+					this.Out(s);
 					return node;
 				}
 				this.Out(s);

@@ -44,8 +44,8 @@ namespace Raven.Storage.Esent.Backup
 				{
 					new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"), Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")))
 				};
-				directoryBackups.AddRange(from index in Directory.GetDirectories(Path.Combine(src, "Indexes"))
-										  let fromIndex = Path.Combine(src, "Indexes", Path.GetFileName(index))
+				directoryBackups.AddRange(from index in Directory.GetDirectories(database.Configuration.IndexStoragePath)
+										  let fromIndex = Path.Combine(database.Configuration.IndexStoragePath, Path.GetFileName(index))
 				                          let toIndex = Path.Combine(to, "Indexes", Path.GetFileName(index))
 										  let tempIndex = Path.Combine(src, Path.Combine("BackupTempDirectories",Guid.NewGuid().ToString("N")))
 				                          select new DirectoryBackup(fromIndex, toIndex, tempIndex));

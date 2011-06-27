@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
@@ -16,6 +17,21 @@ namespace Raven.Client.Silverlight.Connection
 		/// Occurs when a json request is created
 		/// </summary>
 		public event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
+
+		/// <summary>
+		/// Occurs when a json request is completed
+		/// </summary>
+		public event EventHandler<RequestResultArgs> LogRequest = delegate { };
+
+		/// <summary>
+		/// Invoke the LogRequest event
+		/// </summary>
+		internal void InvokeLogRequest(IHoldProfilingInformation sender, RequestResultArgs e)
+		{
+			var handler = LogRequest;
+			if (handler != null)
+				handler(sender, e);
+		}
 
 		/// <summary>
 		/// Creates the HTTP json request.

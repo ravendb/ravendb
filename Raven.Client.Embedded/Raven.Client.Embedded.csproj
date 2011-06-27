@@ -53,7 +53,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EmbeddableDocumentStore.cs" />
-    <Compile Include="EmbededDatabaseCommands.cs" />
+    <Compile Include="EmbeddedDatabaseCommands.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

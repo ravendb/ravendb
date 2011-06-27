@@ -12,7 +12,7 @@ namespace Raven.Http.Abstractions
 {
 	public interface IHttpContext
 	{
-        IRaveHttpnConfiguration Configuration { get; }
+        IRavenHttpConfiguration Configuration { get; }
 		IHttpRequest Request { get; }
 		IHttpResponse Response { get; }
 		IPrincipal User { get; }

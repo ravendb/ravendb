@@ -10,6 +10,7 @@ namespace Raven.Studio
 	using System.ComponentModel.Composition.Primitives;
 	using System.Linq;
 	using System.Reflection;
+	using System.Windows;
 	using System.Windows.Controls;
 	using Caliburn.Micro;
 	using Framework;
@@ -19,6 +20,11 @@ namespace Raven.Studio
     public class AppBootstrapper : Bootstrapper<IShell>
 	{
 		CompositionContainer container;
+
+    	static AppBootstrapper()
+    	{
+			LogManager.GetLog = type => new DebugLogger(type);	
+    	}
 
 		protected override void Configure()
 		{
@@ -86,6 +92,20 @@ namespace Raven.Studio
 
 			var original = ViewLocator.LocateForModelType;
 			ViewLocator.LocateForModelType = (t, v, c) => { return StudioViewLocator.LocateForModelType(t, v, c, original); };
+
+		    MessageBinder.SpecialValues["$selecteditems"] = context => {
+                ListBox listBox;
+
+                if (context.Source is ListBox)
+                    listBox = (ListBox)context.Source;
+                else {
+                    var viewAware = (ViewAware)context.Source.Tag;
+                    var parentView = (FrameworkElement)viewAware.GetView();
+                    listBox = (ListBox)parentView.FindName("DocumentPageContainer");
+                }
+
+		        return listBox.SelectedItems;
+		    };
 		}
 
 		void ShowMessageBox(string message, string title, MessageBoxOptions options = MessageBoxOptions.Ok,

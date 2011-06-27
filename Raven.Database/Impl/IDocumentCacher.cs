@@ -7,5 +7,6 @@ namespace Raven.Database.Impl
 	{
 		CachedDocument GetCachedDocument(string key, Guid etag);
 		void SetCachedDocument(string key, Guid etag, RavenJObject doc, RavenJObject metadata);
+		void RemoveCachedDocument(string key, Guid etag);
 	}
 }

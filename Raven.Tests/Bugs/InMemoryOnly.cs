@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.IO;
 using Raven.Client.Embedded;
+using Raven.Database.Extensions;
 using Raven.Http;
 using Xunit;
 
@@ -15,8 +16,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void InMemoryDoesNotCreateDataDir()
         {
-            if(Directory.Exists("Data"))
-                Directory.Delete("Data", true);
+        	IOExtensions.DeleteDirectory("Data");
 
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
             using (var store = new EmbeddableDocumentStore

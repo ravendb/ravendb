@@ -9,7 +9,6 @@ using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
-using Raven.Http.Exceptions;
 using System.Linq;
 using Raven.Json.Linq;
 
@@ -65,7 +64,7 @@ namespace Raven.Database.Json
 						IncrementProperty(patchCmd, patchCmd.Name, token);
 						break;
 					case PatchCommandType.Copy:
-						CopyProperty(patchCmd, patchCmd.Name, token);
+						CopyProperty(patchCmd, token);
 						break;
 					case PatchCommandType.Rename:
 						RenameProperty(patchCmd, patchCmd.Name, token);
@@ -86,7 +85,7 @@ namespace Raven.Database.Json
 			document.Remove(propName);
 		}
 
-		private void CopyProperty(PatchRequest patchCmd, string propName, RavenJToken property)
+		private void CopyProperty(PatchRequest patchCmd, RavenJToken property)
 		{
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)
@@ -95,7 +94,7 @@ namespace Raven.Database.Json
 			document[patchCmd.Value.Value<string>()] = property;
 		}
 
-		private void ModifyValue(PatchRequest patchCmd, string propName, RavenJToken property)
+		private static void ModifyValue(PatchRequest patchCmd, string propName, RavenJToken property)
 		{
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)
@@ -233,7 +232,7 @@ namespace Raven.Database.Json
 		}
 
 
-		private void RemoveProperty(PatchRequest patchCmd, string propName, RavenJToken token, RavenJToken parent)
+		private static void RemoveProperty(PatchRequest patchCmd, string propName, RavenJToken token, RavenJToken parent)
 		{
 			EnsurePreviousValueMatchCurrentValue(patchCmd, token);
 			var o = parent as RavenJObject;
@@ -249,7 +248,7 @@ namespace Raven.Database.Json
 				document[propName] = patchCmd.Value;
 				return;
 			}
-			property.Value = (patchCmd.Value as RavenJValue).Value;
+			property.Value = ((RavenJValue) patchCmd.Value).Value;
 		}
 
 
@@ -272,7 +271,8 @@ namespace Raven.Database.Json
 			else
 				val.Value = RavenJToken.FromObject(val.Value<int>() + valToSet.Value<int>()).Value<int>();
 		}
-		private void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
+
+		private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
 		{
 			var prevVal = patchCmd.PrevVal;
 			if (prevVal == null)

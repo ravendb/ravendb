@@ -1,7 +1,6 @@
-using System;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Data;
 using System.Linq;
 using Raven.Database.Indexing;
 
@@ -20,17 +19,19 @@ namespace Raven.Database.Queries
 		{
 			// There isn't much point for query optimizer of aggregation indexes
 			// the main reason is that we must always aggregate on the same items, and using the same 
-			// aggregation. Therefor we can't reuse one aggregate index for another query.
+			// aggregation. Therefore we can't reuse one aggregate index for another query.
 			// We decline to suggest an index here and choose to use the default index created for this
 			// sort of query, which is what we would have to choose anyway.
 			if(indexQuery.AggregationOperation != AggregationOperation.None)
 				return null;
-			
+
+			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2);
+
 			return database.IndexDefinitionStorage.IndexNames
 					.Where(indexName =>
 					{
 						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
-						if (abstractViewGenerator == null) // there is a matching view generator
+						if (abstractViewGenerator == null) // there is no matching view generator
 							return false;
 
 						if (abstractViewGenerator.ReduceDefinition != null) // we can't choose a map/reduce index
@@ -39,14 +40,20 @@ namespace Raven.Database.Queries
 						if (abstractViewGenerator.TransformResultsDefinition != null)// we can't choose an index with transform results
 							return false;
 
-						if (abstractViewGenerator.ViewText.Contains("where")) // without a where clause
+						if (abstractViewGenerator.HasWhereClause) // without a where clause
+							return false;
+
+						// we can't select an index that has SelectMany in it, because it result in invalid results when
+						// you query it for things like Count, see https://github.com/ravendb/ravendb/issues/250
+						// for indexes with internal projections, we use the exact match based on the generated index name
+						// rather than selecting the optimal one
+						if (abstractViewGenerator.CountOfSelectMany > 1) 
 							return false;
 
 						if (abstractViewGenerator.ForEntityName != entityName) // for the specified entity name
 							return false;
-						var items = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2);
 
-						return items.All(abstractViewGenerator.ContainsFieldOnMap);
+						return fieldsQueriedUpon.All(abstractViewGenerator.ContainsFieldOnMap);
 					})
 					.Where(indexName =>
 					{
@@ -62,6 +69,13 @@ namespace Raven.Database.Queries
 								if (indexDefinition.SortOptions.TryGetValue(sortedField.Field, out value) == false)
 									return false;
 							}
+						}
+
+						if(indexDefinition.Analyzers != null)
+						{
+							// none of the fields have custom analyzers
+							if (fieldsQueriedUpon.Any(indexDefinition.Analyzers.ContainsKey)) 
+								return false;
 						}
 
 						return true;

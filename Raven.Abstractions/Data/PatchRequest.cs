@@ -58,11 +58,13 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public RavenJObject ToJson()
         {
-        	var jObject = new RavenJObject();
-			jObject.Add("Type", new RavenJValue(Type.ToString()));
-        	jObject.Add("Value", Value);
-        	jObject.Add("Name", new RavenJValue(Name));
-			if (Position != null)
+        	var jObject = new RavenJObject
+        	              	{
+        	              		{"Type", new RavenJValue(Type.ToString())},
+        	              		{"Value", Value},
+        	              		{"Name", new RavenJValue(Name)}
+        	              	};
+        	if (Position != null)
         		jObject.Add("Position", new RavenJValue(Position.Value));
 			if (Nested != null)
         		jObject.Add("Nested",  new RavenJArray(Nested.Select(x => x.ToJson())));

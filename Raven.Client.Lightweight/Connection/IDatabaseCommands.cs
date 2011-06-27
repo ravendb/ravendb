@@ -11,6 +11,7 @@ using System.Net;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -19,7 +20,7 @@ namespace Raven.Client.Connection
 	///<summary>
 	/// Expose the set of operations by the RavenDB server
 	///</summary>
-	public interface IDatabaseCommands
+	public interface IDatabaseCommands : IHoldProfilingInformation
 	{
 		/// <summary>
 		/// Gets or sets the operations headers.
@@ -181,7 +182,7 @@ namespace Raven.Client.Connection
 		void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation);
 
 		/// <summary>
-		/// Returns a new <see cref="IDatabaseCommands "/> using the specified credentials
+		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		IDatabaseCommands With(ICredentials credentialsForSession);
@@ -195,12 +196,28 @@ namespace Raven.Client.Connection
 		bool SupportsPromotableTransactions { get; }
 
 		/// <summary>
+		/// Perform a set based deletes using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToDelete">The query to delete.</param>
+		void DeleteByIndex(string indexName, IndexQuery queryToDelete);
+		/// <summary>
 		/// Perform a set based deletes using the specified index.
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale);
+
+		/// <summary>
+		/// Perform a set based update using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchRequests">The patch requests.</param>
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests);
 		/// <summary>
 		/// Perform a set based update using the specified index.
 		/// </summary>
@@ -236,6 +253,26 @@ namespace Raven.Client.Connection
 		///</summary>
 		///<returns></returns>
 		IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		void Patch(string key, PatchRequest[] patches);
+
+		/// <summary>
+		/// Sends a patch request for a specific document
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		void Patch(string key, PatchRequest[] patches, Guid? etag);
+
+		/// <summary>
+		/// Disable all caching within the given scope
+		/// </summary>
+		IDisposable DisableAllCaching();
 	}
 }
 #endif

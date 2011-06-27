@@ -1,10 +1,13 @@
 ﻿namespace Raven.Studio.Commands
 {
-	using System.ComponentModel.Composition;
-	using Caliburn.Micro;
+    using System.Collections;
+    using System.ComponentModel.Composition;
+    using System.Linq;
+    using Caliburn.Micro;
 	using Features.Documents;
 	using Messages;
 
+	[Export]
 	public class EditDocument
 	{
 		readonly IEventAggregator events;

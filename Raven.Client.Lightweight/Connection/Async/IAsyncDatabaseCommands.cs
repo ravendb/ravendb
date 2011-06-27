@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
@@ -19,7 +20,7 @@ namespace Raven.Client.Connection.Async
 	/// <summary>
 	/// An async database command operations
 	/// </summary>
-	public interface IAsyncDatabaseCommands : IDisposable
+	public interface IAsyncDatabaseCommands : IDisposable, IHoldProfilingInformation
 	{
 		/// <summary>
 		/// Gets or sets the operations headers.
@@ -149,7 +150,7 @@ namespace Raven.Client.Connection.Async
 		IAsyncDatabaseCommands ForDatabase(string database);
 
 		/// <summary>
-		/// Returns a new <see cref="IDatabaseCommands "/> using the specified credentials
+		/// Returns a new <see cref="IAsyncDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		IAsyncDatabaseCommands With(ICredentials credentialsForSession);

@@ -1,4 +1,10 @@
+using System;
+using System.Linq;
+using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Connection;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -15,13 +21,13 @@ namespace Raven.Tests.Bugs
 				var fooJson = RavenJObject.FromObject(new Foo
 				{
 					Id = "foo/10",
-					BarItem = new Bar {Name = "My Bar Item X"}
+					BarItem = new Bar { Name = "My Bar Item X" }
 
 				}, store.Conventions.CreateSerializer());
 
-				var fooObject = fooJson.Deserialize(typeof (Foo),
-				                                    store.Conventions);
-				decimal? size = ((Foo) fooObject).BarItem.Size;
+				var fooObject = fooJson.Deserialize(typeof(Foo),
+													store.Conventions);
+				decimal? size = ((Foo)fooObject).BarItem.Size;
 
 				Assert.Null(size);
 			}
@@ -40,5 +46,59 @@ namespace Raven.Tests.Bugs
 			public decimal? Size { get; set; }
 		}
 
+
+		public class Doc
+		{
+			public string Id { get; set; }
+			public DateTime? Date { get; set; }
+		}
+
+		public class DocSummary
+		{
+			public string Id { get; set; }
+			public DateTime? MaxDate { get; set; }
+		}
+
+		public class UnsetDocs : AbstractIndexCreationTask<Doc, DocSummary>
+		{
+			public UnsetDocs()
+			{
+				Map = docs =>
+						from doc in docs
+						select new
+						{
+							doc.Id,
+							MaxDate = doc.Date
+						};
+				Store(x => x.MaxDate, FieldStorage.Yes);
+			}
+		}
+
+		[Fact]
+		public void CanLoadFromIndex()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				using (var session = documentStore.OpenSession())
+				{
+					IndexCreation.CreateIndexes(typeof(Doc).Assembly, documentStore);
+					session.Store(new Doc { Id = "test/doc1", Date = DateTime.UtcNow });
+					session.Store(new Doc { Id = "test/doc2", Date = null });
+					session.SaveChanges();
+
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					session
+						.Query<Doc, UnsetDocs>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.AsProjection<DocSummary>()
+						.ToArray();
+				}
+			}
+
+
+		}
 	}
 }

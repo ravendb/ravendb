@@ -11,6 +11,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
 using Raven.Client.Converters;
@@ -27,6 +28,8 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentConvention
 	{
+		private Dictionary<Type, PropertyInfo> idPropertyCache = new Dictionary<Type, PropertyInfo>();
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentConvention"/> class.
 		/// </summary>
@@ -38,6 +41,7 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
+			DefaultQueryingConsistency = ConsistencyOptions.MonotonicRead;
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
@@ -106,6 +110,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value>The max number of requests per session.</value>
 		public int MaxNumberOfRequestsPerSession { get; set; }
+
+		/// <summary>
+		/// The consistency options used when querying the database by default
+		/// Note that this option impact only queries, since we have Strong Consistency model for the documents
+		/// </summary>
+		public ConsistencyOptions DefaultQueryingConsistency { get; set; }
 
 		/// <summary>
 		/// Generates the document key using identity.
@@ -183,7 +193,19 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public PropertyInfo GetIdentityProperty(Type type)
 		{
-			return type.GetProperties().FirstOrDefault(FindIdentityProperty);
+			PropertyInfo info;
+			var currentIdPropertyCache = idPropertyCache;
+			if (currentIdPropertyCache.TryGetValue(type, out info))
+				return info;
+
+			var identityProperty = type.GetProperties().FirstOrDefault(FindIdentityProperty);
+
+			idPropertyCache = new Dictionary<Type, PropertyInfo>(currentIdPropertyCache)
+			{
+				{type, identityProperty}
+			};
+
+			return identityProperty;
 		}
 
 		/// <summary>
@@ -259,15 +281,12 @@ namespace Raven.Client.Document
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
 				Converters =
 					{
-						new JsonEnumConverter(),
-						new JsonDateTimeISO8601Converter(),
-                        new JsonDateTimeOffsetConverter(),
 						new JsonLuceneDateTimeConverter(),
+						new JsonFloatConverter(),
                         new JsonNumericConverter<int>(int.TryParse),
                         new JsonNumericConverter<long>(long.TryParse),
                         new JsonNumericConverter<decimal>(decimal.TryParse),
                         new JsonNumericConverter<double>(double.TryParse),
-                        new JsonNumericConverter<float>(float.TryParse),
                         new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
 #if !NET_3_5 && !SILVERLIGHT
@@ -275,6 +294,12 @@ namespace Raven.Client.Document
 #endif
 					}
 			};
+
+			for (var i = Default.Converters.Length -1; i >= 0; i--)
+			{
+				jsonSerializer.Converters.Insert(0, Default.Converters[i]);
+			}
+
 			CustomizeJsonSerializer(jsonSerializer);
 			return jsonSerializer;
 		}
@@ -286,5 +311,26 @@ namespace Raven.Client.Document
 		{
 			return FindClrType(id, document, metadata);
 		}
+	}
+
+
+	/// <summary>
+	/// The consistency options for all queries, fore more details about the consistency options, see:
+	/// http://www.allthingsdistributed.com/2008/12/eventually_consistent.html
+	/// 
+	/// Note that this option impact only queries, since we have Strong Consistency model for the documents
+	/// </summary>
+	public enum ConsistencyOptions
+	{
+		/// <summary>
+		/// Ensures that after querying an index at time T, you will never see the results
+		/// of the index at a time prior to T.
+		/// This is ensured by the server, and require no action from the client
+		/// </summary>
+		MonotonicRead,
+		/// <summary>
+		///  After updating a documents, will only accept queries which already indexed the updated value.
+		/// </summary>
+		QueryYourWrites,
 	}
 }

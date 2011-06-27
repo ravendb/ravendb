@@ -15,6 +15,7 @@ using log4net;
 using log4net.Appender;
 using log4net.Layout;
 using log4net.Repository.Hierarchy;
+using NDesk.Options;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -27,7 +28,7 @@ namespace Raven.Server
     {
         private static void Main(string[] args)
         {
-            if (Environment.UserInteractive)
+            if (RunningInInteractiveMode())
             {
                 try
                 {
@@ -62,7 +63,14 @@ namespace Raven.Server
             }
         }
 
-        private static void WaitForUserInputAndExitWithError()
+    	private static bool RunningInInteractiveMode()
+    	{
+			if (Type.GetType("Mono.Runtime") != null) // running on mono, which doesn't support detecting this
+				return true;
+    		return Environment.UserInteractive;
+    	}
+
+    	private static void WaitForUserInputAndExitWithError()
         {
             Console.WriteLine("Press any key to continue...");
             Console.ReadKey(true);
@@ -79,56 +87,72 @@ namespace Raven.Server
 
         private static void InteractiveRun(string[] args)
         {
-            switch (GetArgument(args))
-            {
-                case "install":
-                    AdminRequired(InstallAndStart, "/install");
-                    break;
-                case "uninstall":
-                    AdminRequired(EnsureStoppedAndUninstall, "/uninstall");
-                    break;
-                case "start":
-                    AdminRequired(StartService, "/start");
-                    break;
-                case "restart":
-                    AdminRequired(RestartService, "/restart");
-                    break;
-                case "stop":
-                    AdminRequired(StopService, "/stop");
-                    break;
-                case "restore":
-                    if (args.Length != 3)
-                    {
-                        PrintUsage();
-                        break;
-                    }
-                    RunRestoreOperation(args[1], args[2]);
-                    break;
-                case "debug":
-                    RunInDebugMode(anonymousUserAccessMode: null, ravenConfiguration: new RavenConfiguration());
-                    break;
-                case "ram":
-                    RunInDebugMode(anonymousUserAccessMode: AnonymousUserAccessMode.All, ravenConfiguration: new RavenConfiguration
-                    {
-                        RunInMemory = true,
+        	string backupLocation = null;
+        	string restoreLocation = null;
+        	Action actionToTake = null;
+        	bool launchBrowser = false;
+
+        	OptionSet optionSet = null;
+        	optionSet = new OptionSet
+        	{
+        		{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart, key)},
+        		{"uninstall", "Uninstalls the RavenDB service", key => actionToTake= () => AdminRequired(EnsureStoppedAndUninstall, key)},
+        		{"start", "Starts the RavenDB servce", key => actionToTake= () => AdminRequired(StartService, key)},
+        		{"restart", "Restarts the RavenDB service", key => actionToTake= () => AdminRequired(RestartService, key)},
+        		{"stop", "Stops the RavenDB service", key => actionToTake= () => AdminRequired(StopService, key)},
+        		{"ram", "Run RavenDB in RAM only", key =>
+        		{
+					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.All, new RavenConfiguration
+					{
 						Settings =
 							{
-								{"Raven/RunInMemory", "true"}
+								{"Raven/RunInMemory","true"} 
 							}
-                    });
-                    break;
-#if DEBUG
-                case "test":
-                    var dataDirectory = new RavenConfiguration().DataDirectory;
-                    IOExtensions.DeleteDirectory(dataDirectory);
+					}, launchBrowser);		
+        		}},
+        		{"debug", "Runs RavenDB in debug mode", key =>
+        		{
+					actionToTake = () => RunInDebugMode(null, new RavenConfiguration(), launchBrowser);
+        		}},
+				{"browser|launchbrowser", "After the server starts, launches the browser", key => launchBrowser = true},
+        		{"help", "Help about the command line interface", key =>
+        		{
+					actionToTake = () => PrintUsage(optionSet);
+        		}},
+        		{"restore", 
+        			"Restores a RavenDB database from backup",
+        			key => actionToTake = () =>
+        			{
+        				if(backupLocation == null || restoreLocation == null)
+        				{
+        					throw new OptionException("when using restore, source and destination must be specified", "restore");
+        				}
+        				RunRestoreOperation(backupLocation, restoreLocation);
+        			}},
+        		{"dest=|destination=", "The {0:path} of the new new database", value => restoreLocation = value},
+        		{"src=|source=", "The {0:path} of the backup", value => backupLocation = value},
+        	};
 
-                    RunInDebugMode(anonymousUserAccessMode: AnonymousUserAccessMode.All, ravenConfiguration: new RavenConfiguration());
-                    break;
-#endif
-                default:
-                    PrintUsage();
-                    break;
-            }
+
+        	try
+        	{
+				if(args.Length == 0) // we default to executing in debug mode 
+					args = new[]{"--debug"};
+
+        		optionSet.Parse(args);
+        	}
+        	catch (Exception e)
+        	{
+        		Console.WriteLine(e.Message);
+        		PrintUsage(optionSet);
+        		return;
+        	}
+
+			if (actionToTake == null)
+				actionToTake = () => PrintUsage(optionSet);
+			
+			actionToTake();
+			
         }
 
         private static void RunRestoreOperation(string backupLocation, string databaseLocation)
@@ -171,7 +195,7 @@ namespace Raven.Server
             {
                 var process = Process.Start(new ProcessStartInfo
                 {
-                    Arguments = cmdLine,
+                    Arguments = "--" + cmdLine,
                     FileName = Assembly.GetExecutingAssembly().Location,
                     Verb = "runas",
                 });
@@ -194,16 +218,16 @@ namespace Raven.Server
             return args[0].Substring(1);
         }
 
-        private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode, RavenConfiguration ravenConfiguration)
+        private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode, RavenConfiguration ravenConfiguration, bool lauchBrowser)
         {
         	ConfigureDebugLogging();
 
         	NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
             if (anonymousUserAccessMode.HasValue)
                 ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
-            while (RunServer(ravenConfiguration))
+			while (RunServerInDebugMode(ravenConfiguration, lauchBrowser))
             {
-                
+            	lauchBrowser = false;
             }
         }
 
@@ -240,7 +264,7 @@ namespace Raven.Server
     		loggerRepository.Configured = true;
     	}
 
-    	private static bool RunServer(RavenConfiguration ravenConfiguration)
+    	private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool lauchBrowser)
     	{
     		var sp = Stopwatch.StartNew();
             using (var server = new RavenDbServer(ravenConfiguration))
@@ -261,6 +285,17 @@ namespace Raven.Server
 					server.Database.TransactionalStorage.FriendlyName);
             	Console.WriteLine("Server Url: {0}", ravenConfiguration.ServerUrl);
                 Console.WriteLine("Press <enter> to stop or 'cls' and <enter> to clear the log");
+				if(lauchBrowser)
+				{
+					try
+					{
+						Process.Start(ravenConfiguration.ServerUrl);
+					}
+					catch (Exception e)
+					{
+						Console.WriteLine("Could not start browser: " + e.Message);
+					}
+				}
                 while (true)
                 {
                     var readLine = Console.ReadLine() ?? "";
@@ -279,25 +314,21 @@ namespace Raven.Server
             }
         }
 
-        private static void PrintUsage()
+        private static void PrintUsage(OptionSet optionSet)
         {
-            Console.WriteLine(
-                @"
+        	Console.WriteLine(
+        		@"
 Raven DB
 Document Database for the .Net Platform
 ----------------------------------------
-Copyright (C) 2010 - Hibernating Rhinos
+Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
-Command line ptions:
-    Raven.Server             - with no args, starts Raven in local server mode
-    Raven.Server /install    - installs and starts the Raven service
-    Raven.Server /uninstall  - stops and uninstalls the Raven service
-    Raven.Server /start		- starts the previously installed Raven service
-    Raven.Server /stop		- stops the previously installed Raven service
-    Raven.Server /restart	- restarts the previously installed Raven service
-	Raven.Server /restore [backup location] [new database location]
-						- restore a previously backed up database to the new
-						  location
+Command line ptions:",
+        		DateTime.Now.Year);
+
+			optionSet.WriteOptionDescriptions(Console.Out);
+
+        	Console.WriteLine(@"
 Enjoy...
 ");
         }

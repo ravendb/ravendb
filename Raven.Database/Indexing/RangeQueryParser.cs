@@ -34,9 +34,14 @@ namespace Raven.Database.Indexing
 		/// <returns></returns>
 		protected override Query GetRangeQuery(string field, string lower, string upper, bool inclusive)
 		{
-			if (!rangeValue.IsMatch(lower) && !rangeValue.IsMatch(upper))
+			if (lower == "NULL" || lower == "*")
+				lower = null;
+			if (upper == "NULL" || upper == "*")
+				upper = null;
+
+			if ( (lower == null || !rangeValue.IsMatch(lower)) && (upper == null || !rangeValue.IsMatch(upper)))
 			{
-				return base.GetRangeQuery(field, lower, upper, inclusive);
+				return NewRangeQuery(field, lower, upper, inclusive);
 			}
 
 			var from = NumberUtil.StringToNumber(lower);
@@ -71,7 +76,7 @@ namespace Raven.Database.Indexing
 				}
 				default:
 				{
-					return base.GetRangeQuery(field, lower, upper, inclusive);
+					return NewRangeQuery(field, lower, upper, inclusive);
 				}
 			}
 		}

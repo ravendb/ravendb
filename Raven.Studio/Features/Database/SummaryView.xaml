@@ -5,6 +5,12 @@
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 xmlns:converters="clr-namespace:Raven.Studio.Converters"
 			 xmlns:f="clr-namespace:Raven.Studio.Framework"
+			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+			 xmlns:documents="clr-namespace:Raven.Studio.Features.Documents"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 xmlns:Input="clr-namespace:Microsoft.Expression.Interactivity.Input;assembly=Microsoft.Expression.Interactions"
+			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
 			 x:Class="Raven.Studio.Features.Database.SummaryView"
 			 mc:Ignorable="d"
 			 d:DesignHeight="480"
@@ -90,15 +96,27 @@
 			<TextBlock Text="Recent Documents"
 					   Style="{StaticResource SectionHeader}" />
 
-			<ItemsControl x:Name="RecentDocuments"
-						  ItemsPanel="{StaticResource FluidWrapPanel}">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<ContentControl cm:View.Model="{Binding}" />
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
+			<c:WrapListBox x:Name="RecentDocuments"
+						   Style="{StaticResource DocumentList}"
+						   Margin="0 0 0 6"
+						   Grid.Row="1">
 
+				<i:Interaction.Behaviors>
+					<local:SelectItemOnRightClick />
+					<local:AttachDocumentsMenu />
+				</i:Interaction.Behaviors>
+				<i:Interaction.Triggers>
+					<Input:KeyTrigger Key="Delete">
+						<f:CustomActionMessage Target="DeleteDocument"
+											   IgnoreAvailability="True"
+											   MethodName="Execute">
+							<cm:Parameter Value="$selectedItems" />
+						</f:CustomActionMessage>
+					</Input:KeyTrigger>
+				</i:Interaction.Triggers>
+
+			</c:WrapListBox>
+			
 			<TextBlock Text="{Binding RecentDocumentsStatus}"
 					   Style="{StaticResource Instruction}" />
 
@@ -112,7 +130,7 @@
 							   Margin="4 0 0 0" />
 				</StackPanel>
 
-                <Button x:Name="BeginCreateSampleData"
+				<Button x:Name="BeginCreateSampleData"
 						Visibility="{Binding ShowCreateSampleData, Converter={StaticResource visibleWhenTrue}}"
 						Content="Create sample data" />
 			</Grid>

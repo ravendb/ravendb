@@ -7,11 +7,22 @@ namespace Raven.Abstractions.Data
 {
 	public class RavenConnectionStringOptions
 	{
+		public RavenConnectionStringOptions()
+		{
+			EnlistInDistributedTransactions = true;
+		}
+
 		public NetworkCredential Credentials { get; set; }
 		public bool EnlistInDistributedTransactions { get; set; }
 		public string DefaultDatabase { get; set; }
 		public Guid ResourceManagerId { get; set; }
 		public string Url { get; set; }
+
+		public override string ToString()
+		{
+			var user = Credentials == null ? "<none>" : Credentials.UserName;
+			return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url);
+		}
 	}
 
 	public class EmbeddedRavenConnectionStringOptions : RavenConnectionStringOptions

@@ -10,7 +10,7 @@ namespace Raven.Studio.Features.Documents
     using Newtonsoft.Json.Linq;
 
     /// <summary>
-    /// This view model is for displaying documents in bulk. There is no change notification and no behaviours related to editing
+    /// This view model is for displaying documents in bulk. There is no change notification and no behaviors related to editing
     /// </summary>
     public class DocumentViewModel : ISupportDocumentTemplate
     {
@@ -21,7 +21,9 @@ namespace Raven.Studio.Features.Documents
         {
             this.inner = inner;
             Id = inner.Metadata.IfPresent<string>("@id");
-            LastModified = inner.LastModified ?? DateTime.MinValue;
+			LastModified = inner.LastModified ?? DateTime.MinValue;
+        	if (LastModified.Kind == DateTimeKind.Utc)
+        		LastModified = LastModified.ToLocalTime();
 			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
             CollectionType = DetermineCollectionType();
         }
@@ -37,13 +39,9 @@ namespace Raven.Studio.Features.Documents
             {
                 if (string.IsNullOrEmpty(Id)) return string.Empty;
 
-                var collectionType = CollectionType + "/";
-                var display = Id
-                    .Replace(collectionType, string.Empty)
-                    .Replace(collectionType.ToLower(), string.Empty)
-                    .Replace("Raven/", string.Empty);
+            	var display = GetIdWithoutPrefixes();
 
-                Guid guid;
+            	Guid guid;
                 if (Guid.TryParse(display, out guid))
                 {
                     display = display.Substring(0, 8);
@@ -52,7 +50,26 @@ namespace Raven.Studio.Features.Documents
             }
         }
 
-        public RavenJObject Contents
+    	private string GetIdWithoutPrefixes()
+    	{
+    		var display = Id;
+
+    		var prefixToRemoves = new[]
+    		{
+    			"Raven/",
+    			CollectionType + "/",
+    			CollectionType + "-"
+    		};
+
+    		foreach (var prefixToRemove in prefixToRemoves)
+    		{
+    			if (display.StartsWith(prefixToRemove, StringComparison.InvariantCultureIgnoreCase))
+    				display = display.Substring(prefixToRemove.Length);
+    		}
+    		return display;
+    	}
+
+    	public RavenJObject Contents
         {
             get { return JsonDocument.DataAsJson; }
         }

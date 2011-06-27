@@ -11,6 +11,7 @@ using System.Collections.Specialized;
 #endif
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Extensions;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 #endif
@@ -49,11 +50,6 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Occurs when an entity is stored inside any session opened from this instance
-		/// </summary>
-		public event EventHandler<StoredEntityEventArgs> Stored;
-
-		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentStore"/> class.
 		/// </summary>
 		/// <param name="shardStrategy">The shard strategy.</param>
@@ -85,10 +81,15 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public void Dispose()
 		{
-			Stored = null;
-
 			foreach (var shard in shards)
 				shard.Dispose();
+
+			WasDisposed = true;
+
+			var afterDispose = AfterDispose;
+			if (afterDispose != null)
+				afterDispose(this, EventArgs.Empty);
+
 		}
 
 		#endregion
@@ -124,6 +125,49 @@ namespace Raven.Client.Shard
 
 #endif
 
+		/// <summary>
+		/// Setup the context for aggressive caching.
+		/// </summary>
+		/// <param name="cacheDuration">Specify the aggressive cache duration</param>
+		/// <remarks>
+		/// aggressive caching means that we will not check the server to see whatever the response
+		/// we provide is current or not, but will serve the information directly from the local cache
+		/// without touching the server.
+		/// </remarks>
+		public IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
+		{
+			var disposables = shards.Select(shard => shard.AggressivelyCacheFor(cacheDuration)).ToList();
+
+			return new DisposableAction(() =>
+			{
+				foreach (var disposable in disposables)
+				{
+					disposable.Dispose();
+				}
+			});
+		}
+
+		/// <summary>
+		/// Setup the context for no aggressive caching
+		/// </summary>
+		/// <remarks>
+		/// This is mainly useful for internal use inside RavenDB, when we are executing
+		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
+		/// aggressive caching.
+		/// </remarks>
+		public IDisposable DisableAggressiveCaching()
+		{
+			var disposables = shards.Select(shard => shard.DisableAggressiveCaching()).ToList();
+
+			return new DisposableAction(() =>
+			{
+				foreach (var disposable in disposables)
+				{
+					disposable.Dispose();
+				}
+			});
+		}
+
 #if !SILVERLIGHT
 		
 		/// <summary>
@@ -132,7 +176,7 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession()).ToArray());
+			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession()).ToArray(), this);
 		}
 
 		/// <summary>
@@ -140,7 +184,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public IDocumentSession OpenSession(string database)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database)).ToArray());
+			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database)).ToArray(), this);
 		}
 
 		/// <summary>
@@ -148,7 +192,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database, credentialsForSession)).ToArray());
+			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database, credentialsForSession)).ToArray(), this);
 		}
 
 		/// <summary>
@@ -157,7 +201,7 @@ namespace Raven.Client.Shard
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(credentialsForSession)).ToArray());
+			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(credentialsForSession)).ToArray(), this);
 		}
 
 		/// <summary>
@@ -180,6 +224,23 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
+		/// Gets or sets the URL.
+		/// </summary>
+		public string Url
+		{
+			get { throw new NotImplementedException("There isn't a singular url when using sharding"); }
+		}
+
+		///<summary>
+		/// Gets the etag of the last document written by any session belonging to this 
+		/// document store
+		///</summary>
+		public Guid? GetLastWrittenEtag()
+		{
+			throw new NotImplementedException("This isn't a single last written etag when sharding");
+		}
+
+		/// <summary>
 		/// Initializes this instance.
 		/// </summary>
 		/// <returns></returns>
@@ -190,7 +251,6 @@ namespace Raven.Client.Shard
 				foreach (var shard in shards)
 				{
 					var currentShard = shard;
-					currentShard.Stored += Stored;
 					var defaultKeyGeneration = currentShard.Conventions.DocumentKeyGenerator == null;
 					currentShard.Initialize();
 					if(defaultKeyGeneration == false)
@@ -209,6 +269,16 @@ namespace Raven.Client.Shard
 
 			return this;
 		}
+
+		/// <summary>
+		/// Called after dispose is completed
+		/// </summary>
+		public event EventHandler AfterDispose;
+
+		/// <summary>
+		/// Whatever the instance has been disposed
+		/// </summary>
+		public bool WasDisposed { get; private set; }
 	}
 }
 #endif

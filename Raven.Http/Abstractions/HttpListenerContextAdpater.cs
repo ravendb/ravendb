@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Security.Principal;
+using System.Text.RegularExpressions;
 using log4net;
 
 namespace Raven.Http.Abstractions
@@ -15,17 +16,39 @@ namespace Raven.Http.Abstractions
 	public class HttpListenerContextAdpater : IHttpContext
 	{
 		private readonly HttpListenerContext ctx;
-        private readonly IRaveHttpnConfiguration configuration;
-
-        public HttpListenerContextAdpater(HttpListenerContext ctx, IRaveHttpnConfiguration configuration)
+        private readonly IRavenHttpConfiguration configuration;
+		private static readonly Regex maxAgeFinder = new Regex(@"max-age \s* = \s* (\d+)",
+														   RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase |
+														   RegexOptions.Compiled);
+      
+        public HttpListenerContextAdpater(HttpListenerContext ctx, IRavenHttpConfiguration configuration)
 		{
 			this.ctx = ctx;
 			this.configuration = configuration;
 			Request = new HttpListenerRequestAdapter(ctx.Request);
 			ResponseInternal = new HttpListenerResponseAdapter(ctx.Response);
+
+			SetMaxAge();
 		}
 
-        public IRaveHttpnConfiguration Configuration
+		private void SetMaxAge()
+		{
+			string cacheControl = ctx.Request.Headers["Cache-Control"];
+			if (string.IsNullOrEmpty(cacheControl))
+				return;
+
+			var match = maxAgeFinder.Match(cacheControl);
+			if (match.Success == false)
+				return;
+
+			int timeInSeconds;
+			if (int.TryParse(match.Groups[1].Value, out timeInSeconds) == false)
+				return;
+
+			ctx.Response.AddHeader("Cache-Control", "max-age=" + timeInSeconds);
+		}
+
+        public IRavenHttpConfiguration Configuration
 		{
 			get { return configuration; }
 		}

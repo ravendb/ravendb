@@ -267,6 +267,22 @@ If you really want to do in memory filtering on the data returned from the query
         /// <returns></returns>
         TSelf WaitForNonStaleResultsAsOfNow();
 
+    	/// <summary>
+    	/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
+    	/// current document store.
+    	/// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
+    	/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
+    	/// </summary>
+    	TSelf WaitForNonStaleResultsAsOfLastWrite();
+
+    	/// <summary>
+    	/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
+    	/// current document store.
+    	/// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
+    	/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
+    	/// </summary>
+    	TSelf WaitForNonStaleResultsAsOfLastWrite(TimeSpan waitTimeout);
+		
         /// <summary>
         ///   Instructs the query to wait for non stale results as of now for the specified timeout.
         /// </summary>

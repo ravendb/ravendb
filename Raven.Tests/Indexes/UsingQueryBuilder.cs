@@ -94,7 +94,7 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Birthday:{NULL TO 20100515000000000}", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
-			Assert.Equal("Birthday:{null TO 20100515000000000}", query.ToString());
+			Assert.Equal("Birthday:{* TO 20100515000000000}", query.ToString());
 		}
 
 		[Fact]
@@ -102,7 +102,7 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Birthday:[NULL TO 20100515000000000]", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
-			Assert.Equal("Birthday:[null TO 20100515000000000]", query.ToString());
+			Assert.Equal("Birthday:[* TO 20100515000000000]", query.ToString());
 		}
 
 		[Fact]
@@ -200,7 +200,7 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("(Name:\"Simple Phrase\" OR Name:SingleTerm) AND (Age_Range:3 OR Birthday:[NULL TO 20100515000000000])", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
-			Assert.Equal("+(Name:\"simple phrase\" Name:singleterm) +(Age_Range:3 Birthday:[null TO 20100515000000000])", query.ToString());
+			Assert.Equal("+(Name:\"simple phrase\" Name:singleterm) +(Age_Range:3 Birthday:[* TO 20100515000000000])", query.ToString());
 		}
 
 		[Fact]

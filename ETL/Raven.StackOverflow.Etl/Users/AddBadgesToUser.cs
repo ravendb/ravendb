@@ -3,22 +3,29 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Json;
+using Raven.Json.Linq;
 using Raven.StackOverflow.Etl.Generic;
+using Raven.StackOverflow.Etl.Posts;
 using Rhino.Etl.Core;
 using Rhino.Etl.Core.Operations;
 using System.Linq;
 
 namespace Raven.StackOverflow.Etl.Users
 {
-	public class AddBadgesToUser : AbstractOperation
+	public class AddBadgesToUser : BatchFileWritingProcess
 	{
+		public AddBadgesToUser(string outputDirectory) : base(outputDirectory)
+		{
+		}
+
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
 			int count = 0;
@@ -29,20 +36,21 @@ namespace Raven.StackOverflow.Etl.Users
 				var cmds = new List<ICommandData>();
 				foreach (var badgesForUser in badgesForUsers)
 				{
-					var badgesByName = new Dictionary<string, JObject>();	
+					var badgesByName = new Dictionary<string, RavenJObject>();	
 					var badgesArray = badgesForUser.ToArray();
 					foreach (var row in badgesArray)
 					{
-						JObject badge;
+						RavenJObject badge;
 						if (badgesByName.TryGetValue((string)row["Name"], out badge )==false)
 						{
-							badge = new JObject(
-								new JProperty("Name", new JValue(row["Name"])),
-								new JProperty("Dates", new JArray())
-								);
+							badge = new RavenJObject(new []
+							{
+								new KeyValuePair<string, RavenJToken>("Name", RavenJToken.FromObject(row["Name"])),     
+								new KeyValuePair<string, RavenJToken>("Dates", new RavenJArray()), 
+							});
 							badgesByName.Add((string)row["Name"], badge);
 						}
-						((JArray)badge["Dates"]).Add(new JValue(row["Date"]));
+						((RavenJArray)badge["Dates"]).Add(new RavenJValue(row["Date"]));
 					}
 
 					cmds.Add(new PatchCommandData
@@ -53,8 +61,8 @@ namespace Raven.StackOverflow.Etl.Users
 							new PatchRequest
 							{
 								Name = "Badges",
-								Type = "Set",
-								Value = new JArray(badgesByName.Values)
+								Type = PatchCommandType.Set,
+								Value = new RavenJArray(badgesByName.Values)
 							},
 						}
 					});
@@ -62,9 +70,7 @@ namespace Raven.StackOverflow.Etl.Users
 
 				count++;
 
-				File.WriteAllText(Path.Combine("Docs", "Badges #" + count.ToString("00000") + ".json"),
-								  new JArray(cmds.Select(x=>x.ToJson())).ToString(Formatting.Indented));
-
+				WriteCommandsTo("Badges #" + count.ToString("00000") + ".json", cmds);
 			}
 			yield break;
 		}

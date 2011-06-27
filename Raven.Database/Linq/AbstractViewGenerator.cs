@@ -7,9 +7,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Text.RegularExpressions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
-using Raven.Database.Indexing;
 using System.Linq;
 
 namespace Raven.Database.Linq
@@ -24,10 +24,27 @@ namespace Raven.Database.Linq
 	{
         private readonly HashSet<string> fields = new HashSet<string>();
         private bool? containsProjection;
+		private int? countOfSelectMany;
+		private bool? hasWhereClause;
 		private readonly HashSet<string> mapFields = new HashSet<string>();
 		private readonly HashSet<string> reduceFields = new HashSet<string>();
 
-    	public int CountOfFields { get { return fields.Count;  } }
+		private static readonly Regex selectManyOrFrom = new Regex(@"( (^|\s) from \s ) | ( \.SelectMany\( )", 
+			RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace);
+
+		public int CountOfSelectMany
+		{
+			get
+			{
+				if(countOfSelectMany == null)
+				{
+					countOfSelectMany = selectManyOrFrom.Matches(ViewText).Count;
+				}
+				return countOfSelectMany.Value;
+			}
+		}
+
+		public int CountOfFields { get { return fields.Count;  } }
 
     	public IndexingFunc MapDefinition { get; set; }
 		
@@ -50,7 +67,19 @@ namespace Raven.Database.Linq
     		get { return fields.ToArray(); }
     	}
 
-    	protected AbstractViewGenerator()
+		public bool HasWhereClause
+		{
+			get
+			{
+				if(hasWhereClause == null)
+				{
+					hasWhereClause = ViewText.IndexOf("where", StringComparison.InvariantCultureIgnoreCase) > -1;
+				}
+				return hasWhereClause.Value;
+			}
+		}
+
+		protected AbstractViewGenerator()
         {
             Stores = new Dictionary<string, FieldStorage>();
             Indexes = new Dictionary<string, FieldIndexing>();

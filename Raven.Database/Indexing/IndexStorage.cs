@@ -45,7 +45,7 @@ namespace Raven.Database.Indexing
 		{
             this.indexDefinitionStorage = indexDefinitionStorage;
             this.configuration = configuration;
-		    path = Path.Combine(configuration.DataDirectory, "Indexes");
+        	path = configuration.IndexStoragePath;
 
             if (Directory.Exists(path) == false && configuration.RunInMemory == false)
 		        Directory.CreateDirectory(path);
@@ -108,6 +108,8 @@ namespace Raven.Database.Indexing
 
         public bool HasIndex(string index)
         {
+			if (index == null)
+				return false;
             return indexes.ContainsKey(index);
         }
 

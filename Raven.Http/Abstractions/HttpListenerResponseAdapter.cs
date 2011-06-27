@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Specialized;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 
@@ -28,14 +28,14 @@ namespace Raven.Http.Abstractions
 
     	public void AddHeader(string name, string value)
     	{
-			if(name == "ETag")
+			if (name == "ETag" && string.IsNullOrEmpty(response.Headers["Cache-Control"]))
 				response.AddHeader("Expires", "Sat, 01 Jan 2000 00:00:00 GMT");
     		response.AddHeader(name, value);
     	}
 
     	public Stream OutputStream { get; set; }
 
-        public long ContentLength64
+    	public long ContentLength64
         {
             get { return response.ContentLength64; }
             set { response.ContentLength64 = value; }

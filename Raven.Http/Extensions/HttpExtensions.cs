@@ -323,6 +323,22 @@ namespace Raven.Http.Extensions
 			return null;
 		}
 
+		public static Guid? GetCutOffEtag(this IHttpContext context)
+		{
+			var etagAsString = context.Request.QueryString["cutOffEtag"];
+			if (etagAsString != null)
+			{
+				etagAsString = Uri.UnescapeDataString(etagAsString);
+
+				Guid result;
+				if (Guid.TryParse(etagAsString,out result))
+					return result;
+				throw new BadRequestException("Could not parse cut off etag query parameter as guid");
+			}
+			return null;
+		}
+
+
 		public static Guid? GetEtag(this IHttpContext context)
 		{
 			var etagAsString = context.Request.Headers["If-Match"];

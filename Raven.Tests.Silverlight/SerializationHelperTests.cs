@@ -72,7 +72,7 @@ namespace Raven.Tests.Silverlight
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			var last_modified = output.First().LastModified;
-			var delta = Math.Abs((last_modified - now).Value.Seconds);
+			var delta = Math.Abs((last_modified - now).Value.TotalSeconds);
 
 			Assert.IsTrue(delta < 1);
 		}

@@ -111,21 +111,6 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Occurs when an entity is stored in the session
-		/// </summary>
-		public event EntityStored Stored;
-		/// <summary>
-		/// Occurs when an entity is converted to a document and metadata.
-		/// Changes made to the document / metadata instances passed to this event will be persisted.
-		/// </summary>
-		public event EntityToDocument OnEntityConverted;
-
-		/// <summary>
-		/// Occurs when a document and metadata are converted to an entity
-		/// </summary>
-		public event DocumentToEntity OnDocumentConverted;
-
-		/// <summary>
 		/// Gets the metadata for the specified entity.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
@@ -179,21 +164,17 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <param name="shardStrategy">The shard strategy.</param>
 		/// <param name="shardSessions">The shard sessions.</param>
-		public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
+		/// <param name="documentStore"></param>
+		public ShardedDocumentSession(IShardStrategy shardStrategy, IDocumentSession[] shardSessions, ShardedDocumentStore documentStore)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardSessions = shardSessions;
-
-			foreach (var shardSession in shardSessions)
-			{
-				shardSession.Advanced.Stored += Stored;
-				shardSession.Advanced.OnEntityConverted += OnEntityConverted;
-				shardSession.Advanced.OnDocumentConverted += OnDocumentConverted;
-			}
+			this.documentStore = documentStore;
 		}
 
 		private readonly IShardStrategy shardStrategy;
 		private readonly IDocumentSession[] shardSessions;
+		private readonly ShardedDocumentStore documentStore;
 
 		/// <summary>
 		/// Gets the database commands.
@@ -259,6 +240,14 @@ namespace Raven.Client.Shard
 		public T[] Load<T>(params string[] ids)
 		{
 			return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
+		}
+
+		/// <summary>
+		/// The document store associated with this session
+		/// </summary>
+		public IDocumentStore DocumentStore
+		{
+			get { return documentStore; }
 		}
 
 		/// <summary>
@@ -515,11 +504,6 @@ namespace Raven.Client.Shard
 		{
 			foreach (var shardSession in shardSessions)
 				shardSession.Dispose();
-
-			//dereference all event listeners
-			Stored = null;
-			OnEntityConverted = null;
-			OnDocumentConverted = null;
 		}
 
 		#endregion

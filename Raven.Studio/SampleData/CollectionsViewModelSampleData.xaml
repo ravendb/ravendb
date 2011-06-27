@@ -1,4 +1,15 @@
-﻿<Raven_Studio_Features_Collections:CollectionsViewModel xmlns:Raven_Studio_Features_Collections="clr-namespace:Raven.Studio.Features.Collections" xmlns:Raven_Studio_Features_Documents="clr-namespace:Raven.Studio.Features.Documents" xmlns:Raven_Database="clr-namespace:Raven.Database;assembly=Raven.Client.Silverlight" xmlns:System="clr-namespace:System;assembly=mscorlib" xmlns:Raven_Abstractions_Data="clr-namespace:Raven.Abstractions.Data;assembly=Raven.Client.Silverlight" DisplayName="Fringilla vestibulum mus" HasCollections="True" IsNotifying="True" Index="15" IsInitialized="False" IsBusy="False" IsActive="True">
+﻿<Raven_Studio_Features_Collections:CollectionsViewModel xmlns:Raven_Studio_Features_Collections="clr-namespace:Raven.Studio.Features.Collections"
+														xmlns:Raven_Studio_Features_Documents="clr-namespace:Raven.Studio.Features.Documents"
+														xmlns:Raven_Database="clr-namespace:Raven.Database;assembly=Raven.Client.Silverlight"
+														xmlns:System="clr-namespace:System;assembly=mscorlib"
+														xmlns:Raven_Abstractions_Data="clr-namespace:Raven.Abstractions.Data;assembly=Raven.Client.Silverlight"
+														DisplayName="Fringilla vestibulum mus"
+														HasCollections="True"
+														IsNotifying="True"
+														Index="15"
+														IsInitialized="False"
+														IsBusy="False"
+														IsActive="True">
 	<Raven_Studio_Features_Collections:CollectionsViewModel.ActiveCollectionDocuments>
 		<Raven_Studio_Features_Documents:DocumentViewModel CollectionType="Customers" ClrType="Sample.Raven.Customer" DisplayId="Phasellus duis quisque consequat" Id="Convallis vivamus accumsan" LastModified="03/22/2011 11:19:38" Summary="Mauris parturient aliquam amet sed">
 			<Raven_Studio_Features_Documents:DocumentViewModel.JsonDocument>
@@ -92,124 +103,124 @@
 		</Raven_Studio_Features_Documents:DocumentViewModel>
 	</Raven_Studio_Features_Collections:CollectionsViewModel.ActiveCollectionDocuments>
 	<Raven_Studio_Features_Collections:CollectionsViewModel.ActiveCollection>
-		<Raven_Abstractions_Data:Collection Name="Aliquam vestibulum class maecenas">
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Aliquam vestibulum class maecenas">
 			<Raven_Abstractions_Data:Collection.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
 		</Raven_Abstractions_Data:Collection>
 	</Raven_Studio_Features_Collections:CollectionsViewModel.ActiveCollection>
 	<Raven_Studio_Features_Collections:CollectionsViewModel.Collections>
-		<Raven_Abstractions_Data:Collection Name="Tincidunt tristique vestibulum ultricies">
-			<Raven_Abstractions_Data:Collection.Count>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Tincidunt tristique vestibulum ultricies">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Dictumst eleifend adipiscing">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Dictumst eleifend adipiscing">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Venenatis fusce lorem facilisi enim">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Venenatis fusce lorem facilisi enim">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Quisque vulputate">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Quisque vulputate">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Morbi faucibus tempor vivamus erat">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Morbi faucibus tempor vivamus erat">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Eros nam habitant nulla">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Eros nam habitant nulla">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Aliquam nibh inceptos nisi tempus">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Aliquam nibh inceptos nisi tempus">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Tortor sed proin">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Tortor sed proin">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Interdum parturient">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Interdum parturient">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Lobortis nisl nascetur">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Lobortis nisl nascetur">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
 	</Raven_Studio_Features_Collections:CollectionsViewModel.Collections>
 	<Raven_Studio_Features_Collections:CollectionsViewModel.LargestCollectionCount>
 		<System:Int64/>
 	</Raven_Studio_Features_Collections:CollectionsViewModel.LargestCollectionCount>
 	<Raven_Studio_Features_Collections:CollectionsViewModel.RavenCollection>
-		<Raven_Abstractions_Data:Collection Name="Curabitur vestibulum pharetra placerat">
-			<Raven_Abstractions_Data:Collection.Count>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Curabitur vestibulum pharetra placerat">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
 	</Raven_Studio_Features_Collections:CollectionsViewModel.RavenCollection>
 	<Raven_Studio_Features_Collections:CollectionsViewModel.SystemCollections>
-		<Raven_Abstractions_Data:Collection Name="Augue nunc pulvinar dis">
-			<Raven_Abstractions_Data:Collection.Count>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Augue nunc pulvinar dis">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Aliquet odio">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Aliquet odio">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Blandit vestibulum phasellus">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Blandit vestibulum phasellus">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Consequat convallis dignissim adipiscing">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Consequat convallis dignissim adipiscing">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Orci pede est">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Orci pede est">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Turpis varius sagittis hac aenean">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Turpis varius sagittis hac aenean">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Commodo mauris quam">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Commodo mauris quam">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Parturient leo">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Parturient leo">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Quis elementum conubia cubilia">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Quis elementum conubia cubilia">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
-		<Raven_Abstractions_Data:Collection Name="Facilisis nullam fermentum dapibus">
-			<Raven_Abstractions_Data:Collection.Count>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
+		<Raven_Studio_Features_Collections:CollectionViewModel Name="Facilisis nullam fermentum dapibus">
+			<Raven_Studio_Features_Collections:CollectionViewModel.Count>
 				<System:Int64/>
-			</Raven_Abstractions_Data:Collection.Count>
-		</Raven_Abstractions_Data:Collection>
+			</Raven_Studio_Features_Collections:CollectionViewModel.Count>
+		</Raven_Studio_Features_Collections:CollectionViewModel>
 	</Raven_Studio_Features_Collections:CollectionsViewModel.SystemCollections>
 </Raven_Studio_Features_Collections:CollectionsViewModel>

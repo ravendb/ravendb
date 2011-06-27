@@ -18,7 +18,7 @@ namespace Raven.Tests.Storage
 
 		public virtual void Dispose()
 		{
-            //IOExtensions.DeleteDirectory("raven.db.test.esent");
+            IOExtensions.DeleteDirectory("raven.db.test.esent");
 		}
 	}
 }

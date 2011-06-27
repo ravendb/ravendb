@@ -1,12 +1,19 @@
-﻿namespace Raven.Studio.Commands
+﻿using System.Collections.Generic;
+using Raven.Studio.Features.Collections;
+
+namespace Raven.Studio.Commands
 {
-	using System.ComponentModel.Composition;
-	using Caliburn.Micro;
+    using System.Collections;
+    using System.ComponentModel.Composition;
+    using System.Linq;
+    using Caliburn.Micro;
 	using Features.Database;
-	using Messages;
+    using Features.Documents;
+    using Messages;
 	using Plugins;
 	using Shell.MessageBox;
 
+	[Export]
     public class DeleteDocument
 	{
 		readonly IEventAggregator events;
@@ -21,18 +28,30 @@
 			this.showMessageBox = showMessageBox;
 		}
 
-		public void Execute(string documentId)
+		public bool CanExecute(IList<DocumentViewModel> documents)
 		{
-			showMessageBox(
-				"Are you sure that you want to do this document? (" + documentId + ")",
-				"Confirm Deletion",
-				MessageBoxOptions.OkCancel,
-				box => { if (box.WasSelected(MessageBoxOptions.Ok)) ExecuteDeletion(documentId); });
+			if (documents == null || documents.Count == 0)
+				return false;
+
+			var document = documents.First();
+			return document != null && document.CollectionType != BuiltinCollectionName.Projection;
 		}
 
-		public bool CanExecute(string documentId)
+		public void Execute(IList<DocumentViewModel> documents)
 		{
-			return !string.IsNullOrEmpty(documentId);
+			string message = documents.Count > 1 ? string.Format("Are you sure you want to delete these {0} documents?", documents.Count) :
+				string.Format("Are you sure that you want to do this document? ({0})", documents.First().Id);
+
+			showMessageBox(
+				message,
+				"Confirm Deletion",
+				MessageBoxOptions.OkCancel,
+				box => {
+					if (box.WasSelected(MessageBoxOptions.Ok))
+					{
+						documents.Apply(document => ExecuteDeletion(document.Id)); // Is this the most efficient way?
+					}
+				});
 		}
 
 		void ExecuteDeletion(string documentId)

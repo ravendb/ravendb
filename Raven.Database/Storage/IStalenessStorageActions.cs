@@ -9,7 +9,7 @@ namespace Raven.Database.Storage
 {
     public interface IStalenessStorageActions
     {
-        bool IsIndexStale(string name, DateTime? cutOff, string entityName);
+        bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag);
 
         bool IsReduceStale(string name);
         bool IsMapStale(string name);

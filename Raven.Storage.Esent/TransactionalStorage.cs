@@ -52,7 +52,19 @@ namespace Raven.Storage.Esent
 
 		static TransactionalStorage()
 		{
-			SystemParameters.MaxInstances = 1024;
+			try
+			{
+				SystemParameters.MaxInstances = 1024;
+			}
+			catch (EsentErrorException e)
+			{
+				// this is expected if we had done something like recycyling the app domain
+				// because the engine state is actually at the process level (unmanaged)
+				// so we ignore this error
+				if (e.Error == JET_err.AlreadyInitialized)
+					return;
+				throw;
+			}
 		}
 
 		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)

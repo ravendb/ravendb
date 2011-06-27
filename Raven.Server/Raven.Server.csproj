@@ -102,6 +102,7 @@
     <Compile Include="..\Raven.Smuggler\Smuggler.cs">
       <Link>Smuggler.cs</Link>
     </Compile>
+    <Compile Include="FromMono\Options.cs" />
     <Compile Include="RavenDbServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProjectInstaller.cs">

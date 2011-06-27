@@ -99,7 +99,7 @@ namespace Raven.Tests.Document
 
 				using (var session = documentStore.OpenAsyncSession())
 				{
-					var task = session.MultiLoadAsync<Company>(new[]{entity1.Id, entity2.Id});
+					var task = session.LoadAsync<Company>(new[]{entity1.Id, entity2.Id});
 					Assert.Equal(entity1.Name, task.Result[0].Name);
 					Assert.Equal(entity2.Name, task.Result[1].Name);
 				}

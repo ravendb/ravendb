@@ -33,6 +33,11 @@ namespace Raven.Database.Impl
             };
         }
 
+    	public void RemoveCachedDocument(string key, Guid etag)
+    	{
+    		cachedSerializedDocuments.Remove("Doc/" + key + "/" + etag);
+    	}
+
     	public void Dispose()
         {
             cachedSerializedDocuments.Dispose();

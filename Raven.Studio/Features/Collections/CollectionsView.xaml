@@ -9,7 +9,8 @@
 			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
 			 xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Layout;assembly=Microsoft.Expression.Interactions"
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-			 mc:Ignorable="d"
+             xmlns:documents="clr-namespace:Raven.Studio.Features.Documents"
+             xmlns:local="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
 			 d:DesignHeight="480"
 			 d:DesignWidth="640"
 			 d:DataContext="{d:DesignData /SampleData/CollectionsViewModelSampleData.xaml}">
@@ -146,14 +147,17 @@
 						 ItemsSource="{Binding ActiveCollectionDocuments}"
 						 PageContainer="{Binding ElementName=ActiveCollectionDocuments}" />
 
-				<ItemsControl x:Name="ActiveCollectionDocuments"
-							  ItemsPanel="{StaticResource FluidWrapPanel}"
-							  Margin="0 0 0 6"
-							  Grid.Row="1" />
+				<c:WrapListBox x:Name="ActiveCollectionDocuments"
+							   Style="{StaticResource DocumentList}"
+							   Margin="0 0 0 6"
+							   Grid.Row="1">
 
+					<i:Interaction.Behaviors>
+						<local:SelectItemOnRightClick />
+						<local:AttachDocumentsMenu />
+					</i:Interaction.Behaviors>
+				</c:WrapListBox>
 			</tk:DockPanel>
-
-
 		</Grid>
 
 	</Grid>

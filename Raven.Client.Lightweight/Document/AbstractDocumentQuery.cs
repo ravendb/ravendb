@@ -188,6 +188,7 @@ namespace Raven.Client.Document
         }
 
 		private Action<QueryResult> afterQueryExecuted;
+		private Guid? cutoffEtag;
 
 #if !SILVERLIGHT && !NET_3_5
         /// <summary>
@@ -240,10 +241,14 @@ namespace Raven.Client.Document
             this.theAsyncDatabaseCommands = asyncDatabaseCommands;
 #endif
 			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
+
+			if (this.theSession != null &&  // tests may decide to send null here
+				this.theSession.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+				WaitForNonStaleResultsAsOfLastWrite();
         }
 
         /// <summary>
-        ///   Initializes a new instance of the <see cref = "DocumentQuery&lt;T&gt;" /> class.
+        ///   Initializes a new instance of the <see cref = "IDocumentQuery&lt;T&gt;" /> class.
         /// </summary>
         /// <param name = "other">The other.</param>
         protected AbstractDocumentQuery(AbstractDocumentQuery<T, TSelf> other)
@@ -1077,7 +1082,31 @@ If you really want to do in memory filtering on the data returned from the query
             return this;
         }
 
-        /// <summary>
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
+		/// current document store.
+		/// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
+		/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOfLastWrite()
+		{
+			WaitForNonStaleResultsAsOfLastWrite();
+			return this;
+		}
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
+		/// current document store.
+		/// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
+		/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOfLastWrite(TimeSpan waitTimeout)
+		{
+			WaitForNonStaleResultsAsOfLastWrite(waitTimeout);
+			return this;
+		}
+
+		/// <summary>
         ///   Instructs the query to wait for non stale results as of the cutoff date.
         /// </summary>
         /// <param name = "cutOff">The cut off.</param>
@@ -1144,6 +1173,29 @@ If you really want to do in memory filtering on the data returned from the query
             timeout = waitTimeout;
         }
 
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
+		/// current document store.
+		/// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
+		/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
+		/// </summary>
+		public void WaitForNonStaleResultsAsOfLastWrite()
+		{
+			WaitForNonStaleResultsAsOfLastWrite(TimeSpan.FromSeconds(15));
+		}
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
+		/// current document store.
+		/// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
+		/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
+		/// </summary>
+		public void WaitForNonStaleResultsAsOfLastWrite(TimeSpan waitTimeout)
+		{
+			theWaitForNonStaleResults = true;
+			timeout = waitTimeout;
+			cutoffEtag = theSession.DocumentStore.GetLastWrittenEtag();
+		}
+
         /// <summary>
         ///   EXPERT ONLY: Instructs the query to wait for non stale results.
         ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
@@ -1201,9 +1253,15 @@ If you really want to do in memory filtering on the data returned from the query
 
         private Task<QueryResult> GetQueryResultTaskResult(string query, IndexQuery indexQuery, DateTime startTime)
         {
+        	IDisposable disposable = null;
+			if (theWaitForNonStaleResults)
+				disposable = theSession.DocumentStore.DisableAggressiveCaching();
             return theAsyncDatabaseCommands.QueryAsync(indexName, indexQuery, includes.ToArray())
                 .ContinueWith(task =>
                 {
+					if (disposable != null)
+						disposable.Dispose();
+
                     if (theWaitForNonStaleResults && task.Result.IsStale)
                     {
                         var elapsed1 = DateTime.Now - startTime;
@@ -1217,7 +1275,6 @@ If you really want to do in memory filtering on the data returned from the query
                             string.Format(
                                 "Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
                                 query, indexName, theSession.StoreIdentifier));
-
 
                         return TaskEx.Delay(100)
                             .ContinueWith(_ => GetQueryResultTaskResult(query, indexQuery, startTime))
@@ -1247,36 +1304,43 @@ If you really want to do in memory filtering on the data returned from the query
             var sp = Stopwatch.StartNew();
             while (true)
             {
-                var query = theQueryText.ToString();
+            	var query = theQueryText.ToString();
 
-                Debug.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
-                                              query, indexName, theSession.StoreIdentifier));
+            	Debug.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
+            	                              query, indexName, theSession.StoreIdentifier));
 
-                var indexQuery = GenerateIndexQuery(query);
+            	var indexQuery = GenerateIndexQuery(query);
 
-                AddOperationHeaders(theDatabaseCommands.OperationsHeaders.Add);
+            	AddOperationHeaders(theDatabaseCommands.OperationsHeaders.Add);
 
-                var result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
-                if (theWaitForNonStaleResults && result.IsStale)
-                {
-                    if (sp.Elapsed > timeout)
-                    {
-                        sp.Stop();
-                        throw new TimeoutException(
-                            string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
-                                          sp.ElapsedMilliseconds));
-                    }
-                    Debug.WriteLine(
-                        string.Format(
-                            "Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
-                            query, indexName, theSession.StoreIdentifier));
-                    Thread.Sleep(100);
-                    continue;
-                }
-                Debug.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count,
-                                              result.TotalResults));
-            	result.EnsureSnapshot();
-                return result;
+            	using (
+					theWaitForNonStaleResults ?
+						Session.Advanced.DocumentStore.DisableAggressiveCaching() : 
+						null)
+            	{
+            		QueryResult result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
+
+            		if (theWaitForNonStaleResults && result.IsStale)
+            		{
+            			if (sp.Elapsed > timeout)
+            			{
+            				sp.Stop();
+            				throw new TimeoutException(
+            					string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
+            					              sp.ElapsedMilliseconds));
+            			}
+            			Debug.WriteLine(
+            				string.Format(
+            					"Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
+            					query, indexName, theSession.StoreIdentifier));
+            			Thread.Sleep(100);
+            			continue;
+            		}
+            		Debug.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count,
+            		                              result.TotalResults));
+            		result.EnsureSnapshot();
+            		return result;
+            	}
             }
         }
 #endif
@@ -1315,6 +1379,7 @@ If you really want to do in memory filtering on the data returned from the query
                 PageSize = pageSize ?? 128,
                 Start = start,
                 Cutoff = cutoff,
+				CutoffEtag = cutoffEtag,
                 SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
                 FieldsToFetch = projectionFields
             };
@@ -1354,8 +1419,7 @@ If you really want to do in memory filtering on the data returned from the query
 #endif
                 HandleInternalMetadata(result);
 
-                var deserializedResult =
-                    (T)theSession.Conventions.CreateSerializer().Deserialize(new RavenJTokenReader(result), typeof(T));
+                var deserializedResult = DeserializedResult(result);
 
                 var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
                 if (string.IsNullOrEmpty(documentId) == false)
@@ -1378,7 +1442,20 @@ If you really want to do in memory filtering on the data returned from the query
                                           metadata);
         }
 
-        private void HandleInternalMetadata(RavenJObject result)
+		private T DeserializedResult(RavenJObject result)
+		{
+			if(projectionFields != null && projectionFields.Length == 1) // we only select a single field
+			{
+				var type = typeof(T);
+				if(type == typeof(string) || typeof(T).IsValueType|| typeof(T).IsEnum)
+				{
+					return result.Value<T>(projectionFields[0]);
+				}
+			}
+			return (T)theSession.Conventions.CreateSerializer().Deserialize(new RavenJTokenReader(result), typeof(T));
+		}
+
+		private void HandleInternalMetadata(RavenJObject result)
         {
 			// Implant a property with "id" value ... if not exists
         	var metadata = result.Value<RavenJObject>("@metadata");

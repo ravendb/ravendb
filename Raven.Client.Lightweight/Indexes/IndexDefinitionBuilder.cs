@@ -79,9 +79,9 @@ namespace Raven.Client.Indexes
 		    string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 		    return new IndexDefinition
 			{
-				Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, querySource, translateIdentityProperty:true),
-				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results", translateIdentityProperty: false),
-				TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode(TransformResults, convention, "results", translateIdentityProperty: false),
+				Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument>(Map, convention, querySource, translateIdentityProperty:true),
+				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument>(Reduce, convention, "results", translateIdentityProperty: false),
+				TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument>(TransformResults, convention, "results", translateIdentityProperty: false),
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions),

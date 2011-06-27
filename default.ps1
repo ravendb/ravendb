@@ -19,9 +19,9 @@ properties {
     
   $client_dlls_3_5 = @( "Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Json-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
      
-  $client_dlls = @( "Newtonsoft.Json.???","Raven.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
+  $client_dlls = @( "Newtonsoft.Json.???","Raven.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
   
-  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "Newtonsoft.Json.Silverlight.???");   
+  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json.Silverlight.???");   
   
   $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Json.???", `
       "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "log4net.???", "Newtonsoft.Json.???", `
@@ -149,7 +149,13 @@ task TestSilverlight {
 	finally{
     ps "Raven.Server" | kill
 	}
-	
+}
+
+task TestStackoverflowSampleBuilds {
+
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+
+    exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\ETL\Raven.Etl.sln" /p:RavenIncludesPath="$buildartifacts_dir\" /p:OutDir="$buildartifacts_dir\Raven.Etl\" }
 }
 
 task ReleaseNoTests -depends OpenSource,DoRelease {
@@ -171,7 +177,7 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
-task Release -depends Test,TestSilverlight,DoRelease { 
+task Release -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,DoRelease { 
 }
 
 task CopySamples {

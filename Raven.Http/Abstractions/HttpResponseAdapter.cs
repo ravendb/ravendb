@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Specialized;
 using System.IO;
 using System.Web;
 
@@ -13,7 +11,7 @@ namespace Raven.Http.Abstractions
 	public class HttpResponseAdapter : IHttpResponse
 	{
 		private readonly HttpResponse response;
-
+        
 		public HttpResponseAdapter(HttpResponse response)
 		{
 			this.response = response;
@@ -23,14 +21,18 @@ namespace Raven.Http.Abstractions
 
 		public void AddHeader(string name, string value)
 		{
-			if (name == "ETag")
+			if (name == "ETag" && string.IsNullOrEmpty(response.CacheControl))
 				response.AddHeader("Expires", "Sat, 01 Jan 2000 00:00:00 GMT");
+    		
 			response.AddHeader(name, value);
 		}
 
 		public Stream OutputStream
 		{
-			get { return response.OutputStream; }
+			get
+			{
+				return response.OutputStream;
+			}
 		}
 
 		public long ContentLength64

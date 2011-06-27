@@ -71,7 +71,7 @@ namespace Raven.Abstractions.Json
                 }
             }
 
-		    return new DynamicJsonObject((RavenJObject)token);
+		    return new DynamicJsonObject((RavenJObject)((RavenJObject)token).CloneToken());
 		}
 
 		/// <summary>

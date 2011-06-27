@@ -18,7 +18,7 @@ using Raven.Http;
 
 namespace Raven.Database.Config
 {
-	public class InMemoryRavenConfiguration : IRaveHttpnConfiguration
+	public class InMemoryRavenConfiguration : IRavenHttpConfiguration
 	{
 		private CompositionContainer container;
 		private bool containerExternallySet;
@@ -90,6 +90,7 @@ namespace Raven.Database.Config
 			TransactionMode = result;
 
 			DataDirectory = Settings["Raven/DataDir"] ?? @"~\Data";
+			IndexStoragePath = Settings["Raven/IndexStoragePath"] = Path.Combine(DataDirectory, "Indexes");
 
 			// HTTP settings
 			HostName = Settings["Raven/HostName"];
@@ -337,6 +338,13 @@ namespace Raven.Database.Config
 				RunInMemory = value;
 				runInUnreliableYetFastModeThatIsNotSuitableForProduction = value;
 			}
+		}
+
+		private string indexStoragePath;
+		public string IndexStoragePath
+		{
+			get { return indexStoragePath; }
+			set { indexStoragePath = value.ToFullPath(); }
 		}
 
 		protected void ResetContainer()
