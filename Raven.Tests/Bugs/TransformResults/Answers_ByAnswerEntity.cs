@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 
 namespace Raven.Tests.Bugs.TransformResults
@@ -15,6 +16,9 @@ namespace Raven.Tests.Bugs.TransformResults
                               QuestionId = doc.QuestionId,
                               Content = doc.Content
                           };
+
+            Index(x => x.Content, FieldIndexing.Analyzed);
+            Index(x => x.UserId, FieldIndexing.NotAnalyzed); // Case-sensitive searches
 
             TransformResults = (database, results) =>
                 from result in results
