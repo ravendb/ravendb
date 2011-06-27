@@ -1,5 +1,7 @@
-﻿using Raven.Json.Linq;
+﻿using Caliburn.Micro;
+using Raven.Json.Linq;
 using Raven.Studio.Framework;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -12,23 +14,29 @@ namespace Raven.Studio.Features.Documents
     /// <summary>
     /// This view model is for displaying documents in bulk. There is no change notification and no behaviors related to editing
     /// </summary>
-    public class DocumentViewModel : ISupportDocumentTemplate
+    public class DocumentViewModel : ISupportDocumentTemplate,
+		IHandle<DocumentUpdated>
     {
         const int SummaryLength = 150;
-        readonly JsonDocument inner;
+        JsonDocument inner;
 
         public DocumentViewModel(JsonDocument inner)
         {
-            this.inner = inner;
-            Id = inner.Metadata.IfPresent<string>("@id");
-			LastModified = inner.LastModified ?? DateTime.MinValue;
-        	if (LastModified.Kind == DateTimeKind.Utc)
-        		LastModified = LastModified.ToLocalTime();
-			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
-            CollectionType = DetermineCollectionType();
+        	SetFromJsonDocument(inner);
         }
 
-        public string Id { get; private set; }
+		private void SetFromJsonDocument(JsonDocument inner)
+    	{
+			this.inner = inner;
+			Id = inner.Metadata.IfPresent<string>("@id");
+			LastModified = inner.LastModified ?? DateTime.MinValue;
+			if (LastModified.Kind == DateTimeKind.Utc)
+				LastModified = LastModified.ToLocalTime();
+			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
+			CollectionType = DetermineCollectionType();
+    	}
+
+    	public string Id { get; private set; }
         public string ClrType { get; private set; }
         public string CollectionType { get; private set; }
         public DateTime LastModified { get; private set; }
@@ -138,5 +146,10 @@ namespace Raven.Studio.Features.Documents
                     ? BuiltinCollectionName.System
                     : BuiltinCollectionName.Document);
         }
+
+    	public void Handle(DocumentUpdated message)
+    	{
+			SetFromJsonDocument(message.Document.JsonDocument);
+    	}
     }
 }
