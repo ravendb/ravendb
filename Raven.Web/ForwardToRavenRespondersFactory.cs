@@ -26,7 +26,6 @@ namespace Raven.Web
 				if (database != null)
 					return;
 				
-				ravenConfiguration.LoadLoggingSettings();
 
 				database = new DocumentDatabase(ravenConfiguration);
 				database.SpinBackgroundWorkers();
