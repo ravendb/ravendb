@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using log4net;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Data;
@@ -21,7 +21,7 @@ namespace Raven.Bundles.Replication.Reponsders
 {
     public class DocumentReplicationResponder : RequestResponder
     {
-        private ILog log = LogManager.GetLogger(typeof (DocumentReplicationResponder));
+    	private Logger log = LogManager.GetCurrentClassLogger();
 
         public override void Respond(IHttpContext context)
         {
@@ -84,7 +84,7 @@ namespace Raven.Bundles.Replication.Reponsders
             var existingDoc = actions.Documents.DocumentByKey(id, null);
             if (existingDoc == null)
             {
-                log.DebugFormat("New document {0} replicated successfully from {1}", id, src);
+                log.Debug("New document {0} replicated successfully from {1}", id, src);
 				actions.Documents.AddDocument(id, Guid.Empty, document, metadata);
                 return;
             }
@@ -93,7 +93,7 @@ namespace Raven.Bundles.Replication.Reponsders
             if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
                 (IsDirectChildOfCurrentDocument(existingDoc, metadata))) // this update is direct child of the existing doc, so we are fine with overwriting this
             {
-                log.DebugFormat("Existing document {0} replicated successfully from {1}", id, src);
+                log.Debug("Existing document {0} replicated successfully from {1}", id, src);
 				actions.Documents.AddDocument(id, null, document, metadata);
                 return;
             }
@@ -107,14 +107,14 @@ namespace Raven.Bundles.Replication.Reponsders
 
             if (existingDocumentIsInConflict) // the existing document is in conflict
             {
-                log.DebugFormat("Conflicted document {0} has a new version from {1}, adding to conflicted documents", id, src);
+                log.Debug("Conflicted document {0} has a new version from {1}, adding to conflicted documents", id, src);
                 
                 // just update the current doc with the new conflict document
                 existingDoc.DataAsJson.Value<RavenJArray>("Conflicts").Add(RavenJToken.FromObject(newDocumentConflictId));
 				actions.Documents.AddDocument(id, existingDoc.Etag, existingDoc.DataAsJson, existingDoc.Metadata);
                 return;
             }
-            log.DebugFormat("Existing document {0} is in conflict with replicated version from {1}, marking document as conflicted", id, src);
+            log.Debug("Existing document {0} is in conflict with replicated version from {1}, marking document as conflicted", id, src);
                 
             // we have a new conflict
             // move the existing doc to a conflict and create a conflict document

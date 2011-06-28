@@ -11,15 +11,14 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
-using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -34,7 +33,7 @@ namespace Raven.Bundles.Replication.Tasks
         }
 
         private DocumentDatabase docDb;
-        private readonly ILog log = LogManager.GetLogger(typeof(ReplicationTask));
+    	private readonly Logger log = LogManager.GetCurrentClassLogger();
         private bool firstTimeFoundNoReplicationDocument = true;
         private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
@@ -125,21 +124,21 @@ namespace Raven.Bundles.Replication.Tasks
             if (failureInformation.FailureCount > 1000)
             {
                 var shouldReplicateTo = currentReplicationAttempts%10 == 0;
-                log.DebugFormat("Failure count for {0} is {1}, skipping replication: {2}",
+                log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
                     dest, failureInformation.FailureCount, shouldReplicateTo == false);
                 return shouldReplicateTo;
             }
             if (failureInformation.FailureCount > 100)
             {
                 var shouldReplicateTo = currentReplicationAttempts % 5 == 0;
-                log.DebugFormat("Failure count for {0} is {1}, skipping replication: {2}",
+                log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
                     dest, failureInformation.FailureCount, shouldReplicateTo == false);
                 return shouldReplicateTo;
             }
             if (failureInformation.FailureCount > 10)
             {
                 var shouldReplicateTo = currentReplicationAttempts % 2 == 0;
-                log.DebugFormat("Failure count for {0} is {1}, skipping replication: {2}",
+                log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
                     dest, failureInformation.FailureCount, shouldReplicateTo == false);
                 return shouldReplicateTo;
             }
@@ -220,7 +219,7 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 if (IsFirstFailue(destination))
                 {
-                    log.InfoFormat(
+                    log.Info(
                         "This is the first failure for {0}, assuming transinet failure and trying again",
                         destination);
                     if (TryReplicationAttachments(destination, attachments))// success on second faile
@@ -242,7 +241,7 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 if (IsFirstFailue(destination))
                 {
-                    log.InfoFormat(
+                    log.Info(
                         "This is the first failure for {0}, assuming transinet failure and trying again",
                         destination);
                     if (TryReplicationDocuments(destination, jsonDocuments))// success on second faile
@@ -291,7 +290,7 @@ namespace Raven.Bundles.Replication.Tasks
                 }
                 using (request.GetResponse())
                 {
-                    log.InfoFormat("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
+                    log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
                 }
                 return true;
             }
@@ -323,7 +322,7 @@ namespace Raven.Bundles.Replication.Tasks
         {
             try
             {
-            	log.DebugFormat("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
+            	log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
 				var request = (HttpWebRequest)WebRequest.Create(destination.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl());
                 request.UseDefaultCredentials = true;
             	request.ContentType = "application/json; charset=utf-8";
@@ -338,7 +337,7 @@ namespace Raven.Bundles.Replication.Tasks
                 }
                 using (request.GetResponse())
                 {
-                    log.InfoFormat("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
+                    log.Info("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
                 }
                 return true;
             }
@@ -482,8 +481,10 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 			catch (Exception e)
 			{
-				log.ErrorFormat(e, "IGNORING BAD REPLICATION CONFIG!{0}Could not figure out connection options for [Url: {1}, ConnectionStringName: {2}]", 
-					Environment.NewLine, x.Url, x.ConnectionStringName);
+				log.ErrorException(
+					string.Format("IGNORING BAD REPLICATION CONFIG!{0}Could not figure out connection options for [Url: {1}, ConnectionStringName: {2}]", 
+					Environment.NewLine, x.Url, x.ConnectionStringName),
+					e);
 
 				return null;
 			}
