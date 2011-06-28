@@ -6,16 +6,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database;
-using Raven.Database.Json;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
-using Raven.Http;
 using Raven.Json.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
@@ -64,7 +60,7 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					if (Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]) == true)
 					{
-						logger.DebugFormat("Document with key '{0}' was deleted in transaction: {1}", key, transactionInformation.Id);
+						logger.Debug("Document with key '{0}' was deleted in transaction: {1}", key, transactionInformation.Id);
 						return null;
 					}
 					var etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
@@ -72,7 +68,7 @@ namespace Raven.Storage.Esent.StorageActions
 					RavenJObject metadata = ReadDocumentMetadataInTransaction(key, etag);
 
 
-					logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
+					logger.Debug("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
 					return createResult(new JsonDocumentMetadata()
 					{
 						NonAuthoritiveInformation = false,// we are the transaction, therefor we are Authoritive
@@ -90,7 +86,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				if(existsInTx)
 				{
-					logger.DebugFormat("Committed document with key '{0}' was not found, but exists in a separate transaction", key);
+					logger.Debug("Committed document with key '{0}' was not found, but exists in a separate transaction", key);
 					return createResult(new JsonDocumentMetadata
 					{
 						Etag = Guid.Empty,
@@ -100,11 +96,11 @@ namespace Raven.Storage.Esent.StorageActions
 						LastModified = DateTime.MinValue,
 					}, (docKey, etag, metadata) => new RavenJObject());
 				}
-				logger.DebugFormat("Document with key '{0}' was not found", key);
+				logger.Debug("Document with key '{0}' was not found", key);
 				return null;
 			}
 			var existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
-			logger.DebugFormat("Document with key '{0}' was found", key);
+			logger.Debug("Document with key '{0}' was found", key);
 			return createResult(new JsonDocumentMetadata()
 			{
 				Etag = existingEtag,
@@ -267,7 +263,7 @@ namespace Raven.Storage.Esent.StorageActions
 			// probably deleted before we can get it?
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 			{
-				logger.DebugFormat("Document with id {0} or higher was not found", startId);
+				logger.Debug("Document with id {0} or higher was not found", startId);
 				yield break;
 			}
 			do
@@ -278,7 +274,7 @@ namespace Raven.Storage.Esent.StorageActions
 					break;
 
 				var data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
-				logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
+				logger.Debug("Document with id '{0}' was found, doc length: {1}", id, data.Length);
 				var etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
@@ -335,7 +331,7 @@ namespace Raven.Storage.Esent.StorageActions
 				update.Save();
 			}
 
-			logger.DebugFormat("Inserted a new document with key '{0}', update: {1}, ",
+			logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
 							   key, isUpdate);
 
 			cacher.RemoveCachedDocument(key, newEtag);
@@ -384,7 +380,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 				update.Save();
 			}
-			logger.DebugFormat("Inserted a new document with key '{0}', update: {1}, in transaction: {2}",
+			logger.Debug("Inserted a new document with key '{0}', update: {1}, in transaction: {2}",
 							   key, isUpdate, transactionInformation.Id);
 
 			return newEtag;
@@ -398,7 +394,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
-				logger.DebugFormat("Document with key '{0}' was not found, and considered deleted", key);
+				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				return false;
 			}
 			if (Api.TryMoveFirst(session, Details))
@@ -410,7 +406,7 @@ namespace Raven.Storage.Esent.StorageActions
 			metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 
 			Api.JetDelete(session, Documents);
-			logger.DebugFormat("Document with key '{0}' was deleted", key);
+			logger.Debug("Document with key '{0}' was deleted", key);
 
 			cacher.RemoveCachedDocument(key, existingEtag);
 
@@ -424,7 +420,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
-				logger.DebugFormat("Document with key '{0}' was not found, and considered deleted", key);
+				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				return;
 			}
 
