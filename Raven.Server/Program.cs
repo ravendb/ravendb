@@ -11,10 +11,9 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
+using System.Xml;
 using NDesk.Options;
-using NLog.Layouts;
-using NLog.Targets;
-using NLog.Targets.Wrappers;
+using NLog.Config;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Http;
@@ -230,60 +229,15 @@ namespace Raven.Server
 
     	private static void ConfigureDebugLogging()
     	{
-			if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "NLog.config")))
+    		var nlogPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "NLog.config");
+    		if (File.Exists(nlogPath))
 				return;// that overrides the default config
 
-			NLog.LogManager.Configuration.AddTarget(typeof(HttpServer).FullName, 
-				new AsyncTargetWrapper(
-					new ColoredConsoleTarget
-					{
-						ErrorStream = false,
-						UseDefaultRowHighlightingRules = true,
-						Layout = new SimpleLayout(),
-					}
-					));
-
-
-			//new FileTarget
-			//        {
-			//            ArchiveAboveSize = 1024 * 1024, // 1 MB
-			//            ConcurrentWrites = false,
-			//            ArchiveEvery = FileArchivePeriod.Day,
-			//            ArchiveFileName = @"Logs\Raven.Server-######.log",
-			//            ArchiveNumbering = ArchiveNumberingMode.Sequence,
-			//            AutoFlush = false,
-			//            CreateDirs = true,
-			//            EnableFileDelete = true,
-			//            FileName = @"Logs\Raven.Server.log",
-			//            KeepFileOpen = true,
-			//            Layout = new SimpleLayout()
-			//        }
-			//var loggerRepository = LogManager.GetRepository(typeof(HttpServer).Assembly);
-			
-			//var patternLayout = new PatternLayout(PatternLayout.DefaultConversionPattern);
-			//var consoleAppender = new ConsoleAppender
-			//                        {
-			//                            Layout = patternLayout,
-			//                        };
-			//consoleAppender.ActivateOptions();
-			//((Logger)loggerRepository.GetLogger(typeof(HttpServer).FullName)).AddAppender(consoleAppender);
-			//var fileAppender = new RollingFileAppender
-			//                    {
-			//                        AppendToFile = false,
-			//                        File = "Raven.Server.log",
-			//                        Layout = patternLayout,
-			//                        MaxSizeRollBackups = 3,
-			//                        MaximumFileSize = "1024KB",
-			//                        StaticLogFileName = true,
-			//                        LockingModel = new FileAppender.MinimalLock()
-			//                    };
-			//fileAppender.ActivateOptions();
-
-			//var asyncBufferingAppender = new AsyncBufferingAppender();
-			//asyncBufferingAppender.AddAppender(fileAppender);
-
-			//((Hierarchy) loggerRepository).Root.AddAppender(asyncBufferingAppender);
-			//loggerRepository.Configured = true;
+			using (var stream = typeof(Program).Assembly.GetManifestResourceStream("Raven.Server.DefaultLogging.config"))
+			using (var reader = XmlReader.Create(stream))
+			{
+				NLog.LogManager.Configuration = new XmlLoggingConfiguration(reader, "default-config");
+			}
     	}
 
     	private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool lauchBrowser)
