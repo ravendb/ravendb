@@ -14,9 +14,9 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
-using log4net;
 using System.Linq;
 using Newtonsoft.Json;
+using NLog;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
 using Raven.Http.Abstractions;
@@ -62,7 +62,7 @@ namespace Raven.Http
 
         private HttpListener listener;
 
-        private readonly ILog logger = LogManager.GetLogger(typeof(HttpServer));
+		private readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         private int reqNum;
 
@@ -268,7 +268,7 @@ namespace Raven.Http
 				return;
 
     		var curReq = Interlocked.Increment(ref reqNum);
-    		logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
+    		logger.Debug("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
     		                   curReq, 
 							   logHttpRequestStatsParams.HttpMethod, 
 							   logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds, 
