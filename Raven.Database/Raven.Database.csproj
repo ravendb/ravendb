@@ -64,11 +64,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
-    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\log4net.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
@@ -77,6 +72,9 @@
     <Reference Include="Newtonsoft.Json, Version=4.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NLog">
+      <HintPath>..\SharedLibs\NLog.dll</HintPath>
     </Reference>
     <Reference Include="Rhino.Licensing">
       <HintPath>..\SharedLibs\Rhino.Licensing.dll</HintPath>
@@ -124,7 +122,6 @@
     <Compile Include="Impl\DocumentCacher.cs" />
     <Compile Include="Impl\DocumentRetriever.cs" />
     <Compile Include="Impl\IDocumentCacher.cs" />
-    <Compile Include="Impl\Logging\AsyncBufferingAppender.cs" />
     <Compile Include="Indexing\AbstractIndexingExecuter.cs" />
     <Compile Include="Indexing\FieldsToFetch.cs" />
     <Compile Include="Indexing\IIndexExtension.cs" />
@@ -325,7 +322,6 @@
     <Compile Include="Plugins\AbstractPutTrigger.cs" />
     <Compile Include="Plugins\IRequiresDocumentDatabaseInitialization.cs" />
     <Compile Include="DocumentDatabase.cs" />
-    <Compile Include="Extensions\LoggingExtensions.cs" />
     <Compile Include="Indexing\Index.cs" />
     <Compile Include="Indexing\AnonymousObjectToLuceneDocumentConverter.cs" />
     <Compile Include="Indexing\StatefulEnumerableWrapper.cs" />

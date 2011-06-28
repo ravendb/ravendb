@@ -9,13 +9,13 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
-using log4net;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -35,8 +35,8 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public abstract class Index : IDisposable
 	{
-		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof (Index) + ".Indexing");
-		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof (Index) + ".Querying");
+		protected static readonly Logger logIndexing = LogManager.GetLogger(typeof (Index).FullName + ".Indexing");
+		protected static readonly Logger logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
 		private readonly List<Document> currentlyIndexDocumented = new List<Document>();
 		private Directory directory;
 		protected readonly IndexDefinition indexDefinition;
@@ -63,7 +63,7 @@ namespace Raven.Database.Indexing
 			this.name = name;
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
-			logIndexing.DebugFormat("Creating index for {0}", name);
+			logIndexing.Debug("Creating index for {0}", name);
 			this.directory = directory;
 
 			// clear any locks that are currently held
@@ -314,8 +314,10 @@ namespace Raven.Database.Indexing
 					                 TryGetDocKey(o),
 					                 exception.Message
 						);
-					logIndexing.WarnFormat(exception, "Failed to execute indexing function on {0} on {1}", name,
-					                       TryGetDocKey(o));
+					logIndexing.WarnException(
+						string.Format("Failed to execute indexing function on {0} on {1}", name,
+					                       TryGetDocKey(o)),
+						exception);
 					try
 					{
 						actions.Indexing.IncrementIndexingFailure();
@@ -323,7 +325,9 @@ namespace Raven.Database.Indexing
 					catch (Exception e)
 					{
 						// we don't care about error here, because it is an error on error problem
-						logIndexing.WarnFormat(e, "Could not increment indexing failure rate for {0}", name);
+						logIndexing.WarnException(
+							string.Format("Could not increment indexing failure rate for {0}", name),
+							e);
 					}
 				}
 			}.RobustEnumeration(input, func);
@@ -343,8 +347,10 @@ namespace Raven.Database.Indexing
 					                 TryGetDocKey(o),
 					                 exception.Message
 						);
-					logIndexing.WarnFormat(exception, "Failed to execute indexing function on {0} on {1}", name,
-					                       TryGetDocKey(o));
+					logIndexing.WarnException(
+						string.Format("Failed to execute indexing function on {0} on {1}", name,
+					                       TryGetDocKey(o)),
+						exception);
 					try
 					{
 						actions.Indexing.IncrementReduceIndexingFailure();
@@ -352,7 +358,9 @@ namespace Raven.Database.Indexing
 					catch (Exception e)
 					{
 						// we don't care about error here, because it is an error on error problem
-						logIndexing.WarnFormat(e, "Could not increment indexing failure rate for {0}", name);
+						logIndexing.WarnException(
+							string.Format("Could not increment indexing failure rate for {0}", name),
+							e);
 					}
 				}
 			}.RobustEnumeration(input, func);
@@ -572,12 +580,12 @@ namespace Raven.Database.Indexing
 				Query luceneQuery;
 				if (string.IsNullOrEmpty(query))
 				{
-					logQuerying.DebugFormat("Issuing query on index {0} for all documents", parent.name);
+					logQuerying.Debug("Issuing query on index {0} for all documents", parent.name);
 					luceneQuery = new MatchAllDocsQuery();
 				}
 				else
 				{
-					logQuerying.DebugFormat("Issuing query on index {0} for: {1}", parent.name, query);
+					logQuerying.Debug("Issuing query on index {0} for: {1}", parent.name, query);
 					var toDispose = new List<Action>();
 					PerFieldAnalyzerWrapper searchAnalyzer = null;
 					try

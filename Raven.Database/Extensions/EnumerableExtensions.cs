@@ -5,9 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using log4net;
-using Raven.Abstractions.MEF;
-using System.Linq;
 
 namespace Raven.Database.Extensions
 {

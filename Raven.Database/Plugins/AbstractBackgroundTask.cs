@@ -5,21 +5,15 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition;
-using System.Threading;
 using System.Threading.Tasks;
-using log4net;
+using NLog;
 
 namespace Raven.Database.Plugins
 {
 	[InheritedExport]
 	public abstract class AbstractBackgroundTask : IStartupTask
 	{
-		private readonly ILog log;
-
-		protected AbstractBackgroundTask()
-		{
-			log = LogManager.GetLogger(GetType());
-		}
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		public DocumentDatabase Database { get; set; }
 
@@ -47,7 +41,7 @@ namespace Raven.Database.Plugins
 				}
 				catch (Exception e)
 				{
-					log.Error("Failed to execute background task", e);
+					log.ErrorException("Failed to execute background task", e);
 				}
 				if (foundWork == false)
 				{

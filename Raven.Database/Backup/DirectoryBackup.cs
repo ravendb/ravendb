@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using log4net;
+using NLog;
 using Directory = System.IO.Directory;
 using Raven.Database.Extensions;
 
@@ -26,7 +26,7 @@ namespace Raven.Database.Backup
         public event Action<string> Notify = delegate { };
 
         private Dictionary<string, long> fileToSize = new Dictionary<string, long>();
-        private readonly ILog logger = LogManager.GetLogger(typeof(DirectoryBackup));
+    	private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         private readonly string source;
         private readonly string destination;
@@ -68,7 +68,9 @@ namespace Raven.Database.Backup
             }
             catch (Exception e) //cannot delete, probably because there is a file being written there
             {
-                logger.WarnFormat(e, "Could not delete {0}, will delete those on startup", tempPath);
+                logger.WarnException(
+					string.Format("Could not delete {0}, will delete those on startup", tempPath),
+					e);
 
                 foreach (var file in Directory.EnumerateFiles(tempPath))
                 {
