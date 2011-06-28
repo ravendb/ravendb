@@ -179,6 +179,7 @@
     <Compile Include="Bugs\IntegerIds.cs" />
     <Compile Include="Bugs\IteratingTwice.cs" />
     <Compile Include="Bugs\Iulian\CanReadEntityWithUrlId.cs" />
+    <Compile Include="Bugs\LastModifiedShouldBeQueryable.cs" />
     <Compile Include="Bugs\LinqOnDictionary.cs" />
     <Compile Include="Bugs\LuceneIndexing.cs" />
     <Compile Include="Bugs\LuceneQueryShouldNotModifyDynamicDocument.cs" />
