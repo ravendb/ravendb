@@ -1,7 +1,5 @@
-﻿using Caliburn.Micro;
-using Raven.Json.Linq;
+﻿using Raven.Json.Linq;
 using Raven.Studio.Framework;
-using Raven.Studio.Messages;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -14,27 +12,21 @@ namespace Raven.Studio.Features.Documents
     /// <summary>
     /// This view model is for displaying documents in bulk. There is no change notification and no behaviors related to editing
     /// </summary>
-    public class DocumentViewModel : ISupportDocumentTemplate,
-		IHandle<DocumentUpdated>
+    public class DocumentViewModel : ISupportDocumentTemplate
     {
         const int SummaryLength = 150;
-        JsonDocument inner;
+    	readonly JsonDocument inner;
 
         public DocumentViewModel(JsonDocument inner)
         {
-        	Initialize(inner);
-        }
-
-		private void Initialize(JsonDocument jsonDocument)
-    	{
-			inner = jsonDocument;
-			Id = jsonDocument.Metadata.IfPresent<string>("@id");
-			LastModified = jsonDocument.LastModified ?? DateTime.MinValue;
+			this.inner = inner;
+			Id = inner.Metadata.IfPresent<string>("@id");
+			LastModified = inner.LastModified ?? DateTime.MinValue;
 			if (LastModified.Kind == DateTimeKind.Utc)
 				LastModified = LastModified.ToLocalTime();
-			ClrType = jsonDocument.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
+			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
 			CollectionType = DetermineCollectionType();
-    	}
+        }
 
     	public string Id { get; private set; }
         public string ClrType { get; private set; }
@@ -146,10 +138,5 @@ namespace Raven.Studio.Features.Documents
                     ? BuiltinCollectionName.System
                     : BuiltinCollectionName.Document);
         }
-
-    	public void Handle(DocumentUpdated message)
-    	{
-			Initialize(message.Document.JsonDocument);
-    	}
     }
 }
