@@ -62,7 +62,7 @@ namespace Raven.Http
 
         private HttpListener listener;
 
-		private readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         private int reqNum;
 
@@ -212,7 +212,7 @@ namespace Raven.Http
             {
                 HandleException(ctx, e);
 				if (ShouldLogException(e))
-					logger.Warn("Error on request", e);
+					logger.WarnException("Error on request", e);
             }
             finally
             {
@@ -222,7 +222,7 @@ namespace Raven.Http
             	}
             	catch (Exception e)
             	{
-            		logger.Error("Could not finalize request properly", e);
+            		logger.ErrorException("Could not finalize request properly", e);
             	}
             }
         }
@@ -246,7 +246,7 @@ namespace Raven.Http
 			}
 			catch (Exception e)
 			{
-				logger.Warn("Could not gather information to log request stats", e);
+				logger.WarnException("Could not gather information to log request stats", e);
 			}
 
 			ctx.FinalizeResonse();
@@ -292,7 +292,7 @@ namespace Raven.Http
             }
             catch (Exception)
             {
-                logger.Error("Failed to properly handle error, further error handling is ignored", e);
+                logger.ErrorException("Failed to properly handle error, further error handling is ignored", e);
             }
         }
 
