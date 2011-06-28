@@ -24,7 +24,7 @@ namespace Raven.Storage.Esent.Backup
 		private readonly string to;
 		private readonly string src;
 
-		private readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		public BackupOperation(DocumentDatabase database, string src, string to)
 		{
