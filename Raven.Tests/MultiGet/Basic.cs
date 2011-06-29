@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.MultiGet
 {
@@ -45,6 +46,60 @@ namespace Raven.Tests.MultiGet
 				}
 
 				using(var resp = request.GetResponse())
+				using (var stream = resp.GetResponseStream())
+				{
+					var result = new StreamReader(stream).ReadToEnd();
+					Assert.Contains("Ayende", result);
+					Assert.Contains("Oren", result);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanUseMultiQuery()
+		{
+			using (GetNewServer())
+			using (var docStore = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var session = docStore.OpenSession())
+				{
+					session.Store(new User { Name = "Ayende" });
+					session.Store(new User { Name = "Oren" });
+					session.SaveChanges();
+				}
+
+				using (var session = docStore.OpenSession())
+				{
+					session.Query<User>()
+						.Customize(x=>x.WaitForNonStaleResults())
+						.Where(u=>u.Name == "Ayende")
+						.ToArray();
+				}
+
+
+				var request = (HttpWebRequest)WebRequest.Create("http://localhost:8080/multi_get");
+				request.Method = "POST";
+				using (var stream = request.GetRequestStream())
+				{
+					var streamWriter = new StreamWriter(stream);
+					new JsonSerializer().Serialize(streamWriter, new[]
+					{
+						new GetRequest
+						{
+							Url = "/indexes/dynamic/Users",
+							Query = "query=Name:Ayende"
+						},
+						new GetRequest
+						{
+							Url = "/indexes/dynamic/Users",
+							Query = "query=Name:Oren"
+						},
+					});
+					streamWriter.Flush();
+					stream.Flush();
+				}
+
+				using (var resp = request.GetResponse())
 				using (var stream = resp.GetResponseStream())
 				{
 					var result = new StreamReader(stream).ReadToEnd();
