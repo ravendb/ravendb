@@ -86,7 +86,7 @@ namespace Raven.Http
 
             foreach (var requestResponder in RequestResponders)
             {
-                requestResponder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value);
+                requestResponder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, this);
             }
         }
 

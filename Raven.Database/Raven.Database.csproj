@@ -355,6 +355,7 @@
     <Compile Include="Server\Responders\DocumentBatch.cs" />
     <Compile Include="Server\Responders\Index.cs" />
     <Compile Include="Server\Responders\Indexes.cs" />
+    <Compile Include="Server\Responders\MultiGet.cs" />
     <Compile Include="Server\Responders\Queries.cs" />
     <Compile Include="Server\Responders\RequestResponder.cs" />
     <Compile Include="Server\Responders\SilverlightEnsuresStartup.cs" />
