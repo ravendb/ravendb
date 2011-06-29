@@ -23,7 +23,7 @@ namespace Raven.Tests.Bugs
 					var dateTime = DateTools.DateToString(DateTime.UtcNow, DateTools.Resolution.MILLISECOND);
 
 					var results = session.Advanced.LuceneQuery<object>(new RavenDocumentsByEntityName().IndexName)
-						.Where("LastModified:{* TO " + dateTime + "}")
+						.Where("LastModified:[* TO " + dateTime + "]")
 						.WaitForNonStaleResults()
 						.ToArray();
 
