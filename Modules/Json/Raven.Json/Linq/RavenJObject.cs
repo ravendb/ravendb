@@ -225,7 +225,10 @@ namespace Raven.Json.Linq
 				foreach (var property in Properties)
 				{
 					writer.WritePropertyName(property.Key);
-					property.Value.WriteTo(writer, converters);
+					if(property.Value == null)
+						writer.WriteNull();
+					else
+						property.Value.WriteTo(writer, converters);
 				}
 			}
 

@@ -356,6 +356,7 @@
     <Compile Include="Bugs\QueryingFromIndex.cs" />
     <Compile Include="Bugs\QueryWithPercentageSignp.cs" />
     <Compile Include="Bugs\QueryWithReservedCharacters.cs" />
+    <Compile Include="Bugs\RavenDbNestedPatchTesting.cs" />
     <Compile Include="Bugs\RavenDBQuery.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\RemoteTx.cs" />
