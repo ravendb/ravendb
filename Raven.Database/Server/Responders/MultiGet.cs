@@ -37,7 +37,7 @@ namespace Raven.Database.Server.Responders
 					results.Add(ctx.Complete());
 				}
 			});
-			context.WriteJson(requests);
+			context.WriteJson(results);
 		}
 
 		public class MultiGetHttpContext : IHttpContext
@@ -109,19 +109,21 @@ namespace Raven.Database.Server.Responders
 			public MultiGetHttpRequest(GetRequest req, IHttpRequest realRequest)
 			{
 				this.req = req;
-				QueryString = HttpUtility.ParseQueryString(req.Query);
+				QueryString = HttpUtility.ParseQueryString(req.Query ?? "");
 				Url = new UriBuilder(realRequest.Url)
 				{
 					Query = req.Query,
 					Path = req.Url
 				}.Uri;
 				RawUrl = Url.ToString();
+				Headers = new NameValueCollection();
+				foreach (var header in req.Headers)
+				{
+					Headers.Add(header.Key, header.Value);
+				}
 			}
 
-			public NameValueCollection Headers
-			{
-				get { return req.Headers; }
-			}
+			public NameValueCollection Headers { get; set; }
 
 			public Stream InputStream
 			{
@@ -169,7 +171,7 @@ namespace Raven.Database.Server.Responders
 
 			public void AddHeader(string name, string value)
 			{
-				getResponse.Headers.Add(name, value);
+				getResponse.Headers[name] = value;
 			}
 
 			public Stream OutputStream { get; set; }
