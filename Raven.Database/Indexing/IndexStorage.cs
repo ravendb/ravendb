@@ -6,9 +6,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
+using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
@@ -16,6 +18,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -173,14 +176,31 @@ namespace Raven.Database.Indexing
             IndexQuery query, 
             Func<IndexQueryResult, bool> shouldIncludeInResults,
 			FieldsToFetch fieldsToFetch)
-		{
-			Index value;
-			if (indexes.TryGetValue(index, out value) == false)
-			{
-				log.Debug("Query on non existing index {0}", index);
-				throw new InvalidOperationException("Index " + index + " does not exists");
-			}
+	    {
+	    	Index value;
+	    	if (indexes.TryGetValue(index, out value) == false)
+	    	{
+	    		log.Debug("Query on non existing index {0}", index);
+	    		throw new InvalidOperationException("Index " + index + " does not exists");
+	    	}
 	    	return new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch).Query();
+	    }
+
+		protected internal static IDisposable EnsureInvariantCulture()
+		{
+			if (Thread.CurrentThread.CurrentCulture == CultureInfo.InvariantCulture)
+				return null;
+
+			var oldCurrentCulture = Thread.CurrentThread.CurrentCulture;
+			var oldCurrentUiCulture = Thread.CurrentThread.CurrentUICulture;
+
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+			return new DisposableAction(() =>
+			{
+				Thread.CurrentThread.CurrentCulture = oldCurrentCulture;
+				Thread.CurrentThread.CurrentUICulture = oldCurrentUiCulture;
+			});
 		}
 
 		public void RemoveFromIndex(string index, string[] keys, WorkContext context)
@@ -207,7 +227,10 @@ namespace Raven.Database.Indexing
 				log.Debug("Tried to index on a non existant index {0}, ignoring", index);
 				return;
 			}
-			value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
+			using (EnsureInvariantCulture())
+			{
+				value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
+			}
 		}
 
 		public void Reduce(string index, AbstractViewGenerator viewGenerator, IEnumerable<object> mappedResults,
@@ -225,7 +248,10 @@ namespace Raven.Database.Indexing
 				log.Warn("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
 				return;
 			}
-			mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
+			using(EnsureInvariantCulture())
+			{
+				mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
+			}
 		}
 
         /// <summary>
