@@ -180,6 +180,9 @@
     <Compile Include="Impl\DotNetZip\StaticTree.cs" />
     <Compile Include="Impl\DotNetZip\WorkItem.cs" />
     <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
+    <Compile Include="Infrastructure\Services\NavigationService.cs" />
+    <Compile Include="Infrastructure\Services\UriBinder.cs" />
+    <Compile Include="Messages\NavigationOccurred2.cs" />
     <Compile Include="Messages\NotificationLevel.cs" />
     <Compile Include="Plugins\Database\ExportDatabaseExplorerItemAttribute.cs" />
     <Compile Include="Framework\DynamicViewModel.cs" />
@@ -542,6 +545,7 @@
   <ItemGroup>
     <Resource Include="Resources\Images\pencil.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
