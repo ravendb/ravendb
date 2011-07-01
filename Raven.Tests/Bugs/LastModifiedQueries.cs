@@ -59,5 +59,27 @@ namespace Raven.Tests.Bugs
 				}
 			}
 		}
+	
+		[Fact]
+		public void LastModifiedShouldNotBreakMultiLoad()
+		{
+			var user1 = new User { Name = "John Doe" };
+			var user2 = new User { Name = "Jane Doe" };
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(user1);
+					session.Store(user2);
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var users = session.Load<User>(new[] {user1.Id, user2.Id});
+					Assert.Equal(2, users.Count());
+				}
+			}
+		}
 	}
 }
