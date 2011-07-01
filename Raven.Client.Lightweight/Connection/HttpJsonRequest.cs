@@ -37,6 +37,8 @@ namespace Raven.Client.Connection
 		private readonly IHoldProfilingInformation owner;
 		internal bool ShouldCacheRequest;
 		private string postedData;
+		private DateTime createdAt = DateTime.Now;
+		private DateTime completedAt;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -70,7 +72,7 @@ namespace Raven.Client.Connection
 			{
 				return new ImmediateCompletionResult();
 			}
-
+			
 			return webRequest.BeginGetResponse(callback, state);
 		}
 
@@ -90,6 +92,7 @@ namespace Raven.Client.Connection
 				var cachedResponse = factory.GetCachedResponse(this);
 				factory.InvokeLogRequest(owner, new RequestResultArgs
 				{
+					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.AggresivelyCached,
@@ -114,6 +117,7 @@ namespace Raven.Client.Connection
 				var result = factory.GetCachedResponse(this);
 				factory.InvokeLogRequest(owner, new RequestResultArgs
 				{
+					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.AggresivelyCached,
@@ -133,9 +137,11 @@ namespace Raven.Client.Connection
 			try
 			{
 				response = getResponse();
+				completedAt = DateTime.Now;
 			}
 			catch (WebException e)
 			{
+				completedAt = DateTime.Now;
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse == null || 
 					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
@@ -147,6 +153,7 @@ namespace Raven.Client.Connection
 
 					factory.InvokeLogRequest(owner, new RequestResultArgs
 					{
+						DurationMilliseconds = CalculateDuration(),
 						Method = webRequest.Method,
 						HttpResult = httpResult,
 						Status = RequestStatus.ErrorOnServer,
@@ -165,6 +172,7 @@ namespace Raven.Client.Connection
 
 					factory.InvokeLogRequest(owner, new RequestResultArgs
 					{
+						DurationMilliseconds = CalculateDuration(),
 						Method = webRequest.Method,
 						HttpResult = (int) httpWebResponse.StatusCode,
 						Status = RequestStatus.Cached,
@@ -182,6 +190,7 @@ namespace Raven.Client.Connection
 
 					factory.InvokeLogRequest(owner, new RequestResultArgs
 					{
+						DurationMilliseconds = CalculateDuration(),
 						Method = webRequest.Method,
 						HttpResult = (int)httpWebResponse.StatusCode,
 						Status = RequestStatus.Cached,
@@ -206,6 +215,7 @@ namespace Raven.Client.Connection
 
 				factory.InvokeLogRequest(owner, new RequestResultArgs
 				{
+					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.SentToServer,
@@ -216,6 +226,11 @@ namespace Raven.Client.Connection
 
 				return text;
 			}
+		}
+
+		private double CalculateDuration()
+		{
+			return (completedAt - createdAt).TotalMilliseconds;
 		}
 
 		/// <summary>

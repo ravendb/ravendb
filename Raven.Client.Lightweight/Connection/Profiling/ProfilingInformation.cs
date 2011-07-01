@@ -46,6 +46,11 @@ namespace Raven.Client.Connection.Profiling
 		/// </summary>
 		public DateTime At = DateTime.Now;
 
+		/// <summary>
+		/// The duration this session was opened
+		/// </summary>
+		public double DurationMilliseconds;
+
 		///<summary>
 		/// Create a new instance of this class
 		///</summary>

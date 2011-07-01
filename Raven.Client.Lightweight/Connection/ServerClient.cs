@@ -1170,6 +1170,27 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			get { return profilingInformation; }
 		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
+		public void Dispose()
+		{
+			GC.SuppressFinalize(this);
+			if (ProfilingInformation != null)
+			{
+				ProfilingInformation.DurationMilliseconds = (DateTime.Now - ProfilingInformation.At).TotalMilliseconds;
+			}
+		}
+
+		/// <summary>
+		/// Allows an <see cref="T:System.Object"/> to attempt to free resources and perform other cleanup operations before the <see cref="T:System.Object"/> is reclaimed by garbage collection.
+		/// </summary>
+		~ServerClient()
+		{
+			Dispose();
+		}
 	}
 }
 #endif

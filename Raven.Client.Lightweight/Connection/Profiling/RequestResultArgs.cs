@@ -31,6 +31,10 @@ namespace Raven.Client.Connection.Profiling
 		/// </summary>
 		public string Url { get; set; }
 		/// <summary>
+		/// How long this request took
+		/// </summary>
+		public double DurationMilliseconds { get; set; }
+		/// <summary>
 		/// The request method
 		/// </summary>
 		public string Method { get; set; }
