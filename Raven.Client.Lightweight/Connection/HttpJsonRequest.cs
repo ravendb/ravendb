@@ -68,7 +68,7 @@ namespace Raven.Client.Connection
 		{
 			if (SkipServerCheck)
 			{
-				return new ImmedateCompletionResult();
+				return new ImmediateCompletionResult();
 			}
 
 			return webRequest.BeginGetResponse(callback, state);
@@ -364,7 +364,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private class ImmedateCompletionResult : IAsyncResult, IDisposable
+		private class ImmediateCompletionResult : IAsyncResult, IDisposable
 		{
 			private ManualResetEvent manualResetEvent;
 
