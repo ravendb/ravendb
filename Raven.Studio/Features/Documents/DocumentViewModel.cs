@@ -15,20 +15,20 @@ namespace Raven.Studio.Features.Documents
     public class DocumentViewModel : ISupportDocumentTemplate
     {
         const int SummaryLength = 150;
-        readonly JsonDocument inner;
+    	readonly JsonDocument inner;
 
         public DocumentViewModel(JsonDocument inner)
         {
-            this.inner = inner;
-            Id = inner.Metadata.IfPresent<string>("@id");
+			this.inner = inner;
+			Id = inner.Metadata.IfPresent<string>("@id");
 			LastModified = inner.LastModified ?? DateTime.MinValue;
-        	if (LastModified.Kind == DateTimeKind.Utc)
-        		LastModified = LastModified.ToLocalTime();
+			if (LastModified.Kind == DateTimeKind.Utc)
+				LastModified = LastModified.ToLocalTime();
 			ClrType = inner.Metadata.IfPresent<string>(Raven.Abstractions.Data.Constants.RavenClrType);
-            CollectionType = DetermineCollectionType();
+			CollectionType = DetermineCollectionType();
         }
 
-        public string Id { get; private set; }
+    	public string Id { get; private set; }
         public string ClrType { get; private set; }
         public string CollectionType { get; private set; }
         public DateTime LastModified { get; private set; }
