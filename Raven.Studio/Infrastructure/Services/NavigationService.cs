@@ -12,6 +12,7 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Infrastructure.Services
 {
+	[Export]
 	public class NavigationService
 	{
 		readonly IEventAggregator events;

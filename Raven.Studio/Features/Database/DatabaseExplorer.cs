@@ -115,7 +115,7 @@ namespace Raven.Studio.Features.Database
 		{
 			if (message.Type == typeof(CollectionsViewModel))
 			{
-				var viewModel = IoC.GetInstance(message.Type, null);
+				var viewModel = (IScreen)IoC.GetInstance(message.Type, null);
 				Show(viewModel);
 			}
 		}
