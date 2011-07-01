@@ -72,9 +72,12 @@ namespace Raven.Client.Connection
 			if (metadata == null) return defaultValue;
 			if (!metadata.ContainsKey(key)) return defaultValue;
 
-			var value = metadata[key].Value<T>();
+			var value = metadata[key].Value<object>();
 
-			return convert(value);
+			if(value is TResult)
+				return (TResult) value;
+
+			return convert(metadata[key].Value<T>());
 		}
 	}
 }
