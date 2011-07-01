@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Silverlight.Connection;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Tasks
 {
@@ -25,8 +26,8 @@ namespace Raven.Studio.Features.Tasks
 		bool exportIndexesOnly;
 
 		[ImportingConstructor]
-		public ExportTask(IServer server, IEventAggregator events)
-			: base(server, events)
+		public ExportTask(IServer server, IEventAggregator events, NavigationService navigationService)
+			: base(server, events, navigationService)
 		{
 		}
 

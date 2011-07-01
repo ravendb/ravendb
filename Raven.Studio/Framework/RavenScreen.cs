@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Framework
+﻿using Raven.Studio.Infrastructure.Navigation;
+
+namespace Raven.Studio.Framework
 {
 	using Caliburn.Micro;
 	using Messages;
@@ -6,11 +8,24 @@
 	public abstract class RavenScreen : Screen
 	{
 		protected IEventAggregator Events;
+		protected readonly NavigationService NavigationService;
 		bool isBusy;
 
-		protected RavenScreen(IEventAggregator events)
+		protected RavenScreen(IEventAggregator events, NavigationService navigationService)
 		{
 			Events = events;
+			this.NavigationService = navigationService;
+		}
+
+		protected override void OnViewAttached(object view, object context)
+		{
+			base.OnViewAttached(view, context);
+			NavigationService.Track(GetScreenNavigationState());
+		}
+
+		protected virtual string GetScreenNavigationState()
+		{
+			return GetType().Name;
 		}
 
 		public bool IsBusy

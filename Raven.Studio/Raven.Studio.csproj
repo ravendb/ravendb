@@ -180,9 +180,10 @@
     <Compile Include="Impl\DotNetZip\StaticTree.cs" />
     <Compile Include="Impl\DotNetZip\WorkItem.cs" />
     <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
-    <Compile Include="Infrastructure\Services\NavigationService.cs" />
-    <Compile Include="Infrastructure\Services\UriBinder.cs" />
-    <Compile Include="Messages\NavigationOccurred2.cs" />
+    <Compile Include="Infrastructure\Navigation\DocumentByIdNavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\INavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\INavigatorMetdata.cs" />
+    <Compile Include="Infrastructure\Navigation\NavigationService.cs" />
     <Compile Include="Messages\NotificationLevel.cs" />
     <Compile Include="Plugins\Database\ExportDatabaseExplorerItemAttribute.cs" />
     <Compile Include="Framework\DynamicViewModel.cs" />

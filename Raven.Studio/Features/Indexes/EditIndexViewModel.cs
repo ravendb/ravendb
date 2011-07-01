@@ -1,6 +1,7 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Indexes
 {
@@ -25,8 +26,8 @@ namespace Raven.Studio.Features.Indexes
 		bool shouldShowReduce;
 		bool shouldShowTransformResults;
 
-		public EditIndexViewModel(IndexDefinition index, IServer server, IEventAggregator events)
-			: base(events)
+		public EditIndexViewModel(IndexDefinition index, IServer server, IEventAggregator events, NavigationService navigationService)
+			: base(events, navigationService)
 		{
 			DisplayName = "Edit Index";
 

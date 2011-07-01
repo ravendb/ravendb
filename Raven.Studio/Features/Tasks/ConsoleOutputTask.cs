@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Tasks
+﻿using Raven.Studio.Infrastructure.Navigation;
+
+namespace Raven.Studio.Features.Tasks
 {
 	using Caliburn.Micro;
 	using Database;
@@ -11,8 +13,8 @@
 		protected readonly IServer server;
 		string status;
 
-		protected ConsoleOutputTask(IServer server, IEventAggregator events)
-			: base(events)
+		protected ConsoleOutputTask(IServer server, IEventAggregator events, NavigationService navigationService)
+			: base(events, navigationService)
 		{
 			this.server = server;
 			Console = new BindableCollection<string>();

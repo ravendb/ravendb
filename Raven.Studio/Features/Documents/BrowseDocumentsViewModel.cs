@@ -1,4 +1,5 @@
 using Raven.Abstractions.Data;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -21,8 +22,8 @@ namespace Raven.Studio.Features.Documents
 		string status;
 
 		[ImportingConstructor]
-		public BrowseDocumentsViewModel(IServer server, IEventAggregator events)
-			: base(events)
+		public BrowseDocumentsViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
+			: base(events, navigationService)
 		{
 			DisplayName = "Documents";
 			this.server = server;

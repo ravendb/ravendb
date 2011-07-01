@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Security.Cryptography;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio
 {
@@ -25,6 +26,13 @@ namespace Raven.Studio
     	{
 			LogManager.GetLog = type => new DebugLogger(type);	
     	}
+
+		protected override void OnStartup(object sender, StartupEventArgs e)
+		{
+			base.OnStartup(sender, e);
+			var navigationService = container.GetExportedValue<NavigationService>();
+			navigationService.Initialize();
+		}
 
 		protected override void Configure()
 		{

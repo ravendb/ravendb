@@ -16,8 +16,7 @@ namespace Raven.Studio.Features.Database
 	[Export(typeof(DatabaseExplorer))]
 	public class DatabaseExplorer : Conductor<object>, IPartImportsSatisfiedNotification,
 		IHandle<DatabaseScreenRequested>,
-		IHandle<DocumentDeleted>,
-		IHandle<NavigationOccurred2>
+		IHandle<DocumentDeleted>
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
@@ -109,15 +108,6 @@ namespace Raven.Studio.Features.Database
 			var screen = item as IScreen;
 			if (screen != null) 
 				SelectedItem = screen.DisplayName;
-		}
-
-		public void Handle(NavigationOccurred2 message)
-		{
-			if (message.Type == typeof(CollectionsViewModel))
-			{
-				var viewModel = IoC.GetInstance(message.Type, null);
-				Show(viewModel);
-			}
 		}
 	}
 }
