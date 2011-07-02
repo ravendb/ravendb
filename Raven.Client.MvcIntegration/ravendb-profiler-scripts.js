@@ -4,7 +4,7 @@ var RavenDBProfiler = (function ($) {
     popupButton,
     resultDialog;
 
-	var templates = ['ravendb-profiler', 'session-template', 'request-details'];
+	var templates = ['totals', 'ravendb-profiler', 'session-template', 'request-details'];
 
 	var load = function () {
 		if (options.id.length == 0)
@@ -52,9 +52,28 @@ var RavenDBProfiler = (function ($) {
 			var results = str.split('?');
 			if (results.length > 1) {
 				var queryItems = results[1].split('&');
-				return unescape(unescape(queryItems.join('\r\n')));
+				return unescape(unescape(queryItems.join('\r\n').trim()));
 			}
 			return "";
+		},
+		round: function (n) { // round to 2 points after period
+			return Math.round(n * 100) / 100;
+		},
+		totalRequestsTimes: function (data) {
+			var total = 0;
+			for (var i = 0; i < data.results.length; i++) {
+				for (var j = 0; j < data.results[i].Requests.length; j++) {
+					total += data.results[i].Requests[j].DurationMilliseconds;
+				}
+			}
+			return this.round(total);
+		},
+		totalRequests: function (data) {
+			var total = 0;
+			for (var i = 0; i < data.results.length; i++) {
+				total += data.results[i].Requests.length;
+			}
+			return this.round(total);
 		}
 	};
 
@@ -62,7 +81,9 @@ var RavenDBProfiler = (function ($) {
 		if (!popupButton)
 			createUI();
 
-		$.tmpl('ravendb-profiler', resultList).appendTo("#ravendb-session-container");
+		$.tmpl('totals', { results: resultList }, templateOptions).appendTo("#ravendb-session-container");
+		$.tmpl('ravendb-profiler', resultList, templateOptions).appendTo("#ravendb-session-container");
+		fixupTableColumnsWidth();
 	};
 
 	var createUI = function () {
@@ -74,7 +95,7 @@ var RavenDBProfiler = (function ($) {
 		popupButton = $('<span class="rdbprofilerbutton">RavenDB Profiler</span>')
         .appendTo('body')
         .click(function () {
-            container.toggle();
+        	container.toggle();
         });
 
 
@@ -89,41 +110,41 @@ var RavenDBProfiler = (function ($) {
 		});
 		$("#ravendb-session-container")
         .delegate('.show-full-url', 'click', function () {
-            var item = $.tmplItem(this);
-            var req = item.data.Requests[parseInt($(this).attr('request-index'))];
-            alert(req.Url);
+        	var item = $.tmplItem(this);
+        	var req = item.data.Requests[parseInt($(this).attr('request-index'))];
+        	alert(req.Url);
         })
         .delegate('.show-request-details', 'click', function () {
-            var item = $.tmplItem(this);
-            var req = item.data.Requests[parseInt($(this).attr('request-index'))];
-            $.tmpl('request-details', req, templateOptions).appendTo($('#ravendb-session-container'));
+        	var item = $.tmplItem(this);
+        	var req = item.data.Requests[parseInt($(this).attr('request-index'))];
+        	$.tmpl('request-details', req, templateOptions).appendTo($('#ravendb-session-container'));
 
         })
         .delegate('.ravendb-close', 'click', function () {
-            $(this).parent().remove();
+        	$(this).parent().remove();
         })
         .delegate(".toggle-request", "click", function () {
 
-            if (this.collapse) {
-            	$('.session-information', $(this).parent()).remove()
-            	this.collapse = false;
-            	fixupTableColumnsWidth();
-            	return;
-            }
+        	if (this.collapse) {
+        		$('.session-information', $(this).parent()).remove();
+        		this.collapse = false;
+        		fixupTableColumnsWidth();
+        		return;
+        	}
 
-            this.collapse = true;
-            var item = $.tmplItem(this);
+        	this.collapse = true;
+        	var item = $.tmplItem(this);
 
-            $.tmpl('session-template', item.data, templateOptions).appendTo($(this).parent());
+        	$.tmpl('session-template', item.data, templateOptions).appendTo($(this).parent());
 
-            fixupTableColumnsWidth();
+        	fixupTableColumnsWidth();
         });
 	};
 
 	return {
 		initalize: function (opt) {
 			options = $.extend({}, opt, {});
-			container = $('<div class="ravendb-profiler-results"><h2>Sessions</h2><ol id="ravendb-session-container"></ol><p/> <a href="#" class="ravendb-toggle ravendb-close">Close</a></div>')
+			container = $('<div class="ravendb-profiler-results"><div id="ravendb-session-container"/><p/> <a href="#" class="ravendb-toggle ravendb-close">Close</a></div>')
             .appendTo('body');
 
 			$('body').ajaxComplete(function (event, xhrRequest, ajaxOptions) {

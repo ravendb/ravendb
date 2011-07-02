@@ -78,7 +78,7 @@ namespace Raven.Client.MvcIntegration
 		private void HandlePathRequest(HttpContext context, string path)
 		{
 			if(path.EndsWith(".js"))
-				context.Response.ContentType = "application/x-javascript";
+				context.Response.ContentType = "application/javascript";
 			else if (path.EndsWith(".tmpl.html"))
 				context.Response.ContentType = "text/html";
 			else if (path.EndsWith(".css"))

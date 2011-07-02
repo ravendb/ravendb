@@ -94,6 +94,9 @@
   <ItemGroup>
     <EmbeddedResource Include="jquery.tmpl.min.js" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Templates\totals.tmpl.html" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
