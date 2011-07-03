@@ -4,9 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
+using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Tokenattributes;
+using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Raven.Abstractions.Indexing;
@@ -22,6 +27,30 @@ namespace Raven.Database.Indexing
 		public RangeQueryParser(Version matchVersion, string f, Analyzer a)
 			: base(matchVersion, f, a)
 		{
+		}
+
+		public override Query GetFieldQuery(string field, string queryText)
+		{
+			var fieldQuery = base.GetFieldQuery(field, queryText);
+			if (fieldQuery is TermQuery
+				&& queryText.EndsWith("*")
+				&& !queryText.EndsWith(@"\*")
+				&& queryText.Contains(" "))
+			{ 
+				var analyzer = GetAnalyzer();
+				var tokenStream = analyzer.ReusableTokenStream(field, new StringReader(queryText.Substring(0, queryText.Length-1)));
+				var sb = new StringBuilder();
+				while (tokenStream.IncrementToken())
+				{
+					var attribute = (TermAttribute)tokenStream.GetAttribute(typeof(TermAttribute));
+					if (sb.Length != 0)
+						sb.Append(' ');
+					sb.Append(attribute.Term());
+				}
+				var prefix = new Term(field, sb.ToString());
+				return new PrefixQuery(prefix);
+			}
+			return fieldQuery;
 		}
 
 		/// <summary>
