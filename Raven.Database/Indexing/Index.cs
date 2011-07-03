@@ -39,7 +39,7 @@ namespace Raven.Database.Indexing
 	{
 		protected static readonly Logger logIndexing = LogManager.GetLogger(typeof (Index).FullName + ".Indexing");
 		protected static readonly Logger logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
-		private readonly List<Document> currentlyIndexDocumented = new List<Document>();
+		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
 		private Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 
@@ -219,7 +219,7 @@ namespace Raven.Database.Indexing
 						shouldRecreateSearcher = action(indexWriter, searchAnalyzer);
 						foreach (IIndexExtension indexExtension in indexExtensions.Values)
 						{
-							indexExtension.OnDocumentsIndexed(currentlyIndexDocumented);
+							indexExtension.OnDocumentsIndexed(currentlyIndexDocuments);
 						}
 					}
 					catch (Exception e)
@@ -232,7 +232,7 @@ namespace Raven.Database.Indexing
 				}
 				finally
 				{
-					currentlyIndexDocumented.Clear();
+					currentlyIndexDocuments.Clear();
 					if (searchAnalyzer != null)
 						searchAnalyzer.Close();
 					foreach (Action dispose in toDispose)
@@ -423,7 +423,7 @@ namespace Raven.Database.Indexing
 			try
 			{
 				if (indexExtensions.Count > 0)
-					currentlyIndexDocumented.Add(luceneDoc);
+					currentlyIndexDocuments.Add(CloneDocument(luceneDoc));
 
 				currentIndexWriter.AddDocument(luceneDoc, newAnalyzer);
 			}
@@ -446,7 +446,47 @@ namespace Raven.Database.Indexing
 			indexExtensions.TryAdd(indexExtensionKey, extension);
 		}
 
-		
+
+		private static Document CloneDocument(Document luceneDoc)
+		{
+			var clonedDocument = new Document();
+			foreach (AbstractField field in luceneDoc.GetFields())
+			{
+				var numericField = field as NumericField;
+				if (numericField != null)
+				{
+					var clonedNumericField = new NumericField(numericField.Name(),
+															  numericField.IsStored() ? Field.Store.YES : Field.Store.NO,
+															  numericField.IsIndexed());
+					var numericValue = numericField.GetNumericValue();
+					if (numericValue is int)
+					{
+						clonedNumericField.SetIntValue((int)numericValue);
+					}
+					if (numericValue is long)
+					{
+						clonedNumericField.SetLongValue((long)numericValue);
+					}
+					if (numericValue is double)
+					{
+						clonedNumericField.SetDoubleValue((double)numericValue);
+					}
+					if (numericValue is float)
+					{
+						clonedNumericField.SetFloatValue((float)numericValue);
+					}
+					clonedDocument.Add(clonedNumericField);
+				}
+				else
+				{
+					var clonedField = new Field(field.Name(), field.BinaryValue(),
+												field.IsStored() ? Field.Store.YES : Field.Store.NO);
+					clonedDocument.Add(clonedField);
+				}
+			}
+			return clonedDocument;
+		}
+
 
 		#region Nested type: IndexQueryOperation
 
