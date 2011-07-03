@@ -23,6 +23,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;
@@ -228,6 +229,7 @@ namespace Raven.Database.Indexing
 				return;
 			}
 			using (EnsureInvariantCulture())
+			using(DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
 				value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
 			}
