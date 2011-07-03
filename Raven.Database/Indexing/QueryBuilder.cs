@@ -12,32 +12,23 @@ using Lucene.Net.Search;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
-{
-	
+{	
 	public static class QueryBuilder
 	{
 		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):(\[\[.+?\]\])", RegexOptions.Compiled);
 
 		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
 		{
-			var keywordAnalyzer = new KeywordAnalyzer();
-			try
-		    {
-		    	query = PreProcessUntokenizedTerms(analyzer, query, keywordAnalyzer);
-		    	var queryParser = new RangeQueryParser(Version.LUCENE_29, "", analyzer);
-				queryParser.SetAllowLeadingWildcard(true);
-		    	return queryParser.Parse(query);;
-			}
-		    finally
-		    {
-				keywordAnalyzer.Close();
-		    }
+			query = PreProcessUntokenizedTerms(analyzer, query);
+			var queryParser = new RangeQueryParser(Version.LUCENE_29, "", analyzer);
+			queryParser.SetAllowLeadingWildcard(true);
+			return queryParser.Parse(query);
 		}
 
 		/// <summary>
 		/// Detects untokenized fields and sets as NotAnalyzed in analyzer
 		/// </summary>
-		private static string PreProcessUntokenizedTerms(PerFieldAnalyzerWrapper analyzer, string query, Analyzer keywordAnlyzer)
+		private static string PreProcessUntokenizedTerms(PerFieldAnalyzerWrapper analyzer, string query)
 		{
 			var untokenizedMatches = untokenizedQuery.Matches(query);
 			if (untokenizedMatches.Count < 1)
@@ -45,6 +36,7 @@ namespace Raven.Database.Indexing
 				return query;
 			}
 
+			var keywordAnlyzer = new KeywordAnalyzer();
 			var sb = new StringBuilder(query);
 
 			// KeywordAnalyzer will not tokenize the values
