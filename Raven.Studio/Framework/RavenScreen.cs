@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.Composition;
+﻿using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Framework
@@ -12,7 +13,7 @@ namespace Raven.Studio.Framework
 		bool isBusy;
 
 		[Import]
-		protected NavigationService NavigationService;
+		public NavigationService NavigationService { get; set; }
 
 		protected RavenScreen(IEventAggregator events)
 		{
@@ -22,12 +23,12 @@ namespace Raven.Studio.Framework
 		protected override void OnViewAttached(object view, object context)
 		{
 			base.OnViewAttached(view, context);
-			NavigationService.Track(GetScreenNavigationState());
+			NavigationService.Track(GetType(), GetNavigationParameters());
 		}
 
-		protected virtual string GetScreenNavigationState()
+		protected virtual Dictionary<string, string> GetNavigationParameters()
 		{
-			return GetType().Name;
+			return null;
 		}
 
 		public bool IsBusy

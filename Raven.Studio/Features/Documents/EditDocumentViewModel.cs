@@ -54,11 +54,6 @@ namespace Raven.Studio.Features.Documents
 			base.OnViewAttached(view, context);
 		}
 
-		protected override string GetScreenNavigationState()
-		{
-			return "docs/" + Id;
-		}
-
 		public string ClrType { get; private set; }
 		public string CollectionType { get; private set; }
 
