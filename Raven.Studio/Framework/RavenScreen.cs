@@ -1,4 +1,5 @@
 ﻿using Raven.Studio.Infrastructure.Navigation;
+using Raven.Studio.Plugins;
 
 namespace Raven.Studio.Framework
 {
@@ -7,12 +8,14 @@ namespace Raven.Studio.Framework
 
 	public abstract class RavenScreen : Screen
 	{
+		private readonly IServer server;
 		protected IEventAggregator Events;
 		protected readonly NavigationService NavigationService;
 		bool isBusy;
 
-		protected RavenScreen(IEventAggregator events, NavigationService navigationService)
+		protected RavenScreen(IServer server, IEventAggregator events, NavigationService navigationService)
 		{
+			this.server = server;
 			Events = events;
 			this.NavigationService = navigationService;
 		}
@@ -25,7 +28,7 @@ namespace Raven.Studio.Framework
 
 		protected virtual string GetScreenNavigationState()
 		{
-			return GetType().Name;
+			return "/" + server.CurrentDatabase + "/" + DisplayName.ToLowerInvariant();
 		}
 
 		public bool IsBusy
