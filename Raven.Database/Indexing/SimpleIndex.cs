@@ -69,6 +69,8 @@ namespace Raven.Database.Indexing
 					indexWriter.DeleteDocuments(new Term(Constants.DocumentIdFieldName, documentId.ToLowerInvariant()));
                     return doc;
                 });
+
+				var luceneDoc = new Document();
                 foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
                 {
                     count++;
@@ -81,7 +83,7 @@ namespace Raven.Database.Indexing
 
                     if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
                     {
-                        var luceneDoc = new Document();
+						luceneDoc.GetFields().Clear();
 						luceneDoc.Add(new Field(Constants.DocumentIdFieldName, indexingResult.NewDocId.ToLowerInvariant(), Field.Store.YES,
 												Field.Index.NOT_ANALYZED_NO_NORMS));
 

@@ -221,14 +221,14 @@ namespace Raven.Database.Indexing
 						trigger => trigger.OnIndexEntryDeleted(name, entryKey));
 				}
 				PropertyDescriptorCollection properties = null;
+				var luceneDoc = new Document();
 				foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
 					var fields = GetFields(doc, ref properties).ToList();
 
-					string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
-
-					var luceneDoc = new Document();
+					var reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
+					luceneDoc.GetFields().Clear();
 					luceneDoc.Add(new Field(Abstractions.Data.Constants.ReduceKeyFieldName, reduceKeyAsString.ToLowerInvariant(),
 					                        Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
 					foreach (var field in fields)
