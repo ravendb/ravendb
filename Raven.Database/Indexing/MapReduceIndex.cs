@@ -223,10 +223,8 @@ namespace Raven.Database.Indexing
 				PropertyDescriptorCollection properties = null;
 				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 				var luceneDoc = new Document();
-				var fieldsAdded = new HashSet<AbstractField>();
 				var reduceKeyField = new Field(Abstractions.Data.Constants.ReduceKeyFieldName, "dummy",
 				                      Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
-				luceneDoc.Add(reduceKeyField);
 				foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
@@ -235,7 +233,12 @@ namespace Raven.Database.Indexing
 					string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
 					reduceKeyField.SetValue(reduceKeyAsString.ToLowerInvariant());
 
-					AddFieldsToDocumentOnlyOnce(luceneDoc, fieldsAdded, fields);
+					luceneDoc.GetFields().Clear();
+					luceneDoc.Add(reduceKeyField);
+					foreach (var field in fields)
+					{
+						luceneDoc.Add(field);
+					}
 
 					batchers.ApplyAndIgnoreAllErrors(
 						exception =>

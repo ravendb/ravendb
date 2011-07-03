@@ -446,25 +446,6 @@ namespace Raven.Database.Indexing
 			indexExtensions.TryAdd(indexExtensionKey, extension);
 		}
 
-		protected static void AddFieldsToDocumentOnlyOnce(Document luceneDoc, HashSet<AbstractField> fieldsAdded, List<AbstractField> fields)
-		{
-			foreach (var field in fields)
-			{
-				if (fieldsAdded.Add(field))
-					luceneDoc.Add(field);
-			}
-			// we might have extra fields laying around, from a previous run, we need to clear those as well
-			var removedFields = fieldsAdded.Except(fields).ToList();
-			foreach (var field in removedFields)
-			{
-				// HACK! HACK! HACK!
-				// YUCK, but we have to be able to remove a specific field, not just by name
-				// Need to figure out a better way of doing this.
-				luceneDoc.fields_ForNUnit.Remove(field);
-				fieldsAdded.Remove(field);
-			}
-		}
-
 		private static Document CloneDocument(Document luceneDoc)
 		{
 			var clonedDocument = new Document();

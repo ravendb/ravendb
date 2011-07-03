@@ -73,8 +73,6 @@ namespace Raven.Database.Indexing
 				var luceneDoc = new Document();
 				var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
 											  Field.Index.NOT_ANALYZED_NO_NORMS);
-				luceneDoc.Add(documentIdField);
-				var fieldsAdded = new HashSet<AbstractField>();
 				foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
                 {
                     count++;
@@ -89,11 +87,16 @@ namespace Raven.Database.Indexing
                     {
                     	
 
-						documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
 
                         madeChanges = true;
-                        AddFieldsToDocumentOnlyOnce(luceneDoc, fieldsAdded, indexingResult.Fields);
-                        batchers.ApplyAndIgnoreAllErrors(
+                    	luceneDoc.GetFields().Clear();
+						documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
+                    	luceneDoc.Add(documentIdField);
+						foreach (var field in indexingResult.Fields)
+                    	{
+                    		luceneDoc.Add(field);
+                    	}
+                    	batchers.ApplyAndIgnoreAllErrors(
                             exception =>
                             {
                                 logIndexing.Warn(
