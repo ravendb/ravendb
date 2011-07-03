@@ -118,6 +118,8 @@ namespace Raven.Studio.Features.Database
 
 								if (callback != null) callback();
 							});
+
+							SetBuildNumber();
 						},
 						faulted =>
 						{
@@ -212,8 +214,6 @@ namespace Raven.Studio.Features.Database
 
 			using (var session = OpenSession())
 				session.Advanced.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync();
-
-			SetBuildNumber();
 
 			callback();
 		}
