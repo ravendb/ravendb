@@ -24,9 +24,21 @@ using DateTools = Lucene.Net.Documents.DateTools;
 
 namespace Raven.Database.Indexing
 {
-	public static class AnonymousObjectToLuceneDocumentConverter
+	public class AnonymousObjectToLuceneDocumentConverter
 	{
-		public static IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, IndexDefinition indexDefinition, Field.Store defaultStorage)
+		private const string NullValueMarker = "NULL_VALUE";
+
+		private readonly IndexDefinition indexDefinition;
+		private readonly List<int> multipleItemsSameFieldCount = new List<int>();
+		private readonly Dictionary<object, Field> fieldsCache = new Dictionary<object, Field>();
+		private readonly Dictionary<object, NumericField> numericFieldsCache = new Dictionary<object, NumericField>();
+
+		public AnonymousObjectToLuceneDocumentConverter(IndexDefinition indexDefinition)
+		{
+			this.indexDefinition = indexDefinition;
+		}
+
+		public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{
 			return (from property in properties.Cast<PropertyDescriptor>()
 			        let name = property.Name
@@ -36,7 +48,7 @@ namespace Raven.Database.Indexing
 			        select field);
 		}
 
-        public static IEnumerable<AbstractField> Index(RavenJObject document, IndexDefinition indexDefinition, Field.Store defaultStorage)
+        public IEnumerable<AbstractField> Index(RavenJObject document, IndexDefinition indexDefinition, Field.Store defaultStorage)
         {
         	return (from property in document
         	        let name = property.Key
@@ -69,7 +81,7 @@ namespace Raven.Database.Indexing
 		///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
 		///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
 		/// </summary>
-		private static IEnumerable<AbstractField> CreateFields(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
+		private IEnumerable<AbstractField> CreateFields(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{
             if(string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
@@ -82,7 +94,7 @@ namespace Raven.Database.Indexing
 
 			if (value == null)
 			{
-				yield return new Field(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
 								 Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield break;
 			}
@@ -90,7 +102,7 @@ namespace Raven.Database.Indexing
 			{
 				if(((DynamicNullObject)value ).IsExplicitNull)
 				{
-					yield return new Field(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
+					yield return CreateFieldWithCaching(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
 							 Field.Index.NOT_ANALYZED_NO_NORMS);
 				}
 				yield break;
@@ -107,12 +119,15 @@ namespace Raven.Database.Indexing
 			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
                 yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				int count = 1;
                 foreach (var itemToIndex in itemsToIndex)
 				{
+					multipleItemsSameFieldCount.Add(count++);
                     foreach (var field in CreateFields(name, itemToIndex, indexDefinition, defaultStorage))
                     {
                         yield return field;
                     }
+					multipleItemsSameFieldCount.RemoveAt(multipleItemsSameFieldCount.Count - 1);
 				}
 				yield break;
 			}
@@ -123,18 +138,18 @@ namespace Raven.Database.Indexing
 				if (value is DateTime)
 				{
 				    var val = (DateTime) value;
-					yield return new Field(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
+					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				else if(value is DateTimeOffset)
 				{
 					var val = (DateTimeOffset)value;
-					yield return new Field(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
+					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				else
 				{
-					yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+					yield return CreateFieldWithCaching(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
 										   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
             	yield break;
@@ -143,20 +158,20 @@ namespace Raven.Database.Indexing
 			if (value is string) 
 			{
 			    var index = indexDefinition.GetIndex(name, Field.Index.ANALYZED);
-			    yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
                                  index); 
 				yield break;
 			}
 
 			if (value is DateTime)
 			{
-				yield return new Field(name, DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND),
+				yield return CreateFieldWithCaching(name, DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND),
 					indexDefinition.GetStorage(name, defaultStorage),
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else if (value is DateTimeOffset)
 			{
-				yield return new Field(name, DateTools.DateToString(((DateTimeOffset)value).DateTime, DateTools.Resolution.MILLISECOND),
+				yield return CreateFieldWithCaching(name, DateTools.DateToString(((DateTimeOffset)value).DateTime, DateTools.Resolution.MILLISECOND),
 					indexDefinition.GetStorage(name, defaultStorage),
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
@@ -169,58 +184,78 @@ namespace Raven.Database.Indexing
 			else if(value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
 				var convert = ((IConvertible) value);
-				yield return new Field(name, convert.ToString(CultureInfo.InvariantCulture), indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name, convert.ToString(CultureInfo.InvariantCulture), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else if (value is DynamicJsonObject)
 			{
 				var inner = ((DynamicJsonObject)value).Inner;
-				yield return new Field(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-				yield return new Field(name, inner.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				yield return CreateFieldWithCaching(name, inner.ToString(), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else 
 			{
-				yield return new Field(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-				yield return new Field(name, RavenJToken.FromObject(value).ToString(), indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				yield return CreateFieldWithCaching(name, RavenJToken.FromObject(value).ToString(), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 
 
-			var numericField = new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true);
+			foreach (var numericField in CreateNumericFieldWithCaching(name, value, defaultStorage)) 
+				yield return numericField;
+		}
+
+		private IEnumerable<AbstractField> CreateNumericFieldWithCaching(string name, object value,
+			Field.Store defaultStorage)
+		{
+
+			var fieldName = name + "_Range";
+			var storage = indexDefinition.GetStorage(name, defaultStorage);
+			var cacheKey = new
+			{
+				fieldName,
+				storage,
+				multipleItemsSameFieldCountSum = multipleItemsSameFieldCount.Sum()
+			};
+			NumericField numericField;
+			if (numericFieldsCache.TryGetValue(cacheKey, out numericField) == false)
+			{
+				numericFieldsCache[cacheKey] = numericField = new NumericField(fieldName, storage, true);
+			}
+
 			if (value is int)
 			{
-				if(indexDefinition.GetSortOption(name) == SortOptions.Long)
-					yield return numericField.SetLongValue((int)value);
+				if (indexDefinition.GetSortOption(name) == SortOptions.Long)
+					yield return numericField.SetLongValue((int) value);
 				else
-					yield return numericField.SetIntValue((int)value);
+					yield return numericField.SetIntValue((int) value);
 			}
 			if (value is long)
 			{
 				yield return numericField
 					.SetLongValue((long) value);
-
 			}
 			if (value is decimal)
-            {
+			{
 				yield return numericField
-					.SetDoubleValue((double)(decimal)value);
-            }
+					.SetDoubleValue((double) (decimal) value);
+			}
 			if (value is float)
-            {
+			{
 				if (indexDefinition.GetSortOption(name) == SortOptions.Double)
-					yield return numericField.SetDoubleValue((float)value);
+					yield return numericField.SetDoubleValue((float) value);
 				else
-            		yield return numericField.SetFloatValue((float) value);
-            }
+					yield return numericField.SetFloatValue((float) value);
+			}
 			if (value is double)
-            {
+			{
 				yield return numericField
-					.SetDoubleValue((double)value);
-            }
+					.SetDoubleValue((double) value);
+			}
 		}
 
-	    private static bool ShouldTreatAsEnumerable(IEnumerable itemsToIndex)
+		private static bool ShouldTreatAsEnumerable(IEnumerable itemsToIndex)
 	    {
             if (itemsToIndex == null)
                 return false;
@@ -239,5 +274,23 @@ namespace Raven.Database.Indexing
 
 	        return true;
 	    }
+		private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index)
+		{
+			var cacheKey = new
+			{
+				name,
+				index,
+				store,
+				multipleItemsSameFieldCountSum = multipleItemsSameFieldCount.Sum()
+			};
+			Field field;
+			if (fieldsCache.TryGetValue(cacheKey, out field) == false)
+			{
+				fieldsCache[cacheKey] = field = new Field(name, value, store, index);
+			}
+			field.SetValue(value);
+			return field;
+		}
+
 	}
 }
