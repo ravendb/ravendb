@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -15,6 +16,8 @@ namespace Raven.Studio.Infrastructure.Navigation
 	[Export]
 	public class NavigationService
 	{
+		private string currentUrl;
+
 		[ImportMany]
 		public Lazy<INavigator, INavigatorMetdata>[] Routes { get; set; }
 
@@ -25,18 +28,30 @@ namespace Raven.Studio.Infrastructure.Navigation
 
 		private void Navigate(NavigationStateChangedEventArgs e)
 		{
+			if (e.NewNavigationState == currentUrl)
+				return;
+			currentUrl = e.NewNavigationState;
 			foreach (var route in Routes)
 			{
-				var match = Regex.Match(e.NewNavigationState, route.Metadata.Url);
+				var regex = new Regex(route.Metadata.Url);
+				var match = regex.Match(e.NewNavigationState);
 				if (match.Success == false)
 					continue;
 
-				route.Value.Navigate(match.Groups.Count > 1 ? match.Groups[1].Value : null);
+				var parameters = new Dictionary<string, string>();
+				foreach (var name in regex.GetGroupNames())
+				{
+					parameters[name] = match.Groups[name].Value;
+				}
+				route.Value.Navigate(parameters);
 			}
 		}
 
 		public void Track(string navigationState)
 		{
+			if (navigationState == currentUrl)
+				return;
+			currentUrl = navigationState;
 			Application.Current.Host.NavigationState = navigationState;
 		}
 	}
