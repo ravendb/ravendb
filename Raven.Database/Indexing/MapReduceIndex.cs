@@ -221,10 +221,11 @@ namespace Raven.Database.Indexing
 						trigger => trigger.OnIndexEntryDeleted(name, entryKey));
 				}
 				PropertyDescriptorCollection properties = null;
+				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 				foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
-					var fields = GetFields(doc, ref properties).ToList();
+					var fields = GetFields(anonymousObjectToLuceneDocumentConverter, doc, ref properties).ToList();
 
 					string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
 
@@ -282,18 +283,18 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private IEnumerable<AbstractField> GetFields(object doc, ref PropertyDescriptorCollection properties)
+		private IEnumerable<AbstractField> GetFields(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc, ref PropertyDescriptorCollection properties)
 		{
 			IEnumerable<AbstractField> fields;
 			if (doc is DynamicJsonObject)
 			{
-				fields = AnonymousObjectToLuceneDocumentConverter.Index(((DynamicJsonObject)doc).Inner,
+				fields = anonymousObjectToLuceneDocumentConverter.Index(((DynamicJsonObject)doc).Inner,
 																		indexDefinition, Field.Store.YES);
 			}
 			else
 			{
 				properties = properties ?? TypeDescriptor.GetProperties(doc);
-				fields = AnonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.YES);
+				fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.YES);
 			}
 			return fields;
 		}

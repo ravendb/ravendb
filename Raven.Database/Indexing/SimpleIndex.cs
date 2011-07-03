@@ -69,15 +69,16 @@ namespace Raven.Database.Indexing
 					indexWriter.DeleteDocuments(new Term(Constants.DocumentIdFieldName, documentId.ToLowerInvariant()));
                     return doc;
                 });
+				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
                 foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
                 {
                     count++;
 
                     IndexingResult indexingResult;
                     if (doc is DynamicJsonObject)
-                        indexingResult = ExtractIndexDataFromDocument((DynamicJsonObject)doc);
+                        indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, (DynamicJsonObject)doc);
                     else
-                        indexingResult = ExtractIndexDataFromDocument(properties, doc);
+                        indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, properties, doc);
 
                     if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
                     {
@@ -125,25 +126,25 @@ namespace Raven.Database.Indexing
             public bool ShouldSkip;
         }
 
-        private IndexingResult ExtractIndexDataFromDocument(DynamicJsonObject dynamicJsonObject)
+		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, DynamicJsonObject dynamicJsonObject)
         {
         	var newDocId = dynamicJsonObject.GetDocumentId();
         	return new IndexingResult
             {
-                Fields = AnonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, indexDefinition,
+                Fields = anonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, indexDefinition,
                                                                   Field.Store.NO),
                 NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
                 ShouldSkip = false
             };
         }
 
-    	private IndexingResult ExtractIndexDataFromDocument(PropertyDescriptorCollection properties, object doc)
+		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, PropertyDescriptorCollection properties, object doc)
         {
             if (properties == null)
             {
                 properties = TypeDescriptor.GetProperties(doc);
             }
-            var abstractFields = AnonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.NO).ToList();
+            var abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.NO).ToList();
             return new IndexingResult()
             {
                 Fields = abstractFields,
