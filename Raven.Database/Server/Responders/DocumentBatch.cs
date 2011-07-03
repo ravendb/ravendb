@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions.Data;
@@ -78,6 +79,11 @@ namespace Raven.Database.Server.Responders
 
 			context.Log(log => log.Debug(()=>
 			{
+				if(commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
+				{
+					return "\tExecuted " + string.Join(", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#} {1} operations", x.Count(), x.Key)));
+				}
+
 				var sb = new StringBuilder();
 				foreach (var commandData in commands)
 				{
