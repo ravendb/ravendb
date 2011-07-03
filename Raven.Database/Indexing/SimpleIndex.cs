@@ -70,7 +70,12 @@ namespace Raven.Database.Indexing
                     return doc;
                 });
 				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
-                foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
+				var luceneDoc = new Document();
+				var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
+											  Field.Index.NOT_ANALYZED_NO_NORMS);
+				luceneDoc.Add(documentIdField);
+				var fieldsAdded = new HashSet<AbstractField>();
+				foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
                 {
                     count++;
 
@@ -82,12 +87,12 @@ namespace Raven.Database.Indexing
 
                     if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
                     {
-                        var luceneDoc = new Document();
-						luceneDoc.Add(new Field(Constants.DocumentIdFieldName, indexingResult.NewDocId.ToLowerInvariant(), Field.Store.YES,
-												Field.Index.NOT_ANALYZED_NO_NORMS));
+                    	
+
+						documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
 
                         madeChanges = true;
-                        CopyFieldsToDocument(luceneDoc, indexingResult.Fields);
+                        AddFieldsToDocumentOnlyOnce(luceneDoc, fieldsAdded, indexingResult.Fields);
                         batchers.ApplyAndIgnoreAllErrors(
                             exception =>
                             {
@@ -122,7 +127,7 @@ namespace Raven.Database.Indexing
         private class IndexingResult
         {
             public string NewDocId;
-            public IEnumerable<AbstractField> Fields;
+            public List<AbstractField> Fields;
             public bool ShouldSkip;
         }
 
@@ -132,7 +137,7 @@ namespace Raven.Database.Indexing
         	return new IndexingResult
             {
                 Fields = anonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, indexDefinition,
-                                                                  Field.Store.NO),
+                                                                  Field.Store.NO).ToList(),
                 NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
                 ShouldSkip = false
             };
@@ -154,13 +159,6 @@ namespace Raven.Database.Indexing
             };
         }
 
-        private static void CopyFieldsToDocument(Document luceneDoc, IEnumerable<AbstractField> fields)
-        {
-            foreach (var field in fields)
-            {
-                luceneDoc.Add(field);
-            }
-        }
 
         public override void Remove(string[] keys, WorkContext context)
         {

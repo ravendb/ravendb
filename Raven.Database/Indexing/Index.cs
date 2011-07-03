@@ -317,7 +317,7 @@ namespace Raven.Database.Indexing
 					                 exception.Message
 						);
 					logIndexing.WarnException(
-						string.Format("Failed to execute indexing function on {0} on {1}", name,
+						String.Format("Failed to execute indexing function on {0} on {1}", name,
 					                       TryGetDocKey(o)),
 						exception);
 					try
@@ -328,7 +328,7 @@ namespace Raven.Database.Indexing
 					{
 						// we don't care about error here, because it is an error on error problem
 						logIndexing.WarnException(
-							string.Format("Could not increment indexing failure rate for {0}", name),
+							String.Format("Could not increment indexing failure rate for {0}", name),
 							e);
 					}
 				}
@@ -350,7 +350,7 @@ namespace Raven.Database.Indexing
 					                 exception.Message
 						);
 					logIndexing.WarnException(
-						string.Format("Failed to execute indexing function on {0} on {1}", name,
+						String.Format("Failed to execute indexing function on {0} on {1}", name,
 					                       TryGetDocKey(o)),
 						exception);
 					try
@@ -361,7 +361,7 @@ namespace Raven.Database.Indexing
 					{
 						// we don't care about error here, because it is an error on error problem
 						logIndexing.WarnException(
-							string.Format("Could not increment indexing failure rate for {0}", name),
+							String.Format("Could not increment indexing failure rate for {0}", name),
 							e);
 					}
 				}
@@ -446,6 +446,24 @@ namespace Raven.Database.Indexing
 			indexExtensions.TryAdd(indexExtensionKey, extension);
 		}
 
+		protected static void AddFieldsToDocumentOnlyOnce(Document luceneDoc, HashSet<AbstractField> fieldsAdded, List<AbstractField> fields)
+		{
+			foreach (var field in fields)
+			{
+				if (fieldsAdded.Add(field))
+					luceneDoc.Add(field);
+			}
+			// we might have extra fields laying around, from a previous run, we need to clear those as well
+			var removedFields = fieldsAdded.Except(fields).ToList();
+			foreach (var field in removedFields)
+			{
+				// HACK! HACK! HACK!
+				// YUCK, but we have to be able to remove a specific field, not just by name
+				// Need to figure out a better way of doing this.
+				luceneDoc.fields_ForNUnit.Remove(field);
+				fieldsAdded.Remove(field);
+			}
+		}
 
 		private static Document CloneDocument(Document luceneDoc)
 		{
@@ -625,7 +643,7 @@ namespace Raven.Database.Indexing
 			{
 				string query = indexQuery.Query;
 				Query luceneQuery;
-				if (string.IsNullOrEmpty(query))
+				if (String.IsNullOrEmpty(query))
 				{
 					logQuerying.Debug("Issuing query on index {0} for all documents", parent.name);
 					luceneQuery = new MatchAllDocsQuery();
@@ -674,7 +692,7 @@ namespace Raven.Database.Indexing
 				Filter filter = indexQuery.GetFilter();
 				Sort sort = indexQuery.GetSort(filter, parent.indexDefinition);
 
-				if (pageSize == int.MaxValue) // we want all docs
+				if (pageSize == Int32.MaxValue) // we want all docs
 				{
 					var gatherAllCollector = new GatherAllCollector();
 					indexSearcher.Search(luceneQuery, filter, gatherAllCollector);
