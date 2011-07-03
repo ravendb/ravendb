@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using log4net;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Database.Storage;
 using System.Linq;
@@ -12,14 +12,13 @@ namespace Raven.Database.Indexing
     {
         protected WorkContext context;
         protected TaskScheduler scheduler;
-        protected readonly ILog log;
+        protected static readonly Logger log = LogManager.GetCurrentClassLogger();
         protected ITransactionalStorage transactionalStorage;
         protected int workCounter;
         protected int lastFlushedWorkCounter;
 
         protected AbstractIndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
         {
-            log = LogManager.GetLogger(GetType());
             this.transactionalStorage = transactionalStorage;
             this.context = context;
             this.scheduler = scheduler;
@@ -69,7 +68,7 @@ namespace Raven.Database.Indexing
                     var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
                     if (failureRate.IsInvalidIndex)
                     {
-                        log.InfoFormat("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
+                        log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
                                        indexesStat.Name,
                                        failureRate.FailureRate);
                         continue;

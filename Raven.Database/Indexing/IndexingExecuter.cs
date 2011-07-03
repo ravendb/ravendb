@@ -134,7 +134,7 @@ namespace Raven.Database.Indexing
             var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
             try
             {
-                log.DebugFormat("Indexing {0} documents for index: {1}", jsonDocs.Length, index);
+                log.Debug("Indexing {0} documents for index: {1}", jsonDocs.Length, index);
                 context.IndexStorage.Index(index, viewGenerator,
                     jsonDocs
                     .Select(doc => documentRetriever
@@ -146,7 +146,9 @@ namespace Raven.Database.Indexing
             {
                 if (actions.IsWriteConflict(e))
                     return;
-                log.WarnFormat(e, "Failed to index documents for index: {0}", index);
+                log.WarnException(
+					string.Format("Failed to index documents for index: {0}", index),
+					e);
             }
         }
 

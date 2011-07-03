@@ -11,16 +11,13 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using log4net;
 using Newtonsoft.Json;
+using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing;
-using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 
@@ -35,7 +32,7 @@ namespace Raven.Database.Storage
         private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
             new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
+		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 		private readonly string path;
         private readonly InMemoryRavenConfiguration configuration;
 		private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
@@ -79,7 +76,7 @@ namespace Raven.Database.Storage
 	                if (actions.Indexing.GetIndexesStats().Any(x => x.Name == name))
 	                    return;
 
-	                actions.Indexing.AddIndex(name, generator.ReduceDefinition != null);
+	                actions.Indexing.AddIndex(name, copy.ReduceDefinition != null);
 	            });
 
 	            var indexDefinition = new IndexDefinition
@@ -99,7 +96,7 @@ namespace Raven.Database.Storage
 
 	    private void ReadIndexesFromDisk()
 	    {
-	        foreach (var index in Directory.GetFiles(this.path, "*.index"))
+	        foreach (var index in Directory.GetFiles(path, "*.index"))
 	        {
 	            try
 	            {
@@ -110,7 +107,7 @@ namespace Raven.Database.Storage
 	            }
 	            catch (Exception e)
 	            {
-	                logger.Warn("Could not compile index " + index + ", skipping bad index", e);
+	                logger.WarnException("Could not compile index " + index + ", skipping bad index", e);
 	            }
 	        }
 	    }
@@ -150,7 +147,7 @@ namespace Raven.Database.Storage
 					throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
 		        return indexDefinition;   
 		    });
-			logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
+			logger.Info("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
 			                  transformer.CompiledQueryText);
 			return transformer;
 		}

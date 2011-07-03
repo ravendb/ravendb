@@ -20,8 +20,9 @@ namespace Raven.Http
 		protected readonly Regex urlMatcher;
         private Func<IRavenHttpConfiguration> settings;
         private Func<IResourceStore> database;
+		protected HttpServer server;
 
-	    protected AbstractRequestResponder()
+		protected AbstractRequestResponder()
 		{
 			urlMatcher = new Regex(UrlPattern);
 			supportedVerbsCached = SupportedVerbs;
@@ -34,8 +35,9 @@ namespace Raven.Http
         public IRavenHttpConfiguration Settings { get { return settings(); } }
         public virtual bool IsUserInterfaceRequest { get { return false; } }
 
-        public void Initialize(Func<IResourceStore> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter)
+        public void Initialize(Func<IResourceStore> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter, HttpServer theServer)
         {
+        	this.server = theServer;
             this.database = databaseGetter;
             this.settings = settingsGetter;
         }

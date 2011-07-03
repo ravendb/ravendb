@@ -9,7 +9,6 @@ using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using log4net.Config;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
@@ -75,8 +74,8 @@ namespace Raven.Database.Config
 			var cleanupThreshold = Settings["Raven/TempIndexCleanupThreshold"];
 			TempIndexCleanupThreshold = cleanupThreshold != null ? TimeSpan.FromSeconds(int.Parse(cleanupThreshold)) : TimeSpan.FromMinutes(20);
 
-			var tempMemoryMaxMB = Settings["Raven/TempIndexInMemoryMaxMB"];
-			TempIndexInMemoryMaxBytes = tempMemoryMaxMB != null ? int.Parse(tempMemoryMaxMB) * 1024000 : 26214400;
+			var tempMemoryMaxMb = Settings["Raven/TempIndexInMemoryMaxMB"];
+			TempIndexInMemoryMaxBytes = tempMemoryMaxMb != null ? int.Parse(tempMemoryMaxMb) * 1024000 : 26214400;
 			TempIndexInMemoryMaxBytes = Math.Max(1024000, TempIndexInMemoryMaxBytes);
 
 			// Data settings
@@ -369,12 +368,6 @@ namespace Raven.Database.Config
 		private static string GetDefaultWebDir()
 		{
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Raven/WebUI");
-		}
-
-		public void LoadLoggingSettings()
-		{
-			XmlConfigurator.ConfigureAndWatch(
-				new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config")));
 		}
 
 		public string GetFullUrl(string baseUrl)

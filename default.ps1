@@ -9,12 +9,12 @@ properties {
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Json.???", "Raven.Web.???", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", `
+  $web_dlls = @( "Raven.Abstractions.???","Raven.Json.???", "Raven.Web.???", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", `
     "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
-  $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
+  $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
     "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $client_dlls_3_5 = @( "Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Json-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
@@ -24,7 +24,7 @@ properties {
   $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json.Silverlight.???");   
   
   $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Json.???", `
-      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "log4net.???", "Newtonsoft.Json.???", `
+      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "nlog.???", "Newtonsoft.Json.???", `
       "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "MissingBitsFromClientProfile.???", "Raven.Studio.xap"  );
       
   $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  );
@@ -448,7 +448,7 @@ task CreateNugetPackage {
   del $build_dir\NuPack\lib\net40\Newtonsoft.Json.*
   del $build_dir\NuPack\lib\sl40\Newtonsoft.Json.*
   del $build_dir\NuPack-Embedded\lib\net40\Newtonsoft.Json.*
-  del $build_dir\NuPack-Embedded\lib\net40\log4net.*
+  del $build_dir\NuPack-Embedded\lib\net40\nlog.*
 
   # The Server folder is used as a tool, and therefore needs the dependency DLLs in it (can't depend on Nuget for that)
  	foreach($server_file in $server_files) {

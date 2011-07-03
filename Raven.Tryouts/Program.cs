@@ -1,11 +1,5 @@
 ﻿using System;
-using log4net.Appender;
-using log4net.Config;
-using log4net.Filter;
-using log4net.Layout;
-using Raven.Http;
 using Raven.Tests.Bugs;
-using Raven.Tests.Stress;
 
 namespace Raven.Tryouts
 {

@@ -5,15 +5,12 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
-using log4net;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 
@@ -25,7 +22,7 @@ namespace Raven.Database.Indexing
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
 		private int workCounter;
-		private readonly ILog log = LogManager.GetLogger(typeof(WorkContext));
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
 		private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }

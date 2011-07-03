@@ -4,14 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using log4net;
+using NLog;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
-using Raven.Database.Extensions;
 
 namespace Raven.Storage.Managed
 {
@@ -19,7 +18,7 @@ namespace Raven.Storage.Managed
     {
         private readonly TableStorage storage;
         private readonly IUuidGenerator generator;
-        private readonly ILog logger = LogManager.GetLogger(typeof(TasksStorageActions));
+    	private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         public TasksStorageActions(TableStorage storage, IUuidGenerator generator)
         {
@@ -60,7 +59,9 @@ namespace Raven.Storage.Managed
                 }
                 catch (Exception e)
                 {
-                    logger.ErrorFormat(e, "Could not create instance of a task: {0}", readResult.Key);
+                    logger.ErrorException(
+						string.Format("Could not create instance of a task: {0}", readResult.Key),
+						e);
                     continue;
                 }
                 MergeSimilarTasks(task, readResult.Key.Value<byte[]>("id"), out countOfMergedTasks);
@@ -100,7 +101,9 @@ namespace Raven.Storage.Managed
                 }
                 catch (Exception e)
                 {
-                    logger.ErrorFormat(e, "Could not create instance of a task: {0}", readResult.Key);
+                    logger.ErrorException(
+						string.Format("Could not create instance of a task: {0}", readResult.Key),
+						e);
                     storage.Tasks.Remove(keyForTaskToTryMerging);
                     continue;
                 }

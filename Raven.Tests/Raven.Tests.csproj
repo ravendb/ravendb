@@ -65,10 +65,6 @@
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL" />
-    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\log4net.dll</HintPath>
-    </Reference>
     <Reference Include="Lucene.Net, Version=2.9.1.2, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
@@ -360,6 +356,7 @@
     <Compile Include="Bugs\QueryingFromIndex.cs" />
     <Compile Include="Bugs\QueryWithPercentageSignp.cs" />
     <Compile Include="Bugs\QueryWithReservedCharacters.cs" />
+    <Compile Include="Bugs\RavenDbNestedPatchTesting.cs" />
     <Compile Include="Bugs\RavenDBQuery.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\RemoteTx.cs" />
@@ -416,6 +413,7 @@
     <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
     <Compile Include="Bugs\WaitForNonStaleResultsAsOfLastWrite.cs" />
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />
+    <Compile Include="Bugs\when_querying_cases_by_name.cs" />
     <Compile Include="Bugs\WhereEntityIs.cs" />
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />
     <Compile Include="Bugs\WillThrowIfQueryingForUnindexedField.cs" />
@@ -491,6 +489,7 @@
     <Compile Include="ManagedStorage\TxStorageTest.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="MultiGet\Basic.cs" />
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />

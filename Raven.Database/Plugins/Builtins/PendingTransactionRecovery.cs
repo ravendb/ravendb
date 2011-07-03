@@ -6,14 +6,14 @@
 using System;
 using System.Collections.Generic;
 using System.Transactions;
-using log4net;
+using NLog;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins.Builtins
 {
 	public class PendingTransactionRecovery : IStartupTask
 	{
-	    private readonly ILog logger = LogManager.GetLogger(typeof (PendingTransactionRecovery));
+		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -43,7 +43,7 @@ namespace Raven.Database.Plugins.Builtins
                             }
                             catch (Exception e)
                             {
-                                logger.Error("Failed to re-enlist in distributed transaction, transaction has been rolled back", e);
+                                logger.ErrorException("Failed to re-enlist in distributed transaction, transaction has been rolled back", e);
                                 actions.Transactions.RollbackTransaction(txId);
                                 actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
                             }

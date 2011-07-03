@@ -14,9 +14,9 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
-using log4net;
 using System.Linq;
 using Newtonsoft.Json;
+using NLog;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
 using Raven.Http.Abstractions;
@@ -62,7 +62,7 @@ namespace Raven.Http
 
         private HttpListener listener;
 
-        private readonly ILog logger = LogManager.GetLogger(typeof(HttpServer));
+		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         private int reqNum;
 
@@ -86,7 +86,7 @@ namespace Raven.Http
 
             foreach (var requestResponder in RequestResponders)
             {
-                requestResponder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value);
+                requestResponder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, this);
             }
         }
 
@@ -212,7 +212,7 @@ namespace Raven.Http
             {
                 HandleException(ctx, e);
 				if (ShouldLogException(e))
-					logger.Warn("Error on request", e);
+					logger.WarnException("Error on request", e);
             }
             finally
             {
@@ -222,7 +222,7 @@ namespace Raven.Http
             	}
             	catch (Exception e)
             	{
-            		logger.Error("Could not finalize request properly", e);
+            		logger.ErrorException("Could not finalize request properly", e);
             	}
             }
         }
@@ -246,7 +246,7 @@ namespace Raven.Http
 			}
 			catch (Exception e)
 			{
-				logger.Warn("Could not gather information to log request stats", e);
+				logger.WarnException("Could not gather information to log request stats", e);
 			}
 
 			ctx.FinalizeResonse();
@@ -268,7 +268,7 @@ namespace Raven.Http
 				return;
 
     		var curReq = Interlocked.Increment(ref reqNum);
-    		logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
+    		logger.Debug("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
     		                   curReq, 
 							   logHttpRequestStatsParams.HttpMethod, 
 							   logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds, 
@@ -292,7 +292,7 @@ namespace Raven.Http
             }
             catch (Exception)
             {
-                logger.Error("Failed to properly handle error, further error handling is ignored", e);
+                logger.ErrorException("Failed to properly handle error, further error handling is ignored", e);
             }
         }
 

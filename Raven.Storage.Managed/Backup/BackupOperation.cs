@@ -7,15 +7,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using log4net;
+using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Backup;
-using Raven.Database.Json;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Munin;
-using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed.Backup
 {
@@ -26,7 +24,7 @@ namespace Raven.Storage.Managed.Backup
 	    private readonly string to;
 		private readonly string src;
 
-		private readonly ILog logger = LogManager.GetLogger(typeof (BackupOperation));
+		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
 		public BackupOperation(DocumentDatabase database, IPersistentSource persistentSource, string src, string to)
 		{
@@ -40,7 +38,7 @@ namespace Raven.Storage.Managed.Backup
 		{
 			try
 			{
-				logger.InfoFormat("Starting backup of '{0}' to '{1}'", src, to);
+				logger.Info("Starting backup of '{0}' to '{1}'", src, to);
 			    var directoryBackups = new List<DirectoryBackup>
 			    {
 			        new DirectoryBackup(src, to, Path.Combine("TempData" + Guid.NewGuid().ToString("N"))),
@@ -74,7 +72,7 @@ namespace Raven.Storage.Managed.Backup
 			}
 			catch (Exception e)
 			{
-				logger.Error("Failed to complete backup", e);
+				logger.ErrorException("Failed to complete backup", e);
 				UpdateBackupStatus("Failed to complete backup because: " + e.Message);
 			}
 			finally
@@ -101,14 +99,14 @@ namespace Raven.Storage.Managed.Backup
 			}
 			catch (Exception e)
 			{
-				logger.Warn("Failed to update completed backup status, will try deleting document", e);
+				logger.WarnException("Failed to update completed backup status, will try deleting document", e);
 				try
 				{
 					database.Delete(BackupStatus.RavenBackupStatusDocumentKey, null, null);
 				}
 				catch (Exception ex)
 				{
-					logger.Warn("Failed to remove out of date backup status", ex);
+					logger.WarnException("Failed to remove out of date backup status", ex);
 				}
 			}
 		}
@@ -132,7 +130,7 @@ namespace Raven.Storage.Managed.Backup
 			}
 			catch (Exception e)
 			{
-				logger.Warn("Failed to update backup status", e);
+				logger.WarnException("Failed to update backup status", e);
 			}
 		}
 	}

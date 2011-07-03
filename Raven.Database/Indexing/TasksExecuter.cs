@@ -4,8 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using log4net;
-using Raven.Database.Extensions;
+using NLog;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 
@@ -14,7 +13,7 @@ namespace Raven.Database.Indexing
 	public class TasksExecuter
 	{
 		private readonly WorkContext context;
-		private readonly ILog log = LogManager.GetLogger(typeof (IndexingExecuter));
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		private readonly ITransactionalStorage transactionalStorage;
 
 		public TasksExecuter(ITransactionalStorage transactionalStorage, WorkContext context)
@@ -56,7 +55,7 @@ namespace Raven.Database.Indexing
 				if (task == null)
 					return;
 
-				log.DebugFormat("Executing {0}", task);
+				log.Debug("Executing {0}", task);
 				foundWork = true;
 
 				try
@@ -65,7 +64,9 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception e)
 				{
-					log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", task);
+					log.WarnException(
+						string.Format("Task {0} has failed and was deleted without completing any work", task),
+						e);
 				}
 			});
 			return foundWork;

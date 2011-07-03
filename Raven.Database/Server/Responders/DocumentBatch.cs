@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
+using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -75,16 +76,15 @@ namespace Raven.Database.Server.Responders
     		                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
     			.ToArray();
 
-			context.Log(log =>
+			context.Log(log => log.Debug(()=>
 			{
-				if (log.IsDebugEnabled)
+				var sb = new StringBuilder();
+				foreach (var commandData in commands)
 				{
-					foreach (var commandData in commands)
-					{
-						log.DebugFormat("\t{0} {1}", commandData.Method, commandData.Key);
-					}
+					sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
 				}
-			});
+				return sb.ToString();
+			}));
 
     		var batchResult = Database.Batch(commands);
             context.WriteJson(batchResult);

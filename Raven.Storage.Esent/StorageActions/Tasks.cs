@@ -8,8 +8,6 @@ using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
-using Raven.Database.Extensions;
-using Raven.Database.Json;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -78,7 +76,9 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 				catch (Exception e)
 				{
-					logger.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsBytes);
+					logger.ErrorException(
+						string.Format("Could not create instance of a task: {0}", taskAsBytes),
+						e);
 					continue;
 				}
 
@@ -130,7 +130,9 @@ namespace Raven.Storage.Esent.StorageActions
 					}
 					catch (Exception e)
 					{
-						logger.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsBytes);
+						logger.ErrorException(
+							string.Format("Could not create instance of a task: {0}", taskAsBytes),
+							e);
 						Api.JetDelete(session, Tasks);
 						continue;
 					}

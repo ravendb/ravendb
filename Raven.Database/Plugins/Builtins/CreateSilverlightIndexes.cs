@@ -19,11 +19,10 @@ namespace Raven.Database.Plugins.Builtins
 						@"from doc in docs 
 let Tag = doc[""@metadata""][""Raven-Entity-Name""]
 where  Tag != null 
-select new { Tag, LastModified = doc[""@metadata""][""Last-Modified""] };",
+select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""] };",
 					Indexes =
 					{
 						{"Tag", FieldIndexing.NotAnalyzed},
-						{"LastModified", FieldIndexing.NotAnalyzed}
 					},
 					Stores =
 					{

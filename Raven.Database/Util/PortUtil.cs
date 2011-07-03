@@ -1,14 +1,14 @@
 using System;
 using System.Linq;
 using System.Net.NetworkInformation;
-using log4net;
+using NLog;
 using Raven.Http;
 
 namespace Raven.Database.Util
 {
     public static class PortUtil
     {
-        private static readonly ILog logger = LogManager.GetLogger(typeof (PortUtil));
+    	private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         const int DefaultPort = 8080;
 
@@ -19,8 +19,7 @@ namespace Raven.Database.Util
                 var autoPort = FindPort();
                 if (autoPort != DefaultPort)
                 {
-                    logger.InfoFormat("Default port {0} was not available, so using available port {1}", DefaultPort,
-                                      autoPort);
+                    logger.Info("Default port {0} was not available, so using available port {1}", DefaultPort, autoPort);
                 }
                 return autoPort;
             }

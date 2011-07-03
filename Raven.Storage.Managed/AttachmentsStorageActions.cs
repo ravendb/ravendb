@@ -7,16 +7,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using log4net;
-using Newtonsoft.Json.Linq;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Data;
 using Raven.Database.Impl;
-using Raven.Database.Json;
 using Raven.Database.Storage;
-using Raven.Http.Exceptions;
 using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 
@@ -26,7 +23,7 @@ namespace Raven.Storage.Managed
     {
         private readonly TableStorage storage;
         private readonly IUuidGenerator generator;
-        private readonly ILog logger = LogManager.GetLogger(typeof (AttachmentsStorageActions));
+    	private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         public AttachmentsStorageActions(TableStorage storage, IUuidGenerator generator)
         {
@@ -49,7 +46,7 @@ namespace Raven.Storage.Managed
 			}, ms.ToArray());
            if (result == false)
                throw new ConcurrencyException("PUT attempted on attachment '" + key + "' while it was locked by another transaction");
-            logger.DebugFormat("Adding attachment {0}", key);
+            logger.Debug("Adding attachment {0}", key);
             return newEtag;
         }
 
@@ -80,7 +77,7 @@ namespace Raven.Storage.Managed
 			if (!storage.Attachments.Remove(new RavenJObject { { "key", key } }))
                 throw new ConcurrencyException("DELETE attempted on attachment '" + key +
                                                "'  while it was locked by another transaction");
-            logger.DebugFormat("Attachment with key '{0}' was deleted", key);
+            logger.Debug("Attachment with key '{0}' was deleted", key);
         }
 
         public Attachment GetAttachment(string key)
