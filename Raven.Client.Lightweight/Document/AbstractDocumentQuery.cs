@@ -1281,8 +1281,8 @@ If you really want to do in memory filtering on the data returned from the query
                             .Unwrap();
                     }
 
-                    Debug.WriteLine(string.Format("Query returned {0}/{1} results", task.Result.Results.Count,
-                                                  task.Result.TotalResults));
+                    Debug.WriteLine(string.Format("Query returned {0}/{1} {2}results", task.Result.Results.Count,
+						task.Result.TotalResults, task.Result.IsStale ? "stale " : ""));
 					task.Result.EnsureSnapshot();
                     return task;
                 }).Unwrap();
@@ -1336,8 +1336,8 @@ If you really want to do in memory filtering on the data returned from the query
             			Thread.Sleep(100);
             			continue;
             		}
-            		Debug.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count,
-            		                              result.TotalResults));
+            		Debug.WriteLine(string.Format("Query returned {0}/{1} {2}results", result.Results.Count,
+            		                              result.TotalResults, result.IsStale ? "stale " : ""));
             		result.EnsureSnapshot();
             		return result;
             	}

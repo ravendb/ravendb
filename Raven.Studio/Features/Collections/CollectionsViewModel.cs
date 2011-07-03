@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Connection;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Collections
 {
@@ -25,8 +26,8 @@ namespace Raven.Studio.Features.Collections
 		CollectionViewModel activeCollection;
 
 		[ImportingConstructor]
-		public CollectionsViewModel(IServer server, IEventAggregator events)
-			: base(events)
+		public CollectionsViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
+			: base(events, navigationService)
 		{
 			DisplayName = "Collections";
 

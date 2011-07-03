@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Lucene.Net.Analysis;
@@ -17,6 +18,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
@@ -444,6 +446,8 @@ namespace Raven.Database.Indexing
 			indexExtensions.TryAdd(indexExtensionKey, extension);
 		}
 
+		
+
 		#region Nested type: IndexQueryOperation
 
 		internal class IndexQueryOperation
@@ -472,53 +476,56 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<IndexQueryResult> Query()
 			{
-				AssertQueryDoesNotContainFieldsThatAreNotIndexes();
-			    var indexSearcher = parent.searcher;
-			    indexSearcher.GetIndexReader().IncRef();
-                try
+				using(IndexStorage.EnsureInvariantCulture())
 				{
-					Query luceneQuery = GetLuceneQuery();
-					int start = indexQuery.Start;
-					int pageSize = indexQuery.PageSize;
-					int returnedResults = 0;
-					int skippedResultsInCurrentLoop = 0;
-					do
+					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
+					var indexSearcher = parent.searcher;
+					indexSearcher.GetIndexReader().IncRef();
+					try
 					{
-						if (skippedResultsInCurrentLoop > 0)
+						Query luceneQuery = GetLuceneQuery();
+						int start = indexQuery.Start;
+						int pageSize = indexQuery.PageSize;
+						int returnedResults = 0;
+						int skippedResultsInCurrentLoop = 0;
+						do
 						{
-							start = start + pageSize;
-							// trying to guesstimate how many results we will need to read from the index
-							// to get enough unique documents to match the page size
-							pageSize = skippedResultsInCurrentLoop*indexQuery.PageSize;
-							skippedResultsInCurrentLoop = 0;
-						}
-						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
-						indexQuery.TotalSize.Value = search.totalHits;
-
-						RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start);
-
-						for (int i = start; i < search.totalHits && (i - start) < pageSize; i++)
-						{
-							Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
-							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.scoreDocs[i].score);
-							if (ShouldIncludeInResults(indexQueryResult) == false)
+							if (skippedResultsInCurrentLoop > 0)
 							{
-								indexQuery.SkippedResults.Value++;
-								skippedResultsInCurrentLoop++;
-								continue;
+								start = start + pageSize;
+								// trying to guesstimate how many results we will need to read from the index
+								// to get enough unique documents to match the page size
+								pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
+								skippedResultsInCurrentLoop = 0;
 							}
-						
-							returnedResults++;
-							yield return indexQueryResult;
-							if (returnedResults == indexQuery.PageSize)
-								yield break;
-						}
-					} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
+							TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
+							indexQuery.TotalSize.Value = search.totalHits;
+
+							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start);
+
+							for (int i = start; i < search.totalHits && (i - start) < pageSize; i++)
+							{
+								Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
+								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.scoreDocs[i].score);
+								if (ShouldIncludeInResults(indexQueryResult) == false)
+								{
+									indexQuery.SkippedResults.Value++;
+									skippedResultsInCurrentLoop++;
+									continue;
+								}
+
+								returnedResults++;
+								yield return indexQueryResult;
+								if (returnedResults == indexQuery.PageSize)
+									yield break;
+							}
+						} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
+					}
+					finally
+					{
+						indexSearcher.GetIndexReader().DecRef();
+					}
 				}
-                finally
-                {
-                    indexSearcher.GetIndexReader().DecRef();
-                }
 			}
 
 			private bool ShouldIncludeInResults(IndexQueryResult indexQueryResult)

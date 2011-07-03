@@ -1,6 +1,7 @@
 ﻿using Raven.Abstractions.Commands;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Tasks
 {
@@ -25,8 +26,8 @@ namespace Raven.Studio.Features.Tasks
 	public class ImportTask : ConsoleOutputTask
 	{
 		[ImportingConstructor]
-		public ImportTask(IServer server, IEventAggregator events)
-			: base(server, events)
+		public ImportTask(IServer server, IEventAggregator events, NavigationService navigationService)
+			: base(server, events, navigationService)
 		{
 		}
 

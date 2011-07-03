@@ -175,7 +175,7 @@
     <Compile Include="Bugs\IntegerIds.cs" />
     <Compile Include="Bugs\IteratingTwice.cs" />
     <Compile Include="Bugs\Iulian\CanReadEntityWithUrlId.cs" />
-    <Compile Include="Bugs\LastModifiedShouldBeQueryable.cs" />
+    <Compile Include="Bugs\LastModifiedQueries.cs" />
     <Compile Include="Bugs\LinqOnDictionary.cs" />
     <Compile Include="Bugs\LuceneIndexing.cs" />
     <Compile Include="Bugs\LuceneQueryShouldNotModifyDynamicDocument.cs" />
@@ -413,7 +413,7 @@
     <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
     <Compile Include="Bugs\WaitForNonStaleResultsAsOfLastWrite.cs" />
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />
-    <Compile Include="Bugs\when_querying_cases_by_name.cs" />
+    <Compile Include="Bugs\when_querying_cases_by_name_in_danish.cs" />
     <Compile Include="Bugs\WhereEntityIs.cs" />
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />
     <Compile Include="Bugs\WillThrowIfQueryingForUnindexedField.cs" />

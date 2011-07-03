@@ -1,3 +1,5 @@
+using Raven.Studio.Infrastructure.Navigation;
+
 namespace Raven.Studio.Features.Database
 {
     using System.ComponentModel.Composition;
@@ -14,8 +16,8 @@ namespace Raven.Studio.Features.Database
         private Visibility showCreateDatabaseForm;
 
         [ImportingConstructor]
-        public SelectDatabaseViewModel(IServer server, IEventAggregator events)
-            : base(events)
+		public SelectDatabaseViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
+			: base(events, navigationService)
         {
             DisplayName = "Home";
             Server = server;

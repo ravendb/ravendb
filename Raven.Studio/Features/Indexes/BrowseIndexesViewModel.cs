@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Indexing;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Indexes
 {
@@ -20,8 +21,8 @@ namespace Raven.Studio.Features.Indexes
 		object activeItem;
 
 		[ImportingConstructor]
-		public BrowseIndexesViewModel(IServer server, IEventAggregator events)
-			: base(events)
+		public BrowseIndexesViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
+			: base(events, navigationService)
 		{
 			DisplayName = "Indexes";
 
@@ -52,7 +53,7 @@ namespace Raven.Studio.Features.Indexes
 
 		public void CreateNewIndex()
 		{
-			ActiveItem = new EditIndexViewModel(new IndexDefinition(), server, Events);
+			ActiveItem = new EditIndexViewModel(new IndexDefinition(), server, Events, NavigationService);
 		}
 
 		void BeginRefreshIndexes()
@@ -83,7 +84,7 @@ namespace Raven.Studio.Features.Indexes
 			{
 				activeIndex = value;
 				if (activeIndex != null)
-					ActiveItem = new EditIndexViewModel(activeIndex, server, Events);
+					ActiveItem = new EditIndexViewModel(activeIndex, server, Events, NavigationService);
 				NotifyOfPropertyChange(() => ActiveIndex);
 			}
 		}

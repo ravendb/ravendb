@@ -1,16 +1,20 @@
 using System;
+using System.Globalization;
 using System.Linq;
+using System.Threading;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Embedded;
 using Raven.Client.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class when_querying_cases_by_name : IDisposable
+	public class when_querying_cases_by_name_in_danish : IDisposable
 	{
 		private readonly EmbeddableDocumentStore store;
+		private readonly IDisposable cultureReset = SwitchCultures("da");
 
-        public when_querying_cases_by_name()
+        public when_querying_cases_by_name_in_danish()
         {
             store = new EmbeddableDocumentStore
             {
@@ -37,18 +41,34 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void can_query_names_starting_with_da()
         {
-            using (var session = store.OpenSession())
-            {
-                var cases = session.Query<Case>()
-                    .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
-                    .Where(x => x.Name.StartsWith("da")).ToList();
-                
-                Assert.Equal(4, cases.Count);
+			using (var session = store.OpenSession())
+			{
+				var cases = session.Query<Case>()
+					.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite(TimeSpan.FromMinutes(5)))
+					.Where(x => x.Name.StartsWith("da"))
+					.ToList();
+
+				Assert.Equal(4, cases.Count);
 				Assert.Equal(new[] { "dacb", "daab", "dacb", "dada" }, cases.Select(x => x.Name).ToArray());
 			}
         }
 
-        [Fact]
+		private static IDisposable SwitchCultures(string cultureName)
+		{
+			var oldCurrentCulture = Thread.CurrentThread.CurrentCulture;
+			var oldCurrentUiCulture = Thread.CurrentThread.CurrentUICulture;
+
+			var culture = new CultureInfo(cultureName);
+			Thread.CurrentThread.CurrentCulture = culture;
+			Thread.CurrentThread.CurrentUICulture = culture;
+			return new DisposableAction(() =>
+			{
+				Thread.CurrentThread.CurrentCulture = oldCurrentCulture;
+				Thread.CurrentThread.CurrentUICulture = oldCurrentUiCulture;
+			});
+		}
+
+		[Fact]
         public void can_query_names_starting_with_dad()
         {
             using (var session = store.OpenSession())
@@ -94,7 +114,7 @@ namespace Raven.Tests.Bugs
 		public void Dispose()
 		{
 			store.Dispose();
-			
+			cultureReset.Dispose();
 		}
 
 		public class Case

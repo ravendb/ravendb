@@ -2,6 +2,7 @@
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Database
 {
@@ -32,8 +33,8 @@ namespace Raven.Studio.Features.Database
         readonly IServer server;
 
         [ImportingConstructor]
-        public SummaryViewModel(IServer server, IEventAggregator events)
-            : base(events)
+        public SummaryViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
+			: base(events, navigationService)
         {
             this.server = server;
             this.events = events;
