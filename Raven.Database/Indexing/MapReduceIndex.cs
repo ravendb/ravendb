@@ -126,7 +126,7 @@ namespace Raven.Database.Indexing
 			else
 			{
 				var docIdProp = TypeDescriptor.GetProperties(doc).Find(Abstractions.Data.Constants.DocumentIdFieldName, false);
-				documentIdFetcher = o => docIdProp.GetValue(o);
+				documentIdFetcher = docIdProp.GetValue;
 			}
 			return documentIdFetcher;
 		}
@@ -222,20 +222,21 @@ namespace Raven.Database.Indexing
 				}
 				PropertyDescriptorCollection properties = null;
 				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
+				var luceneDoc = new Document();
+				var fieldsAdded = new HashSet<AbstractField>();
+				var reduceKeyField = new Field(Abstractions.Data.Constants.ReduceKeyFieldName, "dummy",
+				                      Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
+				luceneDoc.Add(reduceKeyField);
 				foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
 					var fields = GetFields(anonymousObjectToLuceneDocumentConverter, doc, ref properties).ToList();
 
 					string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
+					reduceKeyField.SetValue(reduceKeyAsString.ToLowerInvariant());
 
-					var luceneDoc = new Document();
-					luceneDoc.Add(new Field(Abstractions.Data.Constants.ReduceKeyFieldName, reduceKeyAsString.ToLowerInvariant(),
-					                        Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
-					foreach (var field in fields)
-					{
-						luceneDoc.Add(field);
-					}
+					AddFieldsToDocumentOnlyOnce(luceneDoc, fieldsAdded, fields);
+
 					batchers.ApplyAndIgnoreAllErrors(
 						exception =>
 						{
@@ -264,6 +265,25 @@ namespace Raven.Database.Indexing
 			});
 			logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name,
 							  string.Join(", ", reduceKeys)));
+		}
+
+		private static void AddFieldsToDocumentOnlyOnce(Document luceneDoc, HashSet<AbstractField> fieldsAdded, List<AbstractField> fields)
+		{
+			foreach (var field in fields)
+			{
+				if (fieldsAdded.Add(field))
+					luceneDoc.Add(field);
+			}
+			// we might have extra fields laying around, from a previous run, we need to clear those as well
+			var removedFields = fieldsAdded.Except(fields).ToList();
+			foreach (var field in removedFields)
+			{
+				// HACK! HACK! HACK!
+				// YUCK, but we have to be able to remove a specific field, not just by name
+				// Need to figure out a better way of doing this.
+				luceneDoc.fields_ForNUnit.Remove(field);
+				fieldsAdded.Remove(field);
+			}
 		}
 
 		private string ExtractReduceKey(AbstractViewGenerator viewGenerator, object doc)
