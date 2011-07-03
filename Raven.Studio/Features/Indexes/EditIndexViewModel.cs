@@ -26,8 +26,8 @@ namespace Raven.Studio.Features.Indexes
 		bool shouldShowReduce;
 		bool shouldShowTransformResults;
 
-		public EditIndexViewModel(IndexDefinition index, IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(events, navigationService)
+		public EditIndexViewModel(IndexDefinition index, IServer server, IEventAggregator events)
+			: base(events)
 		{
 			DisplayName = "Edit Index";
 

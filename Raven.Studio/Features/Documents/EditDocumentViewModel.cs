@@ -33,7 +33,8 @@ namespace Raven.Studio.Features.Documents
 		private IKeyboardShortcutBinder keys;
 
 		[ImportingConstructor]
-		public EditDocumentViewModel(IEventAggregator events, IKeyboardShortcutBinder keys, NavigationService navigationService): base(events, navigationService)
+		public EditDocumentViewModel(IEventAggregator events, IKeyboardShortcutBinder keys)
+			: base(events)
 		{
 			metadata = new Dictionary<string, RavenJToken>();
 

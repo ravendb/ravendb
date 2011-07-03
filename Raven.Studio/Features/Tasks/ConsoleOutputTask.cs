@@ -13,8 +13,8 @@ namespace Raven.Studio.Features.Tasks
 		protected readonly IServer server;
 		string status;
 
-		protected ConsoleOutputTask(IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(events, navigationService)
+		protected ConsoleOutputTask(IServer server, IEventAggregator events)
+			: base(events)
 		{
 			this.server = server;
 			Console = new BindableCollection<string>();

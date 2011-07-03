@@ -26,8 +26,8 @@ namespace Raven.Studio.Features.Tasks
 		bool exportIndexesOnly;
 
 		[ImportingConstructor]
-		public ExportTask(IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(server, events, navigationService)
+		public ExportTask(IServer server, IEventAggregator events)
+			: base(server, events)
 		{
 		}
 

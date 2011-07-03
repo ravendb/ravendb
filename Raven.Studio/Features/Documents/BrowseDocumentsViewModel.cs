@@ -22,8 +22,8 @@ namespace Raven.Studio.Features.Documents
 		string status;
 
 		[ImportingConstructor]
-		public BrowseDocumentsViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(events, navigationService)
+		public BrowseDocumentsViewModel(IServer server, IEventAggregator events)
+			: base(events)
 		{
 			DisplayName = "Documents";
 			this.server = server;

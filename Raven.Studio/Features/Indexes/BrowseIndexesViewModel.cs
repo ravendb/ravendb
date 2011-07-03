@@ -21,8 +21,8 @@ namespace Raven.Studio.Features.Indexes
 		object activeItem;
 
 		[ImportingConstructor]
-		public BrowseIndexesViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(events, navigationService)
+		public BrowseIndexesViewModel(IServer server, IEventAggregator events)
+			: base(events)
 		{
 			DisplayName = "Indexes";
 
@@ -53,7 +53,7 @@ namespace Raven.Studio.Features.Indexes
 
 		public void CreateNewIndex()
 		{
-			ActiveItem = new EditIndexViewModel(new IndexDefinition(), server, Events, NavigationService);
+			ActiveItem = new EditIndexViewModel(new IndexDefinition(), server, Events);
 		}
 
 		void BeginRefreshIndexes()
@@ -84,7 +84,7 @@ namespace Raven.Studio.Features.Indexes
 			{
 				activeIndex = value;
 				if (activeIndex != null)
-					ActiveItem = new EditIndexViewModel(activeIndex, server, Events, NavigationService);
+					ActiveItem = new EditIndexViewModel(activeIndex, server, Events);
 				NotifyOfPropertyChange(() => ActiveIndex);
 			}
 		}

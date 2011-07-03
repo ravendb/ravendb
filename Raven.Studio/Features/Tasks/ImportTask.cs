@@ -26,8 +26,8 @@ namespace Raven.Studio.Features.Tasks
 	public class ImportTask : ConsoleOutputTask
 	{
 		[ImportingConstructor]
-		public ImportTask(IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(server, events, navigationService)
+		public ImportTask(IServer server, IEventAggregator events)
+			: base(server, events)
 		{
 		}
 

@@ -33,8 +33,8 @@ namespace Raven.Studio.Features.Database
         readonly IServer server;
 
         [ImportingConstructor]
-        public SummaryViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(events, navigationService)
+        public SummaryViewModel(IServer server, IEventAggregator events)
+			: base(events)
         {
             this.server = server;
             this.events = events;

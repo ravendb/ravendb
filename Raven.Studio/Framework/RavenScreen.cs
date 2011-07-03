@@ -1,4 +1,5 @@
-﻿using Raven.Studio.Infrastructure.Navigation;
+﻿using System.ComponentModel.Composition;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Framework
 {
@@ -8,13 +9,14 @@ namespace Raven.Studio.Framework
 	public abstract class RavenScreen : Screen
 	{
 		protected IEventAggregator Events;
-		protected readonly NavigationService NavigationService;
 		bool isBusy;
 
-		protected RavenScreen(IEventAggregator events, NavigationService navigationService)
+		[Import]
+		protected NavigationService NavigationService;
+
+		protected RavenScreen(IEventAggregator events)
 		{
 			Events = events;
-			this.NavigationService = navigationService;
 		}
 
 		protected override void OnViewAttached(object view, object context)

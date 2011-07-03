@@ -14,14 +14,12 @@ namespace Raven.Studio.Commands
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
-		private readonly NavigationService navigationService;
 
 		[ImportingConstructor]
-		public EditIndex(IEventAggregator events, IServer server, NavigationService navigationService)
+		public EditIndex(IEventAggregator events, IServer server)
 		{
 			this.events = events;
 			this.server = server;
-			this.navigationService = navigationService;
 		}
 
 		public void Execute(string indexName)
@@ -32,7 +30,7 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccess(get =>
 				{
 					events.Publish(
-						new DatabaseScreenRequested(() => new EditIndexViewModel(get.Result, server, events, navigationService)));
+						new DatabaseScreenRequested(() => new EditIndexViewModel(get.Result, server, events)));
 						events.Publish(new WorkCompleted());
 					});
 		}
