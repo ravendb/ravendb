@@ -12,6 +12,7 @@ using System.Windows;
 using System.Windows.Interop;
 using Caliburn.Micro;
 using Raven.Studio.Framework;
+using Raven.Studio.Framework.Extensions;
 
 namespace Raven.Studio.Infrastructure.Navigation
 {
@@ -36,8 +37,15 @@ namespace Raven.Studio.Infrastructure.Navigation
 				if (isUrlMatchsRoute(e.NewNavigationState, route.Value) == false)
 					continue;
 
-				var viewModel = (RavenScreen)IoC.GetInstance(route.Key, null);
+				//var viewModel = (RavenScreen)IoC.GetInstance(route.Key, null);
+				//viewModel.Navigate(GetParameters(route.Value, e.NewNavigationState));
+				
 			}
+		}
+
+		private Dictionary<string, string> GetParameters(string routeSignature, string url)
+		{
+			return new Dictionary<string, string>();
 		}
 
 		private bool isUrlMatchsRoute(string url, string routeSignature)

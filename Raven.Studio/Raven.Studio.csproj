@@ -161,6 +161,7 @@
     <Compile Include="Framework\DebugLogger.cs" />
     <Compile Include="Framework\EventArgs.cs" />
     <Compile Include="Framework\IBindablePagedQuery.cs" />
+    <Compile Include="Framework\IRavenConductor.cs" />
     <Compile Include="Framework\MenuItemMetadata.cs" />
     <Compile Include="Framework\CustomActionMessage.cs" />
     <Compile Include="Helpers\StateManager.cs" />

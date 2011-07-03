@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using Raven.Studio.Framework.Extensions;
 using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Framework
@@ -29,6 +31,21 @@ namespace Raven.Studio.Framework
 		protected virtual Dictionary<string, string> GetNavigationParameters()
 		{
 			return null;
+		}
+
+		protected virtual Type GetConductorType()
+		{
+			return null;
+		}
+
+		public virtual void Navigate(Dictionary<string, string> parameters)
+		{
+			var conductorType = GetConductorType();
+			if (conductorType == null)
+				return;
+
+			var conductor = (IRavenConductor)IoC.GetInstance(conductorType, null);
+			conductor.TrackNavigationTo(this, Events); ;
 		}
 
 		public bool IsBusy
