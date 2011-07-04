@@ -133,32 +133,30 @@ namespace Raven.Client.Document.Async
                 tcs.TrySetResult((T)entity);
                 return tcs.Task;
             }
-			
-			IncrementRequestCount();
 
-			return AsyncDatabaseCommands.GetAsync(id)
-                .ContinueWith(task =>
-                {
-                    JsonDocument documentFound;
-                    try
-                    {
-                        documentFound = task.Result;
-                    }
-                    catch (WebException ex)
-                    {
-                        var httpWebResponse = ex.Response as HttpWebResponse;
-                        if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-                            return default(T);
-                        throw;
-                    }
-                    if (documentFound == null)
-                        return default(T);
+	    	var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
 
-                    return TrackEntity<T>(documentFound);
-                });
+			return CompleteLoadAsync<T>(id, loadOperation);
+               
 		}
 
-	    /// <summary>
+		private Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
+		{
+			using (loadOperation.EnterLoadContext())
+			{
+				return AsyncDatabaseCommands.GetAsync(id)
+					.ContinueWith(task =>
+					{
+						if (loadOperation.SetResult(task.Result) == false)
+							return Task.Factory.StartNew(() => loadOperation.Complete<T>());
+
+						return CompleteLoadAsync<T>(id, loadOperation);
+					})
+					.Unwrap();
+			}
+		}
+
+		/// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
 		/// <param name="ids">The ids.</param>
