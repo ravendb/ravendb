@@ -34,11 +34,7 @@ namespace Raven.Client.Document.SessionOperations
 			this.disableAllCaching = disableAllCaching;
 			this.ids = ids;
 			this.includes = includes;
-		}
-
 		
-		public void Begin()
-		{
 			sessionOperations.IncrementRequestCount();
 			log.Debug("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
 

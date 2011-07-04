@@ -187,11 +187,13 @@ namespace Raven.Client.Document
 				return new T[0];
 
 			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
-			multiLoadOperation.Begin();
 			MultiLoadResult multiLoadResult;
 			do
 			{
-				multiLoadResult = DatabaseCommands.Get(ids, includes);
+				using(multiLoadOperation.EnterMultiLoadContext())
+				{
+					multiLoadResult = DatabaseCommands.Get(ids, includes);
+				}
 			} while (multiLoadOperation.SetResult(multiLoadResult));
 
 			return multiLoadOperation.Complete<T>();

@@ -250,36 +250,54 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		/// <param name="keys">The keys.</param>
-		/// <returns></returns>
-		public Task<JsonDocument[]> MultiGetAsync(string[] keys)
+		public Task<MultiLoadResult> MultiGetAsync(string[] keys, string[] includes)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
+			var path = url + "/queries/?";
+			if (includes != null && includes.Length > 0)
+			{
+				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
+			}
+			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
+			// we are fine with that, requests to load > 128 items are going to be rare
+			HttpJsonRequest request;
+			if (keys.Length < 128)
+			{
+				path += "&" + string.Join("&", keys.Select(x => "id=" + x).ToArray());
+				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+				return request.ReadResponseStringAsync()
+					.ContinueWith(task => CompleteMultiGet(task));
+			}
+			request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
 			var array = Encoding.UTF8.GetBytes(new JArray(keys).ToString(Formatting.None));
 			return request.WriteAsync(array)
 				.ContinueWith(writeTask => request.ReadResponseStringAsync())
-				.ContinueWith(task =>
-				{
-					RavenJArray responses;
-					try
-					{
-						responses = RavenJObject.Parse(task.Result.Result).Value<RavenJArray>("Results");
-					}
-					catch (WebException e)
-					{
-						var httpWebResponse = e.Response as HttpWebResponse;
-						if (httpWebResponse == null ||
-							httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-							throw;
-						throw ThrowConcurrencyException(e);
-					}
-
-					return SerializationHelper.RavenJObjectsToJsonDocuments(responses.Cast<RavenJObject>())
-						.ToArray();
-				});
+				.ContinueWith(task => CompleteMultiGet(task.Result));
+				
 		}
 
-		/// <summary>
+		private static MultiLoadResult CompleteMultiGet(Task<string> task)
+    	{
+    		try
+    		{
+				var result = RavenJObject.Parse(task.Result);
+
+				return new MultiLoadResult
+				{
+					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
+					Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+				};
+    		}
+    		catch (WebException e)
+    		{
+    			var httpWebResponse = e.Response as HttpWebResponse;
+    			if (httpWebResponse == null ||
+    			    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+    				throw;
+    			throw ThrowConcurrencyException(e);
+    		}
+    	}
+
+    	/// <summary>
 		/// Begins an async get operation for documents
 		/// </summary>
 		/// <param name="start">Paging start</param>

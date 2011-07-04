@@ -7,10 +7,12 @@
 
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
 
 namespace Raven.Client.Document.Async
@@ -82,6 +84,24 @@ namespace Raven.Client.Document.Async
 	    }
 
 		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		public IAsyncLoaderWithInclude<object> Include(string path)
+		{
+			return new AsyncMultiLoaderWithInclude<object>(this).Include(path);
+		}
+
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		public IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+		{
+			return new AsyncMultiLoaderWithInclude<T>(this).Include(path);
+		}
+
+		/// <summary>
 		/// Loads the specified entities with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
@@ -144,10 +164,33 @@ namespace Raven.Client.Document.Async
 		/// <param name="ids">The ids.</param>
 		/// <returns></returns>
 		public Task<T[]> LoadAsync<T>(string[] ids)
+	    {
+	    	return LoadAsyncInternal<T>(ids, new string[0]);
+	    }
+
+
+		/// <summary>
+		/// Begins the async multi load operation
+		/// </summary>
+		public Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes)
 		{
-			IncrementRequestCount();
-			return AsyncDatabaseCommands.MultiGetAsync(ids)
-                .ContinueWith(task => task.Result.Select(TrackEntity<T>).ToArray());
+			var multiLoadOperation = new MultiLoadOperation(this,AsyncDatabaseCommands.DisableAllCaching, ids, includes);
+			return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
+		}
+
+		private Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes, MultiLoadOperation multiLoadOperation)
+		{
+			using (multiLoadOperation.EnterMultiLoadContext())
+			{
+				return AsyncDatabaseCommands.MultiGetAsync(ids, includes)
+					.ContinueWith(t =>
+					{
+						if (multiLoadOperation.SetResult(t.Result) == false)
+							return Task.Factory.StartNew(() => multiLoadOperation.Complete<T>());
+						return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
+					})
+					.Unwrap();
+			}
 		}
 
 		/// <summary>

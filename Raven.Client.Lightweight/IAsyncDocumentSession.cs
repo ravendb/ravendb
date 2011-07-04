@@ -6,7 +6,9 @@
 #if !NET_3_5
 
 using System;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Raven.Client.Document;
 
 namespace Raven.Client
 {
@@ -26,6 +28,19 @@ namespace Raven.Client
 		/// </remarks>
 		IAsyncAdvancedSessionOperations Advanced { get; }
 
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		IAsyncLoaderWithInclude<object> Include(string path);
+
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path);
+
+	
 		/// <summary>
 		/// Stores the specified entity in the session. The entity will be saved when <see cref="IDocumentSession.SaveChanges"/> is called.
 		/// </summary>

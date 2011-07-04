@@ -141,6 +141,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\AsyncDocumentQuery.cs">
       <Link>Imports\Document\AsyncDocumentQuery.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiLoaderWithInclude.cs">
+      <Link>Imports\Document\AsyncMultiLoaderWithInclude.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\AsyncSpatialDocumentQuery.cs">
       <Link>Imports\Document\AsyncSpatialDocumentQuery.cs</Link>
     </Compile>
@@ -152,6 +155,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\IAbstractDocumentQuery.cs">
       <Link>Imports\Document\IAbstractDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\IAsyncLoaderWithInclude.cs">
+      <Link>Imports\Document\IAsyncLoaderWithInclude.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\DocumentSessionLoadOperation.cs">
       <Link>Imports\Document\SessionOperations\DocumentSessionLoadOperation.cs</Link>

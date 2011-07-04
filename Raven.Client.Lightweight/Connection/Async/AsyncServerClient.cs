@@ -45,9 +45,6 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
-		/// <param name="url">The URL.</param>
-		/// <param name="convention">The convention.</param>
-		/// <param name="credentials">The credentials.</param>
 		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
@@ -321,34 +318,50 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		/// <param name="keys">The keys.</param>
-		/// <returns></returns>
-		public Task<JsonDocument[]> MultiGetAsync(string[] keys)
+		public Task<MultiLoadResult> MultiGetAsync(string[] keys, string[] includes)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
-			var data = new RavenJArray(keys).ToString(Formatting.None);
-			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, data, null)
+			var path = url + "/queries/?";
+			if (includes != null && includes.Length > 0)
+			{
+				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
+			}
+			HttpJsonRequest request;
+			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
+			// we are fine with that, requests to load > 128 items are going to be rare
+			if (keys.Length < 128)
+			{
+				path += "&" + string.Join("&", keys.Select(x => "id=" + x).ToArray());
+				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+				return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
+					.ContinueWith(task => CompleteMultiGetAsync(task));
+			}
+			request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
+			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, new RavenJArray(keys).ToString(Formatting.None), null)
 				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null))
 				.Unwrap()
-				.ContinueWith(task =>
-				{
-					RavenJArray responses;
-					try
-					{
-						responses = RavenJObject.Parse(task.Result).Value<RavenJArray>("Results");
-					}
-					catch (WebException e)
-					{
-						var httpWebResponse = e.Response as HttpWebResponse;
-						if (httpWebResponse == null ||
-							httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-							throw;
-						throw ThrowConcurrencyException(e);
-					}
+				.ContinueWith(task => CompleteMultiGetAsync(task));
+		}
 
-					return SerializationHelper.RavenJObjectsToJsonDocuments(responses.Cast<RavenJObject>())
-						.ToArray();
-				});
+		private static MultiLoadResult CompleteMultiGetAsync(Task<string> task)
+		{
+			try
+			{
+				var result = RavenJObject.Parse(task.Result);
+
+				return new MultiLoadResult
+				{
+					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
+					Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+				};
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+				    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					throw;
+				throw ThrowConcurrencyException(e);
+			}
 		}
 
 		/// <summary>
@@ -416,7 +429,6 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins the async query.
 		/// </summary>
-		/// <param name="query">A string representation of a Linq query</param>
 		public Task<QueryResult> LinearQueryAsync(string query, int start, int pageSize)
 		{
 			throw new NotImplementedException();
