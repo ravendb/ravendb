@@ -759,11 +759,11 @@ namespace Raven.Client.Linq
 			var member = ((MemberExpression) expression.Body).Member;
 			var propertyInfo = ((MemberExpression)expression.Body).Member as PropertyInfo;
 			var fieldInfo = ((MemberExpression)expression.Body).Member as FieldInfo;
-			var name = member.Name;
+			var expressionMemberInfo = GetMember(expression.Body);
 			var type = propertyInfo != null
 			           	? propertyInfo.PropertyType
 			           	: (fieldInfo != null ? fieldInfo.FieldType : typeof(object));
-			luceneQuery.AddOrder(name, descending, type);
+			luceneQuery.AddOrder(expressionMemberInfo.Path, descending, type);
 		}
 
 		private void VisitSelect(Expression operand)
