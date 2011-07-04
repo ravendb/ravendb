@@ -59,5 +59,10 @@ namespace Raven.Studio.Features.Tasks
 			                        		Title = string.Format("Task: {0}", SelectedTask)
 			                        	});
 		}
+
+		protected override void OnViewAttached(object view, object context)
+		{
+			navigationService.Track(new NavigationState {Url = "tasks", Title = "Tasks"});
+		}
 	}
 }
