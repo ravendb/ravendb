@@ -15,14 +15,14 @@ namespace Raven.Tests.Document
 {
 	public class DocumentStoreServerTests_DifferentProcess
 	{
-		[Fact(Skip = "Requires running a separate server process, promotion doesn't work on the same process :-(")]
+		[Fact]
 		public void Can_promote_transactions()
 		{
 			var documentStore = new DocumentStore {Url = "http://localhost:8080"};
 			documentStore.Initialize();
 
 			var company = new Company {Name = "Company Name"};
-
+		    var durableEnlistment = new ManyDocumentsViaDTC.DummyEnlistmentNotification();
 			using (var tx = new TransactionScope())
 			{
 				var session = documentStore.OpenSession();
@@ -32,13 +32,16 @@ namespace Raven.Tests.Document
 				Assert.Equal(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
 
 				Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-				                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(), EnlistmentOptions.None);
+				                                  durableEnlistment, EnlistmentOptions.None);
 
 				Assert.NotEqual(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
 
 
 				tx.Complete();
 			}
+
+            Assert.True(durableEnlistment.WasCommitted);
+
 			for (int i = 0; i < 15; i++)// wait for commit
 			{
 				using (var session2 = documentStore.OpenSession())
