@@ -1,10 +1,7 @@
-﻿using Raven.Studio.Infrastructure.Navigation;
-
-namespace Raven.Studio.Commands
+﻿namespace Raven.Studio.Commands
 {
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
-	using Features.Database;
 	using Features.Indexes;
 	using Framework.Extensions;
 	using Messages;
@@ -30,7 +27,7 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccess(get =>
 				{
 					events.Publish(
-						new DatabaseScreenRequested(() => new EditIndexViewModel(get.Result, server, events)));
+						new DatabaseScreenRequested(() => new EditIndexViewModel(get.Result)));
 						events.Publish(new WorkCompleted());
 					});
 		}

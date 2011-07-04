@@ -26,8 +26,7 @@ namespace Raven.Studio.Features.Tasks
 		bool exportIndexesOnly;
 
 		[ImportingConstructor]
-		public ExportTask(IServer server, IEventAggregator events)
-			: base(server, events)
+		public ExportTask()
 		{
 		}
 
@@ -79,7 +78,7 @@ namespace Raven.Studio.Features.Tasks
 
 			var stream = saveFile.OpenFile();
 			var jsonRequestFactory = new HttpJsonRequestFactory();
-			var baseUrl = server.CurrentDatabaseAddress;
+			var baseUrl = Server.CurrentDatabaseAddress;
 			var credentials = new NetworkCredential();
 			var convention = new DocumentConvention();
 

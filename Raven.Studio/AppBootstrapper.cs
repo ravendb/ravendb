@@ -32,7 +32,6 @@ namespace Raven.Studio
 			base.OnStartup(sender, e);
 			var navigationService = container.GetExportedValue<NavigationService>();
 			navigationService.Initialize();
-			new RoutesConfigurator().Configure();
 		}
 
 		protected override void Configure()

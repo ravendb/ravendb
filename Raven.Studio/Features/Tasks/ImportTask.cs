@@ -26,8 +26,7 @@ namespace Raven.Studio.Features.Tasks
 	public class ImportTask : ConsoleOutputTask
 	{
 		[ImportingConstructor]
-		public ImportTask(IServer server, IEventAggregator events)
-			: base(server, events)
+		public ImportTask()
 		{
 		}
 
@@ -125,7 +124,7 @@ namespace Raven.Studio.Features.Tasks
 
 			// import Indexes
 			var totalIndexes = 0;
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 				{
 					var json = JToken.ReadFrom(jsonReader);
@@ -213,7 +212,7 @@ namespace Raven.Studio.Features.Tasks
 						batch.Count, Math.Round((double)size / 1024, 2), sw.ElapsedMilliseconds);
 			batch.Clear();
 
-			return server.OpenSession().Advanced.AsyncDatabaseCommands
+			return Server.OpenSession().Advanced.AsyncDatabaseCommands
 				.BatchAsync(commands);
 		}
 	}
