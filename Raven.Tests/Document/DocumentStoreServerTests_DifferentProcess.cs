@@ -4,9 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
+using System.Net;
 using System.Threading;
 using System.Transactions;
 using Raven.Client.Document;
+using Raven.Server;
 using Raven.Tests.Bugs;
 using Xunit;
 using Transaction = System.Transactions.Transaction;
@@ -18,41 +21,68 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_promote_transactions()
 		{
-			var documentStore = new DocumentStore {Url = "http://localhost:8080"};
-			documentStore.Initialize();
-
-			var company = new Company {Name = "Company Name"};
-		    var durableEnlistment = new ManyDocumentsViaDTC.DummyEnlistmentNotification();
-			using (var tx = new TransactionScope())
+			var process = Process.Start(typeof (Program).Assembly.Location, "/ram");
+			try
 			{
-				var session = documentStore.OpenSession();
-				session.Store(company);
-				session.SaveChanges();
+				WaitForNetwork("http://localhost:8080");
 
-				Assert.Equal(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
+				var documentStore = new DocumentStore { Url = "http://localhost:8080" };
+				documentStore.Initialize();
 
-				Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-				                                  durableEnlistment, EnlistmentOptions.None);
+				var company = new Company { Name = "Company Name" };
+				var durableEnlistment = new ManyDocumentsViaDTC.DummyEnlistmentNotification();
+				using (var tx = new TransactionScope())
+				{
+					var session = documentStore.OpenSession();
+					session.Store(company);
+					session.SaveChanges();
 
-				Assert.NotEqual(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
+					Assert.Equal(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
+
+					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
+													  durableEnlistment, EnlistmentOptions.None);
+
+					Assert.NotEqual(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
 
 
-				tx.Complete();
-			}
+					tx.Complete();
+				}
 
 
-			for (int i = 0; i < 15; i++)// wait for commit
-			{
+				for (int i = 0; i < 15; i++)// wait for commit
+				{
+					using (var session2 = documentStore.OpenSession())
+						if (session2.Load<Company>(company.Id) != null)
+							break;
+					Thread.Sleep(100);
+				}
 				using (var session2 = documentStore.OpenSession())
-					if (session2.Load<Company>(company.Id) != null)
-						break;
-				Thread.Sleep(100);
+					Assert.NotNull((session2.Load<Company>(company.Id)));
+
+				Assert.True(durableEnlistment.WasCommitted);
+
 			}
-			using (var session2 = documentStore.OpenSession())
-				Assert.NotNull((session2.Load<Company>(company.Id)));
+			finally
+			{
+				process.Kill();
+			}
+		}
 
-			Assert.True(durableEnlistment.WasCommitted);
-
+		private static void WaitForNetwork(string url)
+		{
+			for (int i = 0; i < 15; i++)
+			{
+				try
+				{
+					var request = WebRequest.Create(url);
+					request.GetResponse().Close();
+					break;
+				}
+				catch (Exception)
+				{
+					Thread.Sleep(100);
+				}
+			}
 		}
 	}
 }
