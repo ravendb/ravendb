@@ -40,7 +40,6 @@ namespace Raven.Tests.Document
 				tx.Complete();
 			}
 
-            Assert.True(durableEnlistment.WasCommitted);
 
 			for (int i = 0; i < 15; i++)// wait for commit
 			{
@@ -51,6 +50,9 @@ namespace Raven.Tests.Document
 			}
 			using (var session2 = documentStore.OpenSession())
 				Assert.NotNull((session2.Load<Company>(company.Id)));
+
+			Assert.True(durableEnlistment.WasCommitted);
+
 		}
 	}
 }
