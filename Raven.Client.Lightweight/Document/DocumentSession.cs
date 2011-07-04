@@ -186,7 +186,7 @@ namespace Raven.Client.Document
 			if(ids.Length == 0)
 				return new T[0];
 
-			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
+			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
 			MultiLoadResult multiLoadResult;
 			do
 			{

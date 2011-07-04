@@ -174,7 +174,7 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes)
 		{
-			var multiLoadOperation = new MultiLoadOperation(this,AsyncDatabaseCommands.DisableAllCaching, ids, includes);
+			var multiLoadOperation = new MultiLoadOperation(this,AsyncDatabaseCommands.DisableAllCaching, ids);
 			return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
 		}
 
