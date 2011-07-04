@@ -10,15 +10,12 @@ namespace Raven.Studio.Features.Tasks
 
 	public abstract class ConsoleOutputTask : RavenScreen
 	{
-		protected readonly IServer server;
 		string status;
 
-		protected ConsoleOutputTask(IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(events, navigationService)
+		protected ConsoleOutputTask()
 		{
-			this.server = server;
 			Console = new BindableCollection<string>();
-			server.CurrentDatabaseChanged += delegate { ClearConsole(); };
+			Server.CurrentDatabaseChanged += delegate { ClearConsole(); };
 		}
 
 		public IObservableCollection<string> Console { get; private set; }

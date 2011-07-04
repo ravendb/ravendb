@@ -26,12 +26,11 @@ namespace Raven.Studio.Features.Collections
 		CollectionViewModel activeCollection;
 
 		[ImportingConstructor]
-		public CollectionsViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(events, navigationService)
+		public CollectionsViewModel()
 		{
 			DisplayName = "Collections";
 
-			events.Subscribe(this);
+			Events.Subscribe(this);
 
 			this.server = server;
 

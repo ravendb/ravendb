@@ -29,20 +29,14 @@ namespace Raven.Studio.Features.Database
                                     IHandle<DocumentDeleted>,
                                     IHandle<StatisticsUpdated>
     {
-        readonly IEventAggregator events;
-        readonly IServer server;
-
         [ImportingConstructor]
-        public SummaryViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(events, navigationService)
+        public SummaryViewModel()
         {
-            this.server = server;
-            this.events = events;
-            events.Subscribe(this);
+            Events.Subscribe(this);
 
             DisplayName = "Summary";
 
-            server.CurrentDatabaseChanged += delegate
+            Server.CurrentDatabaseChanged += delegate
             {
                 Collections = new BindableCollection<Collection>();
                 RecentDocuments = new BindableCollection<DocumentViewModel>();
@@ -57,9 +51,9 @@ namespace Raven.Studio.Features.Database
             };
         }
 
-        public string DatabaseName { get { return server.CurrentDatabase; } }
+        public string DatabaseName { get { return Server.CurrentDatabase; } }
 
-        public IServer Server { get { return server; } }
+        public IServer Server { get { return Server; } }
 
         public BindableCollection<DocumentViewModel> RecentDocuments { get; private set; }
 
@@ -178,7 +172,7 @@ namespace Raven.Studio.Features.Database
 
         public void NavigateToCollection(Collection collection)
         {
-            events.Publish(new DatabaseScreenRequested(() =>
+            Events.Publish(new DatabaseScreenRequested(() =>
                                                         {
                                                             var vm = IoC.Get<CollectionsViewModel>();
                                                             vm.ActiveCollection = new CollectionViewModel{Name = collection.Name, Count = collection.Count};
@@ -193,7 +187,7 @@ namespace Raven.Studio.Features.Database
 
         void RetrieveSummary()
         {
-            using (var session = server.OpenSession())
+            using (var session = Server.OpenSession())
             {
                 ExecuteCollectionQueryWithRetry(session, 5);
 

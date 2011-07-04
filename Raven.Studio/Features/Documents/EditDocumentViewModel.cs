@@ -35,8 +35,7 @@ namespace Raven.Studio.Features.Documents
 		private IKeyboardShortcutBinder keys;
 
 		[ImportingConstructor]
-		public EditDocumentViewModel(IServer server, IEventAggregator events, IKeyboardShortcutBinder keys, NavigationService navigationService)
-			: base(events, navigationService)
+		public EditDocumentViewModel()
 		{
 			metadata = new Dictionary<string, RavenJToken>();
 
@@ -44,7 +43,7 @@ namespace Raven.Studio.Features.Documents
 			document = new JsonDocument();
 			JsonData = InitialJsonData();
 			JsonMetadata = "{}";
-			events.Subscribe(this);
+			Events.Subscribe(this);
 			this.server = server;
 			this.keys = keys;
 

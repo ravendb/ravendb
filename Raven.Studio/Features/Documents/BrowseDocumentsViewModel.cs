@@ -17,20 +17,15 @@ namespace Raven.Studio.Features.Documents
 	public class BrowseDocumentsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{
-		readonly IEventAggregator events;
-		readonly IServer server;
 		string status;
 
 		[ImportingConstructor]
-		public BrowseDocumentsViewModel(IServer server, IEventAggregator events, NavigationService navigationService)
-			: base(events, navigationService)
+		public BrowseDocumentsViewModel()
 		{
 			DisplayName = "Documents";
-			this.server = server;
-			this.events = events;
-			events.Subscribe(this);
+			Events.Subscribe(this);
 
-			server.CurrentDatabaseChanged += delegate
+			Server.CurrentDatabaseChanged += delegate
 			{
 				Initialize();
 			};
@@ -62,7 +57,7 @@ namespace Raven.Studio.Features.Documents
 
 		Task<JsonDocument[]> GetDocumentsQuery(int start, int pageSize)
 		{
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 				return session.Advanced.AsyncDatabaseCommands
 					.GetDocumentsAsync(start, pageSize);
 		}
@@ -82,7 +77,7 @@ namespace Raven.Studio.Features.Documents
 		public void CreateNewDocument()
 		{
 			var doc = IoC.Get<EditDocumentViewModel>();
-			events.Publish(new DatabaseScreenRequested(() => doc));
+			Events.Publish(new DatabaseScreenRequested(() => doc));
 		}
 
 		public bool HasDocuments { get { return Documents.Any(); } }
@@ -91,7 +86,7 @@ namespace Raven.Studio.Features.Documents
 		{
 			if (Documents == null) return;
 
-			var countOfDocuments = server.Statistics.CountOfDocuments;
+			var countOfDocuments = Server.Statistics.CountOfDocuments;
 
 			Status = countOfDocuments == 0
 				? "The database contains no documents."

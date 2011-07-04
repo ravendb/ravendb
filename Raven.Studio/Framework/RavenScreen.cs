@@ -1,4 +1,5 @@
-﻿using Raven.Studio.Infrastructure.Navigation;
+﻿using System.ComponentModel.Composition;
+using Raven.Studio.Infrastructure.Navigation;
 using Raven.Studio.Plugins;
 
 namespace Raven.Studio.Framework
@@ -8,17 +9,14 @@ namespace Raven.Studio.Framework
 
 	public abstract class RavenScreen : Screen
 	{
-		private readonly IServer server;
-		protected IEventAggregator Events;
-		protected readonly NavigationService NavigationService;
 		bool isBusy;
 
-		protected RavenScreen(IServer server, IEventAggregator events, NavigationService navigationService)
-		{
-			this.server = server;
-			Events = events;
-			this.NavigationService = navigationService;
-		}
+		[Import]
+		public IServer Server { get; set; }
+		[Import]
+		public IEventAggregator Events { get; set; }
+		[Import]
+		public NavigationService NavigationService { get; set; }
 
 		protected override void OnViewAttached(object view, object context)
 		{
@@ -28,7 +26,7 @@ namespace Raven.Studio.Framework
 
 		protected virtual string GetScreenNavigationState()
 		{
-			return "/" + server.CurrentDatabase + "/" + DisplayName.ToLowerInvariant();
+			return "/" + Server.CurrentDatabase + "/" + DisplayName.ToLowerInvariant();
 		}
 
 		public bool IsBusy
