@@ -181,6 +181,7 @@
     <Compile Include="Impl\DotNetZip\StaticTree.cs" />
     <Compile Include="Impl\DotNetZip\WorkItem.cs" />
     <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\CollectionsNavigator.cs" />
     <Compile Include="Infrastructure\Navigation\Navigators\ImportNavigator.cs" />
     <Compile Include="Infrastructure\Navigation\NavigatorExportAttribute.cs" />
     <Compile Include="Infrastructure\Navigation\Navigators\BaseNavigator.cs" />

@@ -96,12 +96,27 @@ namespace Raven.Studio.Features.Collections
 
 		void GetDocumentsForActiveCollection()
 		{
+			TrackCurrentCollection();
+
 			ActiveCollectionDocuments.ClearResults();
 			
 			if (ActiveCollection == null) return;
 
 			ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;
 			ActiveCollectionDocuments.LoadPage();
+		}
+
+		private void TrackCurrentCollection()
+		{
+			if (ActiveCollection == null)
+				return;
+
+			Execute.OnUIThread(() =>
+			                   NavigationService.Track(new NavigationState
+			                                           	{
+			                                           		Url = string.Format("collections/{0}", ActiveCollection.Name),
+			                                           		Title = string.Format("Collections: {0}", ActiveCollection.Name)
+			                                           	}));
 		}
 
 		Task<DocumentViewModel[]> GetDocumentsForActiveCollectionQuery(int start, int pageSize)
@@ -148,10 +163,9 @@ namespace Raven.Studio.Features.Collections
 
 						if (ActiveCollection != null)
 						{
-							activeCollection = Collections
-								.Where(collection => collection.Name == activeCollection.Name)
+							ActiveCollection = Collections
+								.Where(collection => collection.Name == ActiveCollection.Name)
 								.FirstOrDefault(); 
-							NotifyOfPropertyChange(() => ActiveCollection); 
 						}
 						else // select the first one if we weren't asked for one
 						{
