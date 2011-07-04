@@ -35,14 +35,23 @@ namespace Raven.Client.Document.SessionOperations
 #endif
 		}
 
-		public IDisposable EnterMLoadContext()
+		public IDisposable EnterLoadContext()
 		{
 			if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
 				return disableAllCaching();
 			return null;
 		}
 
-		public bool HandleException(WebException e)
+		public bool HandleException(WebException ex)
+		{
+			var httpWebResponse = ex.Response as HttpWebResponse;
+			if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+			{
+				documentFound = null;
+				return true;
+			}
+			return false;
+		}
 
 		public bool SetResult(JsonDocument document)
 		{
@@ -58,6 +67,13 @@ namespace Raven.Client.Document.SessionOperations
 				(DateTime.Now - startTime) < sessionOperations.NonAuthoritiveInformationTimeout
 #endif
 				;
+		}
+
+		public T Complete<T>()
+		{
+			if (documentFound == null)
+				return default(T);
+			return sessionOperations.TrackEntity<T>(documentFound);
 		}
 	}
 }

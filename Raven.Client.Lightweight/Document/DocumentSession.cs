@@ -96,51 +96,26 @@ namespace Raven.Client.Document
 				return (T)existingEntity;
 			}
 
-			IncrementRequestCount();
-#if !SILVERLIGHT
-			var sp = Stopwatch.StartNew();
-#else
-			var startTime = DateTime.Now;
-#endif
-			bool firstRequest = true;
-			JsonDocument documentFound;
+			var loadOperation = new LoadOperation(this, DatabaseCommands.DisableAllCaching, id);
+			bool retry;
 			do
 			{
 				try
 				{
-					Debug.WriteLine(string.Format("Loading document [{0}] from {1}", id, StoreIdentifier));
-					IDisposable disposable = null;
-
-					if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
-						disposable = DatabaseCommands.DisableAllCaching();
-
-					using (disposable)
-						documentFound = DatabaseCommands.Get(id);
+					using (loadOperation.EnterLoadContext())
+					{
+						retry = loadOperation.SetResult(DatabaseCommands.Get(id));
+					}
 				}
 				catch (WebException ex)
 				{
-					var httpWebResponse = ex.Response as HttpWebResponse;
-					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-						return default(T);
-					throw;
+					retry = false;
+					if (loadOperation.HandleException(ex) == false)
+						throw;
 				}
-				firstRequest = false;
-				if (documentFound == null)
-					return default(T);
-
-			} while (
-				documentFound.NonAuthoritiveInformation.HasValue &&
-				documentFound.NonAuthoritiveInformation.Value &&
-				AllowNonAuthoritiveInformation == false &&
-#if !SILVERLIGHT
-				sp.Elapsed < NonAuthoritiveInformationTimeout
-#else
-				(DateTime.Now - startTime) < NonAuthoritiveInformationTimeout
-#endif
-				);
-
-
-			return TrackEntity<T>(documentFound);
+				
+			} while (retry);
+			return loadOperation.Complete<T>();
 		}
 
 		/// <summary>

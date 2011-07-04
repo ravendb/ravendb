@@ -159,8 +159,11 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\IAsyncLoaderWithInclude.cs">
       <Link>Imports\Document\IAsyncLoaderWithInclude.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\DocumentSessionLoadOperation.cs">
-      <Link>Imports\Document\SessionOperations\DocumentSessionLoadOperation.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\LoadOperation.cs">
+      <Link>Imports\Document\SessionOperations\LoadOperation.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\MultiLoadOperation.cs">
+      <Link>Imports\Document\SessionOperations\MultiLoadOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
