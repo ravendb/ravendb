@@ -53,14 +53,14 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentSession"/> class.
 		/// </summary>
-		public DocumentSession(DocumentStore documentStore, 
+		public DocumentSession(DocumentStore documentStore,
 			DocumentSessionListeners listeners,
 			Guid id,
 			IDatabaseCommands databaseCommands
 #if !NET_3_5
-			, IAsyncDatabaseCommands asyncDatabaseCommands
+, IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
-			)
+)
 			: base(documentStore, listeners, id)
 		{
 #if !NET_3_5
@@ -81,7 +81,7 @@ namespace Raven.Client.Document
 			get { return this; }
 		}
 
-		
+
 		/// <summary>
 		/// Loads the specified entity with the specified id.
 		/// </summary>
@@ -100,20 +100,10 @@ namespace Raven.Client.Document
 			bool retry;
 			do
 			{
-				try
+				using (loadOperation.EnterLoadContext())
 				{
-					using (loadOperation.EnterLoadContext())
-					{
-						retry = loadOperation.SetResult(DatabaseCommands.Get(id));
-					}
+					retry = loadOperation.SetResult(DatabaseCommands.Get(id));
 				}
-				catch (WebException ex)
-				{
-					retry = false;
-					if (loadOperation.HandleException(ex) == false)
-						throw;
-				}
-				
 			} while (retry);
 			return loadOperation.Complete<T>();
 		}
@@ -158,14 +148,14 @@ namespace Raven.Client.Document
 
 		internal T[] LoadInternal<T>(string[] ids, string[] includes)
 		{
-			if(ids.Length == 0)
+			if (ids.Length == 0)
 				return new T[0];
 
 			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
 			MultiLoadResult multiLoadResult;
 			do
 			{
-				using(multiLoadOperation.EnterMultiLoadContext())
+				using (multiLoadOperation.EnterMultiLoadContext())
 				{
 					multiLoadResult = DatabaseCommands.Get(ids, includes);
 				}
@@ -185,13 +175,13 @@ namespace Raven.Client.Document
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands
 #if !NET_3_5
-				, AsyncDatabaseCommands
+, AsyncDatabaseCommands
 #endif
-				),ravenQueryStatistics, indexName, null,  DatabaseCommands
+), ravenQueryStatistics, indexName, null, DatabaseCommands
 #if !NET_3_5
-				, AsyncDatabaseCommands
+, AsyncDatabaseCommands
 #endif
-					);
+);
 		}
 
 		/// <summary>
@@ -228,7 +218,7 @@ namespace Raven.Client.Document
 			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
 			foreach (PropertyInfo property in entity.GetType().GetProperties())
 			{
-				if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0) 
+				if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
 					continue;
 				property.SetValue(entity, property.GetValue(newEntity, null), null);
 			}
@@ -239,7 +229,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			 var jsonDocument = DatabaseCommands.Get(documentKey);
+			var jsonDocument = DatabaseCommands.Get(documentKey);
 			if (jsonDocument == null)
 				throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
 			return jsonDocument;
@@ -281,7 +271,7 @@ namespace Raven.Client.Document
 			{
 				string id;
 				TryGetIdFromInstance(entity, out id);
-				if(string.IsNullOrEmpty(id))
+				if (string.IsNullOrEmpty(id))
 					throw new InvalidOperationException("Could not figure out identifier for transient instance");
 				return baseUrl + id;
 			}
@@ -294,15 +284,15 @@ namespace Raven.Client.Document
 		/// </summary>
 		public void SaveChanges()
 		{
-		    using(EntitiesToJsonCachingScope())
-		    {
-                var data = PrepareForSaveChanges();
-                if (data.Commands.Count == 0)
-                    return; // nothing to do here
-                IncrementRequestCount();
-		    	LogBatch(data);
-                UpdateBatchResults(DatabaseCommands.Batch(data.Commands), data.Entities);
-            }
+			using (EntitiesToJsonCachingScope())
+			{
+				var data = PrepareForSaveChanges();
+				if (data.Commands.Count == 0)
+					return; // nothing to do here
+				IncrementRequestCount();
+				LogBatch(data);
+				UpdateBatchResults(DatabaseCommands.Batch(data.Commands), data.Entities);
+			}
 		}
 
 		[Conditional("DEBUG")]
@@ -403,17 +393,17 @@ namespace Raven.Client.Document
 			return new RavenQueryInspector<T>(
 				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
 #if !NET_3_5
-					, Advanced.AsyncDatabaseCommands
+, Advanced.AsyncDatabaseCommands
 #endif
-				), 
+),
 				ravenQueryStatistics,
 				indexName,
 				null,
 				Advanced.DatabaseCommands
 #if !NET_3_5
-				, Advanced.AsyncDatabaseCommands
+, Advanced.AsyncDatabaseCommands
 #endif
-			);
+);
 		}
 
 		/// <summary>

@@ -42,21 +42,12 @@ namespace Raven.Client.Document.SessionOperations
 			return null;
 		}
 
-		public bool HandleException(WebException ex)
-		{
-			var httpWebResponse = ex.Response as HttpWebResponse;
-			if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-			{
-				documentFound = null;
-				return true;
-			}
-			return false;
-		}
-
 		public bool SetResult(JsonDocument document)
 		{
 			firstRequest = false;
 			documentFound = document;
+			if (documentFound == null)
+				return false;
 			return
 				documentFound.NonAuthoritiveInformation.HasValue &&
 				documentFound.NonAuthoritiveInformation.Value &&
