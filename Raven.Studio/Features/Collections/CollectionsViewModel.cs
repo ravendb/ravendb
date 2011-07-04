@@ -163,9 +163,11 @@ namespace Raven.Studio.Features.Collections
 
 						if (ActiveCollection != null)
 						{
-							ActiveCollection = Collections
+							activeCollection = Collections
 								.Where(collection => collection.Name == ActiveCollection.Name)
 								.FirstOrDefault();
+							NotifyOfPropertyChange(() => ActiveCollection);
+							TrackCurrentCollection();
 						}
 						else // select the first one if we weren't asked for one
 						{
