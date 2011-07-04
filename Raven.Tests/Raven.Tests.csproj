@@ -185,6 +185,7 @@
     <Compile Include="Bugs\MultipleRangeQueries.cs" />
     <Compile Include="Bugs\NullableDateTime.cs" />
     <Compile Include="Bugs\NullableValuesRemote.cs" />
+    <Compile Include="Bugs\OrderByCollectionCount.cs" />
     <Compile Include="Bugs\Profiling.cs" />
     <Compile Include="Bugs\ProjectionFromDynamicIndex.cs" />
     <Compile Include="Bugs\Queries\Floats.cs" />
