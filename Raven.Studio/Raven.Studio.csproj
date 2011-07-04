@@ -183,7 +183,7 @@
     <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
     <Compile Include="Infrastructure\Navigation\Navigators\BaseNavigator.cs" />
     <Compile Include="Infrastructure\Navigation\Navigators\EditDocumentNavigator.cs" />
-    <Compile Include="Infrastructure\Navigation\Navigators\DocumentByIdNavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\DatabaseExplorerNavigator.cs" />
     <Compile Include="Infrastructure\Navigation\INavigator.cs" />
     <Compile Include="Infrastructure\Navigation\NavigationService.cs" />
     <Compile Include="Infrastructure\Navigation\INavigatorMetdata.cs" />
