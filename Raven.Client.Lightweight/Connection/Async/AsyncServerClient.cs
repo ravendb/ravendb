@@ -587,6 +587,15 @@ namespace Raven.Client.Connection.Async
 			throw new NotImplementedException();
 		}
 
+
+		/// <summary>
+		/// Disable all caching within the given scope
+		/// </summary>
+		public IDisposable DisableAllCaching()
+		{
+			return jsonRequestFactory.DisableAllCaching();
+		}
+
 		/// <summary>
 		/// Ensures that the silverlight startup tasks have run
 		/// </summary>
