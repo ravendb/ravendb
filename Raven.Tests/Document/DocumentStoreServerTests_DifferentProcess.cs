@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Threading;
 using System.Transactions;
@@ -21,7 +22,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_promote_transactions()
 		{
-			var process = Process.Start(typeof (Program).Assembly.Location, "/ram");
+			var process = Process.Start(GetRavenServerPath(), "/ram");
 			try
 			{
 				WaitForNetwork("http://localhost:8080");
@@ -66,6 +67,14 @@ namespace Raven.Tests.Document
 			{
 				process.Kill();
 			}
+		}
+
+		private static string GetRavenServerPath()
+		{
+			var localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Raven.Server.exe");
+			if(File.Exists(localPath))
+				return localPath;
+			return typeof (Program).Assembly.Location;
 		}
 
 		private static void WaitForNetwork(string url)
