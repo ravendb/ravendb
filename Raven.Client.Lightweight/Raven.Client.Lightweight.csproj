@@ -117,7 +117,7 @@
     <Compile Include="Document\PromotableRavenClientEnlistment.cs" />
     <Compile Include="Document\RavenClientEnlistment.cs" />
     <Compile Include="Document\ReflectionUtil.cs" />
-    <Compile Include="Document\SessionOperations\DocumentSessionLoadOperation.cs" />
+    <Compile Include="Document\SessionOperations\MultiLoadOperation.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
     <Compile Include="Document\SpatialDocumentQuery.cs" />
     <Compile Include="EntityStored.cs" />

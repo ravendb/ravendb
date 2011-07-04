@@ -13,10 +13,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		private readonly Func<IDisposable> disableAllCaching;
-		private string[] ids;
-		private string[] includes;
 		bool firstRequest = true;
-		IDisposable disposable = null;
 		JsonDocument[] results;
 		JsonDocument[] includeResults;
 				
@@ -28,12 +25,10 @@ namespace Raven.Client.Document.SessionOperations
 
 		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, 
 			Func<IDisposable> disableAllCaching,
-			string[] ids, string[] includes)
+			string[] ids)
 		{
 			this.sessionOperations = sessionOperations;
 			this.disableAllCaching = disableAllCaching;
-			this.ids = ids;
-			this.includes = includes;
 		
 			sessionOperations.IncrementRequestCount();
 			log.Debug("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
@@ -48,8 +43,8 @@ namespace Raven.Client.Document.SessionOperations
 		public IDisposable EnterMultiLoadContext()
 		{
 			if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
-				disposable = disableAllCaching();
-			return disposable;
+				return disableAllCaching();
+			return null;
 		}
 
 		public bool SetResult(MultiLoadResult multiLoadResult)
