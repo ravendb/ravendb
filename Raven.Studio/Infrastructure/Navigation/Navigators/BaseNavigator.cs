@@ -10,25 +10,36 @@ namespace Raven.Studio.Infrastructure.Navigation.Navigators
 	{
 		[Import]
 		public IEventAggregator Events { get; set; }
+
 		[Import]
 		public IServer Server { get; set; }
 
-		public void Navigate(Dictionary<string, string> parameters)
+		#region INavigator Members
+
+		public void Navigate(string database, Dictionary<string, string> parameters)
+		{
+			if (Server.CurrentDatabase == database)
+			{
+				HandleNavigation(parameters);
+				return;
+			}
+
+			Server.OpenDatabase(database, () =>
+			                              	{
+			                              		Events.Publish(new DisplayCurrentDatabaseRequested());
+			                              		HandleNavigation(parameters);
+			                              	});
+		}
+
+		private void HandleNavigation(Dictionary<string, string> parameters)
 		{
 			var task = string.Format("Navigating to {0}", GetType().Name);
 			Events.Publish(new WorkStarted(task));
-
-			if (parameters.ContainsKey("database"))
-			{
-				var database = parameters["database"];
-				if (Server.CurrentDatabase != database)
-					Server.OpenDatabase(database, () => Events.Publish(new DisplayCurrentDatabaseRequested()));
-			}
-
 			OnNavigate(parameters);
-
 			Events.Publish(new WorkCompleted(task));
 		}
+
+		#endregion
 
 		protected abstract void OnNavigate(Dictionary<string, string> parameters);
 	}

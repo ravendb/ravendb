@@ -56,7 +56,7 @@ namespace Raven.Studio.Features.Documents
 
 		protected override string GetScreenNavigationState()
 		{
-			return Server.CurrentDatabase + "/docs/" + Id;
+			return "docs/" + Id;
 		}
 
 		public string ClrType { get; private set; }

@@ -5,14 +5,14 @@ namespace Raven.Studio.Infrastructure.Navigation
 {
 	public interface INavigator
 	{
-		void Navigate(Dictionary<string, string> data);
+		void Navigate(string database, Dictionary<string, string> data);
 	}
 
 	[ExportMetadata("Url", @"import")]
 	[Export(typeof(INavigator))]
 	public class ImportNavigator : INavigator
 	{
-		public void Navigate(Dictionary<string, string> data)
+		public void Navigate(string database, Dictionary<string, string> data)
 		{
 			
 		}

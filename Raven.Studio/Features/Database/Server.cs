@@ -31,7 +31,7 @@ namespace Raven.Studio.Features.Database
 	public class Server : PropertyChangedBase, IServer,
 		IHandle<StatisticsUpdateRequested>
 	{
-		const string DefaultDatabaseName = "Default Database";
+		public const string DefaultDatabaseName = "Default Database";
 		readonly IEventAggregator events;
 
 		readonly Dictionary<string, DatabaseStatistics> snapshots = new Dictionary<string, DatabaseStatistics>();

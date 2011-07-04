@@ -10,6 +10,9 @@ using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Interop;
+using Caliburn.Micro;
+using Raven.Studio.Features.Database;
+using Raven.Studio.Infrastructure.Navigation.Navigators;
 
 namespace Raven.Studio.Infrastructure.Navigation
 {
@@ -17,6 +20,7 @@ namespace Raven.Studio.Infrastructure.Navigation
 	public class NavigationService
 	{
 		private string currentUrl;
+		private Regex databasesRegEx = new Regex("^databases/([^/]+)");
 
 		[ImportMany]
 		public Lazy<INavigator, INavigatorMetdata>[] Routes { get; set; }
@@ -31,6 +35,15 @@ namespace Raven.Studio.Infrastructure.Navigation
 			if (e.NewNavigationState == currentUrl)
 				return;
 			currentUrl = e.NewNavigationState;
+
+			string database = Server.DefaultDatabaseName;
+			var databasesMatch = databasesRegEx.Match(currentUrl);
+			if (databasesMatch.Success)
+			{
+				currentUrl = currentUrl.Substring(databasesMatch.Length);
+				database = databasesMatch.Groups[1].Value;
+			}
+
 			foreach (var route in Routes)
 			{
 				var regex = new Regex(route.Metadata.Url);
@@ -43,7 +56,8 @@ namespace Raven.Studio.Infrastructure.Navigation
 				{
 					parameters[name] = match.Groups[name].Value;
 				}
-				route.Value.Navigate(parameters);
+				route.Value.Navigate(database, parameters);
+				return;
 			}
 		}
 

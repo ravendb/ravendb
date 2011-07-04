@@ -4,7 +4,7 @@ using Raven.Studio.Commands;
 
 namespace Raven.Studio.Infrastructure.Navigation.Navigators
 {
-	[ExportMetadata("Url", @"(?<database>\w+)/docs/(?<id>.*)")]
+	[ExportMetadata("Url", @"^docs/(?<id>.*)")]
 	[Export(typeof(INavigator))]
 	public class EditDocumentNavigator : BaseNavigator
 	{
