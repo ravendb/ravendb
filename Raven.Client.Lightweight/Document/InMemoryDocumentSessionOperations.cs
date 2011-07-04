@@ -370,8 +370,11 @@ more responsive application.
 		/// <param name="entity">The entity.</param>
 		public void Delete<T>(T entity)
 		{
-			if(entitiesAndMetadata.ContainsKey(entity)==false)
+			DocumentMetadata value;
+			if(entitiesAndMetadata.TryGetValue(entity, out value)==false)
 				throw new InvalidOperationException(entity+" is not associated with the session, cannot delete unknown entity instance");
+			if(value.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) && value.OriginalMetadata.Value<bool>(Constants.RavenReadOnly))
+				throw new InvalidOperationException(entity +" is marked as read only and cannot be deleted");
 			deletedEntities.Add(entity);
 		}
 
@@ -721,13 +724,12 @@ more responsive application.
 		{
 			DocumentMetadata value = null;
 
-			var keysToDelete = new List<string>();
-
-			foreach (var deletedEntity in deletedEntities)
-			{
-				if(entitiesAndMetadata.TryGetValue(deletedEntity, out value))
-					keysToDelete.Add(value.Key);
-			}
+			var keysToDelete = (from deletedEntity in deletedEntities
+			                    where entitiesAndMetadata.TryGetValue(deletedEntity, out value) 
+								// skip deleting read only entities
+								where !value.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) ||
+									  !value.OriginalMetadata.Value<bool>(Constants.RavenReadOnly)
+			                    select value.Key).ToList();
 
 			foreach (var key in keysToDelete)
 			{
@@ -817,7 +819,13 @@ more responsive application.
 		protected bool EntityChanged(object entity, DocumentMetadata documentMetadata)
 		{
 			if (documentMetadata == null)
-				return true; 
+				return true;
+			// prevent saves of a modified read only entity
+			if (documentMetadata.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) &&
+				documentMetadata.OriginalMetadata.Value<bool>(Constants.RavenReadOnly) &&
+				documentMetadata.Metadata.ContainsKey(Constants.RavenReadOnly) &&
+				documentMetadata.Metadata.Value<bool>(Constants.RavenReadOnly))
+				return false;
 			var newObj = ConvertEntityToJson(entity, documentMetadata.Metadata);
 			var equalityComparer = new RavenJTokenEqualityComparer();
 			return equalityComparer.Equals(newObj, documentMetadata.OriginalValue) == false ||
