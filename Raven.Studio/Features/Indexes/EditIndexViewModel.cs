@@ -302,5 +302,10 @@ namespace Raven.Studio.Features.Indexes
 									});
 			}
 		}
+
+		protected override NavigationState GetScreenNavigationState()
+		{
+			return new NavigationState { Url = string.Format("indexes/{0}", Name), Title = string.Format("Index: {0}", Name) };
+		}
 	}
 }
