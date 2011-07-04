@@ -4,10 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.ComponentModel;
+
 namespace Raven.Studio.Infrastructure.Navigation
 {
 	public interface INavigatorMetdata
 	{
 		string Url { get; }
+
+		[DefaultValue(int.MaxValue)]
+		int Index { get; }
 	}
 }

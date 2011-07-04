@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Browser;
@@ -23,7 +24,7 @@ namespace Raven.Studio.Infrastructure.Navigation
 		private string currentUrl;
 		private Regex databasesRegEx = new Regex("^databases/([^/]+)");
 
-		[ImportMany]
+		[ImportMany(AllowRecomposition = true)]
 		public Lazy<INavigator, INavigatorMetdata>[] Routes { get; set; }
 
 		public void Initialize()
@@ -45,7 +46,7 @@ namespace Raven.Studio.Infrastructure.Navigation
 				database = databasesMatch.Groups[1].Value;
 			}
 
-			foreach (var route in Routes)
+			foreach (var route in Routes.OrderBy(x => x.Metadata.Index))
 			{
 				var regex = new Regex(route.Metadata.Url);
 				var match = regex.Match(e.NewNavigationState);

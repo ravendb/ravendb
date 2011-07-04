@@ -4,8 +4,7 @@ using Raven.Studio.Shell;
 
 namespace Raven.Studio.Infrastructure.Navigation.Navigators
 {
-	[ExportMetadata("Url", @"^start")]
-	[Export(typeof(INavigator))]
+	[NavigatorExport(@"^home", Index = 10)]
 	public class SelectDatabaseNavigator : BaseNavigator
 	{
 		private readonly IShell shellViewModel;

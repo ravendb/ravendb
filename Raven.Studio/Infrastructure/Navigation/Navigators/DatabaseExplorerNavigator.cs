@@ -5,8 +5,7 @@ using Raven.Studio.Features.Database;
 
 namespace Raven.Studio.Infrastructure.Navigation.Navigators
 {
-	[ExportMetadata("Url", @"^(?<page>.*)")]
-	[Export(typeof(INavigator))]
+	[NavigatorExport(@"^(?<page>.*)", Index = 20)]
 	public class DatabaseExplorerNavigator : BaseNavigator
 	{
 		private readonly DatabaseExplorer databaseExplorer;
