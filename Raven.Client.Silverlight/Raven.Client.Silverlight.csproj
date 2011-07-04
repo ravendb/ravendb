@@ -63,6 +63,9 @@
     <Reference Include="Newtonsoft.Json.Silverlight">
       <HintPath>..\SharedLibs\Newtonsoft.Json.Silverlight.dll</HintPath>
     </Reference>
+    <Reference Include="NLog">
+      <HintPath>..\SharedLibs\Silverlight\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows" />
     <Reference Include="system" />
@@ -149,6 +152,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\IAbstractDocumentQuery.cs">
       <Link>Imports\Document\IAbstractDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\DocumentSessionLoadOperation.cs">
+      <Link>Imports\Document\SessionOperations\DocumentSessionLoadOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>

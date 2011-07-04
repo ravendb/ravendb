@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
+using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
@@ -129,7 +130,7 @@ namespace Raven.Client.Document
 
 			} while (
 				documentFound.NonAuthoritiveInformation.HasValue &&
-			documentFound.NonAuthoritiveInformation.Value &&
+				documentFound.NonAuthoritiveInformation.Value &&
 				AllowNonAuthoritiveInformation == false &&
 #if !SILVERLIGHT
 				sp.Elapsed < NonAuthoritiveInformationTimeout
@@ -185,46 +186,15 @@ namespace Raven.Client.Document
 			if(ids.Length == 0)
 				return new T[0];
 
-			IncrementRequestCount();
-			Debug.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
-			JsonDocument[] includeResults;
-			JsonDocument[] results;
-#if !SILVERLIGHT
-			var sp = Stopwatch.StartNew();
-#else
-			var startTime = DateTime.Now;
-#endif
-			bool firstRequest = true;
+			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
+			multiLoadOperation.Begin();
+			MultiLoadResult multiLoadResult;
 			do
 			{
-				IDisposable disposable = null;
-				if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
-					disposable = DatabaseCommands.DisableAllCaching();
-				MultiLoadResult multiLoadResult;
-				using (disposable)
-					multiLoadResult = DatabaseCommands.Get(ids, includes);
+				multiLoadResult = DatabaseCommands.Get(ids, includes);
+			} while (multiLoadOperation.SetResult(multiLoadResult));
 
-				firstRequest = false;
-				includeResults = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
-				results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
-			} while (
-				AllowNonAuthoritiveInformation == false &&
-				results.Any(x => x.NonAuthoritiveInformation ?? false) &&
-#if !SILVERLIGHT
-				sp.Elapsed < NonAuthoritiveInformationTimeout
-#else 
-				(DateTime.Now - startTime) < NonAuthoritiveInformationTimeout
-#endif
-				);
-
-			foreach (var include in includeResults)
-			{
-				TrackEntity<object>(include);
-			}
-
-			return results
-				.Select(TrackEntity<T>)
-				.ToArray();
+			return multiLoadOperation.Complete<T>();
 		}
 
 		/// <summary>

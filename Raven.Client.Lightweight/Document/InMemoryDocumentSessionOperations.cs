@@ -283,7 +283,7 @@ more responsive application.
 		/// <typeparam name="T"></typeparam>
 		/// <param name="documentFound">The document found.</param>
 		/// <returns></returns>
-		protected T TrackEntity<T>(JsonDocument documentFound)
+		protected internal T TrackEntity<T>(JsonDocument documentFound)
 		{
 			if (documentFound.NonAuthoritiveInformation.HasValue
 				&& documentFound.NonAuthoritiveInformation.Value

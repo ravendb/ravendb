@@ -24,7 +24,7 @@
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DocumentationFile>bin\Debug\Raven.Client.Lightweight.XML</DocumentationFile>
-    <NoWarn>1573, 1587</NoWarn>
+    <NoWarn>1573, 1587, 1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -54,6 +54,9 @@
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NLog">
+      <HintPath>..\SharedLibs\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -112,6 +115,7 @@
     <Compile Include="Document\PromotableRavenClientEnlistment.cs" />
     <Compile Include="Document\RavenClientEnlistment.cs" />
     <Compile Include="Document\ReflectionUtil.cs" />
+    <Compile Include="Document\SessionOperations\DocumentSessionLoadOperation.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
     <Compile Include="Document\SpatialDocumentQuery.cs" />
     <Compile Include="EntityStored.cs" />
