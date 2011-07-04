@@ -16,15 +16,11 @@ namespace Raven.Studio.Features.Database
         private Visibility showCreateDatabaseForm;
 
         [ImportingConstructor]
-		public SelectDatabaseViewModel(IServer server, IEventAggregator events)
-			: base(events)
+		public SelectDatabaseViewModel()
         {
             DisplayName = "Home";
-            Server = server;
             ShowCreateDatabaseForm = Visibility.Collapsed;
         }
-
-        public IServer Server { get; private set; }
 
         public Visibility ShowCreateDatabaseForm
         {

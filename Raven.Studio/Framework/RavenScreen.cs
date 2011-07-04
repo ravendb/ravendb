@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using Raven.Studio.Framework.Extensions;
+﻿using System.ComponentModel.Composition;
 using Raven.Studio.Infrastructure.Navigation;
+using Raven.Studio.Plugins;
 
 namespace Raven.Studio.Framework
 {
@@ -11,41 +9,24 @@ namespace Raven.Studio.Framework
 
 	public abstract class RavenScreen : Screen
 	{
-		protected IEventAggregator Events;
 		bool isBusy;
 
 		[Import]
+		public IServer Server { get; set; }
+		[Import]
+		public IEventAggregator Events { get; set; }
+		[Import]
 		public NavigationService NavigationService { get; set; }
-
-		protected RavenScreen(IEventAggregator events)
-		{
-			Events = events;
-		}
 
 		protected override void OnViewAttached(object view, object context)
 		{
 			base.OnViewAttached(view, context);
-			NavigationService.Track(GetType(), GetNavigationParameters());
+			NavigationService.Track(GetScreenNavigationState());
 		}
 
-		protected virtual Dictionary<string, string> GetNavigationParameters()
+		protected virtual string GetScreenNavigationState()
 		{
-			return null;
-		}
-
-		protected virtual Type GetConductorType()
-		{
-			return null;
-		}
-
-		public virtual void Navigate(Dictionary<string, string> parameters)
-		{
-			var conductorType = GetConductorType();
-			if (conductorType == null)
-				return;
-
-			var conductor = (IRavenConductor)IoC.GetInstance(conductorType, null);
-			conductor.TrackNavigationTo(this, Events); ;
+			return "/" + Server.CurrentDatabase + "/" + DisplayName.ToLowerInvariant();
 		}
 
 		public bool IsBusy
@@ -57,7 +38,7 @@ namespace Raven.Studio.Framework
 		protected void WorkStarted(string job = null)
 		{
 			//NOTE: this logic isn't entirely consistent. The IsBusy state applies to the screen as a whole 
-			// while the work started/completed events could be raised multiple times by the same screen
+			// while the work started/completed events could be rasised multiple times by the same screen
 			Events.Publish(new WorkStarted(job));
 			IsBusy = true;
 		}

@@ -16,20 +16,16 @@ namespace Raven.Studio.Features.Indexes
 	public class BrowseIndexesViewModel : RavenScreen,
 										  IHandle<IndexUpdated>
 	{
-		readonly IServer server;
 		IndexDefinition activeIndex;
 		object activeItem;
 
 		[ImportingConstructor]
-		public BrowseIndexesViewModel(IServer server, IEventAggregator events)
-			: base(events)
+		public BrowseIndexesViewModel()
 		{
 			DisplayName = "Indexes";
 
-			this.server = server;
-			events.Subscribe(this);
-
-			server.CurrentDatabaseChanged += delegate
+			Events.Subscribe(this);
+			Server.CurrentDatabaseChanged += delegate
 			{
 			    ActiveItem = null;
 				if(Indexes != null) Indexes.Clear();
@@ -40,7 +36,7 @@ namespace Raven.Studio.Features.Indexes
 		{
 			Indexes = new BindablePagedQuery<IndexDefinition>((start, pageSize) =>
 			{
-				using(var session = server.OpenSession())
+				using(var session = Server.OpenSession())
 				return session.Advanced.AsyncDatabaseCommands
 					.GetIndexesAsync(start, pageSize);
 			});
@@ -53,13 +49,13 @@ namespace Raven.Studio.Features.Indexes
 
 		public void CreateNewIndex()
 		{
-			ActiveItem = new EditIndexViewModel(new IndexDefinition(), server, Events);
+			ActiveItem = new EditIndexViewModel(new IndexDefinition());
 		}
 
 		void BeginRefreshIndexes()
 		{
 			WorkStarted("retrieving indexes");
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 				session.Advanced.AsyncDatabaseCommands
 					.GetStatisticsAsync()
 					.ContinueWith(
@@ -84,7 +80,7 @@ namespace Raven.Studio.Features.Indexes
 			{
 				activeIndex = value;
 				if (activeIndex != null)
-					ActiveItem = new EditIndexViewModel(activeIndex, server, Events);
+					ActiveItem = new EditIndexViewModel(activeIndex);
 				NotifyOfPropertyChange(() => ActiveIndex);
 			}
 		}

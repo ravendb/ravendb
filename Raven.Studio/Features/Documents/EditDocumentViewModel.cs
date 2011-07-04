@@ -1,5 +1,6 @@
 ﻿using Raven.Json.Linq;
 using Raven.Studio.Infrastructure.Navigation;
+using Raven.Studio.Plugins;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -30,11 +31,11 @@ namespace Raven.Studio.Features.Documents
 		private IDictionary<string, RavenJToken> metadata;
 		private bool nonAuthoritiveInformation;
 		private readonly BindableCollection<string> references = new BindableCollection<string>();
+		private readonly IServer server;
 		private IKeyboardShortcutBinder keys;
 
 		[ImportingConstructor]
-		public EditDocumentViewModel(IEventAggregator events, IKeyboardShortcutBinder keys)
-			: base(events)
+		public EditDocumentViewModel()
 		{
 			metadata = new Dictionary<string, RavenJToken>();
 
@@ -42,7 +43,8 @@ namespace Raven.Studio.Features.Documents
 			document = new JsonDocument();
 			JsonData = InitialJsonData();
 			JsonMetadata = "{}";
-			events.Subscribe(this);
+			Events.Subscribe(this);
+			this.server = server;
 			this.keys = keys;
 
 			keys.Register<SaveDocument>(Key.S, ModifierKeys.Control, x => x.Execute(this), this);
@@ -52,6 +54,11 @@ namespace Raven.Studio.Features.Documents
 		{
 			keys.Initialize((FrameworkElement)view);
 			base.OnViewAttached(view, context);
+		}
+
+		protected override string GetScreenNavigationState()
+		{
+			return server.CurrentDatabase + "/docs/" + Id;
 		}
 
 		public string ClrType { get; private set; }
