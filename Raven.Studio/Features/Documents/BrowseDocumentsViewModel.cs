@@ -12,8 +12,8 @@ namespace Raven.Studio.Features.Documents
 	using Plugins;
 	using Plugins.Database;
 
-    [Export]
-	[ExportDatabaseExplorerItem("Documents", Index = 40)]
+	[Export]
+	[ExportDatabaseExplorerItem(DisplayName = "Documents", Index = 40)]
 	public class BrowseDocumentsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{

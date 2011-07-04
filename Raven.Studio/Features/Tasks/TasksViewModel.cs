@@ -11,7 +11,8 @@ namespace Raven.Studio.Features.Tasks
 	using Framework;
 	using Plugins.Database;
 
-	[ExportDatabaseExplorerItem("Tasks", Index = 60)]
+	[Export]
+	[ExportDatabaseExplorerItem(DisplayName = "Tasks", Index = 60)]
 	public class TasksViewModel : Conductor<object>,
 		IPartImportsSatisfiedNotification
 	{

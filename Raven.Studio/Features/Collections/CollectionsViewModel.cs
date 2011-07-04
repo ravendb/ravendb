@@ -17,8 +17,8 @@ namespace Raven.Studio.Features.Collections
 	using Plugins;
 	using Plugins.Database;
 
-	[Export(typeof(CollectionsViewModel))]
-	[ExportDatabaseExplorerItem("Collections", Index = 20)]
+	[Export]
+	[ExportDatabaseExplorerItem(DisplayName = "Collections", Index = 20)]
 	public class CollectionsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{
@@ -99,7 +99,7 @@ namespace Raven.Studio.Features.Collections
 			TrackCurrentCollection();
 
 			ActiveCollectionDocuments.ClearResults();
-			
+
 			if (ActiveCollection == null) return;
 
 			ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;
@@ -112,11 +112,11 @@ namespace Raven.Studio.Features.Collections
 				return;
 
 			Execute.OnUIThread(() =>
-			                   NavigationService.Track(new NavigationState
-			                                           	{
-			                                           		Url = string.Format("collections/{0}", ActiveCollection.Name),
-			                                           		Title = string.Format("Collections: {0}", ActiveCollection.Name)
-			                                           	}));
+							   NavigationService.Track(new NavigationState
+														{
+															Url = string.Format("collections/{0}", ActiveCollection.Name),
+															Title = string.Format("Collections: {0}", ActiveCollection.Name)
+														}));
 		}
 
 		Task<DocumentViewModel[]> GetDocumentsForActiveCollectionQuery(int start, int pageSize)
@@ -155,7 +155,7 @@ namespace Raven.Studio.Features.Collections
 						WorkCompleted("fetching collections");
 
 						Collections = new BindableCollection<CollectionViewModel>(
-							x.Result.Select(item => new CollectionViewModel {Name = item.Name, Count = item.Count}));
+							x.Result.Select(item => new CollectionViewModel { Name = item.Name, Count = item.Count }));
 
 						NotifyOfPropertyChange(() => LargestCollectionCount);
 						NotifyOfPropertyChange(() => Collections);
@@ -165,7 +165,7 @@ namespace Raven.Studio.Features.Collections
 						{
 							ActiveCollection = Collections
 								.Where(collection => collection.Name == ActiveCollection.Name)
-								.FirstOrDefault(); 
+								.FirstOrDefault();
 						}
 						else // select the first one if we weren't asked for one
 						{
@@ -187,7 +187,7 @@ namespace Raven.Studio.Features.Collections
 		public void EditTemplate()
 		{
 			var vm = IoC.Get<EditCollectionTemplateViewModel>();
-			vm.Collection = new Collection {Name = ActiveCollection.Name, Count = ActiveCollection.Count};
+			vm.Collection = new Collection { Name = ActiveCollection.Name, Count = ActiveCollection.Count };
 			Events.Publish(new DatabaseScreenRequested(() => vm));
 		}
 

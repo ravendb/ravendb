@@ -11,8 +11,8 @@ namespace Raven.Studio.Features.Indexes
 	using Plugins;
 	using Plugins.Database;
 
-    [Export]
-	[ExportDatabaseExplorerItem("Indexes", Index = 30)]
+	[Export]
+	[ExportDatabaseExplorerItem(DisplayName = "Indexes", Index = 30)]
 	public class BrowseIndexesViewModel : RavenScreen,
 										  IHandle<IndexUpdated>
 	{

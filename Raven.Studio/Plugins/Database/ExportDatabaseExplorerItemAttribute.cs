@@ -7,13 +7,12 @@
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 	public class ExportDatabaseExplorerItemAttribute : ExportAttribute
 	{
-		public ExportDatabaseExplorerItemAttribute(string displayName)
+		public ExportDatabaseExplorerItemAttribute()
 			: base("Raven.DatabaseExplorerItem")
 		{
-			DisplayName = displayName;
 		}
 
-		public string DisplayName { get; private set; }
+		public string DisplayName { get; set; }
 		public int Index { get; set; }
 	}
 }
