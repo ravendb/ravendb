@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
-using Raven.Studio.Features.Collections;
+using Raven.Studio.Common;
 using Raven.Studio.Features.Tasks;
 
 namespace Raven.Studio.Infrastructure.Navigation.Navigators
@@ -24,14 +24,14 @@ namespace Raven.Studio.Infrastructure.Navigation.Navigators
 			if (string.IsNullOrWhiteSpace(task))
 				return;
 
-			//var activeCollection = tasksViewModel.Collections
-			//    .Where(item => item.Name.Equals(collection, StringComparison.InvariantCultureIgnoreCase))
-			//    .FirstOrDefault();
+			var activeTask = tasksViewModel.AvailableTasks
+				.Where(item => item.FirstWord().Equals(task, StringComparison.InvariantCultureIgnoreCase))
+				.FirstOrDefault();
 
-			//if (activeCollection == null)
-			//    return;
+			if (activeTask == null)
+				return;
 
-			//collectionsViewModel.ActiveCollection = activeCollection;
+			tasksViewModel.SelectedTask = activeTask;
 		}
 	}
 }
