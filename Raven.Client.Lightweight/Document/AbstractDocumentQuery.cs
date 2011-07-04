@@ -11,8 +11,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
-#if !NET_3_5
 using NLog;
+#if !NET_3_5
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 #endif
