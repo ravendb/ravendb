@@ -54,9 +54,9 @@ namespace Raven.Studio.Features.Documents
 			base.OnViewAttached(view, context);
 		}
 
-		protected override string GetScreenNavigationState()
+		protected override NavigationState GetScreenNavigationState()
 		{
-			return "docs/" + Id;
+			return new NavigationState { Url = "docs/" + Id, Title = string.Format("Edit Document {0}", DisplayId) };
 		}
 
 		public string ClrType { get; private set; }

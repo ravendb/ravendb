@@ -35,15 +35,17 @@ namespace Raven.Studio.Framework
 		protected override void OnViewAttached(object view, object context)
 		{
 			base.OnViewAttached(view, context);
-			var screenUrl = GetScreenNavigationState();
+
+			var navigationState = GetScreenNavigationState();
 			if (Server.CurrentDatabase != Features.Database.Server.DefaultDatabaseName)
-				screenUrl = "databases/" + Server.CurrentDatabase + "/" + screenUrl;
-			NavigationService.Track(screenUrl);
+				navigationState.Url = "databases/" + Server.CurrentDatabase + "/" + navigationState.Url;
+
+			NavigationService.Track(navigationState);
 		}
 
-		protected virtual string GetScreenNavigationState()
+		protected virtual NavigationState GetScreenNavigationState()
 		{
-			return DisplayName.ToLowerInvariant();
+			return new NavigationState {Url = DisplayName.ToLowerInvariant(), Title = DisplayName};
 		}
 
 		public bool IsBusy

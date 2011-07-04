@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Browser;
 using System.Windows.Interop;
 using Caliburn.Micro;
 using Raven.Studio.Features.Database;
@@ -61,12 +62,21 @@ namespace Raven.Studio.Infrastructure.Navigation
 			}
 		}
 
-		public void Track(string navigationState)
+		public void Track(NavigationState navigationState)
 		{
-			if (navigationState == currentUrl)
+			if (navigationState.Url == currentUrl)
 				return;
-			currentUrl = navigationState;
-			Application.Current.Host.NavigationState = navigationState;
+			currentUrl = navigationState.Url;
+
+			// Application.Current.IsRunningOutOfBrowser
+			Application.Current.Host.NavigationState = navigationState.Url;
+			HtmlPage.Document.SetProperty("title", navigationState.Title);
 		}
+	}
+
+	public class NavigationState
+	{
+		public string Url { get; set; }
+		public string Title { get; set; }
 	}
 }
