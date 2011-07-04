@@ -11,10 +11,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Browser;
-using System.Windows.Interop;
-using Caliburn.Micro;
 using Raven.Studio.Features.Database;
-using Raven.Studio.Infrastructure.Navigation.Navigators;
 
 namespace Raven.Studio.Infrastructure.Navigation
 {
@@ -29,14 +26,14 @@ namespace Raven.Studio.Infrastructure.Navigation
 
 		public void Initialize()
 		{
-			Application.Current.Host.NavigationStateChanged += (sender, args) => Navigate(args);
+			Application.Current.Host.NavigationStateChanged += (sender, args) => Navigate(args.NewNavigationState);
 		}
 
-		private void Navigate(NavigationStateChangedEventArgs e)
+		private void Navigate(string navigationState)
 		{
-			if (e.NewNavigationState == currentUrl)
+			if (navigationState == currentUrl)
 				return;
-			currentUrl = e.NewNavigationState;
+			currentUrl = navigationState;
 
 			string database = Server.DefaultDatabaseName;
 			var databasesMatch = databasesRegEx.Match(currentUrl);
@@ -49,7 +46,7 @@ namespace Raven.Studio.Infrastructure.Navigation
 			foreach (var route in Routes.OrderBy(x => x.Metadata.Index))
 			{
 				var regex = new Regex(route.Metadata.Url);
-				var match = regex.Match(e.NewNavigationState);
+				var match = regex.Match(navigationState);
 				if (match.Success == false)
 					continue;
 
