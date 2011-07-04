@@ -165,6 +165,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\MultiLoadOperation.cs">
       <Link>Imports\Document\SessionOperations\MultiLoadOperation.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\QueryOperation.cs">
+      <Link>Imports\Document\SessionOperations\QueryOperation.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>

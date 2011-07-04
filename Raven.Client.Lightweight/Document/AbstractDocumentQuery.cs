@@ -12,11 +12,13 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
 #if !NET_3_5
+using NLog;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Document.SessionOperations;
 using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
@@ -32,7 +34,8 @@ namespace Raven.Client.Document
     ///   A query against a Raven index
     /// </summary>
     public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
-    {
+	{
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// Whatever to negate the next operation
         /// </summary>
@@ -1236,56 +1239,35 @@ If you really want to do in memory filtering on the data returned from the query
 #if !NET_3_5
         private Task<QueryResult> GetQueryResultAsync()
         {
-            theSession.IncrementRequestCount();
-            var startTime = DateTime.Now;
+        	var indexQuery = GenerateIndexQuery(theQueryText.ToString());
 
-            var query = theQueryText.ToString();
+        	var queryOperation = new QueryOperation(theSession, indexName, indexQuery, sortByHints,
+        	                                            theWaitForNonStaleResults,
+        	                                            (key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val,
+        	                                            timeout);
 
-            Debug.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
-                                          query, indexName, theSession.StoreIdentifier));
-
-            var indexQuery = GenerateIndexQuery(query);
-
-            AddOperationHeaders(theAsyncDatabaseCommands.OperationsHeaders.Add);
-
-            return GetQueryResultTaskResult(query, indexQuery, startTime);
+			return GetQueryResultTaskResult(theQueryText.ToString(), indexQuery, queryOperation);
         }
 
-        private Task<QueryResult> GetQueryResultTaskResult(string query, IndexQuery indexQuery, DateTime startTime)
+		private Task<QueryResult> GetQueryResultTaskResult(string query, IndexQuery indexQuery, QueryOperation queryOperation)
         {
-        	IDisposable disposable = null;
-			if (theWaitForNonStaleResults)
-				disposable = theSession.DocumentStore.DisableAggressiveCaching();
-            return theAsyncDatabaseCommands.QueryAsync(indexName, indexQuery, includes.ToArray())
-                .ContinueWith(task =>
-                {
-					if (disposable != null)
-						disposable.Dispose();
-
-                    if (theWaitForNonStaleResults && task.Result.IsStale)
-                    {
-                        var elapsed1 = DateTime.Now - startTime;
-                        if (elapsed1 > timeout)
-                        {
-                            throw new TimeoutException(
-                                string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
-                                              elapsed1.TotalMilliseconds));
-                        }
-                        Debug.WriteLine(
-                            string.Format(
-                                "Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
-                                query, indexName, theSession.StoreIdentifier));
-
-                        return TaskEx.Delay(100)
-                            .ContinueWith(_ => GetQueryResultTaskResult(query, indexQuery, startTime))
-                            .Unwrap();
-                    }
-
-                    Debug.WriteLine(string.Format("Query returned {0}/{1} {2}results", task.Result.Results.Count,
-						task.Result.TotalResults, task.Result.IsStale ? "stale " : ""));
+            using(queryOperation.EnterQueryContext())
+            {
+				queryOperation.BeforeExecutingQuery();
+				return theAsyncDatabaseCommands.QueryAsync(indexName, indexQuery, includes.ToArray())
+				.ContinueWith(task =>
+				{
+					if(queryOperation.ShouldQueryAgain(task.Result))
+					{
+						return TaskEx.Delay(100)
+							.ContinueWith(_ => GetQueryResultTaskResult(query, indexQuery, queryOperation))
+							.Unwrap();
+					}
+					
 					task.Result.EnsureSnapshot();
-                    return task;
-                }).Unwrap();
+					return task;
+				}).Unwrap();
+            }
         }
 #endif
 
@@ -1300,70 +1282,32 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 documentQueryListener.BeforeQueryExecuted(this);
             }
-            theSession.IncrementRequestCount();
-            var sp = Stopwatch.StartNew();
+            	var query = theQueryText.ToString();
+        	var indexQuery = GenerateIndexQuery(query);
+        	var queryOperation = new QueryOperation(theSession, indexName, indexQuery, sortByHints,
+        	                                            theWaitForNonStaleResults, DatabaseCommands.OperationsHeaders.Set,
+        	                                            timeout);
             while (true)
             {
-            	var query = theQueryText.ToString();
-
-            	Debug.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
-            	                              query, indexName, theSession.StoreIdentifier));
-
-            	var indexQuery = GenerateIndexQuery(query);
-
-            	AddOperationHeaders(theDatabaseCommands.OperationsHeaders.Add);
-
-            	using (
-					theWaitForNonStaleResults ?
-						Session.Advanced.DocumentStore.DisableAggressiveCaching() : 
-						null)
+				using (queryOperation.EnterQueryContext())
             	{
-            		QueryResult result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
+					queryOperation.BeforeExecutingQuery();
+					var result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
+					if (queryOperation.ShouldQueryAgain(result))
+					{
+						Thread.Sleep(100);
+						continue;
+					}
 
-            		if (theWaitForNonStaleResults && result.IsStale)
-            		{
-            			if (sp.Elapsed > timeout)
-            			{
-            				sp.Stop();
-            				throw new TimeoutException(
-            					string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
-            					              sp.ElapsedMilliseconds));
-            			}
-            			Debug.WriteLine(
-            				string.Format(
-            					"Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
-            					query, indexName, theSession.StoreIdentifier));
-            			Thread.Sleep(100);
-            			continue;
-            		}
-            		Debug.WriteLine(string.Format("Query returned {0}/{1} {2}results", result.Results.Count,
-            		                              result.TotalResults, result.IsStale ? "stale " : ""));
-            		result.EnsureSnapshot();
-            		return result;
+					result.EnsureSnapshot();
+
+					return result;
             	}
             }
         }
 #endif
 
-        private static SortOptions FromPrimitiveTypestring(string type)
-        {
-            switch (type)
-            {
-                case "Int16":
-                    return SortOptions.Short;
-                case "Int32":
-                    return SortOptions.Int;
-                case "Int64":
-                    return SortOptions.Long;
-                case "Single":
-                    return SortOptions.Float;
-                case "String":
-                    return SortOptions.String;
-                default:
-                    return SortOptions.String;
-            }
-        }
-
+     
         /// <summary>
         ///   Generates the index query.
         /// </summary>
@@ -1385,19 +1329,7 @@ If you really want to do in memory filtering on the data returned from the query
             };
         }
 
-        private void AddOperationHeaders(Action<string, string> addOperationHeader)
-        {
-            foreach (var sortByHint in sortByHints)
-            {
-                if (sortByHint.Value == null)
-                    continue;
-
-                addOperationHeader(
-                    string.Format("SortHint-{0}", Uri.EscapeDataString(sortByHint.Key.Trim('-'))),
-                    FromPrimitiveTypestring(sortByHint.Value.Name).ToString());
-            }
-        }
-
+       
         private T Deserialize(RavenJObject result)
         {
             var metadata = result.Value<RavenJObject>("@metadata");
