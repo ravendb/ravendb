@@ -28,6 +28,7 @@ namespace Raven.Studio.Features.Tasks
 		[ImportingConstructor]
 		public ExportTask()
 		{
+			DisplayName = "Export Database";
 		}
 
 		public bool ExportIndexesOnly

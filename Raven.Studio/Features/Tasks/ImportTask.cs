@@ -28,6 +28,7 @@ namespace Raven.Studio.Features.Tasks
 		[ImportingConstructor]
 		public ImportTask()
 		{
+			DisplayName = "Import Database";
 		}
 
 		public void ImportData()
