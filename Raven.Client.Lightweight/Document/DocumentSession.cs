@@ -187,7 +187,6 @@ namespace Raven.Client.Document
 
 			IncrementRequestCount();
 			Debug.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
-			MultiLoadResult multiLoadResult;
 			JsonDocument[] includeResults;
 			JsonDocument[] results;
 #if !SILVERLIGHT
@@ -201,6 +200,7 @@ namespace Raven.Client.Document
 				IDisposable disposable = null;
 				if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
 					disposable = DatabaseCommands.DisableAllCaching();
+				MultiLoadResult multiLoadResult;
 				using (disposable)
 					multiLoadResult = DatabaseCommands.Get(ids, includes);
 
