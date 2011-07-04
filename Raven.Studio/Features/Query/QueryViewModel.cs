@@ -18,20 +18,18 @@ namespace Raven.Studio.Features.Query
 
 
 	[ExportDatabaseExplorerItem("Query", Index = 50)]
-	public class QueryViewModel : Screen
+	public class QueryViewModel : RavenScreen
 	{
 		readonly List<string> dynamicIndex = new List<string>();
-		readonly IServer server;
 		string currentIndex;
 		string queryResultsStatus;
 		bool shouldShowDynamicIndexes;
 
 		[ImportingConstructor]
-		public QueryViewModel(IServer server)
+		public QueryViewModel()
 		{
 			DisplayName = "Query";
 
-			this.server = server;
 			Indexes = new BindableCollection<string>();
 
 		    FieldsForCurrentIndex = new BindableCollection<string>();
@@ -115,7 +113,7 @@ namespace Raven.Studio.Features.Query
 
 		Task<DocumentViewModel[]> BuildQuery(int start, int pageSize)
 		{
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				var indexName = CurrentIndex;
 				var q = new IndexQuery
@@ -154,7 +152,7 @@ namespace Raven.Studio.Features.Query
 		{
             FieldsForCurrentIndex.Clear();
 
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			session.Advanced.AsyncDatabaseCommands
 					.GetIndexAsync(CurrentIndex)
 					.ContinueWith(x => FieldsForCurrentIndex.AddRange(x.Result.Fields));
@@ -163,7 +161,7 @@ namespace Raven.Studio.Features.Query
         void GetTermsForCurrentField()
         {
             TermsForCurrentField.Clear();
-            using (var session = server.OpenSession())
+            using (var session = Server.OpenSession())
                 session.Advanced.AsyncDatabaseCommands
                         .GetTermsAsync(CurrentIndex, CurrentField, fromValue:string.Empty, pageSize:20)
                         .ContinueWith(x => TermsForCurrentField.AddRange(x.Result));
@@ -238,7 +236,7 @@ namespace Raven.Studio.Features.Query
 			}
 			else
 			{
-				using (var session = server.OpenSession())
+				using (var session = Server.OpenSession())
 				{
 					session.Advanced.AsyncDatabaseCommands
 						.GetIndexNamesAsync(0, 1000)
@@ -255,7 +253,7 @@ namespace Raven.Studio.Features.Query
 				return;
 			}
 
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 250)
