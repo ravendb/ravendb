@@ -12,12 +12,21 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Browser;
 using Raven.Studio.Features.Database;
+using Raven.Studio.Plugins;
 
 namespace Raven.Studio.Infrastructure.Navigation
 {
 	[Export]
 	public class NavigationService
 	{
+		private readonly IServer server;
+
+		[ImportingConstructor]
+		public NavigationService(IServer server)
+		{
+			this.server = server;
+		}
+
 		private string currentUrl;
 		private Regex databasesRegEx = new Regex("^databases/([^/]+)");
 
@@ -65,6 +74,9 @@ namespace Raven.Studio.Infrastructure.Navigation
 			if (navigationState.Url == currentUrl)
 				return;
 			currentUrl = navigationState.Url;
+
+			if (server.CurrentDatabase != Server.DefaultDatabaseName)
+				navigationState.Url = "databases/" + server.CurrentDatabase + "/" + navigationState.Url;
 
 			// Application.Current.IsRunningOutOfBrowser
 			Application.Current.Host.NavigationState = navigationState.Url;

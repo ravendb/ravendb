@@ -135,6 +135,7 @@
     <Compile Include="Commands\CopyServerError.cs" />
     <Compile Include="Commands\EditIndex.cs" />
     <Compile Include="Commands\LoadDocument.cs" />
+    <Compile Include="Common\String.cs" />
     <Compile Include="Common\VisualTreeHelperExtensions.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
     <Compile Include="Controls\Editors\LinqEditor.cs" />
@@ -182,7 +183,7 @@
     <Compile Include="Impl\DotNetZip\WorkItem.cs" />
     <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
     <Compile Include="Infrastructure\Navigation\Navigators\CollectionsNavigator.cs" />
-    <Compile Include="Infrastructure\Navigation\Navigators\ImportNavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\TasksNavigator.cs" />
     <Compile Include="Infrastructure\Navigation\NavigatorExportAttribute.cs" />
     <Compile Include="Infrastructure\Navigation\Navigators\BaseNavigator.cs" />
     <Compile Include="Infrastructure\Navigation\Navigators\EditDocumentNavigator.cs" />

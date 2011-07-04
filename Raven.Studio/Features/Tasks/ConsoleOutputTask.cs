@@ -40,5 +40,10 @@ namespace Raven.Studio.Features.Tasks
 		{
 			Console.Add(format, args);
 		}
+
+		protected override NavigationState GetScreenNavigationState()
+		{
+			return null;
+		}
 	}
 }

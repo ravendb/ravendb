@@ -37,10 +37,10 @@ namespace Raven.Studio.Framework
 			base.OnViewAttached(view, context);
 
 			var navigationState = GetScreenNavigationState();
-			if (Server.CurrentDatabase != Features.Database.Server.DefaultDatabaseName)
-				navigationState.Url = "databases/" + Server.CurrentDatabase + "/" + navigationState.Url;
-
-			NavigationService.Track(navigationState);
+			if (navigationState != null)
+			{
+				NavigationService.Track(navigationState);
+			}
 		}
 
 		protected virtual NavigationState GetScreenNavigationState()
