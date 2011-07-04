@@ -23,14 +23,8 @@ namespace Raven.Studio.Infrastructure.Navigation.Navigators
 			if (string.IsNullOrWhiteSpace(collection))
 				return;
 
-			var activeCollection = collectionsViewModel.Collections
-				.Where(item => item.Name.Equals(collection, StringComparison.InvariantCultureIgnoreCase))
-				.FirstOrDefault();
-
-			if (activeCollection == null)
-				return;
-
-			collectionsViewModel.ActiveCollection = activeCollection;
+			collectionsViewModel.SelectCollectionByName(collection);
+			
 		}
 	}
 }

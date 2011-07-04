@@ -60,6 +60,8 @@ namespace Raven.Studio.Features.Collections
 		}
 
 		string status;
+		private System.Action executeAfterCollectionsFetched;
+
 		public string Status
 		{
 			get { return status; }
@@ -141,6 +143,23 @@ namespace Raven.Studio.Features.Collections
 			}
 		}
 
+		public void SelectCollectionByName(string name)
+		{
+			if (Collections != null)
+			{
+				var activeCollection = Collections
+					.Where(item => item.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+					.FirstOrDefault();
+
+				if (activeCollection == null)
+					return;
+
+				ActiveCollection = activeCollection;
+				return;
+			}
+			executeAfterCollectionsFetched = () => SelectCollectionByName(name);
+		}
+
 		protected override void OnActivate()
 		{
 			WorkStarted("fetching collections");
@@ -173,13 +192,18 @@ namespace Raven.Studio.Features.Collections
 						{
 							ActiveCollection = Collections.FirstOrDefault();
 						}
+						if (executeAfterCollectionsFetched != null)
+						{
+							executeAfterCollectionsFetched();
+							executeAfterCollectionsFetched = null;
+						}
 
 						Status = Collections.Any() ? string.Empty : "The database contains no collections.";
 					},
 					faulted =>
 					{
 						WorkCompleted("fetching collections");
-						var error = "Unable to retrieve collections from server.";
+						const string error = "Unable to retrieve collections from server."; ;
 						Status = error;
 						NotifyError(error);
 					});
