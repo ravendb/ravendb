@@ -212,6 +212,10 @@ namespace Raven.Database.Indexing
 					if (indexWriter == null)
 					{
 						indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
+						var mergeScheduler = indexWriter.GetMergeScheduler();
+						if(mergeScheduler != null)
+							mergeScheduler.Close();
+						indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 					}
 
 					try
