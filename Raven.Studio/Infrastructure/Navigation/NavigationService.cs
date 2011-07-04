@@ -36,6 +36,10 @@ namespace Raven.Studio.Infrastructure.Navigation
 		public void Initialize()
 		{
 			Application.Current.Host.NavigationStateChanged += (sender, args) => Navigate(args.NewNavigationState);
+			if (string.IsNullOrEmpty(Application.Current.Host.NavigationState))
+				return;
+
+			Navigate(Application.Current.Host.NavigationState);
 		}
 
 		private void Navigate(string navigationState)
