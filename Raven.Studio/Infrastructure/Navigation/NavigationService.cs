@@ -83,10 +83,4 @@ namespace Raven.Studio.Infrastructure.Navigation
 			HtmlPage.Document.SetProperty("title", navigationState.Title);
 		}
 	}
-
-	public class NavigationState
-	{
-		public string Url { get; set; }
-		public string Title { get; set; }
-	}
 }
