@@ -187,6 +187,7 @@
     <Compile Include="Infrastructure\Navigation\INavigator.cs" />
     <Compile Include="Infrastructure\Navigation\NavigationService.cs" />
     <Compile Include="Infrastructure\Navigation\INavigatorMetdata.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\SelectDatabaseNavigator.cs" />
     <Compile Include="Messages\NotificationLevel.cs" />
     <Compile Include="Plugins\Database\ExportDatabaseExplorerItemAttribute.cs" />
     <Compile Include="Framework\DynamicViewModel.cs" />

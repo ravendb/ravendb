@@ -30,7 +30,7 @@ namespace Raven.Studio.Plugins
 		string CurrentDatabase { get; }
 
 		/// <summary>
-		/// The set of statistics for the currentlly selected database.
+		/// The set of statistics for the currently selected database.
 		/// </summary>
 		IStatisticsSet Statistics { get; }
 

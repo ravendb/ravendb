@@ -4,5 +4,6 @@
 
 	public interface IShell : IConductor
 	{
+		NavigationViewModel Navigation { get; }
 	}
 }
