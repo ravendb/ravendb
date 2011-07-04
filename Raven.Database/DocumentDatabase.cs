@@ -1073,7 +1073,7 @@ namespace Raven.Database
 				actions =>
 					actions.Transactions.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
 												TransactionManager.DefaultTimeout));
-			promotedTransactions.TryAdd(fromTxId, committableTransaction);
+			promotedTransactions.TryAdd(committableTransaction.TransactionInformation.DistributedIdentifier, committableTransaction);
 			return transmitterPropagationToken;
 		}
 
