@@ -11,12 +11,26 @@ namespace Raven.Studio.Framework
 	{
 		bool isBusy;
 
-		[Import]
-		public IServer Server { get; set; }
-		[Import]
-		public IEventAggregator Events { get; set; }
-		[Import]
-		public NavigationService NavigationService { get; set; }
+		private IServer server;
+		public IServer Server
+		{
+			get { return server ?? (server = IoC.Get<IServer>()); }
+			set { server = value; }
+		}
+
+		private IEventAggregator events;
+		public IEventAggregator Events
+		{
+			get { return events ?? (events = IoC.Get<IEventAggregator>()); }
+			set { events = value; }
+		}
+
+		private NavigationService navigationService;
+		public NavigationService NavigationService
+		{
+			get { return navigationService ?? (navigationService = IoC.Get<NavigationService>()); }
+			set { navigationService = value; }
+		}
 
 		protected override void OnViewAttached(object view, object context)
 		{

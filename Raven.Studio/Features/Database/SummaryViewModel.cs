@@ -53,8 +53,6 @@ namespace Raven.Studio.Features.Database
 
         public string DatabaseName { get { return Server.CurrentDatabase; } }
 
-        public IServer Server { get { return Server; } }
-
         public BindableCollection<DocumentViewModel> RecentDocuments { get; private set; }
 
         public BindableCollection<Collection> Collections { get; private set; }

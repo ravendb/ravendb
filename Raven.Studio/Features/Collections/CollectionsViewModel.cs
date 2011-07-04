@@ -22,7 +22,6 @@ namespace Raven.Studio.Features.Collections
 	public class CollectionsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{
-		readonly IServer server;
 		CollectionViewModel activeCollection;
 
 		[ImportingConstructor]
@@ -32,9 +31,7 @@ namespace Raven.Studio.Features.Collections
 
 			Events.Subscribe(this);
 
-			this.server = server;
-
-			server.CurrentDatabaseChanged += delegate
+			Server.CurrentDatabaseChanged += delegate
 			{
 				Initialize();
 			};
@@ -111,7 +108,7 @@ namespace Raven.Studio.Features.Collections
 		{
 			WorkStarted("retrieving documents for collection.");
 
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				var query = new IndexQuery { Start = start, PageSize = pageSize, Query = "Tag:" + ActiveCollection.Name };
 				return session.Advanced.AsyncDatabaseCommands
@@ -133,7 +130,7 @@ namespace Raven.Studio.Features.Collections
 		{
 			WorkStarted("fetching collections");
 
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 25)

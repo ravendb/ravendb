@@ -31,11 +31,10 @@ namespace Raven.Studio.Features.Documents
 		private IDictionary<string, RavenJToken> metadata;
 		private bool nonAuthoritiveInformation;
 		private readonly BindableCollection<string> references = new BindableCollection<string>();
-		private readonly IServer server;
 		private IKeyboardShortcutBinder keys;
 
 		[ImportingConstructor]
-		public EditDocumentViewModel()
+		public EditDocumentViewModel(IKeyboardShortcutBinder keys)
 		{
 			metadata = new Dictionary<string, RavenJToken>();
 
@@ -44,7 +43,6 @@ namespace Raven.Studio.Features.Documents
 			JsonData = InitialJsonData();
 			JsonMetadata = "{}";
 			Events.Subscribe(this);
-			this.server = server;
 			this.keys = keys;
 
 			keys.Register<SaveDocument>(Key.S, ModifierKeys.Control, x => x.Execute(this), this);
@@ -58,7 +56,7 @@ namespace Raven.Studio.Features.Documents
 
 		protected override string GetScreenNavigationState()
 		{
-			return server.CurrentDatabase + "/docs/" + Id;
+			return Server.CurrentDatabase + "/docs/" + Id;
 		}
 
 		public string ClrType { get; private set; }
