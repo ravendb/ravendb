@@ -24,6 +24,7 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly TimeSpan timeout;
 		private QueryResult currentQueryResults;
 		private readonly string[] projectionFields;
+		private bool firstRequest = true;
 
 		public QueryResult CurrentQueryResults
 		{
@@ -66,7 +67,10 @@ namespace Raven.Client.Document.SessionOperations
 
 
 			AddOperationHeaders();
+		}
 
+		private void StartTiming()
+		{
 #if !SILVERLIGHT
 			sp = Stopwatch.StartNew();
 #else
@@ -82,6 +86,11 @@ namespace Raven.Client.Document.SessionOperations
 
 		public IDisposable EnterQueryContext()
 		{
+			if(firstRequest)
+			{
+				StartTiming();
+				firstRequest = false;
+			}
 			if (waitForNonStaleResults == false)
 				return null;
 
