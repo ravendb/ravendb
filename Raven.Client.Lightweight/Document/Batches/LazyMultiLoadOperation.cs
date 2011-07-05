@@ -39,8 +39,6 @@ namespace Raven.Client.Document.Batches
 
 		public void HandleResponse(GetResponse response)
 		{
-			if (response.Status != 200)
-				throw new InvalidOperationException("Unknown status code from server: " + response.Status);
 			var result = RavenJObject.Parse(response.Result);
 
 			var multiLoadResult = new MultiLoadResult
