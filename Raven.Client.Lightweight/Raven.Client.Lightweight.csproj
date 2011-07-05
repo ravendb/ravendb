@@ -99,6 +99,11 @@
     <Compile Include="Document\AsyncSpatialDocumentQuery.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
     <Compile Include="Document\AsyncMultiLoaderWithInclude.cs" />
+    <Compile Include="Document\Batches\ILazyLoaderWithInclude.cs" />
+    <Compile Include="Document\Batches\ILazyOperation.cs" />
+    <Compile Include="Document\Batches\ILazySessionOperations.cs" />
+    <Compile Include="Document\Batches\LazyMultiLoaderWithInclude.cs" />
+    <Compile Include="Document\Batches\LazyMultiLoadOperation.cs" />
     <Compile Include="Document\DefaultRavenContractResolver.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\AbstractDocumentQuery.cs" />
@@ -197,9 +202,7 @@
       <Link>RavenDB.snk</Link>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Data\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\Modules\Json\Raven.Json\Raven.Json.csproj">
       <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>

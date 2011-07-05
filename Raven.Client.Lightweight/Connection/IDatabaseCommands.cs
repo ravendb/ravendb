@@ -273,6 +273,11 @@ namespace Raven.Client.Connection
 		/// Disable all caching within the given scope
 		/// </summary>
 		IDisposable DisableAllCaching();
+
+		/// <summary>
+		/// Perform a single POST requst containing multiple nested GET requests
+		/// </summary>
+		GetResponse[] MultiGet(GetRequest[] requests);
 	}
 }
 #endif

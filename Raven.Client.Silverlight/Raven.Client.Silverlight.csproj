@@ -84,6 +84,12 @@
     <Compile Include="..\Raven.Abstractions\Data\EnumerableExtension.cs">
       <Link>Imports\Data\EnumerableExtension.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\GetRequest.cs">
+      <Link>Imports\Data\GetRequest.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\GetResponse.cs">
+      <Link>Imports\Data\GetResponse.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\IJsonDocumentMetadata.cs">
       <Link>Imports\Data\IJsonDocumentMetadata.cs</Link>
     </Compile>
@@ -146,6 +152,18 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\AsyncSpatialDocumentQuery.cs">
       <Link>Imports\Document\AsyncSpatialDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyLoaderWithInclude.cs">
+      <Link>Imports\Document\Batches\ILazyLoaderWithInclude.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyOperation.cs">
+      <Link>Imports\Document\Batches\ILazyOperation.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyMultiLoaderWithInclude.cs">
+      <Link>Imports\Document\Batches\LazyMultiLoaderWithInclude.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyMultiLoadOperation.cs">
+      <Link>Imports\Document\Batches\LazyMultiLoadOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSessionListeners.cs">
       <Link>Imports\Document\DocumentSessionListeners.cs</Link>

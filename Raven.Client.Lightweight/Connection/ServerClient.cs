@@ -1091,6 +1091,17 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			};
 		}
 
+		/// <summary>
+		/// Perform a single POST requst containing multiple nested GET requests
+		/// </summary>
+		public GetResponse[] MultiGet(GetRequest[] requests)
+		{
+			var requestUri = url + "/multi_get";
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "POST", credentials, convention);
+			httpJsonRequest.Write(JsonConvert.SerializeObject(requests));
+			return JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
+		}
+
 		///<summary>
 		/// Get the possible terms for the specified field in the index 
 		/// You can page through the results by use fromValue parameter as the 
@@ -1160,6 +1171,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			return jsonRequestFactory.DisableAllCaching();
 		}
+
+
 
 		#endregion
 

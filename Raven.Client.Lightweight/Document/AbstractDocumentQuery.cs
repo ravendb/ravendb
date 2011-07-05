@@ -1253,7 +1253,7 @@ If you really want to do in memory filtering on the data returned from the query
         {
             using(queryOperation.EnterQueryContext())
             {
-				queryOperation.BeforeExecutingQuery();
+				queryOperation.LogQuery();
 				return theAsyncDatabaseCommands.QueryAsync(indexName, indexQuery, includes.ToArray())
 				.ContinueWith(task =>
 				{
@@ -1291,7 +1291,7 @@ If you really want to do in memory filtering on the data returned from the query
             {
 				using (queryOperation.EnterQueryContext())
             	{
-					queryOperation.BeforeExecutingQuery();
+					queryOperation.LogQuery();
 					var result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
 					if (queryOperation.ShouldQueryAgain(result))
 					{

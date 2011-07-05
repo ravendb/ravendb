@@ -8,6 +8,7 @@
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
+using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
 
 namespace Raven.Client
@@ -35,6 +36,11 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The async database commands.</value>
 		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+
+		/// <summary>
+		/// Access the lazy operations
+		/// </summary>
+		ILazySessionOperations Lazily { get; }
 #endif
 
 		/// <summary>

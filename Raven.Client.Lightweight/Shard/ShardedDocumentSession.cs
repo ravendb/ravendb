@@ -13,6 +13,7 @@ using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Document.Batches;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -193,6 +194,14 @@ namespace Raven.Client.Shard
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get { throw new NotSupportedException("You cannot ask a sharded session for its AsyncDatabaseCommands, internal sharded session each have diffeernt AsyncDatabaseCommands"); }
+		}
+
+		/// <summary>
+		/// Access the lazy operations
+		/// </summary>
+		public ILazySessionOperations Lazily
+		{
+			get { throw new NotImplementedException(); }
 		}
 #endif
 

@@ -13,6 +13,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		private readonly Func<IDisposable> disableAllCaching;
+		private readonly string[] ids;
 		bool firstRequest = true;
 		JsonDocument[] results;
 		JsonDocument[] includeResults;
@@ -29,15 +30,20 @@ namespace Raven.Client.Document.SessionOperations
 		{
 			this.sessionOperations = sessionOperations;
 			this.disableAllCaching = disableAllCaching;
-		
-			sessionOperations.IncrementRequestCount();
-			log.Debug("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
+			this.ids = ids;
+
 
 #if !SILVERLIGHT
 			sp = Stopwatch.StartNew();
 #else
 			startTime = DateTime.Now;
 #endif
+		}
+
+		public void LogOperation()
+		{
+			sessionOperations.IncrementRequestCount();
+			log.Debug("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
 		}
 
 		public IDisposable EnterMultiLoadContext()

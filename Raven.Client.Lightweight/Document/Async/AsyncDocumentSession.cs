@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
 using System.Threading.Tasks;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
@@ -24,6 +25,7 @@ namespace Raven.Client.Document.Async
 	/// </summary>
 	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
 	{
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
@@ -135,13 +137,13 @@ namespace Raven.Client.Document.Async
             }
 
 	    	var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
-
 			return CompleteLoadAsync<T>(id, loadOperation);
                
 		}
 
 		private Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
 		{
+			loadOperation.LogOperation();
 			using (loadOperation.EnterLoadContext())
 			{
 				return AsyncDatabaseCommands.GetAsync(id)
@@ -178,6 +180,7 @@ namespace Raven.Client.Document.Async
 
 		private Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes, MultiLoadOperation multiLoadOperation)
 		{
+			multiLoadOperation.LogOperation();
 			using (multiLoadOperation.EnterMultiLoadContext())
 			{
 				return AsyncDatabaseCommands.MultiGetAsync(ids, includes)

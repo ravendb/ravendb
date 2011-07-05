@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
+using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -27,10 +28,11 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Implements Unit of Work for accessing the RavenDB server
 	/// </summary>
-	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator
+	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator, ILazySessionOperations
 	{
 #if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 #endif
 
 		/// <summary>
@@ -47,6 +49,14 @@ namespace Raven.Client.Document
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get { return asyncDatabaseCommands; }
+		}
+
+		/// <summary>
+		/// Access the lazy operations
+		/// </summary>
+		public ILazySessionOperations Lazily
+		{
+			get { return this; }
 		}
 #endif
 
@@ -83,6 +93,56 @@ namespace Raven.Client.Document
 
 
 		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, object>> path)
+		{
+			return new LazyMultiLoaderWithInclude<T>(this).Include(path);
+		}
+
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
+		Lazy<T[]> ILazySessionOperations.Load<T>(params string[] ids)
+		{
+			return LazyLoadInternal<T>(ids, new string[0]);
+		}
+
+		/// <summary>
+		/// Loads the specified id.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="id">The id.</param>
+		/// <returns></returns>
+		Lazy<T> ILazySessionOperations.Load<T>(string id)
+		{
+			var lazy = LazyLoadInternal<T>(new[] {id}, new string[0]);
+			return new Lazy<T>(() => lazy.Value.FirstOrDefault());
+		}
+
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		Lazy<T> ILazySessionOperations.Load<T>(ValueType id)
+		{
+			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+			var lazy = LazyLoadInternal<T>(new[] { documentKey }, new string[0]);
+			return new Lazy<T>(() => lazy.Value.FirstOrDefault());
+		}
+
+		/// <summary>
 		/// Loads the specified entity with the specified id.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
@@ -100,6 +160,7 @@ namespace Raven.Client.Document
 			bool retry;
 			do
 			{
+				loadOperation.LogOperation();
 				using (loadOperation.EnterLoadContext())
 				{
 					retry = loadOperation.SetResult(DatabaseCommands.Get(id));
@@ -155,6 +216,7 @@ namespace Raven.Client.Document
 			MultiLoadResult multiLoadResult;
 			do
 			{
+				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
 					multiLoadResult = DatabaseCommands.Get(ids, includes);
@@ -243,6 +305,15 @@ namespace Raven.Client.Document
 		public ILoaderWithInclude<object> Include(string path)
 		{
 			return new MultiLoaderWithInclude<object>(this).Include(path);
+		}
+
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		ILazyLoaderWithInclude<object> ILazySessionOperations.Include(string path)
+		{
+			return new LazyMultiLoaderWithInclude<object>(this).Include(path);
 		}
 
 		/// <summary>
@@ -437,6 +508,48 @@ namespace Raven.Client.Document
 			throw new NotSupportedException();
 		}
 #endif
+
+		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes)
+		{
+			var multiLoadOperation = new MultiLoadOperation(this,DatabaseCommands.DisableAllCaching, ids);
+			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+			pendingLazyOperations.Add(lazyOp);
+			return new Lazy<T[]>(() =>
+			{
+				ExecuteAllLazyOperations();
+				return (T[]) lazyOp.Result;
+			});
+		}
+
+		private void ExecuteAllLazyOperations()
+		{
+			var disposables = pendingLazyOperations.Select(x=>x.EnterContext()).Where(x=>x!=null).ToList();
+			try
+			{
+				var requests = pendingLazyOperations.Select(x => x.CraeteRequest()).ToArray();
+				var responses = DatabaseCommands.MultiGet(requests);
+				for (int i = 0; i < pendingLazyOperations.Count; i++)
+				{
+					if (responses[i].Status != 200 && // known statuses, with specific handling
+						responses[i].Status != 203 && 
+						responses[i].Status != 304 && 
+						responses[i].Status != 404)
+					{
+						throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
+						                                    Environment.NewLine + responses[i].Result);
+					}
+					pendingLazyOperations[i].HandleResponse(responses[i]);
+				}
+			}
+			finally
+			{
+				foreach (var disposable in disposables)
+				{
+					disposable.Dispose();
+				}
+				pendingLazyOperations.Clear();
+			}
+		}
 	}
 #endif
 }

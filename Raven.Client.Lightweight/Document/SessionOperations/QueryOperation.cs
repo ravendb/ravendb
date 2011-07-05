@@ -51,7 +51,7 @@ namespace Raven.Client.Document.SessionOperations
 #endif
 		}
 
-		public void BeforeExecutingQuery()
+		public void LogQuery()
 		{
 			log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
 										  indexQuery.Query, indexName, sessionOperations.StoreIdentifier);

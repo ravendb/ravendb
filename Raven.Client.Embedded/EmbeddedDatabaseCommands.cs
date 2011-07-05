@@ -515,6 +515,14 @@ namespace Raven.Client.Embedded
 			return new DisposableAction(() => { });
 		}
 
+		/// <summary>
+		/// Perform a single POST requst containing multiple nested GET requests
+		/// </summary>
+		public GetResponse[] MultiGet(GetRequest[] requests)
+		{
+			throw new NotImplementedException("Multi GET is only support for Server/Client, not embedded");
+		}
+
 		#endregion
 
 		/// <summary>

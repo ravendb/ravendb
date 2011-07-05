@@ -123,6 +123,7 @@
     <Compile Include="Impl\DocumentRetriever.cs" />
     <Compile Include="Impl\IDocumentCacher.cs" />
     <Compile Include="Indexing\AbstractIndexingExecuter.cs" />
+    <Compile Include="Indexing\ErrorLoggingConcurrentMergeScheduler.cs" />
     <Compile Include="Indexing\FieldsToFetch.cs" />
     <Compile Include="Indexing\IIndexExtension.cs" />
     <Compile Include="Indexing\ReducingExecuter.cs" />
