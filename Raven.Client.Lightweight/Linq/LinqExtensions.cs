@@ -136,7 +136,7 @@ namespace Raven.Client.Linq
 			if (provider == null)
 				throw new ArgumentException("You can only use Raven Queryable with Lazily");
 
-			return provider.Lazily<T>();
+			return provider.Lazily<T>(source.Expression);
 		}
 
 		/// <summary>

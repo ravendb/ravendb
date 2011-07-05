@@ -118,7 +118,7 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression)
 		{
-			var processor = GetQueryProviderProcessor();
+			var processor = GetQueryProviderProcessor<T>();
 			return (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
 		}
 
@@ -128,18 +128,17 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public IAsyncDocumentQuery<TResult> ToAsyncLuceneQuery<TResult>(Expression expression)
 		{
-			var processor = GetQueryProviderProcessor();
+			var processor = GetQueryProviderProcessor<T>();
 			return (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
 		}
 
-		/// <summary>
-		/// Register the query as a lazy query in the session and return a lazy
-		/// instance that will evaluate the query only when needed
-		/// </summary>
-		public Lazy<IEnumerable<S>> Lazily<S>()
+		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression)
 		{
-			throw new NotImplementedException();
+			var processor = GetQueryProviderProcessor<S>();
+			var query = processor.GetLuceneQueryFor(expression);
+			return query.Lazily();
 		}
+
 #endif
 
 		/// <summary>
@@ -151,12 +150,12 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return GetQueryProviderProcessor().Execute(expression);
+			return GetQueryProviderProcessor<T>().Execute(expression);
 		}
 
-		DynamicQueryProviderProcessor<T> GetQueryProviderProcessor()
+		DynamicQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
 		{
-			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch);
+			return new DynamicQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)

@@ -64,17 +64,6 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public HashSet<string> FieldsToFetch { get; private set; }
 
-#if !NET_3_5
-		/// <summary>
-		/// Register the query as a lazy query in the session and return a lazy
-		/// instance that will evaluate the query only when needed
-		/// </summary>
-		public Lazy<IEnumerable<S>> Lazily<S>()
-		{
-			throw new NotImplementedException();
-		}
-#endif
-
 		/// <summary>
 		/// Change the result type for the query provider
 		/// </summary>
@@ -132,7 +121,7 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return GetQueryProviderProcessor().Execute(expression);
+			return GetQueryProviderProcessor<T>().Execute(expression);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
@@ -220,7 +209,7 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public IAsyncDocumentQuery<TResult> ToAsyncLuceneQuery<TResult>(Expression expression)
 		{
-			var processor = GetQueryProviderProcessor();
+			var processor = GetQueryProviderProcessor<T>();
 			return (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
 		}
 
@@ -228,17 +217,17 @@ namespace Raven.Client.Linq
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public Lazy<IEnumerable<T>> Lazily(Expression expression)
+		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression)
 		{
-			var processor = GetQueryProviderProcessor();
+			var processor = GetQueryProviderProcessor<S>();
 			var query = processor.GetLuceneQueryFor(expression);
 			return query.Lazily();
 		}
 #endif
 
-		RavenQueryProviderProcessor<T> GetQueryProviderProcessor()
+		RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
 		{
-			return new RavenQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch);
+			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch);
 		}
 	}
 }
