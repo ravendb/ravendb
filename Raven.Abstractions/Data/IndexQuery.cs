@@ -125,21 +125,17 @@ namespace Raven.Abstractions.Data
 				.Append("/")
 				.Append(index);
 
-			AppendQueryString(path, true);
+			AppendQueryString(path);
 
 			return path.ToString();
 		}
 
-		public void AppendQueryString(StringBuilder path, bool uriEscape)
+		public void AppendQueryString(StringBuilder path)
 		{
 			path
 				.Append("?query=");
-			
-			var query = Uri.EscapeDataString(Query ?? "");
-			if (uriEscape)
-				query = Uri.EscapeUriString(query);
 
-			path.Append(query)
+			path.Append(Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")))
 				.Append("&start=").Append(Start)
 				.Append("&pageSize=").Append(PageSize)
 				.Append("&aggregation=").Append(AggregationOperation);

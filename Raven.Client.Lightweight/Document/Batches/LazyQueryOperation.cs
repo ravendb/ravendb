@@ -21,7 +21,7 @@ namespace Raven.Client.Document.Batches
 		public GetRequest CraeteRequest()
 		{
 			var stringBuilder = new StringBuilder();
-			queryOperation.IndexQuery.AppendQueryString(stringBuilder, false);
+			queryOperation.IndexQuery.AppendQueryString(stringBuilder);
 		
 			return new GetRequest
 			{
