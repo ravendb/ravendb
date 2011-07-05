@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Tests.Linq;
@@ -81,5 +82,36 @@ namespace Raven.Tests.MultiGet
 			}
 		}
 
+		[Fact]
+		public void LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Query<User>().ToArray();
+
+					session.Store(new User { Name = "oren" });
+					session.Store(new User());
+					session.Store(new User { Name = "ayende" });
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var result1 = session.Query<User>().Customize(x=>x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Where(x => x.Name == "oren").Lazily();
+					var result2 = session.Query<User>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Where(x => x.Name == "ayende").Lazily();
+					Assert.NotEmpty(result2.Value);
+
+					Assert.Equal(1, session.Advanced.NumberOfRequests);
+					Assert.NotEmpty(result1.Value);
+					Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+				}
+
+			}
+		}
 	}
 }
