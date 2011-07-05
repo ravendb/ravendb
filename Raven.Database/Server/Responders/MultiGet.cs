@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Http;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using System.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -120,15 +121,19 @@ namespace Raven.Database.Server.Responders
 
 		public class MultiGetHttpRequest : IHttpRequest
 		{
-			private readonly GetRequest req;
-
 			public MultiGetHttpRequest(GetRequest req, IHttpRequest realRequest)
 			{
-				this.req = req;
-				QueryString = HttpUtility.ParseQueryString(req.Query ?? "");
-				foreach (string key in QueryString)
+				var tempQueryString = HttpUtility.ParseQueryString(req.Query ?? "");
+				QueryString = new NameValueCollection();
+				foreach (string key in tempQueryString)
 				{
-					QueryString[key] = HttpUtility.UrlDecode(QueryString[key]);
+					var values = tempQueryString.GetValues(key);
+					if(values == null)
+						continue;
+					foreach (var value in values)
+					{
+						QueryString.Add(key, HttpUtility.UrlDecode(value));
+					}
 				}
 				Url = new UriBuilder(realRequest.Url)
 				{
