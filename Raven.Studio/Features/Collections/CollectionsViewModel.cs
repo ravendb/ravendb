@@ -147,14 +147,14 @@ namespace Raven.Studio.Features.Collections
 		{
 			if (Collections != null)
 			{
-				var activeCollection = Collections
+				var collection = Collections
 					.Where(item => item.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
 					.FirstOrDefault();
 
-				if (activeCollection == null)
+				if (collection == null)
 					return;
 
-				ActiveCollection = activeCollection;
+				ActiveCollection = collection;
 				return;
 			}
 			executeAfterCollectionsFetched = () => SelectCollectionByName(name);

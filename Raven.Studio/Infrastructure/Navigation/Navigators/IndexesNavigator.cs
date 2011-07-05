@@ -23,14 +23,7 @@ namespace Raven.Studio.Infrastructure.Navigation.Navigators
 			if (string.IsNullOrWhiteSpace(index))
 				return;
 
-			var navigateTo = browseIndexesViewModel.Indexes
-				.Where(item => item.Name.Equals(index, StringComparison.InvariantCultureIgnoreCase))
-				.FirstOrDefault();
-
-			if (navigateTo == null)
-				return;
-
-			browseIndexesViewModel.ActiveIndex = navigateTo;
+			browseIndexesViewModel.SelectIndexByName(index);
 		}
 	}
 }

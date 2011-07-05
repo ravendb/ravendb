@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Linq;
 using Raven.Studio.Features.Collections;
 
 namespace Raven.Studio.Infrastructure.Navigation.Navigators
@@ -24,7 +22,6 @@ namespace Raven.Studio.Infrastructure.Navigation.Navigators
 				return;
 
 			collectionsViewModel.SelectCollectionByName(collection);
-			
 		}
 	}
 }
