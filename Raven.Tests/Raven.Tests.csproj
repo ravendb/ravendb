@@ -491,8 +491,8 @@
     <Compile Include="ManagedStorage\TxStorageTest.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MultiGet\Basic.cs" />
-    <Compile Include="MultiGet\MultiGetSession.cs" />
+    <Compile Include="MultiGet\MultiGetBasic.cs" />
+    <Compile Include="MultiGet\MultiGetMultiGet.cs" />
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />

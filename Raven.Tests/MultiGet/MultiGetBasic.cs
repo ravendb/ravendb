@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Tests.MultiGet
 {
-	public class Basic : RemoteClientTest
+	public class MultiGetBasic : RemoteClientTest
 	{
 		[Fact]
 		public void CanUseMultiGetToBatchGetDocumentRequests()
