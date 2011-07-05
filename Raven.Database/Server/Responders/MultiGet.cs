@@ -126,6 +126,10 @@ namespace Raven.Database.Server.Responders
 			{
 				this.req = req;
 				QueryString = HttpUtility.ParseQueryString(req.Query ?? "");
+				foreach (string key in QueryString)
+				{
+					QueryString[key] = HttpUtility.UrlDecode(QueryString[key]);
+				}
 				Url = new UriBuilder(realRequest.Url)
 				{
 					Query = req.Query,
