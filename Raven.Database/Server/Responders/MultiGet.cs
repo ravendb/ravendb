@@ -62,7 +62,10 @@ namespace Raven.Database.Server.Responders
 
 				Response.OutputStream.Position = 0;
 				getResponse.Result = new StreamReader(Response.OutputStream).ReadToEnd();
-				getResponse.Status = Response.StatusCode;
+				if (Response.StatusCode != 0)
+					getResponse.Status = Response.StatusCode;
+				else
+					getResponse.Status = 200;
 				return getResponse;
 			}
 
