@@ -104,6 +104,7 @@
     <Compile Include="Document\Batches\ILazySessionOperations.cs" />
     <Compile Include="Document\Batches\LazyMultiLoaderWithInclude.cs" />
     <Compile Include="Document\Batches\LazyMultiLoadOperation.cs" />
+    <Compile Include="Document\Batches\LazyQueryOperation.cs" />
     <Compile Include="Document\DefaultRavenContractResolver.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\AbstractDocumentQuery.cs" />

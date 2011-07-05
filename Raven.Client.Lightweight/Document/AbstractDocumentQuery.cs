@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -18,6 +19,7 @@ using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Exceptions;
 using Raven.Client.Linq;
@@ -368,8 +370,6 @@ namespace Raven.Client.Document
 				documentQueryListener.BeforeQueryExecuted(this);
 			}
 
-			theSession.IncrementRequestCount();
-
 			var query = theQueryText.ToString();
 			var indexQuery = GenerateIndexQuery(query);
 			queryOperation = new QueryOperation(theSession,
@@ -406,6 +406,7 @@ namespace Raven.Client.Document
 			ExecuteActualQuery();
 		}
 
+
 		private void ExecuteActualQuery()
 		{
 			while (true)
@@ -426,7 +427,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET_3_5
+#if !NET_3_5 && !SILVERLIGHT
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -434,16 +435,20 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Lazy<IEnumerable<T>> Lazily()
 		{
-			//if (lazyQueryResult == null)
-			//{
-			//    queryResult = GetQueryResult();
-			//    InvokeAfterQueryExecuted(queryResult);
-			//}
+			if (queryOperation == null)
+			{
+				InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
+			}
 
-			//return queryResult.CreateSnapshot();
-			throw new NotImplementedException();
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation);
+
+			return ((DocumentSession)theSession).AddLazyOperation<IEnumerable<T>>(lazyQueryOperation);
 		}
         
+#endif
+
+#if !NET_3_5
+
 		/// <summary>
         ///   Gets the query result
         ///   Execute the query the first time that this is called.

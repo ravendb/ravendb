@@ -30,6 +30,11 @@ namespace Raven.Client.Document.SessionOperations
 			get { return currentQueryResults; }
 		}
 
+		public string IndexName
+		{
+			get { return indexName; }
+		}
+
 		public IndexQuery IndexQuery
 		{
 			get { return indexQuery; }

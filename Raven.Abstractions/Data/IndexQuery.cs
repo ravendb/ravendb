@@ -123,22 +123,38 @@ namespace Raven.Abstractions.Data
 				.Append("/")
 				.Append(operationName)
 				.Append("/")
-				.Append(index)
-				.Append("?query=").Append(Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")))
+				.Append(index);
+
+			AppendQueryString(path, true);
+
+			return path.ToString();
+		}
+
+		public void AppendQueryString(StringBuilder path, bool uriEscape)
+		{
+			path
+				.Append("?query=");
+			
+			var query = Uri.EscapeDataString(Query ?? "");
+			if (uriEscape)
+				query = Uri.EscapeUriString(query);
+
+			path.Append(query)
 				.Append("&start=").Append(Start)
 				.Append("&pageSize=").Append(PageSize)
 				.Append("&aggregation=").Append(AggregationOperation);
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			GroupBy.ApplyIfNotNull(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
-			SortedFields.ApplyIfNotNull(field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
-			
+			SortedFields.ApplyIfNotNull(
+				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
+
 			if (Cutoff != null)
 			{
 				var cutOffAsString =
 					Uri.EscapeUriString(Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture)));
 				path.Append("&cutOff=").Append(cutOffAsString);
 			}
-			if(CutoffEtag != null)
+			if (CutoffEtag != null)
 			{
 				path.Append("&cutOffEtag=").Append(CutoffEtag.Value.ToString());
 			}
@@ -148,8 +164,6 @@ namespace Raven.Abstractions.Data
 			{
 				path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
 			}
-
-			return path.ToString();
 		}
 
 		/// <summary>

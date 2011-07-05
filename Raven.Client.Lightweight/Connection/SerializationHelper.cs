@@ -79,5 +79,23 @@ namespace Raven.Client.Connection
 
 			return convert(metadata[key].Value<T>());
 		}
+
+		/// <summary>
+		/// Translate a result for a query
+		/// </summary>
+		public static QueryResult ToQueryResult(RavenJObject json, string etagHeader)
+		{
+			return new QueryResult
+			{
+				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
+				IndexEtag = new Guid(etagHeader),
+				Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
+				Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
+				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+				IndexName = json.Value<string>("IndexName"),
+				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+			};
+		}
 	}
 }

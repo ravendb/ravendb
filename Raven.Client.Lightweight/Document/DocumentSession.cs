@@ -516,6 +516,16 @@ namespace Raven.Client.Document
 			throw new NotSupportedException();
 		}
 
+		internal Lazy<T> AddLazyOperation<T>(ILazyOperation operation)
+		{
+			pendingLazyOperations.Add(operation);
+			return new Lazy<T>(() =>
+			{
+				ExecuteAllLazyOperations();
+				return (T)operation.Result;
+			});
+		}
+
 		/// <summary>
 		/// Register to lazily load documents and include
 		/// </summary>
@@ -523,12 +533,7 @@ namespace Raven.Client.Document
 		{
 			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
 			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
-			pendingLazyOperations.Add(lazyOp);
-			return new Lazy<T[]>(() =>
-			{
-				ExecuteAllLazyOperations();
-				return (T[])lazyOp.Result;
-			});
+			return AddLazyOperation<T[]>(lazyOp);
 		}
 
 		

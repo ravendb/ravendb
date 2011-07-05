@@ -700,17 +700,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw new InvalidOperationException("There is no index named: " + index);
 				throw;
 			}
-			return new QueryResult
-			{
-				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-				IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
-				Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
-				Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
-				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-				IndexName = json.Value<string>("IndexName"),
-				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-			};
+			return SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
 		}
 
 		/// <summary>
