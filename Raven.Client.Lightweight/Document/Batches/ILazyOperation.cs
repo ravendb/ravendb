@@ -7,7 +7,8 @@ namespace Raven.Client.Document.Batches
 	public interface ILazyOperation
 	{
 		GetRequest CraeteRequest();
-		object Result { get; set; }
+		object Result { get;  }
+		bool RequiresRetry { get; }
 		void HandleResponse(GetResponse response);
 		IDisposable EnterContext();
 	}

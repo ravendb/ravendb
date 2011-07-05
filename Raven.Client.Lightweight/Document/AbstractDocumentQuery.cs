@@ -16,10 +16,10 @@ using NLog;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
+using Raven.Client.Document.Batches;
 #endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Exceptions;
 using Raven.Client.Linq;
@@ -402,6 +402,7 @@ namespace Raven.Client.Document
 		{
 			if (queryOperation != null) 
 				return;
+			theSession.IncrementRequestCount();
 			InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			ExecuteActualQuery();
 		}
@@ -468,6 +469,7 @@ namespace Raven.Client.Document
 			if (queryOperation != null)
 				return TaskEx.Run(() => queryOperation);
 			InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
+			theSession.IncrementRequestCount();
 			return ExecuteActualQueryAsync();
 		}
 #endif

@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
 using System;
+using System.Threading;
 using Raven.Abstractions.Data;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -536,14 +537,23 @@ namespace Raven.Client.Document
 			return AddLazyOperation<T[]>(lazyOp);
 		}
 
-		
+
 		private void ExecuteAllLazyOperations()
 		{
 			if (pendingLazyOperations.Count == 0)
 				return;
 
 			IncrementRequestCount();
-			var disposables = pendingLazyOperations.Select(x=>x.EnterContext()).Where(x=>x!=null).ToList();
+			while (ExecuteLazyOperationsSingleStep())
+			{
+				Thread.Sleep(100);
+			}
+			pendingLazyOperations.Clear();
+		}
+
+		private bool ExecuteLazyOperationsSingleStep()
+		{
+			var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
 			try
 			{
 				var requests = pendingLazyOperations.Select(x => x.CraeteRequest()).ToArray();
@@ -551,15 +561,20 @@ namespace Raven.Client.Document
 				for (int i = 0; i < pendingLazyOperations.Count; i++)
 				{
 					if (responses[i].Status != 200 && // known statuses, with specific handling
-						responses[i].Status != 203 && 
-						responses[i].Status != 304 && 
+						responses[i].Status != 203 &&
+						responses[i].Status != 304 &&
 						responses[i].Status != 404)
 					{
 						throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
-						                                    Environment.NewLine + responses[i].Result);
+															Environment.NewLine + responses[i].Result);
 					}
 					pendingLazyOperations[i].HandleResponse(responses[i]);
+					if (pendingLazyOperations[i].RequiresRetry)
+					{
+						return true;
+					}
 				}
+				return false;
 			}
 			finally
 			{
@@ -567,7 +582,6 @@ namespace Raven.Client.Document
 				{
 					disposable.Dispose();
 				}
-				pendingLazyOperations.Clear();
 			}
 		}
 #endif

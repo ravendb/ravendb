@@ -32,13 +32,15 @@ namespace Raven.Client.Document.Batches
 
 		public object Result { get; set; }
 
+		public bool RequiresRetry { get; set; }
+
 		public void HandleResponse(GetResponse response)
 		{
 			var json = RavenJObject.Parse(response.Result);
 			var queryResult = SerializationHelper.ToQueryResult(json, response.Headers["ETag"]);
-			if (queryOperation.IsAcceptable(queryResult) == false)
-				throw new InvalidOperationException();
-			Result = queryOperation.Complete<T>();
+			RequiresRetry = queryOperation.IsAcceptable(queryResult) == false;
+			if (RequiresRetry == false)
+				Result = queryOperation.Complete<T>();
 		}
 
 		public IDisposable EnterContext()
