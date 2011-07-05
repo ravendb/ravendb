@@ -4,6 +4,7 @@ using System.Diagnostics;
 using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Exceptions;
 
 namespace Raven.Client.Document.SessionOperations
 {
@@ -62,6 +63,18 @@ namespace Raven.Client.Document.SessionOperations
 				return null;
 
 			return sessionOperations.DocumentStore.DisableAggressiveCaching();
+		}
+
+		public bool ShouldQueryAgain(Exception e)
+		{
+			if (e is NonAuthoritiveInformationException == false)
+				return false;
+
+#if !SILVERLIGHT
+			return sp.Elapsed <= sessionOperations.NonAuthoritiveInformationTimeout;
+#else
+			return (DateTime.Now - startTime) <= sessionOperations.NonAuthoritiveInformationTimeout;
+#endif
 		}
 
 		public bool ShouldQueryAgain(QueryResult result)

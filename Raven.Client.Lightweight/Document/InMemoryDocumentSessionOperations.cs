@@ -257,11 +257,6 @@ namespace Raven.Client.Document
 			return EntityChanged(entity, value);
 		}
 
-		internal void DecrementRequestCount()
-		{
-			--NumberOfRequests;
-		}
-
 		internal void IncrementRequestCount()
 		{
 			if (++NumberOfRequests > MaxNumberOfRequestsPerSession)

@@ -1,3 +1,4 @@
+#if !NET_3_5
 using System;
 using Raven.Abstractions.Data;
 
@@ -11,3 +12,4 @@ namespace Raven.Client.Document.Batches
 		IDisposable EnterContext();
 	}
 }
+#endif

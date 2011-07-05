@@ -555,7 +555,18 @@ namespace Raven.Client.Document
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
 		}
 
+		
 #if !NET_3_5
+
+		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public Lazy<IEnumerable<T>> Lazily()
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>

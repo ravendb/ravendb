@@ -1005,6 +1005,8 @@ namespace Raven.Client.Linq
 
 			return asyncLuceneQuery;
 		}
+
+
 #endif
 
 		/// <summary>

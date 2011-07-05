@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !NET_3_5
+using System;
 using System.Linq.Expressions;
 
 namespace Raven.Client.Document.Batches
@@ -50,3 +51,4 @@ namespace Raven.Client.Document.Batches
 		Lazy<TResult> Load<TResult>(ValueType id);
 	}
 }
+#endif

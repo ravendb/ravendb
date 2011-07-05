@@ -127,6 +127,19 @@ namespace Raven.Client.Linq
 
 #if !NET_3_5
 		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public static Lazy<IEnumerable<T>> Lazily<T>(this IQueryable<T> source)
+		{
+			var provider = source.Provider as IRavenQueryProvider;
+			if (provider == null)
+				throw new ArgumentException("You can only use Raven Queryable with Lazily");
+
+			return provider.Lazily<T>();
+		}
+
+		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
 		public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source)

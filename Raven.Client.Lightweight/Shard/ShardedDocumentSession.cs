@@ -9,11 +9,11 @@ using System.Linq.Expressions;
 using System.Net;
 using Raven.Abstractions.Exceptions;
 #if !NET_3_5
+using Raven.Client.Document.Batches;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Document.Batches;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;

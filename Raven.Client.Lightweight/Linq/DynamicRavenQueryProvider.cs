@@ -131,6 +131,15 @@ namespace Raven.Client.Linq
 			var processor = GetQueryProviderProcessor();
 			return (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
 		}
+
+		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public Lazy<IEnumerable<S>> Lazily<S>()
+		{
+			throw new NotImplementedException();
+		}
 #endif
 
 		/// <summary>

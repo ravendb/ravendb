@@ -64,6 +64,17 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public HashSet<string> FieldsToFetch { get; private set; }
 
+#if !NET_3_5
+		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public Lazy<IEnumerable<S>> Lazily<S>()
+		{
+			throw new NotImplementedException();
+		}
+#endif
+
 		/// <summary>
 		/// Change the result type for the query provider
 		/// </summary>
@@ -211,6 +222,17 @@ namespace Raven.Client.Linq
 		{
 			var processor = GetQueryProviderProcessor();
 			return (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
+		}
+
+		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public Lazy<IEnumerable<T>> Lazily(Expression expression)
+		{
+			var processor = GetQueryProviderProcessor();
+			var query = processor.GetLuceneQueryFor(expression);
+			return query.Lazily();
 		}
 #endif
 

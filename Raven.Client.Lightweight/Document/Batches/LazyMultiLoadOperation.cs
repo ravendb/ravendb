@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !NET_3_5
+using System;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -58,3 +59,4 @@ namespace Raven.Client.Document.Batches
 		}
 	}
 }
+#endif

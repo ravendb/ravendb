@@ -5,10 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 #if !NET_3_5
+using Raven.Client.Document.Batches;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
-using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
 
 namespace Raven.Client

@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 #if !NET_3_5
 using System.Threading.Tasks;
@@ -35,5 +37,12 @@ namespace Raven.Client
 		QueryResult QueryResult { get; }
 #endif
 
+#if !NET_3_5
+		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		Lazy<IEnumerable<T>> Lazily();
+#endif
 	}
 }

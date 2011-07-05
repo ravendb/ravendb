@@ -390,7 +390,24 @@ namespace Raven.Client.Document
 #endif
 
 #if !NET_3_5
-        /// <summary>
+
+		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public Lazy<IEnumerable<T>> Lazily()
+		{
+			//if (lazyQueryResult == null)
+			//{
+			//    queryResult = GetQueryResult();
+			//    InvokeAfterQueryExecuted(queryResult);
+			//}
+
+			//return queryResult.CreateSnapshot();
+			throw new NotImplementedException();
+		}
+        
+		/// <summary>
         ///   Gets the query result
         ///   Execute the query the first time that this is called.
         /// </summary>
@@ -457,35 +474,19 @@ namespace Raven.Client.Document
         /// </summary>
         public IEnumerator<T> GetEnumerator()
         {
-			var sp = Stopwatch.StartNew();
-            do
-            {
-                try
-                {
-                    var currentQueryResults = QueryResult;
-                    foreach (var include in currentQueryResults.Includes)
-                    {
-                        var metadata = include.Value<RavenJObject>("@metadata");
+        	var currentQueryResults = QueryResult;
+        	foreach (var include in currentQueryResults.Includes)
+        	{
+        		var metadata = include.Value<RavenJObject>("@metadata");
 
-                        theSession.TrackEntity<object>(metadata.Value<string>("@id"),
-                                                    include,
-                                                    metadata);
-                    }
-                    var list = currentQueryResults.Results
-                        .Select(Deserialize)
-                        .ToList();
-                    return list.GetEnumerator();
-                }
-                catch (NonAuthoritiveInformationException)
-                {
-                    if (sp.Elapsed > theSession.NonAuthoritiveInformationTimeout)
-                        throw;
-                    queryResult = null;
-                    // we explicitly do NOT want to consider retries for non authoritive information as 
-                    // additional request counted against the session quota
-                    theSession.DecrementRequestCount();
-                }
-            } while (true);
+        		theSession.TrackEntity<object>(metadata.Value<string>("@id"),
+        		                               include,
+        		                               metadata);
+        	}
+        	var list = currentQueryResults.Results
+        		.Select(Deserialize)
+        		.ToList();
+        	return list.GetEnumerator();
         }
 #else
         /// <summary>
@@ -501,35 +502,19 @@ namespace Raven.Client.Document
 
 		private Task<IEnumerator<T>> ProcessEnumerator(Task<QueryResult> t, DateTime startTime)
 		{
-			try
-			{
-				queryResult = t.Result;
-                foreach (var include in queryResult.Includes)
-                {
-                    var metadata = include.Value<RavenJObject>("@metadata");
-
-                    theSession.TrackEntity<object>(metadata.Value<string>("@id"),
-                                                include,
-                                                metadata);
-                }
-                var list = queryResult.Results
-                    .Select(Deserialize)
-                    .ToList();
-				return TaskEx.Run(() => (IEnumerator<T>)list.GetEnumerator());
-			}
-            catch (NonAuthoritiveInformationException)
+			queryResult = t.Result;
+            foreach (var include in queryResult.Includes)
             {
-                if ((DateTime.Now - startTime) > theSession.NonAuthoritiveInformationTimeout)
-                    throw;
-                queryResult = null;
-                // we explicitly do NOT want to consider retries for non authoritive information as 
-                // additional request counted against the session quota
-                theSession.DecrementRequestCount();
+                var metadata = include.Value<RavenJObject>("@metadata");
 
-            	return QueryResultAsync
-					.ContinueWith(t2 => ProcessEnumerator(t2, startTime))
-					.Unwrap();
+                theSession.TrackEntity<object>(metadata.Value<string>("@id"),
+                                            include,
+                                            metadata);
             }
+            var list = queryResult.Results
+                .Select(Deserialize)
+                .ToList();
+			return TaskEx.Run(() => (IEnumerator<T>)list.GetEnumerator());
 		}
 
 #endif
@@ -1293,19 +1278,27 @@ If you really want to do in memory filtering on the data returned from the query
         	                                            timeout);
             while (true)
             {
-				using (queryOperation.EnterQueryContext())
+            	try
             	{
-					queryOperation.LogQuery();
-					var result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
-					if (queryOperation.ShouldQueryAgain(result))
+					using (queryOperation.EnterQueryContext())
 					{
-						Thread.Sleep(100);
-						continue;
+						queryOperation.LogQuery();
+						var result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
+						if (queryOperation.ShouldQueryAgain(result))
+						{
+							Thread.Sleep(100);
+							continue;
+						}
+
+						result.EnsureSnapshot();
+
+						return result;
 					}
-
-					result.EnsureSnapshot();
-
-					return result;
+            	}
+            	catch (Exception e)
+            	{
+					if (queryOperation.ShouldQueryAgain(e))
+						throw;
             	}
             }
         }

@@ -61,5 +61,13 @@ namespace Raven.Client.Linq
 		/// Set the fields to fetch
 		/// </summary>
 		HashSet<string> FieldsToFetch { get; }
+
+#if !NET_3_5
+		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		Lazy<IEnumerable<T>> Lazily<T>();
+#endif
 	}
 }

@@ -13,9 +13,9 @@ using System;
 using Raven.Abstractions.Data;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
+using Raven.Client.Document.Batches;
 #endif
 using Raven.Client.Connection;
-using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -28,7 +28,10 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Implements Unit of Work for accessing the RavenDB server
 	/// </summary>
-	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator, ILazySessionOperations
+	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator
+#if !NET_3_5
+		, ILazySessionOperations
+#endif
 	{
 #if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
@@ -91,6 +94,7 @@ namespace Raven.Client.Document
 			get { return this; }
 		}
 
+#if !NET_3_5
 
 		/// <summary>
 		/// Begin a load while including the specified path 
@@ -123,6 +127,16 @@ namespace Raven.Client.Document
 			return new Lazy<T>(() => lazy.Value.FirstOrDefault());
 		}
 
+
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		ILazyLoaderWithInclude<object> ILazySessionOperations.Include(string path)
+		{
+			return new LazyMultiLoaderWithInclude<object>(this).Include(path);
+		}
+
 		/// <summary>
 		/// Loads the specified entities with the specified id after applying
 		/// conventions on the provided id to get the real document id.
@@ -141,6 +155,7 @@ namespace Raven.Client.Document
 			var lazy = LazyLoadInternal<T>(new[] { documentKey }, new string[0]);
 			return new Lazy<T>(() => lazy.Value.FirstOrDefault());
 		}
+#endif
 
 		/// <summary>
 		/// Loads the specified entity with the specified id.
@@ -307,15 +322,6 @@ namespace Raven.Client.Document
 		public ILoaderWithInclude<object> Include(string path)
 		{
 			return new MultiLoaderWithInclude<object>(this).Include(path);
-		}
-
-		/// <summary>
-		/// Begin a load while including the specified path 
-		/// </summary>
-		/// <param name="path">The path.</param>
-		ILazyLoaderWithInclude<object> ILazySessionOperations.Include(string path)
-		{
-			return new LazyMultiLoaderWithInclude<object>(this).Include(path);
 		}
 
 		/// <summary>
@@ -509,20 +515,23 @@ namespace Raven.Client.Document
 		{
 			throw new NotSupportedException();
 		}
-#endif
 
+		/// <summary>
+		/// Register to lazily load documents and include
+		/// </summary>
 		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes)
 		{
-			var multiLoadOperation = new MultiLoadOperation(this,DatabaseCommands.DisableAllCaching, ids);
+			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
 			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
 			pendingLazyOperations.Add(lazyOp);
 			return new Lazy<T[]>(() =>
 			{
 				ExecuteAllLazyOperations();
-				return (T[]) lazyOp.Result;
+				return (T[])lazyOp.Result;
 			});
 		}
 
+		
 		private void ExecuteAllLazyOperations()
 		{
 			if (pendingLazyOperations.Count == 0)
@@ -556,6 +565,8 @@ namespace Raven.Client.Document
 				pendingLazyOperations.Clear();
 			}
 		}
+#endif
+
 	}
 #endif
 }
