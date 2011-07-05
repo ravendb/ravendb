@@ -1088,8 +1088,38 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var requestUri = url + "/multi_get";
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "POST", credentials, convention);
+
+			var cachedData = new List<Tuple<CachedRequest, bool>>();
+
+			if(jsonRequestFactory.DisableHttpCaching == false && convention.ShouldCacheRequest(requestUri))
+			{
+				cachedData.AddRange(requests.Select(request => jsonRequestFactory.ConfigureCaching( url +  request.UrlAndQuery, (key, val) => request.Headers[key] = val)));
+			}
+
 			httpJsonRequest.Write(JsonConvert.SerializeObject(requests));
-			return JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
+			var responses = JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
+			for (int i = 0; i < responses.Length; i++)
+			{
+				if (responses[i].Status == 304)
+				{
+					foreach (string header in cachedData[i].Item1.Headers)
+					{
+						responses[i].Headers[header] = cachedData[i].Item1.Headers[header];
+					}
+					responses[i].Result = cachedData[i].Item1.Data;
+					jsonRequestFactory.IncrementCachedRequests();
+				}
+				else
+				{
+					var nameValueCollection = new NameValueCollection();
+					foreach (var header in responses[i].Headers)
+					{
+						nameValueCollection[header.Key] = header.Value;
+					}
+					jsonRequestFactory.CacheResponse(url + requests[i].UrlAndQuery, responses[i].Result, nameValueCollection);
+				}
+			}
+			return responses;
 		}
 
 		///<summary>
