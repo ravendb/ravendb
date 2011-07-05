@@ -75,6 +75,7 @@ namespace Raven.Tests.Bugs
 		{
 			public static readonly Guid Id = Guid.NewGuid();
 
+		    public bool WasCommitted { get; set; }
 			public void Prepare(PreparingEnlistment preparingEnlistment)
 			{
 				preparingEnlistment.Prepared();
@@ -82,6 +83,7 @@ namespace Raven.Tests.Bugs
 
 			public void Commit(Enlistment enlistment)
 			{
+			    WasCommitted = true;
 				enlistment.Done();
 			}
 

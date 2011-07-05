@@ -73,6 +73,30 @@ namespace Raven.Tests.Shard
         IShardResolutionStrategy shardResolution;
         IShardStrategy shardStrategy;
 
+		[Fact]
+		public void Can_override_the_shard_id_generation()
+		{
+			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
+			{
+				documentStore.Initialize();
+
+				foreach (var shard in shards)
+				{
+					var s = shard;
+					shard.Conventions.DocumentKeyGenerator = c => ((Company) c).Name;
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					session.Store(company1);
+					session.Store(company2);
+
+					Assert.Equal("Company1", company1.Id);
+					Assert.Equal("Company2", company2.Id);
+				}
+			}
+		}
+
         [Fact]
         public void Can_insert_into_two_sharded_servers()
         {

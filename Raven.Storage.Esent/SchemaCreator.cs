@@ -53,7 +53,7 @@ namespace Raven.Storage.Esent
 		private void CreateIdentityTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "identity_table", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "identity_table", 1, 80, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
@@ -74,13 +74,13 @@ namespace Raven.Storage.Esent
 
 			const string indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   100);
+							   80);
 		}
 
 		private void CreateIndexingStatsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "indexes_stats", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "indexes_stats", 1, 80, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
@@ -126,7 +126,7 @@ namespace Raven.Storage.Esent
 
 			const string indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-			                   100);
+			                   80);
 		}
 
 		// this table exists solely so that other threads can touch the index
@@ -135,7 +135,7 @@ namespace Raven.Storage.Esent
 		private void CreateIndexingEtagsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "indexes_etag", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "indexes_etag", 1, 80, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
@@ -155,13 +155,13 @@ namespace Raven.Storage.Esent
 
 			const string indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   100);
+							   80);
 		}
 
 		private void CreateIndexingStatsReduceTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "indexes_stats_reduce", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "indexes_stats_reduce", 1, 80, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
@@ -207,13 +207,13 @@ namespace Raven.Storage.Esent
 
 			const string indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   100);
+							   80);
 		}
 
         private void CreateTransactionsTable(JET_DBID dbid)
         {
             JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "transactions", 256, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "transactions", 1, 80, out tableid);
             JET_COLUMNID columnid;
 
             Api.JetAddColumn(session, tableid, "tx_id", new JET_COLUMNDEF
@@ -231,13 +231,13 @@ namespace Raven.Storage.Esent
 
             const string indexDef = "+tx_id\0\0";
             Api.JetCreateIndex(session, tableid, "by_tx_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-                               100);
+                               80);
         }
 
 	    private void CreateDocumentsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "documents", 1024, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "documents", 1, 80, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
@@ -289,21 +289,21 @@ namespace Raven.Storage.Esent
 
 			var indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique, indexDef, indexDef.Length,
-			                   100);
+			                   80);
 
 			indexDef = "+id\0\0";
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-			                   100);
+			                   80);
 
             indexDef = "+etag\0\0";
             Api.JetCreateIndex(session, tableid, "by_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-                               100);
+                               80);
 		}
 
         private void CreateDocumentsBeingModifiedByTransactionsTable(JET_DBID dbid)
         {
             JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "documents_modified_by_transaction", 1024, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "documents_modified_by_transaction", 1, 80, out tableid);
             JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
@@ -360,11 +360,11 @@ namespace Raven.Storage.Esent
 
             var indexDef = "+key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-                               100);
+                               80);
 
 			indexDef = "+id\0\0";
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   100);
+							   80);
 
             indexDef = "+locked_by_transaction\0\0";
         	Api.JetCreateIndex2(session, tableid, new[]
@@ -376,7 +376,7 @@ namespace Raven.Storage.Esent
         			grbit = CreateIndexGrbit.IndexDisallowNull,
         			szIndexName = "by_tx",
         			szKey = indexDef,
-        			ulDensity = 100,
+        			ulDensity = 80,
         		},
         	}, 1);
         }
@@ -384,7 +384,7 @@ namespace Raven.Storage.Esent
 		private void CreateMapResultsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "mapped_results", 1024, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "mapped_results", 1, 80, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
@@ -444,30 +444,30 @@ namespace Raven.Storage.Esent
 
 			var indexDef = "+id\0\0";
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   100);
+							   80);
 			
 			indexDef = "+view\0+document_key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_view_and_doc_key", CreateIndexGrbit.IndexDisallowNull, indexDef,
 			                   indexDef.Length,
-			                   100);
+			                   80);
 
 			indexDef = "+view\0\0";
 			Api.JetCreateIndex(session, tableid, "by_view", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-			                   100);
+			                   80);
 
             indexDef = "+view\0-etag\0\0";
             Api.JetCreateIndex(session, tableid, "by_view_and_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-                               100);
+                               80);
 
             indexDef = "+reduce_key_and_view_hashed\0\0";
             Api.JetCreateIndex(session, tableid, "by_reduce_key_and_view_hashed", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-                               100);
+                               80);
 		}
 
 		private void CreateTasksTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "tasks", 256, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "tasks", 1, 80, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
@@ -512,10 +512,10 @@ namespace Raven.Storage.Esent
 
 			var indexDef = "+id\0\0";
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-			                   100);
+			                   80);
 			indexDef = "+for_index\0\0";
 			Api.JetCreateIndex(session, tableid, "by_index", CreateIndexGrbit.IndexIgnoreNull, indexDef, indexDef.Length,
-			                   100);
+			                   80);
 
 			indexDef = "+supports_merging\0+for_index\0+task_type\0\0";
 			Api.JetCreateIndex2(session, tableid, new[]{new JET_INDEXCREATE
@@ -524,7 +524,7 @@ namespace Raven.Storage.Esent
 				cbKeyMost = SystemParameters.KeyMost,
 				grbit = CreateIndexGrbit.IndexIgnoreNull,
 				szIndexName = "mergables_by_task_type",
-				ulDensity = 100,
+				ulDensity = 80,
 				szKey = indexDef
 			}, },1);
 		}
@@ -532,7 +532,7 @@ namespace Raven.Storage.Esent
 		private void CreateFilesTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "files", 1024, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "files", 1, 80, out tableid);
 			JET_COLUMNID columnid;
 
 
@@ -571,22 +571,22 @@ namespace Raven.Storage.Esent
 
 			var indexDef = "+name\0\0";
 			Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-			                   100);
+			                   80);
 
 			indexDef = "+id\0\0";
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   100);
+							   80);
 
 
 			indexDef = "+etag\0\0";
 			Api.JetCreateIndex(session, tableid, "by_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-							   100);
+							   80);
 		}
 
 	    public void CreateQueueTable(JET_DBID dbid)
         {
             JET_TABLEID tableid;
-            Api.JetCreateTable(session, dbid, "queue", 1024, 100, out tableid);
+            Api.JetCreateTable(session, dbid, "queue", 1, 80, out tableid);
             JET_COLUMNID columnid;
 
 
@@ -620,17 +620,17 @@ namespace Raven.Storage.Esent
 
             var indexDef = "+name\0\0";
             Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-                               100);
+                               80);
 
             indexDef = "+id\0\0";
             Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-                               100);
+                               80);
         }
         
         private void CreateDetailsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "details", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "details", 1, 80, out tableid);
 			JET_COLUMNID id;
 			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
 			{

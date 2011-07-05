@@ -7,10 +7,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using log4net.Appender;
-using log4net.Config;
-using log4net.Layout;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
@@ -30,10 +26,7 @@ namespace Raven.Tests
 
 		protected void EnableDebugLog()
 		{
-			BasicConfigurator.Configure(new TraceAppender
-			{
-				Layout = new SimpleLayout()
-			});
+		
 		}
 
 

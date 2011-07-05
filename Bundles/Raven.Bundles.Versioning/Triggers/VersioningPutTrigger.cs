@@ -52,6 +52,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			{
 				var copyMetadata = new RavenJObject(metadata);
 				copyMetadata[RavenDocumentRevisionStatus] = RavenJToken.FromObject("Historical");
+				copyMetadata[Constants.RavenReadOnly] = true;
 				copyMetadata.Remove(RavenDocumentRevision);
 				var parentRevision = metadata.Value<string>(RavenDocumentRevision);
 				if(parentRevision!=null)

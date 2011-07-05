@@ -6,7 +6,7 @@
 using System;
 using System.IO;
 using System.Security.Principal;
-using log4net;
+using NLog;
 
 namespace Raven.Http.Abstractions
 {
@@ -18,7 +18,7 @@ namespace Raven.Http.Abstractions
 		IPrincipal User { get; }
 		void FinalizeResonse();
 		void SetResponseFilter(Func<Stream, Stream> responseFilter);
-		void OutputSavedLogItems(ILog logger);
-		void Log(Action<ILog> loggingAction);
+		void OutputSavedLogItems(Logger logger);
+		void Log(Action<Logger> loggingAction);
 	}
 }

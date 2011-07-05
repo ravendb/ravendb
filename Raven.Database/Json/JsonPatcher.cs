@@ -156,15 +156,15 @@ namespace Raven.Database.Json
 
 			var position = patchCmd.Position;
 			var value = patchCmd.Value;
-			if (position == null && value == null)
+			if (position == null && (value == null || value.Type == JTokenType.Null))
 				throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because position element does not exists or not an integer and no value was present");
-			if (position != null && value != null)
+			if (position != null && value != null && value.Type != JTokenType.Null)
 				throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because both a position and a value are set");
-			if (position < 0 || position >= array.Length)
+			if (position != null && (position.Value < 0 || position.Value >= array.Length))
 				throw new IndexOutOfRangeException("Cannot remove value from  '" + propName +
 												   "' because position element is out of bound bounds");
 
-			if (value != null)
+			if (value != null && value.Type != JTokenType.Null)
 			{
 				var equalityComparer = new RavenJTokenEqualityComparer();
 				var singleOrDefault = array.FirstOrDefault(x => equalityComparer.Equals(x, value));
@@ -173,7 +173,9 @@ namespace Raven.Database.Json
 				array.Remove(singleOrDefault);
 				return;
 			}
-			array.RemoveAt(position.Value);
+
+			if(position!=null)
+				array.RemoveAt(position.Value);
 		}
 
 		private void InsertValue(PatchRequest patchCmd, string propName, RavenJToken property)

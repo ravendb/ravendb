@@ -40,7 +40,34 @@ namespace Raven.Database.Queries
 			string realQuery = map.Items.Aggregate(query.Query,
 												   (current, mapItem) => current.Replace(mapItem.QueryFrom, mapItem.To));
 
+			UpdateFieldNamesForSortedFields(query, map);
+			UpdateFieldsInArray(map, query.FieldsToFetch);
+			UpdateFieldsInArray(map, query.GroupBy);
+
 			return ExecuteActualQuery(query, map, touchTemporaryIndexResult, realQuery);
+		}
+
+		private static void UpdateFieldNamesForSortedFields(IndexQuery query, DynamicQueryMapping map)
+		{
+			if (query.SortedFields == null) return;
+			foreach (var sortedField in query.SortedFields)
+			{
+				var item = map.Items.FirstOrDefault(x=>x.From == sortedField.Field);
+				if (item != null)
+					sortedField.Field = item.To;
+			}
+		}
+
+		private static void UpdateFieldsInArray(DynamicQueryMapping map, string[] fields)
+		{
+			if (fields == null) 
+				return;
+			for (var i = 0; i < fields.Length; i++)
+			{
+				var item = map.Items.FirstOrDefault(x=>x.From == fields[i]);
+				if (item != null)
+					fields[i] = item.To;
+			}
 		}
 
 		private QueryResult ExecuteActualQuery(IndexQuery query, DynamicQueryMapping map, Tuple<string, bool> touchTemporaryIndexResult, string realQuery)

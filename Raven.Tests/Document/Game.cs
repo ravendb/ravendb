@@ -7,15 +7,11 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using log4net.Appender;
-using log4net.Config;
-using log4net.Layout;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing;
 using Xunit;
 
 namespace Raven.Tests.Document
@@ -58,10 +54,6 @@ namespace Raven.Tests.Document
 		{
 			using (var store = NewDocumentStore())
 			{
-				BasicConfigurator.Configure(new OutputDebugStringAppender
-				{
-					Layout = new SimpleLayout()
-				});
 				store.DatabaseCommands.PutIndex("GameEventCountZoneBySpecificCharacter",
 									new IndexDefinition
 									{
@@ -264,10 +256,6 @@ namespace Raven.Tests.Document
 		{
 			using (var store = NewDocumentStore())
 			{
-				BasicConfigurator.Configure(new OutputDebugStringAppender
-				{
-					Layout = new SimpleLayout()
-				});
 			    store.DatabaseCommands.PutIndex("GameEventCountZoneBySpecificCharacter",
 			                                    new IndexDefinitionBuilder<GameEvent, GameEventCount>
 			                                    {

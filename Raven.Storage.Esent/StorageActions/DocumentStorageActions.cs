@@ -10,12 +10,9 @@ using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Database;
 using Raven.Database.Data;
-using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
-using Raven.Http.Exceptions;
 using Raven.Json.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
@@ -56,7 +53,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 				update.Save();
 			}
-			logger.DebugFormat("Adding attachment {0}", key);
+			logger.Debug("Adding attachment {0}", key);
 
 		    return newETag;
 		}
@@ -69,7 +66,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
 			{
-				logger.DebugFormat("Attachment with key '{0}' was not found, and considered deleted", key);
+				logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
 				return;
 			}
 			var fileEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting();
@@ -84,7 +81,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			Api.JetDelete(session, Files);
-			logger.DebugFormat("Attachment with key '{0}' was deleted", key);
+			logger.Debug("Attachment with key '{0}' was deleted", key);
 		}
 
 		public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)

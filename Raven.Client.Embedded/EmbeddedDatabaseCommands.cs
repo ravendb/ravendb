@@ -366,7 +366,7 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
-		/// Returns a new <see cref="IDatabaseCommands "/> using the specified credentials
+		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		/// <returns></returns>

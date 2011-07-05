@@ -7,12 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using log4net;
 using Microsoft.Isam.Esent.Interop;
+using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Backup;
-using Raven.Database.Json;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 
@@ -25,7 +24,7 @@ namespace Raven.Storage.Esent.Backup
 		private readonly string to;
 		private readonly string src;
 
-		private readonly ILog log = LogManager.GetLogger(typeof (BackupOperation));
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		public BackupOperation(DocumentDatabase database, string src, string to)
 		{
@@ -39,7 +38,7 @@ namespace Raven.Storage.Esent.Backup
 		{
 			try
 			{
-				log.InfoFormat("Starting backup of '{0}' to '{1}'", src, to);
+				log.Info("Starting backup of '{0}' to '{1}'", src, to);
 				var directoryBackups = new List<DirectoryBackup>
 				{
 					new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"), Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")))
@@ -67,7 +66,7 @@ namespace Raven.Storage.Esent.Backup
 			}
 			catch (Exception e)
 			{
-				log.Error("Failed to complete backup", e);
+				log.ErrorException("Failed to complete backup", e);
 				UpdateBackupStatus("Failed to complete backup because: " + e.Message);
 			}
 			finally
@@ -94,14 +93,14 @@ namespace Raven.Storage.Esent.Backup
 			}
 			catch (Exception e)
 			{
-				log.Warn("Failed to update completed backup status, will try deleting document", e);
+				log.WarnException("Failed to update completed backup status, will try deleting document", e);
 				try
 				{
 					database.Delete(BackupStatus.RavenBackupStatusDocumentKey, null, null);
 				}
 				catch (Exception ex)
 				{
-					log.Warn("Failed to remove out of date backup status", ex);
+					log.WarnException("Failed to remove out of date backup status", ex);
 				}
 			}
 		}
@@ -125,7 +124,7 @@ namespace Raven.Storage.Esent.Backup
 			}
 			catch (Exception e)
 			{
-				log.Warn("Failed to update backup status", e);
+				log.WarnException("Failed to update backup status", e);
 			}
 		}
 	}

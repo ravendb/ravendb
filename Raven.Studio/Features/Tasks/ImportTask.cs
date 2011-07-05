@@ -62,9 +62,18 @@ namespace Raven.Studio.Features.Tasks
 				Output("The import file was not formatted correctly:\n\t{0}", e.Message);
 				Output("Import terminated.");
 			}
+			else if (e is AggregateException)
+			{
+				Output("The import failed because:");
+				((AggregateException)e).Handle(exception =>
+				{
+					Output("\t{0}", exception.Message);
+					return true;
+				});
+			}
 			else
 			{
-				Output("The export failed with the following exception: {0}", e.Message);
+				Output("The import failed with the following exception: {0}", e.Message);
 			}
 
 			NotifyError("Database Import Failed");

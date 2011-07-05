@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Runtime.Caching;
+using System.Threading;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
@@ -7,6 +9,17 @@ namespace Raven.Database.Impl
     public class DocumentCacher : IDocumentCacher
     {
         private readonly MemoryCache cachedSerializedDocuments = new MemoryCache(typeof(DocumentCacher).FullName + ".Cache");
+
+		[ThreadStatic]
+    	private static bool skipSettingDocumentInCache;
+
+		public static IDisposable SkipSettingDocumentsInDocumentCache()
+		{
+			var old = skipSettingDocumentInCache;
+			skipSettingDocumentInCache = true;
+
+			return new DisposableAction(() => skipSettingDocumentInCache = old);
+		}
 
         public CachedDocument GetCachedDocument(string key, Guid etag)
         {
@@ -22,6 +35,9 @@ namespace Raven.Database.Impl
 
         public void SetCachedDocument(string key, Guid etag, RavenJObject doc, RavenJObject metadata)
         {
+			if (skipSettingDocumentInCache)
+				return;
+
         	var documentClone = ((RavenJObject)doc.CloneToken());
 			documentClone.EnsureSnapshot();
         	var metadataClone = ((RavenJObject)metadata.CloneToken());

@@ -3,12 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Data;
 using Raven.Database.Server.Responders;
-using Raven.Database.Json;
-using log4net;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 
@@ -16,7 +14,7 @@ namespace Raven.Bundles.Replication.Reponsders
 {
     public class ReplicationLastEtagResponser : RequestResponder
     {
-        private ILog log = LogManager.GetLogger(typeof (ReplicationLastEtagResponser));
+    	private Logger log = LogManager.GetCurrentClassLogger();
 
         public override void Respond(IHttpContext context)
         {
@@ -38,13 +36,13 @@ namespace Raven.Bundles.Replication.Reponsders
                 var document = Database.Get(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null);
                 if (document == null)
                 {
-                    log.DebugFormat("Got replication last etag request from {0}: [{1}]", src, new SourceReplicationInformation());
+                    log.Debug("Got replication last etag request from {0}: [{1}]", src, new SourceReplicationInformation());
                     context.WriteJson(new SourceReplicationInformation());
                 }
                 else
                 {
                     var sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-                    log.DebugFormat("Got replication last etag request from {0}: [{1}]", src, sourceReplicationInformation);
+                    log.Debug("Got replication last etag request from {0}: [{1}]", src, sourceReplicationInformation);
                     context.WriteJson(sourceReplicationInformation);
                 }
             }

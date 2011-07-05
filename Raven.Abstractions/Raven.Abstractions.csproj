@@ -66,6 +66,8 @@
     <Compile Include="Data\DatabaseStatistics.cs" />
     <Compile Include="Commands\ICommandData.cs" />
     <Compile Include="Data\EnumerableExtension.cs" />
+    <Compile Include="Data\GetRequest.cs" />
+    <Compile Include="Data\GetResponse.cs" />
     <Compile Include="Data\IJsonDocumentMetadata.cs" />
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\JsonDocument.cs" />

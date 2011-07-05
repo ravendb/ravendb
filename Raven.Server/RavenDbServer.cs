@@ -28,7 +28,6 @@ namespace Raven.Server
 
 		public RavenDbServer(RavenConfiguration settings)
 		{
-			settings.LoadLoggingSettings();
 			database = new DocumentDatabase(settings);
 
 			try

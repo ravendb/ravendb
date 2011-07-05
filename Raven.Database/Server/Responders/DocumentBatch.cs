@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -75,16 +77,20 @@ namespace Raven.Database.Server.Responders
     		                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
     			.ToArray();
 
-			context.Log(log =>
+			context.Log(log => log.Debug(()=>
 			{
-				if (log.IsDebugEnabled)
+				if(commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
 				{
-					foreach (var commandData in commands)
-					{
-						log.DebugFormat("\t{0} {1}", commandData.Method, commandData.Key);
-					}
+					return "\tExecuted " + string.Join(", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#} {1} operations", x.Count(), x.Key)));
 				}
-			});
+
+				var sb = new StringBuilder();
+				foreach (var commandData in commands)
+				{
+					sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
+				}
+				return sb.ToString();
+			}));
 
     		var batchResult = Database.Batch(commands);
             context.WriteJson(batchResult);

@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
+using Raven.Client.Document;
 using Raven.Database.Plugins;
 using Xunit;
 using Version = Lucene.Net.Util.Version;
@@ -17,7 +18,6 @@ namespace Raven.Tests.Bugs.Indexing
 			using (var store = NewDocumentStore())
 			{
 				store.Configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(MyAnalyzerGenerator)));
-
 				using (var s = store.OpenSession())
 				{
 					s.Store(new {Name = "Ayende Rahien"});

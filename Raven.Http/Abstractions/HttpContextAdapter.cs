@@ -9,7 +9,7 @@ using System.IO;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
 using System.Web;
-using log4net;
+using NLog;
 
 namespace Raven.Http.Abstractions
 {
@@ -80,8 +80,8 @@ namespace Raven.Http.Abstractions
 			context.Response.Filter = responseFilter(context.Response.Filter);
 		}
 
-		private readonly List<Action<ILog>> loggedMessages = new List<Action<ILog>>();
-		public void OutputSavedLogItems(ILog logger)
+		private readonly List<Action<Logger>> loggedMessages = new List<Action<Logger>>();
+		public void OutputSavedLogItems(Logger logger)
 		{
 			foreach (var loggedMessage in loggedMessages)
 			{
@@ -89,7 +89,7 @@ namespace Raven.Http.Abstractions
 			}
 		}
 
-		public void Log(Action<ILog> loggingAction)
+		public void Log(Action<Logger> loggingAction)
 		{
 			loggedMessages.Add(loggingAction);
 		}

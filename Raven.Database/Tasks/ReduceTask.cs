@@ -3,12 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using log4net;
+using NLog;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Storage;
@@ -17,7 +15,7 @@ namespace Raven.Database.Tasks
 {
 	public class ReduceTask : Task
 	{
-		private readonly static ILog log = LogManager.GetLogger(typeof (ReduceTask));
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		public string[] ReduceKeys { get; set; }
 
@@ -55,14 +53,14 @@ namespace Raven.Database.Tasks
 					.Select(JsonToExpando.Convert);
 				
 				var sp = Stopwatch.StartNew();
-				log.DebugFormat("Starting to read {0} reduce keys for index {1}", ReduceKeys.Length, Index);
+				log.Debug("Starting to read {0} reduce keys for index {1}", ReduceKeys.Length, Index);
 
 				var results = mappedResults.ToArray();
 
-				log.DebugFormat("Read {0} reduce keys in {1} with {2} results for index {3}", ReduceKeys.Length, sp.Elapsed, results.Length, Index);
+				log.Debug("Read {0} reduce keys in {1} with {2} results for index {3}", ReduceKeys.Length, sp.Elapsed, results.Length, Index);
 				sp = Stopwatch.StartNew();
 				context.IndexStorage.Reduce(Index, viewGenerator, results, context, actions, ReduceKeys);
-				log.DebugFormat("Indexed {0} reduce keys in {1} with {2} results for index {3}", ReduceKeys.Length, sp.Elapsed,
+				log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3}", ReduceKeys.Length, sp.Elapsed,
 				                results.Length, Index);
 
 			});

@@ -12,7 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
-using log4net;
+using NLog;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -89,7 +89,7 @@ namespace Raven.Database
 		private System.Threading.Tasks.Task tasksBackgroundTask;
 	    private readonly TaskScheduler backgroundTaskScheduler;
 
-		private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		private long currentEtagBase;
 
@@ -349,7 +349,7 @@ namespace Raven.Database
 
         public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			log.DebugFormat("Putting a document with key: {0} and etag {1}", key, etag);
+			log.Debug("Putting a document with key: {0} and etag {1}", key, etag);
 
 			if (string.IsNullOrEmpty(key))
 			{
@@ -483,7 +483,7 @@ namespace Raven.Database
 
 		public void Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
-            log.DebugFormat("Delete a document with key: {0} and etag {1}", key, etag);
+            log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
 			TransactionalStorage.Batch(actions =>
 			{
 				if (transactionInformation == null)
@@ -551,14 +551,14 @@ namespace Raven.Database
 				.ContinueWith(task =>
 				{
 					if (task.Exception != null)
-						log.Warn("Could not commit dtc transaction", task.Exception);
+						log.WarnException("Could not commit dtc transaction", task.Exception);
 					try
 					{
 						transaction.Dispose();
 					}
 					catch (Exception e)
 					{
-						log.Warn("Could not dispose of dtc transaction");
+						log.WarnException("Could not dispose of dtc transaction", e);
 					}
 				});
 		}
@@ -984,7 +984,7 @@ namespace Raven.Database
 				Monitor.Enter(putSerialLock);
 			try
 			{
-				log.DebugFormat("Executing batched commands in a single transaction");
+				log.Debug("Executing batched commands in a single transaction");
 				TransactionalStorage.Batch(actions =>
 				{
 					foreach (var command in commandDatas)
@@ -1000,7 +1000,7 @@ namespace Raven.Database
 					}
 					workContext.ShouldNotifyAboutWork();
 				});
-				log.DebugFormat("Successfully executed {0} commands", results.Count);
+				log.Debug("Successfully executed {0} commands", results.Count);
 			}
 			finally
 			{
@@ -1073,7 +1073,7 @@ namespace Raven.Database
 				actions =>
 					actions.Transactions.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
 												TransactionManager.DefaultTimeout));
-			promotedTransactions.TryAdd(fromTxId, committableTransaction);
+			promotedTransactions.TryAdd(committableTransaction.TransactionInformation.DistributedIdentifier, committableTransaction);
 			return transmitterPropagationToken;
 		}
 

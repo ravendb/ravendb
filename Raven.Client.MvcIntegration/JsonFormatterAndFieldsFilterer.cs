@@ -22,6 +22,7 @@ namespace Raven.Client.MvcIntegration
 			var profilingInformation = ProfilingInformation.CreateProfilingInformation(information.Id);
 			profilingInformation.At = information.At;
 			profilingInformation.Context = information.Context;
+			profilingInformation.DurationMilliseconds = information.DurationMilliseconds;
 			profilingInformation.Requests = information.Requests.Select(FilterRequest).ToList();
 			return profilingInformation;
 		}
@@ -30,6 +31,7 @@ namespace Raven.Client.MvcIntegration
 		{
 			return new RequestResultArgs
 			{
+				DurationMilliseconds = input.DurationMilliseconds,
 				At = input.At,
 				HttpResult = input.HttpResult,
 				Method = input.Method,

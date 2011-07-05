@@ -6,25 +6,27 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
-using log4net;
+using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Linq;
-using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;
-using Version = Lucene.Net.Util.Version;
 using System.ComponentModel.Composition;
 
 namespace Raven.Database.Indexing
@@ -38,7 +40,7 @@ namespace Raven.Database.Indexing
 	    private readonly InMemoryRavenConfiguration configuration;
 		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		private static readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 
         public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration)
@@ -52,7 +54,7 @@ namespace Raven.Database.Indexing
 
 		    foreach (var indexDirectory in indexDefinitionStorage.IndexNames)
 		    {
-		        log.DebugFormat("Loading saved index {0}", indexDirectory);
+		        log.Debug("Loading saved index {0}", indexDirectory);
 
 		        var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
 		        if (indexDefinition == null)
@@ -130,10 +132,10 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(name, out value) == false)
 			{
-				log.InfoFormat("Ignoring delete for non existing index {0}", name);
+				log.Info("Ignoring delete for non existing index {0}", name);
 				return;
 			}
-			log.InfoFormat("Deleting index {0}", name);
+			log.Info("Deleting index {0}", name);
 			value.Dispose();
 			Index ignored;
 			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(name));
@@ -147,7 +149,7 @@ namespace Raven.Database.Indexing
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
 			var encodedName = IndexDefinitionStorage.FixupIndexName(indexDefinition.Name,path);
-			log.InfoFormat("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
+			log.Info("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
 
 		    AssertAnalyzersValid(indexDefinition);
 
@@ -175,14 +177,31 @@ namespace Raven.Database.Indexing
             IndexQuery query, 
             Func<IndexQueryResult, bool> shouldIncludeInResults,
 			FieldsToFetch fieldsToFetch)
-		{
-			Index value;
-			if (indexes.TryGetValue(index, out value) == false)
-			{
-				log.DebugFormat("Query on non existing index {0}", index);
-				throw new InvalidOperationException("Index " + index + " does not exists");
-			}
+	    {
+	    	Index value;
+	    	if (indexes.TryGetValue(index, out value) == false)
+	    	{
+	    		log.Debug("Query on non existing index {0}", index);
+	    		throw new InvalidOperationException("Index " + index + " does not exists");
+	    	}
 	    	return new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch).Query();
+	    }
+
+		protected internal static IDisposable EnsureInvariantCulture()
+		{
+			if (Thread.CurrentThread.CurrentCulture == CultureInfo.InvariantCulture)
+				return null;
+
+			var oldCurrentCulture = Thread.CurrentThread.CurrentCulture;
+			var oldCurrentUiCulture = Thread.CurrentThread.CurrentUICulture;
+
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+			return new DisposableAction(() =>
+			{
+				Thread.CurrentThread.CurrentCulture = oldCurrentCulture;
+				Thread.CurrentThread.CurrentUICulture = oldCurrentUiCulture;
+			});
 		}
 
 		public void RemoveFromIndex(string index, string[] keys, WorkContext context)
@@ -190,7 +209,7 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
 			{
-				log.DebugFormat("Removing from non existing index {0}, ignoring", index);
+				log.Debug("Removing from non existing index {0}, ignoring", index);
 				return;
 			}
 			value.Remove(keys, context);
@@ -206,10 +225,14 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
 			{
-				log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
+				log.Debug("Tried to index on a non existant index {0}, ignoring", index);
 				return;
 			}
-			value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
+			using (EnsureInvariantCulture())
+			using(DocumentCacher.SkipSettingDocumentsInDocumentCache())
+			{
+				value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
+			}
 		}
 
 		public void Reduce(string index, AbstractViewGenerator viewGenerator, IEnumerable<object> mappedResults,
@@ -218,16 +241,19 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
 			{
-				log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
+				log.Debug("Tried to index on a non existant index {0}, ignoring", index);
 				return;
 			}
 			var mapReduceIndex = value as MapReduceIndex;
 			if (mapReduceIndex == null)
 			{
-				log.WarnFormat("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
+				log.Warn("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
 				return;
 			}
-			mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
+			using(EnsureInvariantCulture())
+			{
+				mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
+			}
 		}
 
         /// <summary>

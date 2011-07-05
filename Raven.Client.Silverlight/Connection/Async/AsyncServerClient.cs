@@ -918,6 +918,14 @@ namespace Raven.Client.Silverlight.Connection.Async
 	    }
 
     	/// <summary>
+    	/// Disable all caching within the given scope
+    	/// </summary>
+    	public IDisposable DisableAllCaching()
+    	{
+    		return null; // we dont implement this
+    	}
+
+    	/// <summary>
     	/// The profiling information
     	/// </summary>
     	public ProfilingInformation ProfilingInformation

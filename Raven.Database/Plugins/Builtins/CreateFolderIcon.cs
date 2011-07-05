@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using log4net;
+using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Http.Extensions;
@@ -14,7 +14,7 @@ namespace Raven.Database.Plugins.Builtins
 {
     public class CreateFolderIcon : IStartupTask
     {
-    	private ILog log = LogManager.GetLogger(typeof (CreateFolderIcon));
+    	private static Logger log = LogManager.GetCurrentClassLogger();
 
         public void Execute(DocumentDatabase database)
         {
@@ -51,7 +51,7 @@ FolderType=Generic
         	}
         	catch (Exception e)
         	{
-        		log.Warn("Failed to create the appropriate Folder Icon for the RavenDB Data directory", e);
+        		log.WarnException("Failed to create the appropriate Folder Icon for the RavenDB Data directory", e);
         	}
 
         }

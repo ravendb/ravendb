@@ -10,10 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
-using log4net.Appender;
-using log4net.Config;
-using log4net.Filter;
-using log4net.Layout;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
@@ -33,18 +29,6 @@ namespace Raven.Bundles.Tests.Replication
             {
                 database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data #" + i);
             }
-
-            var outputDebugStringAppender = new OutputDebugStringAppender
-            {
-                Layout = new SimpleLayout(),
-            };
-            outputDebugStringAppender.AddFilter(new LoggerMatchFilter
-            {
-                AcceptOnMatch = true,
-                LoggerToMatch = "Raven.Bundles"
-            });
-            outputDebugStringAppender.AddFilter(new DenyAllFilter());
-            BasicConfigurator.Configure(outputDebugStringAppender);
         }
 
         private const int PortRangeStart = 9101;

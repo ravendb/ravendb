@@ -31,11 +31,11 @@ namespace Raven.StackOverflow.Etl
 
             var processes = new EtlProcess[]
             {
-               // new UsersProcess(InputDirectory, OutputDirectory),
-               // new BadgesProcess(InputDirectory, OutputDirectory),
+                new UsersProcess(InputDirectory, OutputDirectory),
+                new BadgesProcess(InputDirectory, OutputDirectory),
                 new PostsProcess(InputDirectory, OutputDirectory),
-               // new VotesProcess(InputDirectory, OutputDirectory),
-				//new CommentsProcess(InputDirectory, OutputDirectory)
+                new VotesProcess(InputDirectory, OutputDirectory),
+				new CommentsProcess(InputDirectory, OutputDirectory)
             };
             Parallel.ForEach(processes, GenerateJsonDocuments);
         }

@@ -70,7 +70,7 @@ namespace Raven.Abstractions.Data
 			var metadata = (RavenJObject)Metadata.CloneToken();
 
 			if (LastModified != null)
-				metadata["Last-Modified"] = LastModified.Value.ToString("r");
+				metadata["Last-Modified"] = LastModified.Value;
 			if(Etag != null)
 				metadata["@etag"] = Etag.Value.ToString();
 			if (NonAuthoritiveInformation != null)

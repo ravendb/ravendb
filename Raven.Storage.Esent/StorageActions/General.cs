@@ -6,20 +6,16 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
-using log4net;
 using Microsoft.Isam.Esent.Interop;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
-using Raven.Database;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
-using Raven.Database.Json;
 using Raven.Database.Storage;
 using Raven.Database.Extensions;
-using Raven.Http;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -33,7 +29,7 @@ namespace Raven.Storage.Esent.StorageActions
 		private readonly IDocumentCacher cacher;
 		protected readonly JET_DBID dbid;
 
-		protected static readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
+		protected static readonly Logger logger = LogManager.GetCurrentClassLogger();
 		protected readonly Session session;
 		private readonly Transaction transaction;
 

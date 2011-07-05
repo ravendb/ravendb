@@ -67,7 +67,19 @@ namespace Raven.Studio.Features.Tasks
 
 		void OnException(Exception e)
 		{
-			Output("The export failed with the following exception: {0}", e.Message);
+			if (e is AggregateException)
+			{
+				Output("The export failed because:");
+				((AggregateException)e).Handle(exception =>
+				{
+					Output("\t{0}", exception.Message);
+					return true;
+				});
+			}
+			else
+			{
+				Output("The export failed with the following exception: {0}", e.Message);
+			}
 			NotifyError("Database Export Failed");
 		}
 

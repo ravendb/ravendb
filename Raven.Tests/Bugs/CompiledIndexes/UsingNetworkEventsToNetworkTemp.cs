@@ -1,12 +1,6 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
-using System.Threading;
-using log4net.Appender;
-using log4net.Config;
-using log4net.Layout;
 using Raven.Database.Config;
-using Raven.Database.Impl;
-using Raven.Storage.Managed;
 using Xunit;
 using System.Linq;
 
