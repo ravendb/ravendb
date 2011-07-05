@@ -35,10 +35,10 @@ namespace Raven.Client.Connection
 		internal CachedRequest CachedRequestDetails;
 		private readonly HttpJsonRequestFactory factory;
 		private readonly IHoldProfilingInformation owner;
-		internal bool ShouldCacheRequest;
 		private string postedData;
 		private DateTime createdAt = DateTime.Now;
 		private DateTime completedAt;
+		internal bool ShouldCacheRequest;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -210,8 +210,11 @@ namespace Raven.Client.Connection
 				var reader = new StreamReader(responseStream);
 				var text = reader.ReadToEnd();
 				reader.Close();
-				factory.CacheResponse(response, text, this);
 
+				if(Method == "GET" && ShouldCacheRequest)
+				{
+					factory.CacheResponse(Url, text, ResponseHeaders);
+				}
 
 				factory.InvokeLogRequest(owner, new RequestResultArgs
 				{

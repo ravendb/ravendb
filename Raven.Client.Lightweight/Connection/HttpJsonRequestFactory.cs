@@ -55,33 +55,39 @@ namespace Raven.Client.Connection
 		public HttpJsonRequest CreateHttpJsonRequest(IHoldProfilingInformation self, string url, string method, RavenJObject metadata,
 													 ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, metadata, credentials, this, self);
-			ConfigureCaching(url, method, convention, request);
-			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
+			var request = new HttpJsonRequest(url, method, metadata, credentials, this, self)
+			{
+				ShouldCacheRequest = convention.ShouldCacheRequest(url)
+			};
+
+			if (request.ShouldCacheRequest && method == "GET" && !DisableHttpCaching)
+			{
+				var cachedRequestDetails = ConfigureCaching(url, request.webRequest.Headers.Set);
+				request.CachedRequestDetails = cachedRequestDetails.Item1;
+				request.SkipServerCheck = cachedRequestDetails.Item2;
+			}
+			ConfigureRequest(self, new WebRequestEventArgs {Request = request.webRequest});
 			return request;
 		}
 
-		private void ConfigureCaching(string url, string method, DocumentConvention convention, HttpJsonRequest request)
+		internal Tuple<CachedRequest, bool> ConfigureCaching(string url, Action<string,string> setHeader)
 		{
-			request.ShouldCacheRequest = convention.ShouldCacheRequest(url);
-			if (!request.ShouldCacheRequest || method != "GET" || DisableHttpCaching)
-				return;
-
 			var cachedRequest = (CachedRequest)cache.Get(url);
 			if (cachedRequest == null)
-				return;
+				return Tuple.Create<CachedRequest, bool>(null, false);
+			bool skipServerCheck = false;
 			if (AggressiveCacheDuration != null)
 			{
 				var duraion = AggressiveCacheDuration.Value;
 				if(duraion.TotalSeconds > 0)
-					request.webRequest.Headers["Cache-Control"] = "max-age=" + duraion.TotalSeconds;
+					setHeader("Cache-Control", "max-age=" + duraion.TotalSeconds);
 
 				if ((DateTimeOffset.Now - cachedRequest.Time) < duraion) // can serve directly from local cache
-					request.SkipServerCheck = true;
+					skipServerCheck = true;
 			}
 
-			request.CachedRequestDetails = cachedRequest;
-			request.webRequest.Headers["If-None-Match"] = cachedRequest.Headers["ETag"];
+			setHeader("If-None-Match", cachedRequest.Headers["ETag"]);
+			return Tuple.Create(cachedRequest, skipServerCheck);
 		}
 
 
@@ -162,22 +168,26 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException("Cannot get cached response from a request that has no cached infomration");
 			httpJsonRequest.ResponseStatusCode = HttpStatusCode.NotModified;
 			httpJsonRequest.ResponseHeaders = new NameValueCollection(httpJsonRequest.CachedRequestDetails.Headers);
-			Interlocked.Increment(ref NumOfCachedRequests);
+			IncrementCachedRequests();
 			return httpJsonRequest.CachedRequestDetails.Data;
 		}
 
-		internal void CacheResponse(WebResponse response, string text, HttpJsonRequest httpJsonRequest)
+		internal void IncrementCachedRequests()
 		{
-			if (httpJsonRequest.Method == "GET" && httpJsonRequest.ShouldCacheRequest &&
-				string.IsNullOrEmpty(response.Headers["ETag"]) == false)
+			Interlocked.Increment(ref NumOfCachedRequests);
+		}
+
+		internal void CacheResponse(string url, string text, NameValueCollection headers)
+		{
+			if (string.IsNullOrEmpty(headers["ETag"])) 
+				return;
+
+			cache.Set(url, new CachedRequest
 			{
-				cache.Set(httpJsonRequest.Url, new CachedRequest
-				{
-					Data = text,
-					Time = DateTimeOffset.Now,
-					Headers = response.Headers
-				}, new CacheItemPolicy()); // cache as much as possible, for as long as possible, using the default cache limits
-			}
+				Data = text,
+				Time = DateTimeOffset.Now,
+				Headers = headers
+			}, new CacheItemPolicy()); // cache as much as possible, for as long as possible, using the default cache limits
 		}
 
 		/// <summary>
