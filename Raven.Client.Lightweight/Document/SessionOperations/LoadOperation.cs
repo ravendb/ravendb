@@ -27,7 +27,6 @@ namespace Raven.Client.Document.SessionOperations
 			this.disableAllCaching = disableAllCaching;
 			this.id = id;
 
-			sessionOperations.IncrementRequestCount();
 
 #if !SILVERLIGHT
 			sp = Stopwatch.StartNew();

@@ -135,7 +135,7 @@ namespace Raven.Client.Document.Async
                 tcs.TrySetResult((T)entity);
                 return tcs.Task;
             }
-
+			IncrementRequestCount();
 	    	var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
 			return CompleteLoadAsync<T>(id, loadOperation);
                
@@ -174,6 +174,7 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes)
 		{
+			IncrementRequestCount();
 			var multiLoadOperation = new MultiLoadOperation(this,AsyncDatabaseCommands.DisableAllCaching, ids);
 			return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
 		}

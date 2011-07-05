@@ -156,6 +156,7 @@ namespace Raven.Client.Document
 				return (T)existingEntity;
 			}
 
+			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, DatabaseCommands.DisableAllCaching, id);
 			bool retry;
 			do
@@ -212,6 +213,7 @@ namespace Raven.Client.Document
 			if (ids.Length == 0)
 				return new T[0];
 
+			IncrementRequestCount();
 			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
 			MultiLoadResult multiLoadResult;
 			do
@@ -523,6 +525,10 @@ namespace Raven.Client.Document
 
 		private void ExecuteAllLazyOperations()
 		{
+			if (pendingLazyOperations.Count == 0)
+				return;
+
+			IncrementRequestCount();
 			var disposables = pendingLazyOperations.Select(x=>x.EnterContext()).Where(x=>x!=null).ToList();
 			try
 			{

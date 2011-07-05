@@ -42,7 +42,6 @@ namespace Raven.Client.Document.SessionOperations
 
 		public void LogOperation()
 		{
-			sessionOperations.IncrementRequestCount();
 			log.Debug("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
 		}
 

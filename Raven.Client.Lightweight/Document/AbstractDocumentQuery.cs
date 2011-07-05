@@ -1239,6 +1239,7 @@ If you really want to do in memory filtering on the data returned from the query
 #if !NET_3_5
         private Task<QueryResult> GetQueryResultAsync()
         {
+			theSession.IncrementRequestCount();
         	var indexQuery = GenerateIndexQuery(theQueryText.ToString());
 
         	var queryOperation = new QueryOperation(theSession, indexName, indexQuery, sortByHints,
@@ -1282,7 +1283,10 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 documentQueryListener.BeforeQueryExecuted(this);
             }
-            	var query = theQueryText.ToString();
+            
+			theSession.IncrementRequestCount();
+
+			var query = theQueryText.ToString();
         	var indexQuery = GenerateIndexQuery(query);
         	var queryOperation = new QueryOperation(theSession, indexName, indexQuery, sortByHints,
         	                                            theWaitForNonStaleResults, DatabaseCommands.OperationsHeaders.Set,

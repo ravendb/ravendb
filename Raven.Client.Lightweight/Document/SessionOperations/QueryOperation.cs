@@ -41,7 +41,6 @@ namespace Raven.Client.Document.SessionOperations
 			this.indexName = indexName;
 
 
-			sessionOperations.IncrementRequestCount();
 			AddOperationHeaders();
 
 #if !SILVERLIGHT
