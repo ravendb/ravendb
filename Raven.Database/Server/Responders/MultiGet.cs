@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Security.Principal;
+using System.Threading;
 using System.Web;
 using NLog;
 using Raven.Abstractions.Data;
@@ -24,20 +25,32 @@ namespace Raven.Database.Server.Responders
 			get { return new[] { "POST" }; }
 		}
 
+		private readonly ThreadLocal<bool> recursive = new ThreadLocal<bool>(() => false);
+
 		public override void Respond(IHttpContext context)
 		{
-			var results = new List<GetResponse>();
-			var requests = context.ReadJsonObject<GetRequest[]>();
-			Database.TransactionalStorage.Batch(accessor => // ensure all queries are transactionally the same
+			if (recursive.Value)
+				throw new InvalidOperationException("Nested requests to multi_get are not supported");
+			recursive.Value = true;
+			try
 			{
-				foreach (var req in requests)
+				var results = new List<GetResponse>();
+				var requests = context.ReadJsonObject<GetRequest[]>();
+				Database.TransactionalStorage.Batch(accessor => // ensure all queries are transactionally the same
 				{
-					var ctx = new MultiGetHttpContext(Settings, context, req);
-					server.HandleActualRequest(ctx);
-					results.Add(ctx.Complete());
-				}
-			});
-			context.WriteJson(results);
+					foreach (var req in requests)
+					{
+						var ctx = new MultiGetHttpContext(Settings, context, req);
+						server.HandleActualRequest(ctx);
+						results.Add(ctx.Complete());
+					}
+				});
+				context.WriteJson(results);
+			}
+			finally
+			{
+				recursive.Value = false;
+			}
 		}
 
 		public class MultiGetHttpContext : IHttpContext
