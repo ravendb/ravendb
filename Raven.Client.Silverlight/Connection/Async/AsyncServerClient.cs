@@ -362,16 +362,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 						json = (RavenJObject)RavenJToken.ReadFrom(reader);
 
-					return new QueryResult
-							{
-								IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-								IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-								IndexEtag = new Guid(request.ResponseHeaders["ETag"].First()),
-								Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
-								TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-								SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-								Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
-							};
+					return SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"].First());
 				}));
 		}
 
