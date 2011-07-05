@@ -95,7 +95,7 @@ namespace Raven.Client.Document
         /// </summary>
         protected int? pageSize;
 
-        private QueryResult queryResult;
+        private QueryOperation queryOperation;
 
         /// <summary>
         /// The query to use
@@ -127,9 +127,6 @@ namespace Raven.Client.Document
         /// Fields to group on
         /// </summary>
         protected string[] groupByFields;
-#if !NET_3_5
-        private Task<QueryResult> queryResultTask;
-#endif
 
 		/// <summary>
 		/// Holds the query stats
@@ -169,7 +166,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentConvention DocumentConvention
 		{
-			get { return this.theSession.Conventions; }
+			get { return theSession.Conventions; }
 		}
 
 #if !SILVERLIGHT
@@ -197,11 +194,7 @@ namespace Raven.Client.Document
         /// <summary>
         ///   Initializes a new instance of the <see cref = "DocumentQuery&lt;T&gt;" /> class.
         /// </summary>
-        /// <param name = "theSession">The session.</param>
-        /// <param name = "databaseCommands">The database commands.</param>
-        /// <param name = "indexName">Name of the index.</param>
-        /// <param name = "projectionFields">The projection fields.</param>
-        public AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
+        protected AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
                                      IDatabaseCommands databaseCommands,
                                      string indexName,
                                      string[] projectionFields,
@@ -368,6 +361,27 @@ namespace Raven.Client.Document
             timeout = waitTimeout;
         }
 
+		private void InitializeQueryOperation(Action<string, string> setOperationHeaders)
+		{
+			foreach (var documentQueryListener in queryListeners)
+			{
+				documentQueryListener.BeforeQueryExecuted(this);
+			}
+
+			theSession.IncrementRequestCount();
+
+			var query = theQueryText.ToString();
+			var indexQuery = GenerateIndexQuery(query);
+			queryOperation = new QueryOperation(theSession,
+												indexName,
+												indexQuery,
+												projectionFields,
+												sortByHints,
+												theWaitForNonStaleResults,
+												setOperationHeaders,
+												timeout);
+		}
+
 #if !SILVERLIGHT
         /// <summary>
         ///   Gets the query result
@@ -378,15 +392,38 @@ namespace Raven.Client.Document
         {
             get
             {
-            	if (queryResult == null)
-            	{
-            		queryResult = GetQueryResult();
-					InvokeAfterQueryExecuted(queryResult);
-            	}
+				InitSync();
 
-            	return queryResult.CreateSnapshot();
+            	return queryOperation.CurrentQueryResults.CreateSnapshot();
             }
         }
+
+		private void InitSync()
+		{
+			if (queryOperation != null) 
+				return;
+			InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
+			ExecuteActualQuery();
+		}
+
+		private void ExecuteActualQuery()
+		{
+			while (true)
+			{
+				using (queryOperation.EnterQueryContext())
+				{
+					queryOperation.LogQuery();
+					var result = theDatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
+					if (queryOperation.IsAcceptable(result) == false)
+					{
+						Thread.Sleep(100);
+						continue;
+					}
+					break;
+				}
+			}
+			InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
+		}
 #endif
 
 #if !NET_3_5
@@ -416,20 +453,18 @@ namespace Raven.Client.Document
         {
             get
             {
-            	if (queryResultTask == null)
-            	{
-            		queryResultTask = GetQueryResultAsync()
-            			.ContinueWith(task =>
-            			{
-            				var result = task.Result;
-							InvokeAfterQueryExecuted(result);
-            				return result;
-            			});
-            	}
-            	return queryResultTask
-            		.ContinueWith(x => x.Result.CreateSnapshot());
+				return InitAsync()
+            		.ContinueWith(x => x.Result.CurrentQueryResults.CreateSnapshot());
             }
         }
+
+		private Task<QueryOperation> InitAsync()
+		{
+			if (queryOperation != null)
+				return TaskEx.Run(() => queryOperation);
+			InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
+			return ExecuteActualQueryAsync();
+		}
 #endif
 
         /// <summary>
@@ -474,47 +509,41 @@ namespace Raven.Client.Document
         /// </summary>
         public IEnumerator<T> GetEnumerator()
         {
-        	var currentQueryResults = QueryResult;
-        	foreach (var include in currentQueryResults.Includes)
+        	InitSync();
+        	while (true)
         	{
-        		var metadata = include.Value<RavenJObject>("@metadata");
-
-        		theSession.TrackEntity<object>(metadata.Value<string>("@id"),
-        		                               include,
-        		                               metadata);
+				try
+				{
+					return queryOperation.Complete<T>().GetEnumerator();
+				}
+				catch (Exception e)
+				{
+					if (queryOperation.ShouldQueryAgain(e) == false)
+						throw;
+					ExecuteActualQuery(); // retry the query, not that we explicity not incrementing the session request cuont here
+				}
         	}
-        	var list = currentQueryResults.Results
-        		.Select(Deserialize)
-        		.ToList();
-        	return list.GetEnumerator();
         }
-#else
-        /// <summary>
-        ///   Gets the enumerator.
-        /// </summary>
-        public Task<IEnumerator<T>> GetEnumeratorAsync()
-        {
-			var startTime = DateTime.Now;
-        	return QueryResultAsync
-				.ContinueWith(t => ProcessEnumerator(t, startTime))
-				.Unwrap();
-        }
+#endif
 
-		private Task<IEnumerator<T>> ProcessEnumerator(Task<QueryResult> t, DateTime startTime)
+#if !NET_3_5
+     
+		private Task<Tuple<QueryOperation,IList<T>>> ProcessEnumerator(Task<QueryOperation> task)
 		{
-			queryResult = t.Result;
-            foreach (var include in queryResult.Includes)
-            {
-                var metadata = include.Value<RavenJObject>("@metadata");
-
-                theSession.TrackEntity<object>(metadata.Value<string>("@id"),
-                                            include,
-                                            metadata);
-            }
-            var list = queryResult.Results
-                .Select(Deserialize)
-                .ToList();
-			return TaskEx.Run(() => (IEnumerator<T>)list.GetEnumerator());
+			var currentQueryOperation = task.Result;
+			try
+			{
+				var list = currentQueryOperation.Complete<T>();
+				return TaskEx.Run(() => Tuple.Create(currentQueryOperation, list));
+			}
+			catch (Exception e)
+			{
+				if (queryOperation.ShouldQueryAgain(e) == false)
+					throw;
+				return ExecuteActualQueryAsync()
+					.ContinueWith(t => ProcessEnumerator(t))
+					.Unwrap();
+			}
 		}
 
 #endif
@@ -1222,88 +1251,26 @@ If you really want to do in memory filtering on the data returned from the query
 		#endregion
 
 #if !NET_3_5
-        private Task<QueryResult> GetQueryResultAsync()
-        {
-			theSession.IncrementRequestCount();
-        	var indexQuery = GenerateIndexQuery(theQueryText.ToString());
-
-        	var queryOperation = new QueryOperation(theSession, indexName, indexQuery, sortByHints,
-        	                                            theWaitForNonStaleResults,
-        	                                            (key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val,
-        	                                            timeout);
-
-			return GetQueryResultTaskResult(theQueryText.ToString(), indexQuery, queryOperation);
-        }
-
-		private Task<QueryResult> GetQueryResultTaskResult(string query, IndexQuery indexQuery, QueryOperation queryOperation)
+		private Task<QueryOperation> ExecuteActualQueryAsync()
         {
             using(queryOperation.EnterQueryContext())
             {
 				queryOperation.LogQuery();
-				return theAsyncDatabaseCommands.QueryAsync(indexName, indexQuery, includes.ToArray())
-				.ContinueWith(task =>
-				{
-					if(queryOperation.ShouldQueryAgain(task.Result))
-					{
-						return TaskEx.Delay(100)
-							.ContinueWith(_ => GetQueryResultTaskResult(query, indexQuery, queryOperation))
-							.Unwrap();
-					}
-					
-					task.Result.EnsureSnapshot();
-					return task;
-				}).Unwrap();
+            	return theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray())
+            		.ContinueWith(task =>
+            		{
+            			if (queryOperation.IsAcceptable(task.Result) == false)
+            			{
+            				return TaskEx.Delay(100)
+								.ContinueWith(_ => ExecuteActualQueryAsync())
+            					.Unwrap();
+            			}
+						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
+            			return TaskEx.Run(() => queryOperation);
+            		}).Unwrap();
             }
         }
 #endif
-
-#if !SILVERLIGHT
-        /// <summary>
-        ///   Gets the query result.
-        /// </summary>
-        /// <returns></returns>
-        protected virtual QueryResult GetQueryResult()
-        {
-            foreach (var documentQueryListener in queryListeners)
-            {
-                documentQueryListener.BeforeQueryExecuted(this);
-            }
-            
-			theSession.IncrementRequestCount();
-
-			var query = theQueryText.ToString();
-        	var indexQuery = GenerateIndexQuery(query);
-        	var queryOperation = new QueryOperation(theSession, indexName, indexQuery, sortByHints,
-        	                                            theWaitForNonStaleResults, DatabaseCommands.OperationsHeaders.Set,
-        	                                            timeout);
-            while (true)
-            {
-            	try
-            	{
-					using (queryOperation.EnterQueryContext())
-					{
-						queryOperation.LogQuery();
-						var result = theDatabaseCommands.Query(indexName, indexQuery, includes.ToArray());
-						if (queryOperation.ShouldQueryAgain(result))
-						{
-							Thread.Sleep(100);
-							continue;
-						}
-
-						result.EnsureSnapshot();
-
-						return result;
-					}
-            	}
-            	catch (Exception e)
-            	{
-					if (queryOperation.ShouldQueryAgain(e))
-						throw;
-            	}
-            }
-        }
-#endif
-
      
         /// <summary>
         ///   Generates the index query.
@@ -1327,94 +1294,7 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
        
-        private T Deserialize(RavenJObject result)
-        {
-            var metadata = result.Value<RavenJObject>("@metadata");
-            if (
-				// we asked for a projection directly from the index
-				projectionFields != null && projectionFields.Length > 0 
-				// we got a document without an @id
-                // we aren't querying a document, we are probably querying a map reduce index result or a projection
-			   || metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id")))
-			{  
-                if (typeof(T) == typeof(RavenJObject))
-                    return (T)(object)result;
-
-#if !NET_3_5
-                if (typeof(T) == typeof(object))
-                {
-                    return (T)(object)new DynamicJsonObject(result);
-                }
-#endif
-                HandleInternalMetadata(result);
-
-                var deserializedResult = DeserializedResult(result);
-
-                var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
-                if (string.IsNullOrEmpty(documentId) == false)
-                {
-                    // we need to make an addtional check, since it is possible that a value was explicitly stated
-                    // for the identity property, in which case we don't want to override it.
-                    var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
-					if (identityProperty == null ||
-						(result[identityProperty.Name] == null ||
-							result[identityProperty.Name].Type == JTokenType.Null))
-                    {
-                        theSession.TrySetIdentity(deserializedResult, documentId);
-                    }
-                }
-
-                return deserializedResult;
-            }
-            return theSession.TrackEntity<T>(metadata.Value<string>("@id"),
-                                          result,
-                                          metadata);
-        }
-
-		private T DeserializedResult(RavenJObject result)
-		{
-			if(projectionFields != null && projectionFields.Length == 1) // we only select a single field
-			{
-				var type = typeof(T);
-				if(type == typeof(string) || typeof(T).IsValueType|| typeof(T).IsEnum)
-				{
-					return result.Value<T>(projectionFields[0]);
-				}
-			}
-			return (T)theSession.Conventions.CreateSerializer().Deserialize(new RavenJTokenReader(result), typeof(T));
-		}
-
-		private void HandleInternalMetadata(RavenJObject result)
-        {
-			// Implant a property with "id" value ... if not exists
-        	var metadata = result.Value<RavenJObject>("@metadata");
-			if (metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id"))) 
-        	{
-				// if the item has metadata, then nested items will not have it, so we can skip recursing down
-				foreach (var nested in result.Select(property => property.Value))
-				{
-					var jObject = nested as RavenJObject;
-					if(jObject != null)
-						HandleInternalMetadata(jObject);
-					var jArray = nested as RavenJArray;
-					if (jArray == null) 
-						continue;
-					foreach (var item in jArray.OfType<RavenJObject>())
-					{
-						HandleInternalMetadata(item);
-					}
-				}
-				return;
-        	}
-
-			var entityName = metadata.Value<string>(Constants.RavenEntityName);
-
-			var idPropName = theSession.Conventions.FindIdentityPropertyNameFromEntityName(entityName);
-			if (result.ContainsKey(idPropName))
-				return;
-
-			result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
-        }
+       
 
     	private string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
         {
@@ -1505,19 +1385,10 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public Task<Tuple<QueryResult,IList<T>>> ToListAsync()
         {
-            return QueryResultAsync
-                .ContinueWith(r =>
-                {
-                    var result = r.Result;
-
-                    foreach (var include in result.Includes)
-                    {
-                        var metadata = include.Value<RavenJObject>("@metadata");
-                        theSession.TrackEntity<object>(metadata.Value<string>("@id"), include, metadata);
-                    }
-
-                	return Tuple.Create(r.Result, (IList<T>) result.Results.Select(Deserialize).ToList());
-                });
+        	return InitAsync()
+        		.ContinueWith(t => ProcessEnumerator(t))
+        		.Unwrap()
+        		.ContinueWith(t => Tuple.Create(t.Result.Item1.CurrentQueryResults, t.Result.Item2));
         }
 
 		/// <summary>
