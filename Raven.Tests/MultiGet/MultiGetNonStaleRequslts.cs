@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Client.Linq;
@@ -30,7 +31,6 @@ namespace Raven.Tests.MultiGet
 					session.Store(new User());
 					session.SaveChanges();
 				}
-
 				WaitForAllRequestsToComplete(server);
 				server.Server.ResetNumberOfRequests();
 

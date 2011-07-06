@@ -19,7 +19,7 @@ using Raven.Tests.Document;
 
 namespace Raven.Tests
 {
-    public abstract class LocalClientTest
+	public abstract class LocalClientTest : WithNLog
     {
         private string path;
         

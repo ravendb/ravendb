@@ -19,15 +19,12 @@ using Raven.Tests.Document;
 
 namespace Raven.Tests
 {
-	public class RemoteClientTest
+	public class RemoteClientTest : WithNLog
 	{
 		protected const string DbDirectory = @".\TestDb\";
 		protected const string DbName = DbDirectory + @"DocDb.esb";
 
-		protected void EnableDebugLog()
-		{
 		
-		}
 
 		protected void WaitForAllRequestsToComplete(RavenDbServer server)
 		{

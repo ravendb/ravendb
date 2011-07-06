@@ -78,6 +78,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="NLog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL" />
     <Reference Include="Rhino.Mocks">
       <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
     </Reference>
@@ -571,6 +572,7 @@
     <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
     <Compile Include="Views\ViewStorage.cs" />
+    <Compile Include="WithNLog.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
@@ -640,6 +642,7 @@
       <Link>RavenDB.snk</Link>
     </None>
     <None Include="App.config" />
+    <EmbeddedResource Include="DefaultLogging.config" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
