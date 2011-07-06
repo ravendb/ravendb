@@ -63,18 +63,18 @@ namespace Raven.Client.Connection
 			if (request.ShouldCacheRequest && method == "GET" && !DisableHttpCaching)
 			{
 				var cachedRequestDetails = ConfigureCaching(url, request.webRequest.Headers.Set);
-				request.CachedRequestDetails = cachedRequestDetails.Item1;
-				request.SkipServerCheck = cachedRequestDetails.Item2;
+				request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
+				request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
 			}
 			ConfigureRequest(self, new WebRequestEventArgs {Request = request.webRequest});
 			return request;
 		}
 
-		internal Tuple<CachedRequest, bool> ConfigureCaching(string url, Action<string,string> setHeader)
+		internal CachedRequestOp ConfigureCaching(string url, Action<string, string> setHeader)
 		{
 			var cachedRequest = (CachedRequest)cache.Get(url);
 			if (cachedRequest == null)
-				return Tuple.Create<CachedRequest, bool>(null, false);
+				return new CachedRequestOp{SkipServerCheck = false};
 			bool skipServerCheck = false;
 			if (AggressiveCacheDuration != null)
 			{
@@ -87,7 +87,7 @@ namespace Raven.Client.Connection
 			}
 
 			setHeader("If-None-Match", cachedRequest.Headers["ETag"]);
-			return Tuple.Create(cachedRequest, skipServerCheck);
+			return new CachedRequestOp {SkipServerCheck = skipServerCheck, CachedRequest = cachedRequest};
 		}
 
 

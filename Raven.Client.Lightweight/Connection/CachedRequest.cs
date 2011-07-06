@@ -9,4 +9,10 @@ namespace Raven.Client.Connection
 		public DateTimeOffset Time;
 		public NameValueCollection Headers;
 	}
+
+	internal class CachedRequestOp
+	{
+		public CachedRequest CachedRequest;
+		public bool SkipServerCheck;
+	}
 }
