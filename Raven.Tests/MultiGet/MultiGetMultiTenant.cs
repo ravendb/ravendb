@@ -94,8 +94,8 @@ namespace Raven.Tests.MultiGet
 			{
 				using (var session = store.OpenSession())
 				{
-					session.Store(new Linq.User());
-					session.Store(new Linq.User());
+					session.Store(new User());
+					session.Store(new User());
 					session.SaveChanges();
 				}
 
@@ -108,8 +108,8 @@ namespace Raven.Tests.MultiGet
 					{
 						using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 						{
-							session.Advanced.Lazily.Load<Linq.User>("users/1");
-							session.Advanced.Lazily.Load<Linq.User>("users/2");
+							session.Advanced.Lazily.Load<User>("users/1");
+							session.Advanced.Lazily.Load<User>("users/2");
 
 							session.Advanced.Lazily.ExecuteAllPendingLazyOperations();
 						}
