@@ -281,15 +281,7 @@ namespace Raven.Client.Connection.Async
 					try
 					{
 						var responseString = task.Result;
-						return new JsonDocument
-						{
-							DataAsJson = RavenJObject.Parse(responseString),
-							NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
-							Key = key,
-							LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture).ToLocalTime(),
-							Etag = new Guid(request.ResponseHeaders["ETag"]),
-							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
-						};
+						return SerializationHelper.DeserializeJsonDocument(key, responseString, request.ResponseHeaders, request.ResponseStatusCode);
 					}
 					catch (WebException e)
 					{

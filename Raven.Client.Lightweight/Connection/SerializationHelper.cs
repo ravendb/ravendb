@@ -5,8 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
+using System.Net;
+using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
@@ -97,5 +100,46 @@ namespace Raven.Client.Connection
 				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
 			};
 		}
+
+		/// <summary>
+		/// Deserialize a request to a JsonDocument
+		/// </summary>
+		public static JsonDocument DeserializeJsonDocument(string key, string requestString,
+#if !SILVERLIGHT
+			NameValueCollection headers, 
+#else 
+			IDictionary<string, IList<string>> headers,
+#endif
+ HttpStatusCode statusCode)
+		{
+			RavenJObject meta = null;
+			RavenJObject jsonData = null;
+			try
+			{
+				jsonData = RavenJObject.Parse(requestString);
+				meta = headers.FilterHeaders(isServerDocument: false);
+			}
+			catch (JsonReaderException jre)
+			{
+				throw new JsonReaderException("Invalid Json Response: \r\n" + requestString, jre);
+			}
+#if !SILVERLIGHT
+			var etag = headers["ETag"];
+			var lastModified = headers["Last-Modified"];
+#else
+			var etag = headers["ETag"].First();
+			var lastModified = headers["Last-Modified"].First();
+#endif
+			return new JsonDocument
+			{
+				DataAsJson = jsonData,
+				NonAuthoritiveInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				Key = key,
+				Etag = new Guid(etag),
+				LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),
+				Metadata = meta
+			};
+		}
+
 	}
 }

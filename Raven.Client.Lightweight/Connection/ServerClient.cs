@@ -200,32 +200,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			request.AddOperationHeaders(OperationsHeaders);
 			try
 			{
-                var requestString = request.ReadResponseString();
-                RavenJObject meta = null;
-                RavenJObject jsonData = null;
-                try
-                {
-                    jsonData = RavenJObject.Parse(requestString);
-                    meta = request.ResponseHeaders.FilterHeaders(isServerDocument: false);
-                }
-                catch (JsonReaderException jre)
-                {
-                    var headers = "";
-                    foreach (string header in request.ResponseHeaders)
-                    {
-                        headers = headers + string.Format("\n\r{0}:{1}", header, request.ResponseHeaders[header]);
-                    }
-                    throw new JsonReaderException("Invalid Json Response: \n\rHeaders:\n\r" + headers + "\n\rBody:" + requestString, jre);
-                }
-				return new JsonDocument
-				{
-                    DataAsJson = jsonData,
-					NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
-					Key = key,
-					Etag = new Guid(request.ResponseHeaders["ETag"]),
-					LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture).ToLocalTime(),
-                    Metadata = meta
-				};
+				var requestString = request.ReadResponseString();
+				return SerializationHelper.DeserializeJsonDocument(key, requestString, request.ResponseHeaders, request.ResponseStatusCode);
 			}
 			catch (WebException e)
 			{
