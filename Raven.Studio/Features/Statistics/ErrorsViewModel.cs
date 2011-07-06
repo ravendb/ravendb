@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Data;
+using Raven.Studio.Framework;
 
 namespace Raven.Studio.Features.Statistics
 {
@@ -8,9 +9,9 @@ namespace Raven.Studio.Features.Statistics
 	using Caliburn.Micro;
 	using Plugins;
 
-    //NOTE: it would probably make more sense to remove IServer.Errors and rely on the message StatisticsUpdated
+	//NOTE: it would probably make more sense to remove IServer.Errors and rely on the message StatisticsUpdated
 	[Export]
-	public class ErrorsViewModel : Screen
+	public class ErrorsViewModel : RavenScreen
 	{
 		readonly IServer server;
 
@@ -22,7 +23,7 @@ namespace Raven.Studio.Features.Statistics
 			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange( ()=> Errors );};
 		}
 
-        public IEnumerable<Error> Errors
+		public IEnumerable<Error> Errors
 		{
 			get { return server.Errors.Select( x => new Error(x)); }
 		}
@@ -33,15 +34,15 @@ namespace Raven.Studio.Features.Statistics
 		}
 	}
 
-    public class Error
-    {
-        private readonly ServerError inner;
+	public class Error
+	{
+		private readonly ServerError inner;
 
-        public Error(ServerError inner)
-        {
-            this.inner = inner;
-        }
+		public Error(ServerError inner)
+		{
+			this.inner = inner;
+		}
 
-        public ServerError Inner { get { return inner; } }
-    }
+		public ServerError Inner { get { return inner; } }
+	}
 }
