@@ -240,7 +240,7 @@ namespace Raven.Client.Document.SessionOperations
 #endif
 				}
 				log.Debug(
-						"Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
+						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried",
 						indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
 				return false;
 			}
