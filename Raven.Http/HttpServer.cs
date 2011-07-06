@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
@@ -133,7 +132,7 @@ namespace Raven.Http
                         AuthenticationSchemes.Anonymous;
                     listener.AuthenticationSchemeSelectorDelegate = request =>
                     {
-                        return request.HttpMethod == "GET" || request.HttpMethod == "HEAD" ?
+                    	return IsGetRequest(request.HttpMethod, request.Url.AbsolutePath) ?
 							AuthenticationSchemes.Anonymous | AuthenticationSchemes.IntegratedWindowsAuthentication :
                             AuthenticationSchemes.IntegratedWindowsAuthentication;
                     };
@@ -484,9 +483,12 @@ namespace Raven.Http
 				ctx.SetStatusToUnauthorized();
 				return false;
 			}
-            
 
-            if (DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get && IsInvalidUser(ctx) &&  IsNotGetRequest(ctx) )
+
+        	IHttpRequest httpRequest = ctx.Request;
+        	if (DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get && 
+				IsInvalidUser(ctx) &&  
+				IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false )
             {
                 ctx.SetStatusToUnauthorized();
                 return false;
@@ -494,9 +496,9 @@ namespace Raven.Http
             return true;
         }
 
-		private static bool IsNotGetRequest(IHttpContext ctx)
+		protected virtual bool IsGetRequest(string httpMethod, string requestPath)
 		{
-			return (ctx.Request.HttpMethod != "GET" && ctx.Request.HttpMethod != "HEAD");
+			return (httpMethod == "GET" || httpMethod == "HEAD");
 		}
 
 		private static bool IsInvalidUser(IHttpContext ctx)

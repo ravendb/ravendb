@@ -19,118 +19,124 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server
 {
-    public class RavenDbHttpServer : HttpServer
-    {
-        private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
+	public class RavenDbHttpServer : HttpServer
+	{
+		private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
 
-        public override Regex TenantsQuery
-        {
-            get { return databaseQuery; }
-        }
+		public override Regex TenantsQuery
+		{
+			get { return databaseQuery; }
+		}
 
-        public RavenDbHttpServer(IRavenHttpConfiguration configuration, IResourceStore database)
-            : base(configuration, database)
-        {
-        }
+		public RavenDbHttpServer(IRavenHttpConfiguration configuration, IResourceStore database)
+			: base(configuration, database)
+		{
+		}
 
-        protected override void OnDispatchingRequest(IHttpContext ctx)
-        {
-        	ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
-        }
+		protected override void OnDispatchingRequest(IHttpContext ctx)
+		{
+			ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
+		}
 
 		protected override bool ShouldLogException(Exception exception)
 		{
 			return exception is IndexDisabledException == false &&
-			       exception is IndexDoesNotExistsException == false;
+				   exception is IndexDoesNotExistsException == false;
 		}
 
-        protected override bool TryHandleException(IHttpContext ctx, Exception e)
-        {
-            if (e is IndexDisabledException)
-            {
-                HandleIndexDisabledException(ctx, (IndexDisabledException)e);
-                return true;
-            }
-            if (e is IndexDoesNotExistsException)
-            {
-                HandleIndexDoesNotExistsException(ctx, e);
-                return true;
-            }
+		protected override bool TryHandleException(IHttpContext ctx, Exception e)
+		{
+			if (e is IndexDisabledException)
+			{
+				HandleIndexDisabledException(ctx, (IndexDisabledException)e);
+				return true;
+			}
+			if (e is IndexDoesNotExistsException)
+			{
+				HandleIndexDoesNotExistsException(ctx, e);
+				return true;
+			}
 
-            return false;
-        }
+			return false;
+		}
 
-        private static void HandleIndexDoesNotExistsException(IHttpContext ctx, Exception e)
-        {
-            ctx.SetStatusToNotFound();
-            SerializeError(ctx, new
-            {
-                Url = ctx.Request.RawUrl,
-                Error = e.Message
-            });
-        }
+		private static void HandleIndexDoesNotExistsException(IHttpContext ctx, Exception e)
+		{
+			ctx.SetStatusToNotFound();
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				Error = e.Message
+			});
+		}
 
-        private DocumentDatabase DefaultDatabase
-        {
-            get { return (DocumentDatabase) DefaultResourceStore; }
-        }
+		private DocumentDatabase DefaultDatabase
+		{
+			get { return (DocumentDatabase)DefaultResourceStore; }
+		}
 
-        protected override bool TryGetOrCreateResourceStore(string tenantId, out IResourceStore database)
-        {
-            if (ResourcesStoresCache.TryGetValue(tenantId, out database))
-                return true;
+		protected override bool TryGetOrCreateResourceStore(string tenantId, out IResourceStore database)
+		{
+			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
+				return true;
 
-            JsonDocument jsonDocument;
-            
-            using (DefaultDatabase.DisableAllTriggersForCurrentThread())
-                jsonDocument = DefaultDatabase.Get("Raven/Databases/" + tenantId, null);
+			JsonDocument jsonDocument;
 
-            if (jsonDocument == null)
-                return false;
+			using (DefaultDatabase.DisableAllTriggersForCurrentThread())
+				jsonDocument = DefaultDatabase.Get("Raven/Databases/" + tenantId, null);
 
-            var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+			if (jsonDocument == null)
+				return false;
 
-            database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
-            {
-                var config = new InMemoryRavenConfiguration
-                {
-                    Settings = DefaultConfiguration.Settings,
-                };
+			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+
+			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
+			{
+				var config = new InMemoryRavenConfiguration
+				{
+					Settings = DefaultConfiguration.Settings,
+				};
 				foreach (var setting in document.Settings)
 				{
 					config.Settings[setting.Key] = setting.Value;
 				}
-            	var dataDir = config.Settings["Raven/DataDir"];
-				if(dataDir == null)
+				var dataDir = config.Settings["Raven/DataDir"];
+				if (dataDir == null)
 					throw new InvalidOperationException("Could not find Raven/DataDir");
-				if(dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
+				if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
 				{
 					var baseDataPath = Path.GetDirectoryName(DefaultDatabase.Configuration.DataDirectory);
-					if(baseDataPath == null)
+					if (baseDataPath == null)
 						throw new InvalidOperationException("Could not find root data path");
 					config.Settings["Raven/DataDir"] = Path.Combine(baseDataPath, dataDir.Substring(2));
 				}
-            	config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
-             
-                config.Initialize();
-                var documentDatabase = new DocumentDatabase(config);
-                documentDatabase.SpinBackgroundWorkers();
-                return documentDatabase;
-            });
-            return true;
-        }
+				config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+
+				config.Initialize();
+				var documentDatabase = new DocumentDatabase(config);
+				documentDatabase.SpinBackgroundWorkers();
+				return documentDatabase;
+			});
+			return true;
+		}
 
 
-        private static void HandleIndexDisabledException(IHttpContext ctx, IndexDisabledException e)
-        {
-            ctx.Response.StatusCode = 503;
-            ctx.Response.StatusDescription = "Service Unavailable";
-            SerializeError(ctx, new
-            {
-                Url = ctx.Request.RawUrl,
-                Error = e.Information.GetErrorMessage(),
-                Index = e.Information.Name,
-            });
-        }
-    }
+		private static void HandleIndexDisabledException(IHttpContext ctx, IndexDisabledException e)
+		{
+			ctx.Response.StatusCode = 503;
+			ctx.Response.StatusDescription = "Service Unavailable";
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				Error = e.Information.GetErrorMessage(),
+				Index = e.Information.Name,
+			});
+		}
+
+		protected override bool IsGetRequest(string httpMethod, string requestPath)
+		{
+			return base.IsGetRequest(httpMethod, requestPath) || 
+				httpMethod == "POST" && (requestPath == "/multi_get/" || requestPath == "/multi_get");
+		}
+	}
 }
