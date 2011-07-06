@@ -1,6 +1,8 @@
 ﻿using System.IO;
 using System.Security.Cryptography;
+using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure.Navigation;
+using Raven.Studio.Plugins;
 
 namespace Raven.Studio
 {
@@ -32,6 +34,23 @@ namespace Raven.Studio
 			base.OnStartup(sender, e);
 			var navigationService = container.GetExportedValue<NavigationService>();
 			navigationService.Initialize();
+
+			MessageBinder.CustomConverters.Add(typeof(IList<DocumentViewModel>), (providedValue, context) =>
+			{
+				var viewModel = providedValue as DocumentViewModel;
+				if (viewModel != null)
+					return new List<DocumentViewModel> {viewModel};
+
+				var editDocumentViewModel = providedValue as EditDocumentViewModel;
+				if (editDocumentViewModel != null)
+					return new List<DocumentViewModel> {new DocumentViewModel(editDocumentViewModel.JsonDocument)};
+
+				var observableCollection = providedValue as IObservableCollection<object>;
+				if (observableCollection != null)
+					return observableCollection.Cast<DocumentViewModel>().ToList();
+
+				return providedValue;
+			});
 		}
 
 		protected override void Configure()
