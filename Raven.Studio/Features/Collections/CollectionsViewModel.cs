@@ -145,7 +145,7 @@ namespace Raven.Studio.Features.Collections
 
 		public void SelectCollectionByName(string name)
 		{
-			if (Collections != null)
+			if (HasCollections)
 			{
 				var collection = Collections
 					.Where(item => item.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
