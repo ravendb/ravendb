@@ -493,7 +493,9 @@
     </Compile>
     <Compile Include="MultiGet\MultiGetBasic.cs" />
     <Compile Include="MultiGet\MultiGetCaching.cs" />
+    <Compile Include="MultiGet\MultiGetDTC.cs" />
     <Compile Include="MultiGet\MultiGetMultiGet.cs" />
+    <Compile Include="MultiGet\MultiGetNonStaleRequslts.cs" />
     <Compile Include="MultiGet\MultiGetQueries.cs" />
     <Compile Include="MultiGet\MultiGetSecurity.cs" />
     <Compile Include="Patching\MetadataPatching.cs" />
