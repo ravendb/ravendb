@@ -150,7 +150,11 @@ namespace Raven.Client.Document
 		{
 			get
 			{
-				return identifier ?? Url;
+				if (identifier != null) 
+					return identifier;
+				if (DefaultDatabase != null)
+					return Url + " (DB: " + DefaultDatabase + ")";
+				return Url;
 			}
 			set { identifier = value; }
 		}
