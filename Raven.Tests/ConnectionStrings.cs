@@ -91,7 +91,7 @@ namespace Raven.Tests
 				store.ParseConnectionString("Url=http://localhost:8080/;DefaultDatabase=DevMachine;");
 
 				Assert.Equal("http://localhost:8080/", store.Url);
-				Assert.Equal("http://localhost:8080/", store.Identifier);
+				Assert.Equal("http://localhost:8080/ (DB: DevMachine)", store.Identifier);
 				Assert.NotNull(store.ResourceManagerId);
 				Assert.NotNull(store.Credentials);
 				Assert.Equal("DevMachine", store.DefaultDatabase);

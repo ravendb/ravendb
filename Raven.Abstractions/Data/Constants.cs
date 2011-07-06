@@ -2,6 +2,7 @@ namespace Raven.Abstractions.Data
 {
 	public static class Constants
 	{
+		public const string DefaultDatabase = "<default>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 		public const string DistanceFieldName = "__distance";
 		public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";

@@ -152,6 +152,8 @@ namespace Raven.Client.Document
 			{
 				if (identifier != null) 
 					return identifier;
+				if(Url == null)
+					return null;
 				if (DefaultDatabase != null)
 					return Url + " (DB: " + DefaultDatabase + ")";
 				return Url;

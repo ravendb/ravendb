@@ -16,6 +16,7 @@ using System.Threading;
 using System.Linq;
 using Newtonsoft.Json;
 using NLog;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
 using Raven.Http.Abstractions;
@@ -412,8 +413,8 @@ namespace Raven.Http
             var match = TenantsQuery.Match(requestUrl);
 
         	if (match.Success == false)
-            {
-                currentTenantId.Value = "<default>";
+        	{
+        		currentTenantId.Value = Constants.DefaultDatabase;
                 currentDatabase.Value = DefaultResourceStore;
                 currentConfiguration.Value = DefaultConfiguration;
             } 

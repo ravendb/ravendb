@@ -113,7 +113,7 @@ namespace Raven.Database.Server.Responders
 			public string GetRequestUrlForTenantSelection()
 			{
 				var requestUrl = this.GetRequestUrl();
-				if (string.IsNullOrEmpty(tenantId))
+				if (string.IsNullOrEmpty(tenantId) || tenantId == Constants.DefaultDatabase)
 					return requestUrl;
 				return "/databases/" + tenantId + requestUrl;
 			}
