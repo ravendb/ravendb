@@ -47,7 +47,7 @@ namespace Raven.Tests.MultiGet
 		}
 
 		[Fact]
-		public void CanAggressivelyCachePartOfMultiGet()
+		public void CanAggressivelyCachePartOfMultiGet_SimpleFirst()
 		{
 			using (var server = GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
@@ -66,14 +66,14 @@ namespace Raven.Tests.MultiGet
 				{
 					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 					{
-						session.Load<User>("users/1");
+						session.Load<User>(new[] { "users/1" });
 					}
 				}
 				using (var session = store.OpenSession())
 				{
 					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 					{
-						session.Advanced.Lazily.Load<User>("users/1");
+						session.Advanced.Lazily.Load<User>(new[] { "users/1" }); 
 						session.Advanced.Lazily.Load<User>("users/2");
 
 						session.Advanced.Lazily.ExecuteAllPendingLazyOperations();
@@ -85,6 +85,48 @@ namespace Raven.Tests.MultiGet
 				Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
 			}
 		}
+
+		[Fact]
+		public void CanAggressivelyCachePartOfMultiGet_BatchFirst()
+		{
+			using (var server = GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User());
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				WaitForAllRequestsToComplete(server);
+				server.Server.ResetNumberOfRequests();
+
+			
+				using (var session = store.OpenSession())
+				{
+					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+					{
+						session.Advanced.Lazily.Load<User>(new[] { "users/1" });
+
+						session.Advanced.Lazily.ExecuteAllPendingLazyOperations();
+					}
+				}
+
+				using (var session = store.OpenSession())
+				{
+					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+					{
+						session.Load<User>(new[] { "users/1" });
+					}
+				}
+
+				WaitForAllRequestsToComplete(server);
+				Assert.Equal(1, server.Server.NumberOfRequests);
+				Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+			}
+		}
+
 
 		private static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
