@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
 using System;
+using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
 #if !NET_3_5
@@ -38,7 +39,6 @@ namespace Raven.Client.Document
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 #endif
-
 		/// <summary>
 		/// Gets the database commands.
 		/// </summary>
@@ -375,14 +375,19 @@ namespace Raven.Client.Document
 			}
 		}
 
-		[Conditional("DEBUG")]
 		private void LogBatch(SaveChangesData data)
 		{
-			Debug.WriteLine(string.Format("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier));
-			foreach (var commandData in data.Commands)
+			log.Debug(()=>
 			{
-				Debug.WriteLine(string.Format("\t{0} {1}", commandData.Method, commandData.Key));
-			}
+				var sb = new StringBuilder()
+					.AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
+					.AppendLine();
+				foreach (var commandData in data.Commands)
+				{
+					sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
+				}
+				return sb.ToString();
+			});
 		}
 
 

@@ -42,6 +42,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Guid Id { get; private set; }
 
+		protected static readonly NLog.Logger log = NLog.LogManager.GetCurrentClassLogger();
+
 		/// <summary>
 		/// The entities waiting to be deleted
 		/// </summary>
