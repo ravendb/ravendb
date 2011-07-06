@@ -29,6 +29,11 @@ namespace Raven.Tests
 		
 		}
 
+		protected void WaitForAllRequestsToComplete(RavenDbServer server)
+		{
+			while (server.Server.HasPendingRequests)
+				Thread.Sleep(25);
+		}
 
         protected RavenDbServer GetNewServer()
         {

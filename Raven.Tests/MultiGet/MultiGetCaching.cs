@@ -128,12 +128,6 @@ namespace Raven.Tests.MultiGet
 		}
 
 
-		private static void WaitForAllRequestsToComplete(RavenDbServer server)
-		{
-			while (server.Server.HasPendingRequests)
-				Thread.Sleep(25);
-		}
-
 		[Fact]
 		public void CanCacheLazyQueryResults()
 		{
