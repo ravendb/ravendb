@@ -38,7 +38,7 @@ namespace Raven.Studio
 			MessageBinder.CustomConverters.Add(typeof(IList<string>), (providedValue, context) =>
 			{
 				var id = providedValue as string;
-				if (string.IsNullOrEmpty(id) == false)
+				if (id != null)
 					return new List<string> {id};
 
 				return providedValue;
