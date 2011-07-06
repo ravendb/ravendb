@@ -49,6 +49,7 @@ namespace Raven.Studio.Shell
 		public void GoHome()
 		{
 			goHomeAction();
+			Breadcrumbs.Clear();
 		}
 
 		public bool CanGoBack

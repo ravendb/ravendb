@@ -43,11 +43,7 @@
 			this.notifications = notifications;
 			this.busyStatus = busyStatus;
 			this.startScreen = startScreen;
-			navigation.SetGoHome(() =>
-									{
-										this.TrackNavigationTo(startScreen, events);
-										navigation.Breadcrumbs.Clear();
-									});
+			navigation.SetGoHome(() => this.TrackNavigationTo(startScreen, events));
 			this.binder = binder;
 			this.events = events;
 			this.server = server;
