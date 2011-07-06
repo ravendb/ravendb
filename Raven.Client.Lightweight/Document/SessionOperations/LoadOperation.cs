@@ -15,24 +15,14 @@ namespace Raven.Client.Document.SessionOperations
 		private bool firstRequest = true;
 		private JsonDocument documentFound;
 
-#if !SILVERLIGHT
 		private Stopwatch sp;
-#else
-		private	DateTime startTime;
-#endif
 
 		public LoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string id)
 		{
 			this.sessionOperations = sessionOperations;
 			this.disableAllCaching = disableAllCaching;
 			this.id = id;
-
-
-#if !SILVERLIGHT
 			sp = Stopwatch.StartNew();
-#else
-			startTime = DateTime.Now;
-#endif
 		}
 
 		public void LogOperation()
@@ -57,11 +47,7 @@ namespace Raven.Client.Document.SessionOperations
 				documentFound.NonAuthoritiveInformation.HasValue &&
 				documentFound.NonAuthoritiveInformation.Value &&
 				sessionOperations.AllowNonAuthoritiveInformation == false &&
-#if !SILVERLIGHT
 				sp.Elapsed < sessionOperations.NonAuthoritiveInformationTimeout
-#else
-				(DateTime.Now - startTime) < sessionOperations.NonAuthoritiveInformationTimeout
-#endif
 				;
 		}
 

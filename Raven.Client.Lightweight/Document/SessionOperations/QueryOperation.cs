@@ -41,11 +41,7 @@ namespace Raven.Client.Document.SessionOperations
 			get { return indexQuery; }
 		}
 
-#if !SILVERLIGHT
 		private Stopwatch sp;
-#else
-		private	DateTime startTime;
-#endif
 
 		public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, 
 			string indexName, 
@@ -71,11 +67,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		private void StartTiming()
 		{
-#if !SILVERLIGHT
 			sp = Stopwatch.StartNew();
-#else
-			startTime = DateTime.Now;
-#endif
 		}
 
 		public void LogQuery()
@@ -102,11 +94,7 @@ namespace Raven.Client.Document.SessionOperations
 			if (e is NonAuthoritiveInformationException == false)
 				return false;
 
-#if !SILVERLIGHT
 			return sp.Elapsed <= sessionOperations.NonAuthoritiveInformationTimeout;
-#else
-            return (DateTime.Now - startTime) <= sessionOperations.NonAuthoritiveInformationTimeout;
-#endif
 		}
 
 		public IList<T> Complete<T>()
@@ -221,23 +209,12 @@ namespace Raven.Client.Document.SessionOperations
 		{
 			if (waitForNonStaleResults && result.IsStale)
 			{
-#if !SILVERLIGHT
 				if (sp.Elapsed > timeout)
-#else
-				var elapsed = (DateTime.Now - startTime);
-				if (elapsed > timeout)
-#endif
 				{
-#if !SILVERLIGHT
 					sp.Stop();
-#endif
 					throw new TimeoutException(
 						string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
-#if !SILVERLIGHT
 									  sp.ElapsedMilliseconds));
-#else
-						              elapsed.TotalMilliseconds));
-#endif
 				}
 				log.Debug(
 						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried",
