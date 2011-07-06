@@ -496,6 +496,7 @@
     <Compile Include="MultiGet\MultiGetCaching.cs" />
     <Compile Include="MultiGet\MultiGetDTC.cs" />
     <Compile Include="MultiGet\MultiGetMultiGet.cs" />
+    <Compile Include="MultiGet\MultiGetMultiTenant.cs" />
     <Compile Include="MultiGet\MultiGetNonStaleRequslts.cs" />
     <Compile Include="MultiGet\MultiGetQueries.cs" />
     <Compile Include="MultiGet\MultiGetSecurity.cs" />

@@ -10,7 +10,7 @@ namespace Raven.Tests.MultiGet
 	public class MultiGetNonStaleRequslts : RemoteClientTest
 	{
 		[Fact]
-		public void LazyMultiLoadOperationWouldBeInTheSession()
+		public void ShouldBeAbleToGetNonStaleResults()
 		{
 			using (var server = GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
