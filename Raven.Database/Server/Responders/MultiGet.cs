@@ -38,14 +38,9 @@ namespace Raven.Database.Server.Responders
 			{
 				var requests = context.ReadJsonObject<GetRequest[]>();
 				var results = new GetResponse[requests.Length];
-				//Parallel.For(0, requests.Length, position => 
-				//    HandleRequest(requests, results, position, context)
-				//    );
 
-				for (int i = 0; i < requests.Length; i++)
-				{
-					HandleRequest(requests, results, i, context);
-				}
+				Executerequests(context, Settings, results, requests);
+				
 				context.WriteJson(results);
 			}
 			finally
@@ -54,12 +49,33 @@ namespace Raven.Database.Server.Responders
 			}
 		}
 
-		private void HandleRequest(GetRequest[] requests, GetResponse[] results, int i, IHttpContext context)
+		private void Executerequests(
+			IHttpContext context, 
+			IRavenHttpConfiguration ravenHttpConfiguration, 
+			GetResponse[] results,
+			GetRequest[] requests)
+		{
+			if ("yes".Equals(context.Request.QueryString["parallel"], StringComparison.InvariantCultureIgnoreCase))
+			{
+				Parallel.For(0, requests.Length, position =>
+					HandleRequest(requests, results, position, context, ravenHttpConfiguration)
+					);
+			}
+			else
+			{
+				for (var i = 0; i < requests.Length; i++)
+				{
+					HandleRequest(requests, results, i, context, ravenHttpConfiguration);
+				}
+			}
+		}
+
+		private void HandleRequest(GetRequest[] requests, GetResponse[] results, int i, IHttpContext context, IRavenHttpConfiguration ravenHttpConfiguration)
 		{
 			var request = requests[i];
 			if (request == null)
 				return;
-			var ctx = new MultiGetHttpContext(Settings, context, request, TenantId);
+			var ctx = new MultiGetHttpContext(ravenHttpConfiguration, context, request, TenantId);
 			server.HandleActualRequest(ctx);
 			results[i] = ctx.Complete();
 		}
