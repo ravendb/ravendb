@@ -40,7 +40,7 @@ namespace Raven.Studio.Commands
 		public void Execute(IList<DocumentViewModel> documents)
 		{
 			string message = documents.Count > 1 ? string.Format("Are you sure you want to delete these {0} documents?", documents.Count) :
-				string.Format("Are you sure that you want to do this document? ({0})", documents.First().Id);
+				string.Format("Are you sure that you want to delete this document? ({0})", documents.First().Id);
 
 			showMessageBox(
 				message,
