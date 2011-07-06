@@ -35,19 +35,11 @@ namespace Raven.Studio
 			var navigationService = container.GetExportedValue<NavigationService>();
 			navigationService.Initialize();
 
-			MessageBinder.CustomConverters.Add(typeof(IList<DocumentViewModel>), (providedValue, context) =>
+			MessageBinder.CustomConverters.Add(typeof(IList<string>), (providedValue, context) =>
 			{
-				var viewModel = providedValue as DocumentViewModel;
-				if (viewModel != null)
-					return new List<DocumentViewModel> {viewModel};
-
-				var editDocumentViewModel = providedValue as EditDocumentViewModel;
-				if (editDocumentViewModel != null)
-					return new List<DocumentViewModel> {new DocumentViewModel(editDocumentViewModel.JsonDocument)};
-
-				var observableCollection = providedValue as IObservableCollection<object>;
-				if (observableCollection != null)
-					return observableCollection.Cast<DocumentViewModel>().ToList();
+				var id = providedValue as string;
+				if (string.IsNullOrEmpty(id) == false)
+					return new List<string> {id};
 
 				return providedValue;
 			});

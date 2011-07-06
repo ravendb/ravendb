@@ -1,15 +1,11 @@
 ﻿using System.Collections.Generic;
-using Raven.Studio.Features.Collections;
 
 namespace Raven.Studio.Commands
 {
-    using System.Collections;
-    using System.ComponentModel.Composition;
+	using System.ComponentModel.Composition;
     using System.Linq;
     using Caliburn.Micro;
-	using Features.Database;
-    using Features.Documents;
-    using Messages;
+	using Messages;
 	using Plugins;
 	using Shell.MessageBox;
 
@@ -28,19 +24,18 @@ namespace Raven.Studio.Commands
 			this.showMessageBox = showMessageBox;
 		}
 
-		public bool CanExecute(IList<DocumentViewModel> documents)
+		public bool CanExecute(IList<string> documentIds)
 		{
-			if (documents == null || documents.Count == 0)
+			if (documentIds == null || documentIds.Count == 0)
 				return false;
 
-			var document = documents.First();
-			return document != null && document.CollectionType != BuiltinCollectionName.Projection;
+			return string.IsNullOrEmpty(documentIds.First()) == false;
 		}
 
-		public void Execute(IList<DocumentViewModel> documents)
+		public void Execute(IList<string> documentIds)
 		{
-			string message = documents.Count > 1 ? string.Format("Are you sure you want to delete these {0} documents?", documents.Count) :
-				string.Format("Are you sure that you want to delete this document? ({0})", documents.First().Id);
+			string message = documentIds.Count > 1 ? string.Format("Are you sure you want to delete these {0} documents?", documentIds.Count) :
+				string.Format("Are you sure that you want to delete this document? ({0})", documentIds.First());
 
 			showMessageBox(
 				message,
@@ -49,7 +44,7 @@ namespace Raven.Studio.Commands
 				box => {
 					if (box.WasSelected(MessageBoxOptions.Ok))
 					{
-						documents.Apply(document => ExecuteDeletion(document.Id)); // Is this the most efficient way?
+						documentIds.Apply(ExecuteDeletion); // Is this the most efficient way?
 					}
 				});
 		}

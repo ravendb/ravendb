@@ -23,7 +23,7 @@ namespace Raven.Studio.Behaviors
 				if (SelectedItem.CollectionType != BuiltinCollectionName.Projection)
 				{
 					var deleteDocumentsMenuItem = new PopupMenuItem(null, string.Format(DocumentsResources.DocumentMenu_DeleteDocuments, SelectedItems.Count));
-					deleteDocumentsMenuItem.Click += (s, ea) => IoC.Get<DeleteDocument>().Execute(SelectedItems);
+					deleteDocumentsMenuItem.Click += (s, ea) => IoC.Get<DeleteDocument>().Execute(SelectedItems.Select(document => document.Id).ToList());
 					Menu.AddItem(deleteDocumentsMenuItem);
 				}
 			}
@@ -49,7 +49,7 @@ namespace Raven.Studio.Behaviors
 
 					var deleteDocumentMenuItem = new PopupMenuItem(null, DocumentsResources.DocumentMenu_DeleteDocument);
 					deleteDocumentMenuItem.Click +=
-						(s, ea) => IoC.Get<DeleteDocument>().Execute(SelectedItems);
+						(s, ea) => IoC.Get<DeleteDocument>().Execute(SelectedItems.Select(document => document.Id).ToList());
 					Menu.AddItem(deleteDocumentMenuItem);
 				}
 			}
