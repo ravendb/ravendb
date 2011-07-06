@@ -1089,22 +1089,16 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var requestUri = url + "/multi_get";
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "POST", credentials, convention);
 
-			var cachedData = new CachedRequest[requests.Length];
-			if(jsonRequestFactory.DisableHttpCaching == false && convention.ShouldCacheRequest(requestUri))
-			{
-				for (int i = 0; i < requests.Length; i++)
-				{
-					var request = requests[i];
-					var cachingConfiguration = jsonRequestFactory.ConfigureCaching(url + request.UrlAndQuery,
-					                                                               (key, val) => request.Headers[key] = val);
-					cachedData[i] = cachingConfiguration.CachedRequest;
-					if (cachingConfiguration.SkipServerCheck)
-						requests[i] = null;
-				}
-			}
+			var cachedData = PreparingForCachingRequest(requests, requestUri);
+			var responses = ExecuteRequest(requests, httpJsonRequest);
+			HandleCachingResponse(requests, cachedData, responses);
+			return responses;
+		}
 
+		private static GetResponse[] ExecuteRequest(GetRequest[] requests, HttpJsonRequest httpJsonRequest)
+		{
 			GetResponse[] responses;
-			if(requests.All(x=> x== null)) // can be fully served from aggresive cache
+			if (requests.All(x => x == null)) // can be fully served from aggresive cache
 			{
 				responses = new GetResponse[requests.Length];
 			}
@@ -1113,12 +1107,16 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				httpJsonRequest.Write(JsonConvert.SerializeObject(requests));
 				responses = JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
 			}
-			
+			return responses;
+		}
+
+		private void HandleCachingResponse(GetRequest[] requests, CachedRequest[] cachedData, GetResponse[] responses)
+		{
 			for (int i = 0; i < responses.Length; i++)
 			{
-				if(responses[i] == null)
+				if (responses[i] == null)
 				{
-					responses[i] = new GetResponse{Status = 304}; // make sure that it will be treated as cached
+					responses[i] = new GetResponse {Status = 304}; // make sure that it will be treated as cached
 				}
 				if (responses[i].Status == 304)
 				{
@@ -1139,7 +1137,24 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					jsonRequestFactory.CacheResponse(url + requests[i].UrlAndQuery, responses[i].Result, nameValueCollection);
 				}
 			}
-			return responses;
+		}
+
+		private CachedRequest[] PreparingForCachingRequest(GetRequest[] requests, string requestUri)
+		{
+			var cachedData = new CachedRequest[requests.Length];
+			if (jsonRequestFactory.DisableHttpCaching == false && convention.ShouldCacheRequest(requestUri))
+			{
+				for (int i = 0; i < requests.Length; i++)
+				{
+					var request = requests[i];
+					var cachingConfiguration = jsonRequestFactory.ConfigureCaching(url + request.UrlAndQuery,
+					                                                               (key, val) => request.Headers[key] = val);
+					cachedData[i] = cachingConfiguration.CachedRequest;
+					if (cachingConfiguration.SkipServerCheck)
+						requests[i] = null;
+				}
+			}
+			return cachedData;
 		}
 
 		///<summary>
