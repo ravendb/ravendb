@@ -33,6 +33,13 @@ namespace Raven.Client.Document.Batches
 
 		public void HandleResponse(GetResponse response)
 		{
+			if(response.Status == 404)
+			{
+				Result = null;
+				RequiresRetry = false;
+				return;
+			}
+
 			var headers = new NameValueCollection();
 			foreach (var header in response.Headers)
 			{
