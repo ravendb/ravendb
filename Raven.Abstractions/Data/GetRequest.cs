@@ -13,7 +13,14 @@ namespace Raven.Abstractions.Data
 		[JsonIgnore]
 		public string UrlAndQuery
 		{
-			get { return Url +  Query; }
+			get
+			{
+				if (Query == null)
+					return Url;
+				if (Query.StartsWith("?"))
+					return Url + Query;
+				return Url + "?" + Query;
+			}
 		}
 
 		public GetRequest()
