@@ -522,7 +522,7 @@ namespace Raven.Client.Document
 			pendingLazyOperations.Add(operation);
 			return new Lazy<T>(() =>
 			{
-				ExecuteAllLazyOperations();
+				ExecuteAllPendingLazyOperations();
 				return (T)operation.Result;
 			});
 		}
@@ -538,17 +538,23 @@ namespace Raven.Client.Document
 		}
 
 
-		private void ExecuteAllLazyOperations()
+		public void ExecuteAllPendingLazyOperations()
 		{
 			if (pendingLazyOperations.Count == 0)
 				return;
 
-			IncrementRequestCount();
-			while (ExecuteLazyOperationsSingleStep())
+			try
 			{
-				Thread.Sleep(100);
+				IncrementRequestCount();
+				while (ExecuteLazyOperationsSingleStep())
+				{
+					Thread.Sleep(100);
+				}
 			}
-			pendingLazyOperations.Clear();
+			finally
+			{
+				pendingLazyOperations.Clear();
+			}
 		}
 
 		private bool ExecuteLazyOperationsSingleStep()
