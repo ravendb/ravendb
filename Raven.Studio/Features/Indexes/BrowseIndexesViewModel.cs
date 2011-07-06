@@ -1,4 +1,7 @@
-﻿using Raven.Abstractions.Indexing;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Raven.Abstractions.Indexing;
 using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Indexes
@@ -18,6 +21,7 @@ namespace Raven.Studio.Features.Indexes
 	{
 		IndexDefinition activeIndex;
 		object activeItem;
+		private System.Action executeAfterIndexesFetched;
 
 		[ImportingConstructor]
 		public BrowseIndexesViewModel()
@@ -117,7 +121,37 @@ namespace Raven.Studio.Features.Indexes
 		void RefreshIndexes(int totalIndexCount)
 		{
 			Indexes.GetTotalResults = () => totalIndexCount;
-			Indexes.LoadPage();
+			Indexes.LoadPage()
+				.ContinueOnSuccess(x =>
+				                   	{
+				                   		if (HasIndexes && executeAfterIndexesFetched != null)
+				                   		{
+				                   			executeAfterIndexesFetched();
+				                   			executeAfterIndexesFetched = null;
+				                   		}
+				                   	});
+		}
+
+		public bool HasIndexes
+		{
+			get { return Indexes != null && Indexes.Any(); }
+		}
+
+		public void SelectIndexByName(string name)
+		{
+			if (HasIndexes)
+			{
+				var navigateTo = Indexes
+					.Where(item => item.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+					.FirstOrDefault();
+
+				if (navigateTo == null)
+					return;
+
+				ActiveIndex = navigateTo;
+				return;
+			}
+			executeAfterIndexesFetched = () => SelectIndexByName(name);
 		}
 	}
 }

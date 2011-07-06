@@ -1,19 +1,20 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Linq;
 using Raven.Studio.Features.Indexes;
+using Raven.Studio.Shell;
 
 namespace Raven.Studio.Infrastructure.Navigation.Navigators
 {
 	[NavigatorExport(@"^indexes/(?<index>.*)", Index = 40)]
 	public class IndexesNavigator : BaseNavigator
 	{
+		private readonly IShell shellViewModel;
 		private readonly BrowseIndexesViewModel browseIndexesViewModel;
 
 		[ImportingConstructor]
-		public IndexesNavigator(BrowseIndexesViewModel browseIndexesViewModel)
+		public IndexesNavigator(IShell shellViewModel, BrowseIndexesViewModel browseIndexesViewModel)
 		{
+			this.shellViewModel = shellViewModel;
 			this.browseIndexesViewModel = browseIndexesViewModel;
 		}
 
@@ -23,6 +24,7 @@ namespace Raven.Studio.Infrastructure.Navigation.Navigators
 			if (string.IsNullOrWhiteSpace(index))
 				return;
 
+			shellViewModel.DatabaseScreen.Show(browseIndexesViewModel);
 			browseIndexesViewModel.SelectIndexByName(index);
 		}
 	}
