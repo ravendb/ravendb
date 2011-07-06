@@ -44,7 +44,7 @@ namespace Raven.Http
 
 		public int NumberOfRequests
 		{
-			get { return Thread.VolatileRead(ref reqNum); }
+			get { return Thread.VolatileRead(ref physicalRequestsCount); }
 		}
 
 		[ImportMany]
@@ -71,6 +71,7 @@ namespace Raven.Http
         // we set 1/4 aside for handling background tasks
         private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(MaxConcurrentRequests);
         private Timer databasesCleanupTimer;
+		private int physicalRequestsCount;
 
 		public bool HasPendingRequests
 		{
@@ -192,6 +193,7 @@ namespace Raven.Http
             }
             try
             {
+            	Interlocked.Increment(ref physicalRequestsCount);
                 HandleActualRequest(ctx);
             }
             finally
@@ -505,6 +507,7 @@ namespace Raven.Http
 		public void ResetNumberOfRequests()
 		{
 			Interlocked.Exchange(ref reqNum, 0);
+			Interlocked.Exchange(ref physicalRequestsCount, 0);
 		}
     }
 }
