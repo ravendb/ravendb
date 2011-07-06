@@ -102,5 +102,10 @@ namespace Raven.Http.Abstractions
 		{
 			loggedMessages.Add(loggingAction);
 		}
+
+		public string GetRequestUrlForTenantSelection()
+		{
+			return this.GetRequestUrl();
+		}
 	}
 }

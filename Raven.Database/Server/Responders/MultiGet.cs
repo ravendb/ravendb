@@ -59,7 +59,7 @@ namespace Raven.Database.Server.Responders
 			var request = requests[i];
 			if (request == null)
 				return;
-			var ctx = new MultiGetHttpContext(Settings, context, request);
+			var ctx = new MultiGetHttpContext(Settings, context, request, TenantId);
 			server.HandleActualRequest(ctx);
 			results[i] = ctx.Complete();
 		}
@@ -68,12 +68,14 @@ namespace Raven.Database.Server.Responders
 		{
 			private readonly IRavenHttpConfiguration configuration;
 			private readonly IHttpContext realContext;
+			private readonly string tenantId;
 			private readonly GetResponse getResponse;
 
-			public MultiGetHttpContext(IRavenHttpConfiguration configuration, IHttpContext realContext, GetRequest req)
+			public MultiGetHttpContext(IRavenHttpConfiguration configuration, IHttpContext realContext, GetRequest req, string tenantId)
 			{
 				this.configuration = configuration;
 				this.realContext = realContext;
+				this.tenantId = tenantId;
 				getResponse = new GetResponse();
 				Request = new MultiGetHttpRequest(req, realContext.Request);
 				Response = new MultiGetHttpResponse(getResponse, realContext.Response);
@@ -107,6 +109,14 @@ namespace Raven.Database.Server.Responders
 				get { return realContext.User; }
 			}
 
+
+			public string GetRequestUrlForTenantSelection()
+			{
+				var requestUrl = this.GetRequestUrl();
+				if (string.IsNullOrEmpty(tenantId))
+					return requestUrl;
+				return "/databases/" + tenantId + requestUrl;
+			}
 
 			public void FinalizeResonse()
 			{

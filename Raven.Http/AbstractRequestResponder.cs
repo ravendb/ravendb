@@ -21,6 +21,7 @@ namespace Raven.Http
         private Func<IRavenHttpConfiguration> settings;
         private Func<IResourceStore> database;
 		protected HttpServer server;
+		private Func<string> tenantId;
 
 		protected AbstractRequestResponder()
 		{
@@ -33,13 +34,16 @@ namespace Raven.Http
 
         public IResourceStore ResourceStore { get { return database(); } }
         public IRavenHttpConfiguration Settings { get { return settings(); } }
+		public string TenantId { get { return tenantId(); } }
+
         public virtual bool IsUserInterfaceRequest { get { return false; } }
 
-        public void Initialize(Func<IResourceStore> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter, HttpServer theServer)
+        public void Initialize(Func<IResourceStore> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
         {
         	this.server = theServer;
             this.database = databaseGetter;
             this.settings = settingsGetter;
+        	this.tenantId = tenantIdGetter;
         }
 
 		public bool WillRespond(IHttpContext context)

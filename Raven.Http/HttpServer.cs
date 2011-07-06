@@ -86,7 +86,7 @@ namespace Raven.Http
 
             foreach (var requestResponder in RequestResponders)
             {
-                requestResponder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, this);
+                requestResponder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
             }
         }
 
@@ -408,11 +408,10 @@ namespace Raven.Http
 
         private void SetupRequestToProperDatabase(IHttpContext ctx)
         {
-            var requestUrl = ctx.GetRequestUrl();
+            var requestUrl = ctx.GetRequestUrlForTenantSelection();
             var match = TenantsQuery.Match(requestUrl);
 
-            IResourceStore resourceStore;
-            if (match.Success == false)
+        	if (match.Success == false)
             {
                 currentTenantId.Value = "<default>";
                 currentDatabase.Value = DefaultResourceStore;
@@ -421,7 +420,8 @@ namespace Raven.Http
             else
             {
                 var tenantId = match.Groups[1].Value;
-                if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
+            	IResourceStore resourceStore;
+            	if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
                 {
                     databaseLastRecentlyUsed.AddOrUpdate(tenantId, DateTime.Now, (s, time) => DateTime.Now);
 

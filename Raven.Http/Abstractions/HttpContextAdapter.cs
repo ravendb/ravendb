@@ -70,6 +70,11 @@ namespace Raven.Http.Abstractions
 			get { return context.User; }
 		}
 
+		public string GetRequestUrlForTenantSelection()
+		{
+			return this.GetRequestUrl();
+		}
+
 		public void FinalizeResonse()
 		{
 			

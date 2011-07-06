@@ -16,6 +16,7 @@ namespace Raven.Http.Abstractions
 		IHttpRequest Request { get; }
 		IHttpResponse Response { get; }
 		IPrincipal User { get; }
+		string GetRequestUrlForTenantSelection();
 		void FinalizeResonse();
 		void SetResponseFilter(Func<Stream, Stream> responseFilter);
 		void OutputSavedLogItems(Logger logger);
