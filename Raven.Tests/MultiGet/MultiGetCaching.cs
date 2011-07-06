@@ -1,6 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Threading;
 using Raven.Client.Linq;
 using Raven.Client.Document;
+using Raven.Server;
 using Raven.Tests.Linq;
 using Xunit;
 
@@ -8,6 +11,87 @@ namespace Raven.Tests.MultiGet
 {
 	public class MultiGetCaching : RemoteClientTest
 	{
+		[Fact]
+		public void CanAggressivelyCacheLoads()
+		{
+			using (var server = GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User());
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				WaitForAllRequestsToComplete(server);
+				server.Server.ResetNumberOfRequests();
+
+				for (int i = 0; i < 5; i++)
+				{
+					using (var session = store.OpenSession())
+					{
+						using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+						{
+							session.Advanced.Lazily.Load<User>("users/1");
+							session.Advanced.Lazily.Load<User>("users/2");
+
+							session.Advanced.Lazily.ExecuteAllPendingLazyOperations();
+						 }
+					}
+				}
+
+				WaitForAllRequestsToComplete(server);
+				Assert.Equal(1, server.Server.NumberOfRequests);
+			}
+		}
+
+		[Fact]
+		public void CanAggressivelyCachePartOfMultiGet()
+		{
+			using (var server = GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User());
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				WaitForAllRequestsToComplete(server);
+				server.Server.ResetNumberOfRequests();
+
+				using (var session = store.OpenSession())
+				{
+					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+					{
+						session.Load<User>("users/1");
+					}
+				}
+				using (var session = store.OpenSession())
+				{
+					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+					{
+						session.Advanced.Lazily.Load<User>("users/1");
+						session.Advanced.Lazily.Load<User>("users/2");
+
+						session.Advanced.Lazily.ExecuteAllPendingLazyOperations();
+					}
+				}
+
+				WaitForAllRequestsToComplete(server);
+				Assert.Equal(2, server.Server.NumberOfRequests);
+				Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+			}
+		}
+
+		private static void WaitForAllRequestsToComplete(RavenDbServer server)
+		{
+			while (server.Server.HasPendingRequests)
+				Thread.Sleep(25);
+		}
+
 		[Fact]
 		public void CanCacheLazyQueryResults()
 		{

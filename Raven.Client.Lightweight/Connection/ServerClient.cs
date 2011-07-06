@@ -1089,24 +1089,44 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var requestUri = url + "/multi_get";
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "POST", credentials, convention);
 
-			var cachedData = new List<Tuple<CachedRequest, bool>>();
-
+			var cachedData = new CachedRequest[requests.Length];
 			if(jsonRequestFactory.DisableHttpCaching == false && convention.ShouldCacheRequest(requestUri))
 			{
-				cachedData.AddRange(requests.Select(request => jsonRequestFactory.ConfigureCaching( url +  request.UrlAndQuery, (key, val) => request.Headers[key] = val)));
+				for (int i = 0; i < requests.Length; i++)
+				{
+					var request = requests[i];
+					var cachingConfiguration = jsonRequestFactory.ConfigureCaching(url + request.UrlAndQuery,
+					                                                               (key, val) => request.Headers[key] = val);
+					cachedData[i] = cachingConfiguration.CachedRequest;
+					if (cachingConfiguration.SkipServerCheck)
+						requests[i] = null;
+				}
 			}
 
-			httpJsonRequest.Write(JsonConvert.SerializeObject(requests));
-			var responses = JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
+			GetResponse[] responses;
+			if(requests.All(x=> x== null)) // can be fully served from aggresive cache
+			{
+				responses = new GetResponse[requests.Length];
+			}
+			else // make the call
+			{
+				httpJsonRequest.Write(JsonConvert.SerializeObject(requests));
+				responses = JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
+			}
+			
 			for (int i = 0; i < responses.Length; i++)
 			{
+				if(responses[i] == null)
+				{
+					responses[i] = new GetResponse{Status = 304}; // make sure that it will be treated as cached
+				}
 				if (responses[i].Status == 304)
 				{
-					foreach (string header in cachedData[i].Item1.Headers)
+					foreach (string header in cachedData[i].Headers)
 					{
-						responses[i].Headers[header] = cachedData[i].Item1.Headers[header];
+						responses[i].Headers[header] = cachedData[i].Headers[header];
 					}
-					responses[i].Result = cachedData[i].Item1.Data;
+					responses[i].Result = cachedData[i].Data;
 					jsonRequestFactory.IncrementCachedRequests();
 				}
 				else
