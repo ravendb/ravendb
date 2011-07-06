@@ -25,7 +25,6 @@ namespace Raven.Client.Document.Async
 	/// </summary>
 	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
