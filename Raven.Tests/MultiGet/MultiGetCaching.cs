@@ -86,6 +86,48 @@ namespace Raven.Tests.MultiGet
 			}
 		}
 
+
+
+		[Fact]
+		public void CanAggressivelyCachePartOfMultiGet_DirectLoad()
+		{
+			using (var server = GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User());
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				WaitForAllRequestsToComplete(server);
+				server.Server.ResetNumberOfRequests();
+
+				using (var session = store.OpenSession())
+				{
+					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+					{
+						session.Load<User>("users/1");
+					}
+				}
+				using (var session = store.OpenSession())
+				{
+					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+					{
+						session.Advanced.Lazily.Load<User>("users/1");
+						session.Advanced.Lazily.Load<User>("users/2");
+
+						session.Advanced.Lazily.ExecuteAllPendingLazyOperations();
+					}
+				}
+
+				WaitForAllRequestsToComplete(server);
+				Assert.Equal(2, server.Server.NumberOfRequests);
+				Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+			}
+		}
+
 		[Fact]
 		public void CanAggressivelyCachePartOfMultiGet_BatchFirst()
 		{

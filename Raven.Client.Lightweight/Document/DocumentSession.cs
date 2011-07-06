@@ -124,8 +124,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		Lazy<T> ILazySessionOperations.Load<T>(string id)
 		{
-			var lazy = LazyLoadInternal<T>(new[] {id}, new string[0]);
-			return new Lazy<T>(() => lazy.Value.FirstOrDefault());
+			var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
+			return AddLazyOperation<T>(lazyLoadOperation);
 		}
 
 
@@ -153,8 +153,7 @@ namespace Raven.Client.Document
 		Lazy<T> ILazySessionOperations.Load<T>(ValueType id)
 		{
 			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-			var lazy = LazyLoadInternal<T>(new[] { documentKey }, new string[0]);
-			return new Lazy<T>(() => lazy.Value.FirstOrDefault());
+			return Lazily.Load<T>(documentKey);
 		}
 #endif
 

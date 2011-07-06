@@ -29,7 +29,6 @@ namespace Raven.Client.Document.SessionOperations
 			this.ids = ids;
 
 
-			sp = Stopwatch.StartNew();
 		}
 
 		public void LogOperation()
@@ -41,6 +40,8 @@ namespace Raven.Client.Document.SessionOperations
 		{
 			if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
 				return disableAllCaching();
+			sp = Stopwatch.StartNew();
+
 			return null;
 		}
 
