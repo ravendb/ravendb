@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -1066,21 +1067,22 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "POST", credentials, convention);
 
 			var cachedData = PreparingForCachingRequest(requests, requestUri);
-			var responses = ExecuteRequest(requests, httpJsonRequest);
+			var responses = ExecuteRequest(requests, httpJsonRequest, cachedData);
 			HandleCachingResponse(requests, cachedData, responses);
 			return responses;
 		}
 
-		private static GetResponse[] ExecuteRequest(GetRequest[] requests, HttpJsonRequest httpJsonRequest)
+		private  GetResponse[] ExecuteRequest(GetRequest[] requests, HttpJsonRequest httpJsonRequest, IEnumerable<CachedRequest> cacheData)
 		{
 			GetResponse[] responses;
+			var postedData = JsonConvert.SerializeObject(requests);
 			if (requests.All(x => x == null)) // can be fully served from aggresive cache
 			{
 				responses = new GetResponse[requests.Length];
 			}
 			else // make the call
 			{
-				httpJsonRequest.Write(JsonConvert.SerializeObject(requests));
+				httpJsonRequest.Write(postedData);
 				responses = JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
 			}
 			return responses;
