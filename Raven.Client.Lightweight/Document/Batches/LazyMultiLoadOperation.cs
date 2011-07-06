@@ -26,11 +26,16 @@ namespace Raven.Client.Document.Batches
 
 		public GetRequest CraeteRequest()
 		{
-
+			string query = "";
+			if (includes != null && includes.Length > 0)
+			{
+				query += string.Join("&", includes.Select(x => "include=" + x).ToArray());
+			}
+			query += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
 			return new GetRequest
 			{
-				Url = "/queries/",
-				Query = string.Join("&", ids.Select(x => "id=" + x).ToArray()) + "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray())
+				Url = "/queries/?",
+				Query = query 
 			};
 		}
 
