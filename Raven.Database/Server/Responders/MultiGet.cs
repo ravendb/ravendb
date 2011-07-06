@@ -57,6 +57,8 @@ namespace Raven.Database.Server.Responders
 		private void HandleRequest(GetRequest[] requests, GetResponse[] results, int i, IHttpContext context)
 		{
 			var request = requests[i];
+			if (request == null)
+				return;
 			var ctx = new MultiGetHttpContext(Settings, context, request);
 			server.HandleActualRequest(ctx);
 			results[i] = ctx.Complete();
