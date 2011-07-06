@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Security.Principal;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
 using NLog;
 using Raven.Abstractions.Data;
@@ -35,23 +36,30 @@ namespace Raven.Database.Server.Responders
 			recursive.Value = true;
 			try
 			{
-				var results = new List<GetResponse>();
 				var requests = context.ReadJsonObject<GetRequest[]>();
-				Database.TransactionalStorage.Batch(accessor => // ensure all queries are transactionally the same
+				var results = new GetResponse[requests.Length];
+				//Parallel.For(0, requests.Length, position => 
+				//    HandleRequest(requests, results, position, context)
+				//    );
+
+				for (int i = 0; i < requests.Length; i++)
 				{
-					foreach (var req in requests)
-					{
-						var ctx = new MultiGetHttpContext(Settings, context, req);
-						server.HandleActualRequest(ctx);
-						results.Add(ctx.Complete());
-					}
-				});
+					HandleRequest(requests, results, i, context);
+				}
 				context.WriteJson(results);
 			}
 			finally
 			{
 				recursive.Value = false;
 			}
+		}
+
+		private void HandleRequest(GetRequest[] requests, GetResponse[] results, int i, IHttpContext context)
+		{
+			var request = requests[i];
+			var ctx = new MultiGetHttpContext(Settings, context, request);
+			server.HandleActualRequest(ctx);
+			results[i] = ctx.Complete();
 		}
 
 		public class MultiGetHttpContext : IHttpContext
