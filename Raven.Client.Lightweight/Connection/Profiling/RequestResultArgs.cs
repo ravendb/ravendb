@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Raven.Client.Connection.Profiling
 {
@@ -16,7 +17,13 @@ namespace Raven.Client.Connection.Profiling
 		public RequestResultArgs()
 		{
 			At = DateTime.Now;
+			AdditionalInformation = new Dictionary<string, string>();
 		}
+
+		/// <summary>
+		/// Any additional information that might be required
+		/// </summary>
+		public IDictionary<string, string> AdditionalInformation { get; set; }
 
 		/// <summary>
 		/// When the request completed

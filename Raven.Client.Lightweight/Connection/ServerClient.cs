@@ -1087,16 +1087,17 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private void HandleCachingResponse(GetRequest[] requests, CachedRequest[] cachedData, GetResponse[] responses)
 		{
-			bool hasCachedRequests = false;
+			var hasCachedRequests = false;
+			var requestStatuses = new RequestStatus[responses.Length];
 			for (int i = 0; i < responses.Length; i++)
 			{
-				if (responses[i] == null)
+				if (responses[i] == null || responses[i].Status == 304)
 				{
-					responses[i] = new GetResponse {Status = 304}; // make sure that it will be treated as cached
-				}
-				if (responses[i].Status == 304)
-				{
-					hasCachedRequests = true;	
+					hasCachedRequests = true;
+
+					requestStatuses[i] = responses[i] == null ? RequestStatus.AggresivelyCached : RequestStatus.Cached;
+					responses[i] = responses[i] ?? new GetResponse { Status = 0 }; 
+
 					foreach (string header in cachedData[i].Headers)
 					{
 						responses[i].Headers[header] = cachedData[i].Headers[header];
@@ -1106,6 +1107,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				}
 				else
 				{
+					requestStatuses[i] = responses[i].RequestHasErrors() ? RequestStatus.ErrorOnServer : RequestStatus.SentToServer;
+
 					var nameValueCollection = new NameValueCollection();
 					foreach (var header in responses[i].Headers)
 					{
@@ -1124,7 +1127,10 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				lastRequest = new RequestResultArgs();
 				profilingInformation.Requests.Add(lastRequest);
 			}
-
+			for (int i = 0; i < requestStatuses.Length; i++)
+			{
+				lastRequest.AdditionalInformation["NestedRequestStatus-" + i] = requestStatuses[i].ToString();
+			}
 			lastRequest.Result = JsonConvert.SerializeObject(responses);
 		}
 

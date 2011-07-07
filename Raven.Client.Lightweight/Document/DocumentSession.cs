@@ -578,10 +578,7 @@ namespace Raven.Client.Document
 				var responses = DatabaseCommands.MultiGet(requests);
 				for (int i = 0; i < pendingLazyOperations.Count; i++)
 				{
-					if (responses[i].Status != 200 && // known statuses, with specific handling
-						responses[i].Status != 203 &&
-						responses[i].Status != 304 &&
-						responses[i].Status != 404)
+					if (responses[i].RequestHasErrors())
 					{
 						throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
 															Environment.NewLine + responses[i].Result);
@@ -602,6 +599,7 @@ namespace Raven.Client.Document
 				}
 			}
 		}
+
 #endif
 
 	}
