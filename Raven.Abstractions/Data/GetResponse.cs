@@ -18,6 +18,7 @@ namespace Raven.Abstractions.Data
 		{
 			switch (Status)
 			{
+				case 0:   // aggressively cached
 				case 200: // known non error values
 				case 203:
 				case 304:

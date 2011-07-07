@@ -1074,11 +1074,21 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return responses;
 		}
 
-		private static GetResponse[] ExecuteRequest(GetRequest[] requests, HttpJsonRequest httpJsonRequest)
+		private GetResponse[] ExecuteRequest(GetRequest[] requests, HttpJsonRequest httpJsonRequest)
 		{
 			var postedData = JsonConvert.SerializeObject(requests);
 			if (requests.All(x => x == null)) // can be fully served from aggresive cache
 			{
+				jsonRequestFactory.InvokeLogRequest(this, new RequestResultArgs
+				{
+					DurationMilliseconds = 0,
+					Method = httpJsonRequest.webRequest.Method,
+					HttpResult = 0,
+					Status = RequestStatus.AggresivelyCached,
+					Result = "",
+					Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
+					PostedData = postedData
+				});
 				return new GetResponse[requests.Length];
 			}
 			httpJsonRequest.Write(postedData);
@@ -1121,12 +1131,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			if(hasCachedRequests == false || convention.DisableProfiling)
 				return;
 
-			var lastRequest = profilingInformation.Requests.LastOrDefault();
-			if(lastRequest == null || lastRequest.Url.Contains("multi_get") == false)
-			{
-				lastRequest = new RequestResultArgs();
-				profilingInformation.Requests.Add(lastRequest);
-			}
+			var lastRequest = profilingInformation.Requests.Last();
 			for (int i = 0; i < requestStatuses.Length; i++)
 			{
 				lastRequest.AdditionalInformation["NestedRequestStatus-" + i] = requestStatuses[i].ToString();
