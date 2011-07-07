@@ -94,6 +94,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Action<JsonSerializer> CustomizeJsonSerializer { get; set; }
 
+		/// <summary>
+		/// Disable all profiling support
+		/// </summary>
+		public bool DisableProfiling { get; set; }
+
 		///<summary>
 		/// A list of type converters that can be used to translate the document key (string)
 		/// to whatever type it is that is used on the entity, if the type isn't already a string

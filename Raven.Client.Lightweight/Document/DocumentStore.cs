@@ -394,11 +394,7 @@ namespace Raven.Client.Document
 		public Guid ResourceManagerId { get; set; }
 
 #if !NET_3_5
-		/// <summary>
-		/// Disable all profiling support
-		/// </summary>
-		public bool DisableProfiling { get; set; }
-
+		
 		private readonly ProfilingContext profilingContext = new ProfilingContext();
 #endif
 
@@ -423,7 +419,7 @@ namespace Raven.Client.Document
 			try
 			{
 #if !NET_3_5
-				if(DisableProfiling == false)
+				if(Conventions.DisableProfiling == false)
 				{
 					jsonRequestFactory.LogRequest += profilingContext.RecordAction;
 				}
