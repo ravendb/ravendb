@@ -16,29 +16,27 @@ namespace Raven.Studio.Features.Query
 	using Plugins.Database;
 	using Client.Extensions;
 
-
-	[ExportDatabaseExplorerItem("Query", Index = 50)]
-	public class QueryViewModel : Screen
+	[Export]
+	[ExportDatabaseExplorerItem(DisplayName = "Query", Index = 50)]
+	public class QueryViewModel : RavenScreen
 	{
 		readonly List<string> dynamicIndex = new List<string>();
-		readonly IServer server;
 		string currentIndex;
 		string queryResultsStatus;
 		bool shouldShowDynamicIndexes;
 
 		[ImportingConstructor]
-		public QueryViewModel(IServer server)
+		public QueryViewModel()
 		{
 			DisplayName = "Query";
 
-			this.server = server;
 			Indexes = new BindableCollection<string>();
 
-		    FieldsForCurrentIndex = new BindableCollection<string>();
-		    FieldsForCurrentIndex.CollectionChanged += delegate { NotifyOfPropertyChange(() => HasFields); };
+			FieldsForCurrentIndex = new BindableCollection<string>();
+			FieldsForCurrentIndex.CollectionChanged += delegate { NotifyOfPropertyChange(() => HasFields); };
 
-		    TermsForCurrentField = new BindableCollection<string>();
-		    TermsForCurrentField.CollectionChanged += delegate { NotifyOfPropertyChange(() => HasSuggestedTerms); };
+			TermsForCurrentField = new BindableCollection<string>();
+			TermsForCurrentField.CollectionChanged += delegate { NotifyOfPropertyChange(() => HasSuggestedTerms); };
 
 			QueryResults =
 				new BindablePagedQuery<DocumentViewModel>(
@@ -48,14 +46,14 @@ namespace Raven.Studio.Features.Query
 		}
 
 		public IObservableCollection<string> Indexes { get; private set; }
-	    private string query;
-	    public string Query
-	    {
-	        get { return query; }
-	        set { query = value; NotifyOfPropertyChange(()=>Query); }
-	    }
+		private string query;
+		public string Query
+		{
+			get { return query; }
+			set { query = value; NotifyOfPropertyChange(() => Query); }
+		}
 
-	    public IObservableCollection<string> TermsForCurrentField { get; private set; }
+		public IObservableCollection<string> TermsForCurrentField { get; private set; }
 		public IObservableCollection<string> FieldsForCurrentIndex { get; private set; }
 		public BindablePagedQuery<DocumentViewModel> QueryResults { get; private set; }
 
@@ -69,10 +67,10 @@ namespace Raven.Studio.Features.Query
 			}
 		}
 
-	    public bool HasCurrentIndex
-	    {
-            get { return !string.IsNullOrEmpty(CurrentIndex); }
-	    }
+		public bool HasCurrentIndex
+		{
+			get { return !string.IsNullOrEmpty(CurrentIndex); }
+		}
 
 		public string CurrentIndex
 		{
@@ -82,12 +80,12 @@ namespace Raven.Studio.Features.Query
 				currentIndex = value;
 				NotifyOfPropertyChange(() => CurrentIndex);
 				NotifyOfPropertyChange(() => CanExecute);
-                NotifyOfPropertyChange(() => HasCurrentIndex);
+				NotifyOfPropertyChange(() => HasCurrentIndex);
 
-                QueryResults.ClearResults();
-			    QueryResultsStatus = string.Empty;
+				QueryResults.ClearResults();
+				QueryResultsStatus = string.Empty;
 
-				if(!string.IsNullOrEmpty(currentIndex)) GetFieldsForCurrentIndex();
+				if (!string.IsNullOrEmpty(currentIndex)) GetFieldsForCurrentIndex();
 			}
 		}
 
@@ -115,98 +113,98 @@ namespace Raven.Studio.Features.Query
 
 		Task<DocumentViewModel[]> BuildQuery(int start, int pageSize)
 		{
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				var indexName = CurrentIndex;
 				var q = new IndexQuery
-				            	{
-				            		Start = start,
-				            		PageSize = pageSize,
-				            		Query = Query
-				            	};
+								{
+									Start = start,
+									PageSize = pageSize,
+									Query = Query
+								};
 
 				return session.Advanced.AsyncDatabaseCommands
 					.QueryAsync(indexName, q, null)
 					.ContinueWith(x =>
-					              	{
+									{
 										if (x.Exception != null)
 										{
 											QueryResultsStatus = x.Exception.ExtractSingleInnerException().SimplifyError();
-											return new DocumentViewModel[]{};
+											return new DocumentViewModel[] { };
 										}
-						
-					              		QueryResults.GetTotalResults = () => x.Result.TotalResults;
 
-					              		QueryResultsStatus = DetermineResultsStatus(x.Result);
+										QueryResults.GetTotalResults = () => x.Result.TotalResults;
 
-					              		//maybe we added a temp index?
-					              		if (indexName.StartsWith("dynamic"))
-					              			GetIndexNames();
+										QueryResultsStatus = DetermineResultsStatus(x.Result);
 
-					              		return x.Result.Results
-					              			.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
+										//maybe we added a temp index?
+										if (indexName.StartsWith("dynamic"))
+											GetIndexNames();
+
+										return x.Result.Results
+											.Select(obj => new DocumentViewModel(obj.ToJsonDocument()))
 											.ToArray();
-					              	});
+									});
 			}
 		}
 
 		void GetFieldsForCurrentIndex()
 		{
-            FieldsForCurrentIndex.Clear();
+			FieldsForCurrentIndex.Clear();
 
-			using (var session = server.OpenSession())
-			session.Advanced.AsyncDatabaseCommands
-					.GetIndexAsync(CurrentIndex)
-					.ContinueWith(x => FieldsForCurrentIndex.AddRange(x.Result.Fields));
+			using (var session = Server.OpenSession())
+				session.Advanced.AsyncDatabaseCommands
+						.GetIndexAsync(CurrentIndex)
+						.ContinueWith(x => FieldsForCurrentIndex.AddRange(x.Result.Fields));
 		}
 
-        void GetTermsForCurrentField()
-        {
-            TermsForCurrentField.Clear();
-            using (var session = server.OpenSession())
-                session.Advanced.AsyncDatabaseCommands
-                        .GetTermsAsync(CurrentIndex, CurrentField, fromValue:string.Empty, pageSize:20)
-                        .ContinueWith(x => TermsForCurrentField.AddRange(x.Result));
-        }
+		void GetTermsForCurrentField()
+		{
+			TermsForCurrentField.Clear();
+			using (var session = Server.OpenSession())
+				session.Advanced.AsyncDatabaseCommands
+						.GetTermsAsync(CurrentIndex, CurrentField, fromValue: string.Empty, pageSize: 20)
+						.ContinueWith(x => TermsForCurrentField.AddRange(x.Result));
+		}
 
-        public void AddFieldToQuery(string field)
-        {
-            if (!string.IsNullOrEmpty(Query)) field = " " + field;
-            field += ":";
-            Query += field;
-        }
+		public void AddFieldToQuery(string field)
+		{
+			if (!string.IsNullOrEmpty(Query)) field = " " + field;
+			field += ":";
+			Query += field;
+		}
 
-        public void AddTermToQuery(string term)
-        {
-            var q = (Query ?? string.Empty).Trim();
-            var field = CurrentField + ":";
-            if (!q.EndsWith(field))
-                Query += field + " \"" + term + "\"";
-            else
-                Query += term;
-        }
+		public void AddTermToQuery(string term)
+		{
+			var q = (Query ?? string.Empty).Trim();
+			var field = CurrentField + ":";
+			if (!q.EndsWith(field))
+				Query += field + " \"" + term + "\"";
+			else
+				Query += term;
+		}
 
-	    private string currentField;
-	    public string CurrentField
-	    {
-	        get { return currentField; }
-	        set
-	        {
-	            currentField = value; 
-                NotifyOfPropertyChange(()=>CurrentField);
-                if (!string.IsNullOrEmpty(currentField)) GetTermsForCurrentField();
-	        }
-	    }
+		private string currentField;
+		public string CurrentField
+		{
+			get { return currentField; }
+			set
+			{
+				currentField = value;
+				NotifyOfPropertyChange(() => CurrentField);
+				if (!string.IsNullOrEmpty(currentField)) GetTermsForCurrentField();
+			}
+		}
 
-	    public bool HasFields
-	    {
-            get { return FieldsForCurrentIndex.Any(); }
-	    }
+		public bool HasFields
+		{
+			get { return FieldsForCurrentIndex.Any(); }
+		}
 
-	    public bool HasSuggestedTerms
-	    {
-            get { return TermsForCurrentField.Any(); }
-	    }
+		public bool HasSuggestedTerms
+		{
+			get { return TermsForCurrentField.Any(); }
+		}
 
 		static string DetermineResultsStatus(QueryResult result)
 		{
@@ -223,11 +221,11 @@ namespace Raven.Studio.Features.Query
 
 		void ReplaceVisibleList(IEnumerable<string> newList)
 		{
-            if( !newList.Except(Indexes).Any() ) return;
+			if (!newList.Except(Indexes).Any()) return;
 
-            string oldSelection = currentIndex;
+			string oldSelection = currentIndex;
 			Indexes.Replace(newList);
-            currentIndex = oldSelection;
+			currentIndex = oldSelection;
 		}
 
 		void GetIndexNames()
@@ -238,7 +236,7 @@ namespace Raven.Studio.Features.Query
 			}
 			else
 			{
-				using (var session = server.OpenSession())
+				using (var session = Server.OpenSession())
 				{
 					session.Advanced.AsyncDatabaseCommands
 						.GetIndexNamesAsync(0, 1000)
@@ -255,20 +253,20 @@ namespace Raven.Studio.Features.Query
 				return;
 			}
 
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 250)
 					.ContinueWith(task =>
 					{
-					    foreach (var collection in task.Result)
-					    {
-					        dynamicIndex.Insert(0, "dynamic/" + collection.Name);
-					    }
+						foreach (var collection in task.Result)
+						{
+							dynamicIndex.Insert(0, "dynamic/" + collection.Name);
+						}
 
-					    dynamicIndex.Insert(0, "dynamic");
+						dynamicIndex.Insert(0, "dynamic");
 
-					    ReplaceVisibleList(dynamicIndex);
+						ReplaceVisibleList(dynamicIndex);
 					});
 			}
 		}

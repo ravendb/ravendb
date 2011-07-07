@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Connection;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Collections
 {
@@ -16,25 +17,21 @@ namespace Raven.Studio.Features.Collections
 	using Plugins;
 	using Plugins.Database;
 
-	[Export(typeof(CollectionsViewModel))]
-	[ExportDatabaseExplorerItem("Collections", Index = 20)]
+	[Export]
+	[ExportDatabaseExplorerItem(DisplayName = "Collections", Index = 20)]
 	public class CollectionsViewModel : RavenScreen,
 		IHandle<DocumentDeleted>
 	{
-		readonly IServer server;
 		CollectionViewModel activeCollection;
 
 		[ImportingConstructor]
-		public CollectionsViewModel(IServer server, IEventAggregator events)
-			: base(events)
+		public CollectionsViewModel()
 		{
 			DisplayName = "Collections";
 
-			events.Subscribe(this);
+			Events.Subscribe(this);
 
-			this.server = server;
-
-			server.CurrentDatabaseChanged += delegate
+			Server.CurrentDatabaseChanged += delegate
 			{
 				Initialize();
 			};
@@ -63,6 +60,8 @@ namespace Raven.Studio.Features.Collections
 		}
 
 		string status;
+		private System.Action executeAfterCollectionsFetched;
+
 		public string Status
 		{
 			get { return status; }
@@ -99,19 +98,34 @@ namespace Raven.Studio.Features.Collections
 
 		void GetDocumentsForActiveCollection()
 		{
+			TrackCurrentCollection();
+
 			ActiveCollectionDocuments.ClearResults();
-			
+
 			if (ActiveCollection == null) return;
 
 			ActiveCollectionDocuments.GetTotalResults = () => ActiveCollection.Count;
 			ActiveCollectionDocuments.LoadPage();
 		}
 
+		private void TrackCurrentCollection()
+		{
+			if (ActiveCollection == null)
+				return;
+
+			Execute.OnUIThread(() =>
+							   NavigationService.Track(new NavigationState
+														{
+															Url = string.Format("collections/{0}", ActiveCollection.Name),
+															Title = string.Format("Collections: {0}", ActiveCollection.Name)
+														}));
+		}
+
 		Task<DocumentViewModel[]> GetDocumentsForActiveCollectionQuery(int start, int pageSize)
 		{
 			WorkStarted("retrieving documents for collection.");
 
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				var query = new IndexQuery { Start = start, PageSize = pageSize, Query = "Tag:" + ActiveCollection.Name };
 				return session.Advanced.AsyncDatabaseCommands
@@ -129,11 +143,28 @@ namespace Raven.Studio.Features.Collections
 			}
 		}
 
+		public void SelectCollectionByName(string name)
+		{
+			if (HasCollections)
+			{
+				var collection = Collections
+					.Where(item => item.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+					.FirstOrDefault();
+
+				if (collection == null)
+					return;
+
+				ActiveCollection = collection;
+				return;
+			}
+			executeAfterCollectionsFetched = () => SelectCollectionByName(name);
+		}
+
 		protected override void OnActivate()
 		{
 			WorkStarted("fetching collections");
 
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.GetCollectionsAsync(0, 25)
@@ -143,7 +174,7 @@ namespace Raven.Studio.Features.Collections
 						WorkCompleted("fetching collections");
 
 						Collections = new BindableCollection<CollectionViewModel>(
-							x.Result.Select(item => new CollectionViewModel {Name = item.Name, Count = item.Count}));
+							x.Result.Select(item => new CollectionViewModel { Name = item.Name, Count = item.Count }));
 
 						NotifyOfPropertyChange(() => LargestCollectionCount);
 						NotifyOfPropertyChange(() => Collections);
@@ -152,13 +183,19 @@ namespace Raven.Studio.Features.Collections
 						if (ActiveCollection != null)
 						{
 							activeCollection = Collections
-								.Where(collection => collection.Name == activeCollection.Name)
-								.FirstOrDefault(); 
-							NotifyOfPropertyChange(() => ActiveCollection); 
+								.Where(collection => collection.Name == ActiveCollection.Name)
+								.FirstOrDefault();
+							NotifyOfPropertyChange(() => ActiveCollection);
+							TrackCurrentCollection();
 						}
 						else // select the first one if we weren't asked for one
 						{
 							ActiveCollection = Collections.FirstOrDefault();
+						}
+						if (executeAfterCollectionsFetched != null)
+						{
+							executeAfterCollectionsFetched();
+							executeAfterCollectionsFetched = null;
 						}
 
 						Status = Collections.Any() ? string.Empty : "The database contains no collections.";
@@ -166,7 +203,7 @@ namespace Raven.Studio.Features.Collections
 					faulted =>
 					{
 						WorkCompleted("fetching collections");
-						var error = "Unable to retrieve collections from server.";
+						const string error = "Unable to retrieve collections from server."; ;
 						Status = error;
 						NotifyError(error);
 					});
@@ -176,7 +213,7 @@ namespace Raven.Studio.Features.Collections
 		public void EditTemplate()
 		{
 			var vm = IoC.Get<EditCollectionTemplateViewModel>();
-			vm.Collection = new Collection {Name = ActiveCollection.Name, Count = ActiveCollection.Count};
+			vm.Collection = new Collection { Name = ActiveCollection.Name, Count = ActiveCollection.Count };
 			Events.Publish(new DatabaseScreenRequested(() => vm));
 		}
 

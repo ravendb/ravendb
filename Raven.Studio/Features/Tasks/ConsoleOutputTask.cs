@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Features.Tasks
+﻿using Raven.Studio.Infrastructure.Navigation;
+
+namespace Raven.Studio.Features.Tasks
 {
 	using Caliburn.Micro;
 	using Database;
@@ -8,15 +10,12 @@
 
 	public abstract class ConsoleOutputTask : RavenScreen
 	{
-		protected readonly IServer server;
 		string status;
 
-		protected ConsoleOutputTask(IServer server, IEventAggregator events)
-			: base(events)
+		protected ConsoleOutputTask()
 		{
-			this.server = server;
 			Console = new BindableCollection<string>();
-			server.CurrentDatabaseChanged += delegate { ClearConsole(); };
+			Server.CurrentDatabaseChanged += delegate { ClearConsole(); };
 		}
 
 		public IObservableCollection<string> Console { get; private set; }
@@ -40,6 +39,11 @@
 		protected void Output(string format, params object[] args)
 		{
 			Console.Add(format, args);
+		}
+
+		protected override NavigationState GetScreenNavigationState()
+		{
+			return null;
 		}
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Silverlight.Connection;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Tasks
 {
@@ -25,9 +26,9 @@ namespace Raven.Studio.Features.Tasks
 		bool exportIndexesOnly;
 
 		[ImportingConstructor]
-		public ExportTask(IServer server, IEventAggregator events)
-			: base(server, events)
+		public ExportTask()
 		{
+			DisplayName = "Export Database";
 		}
 
 		public bool ExportIndexesOnly
@@ -90,7 +91,7 @@ namespace Raven.Studio.Features.Tasks
 
 			var stream = saveFile.OpenFile();
 			var jsonRequestFactory = new HttpJsonRequestFactory();
-			var baseUrl = server.CurrentDatabaseAddress;
+			var baseUrl = Server.CurrentDatabaseAddress;
 			var credentials = new NetworkCredential();
 			var convention = new DocumentConvention();
 

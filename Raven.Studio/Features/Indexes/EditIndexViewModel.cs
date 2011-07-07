@@ -1,6 +1,7 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
+using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Indexes
 {
@@ -19,19 +20,16 @@ namespace Raven.Studio.Features.Indexes
     public class EditIndexViewModel : RavenScreen
 	{
 		readonly IndexDefinition index;
-		readonly IServer server;
 		bool isDirty;
 		string name;
 		bool shouldShowReduce;
 		bool shouldShowTransformResults;
 
-		public EditIndexViewModel(IndexDefinition index, IServer server, IEventAggregator events)
-			: base(events)
+		public EditIndexViewModel(IndexDefinition index)
 		{
 			DisplayName = "Edit Index";
 
 			this.index = index;
-			this.server = server;
 
 			Name = index.Name;
 			ShouldShowReduce = !string.IsNullOrEmpty(index.Reduce);
@@ -50,7 +48,7 @@ namespace Raven.Studio.Features.Indexes
 			QueryResults = new BindablePagedQuery<DocumentViewModel>(
 				(start, size) => { throw new Exception("Replace this when executing the query."); });
 
-			RelatedErrors = (from error in this.server.Errors
+			RelatedErrors = (from error in this.Server.Errors
 							 where error.Index == index.Name
 							 select error).ToList();
 		}
@@ -167,7 +165,7 @@ namespace Raven.Studio.Features.Indexes
 			if (string.IsNullOrEmpty(index.Reduce)) index.Reduce = null;
 			if (string.IsNullOrEmpty(index.TransformResults)) index.TransformResults = null;
 
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.PutIndexAsync(Name, index, true)
@@ -191,7 +189,7 @@ namespace Raven.Studio.Features.Indexes
 		public void Remove()
 		{
 			WorkStarted("removing index " + Name);
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
 					.DeleteIndexAsync(Name)
@@ -281,7 +279,7 @@ namespace Raven.Studio.Features.Indexes
 
 		Task<DocumentViewModel[]> BuildQuery(int start, int pageSize)
 		{
-			using (var session = server.OpenSession())
+			using (var session = Server.OpenSession())
 			{
 				var indexName = Name;
 				var query = new IndexQuery
@@ -303,6 +301,11 @@ namespace Raven.Studio.Features.Indexes
 											.ToArray();
 									});
 			}
+		}
+
+		protected override NavigationState GetScreenNavigationState()
+		{
+			return new NavigationState { Url = string.Format("indexes/{0}", Name), Title = string.Format("Index: {0}", Name) };
 		}
 	}
 }

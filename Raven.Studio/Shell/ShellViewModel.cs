@@ -17,7 +17,8 @@
 								  IHandle<DisplayCurrentDatabaseRequested>
 	{
 		readonly BusyStatusViewModel busyStatus;
-		readonly DatabaseExplorer databaseScreen;
+		private readonly SelectDatabaseViewModel startScreen;
+		private readonly DatabaseExplorer databaseScreen;
 		readonly IEventAggregator events;
 		readonly NavigationViewModel navigation;
 		readonly NotificationsViewModel notifications;
@@ -32,7 +33,7 @@
 			NavigationViewModel navigation,
 			NotificationsViewModel notifications,
 			BusyStatusViewModel busyStatus,
-			SelectDatabaseViewModel start,
+			SelectDatabaseViewModel startScreen,
 			DatabaseExplorer databaseScreen,
 			IKeyboardShortcutBinder binder,
 			IEventAggregator events)
@@ -41,18 +42,15 @@
 			this.navigation = navigation;
 			this.notifications = notifications;
 			this.busyStatus = busyStatus;
-			navigation.SetGoHome(() =>
-									{
-										this.TrackNavigationTo(start, events);
-										navigation.Breadcrumbs.Clear();
-									});
+			this.startScreen = startScreen;
+			navigation.SetGoHome(() => this.TrackNavigationTo(startScreen, events));
 			this.binder = binder;
 			this.events = events;
 			this.server = server;
 			events.Subscribe(this);
 
 
-			Items.Add(start);
+			Items.Add(startScreen);
 			Items.Add(databaseScreen);
 
 			serverUri = new Uri(uriProvider.GetServerUri());
@@ -72,10 +70,20 @@
 									   ActivateItem(databaseScreen);
 									   break;
 								   default:
-									   ActivateItem(start);
+									   ActivateItem(startScreen);
 									   break;
 							   }
 						   });
+		}
+
+		public SelectDatabaseViewModel StartScreen
+		{
+			get { return startScreen; }
+		}
+
+		public DatabaseExplorer DatabaseScreen
+		{
+			get { return databaseScreen; }
 		}
 
 		public IServer Server { get { return server; } }

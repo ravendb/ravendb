@@ -199,19 +199,19 @@
 			set { query = value; }
 		}
 
-		public void LoadPage(int page = 0)
+		public Task LoadPage(int page = 0)
 		{
-			LoadPage(null, page);
+			return LoadPage(null, page);
 		}
 
-		public void LoadPage(Action afterLoaded, int page = 0)
+		public Task LoadPage(Action afterLoaded, int page = 0)
 		{
 			//HACK:
 			IoC.Get<IEventAggregator>().Publish(new WorkStarted("loading page"));
 
 			IsLoading = true;
 
-			query(page * PageSize, PageSize)
+			return query(page * PageSize, PageSize)
 				.ContinueWith(x =>
 								{
 									HandleLoadPageResults(x.Result, page);

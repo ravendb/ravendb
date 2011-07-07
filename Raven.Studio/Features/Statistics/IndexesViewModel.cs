@@ -14,7 +14,7 @@ namespace Raven.Studio.Features.Statistics
     using Plugins;
 
     [Export]
-    public class IndexesViewModel : Screen, IHandle<StatisticsUpdated>
+    public class IndexesViewModel : RavenScreen, IHandle<StatisticsUpdated>
     {
         private readonly Style defaultStyle;
         private readonly Style staleStyle;

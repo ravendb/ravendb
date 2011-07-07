@@ -1,3 +1,5 @@
+using System.Windows;
+
 namespace Raven.Studio.Features.Database
 {
 	using System;
@@ -88,7 +90,9 @@ namespace Raven.Studio.Features.Database
 				.OrderBy(x => x.Metadata.Index)
 				.Select(x => x.Metadata.DisplayName)
 				.ToList();
-			
+
+			if (string.IsNullOrEmpty(Application.Current.Host.NavigationState) == false) 
+				return;
 			ShowFirstScreen();
 		}
 

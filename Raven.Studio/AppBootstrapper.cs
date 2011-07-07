@@ -1,5 +1,8 @@
 ﻿using System.IO;
 using System.Security.Cryptography;
+using Raven.Studio.Features.Documents;
+using Raven.Studio.Infrastructure.Navigation;
+using Raven.Studio.Plugins;
 
 namespace Raven.Studio
 {
@@ -25,6 +28,22 @@ namespace Raven.Studio
     	{
 			LogManager.GetLog = type => new DebugLogger(type);	
     	}
+
+		protected override void OnStartup(object sender, StartupEventArgs e)
+		{
+			base.OnStartup(sender, e);
+			var navigationService = container.GetExportedValue<NavigationService>();
+			navigationService.Initialize();
+
+			MessageBinder.CustomConverters.Add(typeof(IList<string>), (providedValue, context) =>
+			{
+				var id = providedValue as string;
+				if (id != null)
+					return new List<string> {id};
+
+				return providedValue;
+			});
+		}
 
 		protected override void Configure()
 		{

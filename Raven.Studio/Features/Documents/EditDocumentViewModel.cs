@@ -1,4 +1,6 @@
 ﻿using Raven.Json.Linq;
+using Raven.Studio.Infrastructure.Navigation;
+using Raven.Studio.Plugins;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -18,7 +20,7 @@ namespace Raven.Studio.Features.Documents
 
 	[Export(typeof(EditDocumentViewModel))]
 	[PartCreationPolicy(CreationPolicy.NonShared)]
-	public class EditDocumentViewModel : Screen
+	public class EditDocumentViewModel : RavenScreen
 	{
 		private JsonDocument document;
 		private string etag;
@@ -32,7 +34,7 @@ namespace Raven.Studio.Features.Documents
 		private IKeyboardShortcutBinder keys;
 
 		[ImportingConstructor]
-		public EditDocumentViewModel(IEventAggregator events, IKeyboardShortcutBinder keys)
+		public EditDocumentViewModel(IKeyboardShortcutBinder keys)
 		{
 			metadata = new Dictionary<string, RavenJToken>();
 
@@ -40,7 +42,7 @@ namespace Raven.Studio.Features.Documents
 			document = new JsonDocument();
 			JsonData = InitialJsonData();
 			JsonMetadata = "{}";
-			events.Subscribe(this);
+			Events.Subscribe(this);
 			this.keys = keys;
 
 			keys.Register<SaveDocument>(Key.S, ModifierKeys.Control, x => x.Execute(this), this);
@@ -50,6 +52,11 @@ namespace Raven.Studio.Features.Documents
 		{
 			keys.Initialize((FrameworkElement)view);
 			base.OnViewAttached(view, context);
+		}
+
+		protected override NavigationState GetScreenNavigationState()
+		{
+			return new NavigationState { Url = "docs/" + Id, Title = string.Format("Edit Document {0}", DisplayId) };
 		}
 
 		public string ClrType { get; private set; }
@@ -168,8 +175,7 @@ namespace Raven.Studio.Features.Documents
 			Id = document.Key;
 			JsonData = PrepareRawJsonString(document.DataAsJson);
 
-			IsProjection = string.IsNullOrEmpty(Id) && (document.Metadata == null);
-
+			IsProjection = string.IsNullOrEmpty(Id) && (document.Metadata.Any() == false);
 			if (IsProjection) return;
 
 			if (document.Metadata != null)

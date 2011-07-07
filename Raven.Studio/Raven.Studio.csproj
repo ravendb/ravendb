@@ -135,6 +135,7 @@
     <Compile Include="Commands\CopyServerError.cs" />
     <Compile Include="Commands\EditIndex.cs" />
     <Compile Include="Commands\LoadDocument.cs" />
+    <Compile Include="Common\String.cs" />
     <Compile Include="Common\VisualTreeHelperExtensions.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
     <Compile Include="Controls\Editors\LinqEditor.cs" />
@@ -161,6 +162,7 @@
     <Compile Include="Framework\DebugLogger.cs" />
     <Compile Include="Framework\EventArgs.cs" />
     <Compile Include="Framework\IBindablePagedQuery.cs" />
+    <Compile Include="Framework\IRavenConductor.cs" />
     <Compile Include="Framework\MenuItemMetadata.cs" />
     <Compile Include="Framework\CustomActionMessage.cs" />
     <Compile Include="Helpers\StateManager.cs" />
@@ -180,6 +182,19 @@
     <Compile Include="Impl\DotNetZip\StaticTree.cs" />
     <Compile Include="Impl\DotNetZip\WorkItem.cs" />
     <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
+    <Compile Include="Infrastructure\Navigation\NavigationState.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\CollectionsNavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\ErrorsNavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\IndexesNavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\TasksNavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\NavigatorExportAttribute.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\BaseNavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\EditDocumentNavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\DatabaseExplorerNavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\INavigator.cs" />
+    <Compile Include="Infrastructure\Navigation\NavigationService.cs" />
+    <Compile Include="Infrastructure\Navigation\INavigatorMetdata.cs" />
+    <Compile Include="Infrastructure\Navigation\Navigators\SelectDatabaseNavigator.cs" />
     <Compile Include="Messages\NotificationLevel.cs" />
     <Compile Include="Plugins\Database\ExportDatabaseExplorerItemAttribute.cs" />
     <Compile Include="Framework\DynamicViewModel.cs" />
@@ -542,6 +557,7 @@
   <ItemGroup>
     <Resource Include="Resources\Images\pencil.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

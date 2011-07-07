@@ -108,7 +108,8 @@
 			});
 
 			return new[] {
-			             	ReflectionModelServices.CreateExportDefinition(lazyMember, contracName, metadata, null)
+			             	ReflectionModelServices.CreateExportDefinition(lazyMember, contracName, metadata, null),
+							ReflectionModelServices.CreateExportDefinition(lazyMember, AttributedModelServices.GetContractName(contractType), metadata, null)
 			             };
 		}
 	}

@@ -1,16 +1,51 @@
-﻿namespace Raven.Studio.Framework
+﻿using System.ComponentModel.Composition;
+using Raven.Studio.Infrastructure.Navigation;
+using Raven.Studio.Plugins;
+
+namespace Raven.Studio.Framework
 {
 	using Caliburn.Micro;
 	using Messages;
 
 	public abstract class RavenScreen : Screen
 	{
-		protected IEventAggregator Events;
 		bool isBusy;
 
-		protected RavenScreen(IEventAggregator events)
+		private IServer server;
+		public IServer Server
 		{
-			Events = events;
+			get { return server ?? (server = IoC.Get<IServer>()); }
+			set { server = value; }
+		}
+
+		private IEventAggregator events;
+		public IEventAggregator Events
+		{
+			get { return events ?? (events = IoC.Get<IEventAggregator>()); }
+			set { events = value; }
+		}
+
+		private NavigationService navigationService;
+		public NavigationService NavigationService
+		{
+			get { return navigationService ?? (navigationService = IoC.Get<NavigationService>()); }
+			set { navigationService = value; }
+		}
+
+		protected override void OnViewAttached(object view, object context)
+		{
+			base.OnViewAttached(view, context);
+
+			var navigationState = GetScreenNavigationState();
+			if (navigationState != null)
+			{
+				NavigationService.Track(navigationState);
+			}
+		}
+
+		protected virtual NavigationState GetScreenNavigationState()
+		{
+			return new NavigationState {Url = DisplayName.ToLowerInvariant(), Title = DisplayName};
 		}
 
 		public bool IsBusy
@@ -22,7 +57,7 @@
 		protected void WorkStarted(string job = null)
 		{
 			//NOTE: this logic isn't entirely consistent. The IsBusy state applies to the screen as a whole 
-			// while the work started/completed events could be rasised multiple times by the same screen
+			// while the work started/completed events could be raised multiple times by the same screen
 			Events.Publish(new WorkStarted(job));
 			IsBusy = true;
 		}

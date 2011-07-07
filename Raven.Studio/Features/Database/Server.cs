@@ -31,7 +31,7 @@ namespace Raven.Studio.Features.Database
 	public class Server : PropertyChangedBase, IServer,
 		IHandle<StatisticsUpdateRequested>
 	{
-		const string DefaultDatabaseName = "Default Database";
+		public const string DefaultDatabaseName = "Default Database";
 		readonly IEventAggregator events;
 
 		readonly Dictionary<string, DatabaseStatistics> snapshots = new Dictionary<string, DatabaseStatistics>();
@@ -118,6 +118,8 @@ namespace Raven.Studio.Features.Database
 
 								if (callback != null) callback();
 							});
+
+							SetBuildNumber();
 						},
 						faulted =>
 						{
@@ -212,8 +214,6 @@ namespace Raven.Studio.Features.Database
 
 			using (var session = OpenSession())
 				session.Advanced.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync();
-
-			SetBuildNumber();
 
 			callback();
 		}

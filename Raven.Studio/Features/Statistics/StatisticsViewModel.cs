@@ -58,8 +58,11 @@ namespace Raven.Studio.Features.Statistics
 			var key = entry.Label;
 			if (!hash.ContainsKey(key))
 			{
-				hash[key] = entry;
-				Items.Add(entry);
+				lock (hash)
+				{
+					hash[key] = entry;
+					Items.Add(entry);
+				}
 			}
 			else
 			{
