@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -36,8 +37,7 @@ namespace Raven.Client.Connection
 		private readonly HttpJsonRequestFactory factory;
 		private readonly IHoldProfilingInformation owner;
 		private string postedData;
-		private DateTime createdAt = DateTime.Now;
-		private DateTime completedAt;
+		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
 
 		/// <summary>
@@ -137,11 +137,11 @@ namespace Raven.Client.Connection
 			try
 			{
 				response = getResponse();
-				completedAt = DateTime.Now;
+				sp.Stop();
 			}
 			catch (WebException e)
 			{
-				completedAt = DateTime.Now;
+				sp.Stop();
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse == null || 
 					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
@@ -231,9 +231,9 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private double CalculateDuration()
+		public double CalculateDuration()
 		{
-			return (completedAt - createdAt).TotalMilliseconds;
+			return sp.ElapsedMilliseconds;
 		}
 
 		/// <summary>

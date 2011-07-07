@@ -1081,7 +1081,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			{
 				jsonRequestFactory.InvokeLogRequest(this, new RequestResultArgs
 				{
-					DurationMilliseconds = 0,
+					DurationMilliseconds = httpJsonRequest.CalculateDuration(),
 					Method = httpJsonRequest.webRequest.Method,
 					HttpResult = 0,
 					Status = RequestStatus.AggresivelyCached,
