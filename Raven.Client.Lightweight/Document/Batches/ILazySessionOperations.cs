@@ -48,12 +48,19 @@ namespace Raven.Client.Document.Batches
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		Lazy<TResult> Load<TResult>(ValueType id);
+		Lazy<TResult> Load<TResult>(ValueType id);	
+	}
 
+	/// <summary>
+	/// Allow to perform eager operations on the session
+	/// </summary>
+	public interface IEagerSessionOperations
+	{
 		/// <summary>
 		/// Execute all the lazy requests pending within this session
 		/// </summary>
 		void ExecuteAllPendingLazyOperations();
+	
 	}
 }
 #endif

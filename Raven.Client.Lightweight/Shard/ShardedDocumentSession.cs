@@ -203,6 +203,14 @@ namespace Raven.Client.Shard
 		{
 			get { throw new NotImplementedException(); }
 		}
+
+		/// <summary>
+		/// Access the eager operations
+		/// </summary>
+		public IEagerSessionOperations Eagerly
+		{
+			get { throw new NotImplementedException(); }
+		}
 #endif
 
 		/// <summary>

@@ -111,7 +111,7 @@ namespace Raven.Tests.MultiGet
 							session.Advanced.Lazily.Load<User>("users/1");
 							session.Advanced.Lazily.Load<User>("users/2");
 
-							session.Advanced.Lazily.ExecuteAllPendingLazyOperations();
+							session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
 						}
 					}
 				}

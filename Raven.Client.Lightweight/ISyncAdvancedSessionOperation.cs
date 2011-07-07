@@ -41,6 +41,11 @@ namespace Raven.Client
 		/// Access the lazy operations
 		/// </summary>
 		ILazySessionOperations Lazily { get; }
+
+		/// <summary>
+		/// Access the eager operations
+		/// </summary>
+		IEagerSessionOperations Eagerly { get; }
 #endif
 
 		/// <summary>

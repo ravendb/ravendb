@@ -32,7 +32,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 #if !NET_3_5
-		, ILazySessionOperations
+		, ILazySessionOperations, IEagerSessionOperations
 #endif
 	{
 #if !NET_3_5
@@ -59,6 +59,14 @@ namespace Raven.Client.Document
 		/// Access the lazy operations
 		/// </summary>
 		public ILazySessionOperations Lazily
+		{
+			get { return this; }
+		}
+
+		/// <summary>
+		/// Access the eager operations
+		/// </summary>
+		public IEagerSessionOperations Eagerly
 		{
 			get { return this; }
 		}
