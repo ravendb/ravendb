@@ -1064,34 +1064,30 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
 			var requestUri = url + "/multi_get";
-			if (this.convention.UseParallelMultiGet)
+			if (convention.UseParallelMultiGet)
 				requestUri += "?prallel=yes";
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "POST", credentials, convention);
 
 			var cachedData = PreparingForCachingRequest(requests, requestUri);
-			var responses = ExecuteRequest(requests, httpJsonRequest, cachedData);
+			var responses = ExecuteRequest(requests, httpJsonRequest);
 			HandleCachingResponse(requests, cachedData, responses);
 			return responses;
 		}
 
-		private  GetResponse[] ExecuteRequest(GetRequest[] requests, HttpJsonRequest httpJsonRequest, IEnumerable<CachedRequest> cacheData)
+		private static GetResponse[] ExecuteRequest(GetRequest[] requests, HttpJsonRequest httpJsonRequest)
 		{
-			GetResponse[] responses;
 			var postedData = JsonConvert.SerializeObject(requests);
 			if (requests.All(x => x == null)) // can be fully served from aggresive cache
 			{
-				responses = new GetResponse[requests.Length];
+				return new GetResponse[requests.Length];
 			}
-			else // make the call
-			{
-				httpJsonRequest.Write(postedData);
-				responses = JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
-			}
-			return responses;
+			httpJsonRequest.Write(postedData);
+			return JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
 		}
 
 		private void HandleCachingResponse(GetRequest[] requests, CachedRequest[] cachedData, GetResponse[] responses)
 		{
+			bool hasCachedRequests = false;
 			for (int i = 0; i < responses.Length; i++)
 			{
 				if (responses[i] == null)
@@ -1100,6 +1096,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				}
 				if (responses[i].Status == 304)
 				{
+					hasCachedRequests = true;	
 					foreach (string header in cachedData[i].Headers)
 					{
 						responses[i].Headers[header] = cachedData[i].Headers[header];
@@ -1117,6 +1114,18 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					jsonRequestFactory.CacheResponse(url + requests[i].UrlAndQuery, responses[i].Result, nameValueCollection);
 				}
 			}
+
+			if(hasCachedRequests == false || convention.DisableProfiling)
+				return;
+
+			var lastRequest = profilingInformation.Requests.LastOrDefault();
+			if(lastRequest == null || lastRequest.Url.Contains("multi_get") == false)
+			{
+				lastRequest = new RequestResultArgs();
+				profilingInformation.Requests.Add(lastRequest);
+			}
+
+			lastRequest.Result = JsonConvert.SerializeObject(responses);
 		}
 
 		private CachedRequest[] PreparingForCachingRequest(GetRequest[] requests, string requestUri)
