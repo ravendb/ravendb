@@ -266,14 +266,14 @@ namespace Raven.Http.Extensions
 
 		public static void RemoveFromRequestUrl(this IHttpRequest self, string token)
 		{
-			if (self.Url.LocalPath.StartsWith(token))
+			if (self.Url.LocalPath.StartsWith(token, StringComparison.InvariantCultureIgnoreCase))
 			{
 				self.Url = new UriBuilder(self.Url)
 				{
 					Path = self.Url.LocalPath.Substring(token.Length)
 				}.Uri;
 			}
-			if (self.RawUrl.StartsWith(token))
+			if (self.RawUrl.StartsWith(token, StringComparison.InvariantCultureIgnoreCase))
 			{
 				self.RawUrl = self.RawUrl.Substring(token.Length);
 			}
