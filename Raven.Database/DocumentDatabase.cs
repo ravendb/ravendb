@@ -233,6 +233,12 @@ namespace Raven.Database
 			}
 		}
 
+		public string SilverlightXapName
+		{
+			get { return "Raven.Studio.xap"; }
+			
+		}
+
 		IRavenHttpConfiguration IResourceStore.Configuration
 		{
 			get { return Configuration; }
