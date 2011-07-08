@@ -28,7 +28,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Project using a different type
 		/// </summary>
-		public static IEnumerable<TResult> As<TResult>(this IQueryable queryable)
+		public static IQueryable<TResult> As<TResult>(this IQueryable queryable)
 		{
 			var ofType = queryable.OfType<TResult>();
 			var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
