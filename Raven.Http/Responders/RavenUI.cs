@@ -3,8 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System.IO;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using System.Linq;
 
 namespace Raven.Http.Responders
 {
@@ -30,6 +33,12 @@ namespace Raven.Http.Responders
 
 		public override void Respond(IHttpContext context)
 		{
+			if (context.Request.Url.AbsolutePath == RavenRoot.RootPath && 
+				SilverlightUI.GetPaths(ResourceStore.SilverlightXapName, ResourceStore.Configuration.WebDir).All(f => File.Exists(f) == false))
+			{
+				context.WriteEmbeddedFile(ResourceStore.GetType().Assembly, Settings.WebDir, "studio_not_found.html");
+				return;
+			}
 			var docPath = context.GetRequestUrl().Replace("/raven/", "");
 			context.WriteEmbeddedFile(ResourceStore.GetType().Assembly,Settings.WebDir, docPath);
 		}

@@ -40,7 +40,7 @@ namespace Raven.Http.Responders
 
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var fileName = match.Groups[1].Value;
-			var paths = GetPaths(fileName);
+			var paths = GetPaths(fileName, ResourceStore.Configuration.WebDir);
 			var matchingPath = paths.FirstOrDefault(File.Exists);
 			if (matchingPath != null)
 			{
@@ -55,14 +55,14 @@ namespace Raven.Http.Responders
 			get { return true; }
 		}
 
-		private IEnumerable<string> GetPaths(string fileName)
+		public static IEnumerable<string> GetPaths(string fileName, string webDir)
 		{
 			// dev path
 			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\Raven.Studio\bin\debug", fileName);
 			//local path
 			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
 			// web ui path
-			yield return Path.Combine(this.ResourceStore.Configuration.WebDir, fileName);
+			yield return Path.Combine(webDir, fileName);
 		}
 	}
 }

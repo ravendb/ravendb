@@ -82,7 +82,6 @@
     <Compile Include="Responders\SilverlightPlugins.cs" />
     <Compile Include="Responders\SilverlightUI.cs" />
     <Compile Include="Responders\RavenUI.cs" />
-    <Compile Include="Responders\StudioUI.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="RavenDB.snk" />
