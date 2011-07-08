@@ -35,6 +35,7 @@ namespace Raven.Tests.Bugs.Queries
                 using (IDocumentSession session = documentStore.OpenSession())
                 {
                     var result1 = session.Query<User, User_Entity>()
+						.Customize(x=>x.WaitForNonStaleResults())
                         .Where(x => x.Name.StartsWith("Mrs"))
                         .ToArray();
                     Assert.True(result1.Length == 1);
@@ -68,7 +69,6 @@ namespace Raven.Tests.Bugs.Queries
                               Id = doc.Id,
                               Name = doc.Name,
                           };
-            Index(x => x.Name, FieldIndexing.Analyzed);            
         }
     }
 
