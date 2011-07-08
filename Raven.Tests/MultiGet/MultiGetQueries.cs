@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Document;
-using Raven.Tests.Linq;
+using Raven.Client.Embedded;
+using Raven.Client.Indexes;
+using Raven.Tests.Bugs.TransformResults;
 using Xunit;
 using Raven.Client.Linq;
+using User = Raven.Tests.Linq.User;
 
 namespace Raven.Tests.MultiGet
 {
@@ -23,6 +27,53 @@ namespace Raven.Tests.MultiGet
 					Assert.Equal(0, session.Advanced.NumberOfRequests);
 				}
 
+			}
+		}
+
+		[Fact]
+		public void WithPaging()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User { Name = "oren" });
+					session.Store(new User());
+					session.Store(new User { Name = "ayende" });
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var result1 = session.Query<User>().Where(x => x.Age == 0).Skip(1).Take(2).Lazily();
+					Assert.Equal(2, result1.Value.ToArray().Length);
+				}
+
+			}
+		}
+
+
+		[Fact]
+		public void write_then_read_from_complex_entity_types_lazily()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, store);
+
+				string answerId = ComplexValuesFromTransformResults.CreateEntities(store);
+				// Working
+				using (IDocumentSession session = store.OpenSession())
+				{
+					var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
+						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
+						.Where(x => x.Id == answerId)
+						.As<AnswerEntity>()
+						.Lazily();
+					Assert.NotNull(answerInfo.Value.ToArray().Length);
+				}
 			}
 		}
 
