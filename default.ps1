@@ -17,9 +17,9 @@ properties {
   $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
     "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
-  $client_dlls_3_5 = @( "Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Json-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
+  $client_dlls_3_5 = @( "nlog.???","Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Json-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
      
-  $client_dlls = @( "Raven.Client.MvcIntegration.???", "Newtonsoft.Json.???","Raven.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", `
+  $client_dlls = @( "nlog.???","Raven.Client.MvcIntegration.???", "Newtonsoft.Json.???","Raven.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", `
 			"MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
   
   $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json.Silverlight.???");   
