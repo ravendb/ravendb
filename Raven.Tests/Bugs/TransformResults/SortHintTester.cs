@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs.TransformResults
                            .As<AnswerEntity>()
                            .SingleOrDefault();
 
-                    for (int i = 0; i < 10000; i++)
+                    for (int i = 0; i < 100; i++)
                     {
                         answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                             .Statistics(out stats)
@@ -57,11 +57,6 @@ namespace Raven.Tests.Bugs.TransformResults
             }
         }
 
-        private void WaitForAllRequestsToComplete(RavenDbServer server)
-        {
-            while (server.Server.HasPendingRequests)
-                Thread.Sleep(25);
-        }
         public static string CreateEntities(IDocumentStore documentStore)
         {
             const string questionId = @"question\259";
