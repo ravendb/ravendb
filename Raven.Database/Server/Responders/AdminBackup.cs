@@ -27,7 +27,7 @@ namespace Raven.Database.Server.Responders
 		{
 			if(context.IsAdministrator() == false)
 			{
-				context.SetStatusToForbidden();
+				context.SetStatusToUnauthorized();
 				context.WriteJson(new
 				{
 					Error = "Only administrators can initiate a backup procedure"
