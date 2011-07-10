@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
-<TestRunConfiguration name="CodeCoverage" id="bd4238bb-e5ea-4e8a-be70-1bdee68ff96a" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2006">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRunConfiguration name="CodeCoverage" id="bd4238bb-e5ea-4e8a-be70-1bdee68ff96a" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
   <Description>Code Coverage configuration</Description>
   <CodeCoverage enabled="true">
     <Regular>
