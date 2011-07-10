@@ -117,9 +117,23 @@ namespace Raven.Database.Indexing
 				{
 					IndexWriter writer = indexWriter;
 					indexWriter = null;
-					writer.Close();
+					try
+					{
+						writer.Close();
+					}
+					catch (Exception e)
+					{
+						logIndexing.ErrorException("Error when closing the index", e);
+					}
 				}
-				directory.Close();
+				try
+				{
+					directory.Close();
+				}
+				catch (Exception e)
+				{
+					logIndexing.ErrorException("Error when closing the directory", e);
+				}
 			}
 		}
 
