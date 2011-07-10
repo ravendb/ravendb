@@ -23,7 +23,7 @@ namespace Raven.Database.Backup
 
         public const int MoveFileDelayUntilReboot = 0x4;
 
-        public event Action<string> Notify = delegate { };
+        public event Action<string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
         private Dictionary<string, long> fileToSize = new Dictionary<string, long>();
     	private static readonly Logger logger = LogManager.GetCurrentClassLogger();
@@ -56,10 +56,10 @@ namespace Raven.Database.Backup
         {
             foreach (var file in Directory.EnumerateFiles(tempPath))
             {
-                Notify("Copying " + Path.GetFileName(file));
+                Notify("Copying " + Path.GetFileName(file), BackupStatus.BackupMessageSeverity.Informational);
                 var fullName = new FileInfo(file).FullName;
                 FileCopy(file, Path.Combine(destination, Path.GetFileName(file)), fileToSize[fullName]);
-                Notify("Copied " + Path.GetFileName(file));
+                Notify("Copied " + Path.GetFileName(file), BackupStatus.BackupMessageSeverity.Informational);
             }
 
             try
@@ -127,7 +127,7 @@ namespace Raven.Database.Backup
             // of all the files
             foreach (var sourceFile in sourceFilesSnapshot)
             {
-                Notify("Hard linked " + sourceFile);
+                Notify("Hard linked " + sourceFile, BackupStatus.BackupMessageSeverity.Informational);
             }
 
         }

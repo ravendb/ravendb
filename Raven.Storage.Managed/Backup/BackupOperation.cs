@@ -20,8 +20,8 @@ namespace Raven.Storage.Managed.Backup
 	public class BackupOperation
 	{
 		private readonly DocumentDatabase database;
-	    private readonly IPersistentSource persistentSource;
-	    private readonly string to;
+		private readonly IPersistentSource persistentSource;
+		private readonly string to;
 		private readonly string src;
 
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
@@ -29,9 +29,9 @@ namespace Raven.Storage.Managed.Backup
 		public BackupOperation(DocumentDatabase database, IPersistentSource persistentSource, string src, string to)
 		{
 			this.database = database;
-		    this.persistentSource = persistentSource;
-		    this.to = to.ToFullPath();
-            this.src = src.ToFullPath();
+			this.persistentSource = persistentSource;
+			this.to = to.ToFullPath();
+			this.src = src.ToFullPath();
 		}
 
 		public void Execute(object ignored)
@@ -39,41 +39,41 @@ namespace Raven.Storage.Managed.Backup
 			try
 			{
 				logger.Info("Starting backup of '{0}' to '{1}'", src, to);
-			    var directoryBackups = new List<DirectoryBackup>
-			    {
-			        new DirectoryBackup(src, to, Path.Combine("TempData" + Guid.NewGuid().ToString("N"))),
-			        new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"),
-			                            Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")))
-			    };
+				var directoryBackups = new List<DirectoryBackup>
+				{
+					new DirectoryBackup(src, to, Path.Combine("TempData" + Guid.NewGuid().ToString("N"))),
+					new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"),
+										Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")))
+				};
 				directoryBackups.AddRange(from index in Directory.GetDirectories(database.Configuration.IndexStoragePath)
 										  let fromIndex = Path.Combine(database.Configuration.IndexStoragePath, Path.GetFileName(index))
-				                          let toIndex = Path.Combine(to, "Indexes", Path.GetFileName(index))
+										  let toIndex = Path.Combine(to, "Indexes", Path.GetFileName(index))
 										  let tempIndex = Path.Combine(src, Path.Combine("BackupTempDirectories",Guid.NewGuid().ToString("N")))
-				                          select new DirectoryBackup(fromIndex, toIndex, tempIndex));
+										  select new DirectoryBackup(fromIndex, toIndex, tempIndex));
 
 
-			    persistentSource.Read(log =>
-			    {
-			        persistentSource.FlushLog();
+				persistentSource.Read(log =>
+				{
+					persistentSource.FlushLog();
 
-			        foreach (var directoryBackup in directoryBackups)
-			        {
-			            directoryBackup.Notify += UpdateBackupStatus;
-			            directoryBackup.Prepare();
-			        }
+					foreach (var directoryBackup in directoryBackups)
+					{
+						directoryBackup.Notify += UpdateBackupStatus;
+						directoryBackup.Prepare();
+					}
 
-			        foreach (var directoryBackup in directoryBackups)
-			        {
-			            directoryBackup.Execute();
-			        }
+					foreach (var directoryBackup in directoryBackups)
+					{
+						directoryBackup.Execute();
+					}
 
-			        return 0;// ignored
-			    });
+					return 0;// ignored
+				});
 			}
 			catch (Exception e)
 			{
 				logger.ErrorException("Failed to complete backup", e);
-				UpdateBackupStatus("Failed to complete backup because: " + e.Message);
+				UpdateBackupStatus("Failed to complete backup because: " + e.Message, BackupStatus.BackupMessageSeverity.Error);
 			}
 			finally
 			{
@@ -94,8 +94,8 @@ namespace Raven.Storage.Managed.Backup
 				backupStatus.IsRunning = false;
 				backupStatus.Completed = DateTime.UtcNow;
 				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
-				             jsonDocument.Metadata,
-				             null);
+							 jsonDocument.Metadata,
+							 null);
 			}
 			catch (Exception e)
 			{
@@ -111,7 +111,7 @@ namespace Raven.Storage.Managed.Backup
 			}
 		}
 
-		private void UpdateBackupStatus(string newMsg)
+		private void UpdateBackupStatus(string newMsg, BackupStatus.BackupMessageSeverity severity)
 		{
 			try
 			{
@@ -123,10 +123,11 @@ namespace Raven.Storage.Managed.Backup
 				backupStatus.Messages.Add(new BackupStatus.BackupMessage
 				{
 					Message = newMsg,
-					Timestamp = DateTime.UtcNow
+					Timestamp = DateTime.UtcNow,
+					Severity = severity
 				});
 				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus), jsonDocument.Metadata,
-				             null);
+							 null);
 			}
 			catch (Exception e)
 			{

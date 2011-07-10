@@ -41,17 +41,17 @@ namespace Raven.Tests.Storage
 			base.Dispose();
 		}
 
-        private void DeleteIfExists(string DirectoryName)
-        {
-            string directoryFullName = null;
+		private void DeleteIfExists(string DirectoryName)
+		{
+			string directoryFullName = null;
 
-            if (Path.IsPathRooted(DirectoryName) == false)
-                directoryFullName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DirectoryName);
-            else
-                directoryFullName = DirectoryName;
+			if (Path.IsPathRooted(DirectoryName) == false)
+				directoryFullName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DirectoryName);
+			else
+				directoryFullName = DirectoryName;
 
-            IOExtensions.DeleteDirectory(directoryFullName);
-        }
+			IOExtensions.DeleteDirectory(directoryFullName);
+		}
 		
 		[Fact]
 		public void AfterBackupRestoreCanReadDocument()
@@ -59,11 +59,11 @@ namespace Raven.Tests.Storage
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
 			db.StartBackup("raven.db.test.backup");
-			WaitForBackup();
+			WaitForBackup(true);
 
 			db.Dispose();
 
-            DeleteIfExists("raven.db.test.esent");
+			DeleteIfExists("raven.db.test.esent");
 
 			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
 
@@ -79,11 +79,11 @@ namespace Raven.Tests.Storage
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 			db.StartBackup("raven.db.test.backup");
-			WaitForBackup();
+			WaitForBackup(true);
 
 			db.Dispose();
 
-            DeleteIfExists("raven.db.test.esent");
+			DeleteIfExists("raven.db.test.esent");
 
 			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
 
@@ -118,11 +118,11 @@ namespace Raven.Tests.Storage
 			Assert.Equal(1, queryResult.Results.Count);
 
 			db.StartBackup("raven.db.test.backup");
-			WaitForBackup();
+			WaitForBackup(true);
 
 			db.Dispose();
 
-            DeleteIfExists("raven.db.test.esent");
+			DeleteIfExists("raven.db.test.esent");
 
 			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
 
@@ -136,7 +136,38 @@ namespace Raven.Tests.Storage
 			Assert.Equal(1, queryResult.Results.Count);
 		}
 
-		private void WaitForBackup()
+		[Fact]
+		public void AfterFailedBackupRestoreCanDetectError()
+		{
+			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+			db.SpinBackgroundWorkers();
+			QueryResult queryResult;
+			do
+			{
+				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Users]]",
+					PageSize = 10
+				});
+			} while (queryResult.IsStale);
+			Assert.Equal(1, queryResult.Results.Count);
+
+
+			File.WriteAllText("raven.db.test.backup.txt", "Sabotage!");
+			db.StartBackup("raven.db.test.backup.txt");
+			WaitForBackup(false);
+
+			Assert.True(GetStateOfLastStatusMessage().Severity == BackupStatus.BackupMessageSeverity.Error);
+		}
+
+		private BackupStatus.BackupMessage GetStateOfLastStatusMessage()
+		{
+			JsonDocument jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+			var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
+			return backupStatus.Messages.OrderByDescending(m => m.Timestamp).First();
+		}
+
+		private void WaitForBackup(bool checkError)
 		{
 			while (true)
 			{
@@ -146,11 +177,12 @@ namespace Raven.Tests.Storage
 				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				if (backupStatus.IsRunning == false)
 				{
-					var message = backupStatus.Messages.LastOrDefault(x => x.Message.Contains("Failed"));
+					if (checkError)
+					{
+						Assert.False(backupStatus.Messages.Any(x => x.Severity == BackupStatus.BackupMessageSeverity.Error));
+					}
 
-					if (message == null)
-						return;
-					throw new InvalidOperationException(message.Message);
+					return;
 				}
 				Thread.Sleep(50);
 			}
