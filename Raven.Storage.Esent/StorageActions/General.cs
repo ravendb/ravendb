@@ -33,6 +33,11 @@ namespace Raven.Storage.Esent.StorageActions
 		protected readonly Session session;
 		private readonly Transaction transaction;
 
+		public JET_DBID Dbid
+		{
+			get { return dbid; }
+		}
+
 		public Session Session
 		{
 			get { return session; }

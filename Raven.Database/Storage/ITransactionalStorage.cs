@@ -19,6 +19,7 @@ namespace Raven.Database.Storage
         bool Initialize(IUuidGenerator generator);
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory);
 		void Restore(string backupLocation, string databaseLocation);
+    	long GetDatabaseSizeInBytes();
 
     	string FriendlyName { get; }
     	bool HandleException(Exception exception);

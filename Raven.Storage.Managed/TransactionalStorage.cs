@@ -168,6 +168,11 @@ namespace Raven.Storage.Managed
             new RestoreOperation(backupLocation, databaseLocation).Execute();
         }
 
+    	public long GetDatabaseSizeInBytes()
+    	{
+    		return PersistenceSource.Read(stream => stream.Length);
+    	}
+
     	public string FriendlyName
     	{
 			get { return "Munin"; }

@@ -131,6 +131,22 @@ namespace Raven.Storage.Esent
 			new RestoreOperation(backupLocation, databaseLocation).Execute();
 		}
 
+		public long GetDatabaseSizeInBytes()
+		{
+			long sizeInBytes = -1;
+
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher))
+			{
+				int sizeInPages, pageSize;
+				Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out sizeInPages, JET_DbInfo.Filesize);
+				Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out pageSize, JET_DbInfo.PageSize);
+				sizeInBytes = ((long)sizeInPages) * pageSize;
+			}
+
+			return sizeInBytes;
+
+		}
+
 		public string FriendlyName
 		{
 			get { return "Esent"; }
