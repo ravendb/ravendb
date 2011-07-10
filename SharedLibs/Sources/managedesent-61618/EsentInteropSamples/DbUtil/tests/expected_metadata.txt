@@ -1,0 +1,94 @@
+table
+	ascii
+		Coltyp:     LongText
+		Columnid:   257
+		Code page:  ASCII
+		Max length: 0
+		Grbit:      ColumnTagged
+	binary
+		Coltyp:     LongBinary
+		Columnid:   256
+		Max length: 0
+		Grbit:      ColumnTagged
+	bit
+		Coltyp:     Bit
+		Columnid:   2
+		Max length: 1
+		Grbit:      ColumnFixed
+	byte
+		Coltyp:     UnsignedByte
+		Columnid:   3
+		Max length: 1
+		Grbit:      ColumnFixed
+	currency
+		Coltyp:     Currency
+		Columnid:   6
+		Max length: 8
+		Grbit:      ColumnFixed
+	double
+		Coltyp:     IEEEDouble
+		Columnid:   8
+		Max length: 8
+		Grbit:      ColumnFixed
+	key
+		Coltyp:     Long
+		Columnid:   1
+		Max length: 4
+		Grbit:      ColumnFixed, ColumnAutoincrement
+	long
+		Coltyp:     Long
+		Columnid:   5
+		Max length: 4
+		Grbit:      ColumnFixed
+	short
+		Coltyp:     Short
+		Columnid:   4
+		Max length: 2
+		Grbit:      ColumnFixed
+	single
+		Coltyp:     IEEESingle
+		Columnid:   7
+		Max length: 4
+		Grbit:      ColumnFixed
+	unicode
+		Coltyp:     LongText
+		Columnid:   258
+		Code page:  Unicode
+		Max length: 0
+		Grbit:      ColumnTagged
+	primary
+		Grbit:          IndexUnique, IndexPrimary
+		CultureInfo:    en-US
+		CompareOptions: IgnoreCase, IgnoreKanaType, IgnoreWidth
+			key
+				Coltyp:      Long
+				IsAscending: True
+				IsASCII:     False
+	secondary
+		Grbit:          None
+		CultureInfo:    en-US
+		CompareOptions: IgnoreCase, IgnoreKanaType, IgnoreWidth
+			double
+				Coltyp:      IEEEDouble
+				IsAscending: True
+				IsASCII:     False
+			ascii
+				Coltyp:      LongText
+				IsAscending: False
+				IsASCII:     True
+	unique_secondary
+		Grbit:          IndexUnique
+		CultureInfo:    en-US
+		CompareOptions: IgnoreCase, IgnoreKanaType, IgnoreWidth
+			unicode
+				Coltyp:      LongText
+				IsAscending: False
+				IsASCII:     False
+			binary
+				Coltyp:      LongBinary
+				IsAscending: True
+				IsASCII:     False
+			key
+				Coltyp:      Long
+				IsAscending: True
+				IsASCII:     False

@@ -1,0 +1,95 @@
+﻿<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{7B70729C-8E3E-4D2C-8927-7ADB07D218F8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>PixieTests</RootNamespace>
+    <AssemblyName>PixieTests</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Practices.Unity, Version=1.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\External Components\Unity Application Block\Microsoft.Practices.Unity.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="Rhino.Mocks, Version=3.5.0.1337, Culture=neutral, PublicKeyToken=0b3305902db7183f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\External Components\Rhino.Mocks\Rhino.Mocks.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Any.cs" />
+    <Compile Include="BasicTableTests.cs" />
+    <Compile Include="ColumnTypesTests.cs" />
+    <Compile Include="DisposableObjectIdTests.cs" />
+    <Compile Include="DisposableObjectManagerTests.cs" />
+    <Compile Include="ExceptionTests.cs" />
+    <Compile Include="FluentInterfaceTests.cs" />
+    <Compile Include="IndexDefinitionTests.cs" />
+    <Compile Include="ReadOnlyReadWriteTests.cs" />
+    <Compile Include="InteropConversionTests.cs" />
+    <Compile Include="DefinedAsTests.cs" />
+    <Compile Include="JetParameterTests.cs" />
+    <Compile Include="RetrieveColumnPerfTests.cs" />
+    <Compile Include="SimplePerfTest.cs" />
+    <Compile Include="TestUtilities.cs" />
+    <Compile Include="TransactionTests.cs" />
+    <Compile Include="CursorTests.cs" />
+    <Compile Include="SetupHelper.cs" />
+    <Compile Include="SqlConnectionTests.cs" />
+    <Compile Include="TestSqlImpl.cs" />
+    <Compile Include="SqlImplLayerTests.cs" />
+    <Compile Include="MockConnectionFactoryFixture.cs" />
+    <Compile Include="SimpleTableFixture.cs" />
+    <Compile Include="DataConversionTests.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SqlConnectionLayerTests.cs" />
+    <Compile Include="WeakReferenceOfTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\EsentInterop\EsentInterop.csproj">
+      <Project>{E929E163-52A0-4AAC-917B-6D7FAF70C45E}</Project>
+      <Name>EsentInterop</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Pixie.csproj">
+      <Project>{C04E3673-CBA3-4B15-8D92-98AC0C676ADB}</Project>
+      <Name>Pixie</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

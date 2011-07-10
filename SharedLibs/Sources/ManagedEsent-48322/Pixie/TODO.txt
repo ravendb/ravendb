@@ -1,5 +1,0 @@
-﻿Global schema, invalidate when meta-data updates.
-Move ColumnDefinition members to ColumnMetaData. The IsNonNull flag has to be set if there is an index contianing the column with IndexDisallowNull 
-INSERT OR REPLACE
-Record.HasChanges / IsUnsaved
-
