@@ -119,7 +119,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   Matches exact value
 		/// </summary>
-		void WhereEquals(WhereEqualsParams whereEqualsParams);
+		void WhereEquals(WhereParams whereParams);
 
 		///<summary>
 		/// Negate the next operation

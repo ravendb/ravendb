@@ -90,7 +90,7 @@ namespace Raven.Tests.Indexes
             with_index_and_some_entities(delegate(IDocumentSession session)
             {
             	var result = session.Advanced.LuceneQuery<EntityCount>("someIndex").WaitForNonStaleResults()
-            		.WhereEquals(new WhereEqualsParams
+            		.WhereEquals(new WhereParams
             		{
             			FieldName = "NormalizedName",
             			Value = searchString,
@@ -111,7 +111,7 @@ namespace Raven.Tests.Indexes
             {
                 var result = session.Advanced.LuceneQuery<EntityCount>("someIndex")
                     .WaitForNonStaleResults()
-					.WhereEquals(new WhereEqualsParams
+					.WhereEquals(new WhereParams
 					{
 						FieldName = "NormalizedName",
 						Value = searchString,

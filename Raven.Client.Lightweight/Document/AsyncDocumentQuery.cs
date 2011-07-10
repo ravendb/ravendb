@@ -132,9 +132,9 @@ namespace Raven.Client.Document
         /// <summary>
         /// 	Matches exact value
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(WhereEqualsParams whereEqualsParams)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(WhereParams whereParams)
         {
-            WhereEquals(whereEqualsParams);
+            WhereEquals(whereParams);
             return this;
         }
 

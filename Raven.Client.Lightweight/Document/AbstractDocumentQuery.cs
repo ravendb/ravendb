@@ -501,7 +501,7 @@ namespace Raven.Client.Document
         /// <param name = "fieldType">the type of the field to be sorted.</param>
         public void AddOrder(string fieldName, bool descending, Type fieldType)
         {
-            fieldName = EnsureValidFieldName(new WhereEqualsParams
+            fieldName = EnsureValidFieldName(new WhereParams
             {
                 FieldName = fieldName
             });
@@ -666,7 +666,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </remarks>
         public void WhereEquals(string fieldName, object value)
         {
-            WhereEquals(new WhereEqualsParams
+            WhereEquals(new WhereParams
             {
                 FieldName = fieldName,
                 Value = value
@@ -681,7 +681,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </remarks>
         public void WhereEquals(string fieldName, object value, bool isAnalyzed)
         {
-            WhereEquals(new WhereEqualsParams
+            WhereEquals(new WhereParams
             {
                 AllowWildcards = isAnalyzed,
                 IsAnalyzed = isAnalyzed,
@@ -731,11 +731,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///   Matches exact value
         /// </summary>
-        public void WhereEquals(WhereEqualsParams whereEqualsParams)
+        public void WhereEquals(WhereParams whereParams)
         {
-            EnsureValidFieldName(whereEqualsParams);
-            var transformToEqualValue = TransformToEqualValue(whereEqualsParams);
-			lastEquality = new KeyValuePair<string, string>(whereEqualsParams.FieldName, transformToEqualValue);
+            EnsureValidFieldName(whereParams);
+            var transformToEqualValue = TransformToEqualValue(whereParams);
+			lastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
             if (theQueryText.Length > 0 && theQueryText[theQueryText.Length - 1] != '(')
             {
                 theQueryText.Append(" ");
@@ -743,21 +743,21 @@ If you really want to do in memory filtering on the data returned from the query
 
             NegateIfNeeded();
 
-            theQueryText.Append(whereEqualsParams.FieldName);
+            theQueryText.Append(whereParams.FieldName);
             theQueryText.Append(":");
             theQueryText.Append(transformToEqualValue);
         }
 
-        private string EnsureValidFieldName(WhereEqualsParams whereEqualsParams)
+        private string EnsureValidFieldName(WhereParams whereParams)
         {
-			if (theSession == null || theSession.Conventions == null || whereEqualsParams.IsNestedPath)
-				return whereEqualsParams.FieldName;
+			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath)
+				return whereParams.FieldName;
 
             var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
-			if (identityProperty == null || identityProperty.Name != whereEqualsParams.FieldName)
-				return whereEqualsParams.FieldName;
+			if (identityProperty == null || identityProperty.Name != whereParams.FieldName)
+				return whereParams.FieldName;
         	
-			return whereEqualsParams.FieldName = Constants.DocumentIdFieldName;
+			return whereParams.FieldName = Constants.DocumentIdFieldName;
         }
 
         ///<summary>
@@ -781,7 +781,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public void WhereContains(string fieldName, object value)
         {
-            WhereEquals(new WhereEqualsParams
+            WhereEquals(new WhereParams
             {
                 AllowWildcards = true,
                 IsAnalyzed = true,
@@ -829,7 +829,7 @@ If you really want to do in memory filtering on the data returned from the query
         {
             // NOTE: doesn't fully match StartsWith semantics
             WhereEquals(
-                new WhereEqualsParams
+                new WhereParams
                 {
                     FieldName = fieldName,
                     Value = String.Concat(value, "*"),
@@ -850,7 +850,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             // NOTE: doesn't fully match EndsWith semantics
             WhereEquals(
-                new WhereEqualsParams
+                new WhereParams
                 {
                     FieldName = fieldName,
                     Value = String.Concat("*", value),
@@ -878,12 +878,12 @@ If you really want to do in memory filtering on the data returned from the query
 
             NegateIfNeeded();
 
-            fieldName = EnsureValidFieldName(new WhereEqualsParams { FieldName = fieldName });
+            fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
 
             theQueryText.Append(fieldName).Append(":{");
-            theQueryText.Append(start == null ? "*" : TransformToRangeValue(start));
+            theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
             theQueryText.Append(" TO ");
-            theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(end));
+            theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams{Value = end, FieldName = fieldName}));
             theQueryText.Append("}");
         }
 
@@ -905,11 +905,11 @@ If you really want to do in memory filtering on the data returned from the query
 
             NegateIfNeeded();
 
-            fieldName = EnsureValidFieldName(new WhereEqualsParams { FieldName = fieldName });
+            fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
             theQueryText.Append(fieldName).Append(":[");
-            theQueryText.Append(start == null ? "*" : TransformToRangeValue(start));
+			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
             theQueryText.Append(" TO ");
-            theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(end));
+			theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
             theQueryText.Append("]");
         }
 
@@ -1303,63 +1303,69 @@ If you really want to do in memory filtering on the data returned from the query
        
        
 
-    	private string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
+    	private string TransformToEqualValue(WhereParams whereParams)
         {
-            if (whereEqualsParams.Value == null)
+            if (whereParams.Value == null)
             {
 				return Constants.NullValueNotAnalyzed;
             }
 
-            if (whereEqualsParams.Value is bool)
+            if (whereParams.Value is bool)
             {
-                return (bool)whereEqualsParams.Value ? "true" : "false";
+                return (bool)whereParams.Value ? "true" : "false";
             }
 
-            if (whereEqualsParams.Value is DateTime)
+            if (whereParams.Value is DateTime)
             {
-                return DateTools.DateToString((DateTime)whereEqualsParams.Value, DateTools.Resolution.MILLISECOND);
+                return DateTools.DateToString((DateTime)whereParams.Value, DateTools.Resolution.MILLISECOND);
             }
 			
-			if (whereEqualsParams.Value is DateTimeOffset)
+			if (whereParams.Value is DateTimeOffset)
 			{
-				return DateTools.DateToString(((DateTimeOffset)whereEqualsParams.Value).DateTime, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).DateTime, DateTools.Resolution.MILLISECOND);
 			}
 
-			if(whereEqualsParams.FieldName == Constants.DocumentIdFieldName && whereEqualsParams.Value is string == false)
+			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
-				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereEqualsParams.Value, typeof(T), false);
+				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, typeof(T), false);
 			}
 
-    		var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),
-                                            whereEqualsParams.AllowWildcards && whereEqualsParams.IsAnalyzed);
+    		var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
+                                            whereParams.AllowWildcards && whereParams.IsAnalyzed);
 
-            if (whereEqualsParams.Value is string == false)
+            if (whereParams.Value is string == false)
                 return escaped;
 
-            return whereEqualsParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
+            return whereParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
         }
 
-        private static string TransformToRangeValue(object value)
+        private string TransformToRangeValue(WhereParams whereParams)
         {
-            if (value == null)
+        	if (whereParams.Value == null)
 				return Constants.NullValueNotAnalyzed;
 
-            if (value is int)
-                return NumberUtil.NumberToString((int)value);
-            if (value is long)
-                return NumberUtil.NumberToString((long)value);
-            if (value is decimal)
-                return NumberUtil.NumberToString((double)(decimal)value);
-            if (value is double)
-                return NumberUtil.NumberToString((double)value);
-            if (value is float)
-                return NumberUtil.NumberToString((float)value);
-            if (value is DateTime)
-                return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
-			if (value is DateTimeOffset)
-				return DateTools.DateToString(((DateTimeOffset)value).DateTime, DateTools.Resolution.MILLISECOND);
+			if (whereParams.Value is DateTime)
+				return DateTools.DateToString((DateTime)whereParams.Value, DateTools.Resolution.MILLISECOND);
+			if (whereParams.Value is DateTimeOffset)
+				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).DateTime, DateTools.Resolution.MILLISECOND);
 
-            return RavenQuery.Escape(value.ToString(), false);
+			if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
+			{
+				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, typeof(T), false);
+			}
+            if (whereParams.Value is int)
+                return NumberUtil.NumberToString((int)whereParams.Value);
+            if (whereParams.Value is long)
+                return NumberUtil.NumberToString((long)whereParams.Value);
+            if (whereParams.Value is decimal)
+                return NumberUtil.NumberToString((double)(decimal)whereParams.Value);
+            if (whereParams.Value is double)
+                return NumberUtil.NumberToString((double)whereParams.Value);
+            if (whereParams.Value is float)
+                return NumberUtil.NumberToString((float)whereParams.Value);
+           
+
+            return RavenQuery.Escape(whereParams.Value.ToString(), false);
         }
 
         /// <summary>

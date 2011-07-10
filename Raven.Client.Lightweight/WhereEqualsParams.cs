@@ -3,12 +3,12 @@
 	/// <summary>
 	/// Parameters for the Where Equals call
 	/// </summary>
-	public class WhereEqualsParams
+	public class WhereParams
 	{
 		/// <summary>
 		/// Create a new instance 
 		/// </summary>
-		public WhereEqualsParams()
+		public WhereParams()
 		{
 			IsNestedPath = false;
 			AllowWildcards = false;

@@ -192,7 +192,7 @@ namespace Raven.Client.Linq
 				var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
 
 				luceneQuery.WhereEquals(
-					new WhereEqualsParams
+					new WhereParams
 					{
 						FieldName = expressionMemberInfo.Path,
 						Value = GetValueFromExpression(methodCallExpression.Arguments[1], GetMemberType(expressionMemberInfo)),
@@ -210,7 +210,7 @@ namespace Raven.Client.Linq
 
 			var memberInfo = GetMember(expression.Left);
 
-			luceneQuery.WhereEquals(new WhereEqualsParams
+			luceneQuery.WhereEquals(new WhereParams
 			{
 				FieldName = memberInfo.Path,
 				Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
@@ -244,7 +244,7 @@ namespace Raven.Client.Linq
 			{
 				var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
 				luceneQuery.NegateNext();
-				luceneQuery.WhereEquals(new WhereEqualsParams
+				luceneQuery.WhereEquals(new WhereParams
 				{
 					FieldName = expressionMemberInfo.Path,
 					Value = GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
@@ -253,7 +253,7 @@ namespace Raven.Client.Linq
 				});
 				luceneQuery.AndAlso();
 				luceneQuery
-					.WhereEquals(new WhereEqualsParams
+					.WhereEquals(new WhereParams
 					{
 						FieldName = expressionMemberInfo.Path,
 						Value = "*",
@@ -273,7 +273,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Left);
 
 			luceneQuery.NegateNext();
-			luceneQuery.WhereEquals(new WhereEqualsParams
+			luceneQuery.WhereEquals(new WhereParams
 			{
 				FieldName = memberInfo.Path,
 				Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
@@ -281,7 +281,7 @@ namespace Raven.Client.Linq
 				AllowWildcards = false
 			});
 			luceneQuery.AndAlso();
-			luceneQuery.WhereEquals(new WhereEqualsParams
+			luceneQuery.WhereEquals(new WhereParams
 			{
 				FieldName = memberInfo.Path,
 				Value = "*",
@@ -397,7 +397,7 @@ namespace Raven.Client.Linq
 			{
 				isAnalyzed = memberInfo.Type != typeof(string);
 			}
-			luceneQuery.WhereEquals(new WhereEqualsParams
+			luceneQuery.WhereEquals(new WhereParams
 			{
 				FieldName = memberInfo.Path,
 				Value = GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
@@ -507,7 +507,7 @@ namespace Raven.Client.Linq
 		{
 			if (memberExpression.Type == typeof (bool))
 			{
-				luceneQuery.WhereEquals(new WhereEqualsParams
+				luceneQuery.WhereEquals(new WhereParams
 				{
 					FieldName = memberExpression.Member.Name,
 					Value = boolValue,
@@ -868,8 +868,11 @@ namespace Raven.Client.Linq
 			queryType = SpecialQueryType.FirstOrDefault;
 		}
 		
-		private static string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
+		private  string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
 		{
+			var identityProperty = luceneQuery.DocumentConvention.GetIdentityProperty(typeof(T));
+			if (identityProperty != null && identityProperty.Name == expression.Path)
+				return Constants.DocumentIdFieldName;
 			if (value is int || value is long || value is double || value is float || value is decimal)
 				return expression.Path + "_Range";
 			return expression.Path;

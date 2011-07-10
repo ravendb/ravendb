@@ -215,7 +215,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
-		public IDocumentQuery<T> WhereEquals(WhereEqualsParams whereEqualsParams)
+		public IDocumentQuery<T> WhereEquals(WhereParams whereEqualsParams)
 		{
 			ApplyForAll(query => query.WhereEquals(whereEqualsParams));
 			return this;
