@@ -87,10 +87,12 @@ namespace Raven.Server
         	string restoreLocation = null;
         	Action actionToTake = null;
         	bool launchBrowser = false;
+			var ravenConfiguration = new RavenConfiguration();
 
         	OptionSet optionSet = null;
         	optionSet = new OptionSet
         	{
+				{"config=", "The config section to use", path => ravenConfiguration.LoadFrom(path)},
         		{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart, key)},
         		{"uninstall", "Uninstalls the RavenDB service", key => actionToTake= () => AdminRequired(EnsureStoppedAndUninstall, key)},
         		{"start", "Starts the RavenDB servce", key => actionToTake= () => AdminRequired(StartService, key)},
@@ -98,18 +100,10 @@ namespace Raven.Server
         		{"stop", "Stops the RavenDB service", key => actionToTake= () => AdminRequired(StopService, key)},
         		{"ram", "Run RavenDB in RAM only", key =>
         		{
-					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.All, new RavenConfiguration
-					{
-						Settings =
-							{
-								{"Raven/RunInMemory","true"} 
-							}
-					}, launchBrowser);		
+        			ravenConfiguration.Settings["Raven/RunInMemory"] = "true";
+					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.All, ravenConfiguration, launchBrowser);		
         		}},
-        		{"debug", "Runs RavenDB in debug mode", key =>
-        		{
-					actionToTake = () => RunInDebugMode(null, new RavenConfiguration(), launchBrowser);
-        		}},
+        		{"debug", "Runs RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser)},
 				{"browser|launchbrowser", "After the server starts, launches the browser", key => launchBrowser = true},
         		{"help", "Help about the command line interface", key =>
         		{
@@ -195,8 +189,7 @@ namespace Raven.Server
                     FileName = Assembly.GetExecutingAssembly().Location,
                     Verb = "runas",
                 });
-                if (process != null)
-                    process.WaitForExit();
+                process.WaitForExit();
                 return true;
             }
             catch (Exception)
@@ -205,25 +198,16 @@ namespace Raven.Server
             }
         }
 
-        private static string GetArgument(string[] args)
-        {
-            if (args.Length == 0)
-                return "debug";
-            if (args[0].StartsWith("/") == false)
-                return "help";
-            return args[0].Substring(1);
-        }
-
-        private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode, RavenConfiguration ravenConfiguration, bool lauchBrowser)
+        private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode, RavenConfiguration ravenConfiguration, bool launchBrowser)
         {
         	ConfigureDebugLogging();
 
         	NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
             if (anonymousUserAccessMode.HasValue)
                 ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
-			while (RunServerInDebugMode(ravenConfiguration, lauchBrowser))
+			while (RunServerInDebugMode(ravenConfiguration, launchBrowser))
             {
-            	lauchBrowser = false;
+            	launchBrowser = false;
             }
         }
 

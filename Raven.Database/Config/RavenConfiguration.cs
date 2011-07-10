@@ -4,7 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Configuration;
+using System.Linq;
 
 namespace Raven.Database.Config
 {
@@ -12,15 +16,25 @@ namespace Raven.Database.Config
     {
         public RavenConfiguration()
         {
-            foreach (string setting in ConfigurationManager.AppSettings)
-            {
-                if (setting.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
-                    Settings[setting] = ConfigurationManager.AppSettings[setting];
-            }
-
-            Initialize();
+        	LoadConfigurationAndInitialize(ConfigurationManager.AppSettings.AllKeys.Select(k=> Tuple.Create(k,ConfigurationManager.AppSettings[k])));
         }
 
-        
+    	private void LoadConfigurationAndInitialize(IEnumerable<Tuple<string,string>> values)
+    	{
+    		foreach (var setting in values)
+    		{
+    			if (setting.Item1.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+					Settings[setting.Item1] = setting.Item2;
+    		}
+
+    		Initialize();
+    	}
+
+
+    	public void LoadFrom(string path)
+    	{
+    		var configuration = ConfigurationManager.OpenExeConfiguration(path);
+			LoadConfigurationAndInitialize(configuration.AppSettings.Settings.AllKeys.Select(k => Tuple.Create(k, ConfigurationManager.AppSettings[k])));
+    	}
     }
 }
