@@ -29,7 +29,7 @@ namespace Raven.Tests.Bugs.CompiledIndexes
 		{
 			foreach (var events in source.GroupBy(@event => @event.Network))
 			{
-				foreach (var time in events.Select(x => new { NetworkTimeStamp = (DateTime)x.NetworkTimeStamp }).Distinct())
+				foreach (var time in events.Select(x => new { NetworkTimeStamp =x.NetworkTimeStamp }).Distinct())
 				{
 					DateTime eventTime = new DateTime(2011,5,29).ToUniversalTime();
 					yield return new NetworkList
