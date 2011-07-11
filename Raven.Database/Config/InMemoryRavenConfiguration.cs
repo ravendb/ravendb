@@ -89,7 +89,10 @@ namespace Raven.Database.Config
 			TransactionMode = result;
 
 			DataDirectory = Settings["Raven/DataDir"] ?? @"~\Data";
-			IndexStoragePath = Settings["Raven/IndexStoragePath"] = Path.Combine(DataDirectory, "Indexes");
+			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
+			{
+				IndexStoragePath = Settings["Raven/IndexStoragePath"];
+			}
 
 			// HTTP settings
 			HostName = Settings["Raven/HostName"];
@@ -342,8 +345,17 @@ namespace Raven.Database.Config
 		private string indexStoragePath;
 		public string IndexStoragePath
 		{
-			get { return indexStoragePath; }
-			set { indexStoragePath = value.ToFullPath(); }
+			get
+			{
+				if (string.IsNullOrEmpty(indexStoragePath))
+					return Path.Combine(DataDirectory, "Indexes");
+				
+				return indexStoragePath;
+			}
+			set
+			{
+				indexStoragePath = value.ToFullPath();
+			}
 		}
 
 		protected void ResetContainer()
