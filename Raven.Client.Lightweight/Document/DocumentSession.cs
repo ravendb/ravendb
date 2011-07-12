@@ -38,6 +38,7 @@ namespace Raven.Client.Document
 #if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
+		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 #endif
 		/// <summary>
 		/// Gets the database commands.
@@ -121,7 +122,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		Lazy<T[]> ILazySessionOperations.Load<T>(params string[] ids)
 		{
-			return LazyLoadInternal<T>(ids, new string[0]);
+			return Lazily.Load<T>(ids, null);
 		}
 
 		/// <summary>
@@ -132,10 +133,37 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		Lazy<T> ILazySessionOperations.Load<T>(string id)
 		{
-			var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
-			return AddLazyOperation<T>(lazyLoadOperation);
+			return Lazily.Load(id, (Action<T>)null);
 		}
 
+		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
+		{
+			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
+		}
+
+		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
+		{
+			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
+			return AddLazyOperation(lazyLoadOperation, onEval);
+		}
+
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		Lazy<TResult> ILazySessionOperations.Load<TResult>(ValueType id, Action<TResult> onEval)
+		{
+			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(TResult), false);
+			return Lazily.Load<TResult>(documentKey);
+		}
 
 		/// <summary>
 		/// Begin a load while including the specified path 
@@ -160,8 +188,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		Lazy<T> ILazySessionOperations.Load<T>(ValueType id)
 		{
-			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-			return Lazily.Load<T>(documentKey);
+			return Lazily.Load<T>(id, null);
 		}
 #endif
 
@@ -529,24 +556,29 @@ namespace Raven.Client.Document
 			throw new NotSupportedException();
 		}
 
-		internal Lazy<T> AddLazyOperation<T>(ILazyOperation operation)
+		internal Lazy<T> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval)
 		{
 			pendingLazyOperations.Add(operation);
-			return new Lazy<T>(() =>
+			var lazyValue = new Lazy<T>(() =>
 			{
 				ExecuteAllPendingLazyOperations();
-				return (T)operation.Result;
+				return (T) operation.Result;
 			});
+
+			if (onEval != null)
+				onEvaluateLazy[operation] = theResult => onEval((T) theResult);
+
+			return lazyValue;
 		}
 
 		/// <summary>
 		/// Register to lazily load documents and include
 		/// </summary>
-		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes)
+		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
 		{
 			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
 			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
-			return AddLazyOperation<T[]>(lazyOp);
+			return AddLazyOperation(lazyOp, onEval);
 		}
 
 
@@ -561,6 +593,13 @@ namespace Raven.Client.Document
 				while (ExecuteLazyOperationsSingleStep())
 				{
 					Thread.Sleep(100);
+				}
+
+				foreach (var pendingLazyOperation in pendingLazyOperations)
+				{
+					Action<object> value;
+					if (onEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
+						value(pendingLazyOperation.Result);
 				}
 			}
 			finally

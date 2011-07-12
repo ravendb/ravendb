@@ -37,16 +37,15 @@ namespace Raven.Client.Document.Batches
         /// <param name="ids">The ids.</param>
         public Lazy<T[]> Load(params string[] ids)
         {
-            return session.LazyLoadInternal<T>(ids, includes.ToArray());
+            return session.LazyLoadInternal<T>(ids, includes.ToArray(), null);
         }
 
         /// <summary>
         /// Loads the specified id.
         /// </summary>
-        /// <param name="id">The id.</param>
         public Lazy<T> Load(string id)
         {
-        	var results = session.LazyLoadInternal<T>(new[] { id }, includes.ToArray());
+        	var results = session.LazyLoadInternal<T>(new[] { id }, includes.ToArray(), null);
         	return new Lazy<T>(() => results.Value.First());
         }
 
@@ -85,7 +84,7 @@ namespace Raven.Client.Document.Batches
         /// <param name="ids">The ids.</param>
         public Lazy<TResult[]> Load<TResult>(params string[] ids)
         {
-            return session.LazyLoadInternal<TResult>(ids, includes.ToArray());
+            return session.LazyLoadInternal<TResult>(ids, includes.ToArray(), null);
         }
 
         /// <summary>

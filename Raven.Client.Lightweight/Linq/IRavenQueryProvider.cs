@@ -57,9 +57,9 @@ namespace Raven.Client.Linq
 		IAsyncDocumentQuery<T> ToAsyncLuceneQuery<T>(Expression expression);
 
 		/// <summary>
-		/// Convert the Linq query to a lazy Lucene query
+		/// Convert the Linq query to a lazy Lucene query and provide a function to execute when it is being evaluate
 		/// </summary>
-		Lazy<IEnumerable<T>> Lazily<T>(Expression expression);
+		Lazy<IEnumerable<T>> Lazily<T>(Expression expression, Action<IEnumerable<T>> onEval);
 #endif
 
 		/// <summary>

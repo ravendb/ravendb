@@ -132,11 +132,21 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public static Lazy<IEnumerable<T>> Lazily<T>(this IQueryable<T> source)
 		{
+			return Lazily(source, null);
+		}
+
+		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// As well as a function to execute when the value is evaluated
+		/// </summary>
+		public static Lazy<IEnumerable<T>> Lazily<T>(this IQueryable<T> source, Action<IEnumerable<T>> onEval)
+		{
 			var provider = source.Provider as IRavenQueryProvider;
 			if (provider == null)
 				throw new ArgumentException("You can only use Raven Queryable with Lazily");
 
-			return provider.Lazily<T>(source.Expression);
+			return provider.Lazily(source.Expression, onEval);
 		}
 
 		/// <summary>

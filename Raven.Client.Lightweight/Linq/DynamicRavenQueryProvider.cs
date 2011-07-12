@@ -132,13 +132,13 @@ namespace Raven.Client.Linq
 			return (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
 		}
 
-		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression)
+		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression, Action<IEnumerable<S>> onEval)
 		{
 			var processor = GetQueryProviderProcessor<S>();
 			var query = processor.GetLuceneQueryFor(expression);
 			if (FieldsToFetch.Count > 0)
 				query = query.SelectFields<S>(FieldsToFetch.ToArray());
-			return query.Lazily();
+			return query.Lazily(onEval);
 		}
 
 #endif

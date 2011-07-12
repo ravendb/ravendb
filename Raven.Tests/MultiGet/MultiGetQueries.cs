@@ -54,6 +54,54 @@ namespace Raven.Tests.MultiGet
 			}
 		}
 
+		[Fact]
+		public void WithQueuedActions()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User { Name = "oren" });
+					session.Store(new User());
+					session.Store(new User { Name = "ayende" });
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					IEnumerable<User> users = null;
+					session.Query<User>().Where(x => x.Age == 0).Skip(1).Take(2).Lazily(x => users = x);
+					session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
+					Assert.Equal(2, users.Count());
+				}
+
+			}
+		}
+
+		[Fact]
+		public void WithQueuedActions_Load()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User { Name = "oren" });
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					User user = null;
+					session.Advanced.Lazily.Load<User>("users/1",x => user = x);
+					session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
+					Assert.NotNull(user);
+				}
+
+			}
+		}
 
 		[Fact]
 		public void write_then_read_from_complex_entity_types_lazily()

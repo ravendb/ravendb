@@ -436,6 +436,15 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Lazy<IEnumerable<T>> Lazily()
 		{
+			return Lazily(null);
+		}
+
+		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+		{
 			if (queryOperation == null)
 			{
 				InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
@@ -443,9 +452,10 @@ namespace Raven.Client.Document
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation);
 
-			return ((DocumentSession)theSession).AddLazyOperation<IEnumerable<T>>(lazyQueryOperation);
+			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
-        
+
+
 #endif
 
 #if !NET_3_5

@@ -1,5 +1,6 @@
 ﻿#if !NET_3_5
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Raven.Client.Document.Batches
@@ -24,17 +25,22 @@ namespace Raven.Client.Document.Batches
 		/// <summary>
 		/// Loads the specified ids.
 		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <returns></returns>
 		Lazy<TResult[]> Load<TResult>(params string[] ids);
+
+		/// <summary>
+		/// Loads the specified ids and a function to call when it is evaluated
+		/// </summary>
+		Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval);
 
 		/// <summary>
 		/// Loads the specified id.
 		/// </summary>
-		/// <typeparam name="TResult"></typeparam>
-		/// <param name="id">The id.</param>
-		/// <returns></returns>
 		Lazy<TResult> Load<TResult>(string id);
+
+		/// <summary>
+		/// Loads the specified id and a function to call when it is evaluated
+		/// </summary>
+		Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval);
 
 		/// <summary>
 		/// Loads the specified entities with the specified id after applying
@@ -48,7 +54,21 @@ namespace Raven.Client.Document.Batches
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		Lazy<TResult> Load<TResult>(ValueType id);	
+		Lazy<TResult> Load<TResult>(ValueType id);
+
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		Lazy<TResult> Load<TResult>(ValueType id, Action<TResult> onEval);	
 	}
 
 	/// <summary>

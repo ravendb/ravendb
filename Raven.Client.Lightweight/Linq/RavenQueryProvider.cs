@@ -217,13 +217,13 @@ namespace Raven.Client.Linq
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression)
+		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression, Action<IEnumerable<S>> onEval )
 		{
 			var processor = GetQueryProviderProcessor<S>();
 			var query = processor.GetLuceneQueryFor(expression);
 			if (FieldsToFetch.Count > 0)
 				query = query.SelectFields<S>(FieldsToFetch.ToArray());
-			return query.Lazily();
+			return query.Lazily(onEval);
 		}
 #endif
 
