@@ -6,8 +6,14 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.IsolatedStorage;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
+using NLog;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
@@ -19,6 +25,8 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public class ReplicationInformer
 	{
+		private Logger log = LogManager.GetCurrentClassLogger();
+
 		private readonly DocumentConvention conventions;
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		private DateTime lastReplicationUpdate = DateTime.MinValue;
@@ -63,7 +71,12 @@ namespace Raven.Client.Connection
 		{
 			if (lastReplicationUpdate.AddMinutes(5) > DateTime.UtcNow)
 				return;
-			RefreshReplicationInformation(serverClient);
+			lock (replicationLock)
+			{
+				if (lastReplicationUpdate.AddMinutes(5) > DateTime.UtcNow)
+					return;
+				RefreshReplicationInformation(serverClient);
+			}
 		}
 
 		private class IntHolder
@@ -162,14 +175,29 @@ namespace Raven.Client.Connection
 		/// <param name="commands">The commands.</param>
 		public void RefreshReplicationInformation(ServerClient commands)
 		{
+			var serverHash = GetServerHash(commands);
+
 			lock (replicationLock)
 			{
 
 				lastReplicationUpdate = DateTime.UtcNow;
-				var document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
-				failureCounts[commands.Url] = new IntHolder();// we just hit the master, so we can reset its failure count
+				JsonDocument document;
+				try
+				{
+					document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
+					failureCounts[commands.Url] = new IntHolder();// we just hit the master, so we can reset its failure count
+					TrySavingReplicationInformationToLocalCache(serverHash, document);
+				}
+				catch (Exception e)
+				{
+					log.ErrorException("Could not contact master for new replication information", e);
+					document = TryLoadReplicationInformationFromLocalCache(serverHash);
+				}
 				if (document == null)
 					return;
+
+
+
 				var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
 				replicationDestinations = replicationDocument.Destinations.Select(x => x.Url)
 					// filter out replication destination that don't have the url setup, we don't know how to reach them
@@ -183,6 +211,39 @@ namespace Raven.Client.Connection
 						continue;
 					failureCounts[replicationDestination] = new IntHolder();
 				}
+			}
+		}
+
+		private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
+		{
+			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForApplication())
+			{
+				var path = "RavenDB Replication Information For - " + serverHash;
+				if (machineStoreForApplication.FileExists(path) == false)
+					return null;
+				using (
+					var stream = machineStoreForApplication.OpenFile(path,
+					                                                 FileMode.Open))
+				{
+					return stream.ToJObject().ToJsonDocument();
+				}
+			}
+		}
+
+		private void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
+		{
+			using(var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForApplication())
+			using (var stream = machineStoreForApplication.CreateFile("RavenDB Replication Information For - " + serverHash))
+			{
+				document.ToJson().WriteTo(stream);
+			}
+		}
+
+		private static string GetServerHash(ServerClient commands)
+		{
+			using (var md5 = MD5.Create())
+			{
+				return Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(commands.Url)));
 			}
 		}
 
