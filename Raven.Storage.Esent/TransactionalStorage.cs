@@ -42,9 +42,9 @@ namespace Raven.Storage.Esent
 		private JET_INSTANCE instance;
 		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
 		private IUuidGenerator generator;
-	    private IDocumentCacher documentCacher = new DocumentCacher();
+		private readonly IDocumentCacher documentCacher;
 
-	    [ImportMany]
+		[ImportMany]
 		public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
 
 		[ImportMany]
@@ -69,6 +69,7 @@ namespace Raven.Storage.Esent
 
 		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
 		{
+			documentCacher = new DocumentCacher(configuration);
 			database = configuration.DataDirectory;
 			this.configuration = configuration;
 			this.onCommit = onCommit;
@@ -109,8 +110,8 @@ namespace Raven.Storage.Esent
 				if (disposed)
 					return;
 				GC.SuppressFinalize(this);
-                if (documentCacher != null)
-                    documentCacher.Dispose();
+				if (documentCacher != null)
+					documentCacher.Dispose();
 				Api.JetTerm2(instance, TermGrbit.Complete);
 			}
 			finally

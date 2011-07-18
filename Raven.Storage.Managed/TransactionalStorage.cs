@@ -23,179 +23,179 @@ using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
 {
-    public class TransactionalStorage : ITransactionalStorage
-    {
-        private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+	public class TransactionalStorage : ITransactionalStorage
+	{
+		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
 
-        private readonly InMemoryRavenConfiguration configuration;
-        private readonly Action onCommit;
-        private TableStorage tableStroage;
-        private IPersistentSource persistenceSource;
-        private bool disposed;
-        private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
-        private Timer idleTimer;
-        private long lastUsageTime;
-        private IUuidGenerator uuidGenerator;
-        private readonly IDocumentCacher documentCacher;
+		private readonly InMemoryRavenConfiguration configuration;
+		private readonly Action onCommit;
+		private TableStorage tableStroage;
+		private IPersistentSource persistenceSource;
+		private bool disposed;
+		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+		private Timer idleTimer;
+		private long lastUsageTime;
+		private IUuidGenerator uuidGenerator;
+		private readonly IDocumentCacher documentCacher;
 
-        public IPersistentSource PersistenceSource
-        {
-            get { return persistenceSource; }
-        }
+		public IPersistentSource PersistenceSource
+		{
+			get { return persistenceSource; }
+		}
 
-        [ImportMany]
+		[ImportMany]
 		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
-        public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
-        {
-            this.configuration = configuration;
-            this.onCommit = onCommit;
-            documentCacher = new DocumentCacher();
-        }
+		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
+		{
+			this.configuration = configuration;
+			this.onCommit = onCommit;
+			documentCacher = new DocumentCacher(configuration);
+		}
 
-        public void Dispose()
-        {
-            disposerLock.EnterWriteLock();
-            try
-            {
-                if (disposed)
-                    return;
-                if (documentCacher != null)
-                    documentCacher.Dispose();
-                if (idleTimer != null)
-                    idleTimer.Dispose();
-                if (persistenceSource != null)
-                    persistenceSource.Dispose();
+		public void Dispose()
+		{
+			disposerLock.EnterWriteLock();
+			try
+			{
+				if (disposed)
+					return;
+				if (documentCacher != null)
+					documentCacher.Dispose();
+				if (idleTimer != null)
+					idleTimer.Dispose();
+				if (persistenceSource != null)
+					persistenceSource.Dispose();
 				if(tableStroage != null)
 					tableStroage.Dispose();
-            }
-            finally
-            {
-                disposed = true;
-                disposerLock.ExitWriteLock();
-            }
-        }
+			}
+			finally
+			{
+				disposed = true;
+				disposerLock.ExitWriteLock();
+			}
+		}
 
-        public Guid Id
-        {
-            get; private set;
-        }
+		public Guid Id
+		{
+			get; private set;
+		}
 
-        [DebuggerNonUserCode]
-        public void Batch(Action<IStorageActionsAccessor> action)
-        {
+		[DebuggerNonUserCode]
+		public void Batch(Action<IStorageActionsAccessor> action)
+		{
 			if(current.Value != null)
-            {
-                action(current.Value);
-                return;
-            }
-            disposerLock.EnterReadLock();
-            try
-            {
+			{
+				action(current.Value);
+				return;
+			}
+			disposerLock.EnterReadLock();
+			try
+			{
 				if (disposed)
 				{
 					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
 
-                Interlocked.Exchange(ref lastUsageTime, DateTime.Now.ToBinary());
-                using (tableStroage.BeginTransaction())
-                {
-                    var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
-                    current.Value = storageActionsAccessor;
-                    action(current.Value);
-                    tableStroage.Commit();
-                    storageActionsAccessor.InvokeOnCommit();
-                    onCommit();
-                }
-            }
-            finally
-            {
-                disposerLock.ExitReadLock();
-                current.Value = null;
-            }
-        }
+				Interlocked.Exchange(ref lastUsageTime, DateTime.Now.ToBinary());
+				using (tableStroage.BeginTransaction())
+				{
+					var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
+					current.Value = storageActionsAccessor;
+					action(current.Value);
+					tableStroage.Commit();
+					storageActionsAccessor.InvokeOnCommit();
+					onCommit();
+				}
+			}
+			finally
+			{
+				disposerLock.ExitReadLock();
+				current.Value = null;
+			}
+		}
 
-        public void ExecuteImmediatelyOrRegisterForSyncronization(Action action)
-        {
-            if (current.Value == null)
-            {
-                action();
-                return;
-            }
-            current.Value.OnCommit += action;
-        }
+		public void ExecuteImmediatelyOrRegisterForSyncronization(Action action)
+		{
+			if (current.Value == null)
+			{
+				action();
+				return;
+			}
+			current.Value.OnCommit += action;
+		}
 
-        public bool Initialize(IUuidGenerator generator)
-        {
-            uuidGenerator = generator;
-            if (configuration.RunInMemory  == false && Directory.Exists(configuration.DataDirectory) == false)
-                Directory.CreateDirectory(configuration.DataDirectory);
+		public bool Initialize(IUuidGenerator generator)
+		{
+			uuidGenerator = generator;
+			if (configuration.RunInMemory  == false && Directory.Exists(configuration.DataDirectory) == false)
+				Directory.CreateDirectory(configuration.DataDirectory);
 
-            persistenceSource = configuration.RunInMemory
-                          ? (IPersistentSource)new MemoryPersistentSource()
-                          : new FileBasedPersistentSource(configuration.DataDirectory, "Raven", configuration.TransactionMode == TransactionMode.Safe);
+			persistenceSource = configuration.RunInMemory
+						  ? (IPersistentSource)new MemoryPersistentSource()
+						  : new FileBasedPersistentSource(configuration.DataDirectory, "Raven", configuration.TransactionMode == TransactionMode.Safe);
 
-            tableStroage = new TableStorage(persistenceSource);
+			tableStroage = new TableStorage(persistenceSource);
 
-            idleTimer = new Timer(MaybeOnIdle, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+			idleTimer = new Timer(MaybeOnIdle, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
-            tableStroage.Initialze();
+			tableStroage.Initialze();
 
-            if(persistenceSource.CreatedNew)
-            {
-                Id = Guid.NewGuid();
-                Batch(accessor => tableStroage.Details.Put("id", Id.ToByteArray()));
-            }
-            else
-            {
-                var readResult = tableStroage.Details.Read("id");
-                Id = new Guid(readResult.Data());
-            }
+			if(persistenceSource.CreatedNew)
+			{
+				Id = Guid.NewGuid();
+				Batch(accessor => tableStroage.Details.Put("id", Id.ToByteArray()));
+			}
+			else
+			{
+				var readResult = tableStroage.Details.Read("id");
+				Id = new Guid(readResult.Data());
+			}
 
-            return persistenceSource.CreatedNew;
-        }
+			return persistenceSource.CreatedNew;
+		}
 
-        public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory)
-        {
-            var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory);
-            ThreadPool.QueueUserWorkItem(backupOperation.Execute);
+		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory)
+		{
+			var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory);
+			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		
-        }
+		}
 
-        public void Restore(string backupLocation, string databaseLocation)
-        {
-            new RestoreOperation(backupLocation, databaseLocation).Execute();
-        }
+		public void Restore(string backupLocation, string databaseLocation)
+		{
+			new RestoreOperation(backupLocation, databaseLocation).Execute();
+		}
 
-    	public long GetDatabaseSizeInBytes()
-    	{
-    		return PersistenceSource.Read(stream => stream.Length);
-    	}
+		public long GetDatabaseSizeInBytes()
+		{
+			return PersistenceSource.Read(stream => stream.Length);
+		}
 
-    	public string FriendlyName
-    	{
+		public string FriendlyName
+		{
 			get { return "Munin"; }
-    	}
+		}
 
-    	public bool HandleException(Exception exception)
-        {
-            return false;
-        }
+		public bool HandleException(Exception exception)
+		{
+			return false;
+		}
 
-        private void MaybeOnIdle(object _)
-        {
-            var ticks = Interlocked.Read(ref lastUsageTime);
-            var lastUsage = DateTime.FromBinary(ticks);
-            if ((DateTime.Now - lastUsage).TotalSeconds < 30)
-                return;
+		private void MaybeOnIdle(object _)
+		{
+			var ticks = Interlocked.Read(ref lastUsageTime);
+			var lastUsage = DateTime.FromBinary(ticks);
+			if ((DateTime.Now - lastUsage).TotalSeconds < 30)
+				return;
 
-            tableStroage.PerformIdleTasks();
-        }
+			tableStroage.PerformIdleTasks();
+		}
 
-    	public void EnsureCapacity(int value)
-    	{
-    		persistenceSource.EnsureCapacity(value);
-    	}
-    }
+		public void EnsureCapacity(int value)
+		{
+			persistenceSource.EnsureCapacity(value);
+		}
+	}
 }

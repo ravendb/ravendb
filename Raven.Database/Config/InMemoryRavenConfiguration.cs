@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
@@ -53,6 +54,15 @@ namespace Raven.Database.Config
 								? ThreadPriority.Normal
 								: (ThreadPriority)Enum.Parse(typeof(ThreadPriority), backgroundTasksPriority);
 
+			var memoryCacheLimitPercentage = Settings["Raven/MemoryCacheLimitPercentage"];
+			MemoryCacheLimitPercentage = memoryCacheLimitPercentage == null
+								? MemoryCache.Default.PhysicalMemoryLimit
+								: int.Parse(memoryCacheLimitPercentage);
+			var memoryCacheLimitCheckInterval = Settings["Raven/MemoryCacheLimitCheckInterval"];
+			MemoryCacheLimitCheckInterval = memoryCacheLimitCheckInterval == null
+								? MemoryCache.Default.PollingInterval
+								: TimeSpan.Parse(memoryCacheLimitCheckInterval);
+
 			// Index settings
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
 			MaxNumberOfItemsToIndexInSingleBatch = maxNumberOfItemsToIndexInSingleBatch != null ? int.Parse(maxNumberOfItemsToIndexInSingleBatch) : 2500;
@@ -93,7 +103,7 @@ namespace Raven.Database.Config
 
 			// HTTP settings
 			HostName = Settings["Raven/HostName"];
-		    Port = PortUtil.GetPort(Settings["Raven/Port"]);
+			Port = PortUtil.GetPort(Settings["Raven/Port"]);
 			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? "/";
 
 			if (VirtualDirectory.EndsWith("/"))
@@ -144,6 +154,19 @@ namespace Raven.Database.Config
 		/// </summary>
 		public int MaxPageSize { get; set; }
 
+		/// <summary>
+		/// Percentage of physical memory used for caching
+		/// Allowed values: 0-99 (0 = autosize)
+		/// Default: 99 (or value provided by system.runtime.caching app config)
+		/// </summary>
+		public long MemoryCacheLimitPercentage { get; set; }
+
+		/// <summary>
+		/// Interval for checking the memory cache limits
+		/// Allowed values: max precision is 1 second
+		/// Default: 00:02:00 (or value provided by system.runtime.caching app config)
+		/// </summary>
+		public TimeSpan MemoryCacheLimitCheckInterval { get; set; }
 #endregion
 
 #region Index settings
@@ -390,15 +413,15 @@ namespace Raven.Database.Config
 		public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
 		{
 			var storageEngine = SelectStorageEngine();
-		    switch (storageEngine.ToLowerInvariant())
-		    {
-                case "esent":
-		            storageEngine = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
-		            break;
-                case "munin":
-		            storageEngine = "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
-		            break;
-		    }
+			switch (storageEngine.ToLowerInvariant())
+			{
+				case "esent":
+					storageEngine = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+					break;
+				case "munin":
+					storageEngine = "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+					break;
+			}
 			var type = Type.GetType(storageEngine);
 
 			if (type == null)
