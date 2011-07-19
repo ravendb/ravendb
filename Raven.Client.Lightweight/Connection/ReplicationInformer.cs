@@ -186,7 +186,6 @@ namespace Raven.Client.Connection
 				{
 					document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
 					failureCounts[commands.Url] = new IntHolder();// we just hit the master, so we can reset its failure count
-					TrySavingReplicationInformationToLocalCache(serverHash, document);
 				}
 				catch (Exception e)
 				{
@@ -196,6 +195,7 @@ namespace Raven.Client.Connection
 				if (document == null)
 					return;
 
+				TrySavingReplicationInformationToLocalCache(serverHash, document);
 
 
 				var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
@@ -216,26 +216,30 @@ namespace Raven.Client.Connection
 
 		private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
 		{
-			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForApplication())
+			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 			{
 				var path = "RavenDB Replication Information For - " + serverHash;
-				if (machineStoreForApplication.FileExists(path) == false)
+
+				if (machineStoreForApplication.GetFileNames(path).Length == 0)
 					return null;
-				using (
-					var stream = machineStoreForApplication.OpenFile(path,
-					                                                 FileMode.Open))
+				
+				using (var stream = new IsolatedStorageFileStream(path, FileMode.Open, machineStoreForApplication))
 				{
 					return stream.ToJObject().ToJsonDocument();
 				}
+				
 			}
 		}
 
 		private void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
 		{
-			using(var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForApplication())
-			using (var stream = machineStoreForApplication.CreateFile("RavenDB Replication Information For - " + serverHash))
+			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 			{
-				document.ToJson().WriteTo(stream);
+				var path = "RavenDB Replication Information For - " + serverHash;
+				using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
+				{
+					document.ToJson().WriteTo(stream);
+				}
 			}
 		}
 
@@ -243,7 +247,7 @@ namespace Raven.Client.Connection
 		{
 			using (var md5 = MD5.Create())
 			{
-				return Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(commands.Url)));
+				return BitConverter.ToString(md5.ComputeHash(Encoding.UTF8.GetBytes(commands.Url)));
 			}
 		}
 
