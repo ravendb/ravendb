@@ -65,8 +65,8 @@ namespace Raven.Client.Embedded
         /// <value>The data directory.</value>
         public string DataDirectory
         {
-            get { return Configuration.Settings["Raven/DataDir"]; }
-			set { Configuration.Settings["Raven/DataDir"] = value; }
+            get { return Configuration.DataDirectory; }
+			set { Configuration.DataDirectory = value; }
         }
 
         ///<summary>
