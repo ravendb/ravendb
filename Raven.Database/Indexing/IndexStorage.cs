@@ -71,35 +71,28 @@ namespace Raven.Database.Indexing
 		{
 			Lucene.Net.Store.Directory directory;
 			if (indexDefinition.IsTemp || configuration.RunInMemory)
+			{
 				directory = new RAMDirectory();
+				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close(); // creating index structure
+			}
 			else
 			{
 				var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
 				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
-
-				if (Directory.Exists(indexFullPath))
-				{
-					// We remove the Lucene write lock manually on startup since it is known
-					// Perhaps we need to check here if it was corrupted and invalidate it if it was (this is why we
-					// check explicitly and not just trying a brute force delete
-					var files = Directory.GetFiles(indexFullPath, "write.lock", SearchOption.TopDirectoryOnly);
-					if (files.Length == 1)
-					{
-						// Attempt soft delete, skip if not successful
-						try
-						{
-							File.Delete(Path.Combine(indexFullPath, "write.lock"));
-						}
-						catch (UnauthorizedAccessException) {}
-						catch(IOException){}
-					}
-				}
-
 				directory = FSDirectory.Open(new DirectoryInfo(indexFullPath));
-			}
 
-			//creating index structure if we need to
-			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
+				if (!IndexReader.IndexExists(directory))
+				{
+					//creating index structure if we need to
+					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
+				}
+				else
+				{
+					// forcefully unlock locked indexes if any
+					if (IndexWriter.IsLocked(directory))
+						IndexWriter.Unlock(directory);
+				}
+			}
 
 			return directory;
 		}
