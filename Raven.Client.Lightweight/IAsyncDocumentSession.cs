@@ -40,9 +40,15 @@ namespace Raven.Client
 		/// <param name="path">The path.</param>
 		IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path);
 
+
+		/// <summary>
+		/// Stores the specified entity with the specified etag.
+		/// The entity will be saved when <see cref="SaveChangesAsync"/> is called.
+		/// </summary>
+		void Store(object entity, Guid etag);
 	
 		/// <summary>
-		/// Stores the specified entity in the session. The entity will be saved when <see cref="IDocumentSession.SaveChanges"/> is called.
+		/// Stores the specified entity in the session. The entity will be saved when <see cref="SaveChangesAsync"/> is called.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		void Store(object entity);

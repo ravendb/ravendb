@@ -163,7 +163,19 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value></value>
 		public bool UseOptimisticConcurrency { get; set; }
-		
+
+		/// <summary>
+		/// Gets the ETag for the specified entity.
+		/// If the entity is transient, it will load the etag from the store
+		/// and associate the current state of the entity with the etag from the server.
+		/// </summary>
+		/// <param name="instance">The instance.</param>
+		/// <returns></returns>
+		public Guid? GetEtagFor<T>(T instance)
+		{
+			return GetDocumentMetadata(instance).ETag;
+		}
+
 		/// <summary>
 		/// Gets the metadata for the specified entity.
 		/// </summary>
@@ -172,14 +184,19 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public RavenJObject GetMetadataFor<T>(T instance)
 		{
+			return GetDocumentMetadata(instance).Metadata;
+		}
+
+		private DocumentMetadata GetDocumentMetadata<T>(T instance)
+		{
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
 			{
 				string id;
 				if(TryGetIdFromInstance(instance, out id)
 #if !NET_3_5
-					|| (instance is IDynamicMetaObjectProvider && 
-					TryGetIdFromDynamic(instance, out id) )
+				   || (instance is IDynamicMetaObjectProvider && 
+				       TryGetIdFromDynamic(instance, out id) )
 #endif 
 					)
 				{
@@ -199,7 +216,7 @@ namespace Raven.Client.Document
 					throw new InvalidOperationException("Could not find the document key for " + instance);
 				}
 			}
-			return value.Metadata;
+			return value;
 		}
 
 		/// <summary>
@@ -485,8 +502,20 @@ more responsive application.
 		/// <summary>
 		/// Stores the specified entity in the session. The entity will be saved when SaveChanges is called.
 		/// </summary>
-		/// <param name="entity">The entity.</param>
 		public void Store(object entity)
+		{
+			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?)null);
+		}
+
+		/// <summary>
+		/// Stores the specified entity in the session. The entity will be saved when SaveChanges is called.
+		/// </summary>
+		public void Store(object entity, Guid etag)
+		{
+			StoreInternal(entity, etag);
+		}
+
+		private void StoreInternal(object entity, Guid? etag)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
@@ -538,7 +567,7 @@ more responsive application.
 				Key = id,
 				Metadata = metadata,
 				OriginalMetadata = new RavenJObject(),
-				ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
+				ETag = etag,
 				OriginalValue = new RavenJObject()
 			});
 			if (id != null)

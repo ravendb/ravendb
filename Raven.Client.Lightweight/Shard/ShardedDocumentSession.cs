@@ -124,6 +124,19 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
+		/// Gets the ETag for the specified entity.
+		/// If the entity is transient, it will load the etag from the store
+		/// and associate the current state of the entity with the etag from the server.
+		/// </summary>
+		/// <param name="instance">The instance.</param>
+		/// <returns></returns>
+		public Guid? GetEtagFor<T>(T instance)
+		{
+			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
+			return GetSingleShardSession(shardIds).Advanced.GetEtagFor(instance);
+		}
+
+		/// <summary>
 		/// Gets the document id.
 		/// </summary>
 		/// <param name="instance">The instance.</param>
@@ -409,6 +422,18 @@ namespace Raven.Client.Shard
 			if (shardSession == null)
 				throw new InvalidOperationException("Can't find a shard with identifier: " + shardId);
 			return shardSession;
+		}
+
+		/// <summary>
+		/// Stores the specified entity with the specified etag
+		/// </summary>
+		public void Store(object entity, Guid etag)
+		{
+			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForNewObject(entity);
+			if (String.IsNullOrEmpty(shardId))
+				throw new InvalidOperationException("Can't find a shard to use for entity: " + entity);
+
+			GetSingleShardSession(shardId).Store(entity, etag);
 		}
 
 		/// <summary>

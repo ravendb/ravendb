@@ -106,6 +106,11 @@ namespace Raven.Client
 		/// </summary>
 		void SaveChanges();
 
+		/// <summary>
+		/// Stores the specified entity with the specified etag
+		/// </summary>
+		void Store(object entity, Guid etag);
+
 #if !NET_3_5        
 		/// <summary>
 		/// Stores the specified dynamic entity.

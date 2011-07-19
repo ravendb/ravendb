@@ -104,6 +104,15 @@ namespace Raven.Client
         /// <returns></returns>
         RavenJObject GetMetadataFor<T>(T instance);
 
+		/// <summary>
+		/// Gets the ETag for the specified entity.
+		/// If the entity is transient, it will load the etag from the store
+		/// and associate the current state of the entity with the etag from the server.
+		/// </summary>
+		/// <param name="instance">The instance.</param>
+		/// <returns></returns>
+		Guid? GetEtagFor<T>(T instance);
+
         /// <summary>
         /// Gets the document id for the specified entity.
         /// </summary>
