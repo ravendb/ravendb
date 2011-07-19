@@ -75,11 +75,31 @@ namespace Raven.Database.Indexing
 			else
 			{
 				var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
-				directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory))));
+				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
 
-				//creating index structure if we need to
-				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
+				if (Directory.Exists(indexFullPath))
+				{
+					// We remove the Lucene write lock manually on startup since it is known
+					// Perhaps we need to check here if it was corrupted and invalidate it if it was (this is why we
+					// check explicitly and not just trying a brute force delete
+					var files = Directory.GetFiles(indexFullPath, "write.lock", SearchOption.TopDirectoryOnly);
+					if (files.Length == 1)
+					{
+						// Attempt soft delete, skip if not successful
+						try
+						{
+							File.Delete(Path.Combine(indexFullPath, "write.lock"));
+						}
+						catch (UnauthorizedAccessException) {}
+						catch(IOException){}
+					}
+				}
+
+				directory = FSDirectory.Open(new DirectoryInfo(indexFullPath));
 			}
+
+			//creating index structure if we need to
+			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
 
 			return directory;
 		}
