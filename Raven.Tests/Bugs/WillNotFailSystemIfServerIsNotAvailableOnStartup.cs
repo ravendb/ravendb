@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs
                 Url = "http://localhost:8080"
             }.Initialize())
             {
-                Assert.Throws<WebException>(() => store.OpenSession());
+                Assert.Throws<WebException>(() => store.OpenSession().Load<User>("user/1"));
                 using (GetNewServer(8080,path))
                 {
                     using (var session = store.OpenSession())
