@@ -568,6 +568,16 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed.
+		/// Also provide a function to execute when the value is evaluated
+		/// </summary>
+		public Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
 		public Task<IList<T>> ToListAsync()

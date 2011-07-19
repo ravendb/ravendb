@@ -12,6 +12,12 @@ namespace Raven.Database.Backup
 	{
 		public const string RavenBackupStatusDocumentKey = "Raven/Backup/Status";
 
+		public enum BackupMessageSeverity
+		{
+			Informational,
+			Error
+		}
+
 		public DateTime Started { get; set; }
 		public DateTime? Completed { get; set; }
 		public bool IsRunning { get; set; }
@@ -21,6 +27,7 @@ namespace Raven.Database.Backup
 		{
 			public string Message { get; set; }
 			public DateTime Timestamp { get; set; }
+			public BackupMessageSeverity Severity { get; set; }
 		}
 
 		public BackupStatus()

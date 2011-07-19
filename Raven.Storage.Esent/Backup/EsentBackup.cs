@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database.Backup;
 
 namespace Raven.Storage.Esent.Backup
 {
@@ -12,7 +13,7 @@ namespace Raven.Storage.Esent.Backup
 	{
 		private readonly JET_INSTANCE instance;
 		private readonly string destination;
-		public event Action<string> Notify = delegate { };
+		public event Action<string,BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
 		public EsentBackup(JET_INSTANCE instance, string destination)
 		{
@@ -30,7 +31,7 @@ namespace Raven.Storage.Esent.Backup
 
 		private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
 		{
-			Notify(string.Format("Esent {0} {1} {2}", snp, snt, data).Trim());
+			Notify(string.Format("Esent {0} {1} {2}", snp, snt, data).Trim(), BackupStatus.BackupMessageSeverity.Informational);
 			return JET_err.Success;
 		}
 	}

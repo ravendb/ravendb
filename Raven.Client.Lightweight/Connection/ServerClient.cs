@@ -1065,7 +1065,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var requestUri = url + "/multi_get";
 			if (convention.UseParallelMultiGet)
-				requestUri += "?prallel=yes";
+				requestUri += "?parallel=yes";
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "POST", credentials, convention);
 
 			var cachedData = PreparingForCachingRequest(requests, requestUri);

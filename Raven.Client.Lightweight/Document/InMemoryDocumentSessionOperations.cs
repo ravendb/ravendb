@@ -446,8 +446,16 @@ more responsive application.
 		{
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
-			if (identityProperty == null) 
+			if (identityProperty == null)
+			{
+#if !NET_3_5
+				if (entity is IDynamicMetaObjectProvider)
+				{
+					TrySetIdOnynamic(entity, id);
+				}
+#endif
 				return;
+			}
 
 			if (identityProperty.CanWrite)
 			{
@@ -534,7 +542,7 @@ more responsive application.
 					if (id != null)
 					{
 						// Store it back into the Id field so the client has access to to it                    
-						((dynamic) entity).Id = id;
+						TrySetIdOnynamic(entity, id);
 					}
 				}
 			}
@@ -629,6 +637,17 @@ more responsive application.
 			{
 				id = null;
 				return false;
+			}
+		}
+
+		private static void TrySetIdOnynamic(dynamic entity, string id)
+		{
+			try
+			{
+				entity.Id = id;
+			}
+			catch (RuntimeBinderException)
+			{
 			}
 		}
 #endif

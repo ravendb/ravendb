@@ -186,7 +186,7 @@ namespace Raven.Client.Connection
 			{
 				Data = text,
 				Time = DateTimeOffset.Now,
-				Headers = headers
+				Headers = new NameValueCollection(headers)
 			}, new CacheItemPolicy()); // cache as much as possible, for as long as possible, using the default cache limits
 		}
 
