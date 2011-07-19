@@ -41,7 +41,7 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
-			UseParallelMultiGet = true;
+			UseParallelMultiGet = false;
 			DefaultQueryingConsistency = ConsistencyOptions.MonotonicRead;
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
@@ -282,7 +282,7 @@ namespace Raven.Client.Document
 		/// Instruct RavenDB to parallel Multi Get processing 
 		/// when handling lazy requests
 		/// </summary>
-		public bool UseParallelMultiGet { get; set; }
+		public bool UseParallelMultiGet { get; private set; }
 
 		/// <summary>
 		/// Creates the serializer.
