@@ -277,5 +277,42 @@ namespace Raven.Tests.MultiGet
 
 			}
 		}
+
+		[Fact]
+		public void CanGetStatisticsWithLazyQueryResults()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore {Url = "http://localhost:8080"}.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User {Name = "oren"});
+					session.Store(new User());
+					session.Store(new User {Name = "ayende"});
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					session.Query<User>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x => x.Name == "test")
+						.ToList();
+				}
+				using (var session = store.OpenSession())
+				{
+					RavenQueryStatistics stats;
+					RavenQueryStatistics stats2;
+					var result1 = session.Query<User>().Statistics(out stats).Where(x => x.Name == "oren").Lazily();
+					var result2 = session.Query<User>().Statistics(out stats2).Where(x => x.Name == "ayende").Lazily();
+					Assert.NotEmpty(result2.Value);
+
+					Assert.Equal(1, stats.TotalResults);
+					Assert.Equal(1, stats2.TotalResults);
+				}
+
+			}
+		}
 	}
 }
