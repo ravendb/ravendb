@@ -12,10 +12,12 @@ namespace Raven.Client.Document.Batches
 	public class LazyQueryOperation<T> : ILazyOperation
 	{
 		private readonly QueryOperation queryOperation;
+		private readonly Action<QueryResult> afterQueryExecuted;
 
-		public LazyQueryOperation(QueryOperation queryOperation)
+		public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted)
 		{
 			this.queryOperation = queryOperation;
+			this.afterQueryExecuted = afterQueryExecuted;
 		}
 
 		public GetRequest CraeteRequest()
@@ -41,8 +43,12 @@ namespace Raven.Client.Document.Batches
 			var json = RavenJObject.Parse(response.Result);
 			var queryResult = SerializationHelper.ToQueryResult(json, response.Headers["ETag"]);
 			RequiresRetry = queryOperation.IsAcceptable(queryResult) == false;
-			if (RequiresRetry == false)
-				Result = queryOperation.Complete<T>();
+			if (RequiresRetry) 
+				return;
+
+			if (afterQueryExecuted != null)
+				afterQueryExecuted(queryResult);
+			Result = queryOperation.Complete<T>();
 		}
 
 		public IDisposable EnterContext()
