@@ -501,7 +501,7 @@ namespace Raven.Database
 					RavenJObject metadata;
 					if (actions.Documents.DeleteDocument(key, etag, out metadata))
 					{
-						AddIndexingTask(actions, metadata, () => new RemoveFromIndexTask { Keys = new[] { key } });
+						AddIndexingTask(actions, metadata, () => new RemoveFromIndexTask { Keys = { key } });
 						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
 					}
 				}

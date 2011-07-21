@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Database.Indexing;
 using System.Linq;
 
@@ -12,17 +13,22 @@ namespace Raven.Database.Tasks
 {
 	public class RemoveFromIndexTask : Task
 	{
-		public string[] Keys { get; set; }
+		public HashSet<string> Keys { get; set; }
 
 		public override string ToString()
 		{
 			return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
 		}
 
+		public RemoveFromIndexTask()
+		{
+			Keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		}
+
 		public override bool TryMerge(Task task)
 		{
 			var removeFromIndexTask = ((RemoveFromIndexTask)task);
-			Keys = Keys.Union(removeFromIndexTask.Keys).ToArray();
+			Keys.UnionWith(removeFromIndexTask.Keys);
 			return true;
 		}
 
@@ -31,14 +37,7 @@ namespace Raven.Database.Tasks
 			var keysToRemove = new HashSet<string>();
 			context.TransactionaStorage.Batch(accessor =>
 			{
-				foreach (var key in
-					from key in Keys
-					let documentByKey = accessor.Documents.DocumentByKey(key, null)
-					where documentByKey == null
-					select key)
-				{
-					keysToRemove.Add(key);
-				}
+				keysToRemove = new HashSet<string>(Keys.Where(key=>accessor.Documents.DocumentMetadataByKey(key, null) == null));
 				accessor.Indexing.TouchIndexEtag(Index);
 			});
 			context.IndexStorage.RemoveFromIndex(Index, keysToRemove.ToArray(), context);
@@ -48,7 +47,7 @@ namespace Raven.Database.Tasks
 		{
 			return new RemoveFromIndexTask
 			{
-				Keys = Keys.ToArray(),
+				Keys = new HashSet<string>(Keys),
 				Index = Index,
 			};
 		}
