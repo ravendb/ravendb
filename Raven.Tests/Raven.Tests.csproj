@@ -503,6 +503,7 @@
     <Compile Include="ManagedStorage\TxStorageTest.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="MultiGet\Bugs.cs" />
     <Compile Include="MultiGet\MultiGetBasic.cs" />
     <Compile Include="MultiGet\MultiGetCaching.cs" />
     <Compile Include="MultiGet\MultiGetDTC.cs" />

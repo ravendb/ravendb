@@ -450,7 +450,7 @@ namespace Raven.Client.Document
 				InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation);
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecuted);
 
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
