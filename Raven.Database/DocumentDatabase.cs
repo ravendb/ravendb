@@ -949,33 +949,50 @@ namespace Raven.Database
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
 		{
 			var result = PatchResult.Patched;
-			TransactionalStorage.Batch(actions =>
+			bool shouldRetry = false;
+			int retries = 128;
+			do
 			{
-				var doc = actions.Documents.DocumentByKey(docId, transactionInformation);
-				if (doc == null)
+				TransactionalStorage.Batch(actions =>
 				{
-					result = PatchResult.DocumentDoesNotExists;
-				}
-				else if (etag != null && doc.Etag != etag.Value)
-				{
-					Debug.Assert(doc.Etag != null);
-					throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
+					var doc = actions.Documents.DocumentByKey(docId, transactionInformation);
+					if (doc == null)
 					{
-						ActualETag = doc.Etag.Value,
-						ExpectedETag = etag.Value,
-					};
-				}
-				else
-				{
-					var jsonDoc = doc.ToJson();
-					new JsonPatcher(jsonDoc).Apply(patchDoc);
-					Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<RavenJObject>("@metadata"), transactionInformation);
-					result = PatchResult.Patched;
-				}
+						result = PatchResult.DocumentDoesNotExists;
+					}
+					else if (etag != null && doc.Etag != etag.Value)
+					{
+						Debug.Assert(doc.Etag != null);
+						throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
+						{
+							ActualETag = doc.Etag.Value,
+							ExpectedETag = etag.Value,
+						};
+					}
+					else
+					{
+						var jsonDoc = doc.ToJson();
+						new JsonPatcher(jsonDoc).Apply(patchDoc);
+						try
+						{
+							Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<RavenJObject>("@metadata"), transactionInformation);
+						}
+						catch (ConcurrencyException)
+						{
+							if(retries-- > 0)
+							{
+								shouldRetry = true;
+								return;
+							}
+							throw;
+						}
+						result = PatchResult.Patched;
+					}
+					if (shouldRetry == false)
+						workContext.ShouldNotifyAboutWork();
+				});
 
-				workContext.ShouldNotifyAboutWork();
-			});
-
+			} while (shouldRetry);
 			return result;
 		}
 
@@ -984,28 +1001,46 @@ namespace Raven.Database
 			var results = new List<BatchResult>();
 
 			var commandDatas = commands.ToArray();
-			var shouldLock = commandDatas.Any(x=>x is PutCommandData);
-
+			int retries = 128;
+			var shouldLock = commandDatas.Any(x=>x is PutCommandData || x is PatchCommandData);
+			var shouldRetryIfGotConcurrencyError = commandDatas.All(x => x is PatchCommandData);
+			bool shouldRetry = false;
 			if(shouldLock)
 				Monitor.Enter(putSerialLock);
 			try
 			{
 				log.Debug("Executing batched commands in a single transaction");
-				TransactionalStorage.Batch(actions =>
+				do
 				{
-					foreach (var command in commandDatas)
+					try
 					{
-						command.Execute(this);
-						results.Add(new BatchResult
+						TransactionalStorage.Batch(actions =>
 						{
-							Method = command.Method,
-							Key = command.Key,
-							Etag = command.Etag,
-							Metadata = command.Metadata
+							foreach (var command in commandDatas)
+							{
+								command.Execute(this);
+								results.Add(new BatchResult
+								{
+									Method = command.Method,
+									Key = command.Key,
+									Etag = command.Etag,
+									Metadata = command.Metadata
+								});
+							}
+							workContext.ShouldNotifyAboutWork();
 						});
 					}
-					workContext.ShouldNotifyAboutWork();
-				});
+					catch (ConcurrencyException)
+					{
+						if (shouldRetryIfGotConcurrencyError && retries-- > 128)
+						{
+							shouldRetry = true;
+							results.Clear();
+							continue;
+						}
+						throw;
+					}
+				} while (shouldRetry);
 				log.Debug("Successfully executed {0} commands", results.Count);
 			}
 			finally
