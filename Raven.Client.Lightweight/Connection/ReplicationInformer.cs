@@ -216,18 +216,26 @@ namespace Raven.Client.Connection
 
 		private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
 		{
-			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+			try
 			{
-				var path = "RavenDB Replication Information For - " + serverHash;
-
-				if (machineStoreForApplication.GetFileNames(path).Length == 0)
-					return null;
-				
-				using (var stream = new IsolatedStorageFileStream(path, FileMode.Open, machineStoreForApplication))
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					return stream.ToJObject().ToJsonDocument();
-				}
+					var path = "RavenDB Replication Information For - " + serverHash;
+
+					if (machineStoreForApplication.GetFileNames(path).Length == 0)
+						return null;
 				
+					using (var stream = new IsolatedStorageFileStream(path, FileMode.Open, machineStoreForApplication))
+					{
+						return stream.ToJObject().ToJsonDocument();
+					}
+				
+				}
+			}
+			catch (Exception e)
+			{
+				log.ErrorException("Could not understand the persisted replication information", e);
+				return null;
 			}
 		}
 
