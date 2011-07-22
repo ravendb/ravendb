@@ -158,12 +158,9 @@ namespace Raven.Client.Linq
 			if(provider == null)
 				throw new ArgumentException("You can only use Raven Queryable with ToListAsync");
 			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
+			provider.MoveAfterQueryExecuted(documentQuery);
 			return documentQuery.ToListAsync()
-				.ContinueWith(task =>
-				{
-					provider.InvokeAfterQueryExecuted(task.Result.Item1);
-					return task.Result.Item2;
-				});
+				.ContinueWith(task => task.Result.Item2);
 		}
 
 		/// <summary>
@@ -178,12 +175,9 @@ namespace Raven.Client.Linq
 			var documentQuery = provider
 				.ToAsyncLuceneQuery<T>(source.Expression)
 				.Take(0);
+			provider.MoveAfterQueryExecuted(documentQuery);
 			return documentQuery.ToListAsync()
-				.ContinueWith(task =>
-				{
-					provider.InvokeAfterQueryExecuted(task.Result.Item1);
-					return task.Result.Item1.TotalResults;
-				});
+				.ContinueWith(task => task.Result.Item1.TotalResults);
 		} 
 #endif
 

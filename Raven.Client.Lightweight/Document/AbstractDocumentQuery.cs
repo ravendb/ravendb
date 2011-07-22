@@ -1252,7 +1252,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void AfterQueryExecuted(Action<QueryResult> afterQueryExecutedCallback)
 		{
-			this.afterQueryExecuted = afterQueryExecutedCallback;
+			this.afterQueryExecuted += afterQueryExecutedCallback;
 		}
 
 		/// <summary>

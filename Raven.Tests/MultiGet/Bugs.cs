@@ -27,7 +27,7 @@ namespace Raven.Tests.MultiGet
 					RavenQueryStatistics stats;
 					session.Query<User>()
 						.Statistics(out stats)
-						.ToArray();
+						.Lazily();
 
 					session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
 
