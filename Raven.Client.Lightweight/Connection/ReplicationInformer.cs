@@ -9,10 +9,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+#if !NET_3_5
 using System.Threading.Tasks;
+#endif
 using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -75,8 +78,13 @@ namespace Raven.Client.Connection
 				return;
 			lock (replicationLock)
 			{
-				if (lastReplicationUpdate.AddMinutes(5) > DateTime.UtcNow || refreshReplicationInformationTask != null)
+				if (lastReplicationUpdate.AddMinutes(5) > DateTime.UtcNow
+#if !NET_3_5
+					|| refreshReplicationInformationTask != null
+#endif
+					)
 					return;
+#if !NET_3_5
 				refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
 					.ContinueWith(task =>
 					{
@@ -86,6 +94,16 @@ namespace Raven.Client.Connection
 						}
 						refreshReplicationInformationTask = null;
 					});
+#else
+				try 
+				{          
+				  RefreshReplicationInformation(serverClient);
+				}
+				catch (System.Exception e)
+				{
+  					log.ErrorException("Failed to refresh replication information", e);
+				}
+#endif
 			}
 		}
 
@@ -179,7 +197,12 @@ namespace Raven.Client.Connection
 			Interlocked.Increment(ref value.Value);
 		}
 
-		private void RefreshReplicationInformation(ServerClient commands)
+		/// <summary>
+		/// Refreshes the replication information.
+		/// Expert use only.
+		/// </summary>
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		public void RefreshReplicationInformation(ServerClient commands)
 		{
 			var serverHash = GetServerHash(commands);
 
