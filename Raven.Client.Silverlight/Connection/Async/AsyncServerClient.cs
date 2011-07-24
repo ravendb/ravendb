@@ -247,10 +247,31 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return false;
 		}
 
-		/// <summary>
+    	/// <summary>
+    	/// Perform a single POST requst containing multiple nested GET requests
+    	/// </summary>
+    	public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests)
+    	{
+			var postedData = JsonConvert.SerializeObject(requests);
+
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, "multi_get", "POST",
+																		   credentials, convention);
+
+			return httpJsonRequest.WriteAsync(Encoding.UTF8.GetBytes(postedData))
+				.ContinueWith(
+					task =>
+					{
+						task.Wait();// will throw if write errored
+						return httpJsonRequest.ReadResponseStringAsync()
+							.ContinueWith(replyTask => JsonConvert.DeserializeObject<GetResponse[]>(replyTask.Result));
+					})
+				.Unwrap();
+    	}
+
+    	/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		public Task<MultiLoadResult> MultiGetAsync(string[] keys, string[] includes)
+		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes)
 		{
 			var path = url + "/queries/?";
 			if (includes != null && includes.Length > 0)
@@ -791,14 +812,6 @@ namespace Raven.Client.Silverlight.Connection.Async
 						.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 						.ToArray();
 				});
-		}
-
-		public Task<Collection[]> GetCollectionsAsync(int start, int pageSize)
-		{
-			var query = new IndexQuery { Start = start, PageSize = pageSize, SortedFields = new[] { new SortedField("Name"), } };
-
-			return QueryAsync("Raven/DocumentCollections", query, new string[] { })
-					.ContinueWith(task => task.Result.Results.Select(x => x.Deserialize<Collection>(convention)).ToArray());
 		}
 
 		/// <summary>

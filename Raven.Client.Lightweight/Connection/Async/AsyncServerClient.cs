@@ -310,7 +310,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		public Task<MultiLoadResult> MultiGetAsync(string[] keys, string[] includes)
+		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes)
 		{
 			var path = url + "/queries/?";
 			if (includes != null && includes.Length > 0)
@@ -368,6 +368,45 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
+		/// Perform a single POST requst containing multiple nested GET requests
+		/// </summary>
+		public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests)
+		{
+			var postedData = JsonConvert.SerializeObject(requests);
+
+			var multiGetOperation = new MultiGetOperation(this,  convention, url, requests, postedData);
+
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, multiGetOperation.RequestUri, "POST",
+			                                                               credentials, convention);
+
+			multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);	
+
+			if (multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest))
+			{
+				var cachedResponses = multiGetOperation.HandleCachingResponse(new GetResponse[requests.Length], jsonRequestFactory)	;
+				return Task.Factory.StartNew(() => cachedResponses);
+			}
+
+
+			return Task.Factory.FromAsync(httpJsonRequest.BeginWrite, httpJsonRequest.EndWrite, postedData, null)
+				.ContinueWith(
+					task =>
+					{
+						task.Wait();// will throw on error
+						return Task.Factory.FromAsync<string>(httpJsonRequest.BeginReadResponseString, httpJsonRequest.EndReadResponseString,
+						                               null)
+							.ContinueWith(replyTask =>
+							{
+								var responses = JsonConvert.DeserializeObject<GetResponse[]>(replyTask.Result);
+								return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
+							})
+						;
+					})
+					.Unwrap();
+
+		}
+
+		/// <summary>
 		/// Begins an async get operation for documents whose id starts with the specified prefix
 		/// </summary>
 		/// <param name="prefix">Prefix that the ids begin with.</param>
@@ -416,14 +455,6 @@ namespace Raven.Client.Connection.Async
 					};
 				});
 
-		}
-
-		/// <summary>
-		/// Begins the async query.
-		/// </summary>
-		public Task<QueryResult> LinearQueryAsync(string query, int start, int pageSize)
-		{
-			throw new NotImplementedException();
 		}
 
 		/// <summary>
@@ -548,17 +579,7 @@ namespace Raven.Client.Connection.Async
 		{
 			throw new NotImplementedException();
 		}
-
-		/// <summary>
-		/// Gets the list of collections from the server asyncronously
-		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
-		public Task<Collection[]> GetCollectionsAsync(int start, int pageSize)
-		{
-			throw new NotImplementedException();
-		}
-
+		
 		/// <summary>
 		/// Puts the attachment with the specified key asyncronously
 		/// </summary>
@@ -590,6 +611,7 @@ namespace Raven.Client.Connection.Async
 		{
 			throw new NotImplementedException();
 		}
+
 
 
 		/// <summary>

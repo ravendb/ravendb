@@ -183,7 +183,7 @@ namespace Raven.Client.Document.Async
 			multiLoadOperation.LogOperation();
 			using (multiLoadOperation.EnterMultiLoadContext())
 			{
-				return AsyncDatabaseCommands.MultiGetAsync(ids, includes)
+				return AsyncDatabaseCommands.GetAsync(ids, includes)
 					.ContinueWith(t =>
 					{
 						if (multiLoadOperation.SetResult(t.Result) == false)
