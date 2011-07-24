@@ -89,8 +89,8 @@ namespace Raven.Database.Indexing
 				else
 				{
 					// forcefully unlock locked indexes if any
-					//if (IndexWriter.IsLocked(directory))
-					//    IndexWriter.Unlock(directory);
+					if (IndexWriter.IsLocked(directory))
+					    IndexWriter.Unlock(directory);
 				}
 			}
 
@@ -303,7 +303,7 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values)
 			{
-				if (value.IsMapReduce)
+				if (value.IsMapReduce == false)
 					continue;
 				value.Flush();
 			}
