@@ -33,14 +33,17 @@ namespace Raven.Client.Connection.Async
 						})
 						.ToArray();
 
-					return cmds.MultiGetAsync(termRequests);
+					if (termRequests.Length == 0)
+						return Task.Factory.StartNew(() => new NameAndCount[0]);
+
+					return cmds.MultiGetAsync(termRequests)
+						.ContinueWith(termsResultsTask => termsResultsTask.Result.Select((t, i) => new NameAndCount
+						{
+							Count = RavenJObject.Parse(t.Result).Value<int>("TotalResults"),
+							Name = terms[i]
+						}).ToArray());
 				})
-				.Unwrap()
-				.ContinueWith(task => task.Result.Select((t, i) => new NameAndCount
-				{
-					Count = RavenJObject.Parse(t.Result).Value<int>("TotalResults"),
-					Name = terms[i]
-				}).ToArray());
+				.Unwrap();
 		}
 	}
 
