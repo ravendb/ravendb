@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs.Metadata
                     Assert.NotNull(lastModified);
                     int msPrecision = 1000;
                     Assert.InRange(lastModified.ToUniversalTime(), before.AddMilliseconds(-msPrecision), after.AddMilliseconds(msPrecision));
-                    Assert.Equal(DateTimeKind.Utc, lastModified.Kind);
+                    Assert.Equal(DateTimeKind.Local, lastModified.Kind);
                 }
             }
         }
