@@ -59,7 +59,6 @@
     <Compile Include="Data\AggregationOperationExtensions.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\BatchResult.cs" />
-    <Compile Include="Data\Collection.cs" />
     <Compile Include="Data\ConnectionStringParser.cs" />
     <Compile Include="Data\Constants.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
