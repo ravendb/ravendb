@@ -89,8 +89,8 @@ namespace Raven.Database.Indexing
 				else
 				{
 					// forcefully unlock locked indexes if any
-					if (IndexWriter.IsLocked(directory))
-						IndexWriter.Unlock(directory);
+					//if (IndexWriter.IsLocked(directory))
+					//    IndexWriter.Unlock(directory);
 				}
 			}
 

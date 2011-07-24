@@ -68,11 +68,6 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Creating index for {0}", name);
 			this.directory = directory;
 
-			// clear any locks that are currently held
-			// this may happen if the server crashed while
-			// writing to the index
-			this.directory.ClearLock("write.lock");
-
 			RecreateSearcher();
 		}
 
@@ -225,11 +220,7 @@ namespace Raven.Database.Indexing
 
 					if (indexWriter == null)
 					{
-						indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
-						var mergeScheduler = indexWriter.GetMergeScheduler();
-						if(mergeScheduler != null)
-							mergeScheduler.Close();
-						indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+						indexWriter = CreateIndexWriter(directory);
 					}
 
 					try
@@ -263,6 +254,16 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		private static IndexWriter CreateIndexWriter(Directory directory)
+		{
+			var indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
+			var mergeScheduler = indexWriter.GetMergeScheduler();
+			if(mergeScheduler != null)
+				mergeScheduler.Close();
+			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+			return indexWriter;
+		}
+
 		private void WriteTempIndexToDiskIfNeeded(WorkContext context)
 		{
 			if (context.Configuration.RunInMemory || !indexDefinition.IsTemp) 
@@ -276,8 +277,11 @@ namespace Raven.Database.Indexing
 			indexWriter.Commit();
 			var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
 			directory = fsDir;
+
+			indexWriter.GetAnalyzer().Close();
 			indexWriter.Close();
-			indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
+
+			indexWriter = CreateIndexWriter(directory);
 		}
 
 		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose)
