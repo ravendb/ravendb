@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.Composition.Hosting;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
 
 namespace Raven.Tests.Silverlight
@@ -28,10 +29,6 @@ namespace Raven.Tests.Silverlight
 
 			yield return store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-			yield return
-				IndexCreation.CreateIndexesAsync(new CompositionContainer(new TypeCatalog(typeof (RavenCollections))),
-				                                 store.AsyncDatabaseCommands.ForDatabase(dbname), store.Conventions);
-
 			using (var session = store.OpenAsyncSession(dbname))
 			{
 				Enumerable.Range(0, 25).ToList()
@@ -44,11 +41,11 @@ namespace Raven.Tests.Silverlight
 			}
 
 			
-			Task<Collection[]> task;
+			Task<NameAndCount[]> task;
 			do
 			{
 				task = store.AsyncDatabaseCommands.ForDatabase(dbname)
-					.GetCollectionsAsync(0, 25);
+					.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 25);
 				yield return task;
 				if (task.Result.Length == 0)
 					yield return Delay(100);

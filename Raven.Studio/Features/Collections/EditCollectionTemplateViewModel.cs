@@ -1,4 +1,5 @@
-﻿using Raven.Json.Linq;
+﻿using Raven.Client.Connection.Async;
+using Raven.Json.Linq;
 
 namespace Raven.Studio.Features.Collections
 {
@@ -52,7 +53,7 @@ namespace Raven.Studio.Features.Collections
             get { return Collection.Name + "Template"; }
         }
 
-        public Collection Collection { get; set; }
+        public NameAndCount Collection { get; set; }
 
         public string ValidationSummary
         {

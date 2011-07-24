@@ -9,9 +9,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+#if !NET_3_5
+using System.Threading.Tasks;
+#endif
 using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -59,6 +63,7 @@ namespace Raven.Client.Connection
 
 #if !NET_3_5
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder>();
+		private Task refreshReplicationInformationTask;
 #else
 		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
 #endif
@@ -73,9 +78,32 @@ namespace Raven.Client.Connection
 				return;
 			lock (replicationLock)
 			{
-				if (lastReplicationUpdate.AddMinutes(5) > DateTime.UtcNow)
+				if (lastReplicationUpdate.AddMinutes(5) > DateTime.UtcNow
+#if !NET_3_5
+					|| refreshReplicationInformationTask != null
+#endif
+					)
 					return;
-				RefreshReplicationInformation(serverClient);
+#if !NET_3_5
+				refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
+					.ContinueWith(task =>
+					{
+						if(task.Exception != null)
+						{
+							log.ErrorException("Failed to refresh replication information", task.Exception);
+						}
+						refreshReplicationInformationTask = null;
+					});
+#else
+				try 
+				{          
+				  RefreshReplicationInformation(serverClient);
+				}
+				catch (System.Exception e)
+				{
+  					log.ErrorException("Failed to refresh replication information", e);
+				}
+#endif
 			}
 		}
 
@@ -171,46 +199,43 @@ namespace Raven.Client.Connection
 
 		/// <summary>
 		/// Refreshes the replication information.
+		/// Expert use only.
 		/// </summary>
-		/// <param name="commands">The commands.</param>
+		[MethodImpl(MethodImplOptions.Synchronized)]
 		public void RefreshReplicationInformation(ServerClient commands)
 		{
 			var serverHash = GetServerHash(commands);
 
-			lock (replicationLock)
+			lastReplicationUpdate = DateTime.UtcNow;
+			JsonDocument document;
+			try
 			{
+				document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
+				failureCounts[commands.Url] = new IntHolder(); // we just hit the master, so we can reset its failure count
+			}
+			catch (Exception e)
+			{
+				log.ErrorException("Could not contact master for new replication information", e);
+				document = TryLoadReplicationInformationFromLocalCache(serverHash);
+			}
+			if (document == null)
+				return;
 
-				lastReplicationUpdate = DateTime.UtcNow;
-				JsonDocument document;
-				try
-				{
-					document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
-					failureCounts[commands.Url] = new IntHolder();// we just hit the master, so we can reset its failure count
-				}
-				catch (Exception e)
-				{
-					log.ErrorException("Could not contact master for new replication information", e);
-					document = TryLoadReplicationInformationFromLocalCache(serverHash);
-				}
-				if (document == null)
-					return;
-
-				TrySavingReplicationInformationToLocalCache(serverHash, document);
+			TrySavingReplicationInformationToLocalCache(serverHash, document);
 
 
-				var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
-				replicationDestinations = replicationDocument.Destinations.Select(x => x.Url)
-					// filter out replication destination that don't have the url setup, we don't know how to reach them
-					// so we might as well ignore them. Probably private replication destination (using connection string names only)
-					.Where(x=>x!=null) 
-					.ToList();
-				foreach (var replicationDestination in replicationDestinations)
-				{
-					IntHolder value;
-					if (failureCounts.TryGetValue(replicationDestination, out value))
-						continue;
-					failureCounts[replicationDestination] = new IntHolder();
-				}
+			var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+			replicationDestinations = replicationDocument.Destinations.Select(x => x.Url)
+				// filter out replication destination that don't have the url setup, we don't know how to reach them
+				// so we might as well ignore them. Probably private replication destination (using connection string names only)
+				.Where(x => x != null)
+				.ToList();
+			foreach (var replicationDestination in replicationDestinations)
+			{
+				IntHolder value;
+				if (failureCounts.TryGetValue(replicationDestination, out value))
+					continue;
+				failureCounts[replicationDestination] = new IntHolder();
 			}
 		}
 

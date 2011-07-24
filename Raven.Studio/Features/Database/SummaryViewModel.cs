@@ -1,6 +1,7 @@
 ﻿using Raven.Abstractions.Commands;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure.Navigation;
 
@@ -39,7 +40,7 @@ namespace Raven.Studio.Features.Database
 
 			Server.CurrentDatabaseChanged += delegate
 			{
-				Collections = new BindableCollection<Collection>();
+				Collections = new BindableCollection<NameAndCount>();
 				RecentDocuments = new BindableCollection<DocumentViewModel>();
 				RetrieveSummary();
 
@@ -56,7 +57,7 @@ namespace Raven.Studio.Features.Database
 
 		public BindableCollection<DocumentViewModel> RecentDocuments { get; private set; }
 
-		public BindableCollection<Collection> Collections { get; private set; }
+		public BindableCollection<NameAndCount> Collections { get; private set; }
 
 		string collectionsStatus;
 		public string CollectionsStatus
@@ -169,7 +170,7 @@ namespace Raven.Studio.Features.Database
 			set { isGeneratingSampleData = value; NotifyOfPropertyChange(() => IsGeneratingSampleData); }
 		}
 
-		public void NavigateToCollection(Collection collection)
+		public void NavigateToCollection(NameAndCount collection)
 		{
 			Events.Publish(new DatabaseScreenRequested(() =>
 														{
@@ -217,7 +218,7 @@ namespace Raven.Studio.Features.Database
 		{
 			WorkStarted("fetching collections");
 			session.Advanced.AsyncDatabaseCommands
-				.GetCollectionsAsync(0, 25)
+				.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 128)
 				.ContinueWith(task =>
 					{
 						if (task.Exception != null && retry > 0)
@@ -232,7 +233,7 @@ namespace Raven.Studio.Features.Database
 							x =>
 							{
 								WorkCompleted("fetching collections");
-								Collections = new BindableCollection<Collection>(x.Result);
+								Collections = new BindableCollection<NameAndCount>(x.Result);
 								NotifyOfPropertyChange(() => LargestCollectionCount);
 								NotifyOfPropertyChange(() => Collections);
 								CollectionsStatus = Collections.Any() ? string.Empty : "The database contains no collections.";

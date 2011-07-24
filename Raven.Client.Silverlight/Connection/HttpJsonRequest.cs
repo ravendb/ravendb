@@ -11,6 +11,7 @@ using System.Net;
 using System.Net.Browser;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Silverlight.Connection
@@ -156,7 +157,7 @@ namespace Raven.Client.Silverlight.Connection
 				if (headerName == "ETag")
 					headerName = "If-Match";
                 if(headerName.StartsWith("@") ||
-                    headerName == "Last-Modified")
+					headerName == Constants.LastModified)
                     continue;
 				var value = prop.Value.Value<object>().ToString();
 				switch (headerName)

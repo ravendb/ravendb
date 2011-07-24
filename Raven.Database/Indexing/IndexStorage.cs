@@ -71,15 +71,28 @@ namespace Raven.Database.Indexing
 		{
 			Lucene.Net.Store.Directory directory;
 			if (indexDefinition.IsTemp || configuration.RunInMemory)
+			{
 				directory = new RAMDirectory();
+				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close(); // creating index structure
+			}
 			else
 			{
 				var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
-				directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory))));
-			}
+				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
+				directory = FSDirectory.Open(new DirectoryInfo(indexFullPath));
 
-			//creating index structure if we need to
-			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
+				if (!IndexReader.IndexExists(directory))
+				{
+					//creating index structure if we need to
+					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
+				}
+				else
+				{
+					// forcefully unlock locked indexes if any
+					if (IndexWriter.IsLocked(directory))
+					    IndexWriter.Unlock(directory);
+				}
+			}
 
 			return directory;
 		}
@@ -290,7 +303,7 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values)
 			{
-				if (value.IsMapReduce)
+				if (value.IsMapReduce == false)
 					continue;
 				value.Flush();
 			}

@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Studio.Features.Query
 {
@@ -256,7 +257,7 @@ namespace Raven.Studio.Features.Query
 			using (var session = Server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
-					.GetCollectionsAsync(0, 250)
+					.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 128)
 					.ContinueWith(task =>
 					{
 						foreach (var collection in task.Result)

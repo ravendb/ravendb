@@ -1063,100 +1063,29 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
-			var requestUri = url + "/multi_get";
-			if (convention.UseParallelMultiGet)
-				requestUri += "?parallel=yes";
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "POST", credentials, convention);
 
-			var cachedData = PreparingForCachingRequest(requests, requestUri);
-			var responses = ExecuteRequest(requests, httpJsonRequest);
-			HandleCachingResponse(requests, cachedData, responses);
-			return responses;
-		}
+			var multiGetOperation = new MultiGetOperation(this, convention, url, requests);
 
-		private GetResponse[] ExecuteRequest(GetRequest[] requests, HttpJsonRequest httpJsonRequest)
-		{
-			var postedData = JsonConvert.SerializeObject(requests);
-			if (requests.All(x => x == null)) // can be fully served from aggresive cache
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, multiGetOperation.RequestUri, "POST",
+			                                                               credentials, convention);
+			
+			var requestsForServer = multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
+
+			var postedData = JsonConvert.SerializeObject(requestsForServer);
+
+			if(multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest, postedData))
 			{
-				jsonRequestFactory.InvokeLogRequest(this, new RequestResultArgs
-				{
-					DurationMilliseconds = httpJsonRequest.CalculateDuration(),
-					Method = httpJsonRequest.webRequest.Method,
-					HttpResult = 0,
-					Status = RequestStatus.AggresivelyCached,
-					Result = "",
-					Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
-					PostedData = postedData
-				});
-				return new GetResponse[requests.Length];
+				return multiGetOperation.HandleCachingResponse(new GetResponse[requests.Length], jsonRequestFactory);
 			}
+
 			httpJsonRequest.Write(postedData);
-			return JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
+			var responses = JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
+
+			return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 		}
 
-		private void HandleCachingResponse(GetRequest[] requests, CachedRequest[] cachedData, GetResponse[] responses)
-		{
-			var hasCachedRequests = false;
-			var requestStatuses = new RequestStatus[responses.Length];
-			for (int i = 0; i < responses.Length; i++)
-			{
-				if (responses[i] == null || responses[i].Status == 304)
-				{
-					hasCachedRequests = true;
 
-					requestStatuses[i] = responses[i] == null ? RequestStatus.AggresivelyCached : RequestStatus.Cached;
-					responses[i] = responses[i] ?? new GetResponse { Status = 0 }; 
-
-					foreach (string header in cachedData[i].Headers)
-					{
-						responses[i].Headers[header] = cachedData[i].Headers[header];
-					}
-					responses[i].Result = cachedData[i].Data;
-					jsonRequestFactory.IncrementCachedRequests();
-				}
-				else
-				{
-					requestStatuses[i] = responses[i].RequestHasErrors() ? RequestStatus.ErrorOnServer : RequestStatus.SentToServer;
-
-					var nameValueCollection = new NameValueCollection();
-					foreach (var header in responses[i].Headers)
-					{
-						nameValueCollection[header.Key] = header.Value;
-					}
-					jsonRequestFactory.CacheResponse(url + requests[i].UrlAndQuery, responses[i].Result, nameValueCollection);
-				}
-			}
-
-			if(hasCachedRequests == false || convention.DisableProfiling)
-				return;
-
-			var lastRequest = profilingInformation.Requests.Last();
-			for (int i = 0; i < requestStatuses.Length; i++)
-			{
-				lastRequest.AdditionalInformation["NestedRequestStatus-" + i] = requestStatuses[i].ToString();
-			}
-			lastRequest.Result = JsonConvert.SerializeObject(responses);
-		}
-
-		private CachedRequest[] PreparingForCachingRequest(GetRequest[] requests, string requestUri)
-		{
-			var cachedData = new CachedRequest[requests.Length];
-			if (jsonRequestFactory.DisableHttpCaching == false && convention.ShouldCacheRequest(requestUri))
-			{
-				for (int i = 0; i < requests.Length; i++)
-				{
-					var request = requests[i];
-					var cachingConfiguration = jsonRequestFactory.ConfigureCaching(url + request.UrlAndQuery,
-					                                                               (key, val) => request.Headers[key] = val);
-					cachedData[i] = cachingConfiguration.CachedRequest;
-					if (cachingConfiguration.SkipServerCheck)
-						requests[i] = null;
-				}
-			}
-			return cachedData;
-		}
-
+		
 		///<summary>
 		/// Get the possible terms for the specified field in the index 
 		/// You can page through the results by use fromValue parameter as the 

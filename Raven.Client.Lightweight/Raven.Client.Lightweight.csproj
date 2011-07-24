@@ -69,6 +69,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\Async\IAsyncDatabaseCommands.cs" />
     <Compile Include="Connection\CachedRequest.cs" />
@@ -78,6 +79,7 @@
     <Compile Include="Connection\IRavenQueryInspector.cs" />
     <Compile Include="Connection\JsonExtensions.cs" />
     <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
+    <Compile Include="Connection\MultiGetOperation.cs" />
     <Compile Include="Connection\Profiling\ConcurrentBoundedList.cs" />
     <Compile Include="Connection\Profiling\IHoldProfilingInformation.cs" />
     <Compile Include="Connection\Profiling\ProfilingContext.cs" />
@@ -160,7 +162,6 @@
     <Compile Include="Indexes\IndexCreation.cs" />
     <Compile Include="Indexes\IndexDefinitionBuilder.cs" />
     <Compile Include="Indexes\IndexDefinitionHelper.cs" />
-    <Compile Include="Indexes\RavenCollections.cs" />
     <Compile Include="Indexes\RavenDocumentsByEntityName.cs" />
     <Compile Include="Indexes\SpatialIndex.cs" />
     <Compile Include="ISyncAdvancedSessionOperation.cs" />

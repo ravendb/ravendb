@@ -37,7 +37,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		Task<MultiLoadResult> MultiGetAsync(string[] keys, string[] includes);
+		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes);
 
 		/// <summary>
 		/// Begins an async get operation for documents
@@ -67,12 +67,6 @@ namespace Raven.Client.Connection.Async
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The include paths</param>
 		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes);
-
-		/// <summary>
-		/// Begins the async query.
-		/// </summary>
-		/// <param name="query">A string representation of a Linq query</param>
-		Task<QueryResult> LinearQueryAsync(string query, int start, int pageSize);
 
 		/// <summary>
 		/// Begins the async batch operation
@@ -165,13 +159,6 @@ namespace Raven.Client.Connection.Async
 		Task<string[]> GetDatabaseNamesAsync();
 
 		/// <summary>
-		/// Gets the list of collections from the server asyncronously
-		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
-		Task<Collection[]> GetCollectionsAsync(int start, int pageSize);
-
-		/// <summary>
 		/// Puts the attachment with the specified key asyncronously
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -211,6 +198,11 @@ namespace Raven.Client.Connection.Async
 		/// Disable all caching within the given scope
 		/// </summary>
 		IDisposable DisableAllCaching();
+
+		/// <summary>
+		/// Perform a single POST requst containing multiple nested GET requests
+		/// </summary>
+		Task<GetResponse[]> MultiGetAsync(GetRequest[] requests);
 	}
 }
 #endif

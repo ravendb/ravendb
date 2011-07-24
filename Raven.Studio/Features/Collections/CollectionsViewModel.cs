@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Collections
@@ -167,7 +168,7 @@ namespace Raven.Studio.Features.Collections
 			using (var session = Server.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands
-					.GetCollectionsAsync(0, 25)
+					.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 128)
 					.ContinueWith(
 					x =>
 					{
@@ -213,7 +214,7 @@ namespace Raven.Studio.Features.Collections
 		public void EditTemplate()
 		{
 			var vm = IoC.Get<EditCollectionTemplateViewModel>();
-			vm.Collection = new Collection { Name = ActiveCollection.Name, Count = ActiveCollection.Count };
+			vm.Collection = new NameAndCount() { Name = ActiveCollection.Name, Count = ActiveCollection.Count };
 			Events.Publish(new DatabaseScreenRequested(() => vm));
 		}
 

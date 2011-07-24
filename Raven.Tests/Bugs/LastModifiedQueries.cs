@@ -50,7 +50,7 @@ namespace Raven.Tests.Bugs
 				{
 					user = session.Load<User>("users/1");
 					var ravenJObject = session.Advanced.GetMetadataFor(user);
-					var dateTime = ravenJObject.Value<DateTime>("Last-Modified");
+					var dateTime = ravenJObject.Value<DateTime>("Last-Modified").ToUniversalTime();
 					var results = session.Advanced.LuceneQuery<object>(new RavenDocumentsByEntityName().IndexName)
 						.WhereEquals("LastModified", DateTools.DateToString(dateTime, DateTools.Resolution.MILLISECOND))
 						.WaitForNonStaleResults()

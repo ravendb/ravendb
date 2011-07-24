@@ -33,7 +33,7 @@ namespace Raven.Tests.Bugs.Metadata
                     var lastModified = session.Advanced.GetMetadataFor(user).Value<DateTime>("Last-Modified");
                     Assert.NotNull(lastModified);
                     Assert.InRange(lastModified.ToUniversalTime(), before, after);
-                    Assert.Equal(DateTimeKind.Utc, lastModified.Kind);
+					Assert.Equal(DateTimeKind.Local, lastModified.Kind);
                 }
             }
         }
