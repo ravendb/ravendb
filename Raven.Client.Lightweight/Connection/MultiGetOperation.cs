@@ -46,6 +46,7 @@ namespace Raven.Client.Connection
 		{
 			cachedData = new CachedRequest[requests.Length];
 			var requestsForServer = new GetRequest[requests.Length];
+			Array.Copy(requests, 0, requestsForServer, 0, requests.Length);
 			if (jsonRequestFactory.DisableHttpCaching == false && convention.ShouldCacheRequest(requestUri))
 			{
 				for (int i = 0; i < requests.Length; i++)
@@ -54,11 +55,11 @@ namespace Raven.Client.Connection
 					var cachingConfiguration = jsonRequestFactory.ConfigureCaching(url + request.UrlAndQuery,
 																				   (key, val) => request.Headers[key] = val);
 					cachedData[i] = cachingConfiguration.CachedRequest;
-					if (!cachingConfiguration.SkipServerCheck)
-						requestsForServer[i] = requests[i];
+					if (cachingConfiguration.SkipServerCheck)
+						requestsForServer[i] = null;
 				}
 			}
-			allRequestsCanBeServedFromAggressiveCache = requests.All(x => x == null);
+			allRequestsCanBeServedFromAggressiveCache = requestsForServer.All(x => x == null);
 			return requestsForServer;
 		}
 
