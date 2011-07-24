@@ -151,7 +151,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 							DataAsJson = RavenJObject.Parse(responseString),
 							NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 							Key = key,
-							LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"].First(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
+							LastModified = DateTime.ParseExact(request.ResponseHeaders[Constants.LastModified].First(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
 							Etag = new Guid(request.ResponseHeaders["ETag"].First()),
 							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 						};

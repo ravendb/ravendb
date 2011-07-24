@@ -314,9 +314,9 @@ more responsive application.
 			{
 				documentFound.Metadata["@etag"] = documentFound.Etag.ToString();
 			}
-			if(!documentFound.Metadata.ContainsKey("Last-Modified"))
+			if (!documentFound.Metadata.ContainsKey(Constants.LastModified))
 			{
-				documentFound.Metadata["Last-Modified"] = documentFound.LastModified;
+				documentFound.Metadata[Constants.LastModified] = documentFound.LastModified;
 			}
 			
 			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);

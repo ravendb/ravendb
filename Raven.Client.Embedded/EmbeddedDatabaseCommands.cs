@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
+using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -104,7 +105,15 @@ namespace Raven.Client.Embedded
 		public JsonDocument Get(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.Get(key, RavenTransactionAccessor.GetTransactionInformation());
+			var jsonDocument = database.Get(key, RavenTransactionAccessor.GetTransactionInformation());
+			return EnsureLocalDate(jsonDocument);
+		}
+
+		private JsonDocument EnsureLocalDate(JsonDocument jsonDocument)
+		{
+			if (jsonDocument.LastModified != null)
+				jsonDocument.LastModified = jsonDocument.LastModified.Value.ToLocalTime();
+			return jsonDocument;
 		}
 
 		/// <summary>
@@ -275,7 +284,25 @@ namespace Raven.Client.Embedded
 					entityName = index.Substring("dynamic/".Length);
 				return database.ExecuteDynamicQuery(entityName, query);
 			}
-		    return database.Query(index, query);
+			var queryResult = database.Query(index, query);
+			EnsureLocalDate(queryResult.Results);
+			EnsureLocalDate(queryResult.Includes);
+			return queryResult;
+		}
+
+		private static void EnsureLocalDate(List<RavenJObject> docs)
+		{
+			foreach (var doc in docs)
+			{
+				RavenJToken metadata;
+				if(doc.TryGetValue(Constants.Metadata, out metadata) == false || metadata.Type != JTokenType.Object)
+					continue;
+				var lastModified = metadata.Value<DateTime?>(Constants.LastModified);
+				if(lastModified == null || lastModified.Value.Kind == DateTimeKind.Local)
+					continue;
+
+				metadata[Constants.LastModified] = lastModified.Value.ToLocalTime();
+			}
 		}
 
 		/// <summary>
@@ -302,7 +329,7 @@ namespace Raven.Client.Embedded
 				Results = ids
 					.Select(id => database.Get(id, RavenTransactionAccessor.GetTransactionInformation()))
 					.Where(document => document != null)
-					.Select(x => x.ToJson())
+					.Select(x => EnsureLocalDate(x).ToJson())
 					.ToList()
 			};
 		}
