@@ -24,11 +24,11 @@ namespace Raven.Client.Connection.Async
 					}.GetIndexQueryUrl("", indexName, "indexes"))
 						.Select(url =>
 						{
-							var uri = new Uri(url);
+							var uriParts = url.Split(new[] {'?'}, StringSplitOptions.RemoveEmptyEntries);
 							return new GetRequest
 							{
-								Url = uri.AbsolutePath,
-								Query = uri.Query
+								Url = uriParts[0],
+								Query = uriParts[1]
 							};
 						})
 						.ToArray();

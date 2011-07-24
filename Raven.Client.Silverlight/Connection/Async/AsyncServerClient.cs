@@ -254,7 +254,7 @@ namespace Raven.Client.Silverlight.Connection.Async
     	{
 			var postedData = JsonConvert.SerializeObject(requests);
 
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, "multi_get", "POST",
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, url+ "/multi_get/", "POST",
 																		   credentials, convention);
 
 			return httpJsonRequest.WriteAsync(Encoding.UTF8.GetBytes(postedData))
@@ -933,8 +933,8 @@ namespace Raven.Client.Silverlight.Connection.Async
                 {
                     using (var reader = new JsonTextReader(new StringReader(task.Result)))
                     {
-                        var json = RavenJObject.Load(reader);
-                        return json.Select(x => x.Value.Value<string>()).ToArray();
+                        var json = RavenJArray.Load(reader);
+                        return json.Select(x => x.Value<string>()).ToArray();
                     }
                 });
 	    }
