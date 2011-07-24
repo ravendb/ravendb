@@ -61,5 +61,38 @@ namespace Raven.Database.Extensions
 
             return Path.IsPathRooted(path) ? path : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
         }
+
+        public static void CopyDirectory(string from, string to)
+        {
+            try
+            {
+                CopyDirectory(new DirectoryInfo(from), new DirectoryInfo(to));
+            }
+            catch (Exception e)
+            {
+                throw new Exception(String.Format("Exception encountered copying directory from {0} to {1}.", from, to), e);
+            }
+        }
+
+        static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
+        {
+            if (!target.Exists)
+            {
+                Directory.CreateDirectory(target.FullName);
+            }
+
+            // copy all files in the immediate directly
+            foreach (FileInfo fi in source.GetFiles())
+            {
+                fi.CopyTo(Path.Combine(target.ToString(), fi.Name), true);
+            }
+
+            // and recurse
+            foreach (DirectoryInfo diSourceDir in source.GetDirectories())
+            {
+                DirectoryInfo nextTargetDir = target.CreateSubdirectory(diSourceDir.Name);
+                CopyDirectory(diSourceDir, nextTargetDir);
+            }
+        }
     }
 }
