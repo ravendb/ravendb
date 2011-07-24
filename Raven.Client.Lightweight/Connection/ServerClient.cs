@@ -1063,16 +1063,17 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
-			var postedData = JsonConvert.SerializeObject(requests);
 
-			var multiGetOperation = new MultiGetOperation(this, convention, url, requests, postedData);
+			var multiGetOperation = new MultiGetOperation(this, convention, url, requests);
 
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, multiGetOperation.RequestUri, "POST",
 			                                                               credentials, convention);
 			
-			multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
+			var requestsForServer = multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
 
-			if(multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest))
+			var postedData = JsonConvert.SerializeObject(requestsForServer);
+
+			if(multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest, postedData))
 			{
 				return multiGetOperation.HandleCachingResponse(new GetResponse[requests.Length], jsonRequestFactory);
 			}

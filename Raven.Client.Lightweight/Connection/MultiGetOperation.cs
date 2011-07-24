@@ -15,7 +15,6 @@ namespace Raven.Client.Connection
 		private readonly DocumentConvention convention;
 		private readonly string url;
 		private readonly GetRequest[] requests;
-		private readonly string postedData;
 		private readonly string requestUri;
 		private bool allRequestsCanBeServedFromAggressiveCache;
 		private CachedRequest[] cachedData;
@@ -29,14 +28,12 @@ namespace Raven.Client.Connection
 			IHoldProfilingInformation holdProfilingInformation,
 			DocumentConvention convention, 
 			string url,
-			GetRequest[] requests,
-			string postedData)
+			GetRequest[] requests)
 		{
 			this.holdProfilingInformation = holdProfilingInformation;
 			this.convention = convention;
 			this.url = url;
 			this.requests = requests;
-			this.postedData = postedData;
 
 			requestUri = url + "/multi_get";
 			if (convention.UseParallelMultiGet)
@@ -45,9 +42,10 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public void PreparingForCachingRequest(HttpJsonRequestFactory jsonRequestFactory)
+		public GetRequest[] PreparingForCachingRequest(HttpJsonRequestFactory jsonRequestFactory)
 		{
 			cachedData = new CachedRequest[requests.Length];
+			var requestsForServer = new GetRequest[requests.Length];
 			if (jsonRequestFactory.DisableHttpCaching == false && convention.ShouldCacheRequest(requestUri))
 			{
 				for (int i = 0; i < requests.Length; i++)
@@ -56,14 +54,15 @@ namespace Raven.Client.Connection
 					var cachingConfiguration = jsonRequestFactory.ConfigureCaching(url + request.UrlAndQuery,
 																				   (key, val) => request.Headers[key] = val);
 					cachedData[i] = cachingConfiguration.CachedRequest;
-					if (cachingConfiguration.SkipServerCheck)
-						requests[i] = null;
+					if (!cachingConfiguration.SkipServerCheck)
+						requestsForServer[i] = requests[i];
 				}
 			}
 			allRequestsCanBeServedFromAggressiveCache = requests.All(x => x == null);
+			return requestsForServer;
 		}
 
-		public bool CanFullyCache(HttpJsonRequestFactory jsonRequestFactory, HttpJsonRequest httpJsonRequest)
+		public bool CanFullyCache(HttpJsonRequestFactory jsonRequestFactory, HttpJsonRequest httpJsonRequest, string postedData)
 		{
 			if (allRequestsCanBeServedFromAggressiveCache) // can be fully served from aggresive cache
 			{

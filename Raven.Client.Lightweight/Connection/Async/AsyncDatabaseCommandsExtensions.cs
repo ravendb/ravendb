@@ -1,3 +1,4 @@
+#if !NET_3_5
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -49,3 +50,4 @@ namespace Raven.Client.Connection.Async
 		public int Count { get; set; }
 	}
 }
+#endif
