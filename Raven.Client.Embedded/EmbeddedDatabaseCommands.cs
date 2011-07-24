@@ -111,6 +111,8 @@ namespace Raven.Client.Embedded
 
 		private JsonDocument EnsureLocalDate(JsonDocument jsonDocument)
 		{
+      if(jsonDocument == null)
+        return null;
 			if (jsonDocument.LastModified != null)
 				jsonDocument.LastModified = jsonDocument.LastModified.Value.ToLocalTime();
 			return jsonDocument;
@@ -301,7 +303,7 @@ namespace Raven.Client.Embedded
 				if(lastModified == null || lastModified.Value.Kind == DateTimeKind.Local)
 					continue;
 
-				metadata[Constants.LastModified] = lastModified.Value.ToLocalTime();
+				((RavenJObject)metadata)[Constants.LastModified] = lastModified.Value.ToLocalTime();
 			}
 		}
 
