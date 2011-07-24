@@ -31,23 +31,6 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
 					}
 				});
 			}
-
-			if (documentDatabase.GetIndexDefinition("Raven/DocumentCollections") == null)
-			{
-				documentDatabase.PutIndex("Raven/DocumentCollections", new IndexDefinition
-				{
-					Map =
-						@"from doc in docs
-let Name = doc[""@metadata""][""Raven-Entity-Name""]
-where Name != null
-select new { Name , Count = 1}
-",
-					Reduce =
-						@"from result in results
-group result by result.Name into g
-select new { Name = g.Key, Count = g.Sum(x=>x.Count) }"
-				});
-			}
 		}
 	}
 }
