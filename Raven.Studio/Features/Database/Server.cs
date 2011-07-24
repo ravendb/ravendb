@@ -280,7 +280,7 @@ namespace Raven.Studio.Features.Database
 
 		public IAsyncDocumentSession OpenSession()
 		{
-			return (CurrentDatabase == DefaultDatabaseName)
+			return (CurrentDatabase == DefaultDatabaseName || CurrentDatabase == null)
 					? Store.OpenAsyncSession()
 					: Store.OpenAsyncSession(CurrentDatabase);
 		}
