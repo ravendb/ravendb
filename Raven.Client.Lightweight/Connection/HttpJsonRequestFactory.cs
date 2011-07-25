@@ -36,7 +36,7 @@ namespace Raven.Client.Connection
 				handler(sender, e);
 		}
 
-		private MemoryCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
+		private MemoryCache cache;
 
 		internal int NumOfCachedRequests;
 
@@ -100,7 +100,7 @@ namespace Raven.Client.Connection
 			if (cache != null)
 				cache.Dispose();
 
-			cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
+			cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache", new NameValueCollection());
 			NumOfCachedRequests = 0;
 		}
 
@@ -137,6 +137,11 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
+
+		public HttpJsonRequestFactory()
+		{
+			cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache", new NameValueCollection());
+		}
 #else
 		[ThreadStatic] private static TimeSpan? aggressiveCacheDuration;
 		[ThreadStatic] private static bool disableHttpCaching;
