@@ -94,10 +94,10 @@ namespace FromMono.System.Runtime.Caching
 		MemoryCache ()
 		{
 			name = "Default";
-			CommonInit (name);
+			CommonInit (new NameValueCollection());
 		}
 			
-		public MemoryCache (string name, NameValueCollection config = null)
+		public MemoryCache (string name, NameValueCollection config)
 		{
 			if (name == null)
 				throw new ArgumentNullException ("name");
@@ -107,12 +107,12 @@ namespace FromMono.System.Runtime.Caching
 
 			if (String.Compare (name, "default", StringComparison.OrdinalIgnoreCase) == 0)
 				throw new ArgumentException ("'default' is a reserved name.", "name");
-			
+
 			this.name = name;
-			CommonInit (name, config);
+			CommonInit (config);
 		}
 
-		void CommonInit (string name, NameValueCollection config = null)
+		void CommonInit (NameValueCollection config)
 		{
 			this.defaultCaps = DefaultCacheCapabilities.InMemoryProvider |
 				DefaultCacheCapabilities.CacheEntryChangeMonitors |
@@ -121,7 +121,7 @@ namespace FromMono.System.Runtime.Caching
 				DefaultCacheCapabilities.CacheEntryRemovedCallback |
 				DefaultCacheCapabilities.CacheEntryUpdateCallback;
 
-			GetValuesFromConfig (name, config);
+			GetValuesFromConfig (config);
 			containers = new MemoryCacheContainer [numCPUs];
 			perfCounters = new MemoryCachePerformanceCounters (name.ToLowerInvariant (), noPerformanceCounters);
 		}
@@ -205,7 +205,7 @@ namespace FromMono.System.Runtime.Caching
 			}
 		}
 		
-		void GetValuesFromConfig (string name, NameValueCollection config)
+		void GetValuesFromConfig (NameValueCollection config)
 		{
 			if (config != null) {
 				int parsed;
