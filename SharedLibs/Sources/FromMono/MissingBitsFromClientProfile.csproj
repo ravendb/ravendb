@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>MissingBitsFromClientProfile</RootNamespace>
     <AssemblyName>MissingBitsFromClientProfile</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
   </PropertyGroup>
@@ -48,11 +48,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="System.Configuration\NullableStringValidator.cs" />
-    <Compile Include="System.Runtime.Caching.Configuration\CachingSectionGroup.cs" />
-    <Compile Include="System.Runtime.Caching.Configuration\MemoryCacheElement.cs" />
-    <Compile Include="System.Runtime.Caching.Configuration\MemoryCacheSection.cs" />
-    <Compile Include="System.Runtime.Caching.Configuration\MemoryCacheSettingsCollection.cs" />
     <Compile Include="System.Runtime.Caching.Hosting\IApplicationIdentifier.cs" />
     <Compile Include="System.Runtime.Caching.Hosting\IFileChangeNotificationSystem.cs" />
     <Compile Include="System.Runtime.Caching.Hosting\IMemoryCacheManager.cs" />
@@ -84,7 +79,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="RavenDB.snk" />
-    <None Include="System.Runtime.Caching.Configuration\ChangeLog" />
     <None Include="System.Runtime.Caching.Hosting\ChangeLog" />
   </ItemGroup>
   <ItemGroup>

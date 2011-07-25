@@ -29,9 +29,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Configuration;
+using System.Diagnostics;
 using System.Threading;
-using FromMono.System.Runtime.Caching.Configuration;
+using Microsoft.VisualBasic.Devices;
 
 namespace FromMono.System.Runtime.Caching
 {
@@ -128,7 +128,14 @@ namespace FromMono.System.Runtime.Caching
 		
 		static void DetermineTotalPhysicalMemory ()
 		{
-			var memBytes = (long)new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory;
+			long memBytes = 0;
+			try
+			{
+				memBytes = (long)new ComputerInfo().TotalPhysicalMemory;
+			}
+			catch 
+			{
+			}
 			if(memBytes == 0)
 				memBytes = 134217728L; // 128MB, the runtime default when it's
 									   // impossible to determine the physical
@@ -200,34 +207,18 @@ namespace FromMono.System.Runtime.Caching
 		
 		void GetValuesFromConfig (string name, NameValueCollection config)
 		{
-			var mcs = ConfigurationManager.GetSection ("system.runtime.caching/memoryCache") as MemoryCacheSection;
-			MemoryCacheSettingsCollection settings = mcs != null ? mcs.NamedCaches : null;
-			MemoryCacheElement element = settings != null ? settings [name] : null;
-
-			if (element != null && config == null) {
-				CacheMemoryLimit = (long)element.CacheMemoryLimitMegabytes * 1048576L;
-				PhysicalMemoryLimit = (long)element.PhysicalMemoryLimitPercentage;
-				PollingInterval = element.PollingInterval;
-			}
-			
 			if (config != null) {
 				int parsed;
 
 				if (ParseInt32ConfigValue ("config", "cacheMemoryLimitMegabytes", config, Int32.MaxValue, true, out parsed))
 					CacheMemoryLimit = parsed * 1048576L;
-				else if (element != null)
-					CacheMemoryLimit = (long)element.CacheMemoryLimitMegabytes * 1048576L;
 
 				if (ParseInt32ConfigValue ("config", "physicalMemoryLimitPercentage", config, 100, true, out parsed))
 					PhysicalMemoryLimit = parsed;
-				else if (element != null)
-					PhysicalMemoryLimit = (long)element.PhysicalMemoryLimitPercentage;
 
 				TimeSpan ts;
 				if (ParseTimeSpanConfigValue ("config", "pollingInterval", config, out ts))
 					PollingInterval = ts;
-				else if (element != null)
-					PollingInterval = element.PollingInterval;
 
 				// Those are Mono-specific
 				if (!String.IsNullOrEmpty (config ["__MonoDisablePerformanceCounters"]))
