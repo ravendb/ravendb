@@ -220,7 +220,6 @@
     <Compile Include="Framework\IMenuItemMetadata.cs" />
     <Compile Include="Features\Tasks\ImportTask.cs" />
     <Compile Include="Impl\MissingFromSilverlight\InvalidDataException.cs" />
-    <Compile Include="Impl\MissingFromSilverlight\Stopwatch.cs" />
     <Compile Include="Features\Tasks\TasksViewModel.cs" />
     <Compile Include="Framework\Extensions\BindableCollectionExtensions.cs" />
     <Compile Include="Framework\Enumeration.cs" />
