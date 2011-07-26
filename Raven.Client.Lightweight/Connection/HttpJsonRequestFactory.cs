@@ -2,10 +2,10 @@
 using System.Collections.Specialized;
 using System.Net;
 using System.Threading;
-using FromMono.System.Runtime.Caching;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
+using Raven.Client.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -36,7 +36,7 @@ namespace Raven.Client.Connection
 				handler(sender, e);
 		}
 
-		private MemoryCache cache;
+		private SimpleCache cache;
 
 		internal int NumOfCachedRequests;
 
@@ -100,7 +100,7 @@ namespace Raven.Client.Connection
 			if (cache != null)
 				cache.Dispose();
 
-			cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache", new NameValueCollection());
+			cache = new SimpleCache();
 			NumOfCachedRequests = 0;
 		}
 
@@ -140,7 +140,7 @@ namespace Raven.Client.Connection
 
 		public HttpJsonRequestFactory()
 		{
-			cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache", new NameValueCollection());
+			cache = new SimpleCache();
 		}
 #else
 		[ThreadStatic] private static TimeSpan? aggressiveCacheDuration;
@@ -192,7 +192,7 @@ namespace Raven.Client.Connection
 				Data = text,
 				Time = DateTimeOffset.Now,
 				Headers = new NameValueCollection(headers)
-			}, new CacheItemPolicy()); // cache as much as possible, for as long as possible, using the default cache limits
+			});
 		}
 
 		/// <summary>

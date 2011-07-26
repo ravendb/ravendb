@@ -49,9 +49,6 @@
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
-    <Reference Include="MissingBitsFromClientProfile">
-      <HintPath>..\SharedLibs\MissingBitsFromClientProfile.dll</HintPath>
-    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -196,8 +193,10 @@
     <Compile Include="Shard\ShardStrategy\ShardSelection\IShardSelectionStrategy.cs" />
     <Compile Include="Shard\ShardStrategy\ShardStrategy.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
+    <Compile Include="Util\ConcurrentDictionary.cs" />
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\ObjectReferenceEqualityComparerer.cs" />
+    <Compile Include="Util\SimpleCache.cs" />
     <Compile Include="WhereEqualsParams.cs" />
   </ItemGroup>
   <ItemGroup>
