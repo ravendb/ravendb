@@ -12,12 +12,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Backup;
@@ -942,7 +944,13 @@ namespace Raven.Database
 						indexName => new RavenJObject
 							{
 								{"name", new RavenJValue(indexName) },
-								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName))}
+								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName), new JsonSerializer
+								{
+									Converters =
+										{
+											new JsonEnumConverter(),
+										}
+								})}
 							}));
 		}
 
