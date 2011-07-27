@@ -1,6 +1,6 @@
 ﻿using Raven.Json.Linq;
+using Raven.Studio.Framework.Extensions;
 using Raven.Studio.Infrastructure.Navigation;
-using Raven.Studio.Plugins;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -52,6 +52,24 @@ namespace Raven.Studio.Features.Documents
 		{
 			keys.Initialize((FrameworkElement)view);
 			base.OnViewAttached(view, context);
+		}
+
+		protected override void OnActivate()
+		{
+			base.OnActivate();
+			Server.OpenSession().Advanced.AsyncDatabaseCommands
+						.GetDocumentsStartingWithAsync(Id +"/", 0, 15)
+						.ContinueOnSuccess(get =>
+						{
+							if (get.Result == null)
+								return;
+
+							Execute.OnUIThread(() =>
+							{
+								related.Clear();
+								related.AddRange(get.Result.Select(doc => doc.Key));
+							});
+						});
 		}
 
 		protected override NavigationState GetScreenNavigationState()
@@ -109,15 +127,21 @@ namespace Raven.Studio.Features.Documents
 		{
 			var referencesIds = Regex.Matches(jsonData, @"""(\w+/\w+)""");
 			references.Clear();
-			foreach (Match match in referencesIds)
-			{
-				references.Add(match.Groups[1].Value);
-			}
+			references.AddRange(referencesIds.Cast<Match>().Select(x=>x.Groups[1].Value).Distinct());
 		}
 
 		public ObservableCollection<string> References
 		{
 			get { return references; }
+		}
+
+		private readonly BindableCollection<string> related = new BindableCollection<string>();
+		public BindableCollection<string> Related
+		{
+			get
+			{
+				return related;
+			}
 		}
 
 		public string JsonMetadata
