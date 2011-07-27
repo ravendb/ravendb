@@ -52,7 +52,7 @@
 
 	<Grid Background="{StaticResource DefaultScreenBackground}">
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="180" />
+			<ColumnDefinition Width="Auto" />
 			<ColumnDefinition Width="*" />
 		</Grid.ColumnDefinitions>
 
