@@ -49,6 +49,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attribution\Attribution.cs" />
     <Compile Include="Authorization\AuthorizationTest.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
     <Compile Include="Authorization\Bugs\Kwal.cs" />
@@ -109,6 +110,10 @@
       <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
       <Name>Raven.Storage.Managed</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Bundles.Attribution\Raven.Bundles.Attribution.csproj">
+      <Project>{586D59D9-1D29-403C-8C45-B8A454CD2C90}</Project>
+      <Name>Raven.Bundles.Attribution</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
       <Project>{034FFD8F-F917-4A45-B920-9C460CD66BAF}</Project>
       <Name>Raven.Bundles.Authorization</Name>
@@ -133,6 +138,10 @@
     <ProjectReference Include="..\Raven.Bundles.Versioning\Raven.Bundles.Versioning.csproj">
       <Project>{22BCC20F-FC1F-4523-A717-77CDF8519C1D}</Project>
       <Name>Raven.Bundles.Versioning</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.Attribution\Raven.Client.Attribution.csproj">
+      <Project>{F98397AC-6E80-4A67-BE30-826BA9500594}</Project>
+      <Name>Raven.Client.Attribution</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Authorization\Raven.Client.Authorization.csproj">
       <Project>{3A852FD2-E0F9-449C-8F66-0C6A180D030A}</Project>
