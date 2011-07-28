@@ -10,7 +10,7 @@ namespace Raven.Bundles.Quotas
 	{
 		private readonly DocumentDatabase database;
 		private readonly int margin;
-		private readonly long softLimit;
+		private readonly long hardLimit, softLimit;
 		private DateTime lastCheck;
 		private VetoResult skipCheck = VetoResult.Allowed;
 		private bool recheckOnDelete;
@@ -29,21 +29,26 @@ namespace Raven.Bundles.Quotas
 		public SizeQuotaConfiguration(DocumentDatabase database)
 		{
 			this.database = database;
-			string softLimitQuotaAsString = database.Configuration.Settings["Raven/Qoutas/Size/SoftLimitInKB"];
-			string marginAsString = database.Configuration.Settings["Raven/Qoutas/Size/GraceMarginInKB"];
-
-			if (long.TryParse(softLimitQuotaAsString, out softLimit) == false)
-				softLimit = long.MaxValue;
-			else
-				softLimit *= 1024; // KB -> Bytes
+			var hardLimitQuotaAsString = database.Configuration.Settings["Raven/Qoutas/Size/HardLimitInKB"];
+			var marginAsString = database.Configuration.Settings["Raven/Qoutas/Size/GraceMarginInKB"];
 
 			if (int.TryParse(marginAsString, out margin) == false)
 				margin = 1024 * 1024;// 1 MB by default
+
+			if (long.TryParse(hardLimitQuotaAsString, out hardLimit) == false)
+			{
+				softLimit = hardLimit = long.MaxValue;
+			}
+			else
+			{
+				softLimit = (hardLimit - margin)*1024; // KB -> Bytes
+				hardLimit *= 1024; // KB -> Bytes
+			}
 		}
 
 		public VetoResult AllowPut()
 		{
-			if (softLimit == long.MaxValue)
+			if (hardLimit == long.MaxValue)
 				return VetoResult.Allowed;
 
 			// checking the size of the database is pretty expensive, we only check it every so often, to reduce
@@ -73,7 +78,7 @@ namespace Raven.Bundles.Quotas
 			recheckOnDelete = true;
 
 			string msg;
-			if (totalSizeOnDisk > softLimit + margin) // beyond the grace margin
+			if (totalSizeOnDisk > hardLimit) // beyond the grace margin
 			{
 				msg = string.Format("Database size is {0:#,#}kb, which is over the {1:#,#} allows qouta", totalSizeOnDisk / 1024,
 									softLimit / 1024);
@@ -81,7 +86,7 @@ namespace Raven.Bundles.Quotas
 				WarningMessagesHolder.AddWarning(database, "Size Qouta", msg);
 				skipCheck = VetoResult.Deny(msg);
 			}
-			else // still in the grace period, warn, but allow
+			else // still before the hard limit, warn, but allow
 			{
 				msg = string.Format("Database size is {0:#,#}kb, which is over the {1:#,#} allows qouta", totalSizeOnDisk / 1024,
 											softLimit / 1024);
