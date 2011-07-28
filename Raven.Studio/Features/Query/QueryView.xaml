@@ -118,21 +118,44 @@
 
         </Grid>
 
-        <tk:DockPanel Margin="8 8 0 0">
+		<tk:DockPanel Margin="8 8 0 0">
+			<TextBlock tk:DockPanel.Dock="Top"
+					   Margin="0 0 0 8"
+					   Text="{Binding QueryResultsStatus}" />
 
-            <TextBlock tk:DockPanel.Dock="Top"
-                       Margin="0 0 0 8"
-                       Text="{Binding QueryResultsStatus}" />
+			<r:Pager tk:DockPanel.Dock="Bottom"
+					 PageContainer="{Binding ElementName=QueryResultsContainer}"
+					 ItemsSource="{Binding QueryResults}" />
 
-            <r:Pager tk:DockPanel.Dock="Bottom"
-                     PageContainer="{Binding ElementName=QueryResultsContainer}"
-                     ItemsSource="{Binding QueryResults}" />
+			<Grid>
+				<ListBox x:Name="QueryResultsContainer"
+						 ItemsSource="{Binding QueryResults}"
+						 Style="{StaticResource DocumentList}" />
 
-			<ListBox x:Name="QueryResultsContainer"
-					 ItemsSource="{Binding QueryResults}"
-					 Style="{StaticResource DocumentList}" />
+				<Border Style="{StaticResource Grouping}"
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						Visibility="{Binding QueryResults.NumberOfPages, Converter={StaticResource visibleWhenEmpty}}">
+					<StackPanel>
+						<TextBlock Text="How to query?"
+								   Foreground="DarkRed"
+								   FontSize="20"
+								   TextWrapping="Wrap" />
+						<TextBlock Margin="15,5,0,5"
+								   FontSize="12">
+							<Run Text="Name:Ayende" />
+							<LineBreak />
+							<Run Text="Company:'Hibernating Rhinos'" />
+						</TextBlock>
+						<HyperlinkButton NavigateUri="http://lucene.apache.org/java/2_4_0/queryparsersyntax.html"
+										 TargetName="_blank"
+										 HorizontalAlignment="Right"
+										 Content="Full syntax" />
+					</StackPanel>
+				</Border>
+			</Grid>
 		</tk:DockPanel>
-
-    </tk:DockPanel>
+				
+	</tk:DockPanel>
 
 </UserControl>

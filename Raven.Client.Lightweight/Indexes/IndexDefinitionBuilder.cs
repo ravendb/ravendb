@@ -6,7 +6,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 
@@ -74,8 +76,12 @@ namespace Raven.Client.Indexes
 		{
 			if (Map == null)
 				throw new InvalidOperationException(
-					"Map is required to generate an index, you cannot create an index without a valid Map property (in index " +
-					this.GetType().Name + ").");
+					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", GetType().Name));
+
+			ValidateExpression(Map, "Map");
+			if (Reduce != null)
+				ValidateExpression(Reduce, "Reduce");
+
 		    string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 		    return new IndexDefinition
 			{
@@ -87,6 +93,37 @@ namespace Raven.Client.Indexes
 				SortOptions = ConvertToStringDictionary(SortOptions),
                 Analyzers = ConvertToStringDictionary(Analyzers)
 			};
+		}
+
+		private void ValidateExpression(LambdaExpression expression, string name)
+		{
+			if (expression.Body.NodeType != ExpressionType.Call)
+				throw new InvalidOperationException(name +" should end with a call to Select()");
+
+			if (((MethodCallExpression) (expression.Body)).Method.Name != "Select")
+				throw new InvalidOperationException(name +" should end with a call to Select()");
+
+			var returnType = ((MethodCallExpression)(expression.Body)).Method.ReturnType;
+			if (returnType.IsGenericType == false)
+				throw new InvalidOperationException(name + " should end with a call to Select(), which should return a generic type");
+			var genericArguments = returnType.GetGenericArguments();
+			if (genericArguments.Length != 1)
+				throw new InvalidOperationException(name + " should end with a call to Select(), which should return a generic type with a single argument");
+			var anonymousFields = 
+				genericArguments[0]
+					.GetProperties().Select(x => x.Name)
+					.Union(
+						genericArguments[0].GetFields().Select(x=>x.Name)
+					)
+				.ToArray();
+
+			var reduceResultType = typeof (TReduceResult);
+			foreach (var field in anonymousFields.Where(field => reduceResultType.GetProperty(field) == null && reduceResultType.GetField(field) == null))
+			{
+				throw new InvalidOperationException(
+					string.Format("could  not generate an index, the return type {0} does not contain a member with the name {1}",
+					              reduceResultType.FullName, field));
+			}
 		}
 
 #if !NET_3_5

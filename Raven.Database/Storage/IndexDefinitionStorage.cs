@@ -29,90 +29,90 @@ namespace Raven.Database.Storage
 
 		private readonly ConcurrentDictionary<string, AbstractViewGenerator> indexCache =
 			new ConcurrentDictionary<string, AbstractViewGenerator>(StringComparer.InvariantCultureIgnoreCase);
-        private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
-            new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
+			new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
 
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 		private readonly string path;
-        private readonly InMemoryRavenConfiguration configuration;
+		private readonly InMemoryRavenConfiguration configuration;
 		private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
 		public IndexDefinitionStorage(
-            InMemoryRavenConfiguration configuration,
+			InMemoryRavenConfiguration configuration,
 			ITransactionalStorage  transactionalStorage,
 			string path, 
 			IEnumerable<AbstractViewGenerator> compiledGenerators,
 			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
-		    this.configuration = configuration;
-		    this.extensions = extensions;// this is used later in the ctor, so it must appears first
+			this.configuration = configuration;
+			this.extensions = extensions;// this is used later in the ctor, so it must appears first
 			this.path = Path.Combine(path, IndexDefDir);
 
 			if (Directory.Exists(this.path) == false && configuration.RunInMemory == false)
 				Directory.CreateDirectory(this.path);
 
-            this.extensions = extensions;
+			this.extensions = extensions;
 
-            if (configuration.RunInMemory == false)
-                ReadIndexesFromDisk();
+			if (configuration.RunInMemory == false)
+				ReadIndexesFromDisk();
 
-            //compiled view generators always overwrite dynamic views
-		    ReadIndexesFromCatalog(compiledGenerators, transactionalStorage);
+			//compiled view generators always overwrite dynamic views
+			ReadIndexesFromCatalog(compiledGenerators, transactionalStorage);
 		}
 
-	    private void ReadIndexesFromCatalog(IEnumerable<AbstractViewGenerator> compiledGenerators, ITransactionalStorage transactionalStorage)
-	    {
-	        foreach (var generator in compiledGenerators)
-	        {
-	            var copy = generator;
-	            var displayNameAtt = TypeDescriptor.GetAttributes(copy)
-	                .OfType<DisplayNameAttribute>()
-	                .FirstOrDefault();
+		private void ReadIndexesFromCatalog(IEnumerable<AbstractViewGenerator> compiledGenerators, ITransactionalStorage transactionalStorage)
+		{
+			foreach (var generator in compiledGenerators)
+			{
+				var copy = generator;
+				var displayNameAtt = TypeDescriptor.GetAttributes(copy)
+					.OfType<DisplayNameAttribute>()
+					.FirstOrDefault();
 
-	            var name = displayNameAtt != null ? displayNameAtt.DisplayName : copy.GetType().Name;
+				var name = displayNameAtt != null ? displayNameAtt.DisplayName : copy.GetType().Name;
 
-	            transactionalStorage.Batch(actions =>
-	            {
-	                if (actions.Indexing.GetIndexesStats().Any(x => x.Name == name))
-	                    return;
+				transactionalStorage.Batch(actions =>
+				{
+					if (actions.Indexing.GetIndexesStats().Any(x => x.Name == name))
+						return;
 
-	                actions.Indexing.AddIndex(name, copy.ReduceDefinition != null);
-	            });
+					actions.Indexing.AddIndex(name, copy.ReduceDefinition != null);
+				});
 
-	            var indexDefinition = new IndexDefinition
-	            {
+				var indexDefinition = new IndexDefinition
+				{
 					Name = name,
-	                Map = "Compiled map function: " + generator.GetType().AssemblyQualifiedName,
-	                // need to supply this so the index storage will create map/reduce index
-	                Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
-	                Indexes = generator.Indexes,
-	                Stores = generator.Stores,
-	                IsCompiled = true
-	            };
-	            indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);
-	            indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
-	        }
-	    }
+					Map = "Compiled map function: " + generator.GetType().AssemblyQualifiedName,
+					// need to supply this so the index storage will create map/reduce index
+					Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
+					Indexes = generator.Indexes,
+					Stores = generator.Stores,
+					IsCompiled = true
+				};
+				indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);
+				indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
+			}
+		}
 
-	    private void ReadIndexesFromDisk()
-	    {
-	        foreach (var index in Directory.GetFiles(path, "*.index"))
-	        {
-	            try
-	            {
-	            	var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), Default.Converters);
+		private void ReadIndexesFromDisk()
+		{
+			foreach (var index in Directory.GetFiles(path, "*.index"))
+			{
+				try
+				{
+					var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), Default.Converters);
 					if (indexDefinition.Name == null)
 						indexDefinition.Name = MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index));
-	            	AddAndCompileIndex(indexDefinition);
-	            }
-	            catch (Exception e)
-	            {
-	                logger.WarnException("Could not compile index " + index + ", skipping bad index", e);
-	            }
-	        }
-	    }
+					AddAndCompileIndex(indexDefinition);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not compile index " + index + ", skipping bad index", e);
+				}
+			}
+		}
 
-	    public string[] IndexNames
+		public string[] IndexNames
 		{
 			get { return indexCache.Keys.OrderBy(name => name).ToArray(); }
 		}
@@ -125,13 +125,13 @@ namespace Raven.Database.Storage
 		public string AddIndex(IndexDefinition indexDefinition)
 		{
 			DynamicViewCompiler transformer = AddAndCompileIndex(indexDefinition);
-            if(configuration.RunInMemory == false)
-            {
-            	var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
-            	var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
-            	// Hash the name if it's too long (as a path)
-            	File.WriteAllText(indexName, JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters));
-            }
+			if(configuration.RunInMemory == false)
+			{
+				var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
+				var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
+				// Hash the name if it's too long (as a path)
+				File.WriteAllText(indexName, JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters));
+			}
 			return transformer.Name;
 		}
 
@@ -142,13 +142,13 @@ namespace Raven.Database.Storage
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
 			indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) =>
-		    {
-                if (definition.IsCompiled)
+			{
+				if (definition.IsCompiled)
 					throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
-		        return indexDefinition;   
-		    });
+				return indexDefinition;   
+			});
 			logger.Info("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
-			                  transformer.CompiledQueryText);
+							  transformer.CompiledQueryText);
 			return transformer;
 		}
 
@@ -158,8 +158,8 @@ namespace Raven.Database.Storage
 			indexCache.TryRemove(name, out ignoredViewGenerator);
 			IndexDefinition ignoredIndexDefinition;
 			indexDefinitions.TryRemove(name, out ignoredIndexDefinition);
-            if (configuration.RunInMemory)
-                return;
+			if (configuration.RunInMemory)
+				return;
 			File.Delete(GetIndexPath(name));
 			File.Delete(GetIndexSourcePath(name));
 		}
@@ -180,11 +180,11 @@ namespace Raven.Database.Storage
 
 		public IndexDefinition GetIndexDefinition(string name)
 		{
-		    IndexDefinition value;
+			IndexDefinition value;
 			indexDefinitions.TryGetValue(name, out value);
 			if(value != null &&  value.Name == null) // backward compact, mostly
 				value.Name = name;
-		    return value;
+			return value;
 		}
 
 		public AbstractViewGenerator GetViewGenerator(string name)
@@ -206,10 +206,10 @@ namespace Raven.Database.Storage
 			return IndexCreationOptions.Create;
 		}
 
-	    public bool Contains(string indexName)
-	    {
-            return indexDefinitions.ContainsKey(indexName);
-	    }
+		public bool Contains(string indexName)
+		{
+			return indexDefinitions.ContainsKey(indexName);
+		}
 
 		public string FixupIndexName(string index)
 		{

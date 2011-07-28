@@ -5,7 +5,7 @@ The Raven Datbase is making use of the following OSS projects:
 * Newtonsoft.Json from James Newton-King (http://json.codeplex.com/) and is used under the MIT license: http://json.codeplex.com/license
 * Mono Project - more specifically, parts of the Mono BCL implementations (http://mono-project.com) and is used under the MIT license: http://www.mono-project.com/Licensing
 * DotNetZip (http://dotnetzip.codeplex.com) and is used under the MS PL license: http://dotnetzip.codeplex.com/license
-* Log4Net (http://logging.apache.org/log4net/index.html) under the apache license: http://logging.apache.org/log4net/license.html
+* NLog (http://nlog-project.org/) under the BSD license: http://www.opensource.org/licenses/bsd-license.php
 * Rhino.Licensing (https://github.com/hibernating-rhinos/rhino-licensing) under the BSD license: https://github.com/hibernating-rhinos/rhino-licensing/blob/master/license.txt
 * Rhino.Mocks (https://github.com/hibernating-rhinos/rhino-mocks/) under the BSD license: https://github.com/hibernating-rhinos/rhino-licensing/blob/master/license.txt
 * Lucene.NET, SpellChecker.NET, Spatial.NET - (http://incubator.apache.org/lucene.net/) under the apache license: https://svn.apache.org/repos/asf/incubator/lucene.net/trunk/LICENSE.txt
