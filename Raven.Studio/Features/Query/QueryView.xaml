@@ -135,7 +135,7 @@
 				<Border Style="{StaticResource Grouping}"
 						HorizontalAlignment="Center"
 						VerticalAlignment="Center"
-						Visibility="{Binding QueryResults, Mode=OneWay, Converter={StaticResource visibleWhenEmpty}}">
+						Visibility="{Binding QueryResults.NumberOfPages, Converter={StaticResource visibleWhenEmpty}}">
 					<StackPanel>
 						<TextBlock Text="How to query?"
 								   Foreground="DarkRed"

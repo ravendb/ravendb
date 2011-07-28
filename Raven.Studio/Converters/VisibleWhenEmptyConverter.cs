@@ -11,6 +11,9 @@
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
+			if (value is int)
+				return (int) value > 0 ? Visibility.Collapsed : Visibility.Visible;
+
 			var enumerable = value as IEnumerable;
 			return (enumerable == null) || !enumerable.Cast<object>().Any()
 			       	? Visibility.Visible
