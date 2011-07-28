@@ -15,6 +15,8 @@ namespace Raven.Bundles.Quotas
 		private VetoResult skipCheck = VetoResult.Allowed;
 		private bool recheckOnDelete;
 
+		public const string WarningPrefixName = "Size Quota";
+
 		public static SizeQuotaConfiguration GetConfiguration(DocumentDatabase database)
 		{
 			return
@@ -29,8 +31,8 @@ namespace Raven.Bundles.Quotas
 		public SizeQuotaConfiguration(DocumentDatabase database)
 		{
 			this.database = database;
-			var hardLimitQuotaAsString = database.Configuration.Settings["Raven/Qoutas/Size/HardLimitInKB"];
-			var marginAsString = database.Configuration.Settings["Raven/Qoutas/Size/GraceMarginInKB"];
+			var hardLimitQuotaAsString = database.Configuration.Settings["Raven/Quotas/Size/HardLimitInKB"];
+			var marginAsString = database.Configuration.Settings["Raven/Quotas/Size/SoftMarginInKB"];
 
 			if (int.TryParse(marginAsString, out margin) == false)
 				margin = 1024 * 1024;// 1 MB by default
@@ -69,7 +71,7 @@ namespace Raven.Bundles.Quotas
 			var totalSizeOnDisk = database.GetTotalSizeOnDisk();
 			if (totalSizeOnDisk <= softLimit)
 			{
-				WarningMessagesHolder.RemoveWarnings(database, "Size Qouta");
+				WarningMessagesHolder.RemoveWarnings(database, WarningPrefixName);
 				skipCheck = VetoResult.Allowed;
 				recheckOnDelete = false;
 				return;
@@ -80,18 +82,18 @@ namespace Raven.Bundles.Quotas
 			string msg;
 			if (totalSizeOnDisk > hardLimit) // beyond the grace margin
 			{
-				msg = string.Format("Database size is {0:#,#}kb, which is over the {1:#,#} allows qouta", totalSizeOnDisk / 1024,
-									softLimit / 1024);
+				msg = string.Format("Database size is {0:#,#} KB, which is over the allowed quota of {1:#,#} KB. No more documents are allowed in.",
+					totalSizeOnDisk / 1024, hardLimit / 1024);
 
-				WarningMessagesHolder.AddWarning(database, "Size Qouta", msg);
+				WarningMessagesHolder.AddWarning(database, WarningPrefixName, msg);
 				skipCheck = VetoResult.Deny(msg);
 			}
 			else // still before the hard limit, warn, but allow
 			{
-				msg = string.Format("Database size is {0:#,#}kb, which is over the {1:#,#} allows qouta", totalSizeOnDisk / 1024,
-											softLimit / 1024);
+				msg = string.Format("Database size is {0:#,#} KB, which is close to the allowed quota of {1:#,#} KB",
+					totalSizeOnDisk / 1024, softLimit / 1024);
 
-				WarningMessagesHolder.AddWarning(database, "Size Qouta", msg);
+				WarningMessagesHolder.AddWarning(database, WarningPrefixName, msg);
 				skipCheck = VetoResult.Allowed;
 			}
 		}
