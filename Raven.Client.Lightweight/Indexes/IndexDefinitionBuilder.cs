@@ -78,9 +78,11 @@ namespace Raven.Client.Indexes
 				throw new InvalidOperationException(
 					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", GetType().Name));
 
-			ValidateExpression(Map, "Map");
-			if (Reduce != null)
-				ValidateExpression(Reduce, "Reduce");
+			//if (Reduce != null)
+			//{
+			//    ValidateExpression(Map, "Map");
+			//    ValidateExpression(Reduce, "Reduce");
+			//}
 
 		    string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 		    return new IndexDefinition
@@ -100,7 +102,8 @@ namespace Raven.Client.Indexes
 			if (expression.Body.NodeType != ExpressionType.Call)
 				throw new InvalidOperationException(name +" should end with a call to Select()");
 
-			if (((MethodCallExpression) (expression.Body)).Method.Name != "Select")
+			var methodName = ((MethodCallExpression) (expression.Body)).Method.Name;
+			if (methodName != "Select" && methodName != "SelectMany")
 				throw new InvalidOperationException(name +" should end with a call to Select()");
 
 			var returnType = ((MethodCallExpression)(expression.Body)).Method.ReturnType;

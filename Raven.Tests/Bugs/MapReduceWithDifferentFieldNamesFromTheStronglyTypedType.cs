@@ -7,13 +7,13 @@ namespace Raven.Tests.Bugs
 {
 	public class MapReduceWithDifferentFieldNamesFromTheStronglyTypedType : LocalClientTest
 	{
-		[Fact]
+		[Fact(Skip = "Feature currently disabled")]
 		public void WhenTheAnonymousTypeResultIsNotTheSameAsTheStronglyType_ShouldThrowAnException()
 		{
 			Assert.Throws<InvalidOperationException>(() => new Posts_ByMonthPublished_Count_ShouldFail().Execute(NewDocumentStore()));
 		}
 
-		[Fact]
+		[Fact(Skip = "Feature currently disabled")]
 		public void WhenTheAnonymousTypeResultIsTheSameAsTheStronglyType_ShouldNotThrowAnException()
 		{
 			Assert.DoesNotThrow(() => new Posts_ByMonthPublished_Count_ShouldPass().Execute(NewDocumentStore()));
