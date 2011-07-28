@@ -38,9 +38,8 @@ namespace Raven.Studio.Features.Query
 			TermsForCurrentField = new BindableCollection<string>();
 			TermsForCurrentField.CollectionChanged += delegate { NotifyOfPropertyChange(() => HasSuggestedTerms); };
 
-			QueryResults =
-				new BindablePagedQuery<DocumentViewModel>(
-					(start, size) => { throw new Exception("Replace this when executing the query."); });
+			QueryResults = new BindablePagedQuery<DocumentViewModel>(
+				(start, size) => { throw new Exception("Replace this when executing the query."); });
 
 			shouldShowDynamicIndexes = true;
 		}
