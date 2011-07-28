@@ -130,6 +130,7 @@
     <Compile Include="Behaviors\DocumentsContextMenu.cs" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
+    <Compile Include="Commands\DeleteIndex.cs" />
     <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
     <Compile Include="Commands\CopyDocumentToClipboard.cs" />
     <Compile Include="Commands\CopyServerError.cs" />

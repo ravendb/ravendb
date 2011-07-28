@@ -188,21 +188,6 @@ namespace Raven.Studio.Features.Indexes
 			}
 		}
 
-		public void Remove()
-		{
-			WorkStarted("removing index " + Name);
-			using (var session = Server.OpenSession())
-			{
-				session.Advanced.AsyncDatabaseCommands
-					.DeleteIndexAsync(Name)
-					.ContinueOnSuccess(task =>
-										{
-											WorkCompleted("removing index " + Name);
-											Events.Publish(new IndexUpdated { Index = this, IsRemoved = true });
-										});
-			}
-		}
-
 		void CreateOrEditField<T>(IDictionary<string, T> dictionary, Action<FieldProperties, T> setter)
 		{
 			if (dictionary == null) return;
