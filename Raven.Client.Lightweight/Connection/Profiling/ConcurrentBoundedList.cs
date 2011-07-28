@@ -8,11 +8,13 @@ namespace Raven.Client.Connection.Profiling
 	internal class ConcurrentLruLSet<T>
 	{
 		private readonly int maxCapacity;
+		private readonly Action<T> onDrop;
 		private LinkedList<T> items = new LinkedList<T>();
 
-		public ConcurrentLruLSet(int maxCapacity)
+		public ConcurrentLruLSet(int maxCapacity, Action<T> onDrop = null)
 		{
 			this.maxCapacity = maxCapacity;
+			this.onDrop = onDrop;
 		}
 
 		public T FirstOrDefault(Func<T, bool> predicate)
@@ -32,16 +34,27 @@ namespace Raven.Client.Connection.Profiling
 				newList.Remove(item);
 				newList.AddLast(item);
 
-				if(newList.Count > maxCapacity)
+				LinkedListNode<T> linkedListNode = null;
+				if (newList.Count > maxCapacity)
 				{
+					linkedListNode = newList.First;
 					newList.RemoveFirst();
 				}
 
-				if (Interlocked.CompareExchange(ref items, newList, current) == current)
-					return;
+				if (Interlocked.CompareExchange(ref items, newList, current) != current) 
+					continue;
 
+				if (onDrop != null && linkedListNode != null)
+					onDrop(linkedListNode.Value);
+	
+				return;
 			} while (true);
 
+		}
+
+		public void Clear()
+		{
+			items = new LinkedList<T>();
 		}
 	}
 }

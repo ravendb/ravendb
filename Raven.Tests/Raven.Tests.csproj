@@ -159,6 +159,9 @@
     <Compile Include="Bugs\AggressiveCaching.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
+    <Compile Include="Bugs\MapRedue\Document.cs" />
+    <Compile Include="Bugs\MapRedue\DocumentView.cs" />
+    <Compile Include="Bugs\MapRedue\MapReduceIndex.cs" />
     <Compile Include="Bugs\OfflineConcurrency.cs" />
     <Compile Include="Bugs\SerializingAndDeserializingWithRaven.cs" />
     <Compile Include="Bugs\CanGetScores.cs" />
@@ -377,6 +380,7 @@
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SerializingEntities.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
+    <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
     <Compile Include="Bugs\TransformResults\SortHintTester.cs" />
     <Compile Include="Bugs\SortingById.cs" />
     <Compile Include="Bugs\SortingOnLong.cs" />
@@ -416,6 +420,7 @@
     <Compile Include="Bugs\UsingLongAsId.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\UsingSwedishCollation.cs" />
+    <Compile Include="Bugs\MapRedue\VersionedDocuments.cs" />
     <Compile Include="Bugs\VeryBigResultSet.cs" />
     <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
@@ -431,6 +436,7 @@
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
     <Compile Include="Bugs\Zhang\UseMaxForDateTimeTypeInReduce.cs" />
     <Compile Include="Bugs\Zhang\UseMaxForLongTypeInReduce.cs" />
+    <Compile Include="ConcurrentPatching.cs" />
     <Compile Include="ConnectionStrings.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\CasingIssue.cs" />
@@ -498,6 +504,7 @@
     <Compile Include="ManagedStorage\TxStorageTest.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="MultiGet\Bugs.cs" />
     <Compile Include="MultiGet\MultiGetBasic.cs" />
     <Compile Include="MultiGet\MultiGetCaching.cs" />
     <Compile Include="MultiGet\MultiGetDTC.cs" />

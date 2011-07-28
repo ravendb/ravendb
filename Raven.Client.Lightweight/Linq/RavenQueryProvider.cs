@@ -184,15 +184,6 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
-		/// Called externally to raise the after query executed callback
-		/// </summary>
-		public void InvokeAfterQueryExecuted(QueryResult result)
-		{
-			if(afterQueryExecuted!=null)
-				afterQueryExecuted(result);
-		}
-
-		/// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
 		/// <param name="action">The action.</param>
@@ -204,6 +195,16 @@ namespace Raven.Client.Linq
 		}
 
 #if !NET_3_5
+
+		/// <summary>
+		/// Move the registered after query actions
+		/// </summary>
+		public void MoveAfterQueryExecuted<K>(IAsyncDocumentQuery<K> documentQuery)
+		{
+			if (afterQueryExecuted != null)
+				documentQuery.AfterQueryExecuted(afterQueryExecuted);
+		}
+
 		/// <summary>
 		/// Convert the expression to a Lucene query
 		/// </summary>

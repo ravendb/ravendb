@@ -15,8 +15,8 @@ namespace Raven.Studio.Features.Collections
 			}
 		}
 
-		private long count;
-		public long Count
+		private int count;
+		public int Count
 		{
 			get { return count; }
 			set

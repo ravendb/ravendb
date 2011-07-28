@@ -24,11 +24,6 @@ namespace Raven.Client.Linq
 		void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);
 
 		/// <summary>
-		/// Called externally to raise the after query executed callback
-		/// </summary>
-		void InvokeAfterQueryExecuted(QueryResult result);
-
-		/// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
 		void Customize(Action<IDocumentQueryCustomization> action);
@@ -60,6 +55,12 @@ namespace Raven.Client.Linq
 		/// Convert the Linq query to a lazy Lucene query and provide a function to execute when it is being evaluate
 		/// </summary>
 		Lazy<IEnumerable<T>> Lazily<T>(Expression expression, Action<IEnumerable<T>> onEval);
+
+
+		/// <summary>
+		/// Move the registered after query actions
+		/// </summary>
+		void MoveAfterQueryExecuted<T>(IAsyncDocumentQuery<T> documentQuery);
 #endif
 
 		/// <summary>

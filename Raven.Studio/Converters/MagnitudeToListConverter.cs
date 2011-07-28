@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Converters
+﻿using Raven.Client.Connection.Async;
+
+namespace Raven.Studio.Converters
 {
 	using System;
 	using System.Globalization;
@@ -28,7 +30,7 @@
 
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			var item = value as Collection;
+			var item = value as NameAndCount;
 			if (item == null)
 			{
 				return new[] {new SolidColorBrush(Colors.Blue), new SolidColorBrush(Colors.Green)};

@@ -129,7 +129,7 @@ namespace Raven.Tests.Storage
                     actions.Tasks.AddTask(new RemoveFromIndexTask
                     {
                         Index = "foo",
-                        Keys = new[] { "tasks/"+i },
+                        Keys = { "tasks/"+i },
                     },DateTime.Now);
                 }
             });

@@ -75,9 +75,6 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Raven.Abstractions\Data\Collection.cs">
-      <Link>Imports\Data\Collection.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Constants.cs">
       <Link>Imports\Data\Constants.cs</Link>
     </Compile>
@@ -122,6 +119,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Linq\DynamicNullObject.cs">
       <Link>Imports\Linq\DynamicNullObject.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
+      <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\ConcurrentBoundedList.cs">
       <Link>Imports\Connection\Profiling\ConcurrentBoundedList.cs</Link>
@@ -203,9 +203,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs">
       <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenCollections.cs">
-      <Link>Imports\Indexes\RavenCollections.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenDocumentsByEntityName.cs">
       <Link>Imports\Indexes\RavenDocumentsByEntityName.cs</Link>

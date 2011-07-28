@@ -123,6 +123,16 @@ namespace Raven.Client.Linq
 		}
 
 #if !NET_3_5
+
+		/// <summary>
+		/// Move the registered after query actions
+		/// </summary>
+		public void MoveAfterQueryExecuted<K>(IAsyncDocumentQuery<K> documentQuery)
+		{
+			if (afterQueryExecuted != null)
+				documentQuery.AfterQueryExecuted(afterQueryExecuted);
+		}
+
 		/// <summary>
 		/// Convert the expression to a Lucene query
 		/// </summary>
@@ -136,6 +146,8 @@ namespace Raven.Client.Linq
 		{
 			var processor = GetQueryProviderProcessor<S>();
 			var query = processor.GetLuceneQueryFor(expression);
+			if(afterQueryExecuted != null)
+				query.AfterQueryExecuted(afterQueryExecuted);
 			if (FieldsToFetch.Count > 0)
 				query = query.SelectFields<S>(FieldsToFetch.ToArray());
 			return query.Lazily(onEval);
@@ -226,15 +238,6 @@ namespace Raven.Client.Linq
 			this.afterQueryExecuted = afterQueryExecutedCallback;
 		}
 
-
-		/// <summary>
-		/// Called externally to raise the after query executed callback
-		/// </summary>
-		public void InvokeAfterQueryExecuted(QueryResult result)
-		{
-			if (afterQueryExecuted != null)
-				afterQueryExecuted(result);
-		}
 
 		/// <summary>
 		/// Customizes the query using the specified action

@@ -101,6 +101,7 @@ namespace Raven.Server
         		{"ram", "Run RavenDB in RAM only", key =>
         		{
         			ravenConfiguration.Settings["Raven/RunInMemory"] = "true";
+        			ravenConfiguration.RunInMemory = true;
 					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.All, ravenConfiguration, launchBrowser);		
         		}},
         		{"debug", "Runs RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser)},

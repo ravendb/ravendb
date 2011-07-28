@@ -13,25 +13,20 @@ namespace Raven.Studio.Features.Statistics
 	[Export]
 	public class ErrorsViewModel : RavenScreen
 	{
-		readonly IServer server;
 
 		[ImportingConstructor]
 		public ErrorsViewModel(IServer server)
 		{
 			DisplayName = "Errors";
-			this.server = server;
+			Server = server;
 			server.CurrentDatabaseChanged += delegate { NotifyOfPropertyChange( ()=> Errors );};
 		}
 
 		public IEnumerable<Error> Errors
 		{
-			get { return server.Errors.Select( x => new Error(x)); }
+			get { return Server.Errors.Select( x => new Error(x)); }
 		}
 
-		public IServer Server
-		{
-			get { return server; }
-		}
 	}
 
 	public class Error
