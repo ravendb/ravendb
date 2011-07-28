@@ -1,8 +1,6 @@
-using System;
 using System.Linq;
 using System.Net.NetworkInformation;
 using NLog;
-using Raven.Http;
 
 namespace Raven.Database.Util
 {

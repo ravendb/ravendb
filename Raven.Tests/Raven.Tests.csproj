@@ -159,6 +159,7 @@
     <Compile Include="Bugs\AggressiveCaching.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
+    <Compile Include="Bugs\HiLoToMaxTests.cs" />
     <Compile Include="Bugs\MapRedue\Document.cs" />
     <Compile Include="Bugs\MapRedue\DocumentView.cs" />
     <Compile Include="Bugs\MapRedue\MapReduceIndex.cs" />

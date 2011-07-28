@@ -28,8 +28,18 @@ namespace Raven.Client.Document
 		private readonly string tag;
 		private readonly long capacity;
 		private readonly object generatorLock = new object();
-		private long currentHi;
-		private long currentLo;
+		private long current;
+		private volatile Hodler currentMax = new Hodler(0);
+
+		private class Hodler
+		{
+			public readonly long Value;
+
+			public Hodler(long value)
+			{
+				Value = value;
+			}
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
@@ -39,11 +49,10 @@ namespace Raven.Client.Document
 		/// <param name="capacity">The capacity.</param>
 		public HiLoKeyGenerator(IDocumentStore documentStore, string tag, long capacity)
 		{
-			currentHi = 0;
 			this.documentStore = documentStore;
 			this.tag = tag;
 			this.capacity = capacity;
-			currentLo = capacity + 1;
+			current = 0;
 		}
 
 		/// <summary>
@@ -65,32 +74,27 @@ namespace Raven.Client.Document
 		///</summary>
 		public long NextId()
 		{
-			long incrementedCurrentLow = Interlocked.Increment(ref currentLo);
-			if (incrementedCurrentLow > capacity)
+			long incrementedCurrent = Interlocked.Increment(ref current);
+			while (incrementedCurrent > currentMax.Value)
 			{
 				lock (generatorLock)
 				{
-#if !SILVERLIGHT
-					if (Thread.VolatileRead(ref currentLo) > capacity)
-#else
-					if (currentLo > capacity)
-#endif
+					if (current > currentMax.Value)
 					{
-						currentHi = GetNextHi();
-						currentLo = 1;
-						incrementedCurrentLow = 1;
+						currentMax = new Hodler(GetNextMax());
+						incrementedCurrent = current;
 					}
 					else
 					{
-						incrementedCurrentLow = Interlocked.Increment(ref currentLo);
+						incrementedCurrent = Interlocked.Increment(ref current);
 					}
 				}
 			}
-			return (currentHi - 1) * capacity + (incrementedCurrentLow);
+			return incrementedCurrent;
 		}
 
 #if !SILVERLIGHT
-		private long GetNextHi()
+		private long GetNextMax()
 		{
 			using(new TransactionScope(TransactionScopeOption.Suppress))
 			while (true)
@@ -104,17 +108,26 @@ namespace Raven.Client.Document
 						databaseCommands.Put(RavenKeyGeneratorsHilo + tag,
 									 Guid.Empty,
 									 // sending empty guid means - ensure the that the document does NOT exists
-									 RavenJObject.FromObject(new HiLoKey{ServerHi = 2}),
+									 RavenJObject.FromObject(new {Max = capacity}),
 									 new RavenJObject());
-						return 1;
+						return capacity;
 					}
-					var hiLoKey = document.DataAsJson.JsonDeserialization<HiLoKey>();
-					var newHi = hiLoKey.ServerHi;
-					hiLoKey.ServerHi += 1;
+					long max;
+					if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
+					{
+						var hi = document.DataAsJson.Value<long>("ServerHi");
+						max = ((hi- 1) * capacity);
+						document.DataAsJson.Remove("ServerHi");
+						document.DataAsJson["Max"] = max;
+					}
+					max = document.DataAsJson.Value<long>("Max");
+					document.DataAsJson["Max"] = max + capacity;
 					databaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
-								 RavenJObject.FromObject(hiLoKey),
+								 document.DataAsJson,
 								 document.Metadata);
-					return newHi;
+
+					current = max+1;
+					return max + capacity;
 				}
 				catch (ConcurrencyException)
 				{
@@ -159,15 +172,5 @@ namespace Raven.Client.Document
 		}
 
 #endif
-
-		#region Nested type: HiLoKey
-
-		private class HiLoKey
-		{
-			public long ServerHi { get; set; }
-
-		}
-
-		#endregion
 	}
 }
