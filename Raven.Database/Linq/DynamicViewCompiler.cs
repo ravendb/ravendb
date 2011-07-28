@@ -206,18 +206,19 @@ namespace Raven.Database.Linq
 				groupBySource = lambdaExpression.ExpressionBody;
 			}
 
-			var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToArray();
+			var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToList();
 			captureSelectNewFieldNamesVisitor.FieldNames.Clear();// reduce override the map fields
 			reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 			reduceDefiniton.Initializer.AcceptChildren(captureQueryParameterNamesVisitorForReduce, null);
 
+			mapFields.Remove("__document_id");
 			var reduceFields = captureSelectNewFieldNamesVisitor.FieldNames;
 			if (reduceFields.SetEquals(mapFields) == false)
 			{
 				throw new InvalidOperationException(string.Format(@"The result type is not consistent across map and reduce:
 Map Fields: {0}
 Reduce Fields: {1}
-", mapFields, reduceFields));
+", string.Join(", ", mapFields), string.Join(", ", reduceFields)));
 			}
 
 			// this.ReduceDefinition = from result in results...;

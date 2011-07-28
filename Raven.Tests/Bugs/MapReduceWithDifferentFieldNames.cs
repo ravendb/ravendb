@@ -23,5 +23,18 @@ namespace Raven.Tests.Bugs
 				}));
 			}
 		}
+
+		[Fact]
+		public void WhenTheAnonymousTypeResultIsTheSame_ShouldNotThrowAnException()
+		{
+			using (var store = NewDocumentStore())
+			{
+				Assert.DoesNotThrow(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				{
+					Map = "from doc in docs select new { Field1 = 1, Field2 = 1 }",
+					Reduce = "from result in results group result by \"constant\" into g select new { Field1 = g.Sum(x => x.Field1), Field2 = g.Sum(x => x.Field2) }"
+				}));
+			}
+		}
 	}
 }
