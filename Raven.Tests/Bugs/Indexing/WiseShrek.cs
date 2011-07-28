@@ -60,7 +60,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 			}, new MapOnlyView());
 
-			var perFieldAnalyzerWrapper = simpleIndex.CreateAnalyzer(new LowerCaseAnalyzer(), new List<Action>());
+			var perFieldAnalyzerWrapper = simpleIndex.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), new List<Action>());
 
 			var tokenStream = perFieldAnalyzerWrapper.TokenStream("f_name", new StringReader("hello Shrek"));
 			while (tokenStream.IncrementToken())

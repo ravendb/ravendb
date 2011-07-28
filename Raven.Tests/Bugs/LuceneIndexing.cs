@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs
 		public void MrsJones()
 		{
 			var dir = new RAMDirectory();
-			var analyzer = new LowerCaseAnalyzer();
+			var analyzer = new LowerCaseKeywordAnalyzer();
 			var writer = new IndexWriter(dir, analyzer, true, IndexWriter.MaxFieldLength.UNLIMITED);
 			var document = new Lucene.Net.Documents.Document();
 			document.Add(new Field("Name", "MRS. SHABA", Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
