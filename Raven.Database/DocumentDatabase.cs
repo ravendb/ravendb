@@ -1205,10 +1205,10 @@ namespace Raven.Database
 		{
 			if (Configuration.RunInMemory)
 				return 0;
-			var allFiles = Directory.GetFiles(Configuration.DataDirectory, "*.*", SearchOption.AllDirectories);
-			var totalSize = allFiles.Sum(file => new FileInfo(file).Length);
+			var indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
+			var totalIndexSize = indexes.Sum(file => new FileInfo(file).Length);
 
-			return totalSize;
+			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
 		}
 	}
 }
