@@ -49,7 +49,7 @@ namespace Raven.Bundles.Quotas
 			// checking the size of the database is pretty expensive, we only check it every so often, to reduce
 			// its cost. This means that users might go beyond the limit, but that is okay, since the quota is soft
 			// anyway
-			if ((DateTime.Now - lastCheck).TotalMinutes < 3)
+			if ((DateTime.UtcNow - lastCheck).TotalMinutes < 3)
 				return skipCheck;
 
 			UpdateSkippedCheck();
@@ -59,7 +59,7 @@ namespace Raven.Bundles.Quotas
 
 		private void UpdateSkippedCheck()
 		{
-			lastCheck = DateTime.Now;
+			lastCheck = DateTime.UtcNow;
 
 			var totalSizeOnDisk = database.GetTotalSizeOnDisk();
 			if (totalSizeOnDisk <= softLimit)
