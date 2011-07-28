@@ -10,10 +10,13 @@ using System.Transactions;
 #endif
 #if !NET_3_5
 using System.Threading.Tasks;
+using Raven.Client.Connection.Async;
 #endif
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -93,23 +96,25 @@ namespace Raven.Client.Document
 			return incrementedCurrent;
 		}
 
-#if !SILVERLIGHT
 		private long GetNextMax()
 		{
-			using(new TransactionScope(TransactionScopeOption.Suppress))
+#if !SILVERLIGHT
+			using (new TransactionScope(TransactionScopeOption.Suppress))
+#endif
 			while (true)
 			{
 				try
 				{
-					var databaseCommands = documentStore.DatabaseCommands;
-					var document = databaseCommands.Get(RavenKeyGeneratorsHilo + tag);
+					var document = GetDocument();
 					if (document == null)
 					{
-						databaseCommands.Put(RavenKeyGeneratorsHilo + tag,
-									 Guid.Empty,
-									 // sending empty guid means - ensure the that the document does NOT exists
-									 RavenJObject.FromObject(new {Max = capacity}),
-									 new RavenJObject());
+						PutDocument(new JsonDocument
+						{
+							Etag = Guid.Empty, // sending empty guid means - ensure the that the document does NOT exists
+							Metadata = new RavenJObject(),
+							DataAsJson = RavenJObject.FromObject(new {Max = capacity}),
+							Key = RavenKeyGeneratorsHilo + tag
+						});
 						return capacity;
 					}
 					long max;
@@ -122,9 +127,7 @@ namespace Raven.Client.Document
 					}
 					max = document.DataAsJson.Value<long>("Max");
 					document.DataAsJson["Max"] = max + capacity;
-					databaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
-								 document.DataAsJson,
-								 document.Metadata);
+					PutDocument(document);
 
 					current = max+1;
 					return max + capacity;
@@ -135,42 +138,33 @@ namespace Raven.Client.Document
 				}
 			}
 		}
-#else
-		private long GetNextHi()
+
+#if !SILVERLIGHT
+		private void PutDocument(JsonDocument document)
 		{
-			while (true)
-			{
-				try
-				{
-					var databaseCommands = documentStore.AsyncDatabaseCommands;
-					var docTask = databaseCommands.GetAsync(RavenKeyGeneratorsHilo + tag);
-					docTask.Wait();
-					var document = docTask.Result;
-					if (document == null)
-					{
-						databaseCommands.PutAsync(RavenKeyGeneratorsHilo + tag,
-										Guid.Empty, // sending empty guid means - ensure the that the document does NOT exists
-										RavenJObject.FromObject(new HiLoKey { ServerHi = 2 }),
-										new RavenJObject())
-										.Wait();
-						return 1;
-					}
-					var hiLoKey = document.DataAsJson.JsonDeserialization<HiLoKey>();
-					var newHi = hiLoKey.ServerHi;
-					hiLoKey.ServerHi += 1;
-					databaseCommands.PutAsync(RavenKeyGeneratorsHilo + tag, document.Etag,
-					                          RavenJObject.FromObject(hiLoKey),
-					                          document.Metadata)
-						.Wait();
-					return newHi;
-				}
-				catch (ConcurrencyException)
-				{
-					// expected, we need to retry
-				}
-			}
+			documentStore.DatabaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
+			                     document.DataAsJson,
+			                     document.Metadata);
 		}
 
+		private JsonDocument GetDocument()
+		{
+			return documentStore.DatabaseCommands.Get(RavenKeyGeneratorsHilo + tag);
+		}
+#else
+		private void PutDocument(JsonDocument document)
+		{
+			documentStore.AsyncDatabaseCommands.PutAsync(RavenKeyGeneratorsHilo + tag, document.Etag,
+			                     document.DataAsJson,
+			                     document.Metadata)
+					.Wait();
+		}
+
+		private JsonDocument GetDocument()
+		{
+			return documentStore.AsyncDatabaseCommands.GetAsync(RavenKeyGeneratorsHilo + tag).Result;
+		}
 #endif
+
 	}
 }
