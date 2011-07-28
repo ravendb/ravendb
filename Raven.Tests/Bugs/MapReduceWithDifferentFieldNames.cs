@@ -18,8 +18,20 @@ namespace Raven.Tests.Bugs
 			{
 				Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
-					Map = "from doc in docs select new { doc.Name, Count = 1 }",
-					Reduce = "from result in results group result by result.Name into g select new { g.Key, Count = g.Sum(x=>x.Count) }"
+					Map = "from doc in docs select new { Field1 = 1, Field2NameDoesNotMatch = 1 }",
+					Reduce = "from result in results group result by \"constant\" into g select new { Field1NameDoesNotMatch = g.Sum(x => x.Field1), Field2 = g.Sum(x => x.Field2) }"
+				}));
+
+				Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				{
+					Map = "from doc in docs select new { Field1 = 1, Field2 = 1 }",
+					Reduce = "from result in results group result by \"constant\" into g select new { Field1NameDoesNotMatch = g.Sum(x => x.Field1), Field2 = g.Sum(x => x.Field2) }"
+				}));
+
+				Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				{
+					Map = "from doc in docs select new { Field1 = 1, Field2NameDoesNotMatch = 1 }",
+					Reduce = "from result in results group result by \"constant\" into g select new { Field1 = g.Sum(x => x.Field1), Field2 = g.Sum(x => x.Field2) }"
 				}));
 			}
 		}
