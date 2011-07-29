@@ -89,6 +89,8 @@ namespace Raven.Database.Extensions
                     return Field.Index.ANALYZED_NO_NORMS;
                 case FieldIndexing.NotAnalyzed:
                     return Field.Index.NOT_ANALYZED_NO_NORMS;
+				case FieldIndexing.Default:
+            		return defaultIndex;
                 default:
                     throw new ArgumentOutOfRangeException();
             }

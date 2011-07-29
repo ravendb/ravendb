@@ -11,7 +11,7 @@ using Lucene.Net.Util;
 namespace Raven.Database.Indexing
 {
     
-    public class LowerCaseAnalyzer : Analyzer
+    public class LowerCaseKeywordAnalyzer : Analyzer
     {
         public override TokenStream ReusableTokenStream(string fieldName, TextReader reader)
         {

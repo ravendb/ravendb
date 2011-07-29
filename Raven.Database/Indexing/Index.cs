@@ -210,7 +210,7 @@ namespace Raven.Database.Indexing
 				{
 					try
 					{
-						searchAnalyzer = CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
+						searchAnalyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose);
 					}
 					catch (Exception e)
 					{
@@ -658,7 +658,7 @@ namespace Raven.Database.Indexing
 					PerFieldAnalyzerWrapper searchAnalyzer = null;
 					try
 					{
-						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
+						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose);
 						searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
 						{
 							Analyzer newAnalyzer = generator.GenerateAnalzyerForQuerying(parent.name, indexQuery.Query, currentAnalyzer);
