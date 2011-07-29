@@ -10,10 +10,13 @@ using System.Transactions;
 #endif
 #if !NET_3_5
 using System.Threading.Tasks;
+using Raven.Client.Connection.Async;
 #endif
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -28,8 +31,18 @@ namespace Raven.Client.Document
 		private readonly string tag;
 		private readonly long capacity;
 		private readonly object generatorLock = new object();
-		private long currentHi;
-		private long currentLo;
+		private long current;
+		private volatile Hodler currentMax = new Hodler(0);
+
+		private class Hodler
+		{
+			public readonly long Value;
+
+			public Hodler(long value)
+			{
+				Value = value;
+			}
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
@@ -39,11 +52,10 @@ namespace Raven.Client.Document
 		/// <param name="capacity">The capacity.</param>
 		public HiLoKeyGenerator(IDocumentStore documentStore, string tag, long capacity)
 		{
-			currentHi = 0;
 			this.documentStore = documentStore;
 			this.tag = tag;
 			this.capacity = capacity;
-			currentLo = capacity + 1;
+			current = 0;
 		}
 
 		/// <summary>
@@ -65,56 +77,60 @@ namespace Raven.Client.Document
 		///</summary>
 		public long NextId()
 		{
-			long incrementedCurrentLow = Interlocked.Increment(ref currentLo);
-			if (incrementedCurrentLow > capacity)
+			long incrementedCurrent = Interlocked.Increment(ref current);
+			while (incrementedCurrent > currentMax.Value)
 			{
 				lock (generatorLock)
 				{
-#if !SILVERLIGHT
-					if (Thread.VolatileRead(ref currentLo) > capacity)
-#else
-					if (currentLo > capacity)
-#endif
+					if (current > currentMax.Value)
 					{
-						currentHi = GetNextHi();
-						currentLo = 1;
-						incrementedCurrentLow = 1;
+						currentMax = new Hodler(GetNextMax());
+						incrementedCurrent = current;
 					}
 					else
 					{
-						incrementedCurrentLow = Interlocked.Increment(ref currentLo);
+						incrementedCurrent = Interlocked.Increment(ref current);
 					}
 				}
 			}
-			return (currentHi - 1) * capacity + (incrementedCurrentLow);
+			return incrementedCurrent;
 		}
 
-#if !SILVERLIGHT
-		private long GetNextHi()
+		private long GetNextMax()
 		{
-			using(new TransactionScope(TransactionScopeOption.Suppress))
+#if !SILVERLIGHT
+			using (new TransactionScope(TransactionScopeOption.Suppress))
+#endif
 			while (true)
 			{
 				try
 				{
-					var databaseCommands = documentStore.DatabaseCommands;
-					var document = databaseCommands.Get(RavenKeyGeneratorsHilo + tag);
+					var document = GetDocument();
 					if (document == null)
 					{
-						databaseCommands.Put(RavenKeyGeneratorsHilo + tag,
-									 Guid.Empty,
-									 // sending empty guid means - ensure the that the document does NOT exists
-									 RavenJObject.FromObject(new HiLoKey{ServerHi = 2}),
-									 new RavenJObject());
-						return 1;
+						PutDocument(new JsonDocument
+						{
+							Etag = Guid.Empty, // sending empty guid means - ensure the that the document does NOT exists
+							Metadata = new RavenJObject(),
+							DataAsJson = RavenJObject.FromObject(new {Max = capacity}),
+							Key = RavenKeyGeneratorsHilo + tag
+						});
+						return capacity;
 					}
-					var hiLoKey = document.DataAsJson.JsonDeserialization<HiLoKey>();
-					var newHi = hiLoKey.ServerHi;
-					hiLoKey.ServerHi += 1;
-					databaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
-								 RavenJObject.FromObject(hiLoKey),
-								 document.Metadata);
-					return newHi;
+					long max;
+					if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
+					{
+						var hi = document.DataAsJson.Value<long>("ServerHi");
+						max = ((hi- 1) * capacity);
+						document.DataAsJson.Remove("ServerHi");
+						document.DataAsJson["Max"] = max;
+					}
+					max = document.DataAsJson.Value<long>("Max");
+					document.DataAsJson["Max"] = max + capacity;
+					PutDocument(document);
+
+					current = max+1;
+					return max + capacity;
 				}
 				catch (ConcurrencyException)
 				{
@@ -122,52 +138,33 @@ namespace Raven.Client.Document
 				}
 			}
 		}
-#else
-		private long GetNextHi()
+
+#if !SILVERLIGHT
+		private void PutDocument(JsonDocument document)
 		{
-			while (true)
-			{
-				try
-				{
-					var databaseCommands = documentStore.AsyncDatabaseCommands;
-					var docTask = databaseCommands.GetAsync(RavenKeyGeneratorsHilo + tag);
-					docTask.Wait();
-					var document = docTask.Result;
-					if (document == null)
-					{
-						databaseCommands.PutAsync(RavenKeyGeneratorsHilo + tag,
-										Guid.Empty, // sending empty guid means - ensure the that the document does NOT exists
-										RavenJObject.FromObject(new HiLoKey { ServerHi = 2 }),
-										new RavenJObject())
-										.Wait();
-						return 1;
-					}
-					var hiLoKey = document.DataAsJson.JsonDeserialization<HiLoKey>();
-					var newHi = hiLoKey.ServerHi;
-					hiLoKey.ServerHi += 1;
-					databaseCommands.PutAsync(RavenKeyGeneratorsHilo + tag, document.Etag,
-					                          RavenJObject.FromObject(hiLoKey),
-					                          document.Metadata)
-						.Wait();
-					return newHi;
-				}
-				catch (ConcurrencyException)
-				{
-					// expected, we need to retry
-				}
-			}
+			documentStore.DatabaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
+			                     document.DataAsJson,
+			                     document.Metadata);
 		}
 
+		private JsonDocument GetDocument()
+		{
+			return documentStore.DatabaseCommands.Get(RavenKeyGeneratorsHilo + tag);
+		}
+#else
+		private void PutDocument(JsonDocument document)
+		{
+			documentStore.AsyncDatabaseCommands.PutAsync(RavenKeyGeneratorsHilo + tag, document.Etag,
+			                     document.DataAsJson,
+			                     document.Metadata)
+					.Wait();
+		}
+
+		private JsonDocument GetDocument()
+		{
+			return documentStore.AsyncDatabaseCommands.GetAsync(RavenKeyGeneratorsHilo + tag).Result;
+		}
 #endif
 
-		#region Nested type: HiLoKey
-
-		private class HiLoKey
-		{
-			public long ServerHi { get; set; }
-
-		}
-
-		#endregion
 	}
 }

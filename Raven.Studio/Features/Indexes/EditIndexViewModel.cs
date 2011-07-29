@@ -1,6 +1,7 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
+using Raven.Studio.Features.Statistics;
 using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Indexes
@@ -48,9 +49,10 @@ namespace Raven.Studio.Features.Indexes
 			QueryResults = new BindablePagedQuery<DocumentViewModel>(
 				(start, size) => { throw new Exception("Replace this when executing the query."); });
 
-			RelatedErrors = (from error in this.Server.Errors
-							 where error.Index == index.Name
-							 select error).ToList();
+			RelatedErrors = Server.Errors
+				.Where(error => error.Index == index.Name)
+				.Select(error => new Error(error))
+				.ToList();
 		}
 
 		string status;
@@ -64,7 +66,7 @@ namespace Raven.Studio.Features.Indexes
 			}
 		}
 
-		public IEnumerable<ServerError> RelatedErrors { get; private set; }
+		public IEnumerable<Error> RelatedErrors { get; private set; }
 
 		public string Name
 		{
@@ -183,21 +185,6 @@ namespace Raven.Studio.Features.Indexes
 						Status = error;
 						NotifyError("An error occured while attempting to save " + Name);
 					});
-			}
-		}
-
-		public void Remove()
-		{
-			WorkStarted("removing index " + Name);
-			using (var session = Server.OpenSession())
-			{
-				session.Advanced.AsyncDatabaseCommands
-					.DeleteIndexAsync(Name)
-					.ContinueOnSuccess(task =>
-										{
-											WorkCompleted("removing index " + Name);
-											Events.Publish(new IndexUpdated { Index = this, IsRemoved = true });
-										});
 			}
 		}
 

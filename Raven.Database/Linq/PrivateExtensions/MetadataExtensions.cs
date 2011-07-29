@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Linq;
 
 namespace Raven.Database.Linq.PrivateExtensions
 {
@@ -17,5 +18,13 @@ namespace Raven.Database.Linq.PrivateExtensions
             return self.Where(doc => metadata.Any(
 				m => string.Equals(m, doc[Constants.Metadata][Constants.RavenEntityName], StringComparison.InvariantCultureIgnoreCase)));
         }
+
+		public static dynamic IfEntityIs(this object self, string name)
+		{
+			if (string.Equals(name, ((dynamic)self)[Constants.Metadata][Constants.RavenEntityName], StringComparison.InvariantCultureIgnoreCase))
+				return self;
+
+			return new DynamicNullObject();
+		}
     }
 }

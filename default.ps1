@@ -24,6 +24,8 @@ properties {
   
   $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json.Silverlight.???");   
   
+  $silverlight_dlls_libs = @( "NLog.???");   
+ 
   $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Json.???", `
       "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "nlog.???", "Newtonsoft.Json.???", `
       "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  );
@@ -233,7 +235,13 @@ task CopySilverlight{
 
   foreach($silverlight_dll in $silverlight_dlls) {
     cp "$build_dir\$silverlight_dll" $build_dir\Output\Silverlight
+    
   }
+  
+  foreach($silverlight_dll in $silverlight_dlls_libs) {
+     cp "$base_dir\SharedLibs\Silverlight\$silverlight_dll" $build_dir\Output\Silverlight  
+  }
+  
 }
 
 task CopySmuggler {
@@ -438,6 +446,10 @@ task CreateNugetPackage {
 
 	foreach($sl_dll in $silverlight_dlls) {
     cp "$build_dir\$sl_dll" $build_dir\NuPack\lib\sl40
+  }
+  
+  foreach($silverlight_dll in $silverlight_dlls_libs) {
+     cp "$build_dir\SharedLibs\Silverligt\$silverlight_dll" $build_dir\NuPack\lib\sl40  
   }
   
   foreach($client_dll in $all_client_dlls) {

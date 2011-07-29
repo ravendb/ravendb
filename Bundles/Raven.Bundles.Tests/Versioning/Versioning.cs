@@ -238,18 +238,22 @@ namespace Raven.Bundles.Tests.Versioning
                 }
             }
 
-
             using (var session = documentStore.OpenSession())
             {
-                for (int i = 1; i < 6; i++)
+                for (int i = 1; i < 7; i++)
                 {
                     Assert.Null(session.Load<Company>(company.Id + "/revisions/" + i));
                 }
 
-                for (int i = 6; i < 11; i++)
-                {
-                    Assert.NotNull(session.Load<Company>(company.Id + "/revisions/" + i));
-                }
+				for (int i = 7; i < 12; i++)
+				{
+					Assert.NotNull(session.Load<Company>(company.Id + "/revisions/" + i));
+				}
+
+				for (int i = 12; i < 21; i++)
+				{
+					Assert.Null(session.Load<Company>(company.Id + "/revisions/" + i));
+				}
             }
         }
 

@@ -286,7 +286,9 @@
 
 					<Button x:Name="Remove"
 							Style="{StaticResource FormButton}"
-							ToolTipService.ToolTip="Delete Index">
+							ToolTipService.ToolTip="Delete Index"
+							cm:Action.TargetWithoutContext="DeleteIndex"
+							cm:Message.Attach="Execute($this)">
 						<Image Source="../../../Resources/Images/delete-small.png"
 							   Stretch="None" />
 					</Button>

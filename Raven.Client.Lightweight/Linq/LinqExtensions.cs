@@ -110,6 +110,14 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
+		/// Marker method for allowing complex (multi entity) queries on the server.
+		/// </summary>
+		public static TResult IfEntityIs<TResult>(this object queryable, string name)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
+		/// <summary>
 		/// Marker method for allowing hierarchical queries on the server.
 		/// </summary>
 		public static IEnumerable<TResult> Hierarchy<TResult>(this TResult item, string path)

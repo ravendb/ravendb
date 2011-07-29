@@ -95,10 +95,10 @@ namespace Raven.Bundles.Versioning.Triggers
         private void RemoveOldRevisions(string key, int revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
         {
             int latestValidRevision = revision - versioningConfiguration.MaxRevisions;
-            if (latestValidRevision <= 1)
+            if (latestValidRevision <= 0)
                 return;
 
-        	Database.Delete(key + "/revisions/" + (latestValidRevision - 1), null, transactionInformation);
+        	Database.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null, transactionInformation);
         }
     }
 }

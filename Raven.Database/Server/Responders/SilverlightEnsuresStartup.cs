@@ -31,8 +31,8 @@ namespace Raven.Database.Server.Responders
 			ResourceStore.ExternalState.GetOrAddAtomically("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
 			{
 				var skipCreatingStudioIndexes = ResourceStore.Configuration.Settings["Raven/SkipCreatingStudioIndexes"];
-				if (string.IsNullOrEmpty(skipCreatingStudioIndexes) || 
-					"true".Equals(skipCreatingStudioIndexes, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.IsNullOrEmpty(skipCreatingStudioIndexes) == false && 
+					"true".Equals(skipCreatingStudioIndexes, StringComparison.InvariantCultureIgnoreCase))
 					return true;
 
 				foreach (var silverlightRequestedAware in SilverlightRequestedAware)
