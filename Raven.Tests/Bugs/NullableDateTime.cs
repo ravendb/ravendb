@@ -3,6 +3,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Json.Linq;
 using Xunit;
 using System.Linq;
 
@@ -131,6 +132,64 @@ namespace Raven.Tests.Bugs
 						.Customize(x => x.WaitForNonStaleResults())
 						.AsProjection<DocSummary>()
 						.ToArray();
+				}
+			}
+		}
+
+		public class DocsByDate : AbstractIndexCreationTask<Doc>
+		{
+			public DocsByDate()
+			{
+				Map = docs =>
+							from doc in docs
+							let datetime = (doc.Date != null) ? doc.Date.Value : DateTime.MinValue
+							select new
+							{
+								Date = datetime
+							};
+
+				Store(x => x.Date, FieldStorage.Yes);
+			}
+		}
+
+		[Fact]
+		public void CanWorkWithNullableDateTime()
+		{
+			// Test assumptions
+			var testdoc = new Doc { Date = null };
+			Assert.Null(testdoc.Date);
+			
+			var now = new DateTime(2011, 7, 29, 12, 0, 0);
+			testdoc = new Doc {Date = now};
+			Assert.NotNull(testdoc.Date);
+			Assert.Equal(testdoc.Date.Value, new DateTime(2011, 7, 29, 12, 0, 0));
+
+			using (var store = NewDocumentStore())
+			{
+				new DocsByDate().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					var items = new[]
+					            	{
+					            		new Doc {Date = null},
+					            		new Doc {Date = now},
+					            	};
+					foreach (var item in items)
+						session.Store(item);
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var items = session
+						.Query<Doc, DocsByDate>()
+						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+						.ToArray();
+
+					WaitForUserToContinueTheTest(store);
+
+					Assert.Equal(2, items.Length);
 				}
 			}
 		}
