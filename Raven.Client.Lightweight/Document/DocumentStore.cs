@@ -73,7 +73,7 @@ namespace Raven.Client.Document
 			get
 			{
 				if (databaseCommandsGenerator == null)
-					throw new InvalidOperationException("You cannot open a session or access the database commands before initialising the document store. Did you forgot calling Initialize()?");
+					throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
 				var commands = databaseCommandsGenerator();
 				foreach (string key in SharedOperationsHeaders)
 				{
