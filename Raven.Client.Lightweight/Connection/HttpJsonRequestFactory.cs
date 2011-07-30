@@ -115,6 +115,14 @@ namespace Raven.Client.Connection
 			get { return NumOfCachedRequests; }
 		}
 
+		/// <summary>
+		/// default ctor
+		/// </summary>
+		public HttpJsonRequestFactory()
+		{
+			cache = new SimpleCache();
+		}
+
 #if !NET_3_5
 		///<summary>
 		/// The aggressive cache duration
@@ -137,11 +145,6 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
-
-		public HttpJsonRequestFactory()
-		{
-			cache = new SimpleCache();
-		}
 #else
 		[ThreadStatic] private static TimeSpan? aggressiveCacheDuration;
 		[ThreadStatic] private static bool disableHttpCaching;
