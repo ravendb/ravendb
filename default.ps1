@@ -453,7 +453,7 @@ task CreateNugetPackage {
   }
   
   foreach($silverlight_dll in $silverlight_dlls_libs) {
-     cp "$build_dir\SharedLibs\Silverligt\$silverlight_dll" $build_dir\NuPack\lib\sl40  
+     cp "$build_dir\SharedLibs\Silverlight\$silverlight_dll" $build_dir\NuPack\lib\sl40  
   }
   
   foreach($client_dll in $all_client_dlls) {
