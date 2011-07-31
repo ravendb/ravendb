@@ -12,6 +12,7 @@ namespace Raven.Http
     {
         string VirtualDirectory { get; }
         AnonymousUserAccessMode AnonymousUserAccessMode { get; }
+        string AuthenticationMode { get; }
         string HostName { get; }
         int Port { get; }
         CompositionContainer Container { get; set; }

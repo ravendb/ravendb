@@ -125,6 +125,10 @@ namespace Raven.Http
                     {
 						if(request.RawUrl.StartsWith("/admin",StringComparison.InvariantCultureIgnoreCase))
 							return AuthenticationSchemes.IntegratedWindowsAuthentication;
+
+                        if (DefaultConfiguration.AuthenticationMode == "OAuth" && request.RawUrl.StartsWith("/OAuth/AccessToken", StringComparison.InvariantCultureIgnoreCase))
+                            return AuthenticationSchemes.Anonymous | AuthenticationSchemes.Basic;
+
                         return AuthenticationSchemes.Anonymous;
                     };
                     break;
@@ -133,6 +137,9 @@ namespace Raven.Http
                         AuthenticationSchemes.Anonymous;
                     listener.AuthenticationSchemeSelectorDelegate = request =>
                     {
+                        if (DefaultConfiguration.AuthenticationMode == "OAuth" && request.RawUrl.StartsWith("/OAuth/AccessToken", StringComparison.InvariantCultureIgnoreCase))
+                            return AuthenticationSchemes.Anonymous | AuthenticationSchemes.Basic;
+
                     	return IsGetRequest(request.HttpMethod, request.Url.AbsolutePath) ?
 							AuthenticationSchemes.Anonymous | AuthenticationSchemes.IntegratedWindowsAuthentication :
                             AuthenticationSchemes.IntegratedWindowsAuthentication;

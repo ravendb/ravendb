@@ -263,6 +263,13 @@ namespace Raven.Database.Config
 		/// </summary>
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
+        /// <summary>
+        /// Defines which mode to use to authenticate requests
+        /// Allowed values: Windows, OAuth
+        /// Default: Windows
+        /// </summary>
+        public string AuthenticationMode { get; set; }
+
 #endregion
 
 #region Data settings

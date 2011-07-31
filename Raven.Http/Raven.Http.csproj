@@ -82,6 +82,9 @@
     <Compile Include="Responders\SilverlightPlugins.cs" />
     <Compile Include="Responders\SilverlightUI.cs" />
     <Compile Include="Responders\RavenUI.cs" />
+    <Compile Include="Security\OAuth\AuthenticateClient.cs" />
+    <Compile Include="Security\OAuth\IAuthenticateClient.cs" />
+    <Compile Include="Security\OAuth\OAuthClientCredentialsTokenEndpoint.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="RavenDB.snk" />
