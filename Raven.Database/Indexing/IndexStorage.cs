@@ -187,10 +187,23 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public IEnumerable<IndexQueryResult> Query(
-			string index,
-			IndexQuery query,
-			Func<IndexQueryResult, bool> shouldIncludeInResults,
+		public Query GetLuceneQuery(string index, IndexQuery query)
+		{
+			Index value;
+			if (indexes.TryGetValue(index, out value) == false)
+			{
+				log.Debug("Query on non existing index {0}", index);
+				throw new InvalidOperationException("Index " + index + " does not exists");
+			}
+			var fieldsToFetch = new FieldsToFetch(new string[0], AggregationOperation.None, null);
+			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch).GetLuceneQuery();
+
+		}
+
+	    public IEnumerable<IndexQueryResult> Query(
+            string index, 
+            IndexQuery query, 
+            Func<IndexQueryResult, bool> shouldIncludeInResults,
 			FieldsToFetch fieldsToFetch)
 		{
 			Index value;

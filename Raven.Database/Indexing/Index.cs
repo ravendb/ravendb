@@ -629,7 +629,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			private Query GetLuceneQuery()
+			public Query GetLuceneQuery()
 			{
 				string query = indexQuery.Query;
 				Query luceneQuery;
