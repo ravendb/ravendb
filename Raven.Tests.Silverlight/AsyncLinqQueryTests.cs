@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Silverlight
+﻿using Raven.Abstractions.Indexing;
+
+namespace Raven.Tests.Silverlight
 {
 	using System.Collections.Generic;
 	using System.Linq;
@@ -112,6 +114,42 @@
 					.Where(x => x.Name == "Async Company #1")
 					.ToListAsync();
 				yield return query;
+
+				Assert.AreEqual(1, stats.TotalResults);
+			}
+		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_query_specific_index()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			yield return documentStore.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("test", new IndexDefinition
+			{
+				Map = "from c in docs select new { c.Name }"
+			}, true);
+
+			var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				session.Store(entity);
+				yield return session.SaveChangesAsync();
+			}
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				RavenQueryStatistics stats;
+				var query = session.Query<Company>("test")
+					.Customize(x=>x.WaitForNonStaleResults())
+					.Statistics(out stats)
+					.Where(x => x.Name == "Async Company #1")
+					.ToListAsync();
+				yield return query;
+
+				Assert.IsFalse(query.Result.Count == 0);
 
 				Assert.AreEqual(1, stats.TotalResults);
 			}
