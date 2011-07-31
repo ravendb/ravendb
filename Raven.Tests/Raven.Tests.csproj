@@ -166,6 +166,7 @@
     <Compile Include="Bugs\MapRedue\DocumentView.cs" />
     <Compile Include="Bugs\MapRedue\MapReduceIndex.cs" />
     <Compile Include="Bugs\OfflineConcurrency.cs" />
+    <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
     <Compile Include="Bugs\SerializingAndDeserializingWithRaven.cs" />
     <Compile Include="Bugs\CanGetScores.cs" />
     <Compile Include="Bugs\CanReadLuceneProjectedDateTimeOffset.cs" />

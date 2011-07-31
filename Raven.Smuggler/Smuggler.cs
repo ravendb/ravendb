@@ -317,7 +317,7 @@ Usage:
 				FlushBatch(instanceUrl, batch);
 
 				var attachmentCount = 0;
-				if (jsonReader.Read() == false)
+				if (jsonReader.Read() == false || jsonReader.TokenType == JsonToken.EndObject)
 					return;
 				if (jsonReader.TokenType != JsonToken.PropertyName)
 					throw new InvalidDataException("PropertyName was expected");

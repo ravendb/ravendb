@@ -403,6 +403,10 @@ namespace Raven.Client.Document
 			if (queryOperation != null) 
 				return;
 			theSession.IncrementRequestCount();
+			foreach (var key in DatabaseCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
+			{
+				DatabaseCommands.OperationsHeaders.Remove(key);
+			}
 			InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			ExecuteActualQuery();
 		}
@@ -447,6 +451,10 @@ namespace Raven.Client.Document
 		{
 			if (queryOperation == null)
 			{
+				foreach (var key in DatabaseCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
+				{
+					DatabaseCommands.OperationsHeaders.Remove(key);
+				}
 				InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			}
 
@@ -478,6 +486,10 @@ namespace Raven.Client.Document
 		{
 			if (queryOperation != null)
 				return TaskEx.Run(() => queryOperation);
+			foreach (var key in AsyncDatabaseCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
+			{
+				AsyncDatabaseCommands.OperationsHeaders.Remove(key);
+			}
 			InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
 			theSession.IncrementRequestCount();
 			return ExecuteActualQueryAsync();
