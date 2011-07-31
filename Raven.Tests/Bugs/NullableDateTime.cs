@@ -142,7 +142,7 @@ namespace Raven.Tests.Bugs
 			{
 				Map = docs =>
 							from doc in docs
-							let datetime = (doc.Date != null) ? doc.Date.Value : DateTime.MinValue
+							let datetime = doc.Date ?? DateTime.MinValue
 							select new
 							{
 								Date = datetime
@@ -155,15 +155,6 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanWorkWithNullableDateTime()
 		{
-			// Test assumptions
-			var testdoc = new Doc { Date = null };
-			Assert.Null(testdoc.Date);
-			
-			var now = new DateTime(2011, 7, 29, 12, 0, 0);
-			testdoc = new Doc {Date = now};
-			Assert.NotNull(testdoc.Date);
-			Assert.Equal(testdoc.Date.Value, new DateTime(2011, 7, 29, 12, 0, 0));
-
 			using (var store = NewDocumentStore())
 			{
 				new DocsByDate().Execute(store);
@@ -173,7 +164,7 @@ namespace Raven.Tests.Bugs
 					var items = new[]
 					            	{
 					            		new Doc {Date = null},
-					            		new Doc {Date = now},
+					            		new Doc {Date = DateTime.Now},
 					            	};
 					foreach (var item in items)
 						session.Store(item);
