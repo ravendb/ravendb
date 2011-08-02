@@ -37,7 +37,7 @@ namespace Raven.Tests
         	var ravenConfiguration = new RavenConfiguration
         	{
         		Port = 8080,
-        		RunInMemory = true,
+        		RunInMemory = false,
         		DataDirectory = "Data",
         		AnonymousUserAccessMode = AnonymousUserAccessMode.All
         	};
