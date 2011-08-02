@@ -540,6 +540,7 @@
     <Compile Include="Querying\UsingDynamicQueryWithRemoteServer.cs" />
     <Compile Include="RemoteClientTest.cs" />
     <Compile Include="Security\OAuth\AccessTokenAuthentication.cs" />
+    <Compile Include="Security\OAuth\CertHelper.cs" />
     <Compile Include="Security\OAuth\GrantAccessTokenClientCredentialsFlow.cs" />
     <Compile Include="Security\OAuth\HttpWebRequestExtensions.cs" />
     <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
@@ -680,6 +681,12 @@
     </None>
     <None Include="App.config" />
     <EmbeddedResource Include="DefaultLogging.config" />
+    <None Include="Security\OAuth\Private.pfx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Security\OAuth\Public.cer">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

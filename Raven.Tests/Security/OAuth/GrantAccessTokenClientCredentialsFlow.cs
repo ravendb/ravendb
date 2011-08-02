@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using Raven.Database.Extensions;
 using Raven.Http;
+using Raven.Http.Security.OAuth;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -13,6 +14,7 @@ namespace Raven.Tests.Security.OAuth
     /// </summary>
     public class GrantAccessTokenClientCredentialsFlow : RemoteClientTest, IDisposable
     {
+        readonly string privateKeyPath;
         readonly string path;
         const string baseUrl = "http://localhost";
         const string tokenUrl = "/OAuth/AccessToken";
@@ -23,13 +25,17 @@ namespace Raven.Tests.Security.OAuth
         public GrantAccessTokenClientCredentialsFlow()
         {
             path = GetPath("TestDb");
+            privateKeyPath = GetPath(@"Security\OAuth\Private.pfx");
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
 
         }
 
         protected override void ConfigureServer(Database.Config.RavenConfiguration ravenConfiguration)
         {
+            ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             ravenConfiguration.AuthenticationMode = "OAuth";
+            ravenConfiguration.OAuthTokenCertificatePath = privateKeyPath;
+            ravenConfiguration.OAuthTokenCertificatePassword = "Password123";
         }
 
         public void Dispose()
@@ -55,16 +61,21 @@ namespace Raven.Tests.Security.OAuth
 
             var request = GetNewValidTokenRequest();
 
-            using (var server = GetNewServer())
+            using (var server = GetNewServer(false))
             using (var response = request.MakeRequest())
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
                 token = response.ReadToEnd();
             }
-            
+
+            AccessToken accessToken;
+            AccessTokenBody body;
+
             Assert.NotEmpty(token);
-            Assert.True(Guid.TryParse(token, out tokenGuid));
+            Assert.True(AccessToken.TryParse(token, out accessToken));
+            Assert.True(accessToken.TryParseBody(out body));
+            Assert.True(!body.IsExpired());
         }
 
         [Fact]
@@ -73,7 +84,7 @@ namespace Raven.Tests.Security.OAuth
             var request = GetNewValidTokenRequest()
                 .WithConentType("text/plain");
 
-            using (var server = GetNewServer())
+            using (var server = GetNewServer(false))
             using (var response = request.MakeRequest())
             {
                 Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -93,7 +104,7 @@ namespace Raven.Tests.Security.OAuth
             var request = GetNewValidTokenRequest()
                 .WithoutHeader("grant_type");
 
-            using (var server = GetNewServer())
+            using (var server = GetNewServer(false))
             using (var response = request.MakeRequest())
             {
                 Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -113,7 +124,7 @@ namespace Raven.Tests.Security.OAuth
             var request = GetNewValidTokenRequest()
                 .WithHeader("grant_type", "another");
 
-            using (var server = GetNewServer())
+            using (var server = GetNewServer(false))
             using (var response = request.MakeRequest())
             {
                 Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -133,7 +144,7 @@ namespace Raven.Tests.Security.OAuth
             var request = GetNewValidTokenRequest()
                 .WithoutCredentials();
 
-            using (var server = GetNewServer())
+            using (var server = GetNewServer(false))
             using (var response = request.MakeRequest())
             {
                 Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -150,9 +161,9 @@ namespace Raven.Tests.Security.OAuth
         public void RequestWithInvalidClientPasswordShouldBeRejected()
         {
             var request = GetNewValidTokenRequest()
-                .WithBasicCredentials(baseUrl, validClientUsername, "badPass");
+                .WithBasicCredentials(baseUrl, validClientUsername, "");
 
-            using (var server = GetNewServer())
+            using (var server = GetNewServer(false))
             using (var response = request.MakeRequest())
             {
                 Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

@@ -69,5 +69,12 @@ namespace Raven.Tests.Security.OAuth
 
             return content;
         }
+
+        public static HttpWebRequest WithBearerTokenAuthorization(this HttpWebRequest request, string token)
+        {
+            request.Headers["Authorization"] = "Bearer " + token;
+
+            return request;
+        }
     }
 }

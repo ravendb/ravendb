@@ -57,7 +57,7 @@ namespace Raven.Http.Security.OAuth
 
                 return;
             }
-
+            
             var identity = (HttpListenerBasicIdentity)context.User.Identity;
             var clientId = identity.Name;
             var clientSecret = identity.Password;
@@ -70,7 +70,13 @@ namespace Raven.Http.Security.OAuth
                 return;
             }
 
-            context.Write(Guid.NewGuid().ToString("N"));
+            //TODO: Add userId lookup from client credentials
+            var userId = "";
+            var authorizedDatabases = new[] { "*" };
+
+            var token = AccessToken.Create(Settings.OAuthTokenCertificatePath, Settings.OAuthTokenCertificatePassword, userId, authorizedDatabases);
+
+            context.Write(token.Serialize());
         }
     }
 }

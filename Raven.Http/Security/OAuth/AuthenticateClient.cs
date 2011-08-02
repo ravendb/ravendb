@@ -8,7 +8,7 @@ namespace Raven.Http.Security.OAuth
         public bool Authenticate(string clientId, string clientSecret)
         {
             //TODO: Authenticate using OAuthUser documents in default database
-            return false;
+            return !string.IsNullOrEmpty(clientSecret);
         }
     }
 }
