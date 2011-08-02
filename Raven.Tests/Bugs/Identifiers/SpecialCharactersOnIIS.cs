@@ -9,7 +9,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs.Identifiers
 {
-    public class WithBase64CharactersOnIIS : WithNLog
+    public class SpecialCharactersOnIIS : WithNLog
     {
         public class Entity
         {
