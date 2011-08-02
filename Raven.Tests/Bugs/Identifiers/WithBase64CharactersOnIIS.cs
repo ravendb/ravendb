@@ -5,36 +5,38 @@ using System.Text;
 using Raven.Client;
 using Raven.Client.Document;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs.Identifiers
 {
-    public class WithBase64CharactersOnIIS : IISClientTest
+    public class WithBase64CharactersOnIIS : WithNLog
     {
         public class Entity
         {
             public string Id { get; set; }
         }
 
-        [Fact]
-        public void Can_load_entity()
+        [Theory]
+        [InlineData("foo")]
+        [InlineData("SHA1-UdVhzPmv0o+wUez+Jirt0OFBcUY=")]
+        public void Can_load_entity(string entityId)
         {
-            var specialId = "SHA1-UdVhzPmv0o+wUez+Jirt0OFBcUY=";
+            var testContext = new IISClientTest();
 
-            using(var store = base.GetDocumentStore())
+            using(var store = testContext.GetDocumentStore())
             {
                 store.Initialize();
 
-                object id;
                 using (var session = store.OpenSession())
                 {
-                    var entity = new Entity() { Id = specialId };
+                    var entity = new Entity() { Id = entityId };
                     session.Store(entity);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var entity1 = session.Load<object>(specialId);
+                    var entity1 = session.Load<object>(entityId);
                     Assert.NotNull(entity1);
                 }
             }

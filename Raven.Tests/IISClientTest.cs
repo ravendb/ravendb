@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests
 {
-    public class IISClientTest : WithNLog
+    public class IISClientTest
     {
         const string HostName = "RavenIISTest";
         const int Port = 80;
