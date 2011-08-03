@@ -86,7 +86,6 @@
     <Compile Include="Responders\RavenUI.cs" />
     <Compile Include="Security\OAuth\AccessToken.cs" />
     <Compile Include="Security\OAuth\AccessTokenBody.cs" />
-    <Compile Include="Security\OAuth\AuthenticateClient.cs" />
     <Compile Include="Security\OAuth\IAuthenticateClient.cs" />
     <Compile Include="Security\OAuth\OAuthClientCredentialsTokenEndpoint.cs" />
     <Compile Include="Security\OAuth\OAuthRequestAuthorizer.cs" />

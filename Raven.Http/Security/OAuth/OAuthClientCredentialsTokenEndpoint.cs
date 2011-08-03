@@ -9,8 +9,8 @@ namespace Raven.Http.Security.OAuth
 {
     public class OAuthClientCredentialsTokenEndpoint : AbstractRequestResponder
     {
-        const string tokenContentType = "application/json;charset=UTF-8";
-        const string tokenGrantType = "client_credentials";
+        const string TokenContentType = "application/json;charset=UTF-8";
+        const string TokenGrantType = "client_credentials";
 
         [Import]
         public IAuthenticateClient AuthenticateClient { get; set; }
@@ -33,18 +33,18 @@ namespace Raven.Http.Security.OAuth
                 return;
             }
 
-            if (context.Request.Headers["Content-Type"] != tokenContentType)
+            if (context.Request.Headers["Content-Type"] != TokenContentType)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                context.WriteJson(new { error = "invalid_request", error_description = "Content-Type should be: " + tokenContentType });
+                context.WriteJson(new { error = "invalid_request", error_description = "Content-Type should be: " + TokenContentType });
 
                 return;
             }
 
-            if (context.Request.Headers["grant_type"] != tokenGrantType)
+            if (context.Request.Headers["grant_type"] != TokenGrantType)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                context.WriteJson(new { error = "unsupported_grant_type", error_description = "Only supported grant_type is: " + tokenGrantType });
+                context.WriteJson(new { error = "unsupported_grant_type", error_description = "Only supported grant_type is: " + TokenGrantType });
 
                 return;
             }
