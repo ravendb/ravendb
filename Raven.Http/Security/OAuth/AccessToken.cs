@@ -11,10 +11,9 @@ namespace Raven.Http.Security.OAuth
     {
         public string Body { get; set; }
         public string Signature { get; set; }
-        
-        public bool MatchesSignature(string certPath)
+
+    	private bool MatchesSignature(X509Certificate2 cert)
         {
-            var cert = new X509Certificate2(certPath);
             var csp = (RSACryptoServiceProvider)cert.PublicKey.Key;
 
             var signatureData = Convert.FromBase64String(Signature);
@@ -28,11 +27,24 @@ namespace Raven.Http.Security.OAuth
 			}
         }
 
-        public bool TryParseBody(out AccessTokenBody body)
+        public static bool TryParseBody(X509Certificate2 cert, string token, out AccessTokenBody body)
         {
+        	AccessToken accessToken;
+        	if(TryParse(token, out accessToken) == false)
+        	{
+        		body = null;
+        		return false;
+        	}
+
+			if (accessToken.MatchesSignature(cert) == false)
+			{
+				body = null;
+				return false;
+			}
+
             try
             {
-                body = JsonConvert.DeserializeObject<AccessTokenBody>(Body);
+                body = JsonConvert.DeserializeObject<AccessTokenBody>(accessToken.Body);
                 return true;
             }
             catch
@@ -42,7 +54,7 @@ namespace Raven.Http.Security.OAuth
             }
         }
 
-        public static bool TryParse(string token, out AccessToken accessToken)
+    	private static bool TryParse(string token, out AccessToken accessToken)
         {
             try
             {

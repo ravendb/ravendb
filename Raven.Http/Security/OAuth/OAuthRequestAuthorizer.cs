@@ -1,14 +1,16 @@
 using System;
+using System.Security.Cryptography.X509Certificates;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Http.Security.OAuth
 {
     public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
     {
-        public override bool Authorize(IHttpContext ctx)
-        {
-            var httpRequest = ctx.Request;
+		public override bool Authorize(IHttpContext ctx)
+		{
+			var httpRequest = ctx.Request;
 
             if (ctx.Request.RawUrl.StartsWith("/OAuth/AccessToken", StringComparison.InvariantCultureIgnoreCase))
                 return true;
@@ -27,9 +29,10 @@ namespace Raven.Http.Security.OAuth
                 return false;
             }
 
-            AccessToken accessToken;
+			var cert = new X509Certificate2(Settings.OAuthTokenCertificatePath, Settings.OAuthTokenCertificatePassword);
+
             AccessTokenBody tokenBody;
-            if (!AccessToken.TryParse(token, out accessToken) || !accessToken.MatchesSignature(Settings.OAuthTokenCertificatePath) || !accessToken.TryParseBody(out tokenBody))
+            if (!AccessToken.TryParseBody(cert, token, out tokenBody) )
             {
                 ctx.SetStatusToUnauthorized();
                 WriteAuthorizationChallenge(ctx, "invalid_token", "The access token is invalid");
