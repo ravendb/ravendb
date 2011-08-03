@@ -19,7 +19,7 @@ namespace Raven.Http.Security.OAuth
             var csp = (RSACryptoServiceProvider)cert.PublicKey.Key;
 
             var signatureData = Convert.FromBase64String(Signature);
-            var bodyData = new UnicodeEncoding().GetBytes(Body);
+            var bodyData = Encoding.Unicode.GetBytes(Body);
 
 			using (var sha1Managed = new SHA1Managed())
 			{
@@ -57,7 +57,7 @@ namespace Raven.Http.Security.OAuth
             }
         }
 
-        public static AccessToken Create(string certPath, string certPassword, string userId, params string[] databases)
+        public static AccessToken Create(string certPath, string certPassword, string userId, string[] databases)
         {
             var issued = (DateTime.UtcNow - DateTime.MinValue).TotalMilliseconds;
             
