@@ -49,6 +49,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Authentication\AuthorizationTest.cs" />
+    <Compile Include="Authentication\HttpWebRequestExtensions.cs" />
+    <Compile Include="Authentication\SimpleLogin.cs" />
     <Compile Include="Authorization\AuthorizationTest.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
     <Compile Include="Authorization\Bugs\Kwal.cs" />
@@ -109,6 +112,10 @@
       <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
       <Name>Raven.Storage.Managed</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Bundles.Authentication\Raven.Bundles.Authentication.csproj">
+      <Project>{53DA3AE4-1648-43B9-A814-BAFD89AEBF2A}</Project>
+      <Name>Raven.Bundles.Authentication</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
       <Project>{034FFD8F-F917-4A45-B920-9C460CD66BAF}</Project>
       <Name>Raven.Bundles.Authorization</Name>
@@ -145,6 +152,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Authentication\Private.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Authentication\Public.cer">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
