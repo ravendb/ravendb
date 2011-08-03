@@ -171,6 +171,12 @@
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
     <Compile Include="Bugs\Identifiers\WithBase64Characters.cs" />
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
+    <Compile Include="Bugs\LiveProjections\Entities\Place.cs" />
+    <Compile Include="Bugs\LiveProjections\Entities\Task.cs" />
+    <Compile Include="Bugs\LiveProjections\Entities\TaskSummary.cs" />
+    <Compile Include="Bugs\LiveProjections\Entities\User.cs" />
+    <Compile Include="Bugs\LiveProjections\Indexes\TaskSummaryIndex.cs" />
+    <Compile Include="Bugs\LiveProjections\LiveProjectionOnTasks.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNames.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNamesFromTheStronglyTypedType.cs" />
     <Compile Include="Bugs\MapRedue\Document.cs" />
