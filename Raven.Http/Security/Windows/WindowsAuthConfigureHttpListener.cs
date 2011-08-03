@@ -30,7 +30,7 @@ namespace Raven.Http.Security.Windows
                         AuthenticationSchemes.Anonymous;
                     listener.AuthenticationSchemeSelectorDelegate = request =>
                     {
-                        return IsGetRequest(request.HttpMethod, request.Url.AbsolutePath) ?
+                        return AbstractRequestAuthorizer.IsGetRequest(request.HttpMethod, request.Url.AbsolutePath) ?
                             AuthenticationSchemes.Anonymous | AuthenticationSchemes.IntegratedWindowsAuthentication :
                             AuthenticationSchemes.IntegratedWindowsAuthentication;
                     };
@@ -38,11 +38,6 @@ namespace Raven.Http.Security.Windows
                 default:
                     throw new ArgumentException("Cannot understand access mode: " + config.AnonymousUserAccessMode);
             }
-        }
-
-        static bool IsGetRequest(string httpMethod, string requestPath)
-        {
-            return (httpMethod == "GET" || httpMethod == "HEAD");
         }
     }
 }
