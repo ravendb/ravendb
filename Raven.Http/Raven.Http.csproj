@@ -64,11 +64,13 @@
     <Compile Include="Abstractions\IHttpRequest.cs" />
     <Compile Include="Abstractions\IHttpResponse.cs" />
     <Compile Include="Abstractions\UrlExtension.cs" />
+    <Compile Include="AbstractAuthorizeRequests.cs" />
     <Compile Include="AnonymousUserAccessMode.cs" />
     <Compile Include="CurrentOperationContext.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="HttpServer.cs" />
+    <Compile Include="IConfigureHttpListener.cs" />
     <Compile Include="IResourceStore.cs" />
     <Compile Include="IRavenHttpConfiguration.cs" />
     <Compile Include="LogHttpRequestStatsParams.cs" />
@@ -82,6 +84,14 @@
     <Compile Include="Responders\SilverlightPlugins.cs" />
     <Compile Include="Responders\SilverlightUI.cs" />
     <Compile Include="Responders\RavenUI.cs" />
+    <Compile Include="Security\OAuth\AccessToken.cs" />
+    <Compile Include="Security\OAuth\AuthenticateClient.cs" />
+    <Compile Include="Security\OAuth\IAuthenticateClient.cs" />
+    <Compile Include="Security\OAuth\OAuthClientCredentialsTokenEndpoint.cs" />
+    <Compile Include="Security\OAuth\OAuthAuthorizeRequests.cs" />
+    <Compile Include="Security\OAuth\OAuthConfigureHttpListener.cs" />
+    <Compile Include="Security\Windows\WindowsAuthConfigureHttpListener.cs" />
+    <Compile Include="Security\Windows\WindowsAuthorizeRequests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="RavenDB.snk" />

@@ -263,6 +263,23 @@ namespace Raven.Database.Config
 		/// </summary>
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
+        /// <summary>
+        /// Defines which mode to use to authenticate requests
+        /// Allowed values: Windows, OAuth
+        /// Default: Windows
+        /// </summary>
+        public string AuthenticationMode { get; set; }
+
+        /// <summary>
+        /// Defines the absolute file path of the certificate to use when verifying access token signatures for OAuth
+        /// </summary>
+        public string OAuthTokenCertificatePath { get; set; }
+
+        /// <summary>
+        /// Defines the password to be used with the OAuth Token Certificate when issuing tokens
+        /// </summary>
+        public string OAuthTokenCertificatePassword { get; set; }
+
 #endregion
 
 #region Data settings
