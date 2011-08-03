@@ -70,11 +70,6 @@ namespace Raven.Http.Security.OAuth
             return token;
         }
 
-        protected bool IsGetRequest(string httpMethod, string requestPath)
-        {
-            return (httpMethod == "GET" || httpMethod == "HEAD");
-        }
-        
         static void WriteAuthorizationChallenge(IHttpContext ctx, string error, string errorDescription)
         {
             ctx.Response.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));

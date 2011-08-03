@@ -24,5 +24,11 @@ namespace Raven.Http
         }
         
         public abstract bool Authorize(IHttpContext context);
+
+		protected bool IsGetRequest(string httpMethod, string requestPath)
+		{
+			return (httpMethod == "GET" || httpMethod == "HEAD") ||
+				   httpMethod == "POST" && (requestPath == "/multi_get/" || requestPath == "/multi_get");
+		}
     }
 }

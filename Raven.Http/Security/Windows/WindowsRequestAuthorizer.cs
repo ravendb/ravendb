@@ -28,11 +28,7 @@ namespace Raven.Http.Security.Windows
             return true;
         }
 
-        protected bool IsGetRequest(string httpMethod, string requestPath)
-        {
-        	return (httpMethod == "GET" || httpMethod == "HEAD") ||
-        	       httpMethod == "POST" && (requestPath == "/multi_get/" || requestPath == "/multi_get");
-        }
+      
 
         private static bool IsInvalidUser(IHttpContext ctx)
         {
