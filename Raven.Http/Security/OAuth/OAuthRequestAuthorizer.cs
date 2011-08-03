@@ -2,7 +2,6 @@ using System;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Http.Security.OAuth
 {

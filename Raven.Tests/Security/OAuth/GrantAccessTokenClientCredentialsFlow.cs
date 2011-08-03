@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using Raven.Database.Extensions;
 using Raven.Http;
 using Raven.Http.Security.OAuth;
@@ -57,7 +58,6 @@ namespace Raven.Tests.Security.OAuth
         public void ValidAndAuthorizedRequestShouldBeGrantedAnAccessToken()
         {
             string token;
-            Guid tokenGuid;
 
             var request = GetNewValidTokenRequest();
 
@@ -69,13 +69,12 @@ namespace Raven.Tests.Security.OAuth
                 token = response.ReadToEnd();
             }
 
-            AccessToken accessToken;
             AccessTokenBody body;
 
             Assert.NotEmpty(token);
-            Assert.True(AccessToken.TryParse(token, out accessToken));
-            Assert.True(accessToken.TryParseBody(out body));
-            Assert.True(!body.IsExpired());
+        	var certificate2 = new X509Certificate2(privateKeyPath);
+        	Assert.True(AccessToken.TryParseBody(certificate2 ,token, out body));
+            Assert.False(body.IsExpired());
         }
 
         [Fact]

@@ -1,5 +1,3 @@
-using System;
-using System.Net;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 
