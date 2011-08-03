@@ -63,7 +63,7 @@ namespace Raven.Http.Security.OAuth
         {
             const string bearerPrefix = "Bearer ";
 
-            var auth = CurrentOperationContext.Headers.Value["Authorization"];
+            var auth = ctx.Request.Headers["Authorization"];
 
             if (auth == null || auth.Length <= bearerPrefix.Length || !auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
                 return null;
