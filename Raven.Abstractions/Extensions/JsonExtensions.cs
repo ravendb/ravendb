@@ -5,8 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Extensions
@@ -91,12 +93,20 @@ namespace Raven.Abstractions.Extensions
 		/// </summary>
 		public static T JsonDeserialization<T>(this RavenJObject self)
 		{
-			return (T)new JsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
+			return (T)CreateDefaultJsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
 		}
+
+		private static readonly IContractResolver contractResolver = new DefaultContractResolver(shareCache: true)
+		{
+			DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+		};
 
 		public static JsonSerializer CreateDefaultJsonSerializer()
 		{
-			var jsonSerializer = new JsonSerializer();
+			var jsonSerializer = new JsonSerializer
+			{
+				ContractResolver = contractResolver
+			};
 			foreach (var defaultJsonConverter in Default.Converters)
 			{
 				jsonSerializer.Converters.Add(defaultJsonConverter);
