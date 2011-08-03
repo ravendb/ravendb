@@ -21,9 +21,12 @@ namespace Raven.Http.Security.OAuth
             var signatureData = Convert.FromBase64String(Signature);
             var bodyData = new UnicodeEncoding().GetBytes(Body);
 
-            var hash = new SHA1Managed().ComputeHash(bodyData);
+			using (var sha1Managed = new SHA1Managed())
+			{
+				var hash = sha1Managed.ComputeHash(bodyData);
 
-            return csp.VerifyHash(hash, CryptoConfig.MapNameToOID("SHA1"), signatureData);
+				return csp.VerifyHash(hash, CryptoConfig.MapNameToOID("SHA1"), signatureData);
+			}
         }
 
         public bool TryParseBody(out AccessTokenBody body)
