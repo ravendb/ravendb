@@ -64,7 +64,7 @@
     <Compile Include="Abstractions\IHttpRequest.cs" />
     <Compile Include="Abstractions\IHttpResponse.cs" />
     <Compile Include="Abstractions\UrlExtension.cs" />
-    <Compile Include="AbstractAuthorizeRequests.cs" />
+    <Compile Include="AbstractRequestAuthorizer.cs" />
     <Compile Include="AnonymousUserAccessMode.cs" />
     <Compile Include="CurrentOperationContext.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
@@ -88,10 +88,10 @@
     <Compile Include="Security\OAuth\AuthenticateClient.cs" />
     <Compile Include="Security\OAuth\IAuthenticateClient.cs" />
     <Compile Include="Security\OAuth\OAuthClientCredentialsTokenEndpoint.cs" />
-    <Compile Include="Security\OAuth\OAuthAuthorizeRequests.cs" />
+    <Compile Include="Security\OAuth\OAuthRequestAuthorizer.cs" />
     <Compile Include="Security\OAuth\OAuthConfigureHttpListener.cs" />
     <Compile Include="Security\Windows\WindowsAuthConfigureHttpListener.cs" />
-    <Compile Include="Security\Windows\WindowsAuthorizeRequests.cs" />
+    <Compile Include="Security\Windows\WindowsRequestAuthorizer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="RavenDB.snk" />

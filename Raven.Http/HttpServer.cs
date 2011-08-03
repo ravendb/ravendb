@@ -33,7 +33,7 @@ namespace Raven.Http
 		private const int MaxConcurrentRequests = 192;
 		protected readonly IResourceStore DefaultResourceStore;
         protected readonly IRavenHttpConfiguration DefaultConfiguration;
-		readonly AbstractAuthorizeRequests requestAuthorizer;
+		readonly AbstractRequestAuthorizer requestAuthorizer;
 
         private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
         private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
@@ -99,10 +99,10 @@ namespace Raven.Http
 		    switch (configuration.AuthenticationMode)
 		    {
                 case "Windows":
-		            requestAuthorizer = new WindowsAuthorizeRequests();
+		            requestAuthorizer = new WindowsRequestAuthorizer();
                     break;
                 case "OAuth":
-		            requestAuthorizer = new OAuthAuthorizeRequests();
+		            requestAuthorizer = new OAuthRequestAuthorizer();
                     break;
                 default:
 		            throw new InvalidOperationException(
