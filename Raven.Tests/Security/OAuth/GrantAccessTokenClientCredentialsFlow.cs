@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.Composition.Hosting;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Database.Extensions;
@@ -37,9 +38,19 @@ namespace Raven.Tests.Security.OAuth
             ravenConfiguration.AuthenticationMode = "OAuth";
             ravenConfiguration.OAuthTokenCertificatePath = privateKeyPath;
             ravenConfiguration.OAuthTokenCertificatePassword = "Password123";
+			ravenConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FakeAuthenticateClient)));
         }
 
-        public void Dispose()
+    	public class FakeAuthenticateClient : IAuthenticateClient
+    	{
+    		public bool Authenticate(IResourceStore currentStore, string username, string password, out string[] allowedDatabases)
+    		{
+    			allowedDatabases = new[] {"*"};
+    			return true;
+    		}
+    	}
+
+    	public void Dispose()
         {
             IOExtensions.DeleteDirectory(path);
         }
@@ -108,7 +119,8 @@ namespace Raven.Tests.Security.OAuth
             {
                 Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-                var result = RavenJObject.Parse(response.ReadToEnd());
+            	var readToEnd = response.ReadToEnd();
+            	var result = RavenJObject.Parse(readToEnd);
 
                 Assert.Contains("error", result.Keys);
                 Assert.Equal("unsupported_grant_type", result["error"]);
