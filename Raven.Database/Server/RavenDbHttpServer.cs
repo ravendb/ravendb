@@ -132,11 +132,5 @@ namespace Raven.Database.Server
 				Index = e.Information.Name,
 			});
 		}
-
-		protected override bool IsGetRequest(string httpMethod, string requestPath)
-		{
-			return base.IsGetRequest(httpMethod, requestPath) || 
-				httpMethod == "POST" && (requestPath == "/multi_get/" || requestPath == "/multi_get");
-		}
 	}
 }

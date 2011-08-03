@@ -33,7 +33,7 @@ namespace Raven.Http
 		private const int MaxConcurrentRequests = 192;
 		protected readonly IResourceStore DefaultResourceStore;
         protected readonly IRavenHttpConfiguration DefaultConfiguration;
-        AbstractAuthorizeRequests requestAuthorizer;
+		readonly AbstractAuthorizeRequests requestAuthorizer;
 
         private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
         private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
@@ -477,11 +477,6 @@ namespace Raven.Http
             }
 
         }
-        
-		protected virtual bool IsGetRequest(string httpMethod, string requestPath)
-		{
-			return (httpMethod == "GET" || httpMethod == "HEAD");
-		}
 
 	    public void ResetNumberOfRequests()
 		{
