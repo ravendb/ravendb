@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
+using Raven.Client.Util;
 
 namespace Raven.Client.Document.Async
 {
@@ -61,7 +62,7 @@ namespace Raven.Client.Document.Async
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
 	    {
 	    	var indexName = "dynamic";
-			if (typeof(T) != typeof(object))
+			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
@@ -253,7 +254,7 @@ namespace Raven.Client.Document.Async
 		public IRavenQueryable<T> Query<T>()
 		{
 			string indexName = "dynamic";
-			if (typeof(T) != typeof(object))
+			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
