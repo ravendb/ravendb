@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Transactions;
+using NLog;
 
 namespace Raven.Client.Document
 {
@@ -15,6 +16,8 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class RavenClientEnlistment : IEnlistmentNotification
 	{
+		private static Logger logger = LogManager.GetCurrentClassLogger();
+
 		private readonly ITransactionalDocumentSession session;
 		private readonly Action onTxComplete;
 		private readonly TransactionInformation transaction;
@@ -36,8 +39,17 @@ namespace Raven.Client.Document
 		public void Prepare(PreparingEnlistment preparingEnlistment)
 		{
 			onTxComplete();
-			session.StoreRecoveryInformation(session.ResourceManagerId, PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction), 
-				preparingEnlistment.RecoveryInformation());
+			try
+			{
+				session.StoreRecoveryInformation(session.ResourceManagerId, PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction), 
+				                                 preparingEnlistment.RecoveryInformation());
+			}
+			catch (Exception e)
+			{
+				logger.ErrorException("Could not prepare distributed transaction", e);
+				preparingEnlistment.ForceRollback(e);
+				return;
+			}
 			preparingEnlistment.Prepared();
 		}
 
@@ -47,8 +59,16 @@ namespace Raven.Client.Document
 		/// <param name="enlistment">An <see cref="T:System.Transactions.Enlistment"/> object used to send a response to the transaction manager.</param>
 		public void Commit(Enlistment enlistment)
 		{
-			onTxComplete(); 
-			session.Commit(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+			onTxComplete();
+			try
+			{
+				session.Commit(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+			}
+			catch (Exception e)
+			{
+				logger.ErrorException("Could not commit distributed transaction", e);
+				return; // nothing to do, DTC will mark tx as hang
+			}
 			enlistment.Done();
 		}
 
@@ -58,9 +78,16 @@ namespace Raven.Client.Document
 		/// <param name="enlistment">A <see cref="T:System.Transactions.Enlistment"/> object used to send a response to the transaction manager.</param>
 		public void Rollback(Enlistment enlistment)
 		{
-			onTxComplete(); 
-			session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
-			enlistment.Done();
+			onTxComplete();
+			try
+			{
+				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+			}
+			catch (Exception e)
+			{
+				logger.ErrorException("Could not rollback distributed transaction", e);
+			}
+			enlistment.Done(); // will happen anyway, tx will be rolled back after timeout
 		}
 
 		/// <summary>
@@ -69,9 +96,16 @@ namespace Raven.Client.Document
 		/// <param name="enlistment">An <see cref="T:System.Transactions.Enlistment"/> object used to send a response to the transaction manager.</param>
 		public void InDoubt(Enlistment enlistment)
 		{
-			onTxComplete(); 
-			session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
-			enlistment.Done();
+			onTxComplete();
+			try
+			{
+				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+			}
+			catch (Exception e)
+			{
+				logger.ErrorException("Could not mark distriubted transaction as in doubt", e);
+			}
+			enlistment.Done(); // what else can we do?
 		}
 
 		/// <summary>
@@ -87,8 +121,17 @@ namespace Raven.Client.Document
 		/// <param name="singlePhaseEnlistment">The single phase enlistment.</param>
 		public void Rollback(SinglePhaseEnlistment singlePhaseEnlistment)
 		{
-			onTxComplete(); 
-			session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+			onTxComplete();
+			try
+			{
+				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+			}
+			catch (Exception e)
+			{
+				logger.ErrorException("Could not rollback distributed transaction", e);
+				singlePhaseEnlistment.InDoubt(e);
+				return;
+			}
 			singlePhaseEnlistment.Aborted();
 		}
 	}
