@@ -82,8 +82,17 @@ namespace Raven.Http.Security.OAuth
 
         static string Sign(string body, string certPath, string password)
         {
-            var cert = new X509Certificate2(certPath, password);
-            var csp = (RSACryptoServiceProvider)cert.PrivateKey;
+			X509Certificate2 cert;
+
+			if(string.IsNullOrEmpty(password))
+			{
+				cert = new X509Certificate2(certPath);
+			}
+        	else
+			{
+				cert = new X509Certificate2(certPath, password);
+			}
+        	var csp = (RSACryptoServiceProvider)cert.PrivateKey;
 
             var data = Encoding.Unicode.GetBytes(body);
 			using (var hasher = new SHA1Managed())
