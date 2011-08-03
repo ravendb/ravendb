@@ -225,6 +225,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentStoreListener.cs">
       <Link>Imports\Listeners\IDocumentStoreListener.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
+      <Link>Imports\Util\Types.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
