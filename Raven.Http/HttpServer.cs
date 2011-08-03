@@ -22,6 +22,7 @@ using Raven.Abstractions.MEF;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
 using Raven.Http.Extensions;
+using Raven.Http.Security;
 using Raven.Http.Security.OAuth;
 using Raven.Http.Security.Windows;
 using Formatting = Newtonsoft.Json.Formatting;

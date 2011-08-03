@@ -1,8 +1,7 @@
 using System;
-using System.Net;
 using Raven.Http.Abstractions;
 
-namespace Raven.Http
+namespace Raven.Http.Security
 {
     public abstract class AbstractRequestAuthorizer
     {
