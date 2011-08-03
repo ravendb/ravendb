@@ -72,7 +72,7 @@ namespace Raven.Tests.Security.OAuth
             AccessTokenBody body;
 
             Assert.NotEmpty(token);
-        	var certificate2 = new X509Certificate2(privateKeyPath);
+			var certificate2 = new X509Certificate2(privateKeyPath, "Password123");
         	Assert.True(AccessToken.TryParseBody(certificate2 ,token, out body));
             Assert.False(body.IsExpired());
         }
