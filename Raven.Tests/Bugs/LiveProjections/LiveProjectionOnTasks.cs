@@ -58,7 +58,7 @@ namespace Raven.Tests.Bugs.LiveProjections
                     var first = results.FirstOrDefault();
 
                     Assert.NotNull(first);
-                    Assert.Equal(first.Id, 1);
+					Assert.Equal(first.Id, "tasks/1");
                     Assert.Equal(first.GiverId, 1);
                 }
             }

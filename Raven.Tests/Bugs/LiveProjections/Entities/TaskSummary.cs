@@ -4,7 +4,7 @@ namespace Raven.Tests.Bugs.LiveProjections.Entities
 {
     public class TaskSummary
     {
-        public long Id { get; set; }
+        public string Id { get; set; }
 
         public string Description { get; set; }
 
