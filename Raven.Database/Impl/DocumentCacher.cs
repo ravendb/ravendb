@@ -10,8 +10,8 @@ namespace Raven.Database.Impl
 	public class DocumentCacher : IDocumentCacher
 	{
 		private readonly MemoryCache cachedSerializedDocuments;
+		
 		[ThreadStatic]
-
 		private static bool skipSettingDocumentInCache;
 
 		public DocumentCacher(InMemoryRavenConfiguration configuration)
@@ -52,11 +52,15 @@ namespace Raven.Database.Impl
 			documentClone.EnsureSnapshot();
 			var metadataClone = ((RavenJObject)metadata.CloneToken());
 			metadataClone.EnsureSnapshot();
-			cachedSerializedDocuments["Doc/" + key + "/" + etag] = new CachedDocument
+			cachedSerializedDocuments.Set("Doc/" + key + "/" + etag, new CachedDocument
 			{
 				Document = documentClone,
 				Metadata = metadataClone
-			};
+			}, new CacheItemPolicy
+			{
+				SlidingExpiration = TimeSpan.FromMinutes(5),
+			});
+
 		}
 
 		public void RemoveCachedDocument(string key, Guid etag)
