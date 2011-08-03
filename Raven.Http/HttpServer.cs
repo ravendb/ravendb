@@ -32,8 +32,8 @@ namespace Raven.Http
 	public abstract class HttpServer : IDisposable
     {
 		private const int MaxConcurrentRequests = 192;
-		protected readonly IResourceStore DefaultResourceStore;
-        protected readonly IRavenHttpConfiguration DefaultConfiguration;
+		public IResourceStore DefaultResourceStore { get; private set; }
+		public IRavenHttpConfiguration DefaultConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
         private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();

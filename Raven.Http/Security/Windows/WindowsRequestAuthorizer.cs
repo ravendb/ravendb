@@ -7,7 +7,7 @@ namespace Raven.Http.Security.Windows
     {
         public override bool Authorize(IHttpContext ctx)
         {
-            if (Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx))
+            if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx))
             {
                 ctx.SetStatusToUnauthorized();
                 return false;
@@ -15,7 +15,7 @@ namespace Raven.Http.Security.Windows
 
             IHttpRequest httpRequest = ctx.Request;
 
-            if (Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
+			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
                 IsInvalidUser(ctx) &&
                 IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false)
             {
