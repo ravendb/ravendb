@@ -46,7 +46,7 @@ namespace Raven.Tests.Security.OAuth
     		public bool Authenticate(IResourceStore currentStore, string username, string password, out string[] allowedDatabases)
     		{
     			allowedDatabases = new[] {"*"};
-    			return true;
+    			return string.IsNullOrEmpty(password) == false;
     		}
     	}
 
@@ -177,7 +177,7 @@ namespace Raven.Tests.Security.OAuth
             using (var server = GetNewServer(false))
             using (var response = request.MakeRequest())
             {
-                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
 
                 var result = RavenJObject.Parse(response.ReadToEnd());
 

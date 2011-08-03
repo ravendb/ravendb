@@ -57,7 +57,7 @@ namespace Raven.Http.Security.OAuth
 			if (!AuthenticateClient.Authenticate(ResourceStore, identity.Item1, identity.Item2, out authorizedDatabases) &&
 				!AuthenticateClient.Authenticate(DefaultResourceStore, identity.Item1, identity.Item2, out authorizedDatabases))
 			{
-				context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+				context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
 				context.WriteJson(new { error = "unauthorized_client", error_description = "Invalid client credentials" });
 
 				return;
