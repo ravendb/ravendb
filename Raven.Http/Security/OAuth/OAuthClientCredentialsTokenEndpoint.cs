@@ -27,12 +27,6 @@ namespace Raven.Http.Security.OAuth
 
 		public override void Respond(IHttpContext context)
 		{
-			if (this.Settings.AuthenticationMode != "OAuth")
-			{
-				context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-				return;
-			}
-
 			if (context.Request.Headers["Content-Type"] != TokenContentType)
 			{
 				context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
@@ -59,7 +53,9 @@ namespace Raven.Http.Security.OAuth
 				return;
 			}
 
-			if (!AuthenticateClient.Authenticate(ResourceStore, identity.Item1, identity.Item2))
+			string[] authorizedDatabases;
+			if (!AuthenticateClient.Authenticate(ResourceStore, identity.Item1, identity.Item2, out authorizedDatabases) &&
+				!AuthenticateClient.Authenticate(DefaultResourceStore, identity.Item1, identity.Item2, out authorizedDatabases))
 			{
 				context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
 				context.WriteJson(new { error = "unauthorized_client", error_description = "Invalid client credentials" });
@@ -68,7 +64,6 @@ namespace Raven.Http.Security.OAuth
 			}
 
 			var userId = identity.Item1;
-			var authorizedDatabases = new[] { "*" };
 
 			var token = AccessToken.Create(Settings.OAuthTokenCertificatePath, Settings.OAuthTokenCertificatePassword, userId,
 										   authorizedDatabases);
