@@ -7,7 +7,8 @@ namespace Raven.Http.Security.Windows
     {
         public void Configure(HttpListener listener, IRavenHttpConfiguration config)
         {
-            if (config.AuthenticationMode != "Windows") return;
+            if (string.Equals(config.AuthenticationMode, "Windows",StringComparison.InvariantCultureIgnoreCase)) 
+				return;
 
             switch (config.AnonymousUserAccessMode)
             {

@@ -97,17 +97,17 @@ namespace Raven.Http
                 responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
             }
 
-		    switch (configuration.AuthenticationMode)
+		    switch (configuration.AuthenticationMode.ToLowerInvariant())
 		    {
-                case "Windows":
+                case "windows":
 		            requestAuthorizer = new WindowsRequestAuthorizer();
                     break;
-                case "OAuth":
+                case "oauth":
 		            requestAuthorizer = new OAuthRequestAuthorizer();
                     break;
                 default:
 		            throw new InvalidOperationException(
-		                string.Format("Unknown Security mode {0}. Options are Windows and OAuth", configuration.AuthenticationMode));
+						string.Format("Unknown AuthenticationMode {0}. Options are Windows and OAuth", configuration.AuthenticationMode));
 		    }
 
             requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);

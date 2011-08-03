@@ -8,7 +8,8 @@ namespace Raven.Http.Security.OAuth
     {
         public void Configure(HttpListener listener, IRavenHttpConfiguration config)
         {
-            if (config.AuthenticationMode != "OAuth") return;
+			if (string.Equals(config.AuthenticationMode, "OAuth", StringComparison.InvariantCultureIgnoreCase) == false) 
+				return;
 
             listener.AuthenticationSchemes = AuthenticationSchemes.Anonymous | AuthenticationSchemes.Basic;
 

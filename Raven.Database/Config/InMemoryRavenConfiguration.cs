@@ -88,6 +88,8 @@ namespace Raven.Database.Config
 			TempIndexInMemoryMaxBytes = tempMemoryMaxMb != null ? int.Parse(tempMemoryMaxMb) * 1024000 : 26214400;
 			TempIndexInMemoryMaxBytes = Math.Max(1024000, TempIndexInMemoryMaxBytes);
 
+			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? "windows";
+
 			// Data settings
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
