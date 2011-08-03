@@ -2,6 +2,6 @@
 {
     public interface IAuthenticateClient
     {
-        bool Authenticate(string clientId, string clientSecret);
+        bool Authenticate(string username, string password);
     }
 }

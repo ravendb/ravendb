@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.Composition;
 using System.Net;
+using System.Text;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 
@@ -48,35 +49,56 @@ namespace Raven.Http.Security.OAuth
                 return;
             }
 
-            var user = context.User;
+			var identity = GetUserAndPassword(context);
 
-            if (user == null || !(user.Identity is HttpListenerBasicIdentity))
+			if (identity == null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 context.WriteJson(new { error = "invalid_client", error_description = "No client authentication was provided" });
 
                 return;
             }
-            
-            var identity = (HttpListenerBasicIdentity)context.User.Identity;
-            var clientId = identity.Name;
-            var clientSecret = identity.Password;
 
-            if (!AuthenticateClient.Authenticate(clientId, clientSecret))
-            {
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                context.WriteJson(new { error = "unauthorized_client", error_description = "Invalid client credentials" });
+        	if (!AuthenticateClient.Authenticate(identity.Item1, identity.Item2))
+        	{
+        		context.Response.StatusCode = (int) HttpStatusCode.BadRequest;
+        		context.WriteJson(new {error = "unauthorized_client", error_description = "Invalid client credentials"});
 
-                return;
-            }
+        		return;
+        	}
 
-            //TODO: Add userId lookup from client credentials
-            var userId = "";
-            var authorizedDatabases = new[] { "*" };
+        	var userId = identity.Item1;
+        	var authorizedDatabases = new[] {"*"};
 
-            var token = AccessToken.Create(Settings.OAuthTokenCertificatePath, Settings.OAuthTokenCertificatePassword, userId, authorizedDatabases);
+        	var token = AccessToken.Create(Settings.OAuthTokenCertificatePath, Settings.OAuthTokenCertificatePassword, userId,
+        	                               authorizedDatabases);
 
-            context.Write(token.Serialize());
+        	context.Write(token.Serialize());
         }
+
+    	private static Tuple<string, string> GetUserAndPassword(IHttpContext context)
+    	{
+			if (context.User != null)
+			{
+				var httpListenerBasicIdentity = context.User.Identity as HttpListenerBasicIdentity;
+				if (httpListenerBasicIdentity != null)
+				{
+					return Tuple.Create(httpListenerBasicIdentity.Name, httpListenerBasicIdentity.Password);
+				}
+			}
+
+    		var auth = context.Request.Headers["Authorization"];
+			if(string.IsNullOrEmpty(auth) || auth.StartsWith("Basic",StringComparison.InvariantCultureIgnoreCase) == false)
+			{
+				return null;
+			}
+
+    		var userAndPass = Encoding.UTF8.GetString(Convert.FromBase64String(auth.Substring("Basic ".Length)));
+    		var parts = userAndPass.Split(':');
+			if (parts.Length != 2)
+				return null;
+
+    		return Tuple.Create(parts[0], parts[1]);
+    	}
     }
 }
