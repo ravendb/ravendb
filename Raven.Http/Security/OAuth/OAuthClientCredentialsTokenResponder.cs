@@ -7,7 +7,7 @@ using Raven.Http.Extensions;
 
 namespace Raven.Http.Security.OAuth
 {
-	public class OAuthClientCredentialsTokenEndpoint : AbstractRequestResponder
+	public class OAuthClientCredentialsTokenResponder : AbstractRequestResponder
 	{
 		const string TokenContentType = "application/json;charset=UTF-8";
 		const string TokenGrantType = "client_credentials";
@@ -65,7 +65,7 @@ namespace Raven.Http.Security.OAuth
 
 			var userId = identity.Item1;
 
-			var token = AccessToken.Create(Settings.OAuthTokenCertificatePath, Settings.OAuthTokenCertificatePassword, userId,
+			var token = AccessToken.Create(Settings.OAuthTokenCertificate, userId,
 										   authorizedDatabases);
 
 			context.Write(token.Serialize());
