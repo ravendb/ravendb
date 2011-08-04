@@ -14,8 +14,10 @@ properties {
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
-  $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
-    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+  $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", `
+                     "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???" `
+                    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", `
+                    "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $client_dlls_3_5 = @( "nlog.???","Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Json-3.5.???", "Raven.Client.Lightweight-3.5.???");
      
