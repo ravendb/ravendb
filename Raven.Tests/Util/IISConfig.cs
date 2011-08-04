@@ -24,7 +24,8 @@ namespace Raven.Tests.Util
             {
                 foreach (var site in manager.Sites)
                 {
-					if (((IEnumerable<dynamic>)site.Applications).All(s => s.ApplicationPoolName == applicationPoolName) && site.Applications.Any())
+                	var applications = ((IEnumerable<dynamic>)site.Applications);
+					if (applications.All(s => s.ApplicationPoolName == applicationPoolName) && applications.Any())
                     {
                         site.Delete();
                     }
