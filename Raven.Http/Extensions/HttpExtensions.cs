@@ -446,16 +446,12 @@ namespace Raven.Http.Extensions
 		{
 			if(context == null)
 				return false;
-			if(context.User == null)
-				return false;
-			if(context.User.Identity == null)
-				return false;
-			if(context.User.Identity.IsAuthenticated == false)
+			
+			var windowsPrincipal = context.User as WindowsPrincipal;
+			if (windowsPrincipal == null)
 				return false;
 
-			return
-				context.User.IsInRole(@"administrators") ||
-				context.User.IsInRole(@"builtin\administrators");
+			return windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator);
 		}
 
 		private static string GetContentType(string docPath)
