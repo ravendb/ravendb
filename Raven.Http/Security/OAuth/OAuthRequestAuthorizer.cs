@@ -22,36 +22,30 @@ namespace Raven.Http.Security.OAuth
             
             if (token == null)
             {
-                ctx.SetStatusToUnauthorized();
-                WriteAuthorizationChallenge(ctx, "invalid_request", "The access token is required");
+				WriteAuthorizationChallenge(ctx, 401, "invalid_request", "The access token is required");
                 
                 return false;
             }
 
-			var cert = new X509Certificate2(Settings.OAuthTokenCertificatePath, Settings.OAuthTokenCertificatePassword);
-
-            AccessTokenBody tokenBody;
-            if (!AccessToken.TryParseBody(cert, token, out tokenBody) )
+			AccessTokenBody tokenBody;
+			if (!AccessToken.TryParseBody(Settings.OAuthTokenCertificate, token, out tokenBody))
             {
-                ctx.SetStatusToUnauthorized();
-                WriteAuthorizationChallenge(ctx, "invalid_token", "The access token is invalid");
+				WriteAuthorizationChallenge(ctx, 401, "invalid_token", "The access token is invalid");
 
                 return false;
             }
 
             if (tokenBody.IsExpired())
             {
-                ctx.SetStatusToUnauthorized();
-                WriteAuthorizationChallenge(ctx, "invalid_token", "The access token is expired");
+				WriteAuthorizationChallenge(ctx, 401, "invalid_token", "The access token is expired");
 
                 return false;
             }
 
             if(!tokenBody.IsAuthorized(TenantId))
             {
-                ctx.SetStatusToForbidden();
-                WriteAuthorizationChallenge(ctx, "insufficient_scope", "Not authorized for tenant " + TenantId);
-
+				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", "Not authorized for tenant " + TenantId);
+       
                 return false;
             }
 
@@ -72,8 +66,13 @@ namespace Raven.Http.Security.OAuth
             return token;
         }
 
-        static void WriteAuthorizationChallenge(IHttpContext ctx, string error, string errorDescription)
+        void WriteAuthorizationChallenge(IHttpContext ctx, int statusCode, string error, string errorDescription)
         {
+			if (string.IsNullOrEmpty(Settings.OAuthTokenServer) == false)
+			{
+				ctx.Response.AddHeader("OAuth-Source", Settings.OAuthTokenServer);
+			}
+        	ctx.Response.StatusCode = statusCode;
             ctx.Response.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
         }
     }
