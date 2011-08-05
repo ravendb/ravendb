@@ -15,7 +15,7 @@ properties {
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
   $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", `
-                     "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???" `
+                     "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", `
                     "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", `
                     "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
