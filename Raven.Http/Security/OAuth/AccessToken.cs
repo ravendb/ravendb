@@ -68,30 +68,20 @@ namespace Raven.Http.Security.OAuth
             }
         }
 
-        public static AccessToken Create(string certPath, string certPassword, string userId, string[] databases)
+        public static AccessToken Create(X509Certificate2 cert, string userId, string[] databases)
         {
             var issued = (DateTime.UtcNow - DateTime.MinValue).TotalMilliseconds;
             
             var body = RavenJObject.FromObject(new { UserId = userId, AuthorizedDatabases = databases ?? new string[0], Issued = issued })
                     .ToString(Formatting.None);
 
-            var signature = Sign(body, certPath, certPassword);
+            var signature = Sign(body, cert);
 
             return new AccessToken { Body = body, Signature = signature };
         }
 
-        static string Sign(string body, string certPath, string password)
+        static string Sign(string body, X509Certificate2 cert)
         {
-			X509Certificate2 cert;
-
-			if(string.IsNullOrEmpty(password))
-			{
-				cert = new X509Certificate2(certPath);
-			}
-        	else
-			{
-				cert = new X509Certificate2(certPath, password);
-			}
         	var csp = (RSACryptoServiceProvider)cert.PrivateKey;
 
             var data = Encoding.Unicode.GetBytes(body);
