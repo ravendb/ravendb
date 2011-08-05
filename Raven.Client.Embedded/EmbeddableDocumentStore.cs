@@ -146,7 +146,15 @@ namespace Raven.Client.Embedded
             }
         }
 
-        ///<summary>
+    	/// <summary>
+    	/// Expose the internal http server, if used
+    	/// </summary>
+    	public RavenDbHttpServer HttpServer
+    	{
+    		get { return httpServer; }
+    	}
+
+    	///<summary>
         /// Whatever we should also host an HTTP endpoint for the document database
         ///</summary>
         public bool UseEmbeddedHttpServer { get; set; }
