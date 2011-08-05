@@ -15,7 +15,7 @@ namespace Raven.Bundles.Tests.Authentication
 		[Fact]
 		public void CanLogin()
 		{
-			using(var session = store.OpenSession())
+			using(var session = embeddedStore.OpenSession())
 			{
 				session.Store(new AuthenticationUser
 				{
@@ -26,15 +26,16 @@ namespace Raven.Bundles.Tests.Authentication
 				session.SaveChanges();
 			}
 
-			var req = (HttpWebRequest) WebRequest.Create(server.Database.Configuration.ServerUrl + "/OAuth/AccessToken");
-			var response = req.WithBasicCredentials("Ayende", "abc")
+			var req = (HttpWebRequest) WebRequest.Create(embeddedStore.Configuration.ServerUrl + "OAuth/AccessToken");
+			var response = req
+				.WithBasicCredentials("Ayende", "abc")
 				.WithConentType("application/json;charset=UTF-8")
 				.WithHeader("grant_type", "client_credentials")
 				.MakeRequest()
 				.ReadToEnd();
 
 			AccessTokenBody body;
-			Assert.True(AccessToken.TryParseBody(new X509Certificate2(GetPath(@"Authentication\Public.cer")), response, out body));
+			Assert.True(AccessToken.TryParseBody(embeddedStore.Configuration.OAuthTokenCertificate, response, out body));
 		}
 
 		public static string CompressString(string text)

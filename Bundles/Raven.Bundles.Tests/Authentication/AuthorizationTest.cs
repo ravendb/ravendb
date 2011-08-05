@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Web;
 using Raven.Bundles.Authentication;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Http;
 using Raven.Server;
 
@@ -21,7 +22,7 @@ namespace Raven.Bundles.Tests.Authentication
 	{
 		protected const string UserId = "Raven/Users/Ayende";
 		protected DocumentStore store;
-		protected RavenDbServer server;
+		protected EmbeddableDocumentStore embeddedStore;
 
 		static AuthenticationTest()
 		{
@@ -35,25 +36,26 @@ namespace Raven.Bundles.Tests.Authentication
 		}
 
 
-		protected string GetPath(string subFolderName)
-		{
-			string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(AuthenticationTest)).CodeBase);
-			return Path.Combine(retPath, subFolderName).Substring(6); //remove leading file://
-		}
 
 		protected AuthenticationTest()
 		{
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
-            server = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
+			embeddedStore = new EmbeddableDocumentStore()
 			{
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All,
-				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthenticationUser).Assembly) } },
-				DataDirectory = "Data",
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				AuthenticationMode = "oauth",
-				OAuthTokenCertificate = database::Raven.Database.Config.CertGenerator.GenerateNewCertificate("RavenDB.Test")
-			});
-			store = new DocumentStore { Url = server.Database.Configuration.ServerUrl };
+				UseEmbeddedHttpServer = true,
+				Configuration =
+					{
+						AnonymousUserAccessMode = AnonymousUserAccessMode.All,
+						Catalog = {Catalogs = {new AssemblyCatalog(typeof (AuthenticationUser).Assembly)}},
+						DataDirectory = "Data",
+						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+						AuthenticationMode = "oauth",
+						OAuthTokenCertificate = database::Raven.Database.Config.CertGenerator.GenerateNewCertificate("RavenDB.Test")
+					}
+			};
+
+			embeddedStore.Initialize();
+			store = new DocumentStore { Url = embeddedStore.Configuration.ServerUrl };
 			store.Initialize();
 			foreach (DictionaryEntry de in HttpRuntime.Cache)
 			{
@@ -64,7 +66,7 @@ namespace Raven.Bundles.Tests.Authentication
 		public void Dispose()
 		{
 			store.Dispose();
-			server.Dispose();
+			embeddedStore.Dispose();
 		}
 	}
 }
