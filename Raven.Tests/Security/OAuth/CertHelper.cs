@@ -7,9 +7,8 @@ namespace Raven.Tests.Security.OAuth
 {
     public class CertHelper
     {
-        public static string Sign(string text, string certPath)
+        public static string Sign(string text, X509Certificate2 cert)
         {
-            var cert = new X509Certificate2(certPath, "Password123");
             var csp = (RSACryptoServiceProvider)cert.PrivateKey;
             
             var data = new UnicodeEncoding().GetBytes(text);
@@ -18,9 +17,8 @@ namespace Raven.Tests.Security.OAuth
             return Convert.ToBase64String(csp.SignHash(hash, CryptoConfig.MapNameToOID("SHA1")));
         }
 
-        public static bool Verify(string text, byte[] signature, string certPath)
+        public static bool Verify(string text, byte[] signature, X509Certificate2 cert)
         {
-            var cert = new X509Certificate2(certPath);
             var csp = (RSACryptoServiceProvider)cert.PublicKey.Key;
 
             var data = new UnicodeEncoding().GetBytes(text);

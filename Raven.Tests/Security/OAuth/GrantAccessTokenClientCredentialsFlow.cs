@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Http;
 using Raven.Http.Security.OAuth;
@@ -16,7 +17,6 @@ namespace Raven.Tests.Security.OAuth
     /// </summary>
     public class GrantAccessTokenClientCredentialsFlow : RemoteClientTest, IDisposable
     {
-        readonly string privateKeyPath;
         readonly string path;
         const string baseUrl = "http://localhost";
         const string tokenUrl = "/OAuth/AccessToken";
@@ -27,7 +27,6 @@ namespace Raven.Tests.Security.OAuth
         public GrantAccessTokenClientCredentialsFlow()
         {
             path = GetPath("TestDb");
-            privateKeyPath = GetPath(@"Security\OAuth\Private.pfx");
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
 
         }
@@ -36,8 +35,7 @@ namespace Raven.Tests.Security.OAuth
         {
             ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             ravenConfiguration.AuthenticationMode = "OAuth";
-            ravenConfiguration.OAuthTokenCertificatePath = privateKeyPath;
-            ravenConfiguration.OAuthTokenCertificatePassword = "Password123";
+        	ravenConfiguration.OAuthTokenCertificate = CertGenerator.GenerateNewCertificate("RavenDB.Test");
 			ravenConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FakeAuthenticateClient)));
         }
 
@@ -68,7 +66,6 @@ namespace Raven.Tests.Security.OAuth
         [Fact]
         public void ValidAndAuthorizedRequestShouldBeGrantedAnAccessToken()
         {
-            string token;
 
             var request = GetNewValidTokenRequest();
 
@@ -77,15 +74,16 @@ namespace Raven.Tests.Security.OAuth
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-                token = response.ReadToEnd();
+            	string token = response.ReadToEnd();
+
+				AccessTokenBody body;
+
+				Assert.NotEmpty(token);
+				Assert.True(AccessToken.TryParseBody(server.Database.Configuration.OAuthTokenCertificate, token, out body));
+				Assert.False(body.IsExpired());
             }
 
-            AccessTokenBody body;
-
-            Assert.NotEmpty(token);
-			var certificate2 = new X509Certificate2(privateKeyPath, "Password123");
-        	Assert.True(AccessToken.TryParseBody(certificate2 ,token, out body));
-            Assert.False(body.IsExpired());
+          
         }
 
         [Fact]

@@ -50,8 +50,8 @@ namespace Raven.Bundles.Tests.Authentication
 				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthenticationUser).Assembly) } },
 				DataDirectory = "Data",
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				OAuthTokenCertificatePath = GetPath(@"Authentication\Private.pfx"),
-				OAuthTokenCertificatePassword = "Password123"
+				AuthenticationMode = "oauth",
+				OAuthTokenCertificate = database::Raven.Database.Config.CertGenerator.GenerateNewCertificate("RavenDB.Test")
 			});
 			store = new DocumentStore { Url = server.Database.Configuration.ServerUrl };
 			store.Initialize();
