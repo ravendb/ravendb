@@ -9,6 +9,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
@@ -88,8 +89,6 @@ namespace Raven.Database.Config
 			TempIndexInMemoryMaxBytes = tempMemoryMaxMb != null ? int.Parse(tempMemoryMaxMb) * 1024000 : 26214400;
 			TempIndexInMemoryMaxBytes = Math.Max(1024000, TempIndexInMemoryMaxBytes);
 
-			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? "windows";
-
 			// Data settings
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
@@ -131,7 +130,32 @@ namespace Raven.Database.Config
 			PluginsDirectory = Settings["Raven/PluginsDirectory"] ?? @"~\Plugins";
 			if (PluginsDirectory.StartsWith(@"~\"))
 				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
+
+			// OAuth
+			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? "windows";
+
+			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase) == false) 
+				return;
+			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ?? ServerUrl + "/OAuth/AccessToken";
+			OAuthTokenCertificate = GetCertificate();
 		}
+
+		private X509Certificate2 GetCertificate()
+		{
+			var path = Settings["Raven/OAuthTokenCertificatePath"];
+			if (string.IsNullOrEmpty(path) == false)
+			{
+				var pwd = Settings["Raven/OAuthTokenCertificatePassword"];
+				if (string.IsNullOrEmpty(pwd) == false)
+				{
+					return new X509Certificate2(path, pwd);
+				}
+				return new X509Certificate2(path);
+			}
+
+			return CertGenerator.GenerateNewCertificate("RavenDB");
+		}
+
 
 		public NameValueCollection Settings { get; set; }
 
@@ -273,14 +297,9 @@ namespace Raven.Database.Config
         public string AuthenticationMode { get; set; }
 
         /// <summary>
-        /// Defines the absolute file path of the certificate to use when verifying access token signatures for OAuth
+        /// The certificate to use when verifying access token signatures for OAuth
         /// </summary>
-        public string OAuthTokenCertificatePath { get; set; }
-
-        /// <summary>
-        /// Defines the password to be used with the OAuth Token Certificate when issuing tokens
-        /// </summary>
-        public string OAuthTokenCertificatePassword { get; set; }
+        public X509Certificate2 OAuthTokenCertificate { get; set; }
 
 #endregion
 
@@ -360,7 +379,9 @@ namespace Raven.Database.Config
 			}
 		}
 
-#endregion
+		public string OAuthTokenServer { get; set; }
+
+		#endregion
 
 		public CompositionContainer Container
 		{

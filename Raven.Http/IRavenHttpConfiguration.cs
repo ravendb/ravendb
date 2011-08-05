@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Raven.Http
 {
@@ -13,8 +14,7 @@ namespace Raven.Http
         string VirtualDirectory { get; }
         AnonymousUserAccessMode AnonymousUserAccessMode { get; }
         string AuthenticationMode { get; }
-        string OAuthTokenCertificatePath { get; }
-        string OAuthTokenCertificatePassword { get; }
+		X509Certificate2  OAuthTokenCertificate { get; }
         string HostName { get; }
         int Port { get; }
         CompositionContainer Container { get; set; }
@@ -23,6 +23,7 @@ namespace Raven.Http
         string AccessControlAllowOrigin { get; }
         NameValueCollection Settings { get; }
     	string PluginsDirectory { get; set; }
+    	string OAuthTokenServer { get; set; }
     	string GetFullUrl(string url);
     }
 }
