@@ -165,6 +165,7 @@
     <Compile Include="Bugs\AggressiveCaching.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
+    <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
     <Compile Include="Bugs\Identifiers\WithBase64Characters.cs" />
     <Compile Include="Bugs\HiLoToMaxTests.cs" />

@@ -19,7 +19,8 @@ namespace Raven.Database.Impl
 			cachedSerializedDocuments = new MemoryCache(typeof(DocumentCacher).FullName + ".Cache", new NameValueCollection
 			{
 				{"physicalMemoryLimitPercentage", configuration.MemoryCacheLimitPercentage.ToString()},
-				{"pollingInterval",  configuration.MemoryCacheLimitCheckInterval.ToString(@"hh\:mm\:ss")}
+				{"pollingInterval",  configuration.MemoryCacheLimitCheckInterval.ToString(@"hh\:mm\:ss")},
+				{"cacheMemoryLimitMegabytes", configuration.MemoryCacheLimitMegabytes.ToString()}
 			});
 		}
 

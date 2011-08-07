@@ -26,8 +26,8 @@ namespace Raven.Database.Queries
 			if(index == null) throw new ArgumentNullException("index");
 			
 			var result = new HashSet<string>();
-			var currentIndexSearcher = database.IndexStorage.GetCurrentIndexSearcher(index);
-			try
+			IndexSearcher currentIndexSearcher;
+			using(database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
             {
                 var termEnum = currentIndexSearcher.GetIndexReader().Terms(new Term(field, fromValue ?? string.Empty));
 				try
@@ -57,10 +57,6 @@ namespace Raven.Database.Queries
 				{
 					termEnum.Close();
 				}
-			}
-            finally
-			{
-			    currentIndexSearcher.GetIndexReader().DecRef();
 			}
 
 			return result;

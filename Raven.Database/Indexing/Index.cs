@@ -52,7 +52,7 @@ namespace Raven.Database.Indexing
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
-		private IndexSearcher searcher;
+		private volatile IndexSearcherHolder currentIndexSearcherHolder;
 
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
@@ -79,17 +79,10 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public abstract bool IsMapReduce { get; }
 
-		/// <summary>
-        /// if you are calling this method, you _have_ to call 
-        /// searcher.GetIndexReader().DecRef();
-        /// when you are done searching
-        /// </summary>
-        internal IndexSearcher GetSearcher()
-	    {
-        	var indexSearcher = searcher;
-        	indexSearcher.GetIndexReader().IncRef();
-	        return indexSearcher;
-	    }
+		internal IDisposable GetSearcher(out IndexSearcher searcher)
+		{
+			return currentIndexSearcherHolder.GetSearcher(out searcher);
+		}
 
 	    #region IDisposable Members
 
@@ -102,12 +95,10 @@ namespace Raven.Database.Indexing
 				{
 					indexExtension.Value.Dispose();
 				}
-			    var indexReader = searcher.GetIndexReader();
-				searcher.Close();
-                while (indexReader.GetRefCount() > 0)
-			    {
-                    indexReader.Close();
-			    }
+				if(currentIndexSearcherHolder != null)
+				{
+					currentIndexSearcherHolder.DisposeRudely();
+				}
 				if (indexWriter != null)
 				{
 					IndexWriter writer = indexWriter;
@@ -406,26 +397,26 @@ namespace Raven.Database.Indexing
 
 		private void RecreateSearcher()
 		{
-		    var oldSearch = searcher;
+			var oldSearcher = currentIndexSearcherHolder;
             
 		    if (indexWriter == null)
 		    {
-		        searcher = new IndexSearcher(directory, true);
+		    	currentIndexSearcherHolder = new IndexSearcherHolder(new IndexSearcher(directory, true));
 		    }
 		    else
 		    {
 		        var indexReader = indexWriter.GetReader();
-		    	searcher = new IndexSearcher(indexReader);
+				currentIndexSearcherHolder = new IndexSearcherHolder(new IndexSearcher(indexReader));
 		    }
 
-            if (oldSearch != null)
+            if (oldSearcher != null)
             {
-            	var indexReader = oldSearch.GetIndexReader();
-				oldSearch.Close();
-				indexReader.Close();
+            	IndexSearcher _;
+            	using(oldSearcher.GetSearcher(out _))
+            	{
+            		oldSearcher.DisposeSafely();
+            	}
             }
-            
-            Thread.MemoryBarrier(); // force other threads to see this write
 		}
 
 	    protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
@@ -540,11 +531,10 @@ namespace Raven.Database.Indexing
 				using(IndexStorage.EnsureInvariantCulture())
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
-					var indexSearcher = parent.searcher;
-					indexSearcher.GetIndexReader().IncRef();
-					try
+					IndexSearcher indexSearcher;
+					using(parent.GetSearcher(out indexSearcher))
 					{
-						Query luceneQuery = GetLuceneQuery();
+						var luceneQuery = GetLuceneQuery();
 						int start = indexQuery.Start;
 						int pageSize = indexQuery.PageSize;
 						int returnedResults = 0;
@@ -581,10 +571,6 @@ namespace Raven.Database.Indexing
 									yield break;
 							}
 						} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
-					}
-					finally
-					{
-						indexSearcher.GetIndexReader().DecRef();
 					}
 				}
 			}
