@@ -52,7 +52,7 @@ namespace Raven.Database.Indexing
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
-		private IndexSearcher searcher;
+		private volatile IndexSearcher searcher;
 
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
@@ -86,9 +86,18 @@ namespace Raven.Database.Indexing
         /// </summary>
         internal IndexSearcher GetSearcher()
 	    {
-        	var indexSearcher = searcher;
-        	indexSearcher.GetIndexReader().IncRef();
-	        return indexSearcher;
+			while (true)
+			{
+				try
+				{
+					var indexSearcher = searcher;
+					indexSearcher.GetIndexReader().IncRef();
+					return indexSearcher;
+				}
+				catch (AlreadyClosedException)
+				{
+				}
+			}
 	    }
 
 	    #region IDisposable Members
@@ -406,7 +415,7 @@ namespace Raven.Database.Indexing
 
 		private void RecreateSearcher()
 		{
-		    var oldSearch = searcher;
+		    var oldSearcher = searcher;
             
 		    if (indexWriter == null)
 		    {
@@ -418,14 +427,12 @@ namespace Raven.Database.Indexing
 		    	searcher = new IndexSearcher(indexReader);
 		    }
 
-            if (oldSearch != null)
+            if (oldSearcher != null)
             {
-            	var indexReader = oldSearch.GetIndexReader();
-				oldSearch.Close();
-				indexReader.Close();
+            	var indexReader = oldSearcher.GetIndexReader();
+				oldSearcher.Close();
+				indexReader.DecRef();
             }
-            
-            Thread.MemoryBarrier(); // force other threads to see this write
 		}
 
 	    protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
@@ -540,8 +547,7 @@ namespace Raven.Database.Indexing
 				using(IndexStorage.EnsureInvariantCulture())
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
-					var indexSearcher = parent.searcher;
-					indexSearcher.GetIndexReader().IncRef();
+					var indexSearcher = parent.GetSearcher();
 					try
 					{
 						Query luceneQuery = GetLuceneQuery();
