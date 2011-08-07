@@ -140,10 +140,18 @@ namespace Raven.Database.Config
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
 		{
-						// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
-			return (int)(MemoryCache.Default.CacheMemoryLimit / 2 - 
+			var totalPhysicalMemoryMegabytes =
+				(int) (new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory/1024/1024);
+			// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
+
+			var val = (totalPhysicalMemoryMegabytes / 2)  - 
 						// reduce the unmanaged cache size from the default limit
-						(GetConfigurationValue<int>("Raven/Esent/CacheSizeMax") ?? 1024));
+						(GetConfigurationValue<int>("Raven/Esent/CacheSizeMax") ?? 1024);
+
+			if (val < 0)
+				return 128; // if machine has less than 1024 MB, then only use 128 MB 
+
+			return val;
 		}
 
 		public NameValueCollection Settings { get; set; }
