@@ -54,9 +54,16 @@ namespace Raven.Database.Config
 								? ThreadPriority.Normal
 								: (ThreadPriority)Enum.Parse(typeof(ThreadPriority), backgroundTasksPriority);
 
+			var cacheMemoryLimitMegabytes = Settings["Raven/MemoryCacheLimitMegabytes"];
+			MemoryCacheLimitMegabytes = cacheMemoryLimitMegabytes == null
+											? GetDefaultMemoryCacheLimitMegabytes()
+			                            	: int.Parse(cacheMemoryLimitMegabytes);
+
+			
+
 			var memoryCacheLimitPercentage = Settings["Raven/MemoryCacheLimitPercentage"];
 			MemoryCacheLimitPercentage = memoryCacheLimitPercentage == null
-								? MemoryCache.Default.PhysicalMemoryLimit
+								? 0 // auto-size
 								: int.Parse(memoryCacheLimitPercentage);
 			var memoryCacheLimitCheckInterval = Settings["Raven/MemoryCacheLimitCheckInterval"];
 			MemoryCacheLimitCheckInterval = memoryCacheLimitCheckInterval == null
@@ -131,6 +138,14 @@ namespace Raven.Database.Config
 				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
 		}
 
+		private int GetDefaultMemoryCacheLimitMegabytes()
+		{
+						// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
+			return (int)(MemoryCache.Default.CacheMemoryLimit / 2 - 
+						// reduce the unmanaged cache size from the default limit
+						(GetConfigurationValue<int>("Raven/Esent/CacheSizeMax") ?? 1024));
+		}
+
 		public NameValueCollection Settings { get; set; }
 
 		public string ServerUrl
@@ -160,9 +175,14 @@ namespace Raven.Database.Config
 		/// <summary>
 		/// Percentage of physical memory used for caching
 		/// Allowed values: 0-99 (0 = autosize)
-		/// Default: 99 (or value provided by system.runtime.caching app config)
 		/// </summary>
-		public long MemoryCacheLimitPercentage { get; set; }
+		public int MemoryCacheLimitPercentage { get; set; }
+
+		/// <summary>
+		/// An integer value that specifies the maximum allowable size, in megabytes, that caching 
+		/// document instances will use
+		/// </summary>
+		public int MemoryCacheLimitMegabytes { get; set; }
 
 		/// <summary>
 		/// Interval for checking the memory cache limits
