@@ -8,6 +8,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
+using Lucene.Net.Spatial.Tier;
 
 namespace Raven.Tests.Bugs
 {
@@ -79,9 +80,7 @@ namespace Raven.Tests.Bugs
 
             const double lat = 55.6836422426, lng = 13.5871808352; // in the middle of AreaOne
             const double radius = 5.0;
-
-            // Radius >= 14.4 return 4 results
-            // Radius >= 14.3 return 0 results
+            
             // Expcted is that 5.0 will return 3 results
             var nearbyDocs = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
                                     .WithinRadiusOf(radius, lat, lng)
@@ -90,6 +89,8 @@ namespace Raven.Tests.Bugs
 
             Assert.NotEqual(null, nearbyDocs);
             Assert.Equal(3, nearbyDocs.Length);
+            var dist = DistanceUtils.GetInstance();
+            Assert.Equal(true, nearbyDocs.All(x => dist.GetDistanceMi(x.Latitude, x.Longitude, lat, lng) < radius));
 
             session.Dispose();
         }

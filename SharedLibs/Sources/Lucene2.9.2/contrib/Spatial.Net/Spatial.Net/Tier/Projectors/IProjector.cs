@@ -19,7 +19,9 @@ namespace Lucene.Net.Spatial.Tier.Projectors
 {
 	public interface IProjector
 	{
+        //Incorporated changes from https://issues.apache.org/jira/browse/LUCENENET-431
 		string CoordsAsString(double latitude, double longitude);
 		double[] Coords(double latitude, double longitude);
+        double[] Range();
 	}
 }
