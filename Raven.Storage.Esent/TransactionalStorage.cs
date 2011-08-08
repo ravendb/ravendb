@@ -12,6 +12,7 @@ using System.Runtime.Caching;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
@@ -43,6 +44,8 @@ namespace Raven.Storage.Esent
 		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
 		private IUuidGenerator generator;
 		private readonly IDocumentCacher documentCacher;
+
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		[ImportMany]
 		public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
@@ -170,11 +173,11 @@ namespace Raven.Storage.Esent
 			try
 			{
 				generator = uuidGenerator;
-				new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
+				var instanceParameters = new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
 
 				if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
 				{
-					new InstanceParameters(instance)
+					instanceParameters = new InstanceParameters(instance)
 					{
 						CircularLog = true,
 						Recovery = false,
@@ -194,6 +197,11 @@ namespace Raven.Storage.Esent
 						AlternateDatabaseRecoveryDirectory = path
 					};
 				}
+
+				log.Info(@"Esent Settings:
+  MaxVerPages      = {0}
+  CacheSizeMax     = {1}
+  DatabasePageSize = {2}", instanceParameters.MaxVerPages, SystemParameters.CacheSizeMax, SystemParameters.DatabasePageSize);
 
 				Api.JetInit(ref instance);
 

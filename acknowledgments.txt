@@ -12,3 +12,4 @@ The Raven Datbase is making use of the following OSS projects:
 * xUnit (http://xunit.codeplex.com) under the MS PL license: http://xunit.codeplex.com/license
 * Caliburn.Micro (http://caliburnmicro.codeplex.com/) - under the MIT license: http://caliburnmicro.codeplex.com/license
 * Castle Project (http://www.castleproject.org/) under the Apache license: http://www.apache.org/licenses/LICENSE-2.0.html
+* PSHostsFile (https://github.com/fschwiet/PSHostsFile) under the MIT license https://github.com/fschwiet/PSHostsFile/blob/master/LICENSE.txt

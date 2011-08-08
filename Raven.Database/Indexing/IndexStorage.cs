@@ -274,9 +274,9 @@ namespace Raven.Database.Indexing
         /// searcher.GetIndexReader().DecRef();
         /// when you are done searching
         /// </summary>
-        internal IndexSearcher GetCurrentIndexSearcher(string indexName)
+        internal IDisposable GetCurrentIndexSearcher(string indexName, out IndexSearcher searcher)
         {
-        	return GetIndexByName(indexName).GetSearcher();
+        	return GetIndexByName(indexName).GetSearcher(out searcher);
         }
 
 		private Index GetIndexByName(string indexName)

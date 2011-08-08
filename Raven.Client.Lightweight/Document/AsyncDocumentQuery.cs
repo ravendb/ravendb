@@ -339,12 +339,10 @@ namespace Raven.Client.Document
 
     	/// <summary>
         /// Order the results by the specified fields
-        /// </summary>
-        /// <remarks>
         /// The fields are the names of the fields to sort, defaulting to sorting by ascending.
         /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
-        /// </remarks>
-        /// <param name="fields">The fields.</param>
+		/// </summary>
+		/// <param name="fields">The fields.</param>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy(params string[] fields)
         {
             OrderBy(fields);
