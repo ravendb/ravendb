@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Runtime.Caching;
+using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Config;
 using Raven.Json.Linq;
@@ -10,6 +11,7 @@ namespace Raven.Database.Impl
 	public class DocumentCacher : IDocumentCacher
 	{
 		private readonly MemoryCache cachedSerializedDocuments;
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		
 		[ThreadStatic]
 		private static bool skipSettingDocumentInCache;
@@ -22,6 +24,11 @@ namespace Raven.Database.Impl
 				{"pollingInterval",  configuration.MemoryCacheLimitCheckInterval.ToString(@"hh\:mm\:ss")},
 				{"cacheMemoryLimitMegabytes", configuration.MemoryCacheLimitMegabytes.ToString()}
 			});
+			log.Info(@"MemoryCache Settings:
+  PhysicalMemoryLimit = {0}
+  CacheMemoryLimit    = {1}
+  PollingInterval     = {2}", cachedSerializedDocuments.PhysicalMemoryLimit, cachedSerializedDocuments.CacheMemoryLimit,
+			  cachedSerializedDocuments.PollingInterval);
 		}
 
 		public static IDisposable SkipSettingDocumentsInDocumentCache()

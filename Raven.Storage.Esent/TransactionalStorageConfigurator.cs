@@ -22,7 +22,7 @@ namespace Raven.Storage.Esent
 			this.configuration = configuration;
 		}
 
-		public void ConfigureInstance(JET_INSTANCE jetInstance, string path)
+		public InstanceParameters ConfigureInstance(JET_INSTANCE jetInstance, string path)
 		{
 			path = Path.GetFullPath(path);
 			var logsPath = path;
@@ -30,7 +30,7 @@ namespace Raven.Storage.Esent
 			{
 				logsPath = configuration.Settings["Raven/Esent/LogsPath"].ToFullPath();
 			}
-			new InstanceParameters(jetInstance)
+			return new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,
 				Recovery = true,
