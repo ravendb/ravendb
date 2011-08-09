@@ -28,10 +28,11 @@ namespace Raven.Tests
             {
                 var fullPath = Path.GetFullPath(path);
                 
-                if (Directory.Exists(fullPath) && Directory.Exists(Path.Combine(fullPath, "bin")))
+                if (Directory.Exists(fullPath) && File.Exists(Path.Combine(fullPath, "web.config")))
                 {
-                    if (Directory.GetFiles(Path.Combine(fullPath, "bin"), "Raven.Web.dll").Length == 0)
-                        throw new Exception("Raven.Web\bin at " + fullPath + " was empty, you need to build that.");
+                    var combine = Path.Combine(fullPath, "bin");
+                    if (!Directory.Exists(combine) || Directory.GetFiles(combine, "Raven.Web.dll").Length == 0)
+                        throw new Exception("Raven.Web\bin at " + fullPath + " was nonexistant or empty, you need to build Raven.Web.");
 
                     return fullPath;
                 }
