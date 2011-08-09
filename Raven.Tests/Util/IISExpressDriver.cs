@@ -6,15 +6,6 @@ namespace Raven.Tests.Util
     {
         public string Url { get; private set;  }
 
-        protected override void Shutdown()
-        {
-            _process.StandardInput.Write("q");
-            _process.StandardInput.Flush();
-
-            if (!_process.WaitForExit(10000))
-                throw new Exception("IISExpress did not halt within 10 seconds.");
-        }
-
         public void Start(string physicalPath, int port)
         {
             var sitePhysicalDirectory = physicalPath;
@@ -24,6 +15,14 @@ namespace Raven.Tests.Util
             var match = WaitForConsoleOutputMatching(@"Successfully registered URL ""([^""]*)""");
 
             Url = match.Groups[1].Value;
+        }
+
+        protected override void Shutdown()
+        {
+            _process.Kill();
+
+            if (!_process.WaitForExit(10000))
+                throw new Exception("IISExpress did not halt within 10 seconds.");
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -8,9 +9,12 @@ namespace Raven.Tests.Util
     public abstract class ProcessDriver
     {
         protected Process _process;
+        private string _name;
 
         protected void StartProcess(string exePath, string arguments = "")
         {
+            _name = new FileInfo(exePath).Name;
+
             ProcessStartInfo psi = new ProcessStartInfo(exePath);
                 
             psi.LoadUserProfile = false;
@@ -58,7 +62,9 @@ namespace Raven.Tests.Util
                     totalWaited += msWaitInterval;
                     continue;
                 }
-                
+
+                Console.WriteLine(_name + " console: " + nextLine);
+
                 match = Regex.Match(nextLine, pattern);
 
                 if (match.Success)
