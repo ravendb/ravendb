@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Raven.Client;
 using Raven.Database.Extensions;
 
@@ -26,6 +27,9 @@ namespace Raven.Tests
                 
                 if (Directory.Exists(fullPath) && Directory.Exists(Path.Combine(fullPath, "bin")))
                 {
+                    if (Directory.GetFiles(Path.Combine(fullPath, "bin"), "Raven.Web.dll").Length == 0)
+                        throw new Exception("Raven.Web\bin at " + fullPath + " was empty, you need to build that.");
+
                     return fullPath;
                 }
             }
