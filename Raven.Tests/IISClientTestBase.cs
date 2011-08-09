@@ -12,10 +12,13 @@ namespace Raven.Tests
         public static string DeployWebProjectToTestDirectory()
         {
             var fullPath = Path.GetFullPath(WebDirectory);
-            if (!Directory.Exists(fullPath))
+            if (Directory.Exists(fullPath))
             {
-                IOExtensions.CopyDirectory(GetRavenWebSource(), WebDirectory);
+                IOExtensions.DeleteDirectory(fullPath);
             }
+
+            IOExtensions.CopyDirectory(GetRavenWebSource(), WebDirectory);
+            
             return fullPath;
         }
 

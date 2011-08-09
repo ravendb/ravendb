@@ -10,7 +10,7 @@ namespace Raven.Tests.Util
         {
             var sitePhysicalDirectory = physicalPath;
             StartProcess(@"c:\program files (x86)\IIS Express\IISExpress.exe",
-                @"/port:" + port + @" /path:" + sitePhysicalDirectory);
+                @"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
 
             var match = WaitForConsoleOutputMatching(@"Successfully registered URL ""([^""]*)""");
 
