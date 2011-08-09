@@ -5,19 +5,19 @@ using Raven.Tests.Util;
 
 namespace Raven.Tests
 {
-    class IISExpressTestClient : IISClientTestBase, IDisposable
+    class IISExpressTestClient : IDisposable
     {
         public static int Port = 8084;
 
         private IISExpressDriver _iisExpress;
 
-        public override IDocumentStore GetDocumentStore()
+        public IDocumentStore GetDocumentStore()
         {
             if (_iisExpress == null)
             {
                 _iisExpress = new IISExpressDriver();
 
-                _iisExpress.Start(DeployWebProjectToTestDirectory(), 8084);
+                _iisExpress.Start(IISDeploymentUtil.DeployWebProjectToTestDirectory(), 8084);
             }
 
             return new DocumentStore()

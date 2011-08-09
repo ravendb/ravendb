@@ -5,7 +5,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Tests
 {
-    public abstract class IISClientTestBase
+    public class IISDeploymentUtil
     {
         protected const string WebDirectory = @".\RavenIISTestWeb\";
 
@@ -39,7 +39,5 @@ namespace Raven.Tests
 
             throw new FileNotFoundException("Could not find source directory for Raven.Web");
         }
-
-        public abstract IDocumentStore GetDocumentStore();
     }
 }
