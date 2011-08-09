@@ -7,8 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
-using Raven.Database.Server.Responders;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 

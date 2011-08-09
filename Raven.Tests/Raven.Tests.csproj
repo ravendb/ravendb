@@ -458,6 +458,9 @@
     <Compile Include="Document\TotalCountServerTest.cs" />
     <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
     <Compile Include="Document\ZoneCountResult.cs" />
+    <Compile Include="Faceted\Camera.cs" />
+    <Compile Include="Faceted\FacetedIndex.cs" />
+    <Compile Include="Faceted\FacetedIndexTestHelper.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
     <Compile Include="Indexes\CreateIndexesWithCasting.cs" />
