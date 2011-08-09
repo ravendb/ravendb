@@ -8,7 +8,7 @@ namespace Raven.Tests
     {
         protected const string WebDirectory = @".\RavenIISTestWeb\";
 
-        public string DeployWebProjectToTestDirectory()
+        public static string DeployWebProjectToTestDirectory()
         {
             var fullPath = Path.GetFullPath(WebDirectory);
             if (!Directory.Exists(fullPath))
@@ -18,7 +18,7 @@ namespace Raven.Tests
             return fullPath;
         }
 
-        private string GetRavenWebSource()
+        private static string GetRavenWebSource()
         {
             foreach (var path in new[] { @".\..\..\..\Raven.Web", @".\_PublishedWebsites\Raven.Web" })
             {

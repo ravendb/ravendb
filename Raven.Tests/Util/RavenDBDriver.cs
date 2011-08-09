@@ -69,18 +69,9 @@ namespace Raven.Tests.Util
 
             StartProcess(exePath);
 
-            while(true)
-            {
-                var nextLine = _process.StandardOutput.ReadLine();
+            Match match = WaitForConsoleOutputMatching(@"^Server Url: (http://.*/)\s*$");
 
-                var match = Regex.Match(nextLine, @"^Server Url: (http://.*/)\s*$");
-
-                if (!match.Success)
-                    continue;
-
-                Url = match.Groups[1].Value;
-                break;
-            }
+            Url = match.Groups[1].Value;
         }
 
         public IDocumentStore GetDocumentStore()

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace Raven.Tests.Util
 {
@@ -6,12 +7,13 @@ namespace Raven.Tests.Util
     {
         protected Process _process;
 
-        public void StartProcess(string exePath)
+        protected void StartProcess(string exePath, string arguments = "")
         {
             ProcessStartInfo psi = new ProcessStartInfo(exePath);
                 
             psi.LoadUserProfile = false;
 
+            psi.Arguments = arguments;
             psi.UseShellExecute = false;
             psi.RedirectStandardError = true;
             psi.RedirectStandardInput = true;
@@ -20,6 +22,8 @@ namespace Raven.Tests.Util
 
             _process = Process.Start(psi);
         }
+
+        protected virtual void Shutdown() { }
 
         public void Dispose()
         {
@@ -34,6 +38,19 @@ namespace Raven.Tests.Util
             }
         }
 
-        protected abstract void Shutdown();
+        protected Match WaitForConsoleOutputMatching(string pattern)
+        {
+            Match match;
+            while(true)
+            {
+                var nextLine = _process.StandardOutput.ReadLine();
+                
+                match = Regex.Match(nextLine, pattern);
+
+                if (match.Success)
+                    break;
+            }
+            return match;
+        }
     }
 }
