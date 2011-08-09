@@ -10,15 +10,14 @@ using Xunit;
 
 namespace Raven.Tests
 {
-    public class IISClientTest
+    public class IISNotExpressClientTest : IISClientTestBase
     {
         const string HostName = "RavenIISTest";
         const int Port = 80;
         const string ApplicationPool = "RavenIISTest";
-        protected const string WebDirectory = @".\RavenIISTestWeb\";
         protected const string DbDirectory = @".\RavenIISTestDb\";
 
-        public IISClientTest()
+        public IISNotExpressClientTest()
         {
             IISConfig.RemoveByApplicationPool(ApplicationPool);
 
@@ -26,21 +25,15 @@ namespace Raven.Tests
             IOExtensions.DeleteDirectory(DbDirectory);
         }
 
-        public IDocumentStore GetDocumentStore()
+        public override IDocumentStore GetDocumentStore()
         {
-            if (!Directory.Exists(WebDirectory))
-            {
-                var fullPath = Path.GetFullPath(WebDirectory);
+            string fullPath = DeployWebProjectToTestDirectory();
 
-                IOExtensions.CopyDirectory(GetRavenWebSource(), WebDirectory);
+            PSHostsFile.HostsFile.Set(HostName, "127.0.0.1");
+            IISConfig.CreateApplicationPool(ApplicationPool);
+            IISConfig.CreateSite(HostName, Port, ApplicationPool, fullPath);
 
-                PSHostsFile.HostsFile.Set(HostName, "127.0.0.1");
-                IISConfig.CreateApplicationPool(ApplicationPool);
-                IISConfig.CreateSite(HostName, Port, ApplicationPool, fullPath);
-
-                VerifySiteIsAwake();
-            }
-
+            VerifySiteIsAwake();
             return new DocumentStore()
             {
                 Url = GetUrl()
@@ -89,21 +82,6 @@ namespace Raven.Tests
         private string GetUrl()
         {
             return string.Format("http://{0}:{1}/", HostName, Port);
-        }
-
-        string GetRavenWebSource()
-        {
-            foreach (var path in new[] { @".\..\..\..\Raven.Web", @".\_PublishedWebsites\Raven.Web" })
-            {
-                var fullPath = Path.GetFullPath(path);
-                
-                if (Directory.Exists(fullPath) && Directory.Exists(Path.Combine(fullPath, "bin")))
-                {
-                    return fullPath;
-                }
-            }
-
-            throw new FileNotFoundException("Could not find source directory for Raven.Web");
         }
     }
 }

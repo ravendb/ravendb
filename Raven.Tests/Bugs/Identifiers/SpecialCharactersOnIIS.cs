@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Security.Principal;
+using Raven.Client.Document;
 using Xunit;
 using Xunit.Extensions;
 using Xunit.Sdk;
@@ -20,7 +21,7 @@ namespace Raven.Tests.Bugs.Identifiers
 		[InlineData("SHA1-UdVhzPmv0o+wUez+Jirt0OFBcUY=")]
 		public void Can_load_entity(string entityId)
 		{
-			var testContext = new IISClientTest();
+			var testContext = new IISNotExpressClientTest();
 
 			using (var store = testContext.GetDocumentStore())
 			{
@@ -28,7 +29,7 @@ namespace Raven.Tests.Bugs.Identifiers
 
 				using (var session = store.OpenSession())
 				{
-					var entity = new Entity {Id = entityId};
+					var entity = new WithBase64Characters.Entity {Id = entityId};
 					session.Store(entity);
 					session.SaveChanges();
 				}
@@ -50,6 +51,27 @@ namespace Raven.Tests.Bugs.Identifiers
 
 		#endregion
 	}
+
+    public class IISExpressInstalled : TheoryAttribute
+    {
+        protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
+        {
+            var displayName = method.TypeName + "." + method.Name;
+
+            if (File.Exists(@"c:\Program Files (x86)\IIS Express\iisexpress.exe") == false)
+            {
+                yield return
+                        new SkipCommand(method, displayName,
+                                        "Could not execute " + displayName + " because it requires IIS Express and could not find it at c:\\Program Files (x86)\\");
+                yield break;
+            }
+
+            foreach (var command in base.EnumerateTestCommands(method))
+            {
+                yield return command;
+            }
+        }
+    }
 
 	public class AdminOnlyWithIIS7Installed : TheoryAttribute
 	{
