@@ -8,7 +8,7 @@ namespace Raven.Tests.Util
 
         protected override void Shutdown()
         {
-            _process.StandardInput.Write("Q");
+            _process.StandardInput.Write("q");
 
             if (!_process.WaitForExit(10000))
                 throw new Exception("IISExpress did not halt within 10 seconds.");
@@ -17,8 +17,8 @@ namespace Raven.Tests.Util
         public void Start(string physicalPath, int port)
         {
             var sitePhysicalDirectory = physicalPath;
-            StartProcess("c:\\program files (x86)\\IIS Express\\IISExpress.exe",
-                "/port: " + port + " /path:" + sitePhysicalDirectory);
+            StartProcess(@"c:\program files (x86)\IIS Express\IISExpress.exe",
+                @"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
 
             var match = WaitForConsoleOutputMatching(@"Successfully registered URL ""([^""]*)""");
 

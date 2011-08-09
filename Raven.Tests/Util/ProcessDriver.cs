@@ -1,5 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace Raven.Tests.Util
 {
@@ -38,12 +40,24 @@ namespace Raven.Tests.Util
             }
         }
 
-        protected Match WaitForConsoleOutputMatching(string pattern)
+        protected Match WaitForConsoleOutputMatching(string pattern, int msMaxWait = 10000, int msWaitInterval = 500)
         {
+            int totalWaited = 0;
+
             Match match;
             while(true)
             {
                 var nextLine = _process.StandardOutput.ReadLine();
+
+                if (nextLine == null)
+                {
+                    if (totalWaited > msMaxWait)
+                        throw new TimeoutException("Timeout waiting for regular expression " + pattern);
+                    
+                    Thread.Sleep(msWaitInterval);
+                    totalWaited += msWaitInterval;
+                    continue;
+                }
                 
                 match = Regex.Match(nextLine, pattern);
 
