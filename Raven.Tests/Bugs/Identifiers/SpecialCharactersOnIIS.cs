@@ -63,7 +63,7 @@ namespace Raven.Tests.Bugs.Identifiers
 			{
 				yield return
 						new SkipCommand(method, displayName,
-										"Could not execute " + displayName + " because it requires IIS Express and could not find it at c:\\Program Files (x86)\\");
+                                        "Could not execute " + displayName + " because it requires IIS Express and could not find it at c:\\Program Files (x86)\\.  Considering installing the MSI from http://www.microsoft.com/download/en/details.aspx?id=1038");
 				yield break;
 			}
 
