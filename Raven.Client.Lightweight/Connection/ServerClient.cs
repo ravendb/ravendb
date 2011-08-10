@@ -144,7 +144,7 @@ namespace Raven.Client.Connection
 				replicationInformer.IncrementFailureCount(url);
 			}
 
-			for (int i = 0; i < threadSafeCopy.Count; i++)
+			for (var i = 0; i < threadSafeCopy.Count; i++)
 			{
 				var replicationDestination = threadSafeCopy[i];
 				if (replicationInformer.ShouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)

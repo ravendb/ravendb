@@ -264,7 +264,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
+		private static void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
 		{
 			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 			{
