@@ -476,7 +476,8 @@
     <Compile Include="Document\TotalCountServerTest.cs" />
     <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
     <Compile Include="Document\ZoneCountResult.cs" />
-    <Compile Include="IISClientTest.cs" />
+    <Compile Include="IISDeploymentUtil.cs" />
+    <Compile Include="IISExpressTestClient.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
     <Compile Include="Indexes\CreateIndexesWithCasting.cs" />
@@ -604,6 +605,8 @@
     <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
     <Compile Include="Util\IISConfig.cs" />
+    <Compile Include="Util\IISExpressDriver.cs" />
+    <Compile Include="Util\ProcessDriver.cs" />
     <Compile Include="Util\RavenDBDriver.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
     <Compile Include="Util\RunExternalProcess.cs" />
