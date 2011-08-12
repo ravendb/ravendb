@@ -199,7 +199,7 @@ namespace Raven.Studio.Features.Documents
 			Id = document.Key;
 			JsonData = PrepareRawJsonString(document.DataAsJson);
 
-			IsProjection = string.IsNullOrEmpty(Id) && (document.Metadata.Any() == false);
+			IsProjection = string.IsNullOrEmpty(Id) && (document.Metadata == null || document.Metadata.Any() == false);
 			if (IsProjection) return;
 
 			if (document.Metadata != null)

@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
+using Raven.Client.Util;
 
 namespace Raven.Client.Document.Async
 {
@@ -61,7 +62,7 @@ namespace Raven.Client.Document.Async
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
 	    {
 	    	var indexName = "dynamic";
-			if (typeof(T) != typeof(object))
+			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
@@ -253,36 +254,39 @@ namespace Raven.Client.Document.Async
 		public IRavenQueryable<T> Query<T>()
 		{
 			string indexName = "dynamic";
-			if (typeof(T) != typeof(object))
+			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-			
+
+			return Query<T>(indexName);
+		}
+
+		public IRavenQueryable<T> Query<T>(string indexName)
+		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
 
 			return new RavenQueryInspector<T>(
-				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, 
-				#if !SILVERLIGHT
+				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics,
+#if !SILVERLIGHT
 				null,
-				#endif
-				Advanced.AsyncDatabaseCommands),
+#endif
+ Advanced.AsyncDatabaseCommands),
 				ravenQueryStatistics,
 				indexName,
 				null,
 #if !SILVERLIGHT
  null,
 #endif
-				Advanced.AsyncDatabaseCommands);
+ Advanced.AsyncDatabaseCommands);
 		}
 
-		IRavenQueryable<T> IAsyncDocumentSession.Query<T>(string indexName)
-		{
-			throw new NotSupportedException();
-		}
-
+		/// <summary>
+		/// Create a new query for <typeparam name="T"/>
+		/// </summary>
 		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
 		{
-			throw new NotSupportedException();
+			throw new NotSupportedException("You can't get a sync query from async session");
 		}
 
 		/// <summary>

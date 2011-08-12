@@ -23,6 +23,7 @@ using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
+using Raven.Client.Util;
 
 namespace Raven.Client.Document
 {
@@ -504,7 +505,7 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T>()
 		{
 			string indexName = "dynamic";
-			if (typeof(T) != typeof(object))
+			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
@@ -531,7 +532,7 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> LuceneQuery<T>()
 		{
 			string indexName = "dynamic";
-			if (typeof(T) != typeof(object))
+			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}

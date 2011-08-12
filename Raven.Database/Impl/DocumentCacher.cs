@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Runtime.Caching;
+using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Config;
 using Raven.Json.Linq;
@@ -10,8 +11,9 @@ namespace Raven.Database.Impl
 	public class DocumentCacher : IDocumentCacher
 	{
 		private readonly MemoryCache cachedSerializedDocuments;
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		
 		[ThreadStatic]
-
 		private static bool skipSettingDocumentInCache;
 
 		public DocumentCacher(InMemoryRavenConfiguration configuration)
@@ -19,8 +21,14 @@ namespace Raven.Database.Impl
 			cachedSerializedDocuments = new MemoryCache(typeof(DocumentCacher).FullName + ".Cache", new NameValueCollection
 			{
 				{"physicalMemoryLimitPercentage", configuration.MemoryCacheLimitPercentage.ToString()},
-				{"pollingInterval",  configuration.MemoryCacheLimitCheckInterval.ToString(@"hh\:mm\:ss")}
+				{"pollingInterval",  configuration.MemoryCacheLimitCheckInterval.ToString(@"hh\:mm\:ss")},
+				{"cacheMemoryLimitMegabytes", configuration.MemoryCacheLimitMegabytes.ToString()}
 			});
+			log.Info(@"MemoryCache Settings:
+  PhysicalMemoryLimit = {0}
+  CacheMemoryLimit    = {1}
+  PollingInterval     = {2}", cachedSerializedDocuments.PhysicalMemoryLimit, cachedSerializedDocuments.CacheMemoryLimit,
+			  cachedSerializedDocuments.PollingInterval);
 		}
 
 		public static IDisposable SkipSettingDocumentsInDocumentCache()
@@ -52,11 +60,15 @@ namespace Raven.Database.Impl
 			documentClone.EnsureSnapshot();
 			var metadataClone = ((RavenJObject)metadata.CloneToken());
 			metadataClone.EnsureSnapshot();
-			cachedSerializedDocuments["Doc/" + key + "/" + etag] = new CachedDocument
+			cachedSerializedDocuments.Set("Doc/" + key + "/" + etag, new CachedDocument
 			{
 				Document = documentClone,
 				Metadata = metadataClone
-			};
+			}, new CacheItemPolicy
+			{
+				SlidingExpiration = TimeSpan.FromMinutes(5),
+			});
+
 		}
 
 		public void RemoveCachedDocument(string key, Guid etag)

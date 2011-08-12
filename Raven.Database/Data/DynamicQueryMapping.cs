@@ -269,7 +269,7 @@ namespace Raven.Database.Data
 				Items = fields.Select(x => new DynamicQueryMappingItem
 				{
 					From = x.Item1,
-					To = replaceInvalidCharacterForFields.Replace(x.Item2, ""),
+					To = replaceInvalidCharacterForFields.Replace(x.Item2, "_"),
 					QueryFrom = x.Item2
 				}).OrderByDescending(x=>x.QueryFrom.Length).ToArray();
 				if (GroupByItems != null && DynamicAggregation)

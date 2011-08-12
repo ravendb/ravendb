@@ -69,6 +69,7 @@
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Newtonsoft.Json, Version=4.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
@@ -126,6 +127,7 @@
     <Compile Include="Indexing\ErrorLoggingConcurrentMergeScheduler.cs" />
     <Compile Include="Indexing\FieldsToFetch.cs" />
     <Compile Include="Indexing\IIndexExtension.cs" />
+    <Compile Include="Indexing\IndexSearcherHolder.cs" />
     <Compile Include="Indexing\ReducingExecuter.cs" />
     <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
     <Compile Include="Indexing\TasksExecuter.cs" />
