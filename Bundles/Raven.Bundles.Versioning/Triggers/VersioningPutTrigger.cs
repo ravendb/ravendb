@@ -73,24 +73,31 @@ namespace Raven.Bundles.Versioning.Triggers
         }
 
 		private VersioningConfiguration GetDocumentVersioningConfiguration(RavenJObject metadata)
-        {
-            var versioningConfiguration = new VersioningConfiguration
-            {
-                MaxRevisions = Int32.MaxValue, 
-                Exclude = false
-            };
+		{
+		    JsonDocument doc = null;
+
             var entityName = metadata.Value<string>("Raven-Entity-Name");
             if(entityName != null)
             {
-                var doc = Database.Get("Raven/Versioning/" + entityName, null) ??
-                          Database.Get("Raven/Versioning/DefaultConfiguration", null);
-                if( doc != null)
-                {
-                    versioningConfiguration = doc.DataAsJson.JsonDeserialization<VersioningConfiguration>();
-                }
+                doc = Database.Get("Raven/Versioning/" + entityName, null);
             }
-            return versioningConfiguration;
-        }
+
+            if(doc == null)
+            {
+                doc = Database.Get("Raven/Versioning/DefaultConfiguration", null);
+            }
+
+		    if (doc != null)
+		    {
+		        return doc.DataAsJson.JsonDeserialization<VersioningConfiguration>();
+		    }
+
+		    return new VersioningConfiguration
+		               {
+		                   MaxRevisions = Int32.MaxValue,
+		                   Exclude = false
+		               };
+		}
 
         private void RemoveOldRevisions(string key, int revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
         {
