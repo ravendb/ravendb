@@ -185,6 +185,7 @@
     <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
     <Compile Include="Bugs\Queries\Boolean.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
+    <Compile Include="Bugs\RacielrodTest.cs" />
     <Compile Include="Bugs\SerializingAndDeserializingWithRaven.cs" />
     <Compile Include="Bugs\CanGetScores.cs" />
     <Compile Include="Bugs\CanReadLuceneProjectedDateTimeOffset.cs" />
