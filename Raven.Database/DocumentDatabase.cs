@@ -284,6 +284,8 @@ namespace Raven.Database
 				disposable.Dispose();
 
 		    Configuration.Dispose();
+            disableAllTriggers.Dispose();
+            workContext.Dispose();
 		}
 
 		public void StopBackgroundWokers()

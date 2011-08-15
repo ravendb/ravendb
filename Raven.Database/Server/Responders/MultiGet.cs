@@ -15,7 +15,7 @@ using System.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class MultiGet : RequestResponder
+	public class MultiGet : RequestResponder, IDisposable
 	{
 		public override string UrlPattern
 		{
@@ -211,6 +211,10 @@ namespace Raven.Database.Server.Responders
 			}
 		}
 
+        public void Dispose()
+        {
+            recursive.Dispose();
+        }
 
 		public class MultiGetHttpResponse : IHttpResponse
 		{
@@ -283,6 +287,8 @@ namespace Raven.Database.Server.Responders
 					file.CopyTo(OutputStream);
 				}
 			}
+
+          
 		}
 	}
 
