@@ -113,7 +113,8 @@ namespace Raven.Storage.Esent
 				if (disposed)
 					return;
 				GC.SuppressFinalize(this);
-				if (documentCacher != null)
+                current.Dispose();
+                if (documentCacher != null)
 					documentCacher.Dispose();
 				Api.JetTerm2(instance, TermGrbit.Complete);
 			}

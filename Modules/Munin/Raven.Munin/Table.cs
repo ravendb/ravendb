@@ -20,7 +20,7 @@ namespace Raven.Munin
 {
     public class Table : IEnumerable<Table.ReadResult>, IDisposable
     {
-        private ThreadLocal<Guid> txId;
+        private ThreadLocal<Guid> _txId;
         public string Name { get; set; }
 
         public IEnumerable<RavenJToken> Keys
@@ -116,13 +116,13 @@ namespace Raven.Munin
 
         public ReadResult Read(RavenJToken key)
         {
-            return Read(key, txId.Value);
+            return Read(key, _txId.Value);
         }
 
 
 		public bool UpdateKey(RavenJToken key)
         {
-            return UpdateKey(key, txId.Value);
+            return UpdateKey(key, _txId.Value);
         }
         
         public SecondaryIndex this[string indexName]
@@ -132,12 +132,12 @@ namespace Raven.Munin
 
         public bool Remove(RavenJToken key)
         {
-            return Remove(key, txId.Value);
+            return Remove(key, _txId.Value);
         }
 
         public bool Put(RavenJToken key, byte[] value)
         {
-            return Put(key, value, txId.Value);
+            return Put(key, value, _txId.Value);
         }
 
         public bool Put(RavenJToken key, byte[] value, Guid transactionId)
@@ -410,7 +410,7 @@ namespace Raven.Munin
             persistentSource = source;
             TableId = tableId;
             parent = database;
-            txId = transactionId;
+            _txId = transactionId;
 
             parent.DictionaryStates[tableId] = new PersistentDictionaryState(comparer);
 
@@ -425,10 +425,10 @@ namespace Raven.Munin
 		public bool UpdateKey(RavenJToken key, long position, int size)
     	{
 			Guid existing;
-			if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId.Value)
+			if (keysModifiedInTx.TryGetValue(key, out existing) && existing != _txId.Value)
 				return false;
 
-			operationsInTransactions.GetOrAdd(txId.Value, new List<Command>())
+			operationsInTransactions.GetOrAdd(_txId.Value, new List<Command>())
 				.Add(new Command
 				{
 					Key = key,
@@ -438,16 +438,12 @@ namespace Raven.Munin
 					Type = CommandType.Put
 				});
 
-			if (existing != txId.Value) // otherwise we are already there
-				keysModifiedInTx.TryAdd(key, txId.Value);
+			if (existing != _txId.Value) // otherwise we are already there
+				keysModifiedInTx.TryAdd(key, _txId.Value);
 
 			return true;
     	}
 
-    	/// <summary>
-    	/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-    	/// </summary>
-    	/// <filterpriority>2</filterpriority>
     	public void Dispose()
     	{
     	}

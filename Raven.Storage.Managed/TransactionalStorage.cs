@@ -60,6 +60,7 @@ namespace Raven.Storage.Managed
 			{
 				if (disposed)
 					return;
+                current.Dispose();
 				if (documentCacher != null)
 					documentCacher.Dispose();
 				if (idleTimer != null)

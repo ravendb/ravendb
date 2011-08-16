@@ -208,6 +208,10 @@ namespace Raven.Client.Connection
 		public void Dispose()
 		{
 			cache.Dispose();
+#if !NET_3_5
+            aggressiveCacheDuration.Dispose();
+            disableHttpCaching.Dispose();
+#endif
 		}
 
 		internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)

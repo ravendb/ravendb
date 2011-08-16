@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Database.Storage
 {
-    public interface IStorageActionsAccessor
+    public interface IStorageActionsAccessor : IDisposable
     {
         ITransactionStorageActions Transactions { get; }
         IDocumentStorageActions Documents { get; }
