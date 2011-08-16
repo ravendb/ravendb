@@ -49,7 +49,7 @@ namespace Raven.Client.Document
 			FindClrType = (id, doc, metadata) => metadata.Value<string>(Abstractions.Data.Constants.RavenClrType);
 			FindFullDocumentKeyFromNonStringIdentifier = DefaultFindFullDocumentKeyFromNonStringIdentifier;
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
-			FindTypeTagName = t => DefaultTypeTagName(t);
+			FindTypeTagName = DefaultTypeTagName;
 			FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => prop;
 			FindPropertyNameForDynamicIndex = (indexedType, indexedName, path, prop) => path + prop;
 			IdentityPartsSeparator = "/";
