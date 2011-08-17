@@ -36,6 +36,7 @@ namespace Raven.Client.Connection
 				handler(sender, e);
 		}
 
+		private readonly int maxNumberOfCachedRequests;
 		private SimpleCache cache;
 
 		internal int NumOfCachedRequests;
@@ -100,7 +101,7 @@ namespace Raven.Client.Connection
 			if (cache != null)
 				cache.Dispose();
 
-			cache = new SimpleCache();
+			cache = new SimpleCache(maxNumberOfCachedRequests);
 			NumOfCachedRequests = 0;
 		}
 
@@ -118,9 +119,11 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// default ctor
 		/// </summary>
-		public HttpJsonRequestFactory()
+		/// <param name="maxNumberOfCachedRequests"></param>
+		public HttpJsonRequestFactory(int maxNumberOfCachedRequests)
 		{
-			cache = new SimpleCache();
+			this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
+			ResetCache();
 		}
 
 #if !NET_3_5
@@ -205,6 +208,10 @@ namespace Raven.Client.Connection
 		public void Dispose()
 		{
 			cache.Dispose();
+#if !NET_3_5
+            aggressiveCacheDuration.Dispose();
+            disableHttpCaching.Dispose();
+#endif
 		}
 
 		internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)

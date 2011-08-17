@@ -11,10 +11,10 @@ namespace Raven.Client.Util
 		readonly ConcurrentLruLSet<string> lruKeys;
 		readonly ConcurrentDictionary<string, object> actualCache;
 
-		public SimpleCache()
+		public SimpleCache(int maxNumberOfCacheEntries)
 		{
 			actualCache = new ConcurrentDictionary<string, object>();
-			lruKeys = new ConcurrentLruLSet<string>(2048, key =>
+			lruKeys = new ConcurrentLruLSet<string>(maxNumberOfCacheEntries, key =>
 			{
 				object _;
 				actualCache.TryRemove(key, out _);

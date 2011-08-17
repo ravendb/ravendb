@@ -16,7 +16,7 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Indexing
 {
-	public class WorkContext
+	public class WorkContext : IDisposable
 	{
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
@@ -139,5 +139,10 @@ namespace Raven.Database.Indexing
 			readerWriterLockSlim.EnterWriteLock();
 			return new DisposableAction(readerWriterLockSlim.ExitWriteLock);
 		}
+
+	    public void Dispose()
+	    {
+	        shouldNotifyOnWork.Dispose();
+	    }
 	}
 }

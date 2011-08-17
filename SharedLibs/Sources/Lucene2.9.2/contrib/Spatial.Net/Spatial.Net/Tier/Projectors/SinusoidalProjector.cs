@@ -26,9 +26,13 @@ namespace Lucene.Net.Spatial.Tier.Projectors
 	/// </summary>
 	public class SinusoidalProjector : IProjector
 	{
+        //Incorporated changes from https://issues.apache.org/jira/browse/LUCENENET-431
+        public static double LATITUDE_RANGE= Math.PI;
+        public static double LONGITUDE_RANGE = 2* Math.PI;
+
 		public string CoordsAsString(double latitude, double longitude)
 		{
-			return null;
+            return null;
 		}
 
 		public double[] Coords(double latitude, double longitude)
@@ -39,5 +43,11 @@ namespace Lucene.Net.Spatial.Tier.Projectors
 			double[] r = {nlat, rlong};
 			return r;
 		}
+
+        public double[] Range() 
+        {
+            double[] ranges = { LATITUDE_RANGE, LONGITUDE_RANGE };
+            return ranges;
+        } 
 	}
 }

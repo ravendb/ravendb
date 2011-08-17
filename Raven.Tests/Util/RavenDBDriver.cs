@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -13,12 +12,11 @@ using Raven.Database.Extensions;
 
 namespace Raven.Tests.Util
 {
-    public class RavenDBDriver : IDisposable
+    public class RavenDBDriver : ProcessDriver, IDisposable
     {
         readonly string _shardName;
         readonly DocumentConvention _conventions;
         readonly string _dataDir;
-        Process _process;
 
         public string Url { get; private set;}
 
@@ -69,30 +67,11 @@ namespace Raven.Tests.Util
 
             doc.Save(configPath);
 
-            ProcessStartInfo psi = new ProcessStartInfo(exePath);
-                
-            psi.LoadUserProfile = false;
+            StartProcess(exePath);
 
-            psi.UseShellExecute = false;
-            psi.RedirectStandardError = true;
-            psi.RedirectStandardInput = true;
-            psi.RedirectStandardOutput = true;
-            psi.CreateNoWindow = true;
+            Match match = WaitForConsoleOutputMatching(@"^Server Url: (http://.*/)\s*$");
 
-            _process = Process.Start(psi);
-
-            while(true)
-            {
-                var nextLine = _process.StandardOutput.ReadLine();
-
-                var match = Regex.Match(nextLine, @"^Server Url: (http://.*/)\s*$");
-
-                if (!match.Success)
-                    continue;
-
-                Url = match.Groups[1].Value;
-                break;
-            }
+            Url = match.Groups[1].Value;
         }
 
         public IDocumentStore GetDocumentStore()
@@ -133,17 +112,9 @@ namespace Raven.Tests.Util
                 throw new Exception("RavendB command-line server finished with error text: " + errorOutput);
         }
 
-        public void Dispose()
+        protected override void Shutdown()
         {
-            if (_process != null)
-            {
-                Should_finish_without_error();
-
-                var toDispose = _process;
-                _process = null;
-
-                toDispose.Dispose();
-            }
+            Should_finish_without_error();
         }
 
         protected string GetPath(string subFolderName)

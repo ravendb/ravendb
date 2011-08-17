@@ -39,8 +39,8 @@ namespace Raven.Database.Queries
 				return indexExtension.Query(suggestionQuery);
 
 
-        	var currentSearcher = _database.IndexStorage.GetCurrentIndexSearcher(indexName);
-            try
+        	IndexSearcher currentSearcher;
+			using(_database.IndexStorage.GetCurrentIndexSearcher(indexName,out currentSearcher))
             {
                 var indexReader = currentSearcher.GetIndexReader();
 
@@ -51,11 +51,6 @@ namespace Raven.Database.Queries
 
             	return suggestionQueryIndexExtension.Query(suggestionQuery);
             }
-            finally
-            {
-                currentSearcher.GetIndexReader().DecRef();
-            }
-            
         }
 
         private static StringDistance GetStringDistance(SuggestionQuery query)

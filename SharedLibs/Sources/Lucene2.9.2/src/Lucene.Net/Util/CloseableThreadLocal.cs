@@ -72,6 +72,7 @@ namespace Lucene.Net.Util
 		public virtual void  Close()
 		{
 		    self.Value = null;
+            self.Dispose();
 		}
 	}
 }

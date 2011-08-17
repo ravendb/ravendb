@@ -282,6 +282,10 @@ namespace Raven.Database
 			var disposable = backgroundTaskScheduler as IDisposable;
 			if (disposable != null)
 				disposable.Dispose();
+
+		    Configuration.Dispose();
+            disableAllTriggers.Dispose();
+            workContext.Dispose();
 		}
 
 		public void StopBackgroundWokers()
