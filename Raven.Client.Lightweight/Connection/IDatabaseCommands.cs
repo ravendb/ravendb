@@ -23,24 +23,25 @@ namespace Raven.Client.Connection
 	public interface IDatabaseCommands : IHoldProfilingInformation
 	{
 		/// <summary>
-		/// Gets or sets the operations headers.
+		/// Gets or sets the operations headers
 		/// </summary>
 		/// <value>The operations headers.</value>
 		NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
-		/// Gets documents for the specified key prefix
+        /// Retrieves documents for the specified key prefix
 		/// </summary>
 		JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize);
 
 		/// <summary>
-		/// Gets the document for the specified key.
+        /// Retrieves the document for the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
 		JsonDocument Get(string key);
+
 		/// <summary>
-		/// Gets the results for the specified ids.
+        /// Retrieves documents with the specified ids, optionally specifying includes to fetch along
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
@@ -48,7 +49,7 @@ namespace Raven.Client.Connection
 		MultiLoadResult Get(string[] ids, string[] includes);
 
 		/// <summary>
-		/// Puts the document with the specified key in the database
+        /// Puts the document in the database with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
@@ -58,26 +59,28 @@ namespace Raven.Client.Connection
 		PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
-		/// Deletes the document with the specified key.
+		/// Deletes the document with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		void Delete(string key, Guid? etag);
 
 		/// <summary>
-		/// Puts the attachment with the specified key
+		/// Puts a byte array as attachment with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
 		void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata);
-		/// <summary>
-		/// Gets the attachment by the specified key
+		
+        /// <summary>
+		/// Retrieves the attachment with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
 		Attachment GetAttachment(string key);
+
 		/// <summary>
 		/// Deletes the attachment with the specified key
 		/// </summary>
@@ -86,7 +89,7 @@ namespace Raven.Client.Connection
 		void DeleteAttachment(string key, Guid? etag);
 
 		/// <summary>
-		/// Gets the index names from the server
+		/// Returns the names of all indexes that exist on the server
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
@@ -98,6 +101,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="name">The name.</param>
 		void ResetIndex(string name);
+
 		/// <summary>
 		/// Gets the index definition for the specified name
 		/// </summary>
@@ -105,14 +109,23 @@ namespace Raven.Client.Connection
 		IndexDefinition GetIndex(string name);
 		
 		/// <summary>
-		/// Puts the index definition for the specified name
+		/// Creates an index with the specified name, based on an index definition
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		string PutIndex(string name, IndexDefinition indexDef);
 
+        /// <summary>
+        /// Creates an index with the specified name, based on an index definition
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="indexDef">The index def.</param>
+        /// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
+        string PutIndex(string name, IndexDefinition indexDef, bool overwrite);
+
 		/// <summary>
-		/// Puts the index definition for the specified name
+        /// Creates an index with the specified name, based on an index definition that is created by the supplied
+        /// IndexDefinitionBuilder
 		/// </summary>
 		/// <typeparam name="TDocument">The type of the document.</typeparam>
 		/// <typeparam name="TReduceResult">The type of the reduce result.</typeparam>
@@ -122,14 +135,8 @@ namespace Raven.Client.Connection
 		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef);
 
 		/// <summary>
-		/// Puts the index for the specified name
-		/// </summary>
-		/// <param name="name">The name.</param>
-		/// <param name="indexDef">The index def.</param>
-		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
-		string PutIndex(string name, IndexDefinition indexDef, bool overwrite);
-		/// <summary>
-		/// Puts the index for the specified name
+        /// Creates an index with the specified name, based on an index definition that is created by the supplied
+        /// IndexDefinitionBuilder
 		/// </summary>
 		/// <typeparam name="TDocument">The type of the document.</typeparam>
 		/// <typeparam name="TReduceResult">The type of the reduce result.</typeparam>
@@ -139,14 +146,15 @@ namespace Raven.Client.Connection
 		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite);
 
 		/// <summary>
-		/// Queries the specified index.
+		/// Queries the specified index in the Raven flavoured Lucene query syntax
 		/// </summary>
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
 		QueryResult Query(string index, IndexQuery query, string[] includes);
+
 		/// <summary>
-		/// Deletes the index.
+		/// Deletes the specified index
 		/// </summary>
 		/// <param name="name">The name.</param>
 		void DeleteIndex(string name);
@@ -158,23 +166,26 @@ namespace Raven.Client.Connection
 		BatchResult[] Batch(IEnumerable<ICommandData> commandDatas);
 
 		/// <summary>
-		/// Commits the specified tx id.
+		/// Commits the specified tx id
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
 		void Commit(Guid txId);
+
 		/// <summary>
-		/// Rollbacks the specified tx id.
+		/// Rollbacks the specified tx id
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
 		void Rollback(Guid txId);
+
 		/// <summary>
-		/// Promotes the transaction.
+		/// Promotes the transaction
 		/// </summary>
 		/// <param name="fromTxId">From tx id.</param>
 		/// <returns></returns>
 		byte[] PromoteTransaction(Guid fromTxId);
+
 		/// <summary>
-		/// Stores the recovery information.
+		/// Stores the recovery information
 		/// </summary>
 		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
 		/// <param name="txId">The tx id.</param>
@@ -202,8 +213,9 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
 		void DeleteByIndex(string indexName, IndexQuery queryToDelete);
+
 		/// <summary>
-		/// Perform a set based deletes using the specified index.
+		/// Perform a set based deletes using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
@@ -218,8 +230,9 @@ namespace Raven.Client.Connection
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests);
+
 		/// <summary>
-		/// Perform a set based update using the specified index.
+		/// Perform a set based update using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
@@ -235,19 +248,19 @@ namespace Raven.Client.Connection
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
-		/// with the root database. Useful if the database has works against a tenant database.
+		/// with the root database. Useful if the database has works against a tenant database
 		/// </summary>
 		IDatabaseCommands GetRootDatabase();
 
 		/// <summary>
-		/// Returns a list of suggestions based on the specified suggestion query.
+		/// Returns a list of suggestions based on the specified suggestion query
 		/// </summary>
 		/// <param name="index">The index to query for suggestions</param>
 		/// <param name="suggestionQuery">The suggestion query.</param>
 		SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery);
 
 		///<summary>
-		/// Get the possible terms for the specified field in the index 
+		/// Get the all terms stored in the index for the specified field
 		/// You can page through the results by use fromValue parameter as the 
 		/// starting point for the next query
 		///</summary>

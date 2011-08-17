@@ -124,7 +124,7 @@ namespace Raven.Client.Document
 		}
 
 		private string identifier;
-		DocumentSessionListeners listeners = new DocumentSessionListeners();
+	    readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 #if !SILVERLIGHT
 		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
