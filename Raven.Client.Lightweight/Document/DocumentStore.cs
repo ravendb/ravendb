@@ -416,6 +416,9 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public  IDocumentStore Initialize()
 		{
+            if (string.IsNullOrEmpty(Url))
+                throw new ArgumentException("Document store URL cannot be empty", "Url");
+
 #if !SILVERLIGHT
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
 #else
