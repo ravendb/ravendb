@@ -99,7 +99,7 @@ namespace Raven.Database.Indexing
                     	batchers.ApplyAndIgnoreAllErrors(
                             exception =>
                             {
-                                logIndexing.Warn(
+                                logIndexing.WarnException(
 									string.Format( "Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
                                                        name, indexingResult.NewDocId),
 									exception);
@@ -118,7 +118,7 @@ namespace Raven.Database.Indexing
                 batchers.ApplyAndIgnoreAllErrors(
                     e =>
                     {
-                        logIndexing.Warn("Failed to dispose on index update trigger", e);
+                        logIndexing.WarnException("Failed to dispose on index update trigger", e);
                         context.AddError(name, null, e.Message);
                     },
                     x => x.Dispose());

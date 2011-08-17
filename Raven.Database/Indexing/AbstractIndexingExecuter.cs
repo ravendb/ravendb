@@ -35,7 +35,7 @@ namespace Raven.Database.Indexing
                 }
                 catch (Exception e)
                 {
-                    log.Error("Failed to execute indexing", e);
+                    log.ErrorException("Failed to execute indexing", e);
                 }
                 if (foundWork == false)
                 {

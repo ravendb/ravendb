@@ -260,7 +260,7 @@ namespace Raven.Database.Indexing
 				batchers.ApplyAndIgnoreAllErrors(
 					e =>
 					{
-						logIndexing.Warn("Failed to dispose on index update trigger", e);
+						logIndexing.WarnException("Failed to dispose on index update trigger", e);
 						context.AddError(name, null, e.Message);
 					},
 					x => x.Dispose());
