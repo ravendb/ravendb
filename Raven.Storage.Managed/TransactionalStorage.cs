@@ -31,7 +31,7 @@ namespace Raven.Storage.Managed
 		private readonly Action onCommit;
 		private TableStorage tableStroage;
 		private IPersistentSource persistenceSource;
-		private bool disposed;
+		private volatile bool disposed;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private Timer idleTimer;
 		private long lastUsageTime;
@@ -60,6 +60,7 @@ namespace Raven.Storage.Managed
 			{
 				if (disposed)
 					return;
+                disposed = true;
                 current.Dispose();
 				if (documentCacher != null)
 					documentCacher.Dispose();
@@ -72,7 +73,6 @@ namespace Raven.Storage.Managed
 			}
 			finally
 			{
-				disposed = true;
 				disposerLock.ExitWriteLock();
 			}
 		}
@@ -85,6 +85,12 @@ namespace Raven.Storage.Managed
 		[DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
+            if (disposed)
+            {
+                Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
+                return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+            }
+
 			if(current.Value != null)
 			{
 				action(current.Value);
@@ -93,11 +99,6 @@ namespace Raven.Storage.Managed
 			disposerLock.EnterReadLock();
 			try
 			{
-				if (disposed)
-				{
-					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
-					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
-				}
 
 				Interlocked.Exchange(ref lastUsageTime, DateTime.Now.ToBinary());
 				using (tableStroage.BeginTransaction())

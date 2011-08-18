@@ -38,7 +38,7 @@ namespace Raven.Storage.Esent
 		private readonly Action onCommit;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
-		private bool disposed;
+		private volatile bool disposed;
 
 		private JET_INSTANCE instance;
 		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
@@ -112,6 +112,8 @@ namespace Raven.Storage.Esent
 			{
 				if (disposed)
 					return;
+                
+                disposed = true;
 				GC.SuppressFinalize(this);
                 current.Dispose();
                 if (documentCacher != null)
@@ -120,7 +122,6 @@ namespace Raven.Storage.Esent
 			}
 			finally
 			{
-				disposed = true;
 				disposerLock.ExitWriteLock();
 			}
 		}
