@@ -218,7 +218,7 @@ namespace Raven.Database.Indexing
 							                 exception.Message
 								);
 						},
-						trigger => trigger.OnIndexEntryDeleted(name, entryKey));
+						trigger => trigger.OnIndexEntryDeleted(entryKey));
 				}
 				PropertyDescriptorCollection properties = null;
 				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
@@ -252,7 +252,7 @@ namespace Raven.Database.Indexing
 							                 exception.Message
 								);
 						},
-						trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
+						trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
 					logIndexing.Debug("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
 					AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
 					actions.Indexing.IncrementReduceSuccessIndexing();

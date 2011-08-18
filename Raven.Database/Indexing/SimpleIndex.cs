@@ -65,7 +65,7 @@ namespace Raven.Database.Indexing
                                              exception.Message
                                 );
                         },
-                        trigger => trigger.OnIndexEntryDeleted(name, documentId));
+                        trigger => trigger.OnIndexEntryDeleted(documentId));
 					indexWriter.DeleteDocuments(new Term(Constants.DocumentIdFieldName, documentId.ToLowerInvariant()));
                     return doc;
                 });
@@ -108,7 +108,7 @@ namespace Raven.Database.Indexing
                                                  exception.Message
                                     );
                             },
-                            trigger => trigger.OnIndexEntryCreated(name, indexingResult.NewDocId, luceneDoc));
+                            trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
                         logIndexing.Debug("Index '{0}' resulted in: {1}", name, luceneDoc);
                         AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
                     }
@@ -182,7 +182,7 @@ namespace Raven.Database.Indexing
             					exception);
             				context.AddError(name, key, exception.Message);
             			},
-            			trigger => trigger.OnIndexEntryDeleted(name, key)));
+            			trigger => trigger.OnIndexEntryDeleted(key)));
             	writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k)).ToArray());
             	batchers.ApplyAndIgnoreAllErrors(
             		e =>
