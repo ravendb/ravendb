@@ -56,6 +56,8 @@ namespace Raven.Client.Connection
 		public HttpJsonRequest CreateHttpJsonRequest(IHoldProfilingInformation self, string url, string method, RavenJObject metadata,
 													 ICredentials credentials, DocumentConvention convention)
 		{
+            if (disposed)
+                throw new ObjectDisposedException(typeof (HttpJsonRequestFactory).FullName);
 			var request = new HttpJsonRequest(url, method, metadata, credentials, this, self)
 			{
 				ShouldCacheRequest = convention.ShouldCacheRequest(url)
@@ -148,6 +150,7 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
+	    private volatile bool disposed;
 #else
 		[ThreadStatic] private static TimeSpan? aggressiveCacheDuration;
 		[ThreadStatic] private static bool disableHttpCaching;
@@ -207,6 +210,9 @@ namespace Raven.Client.Connection
 		/// <filterpriority>2</filterpriority>
 		public void Dispose()
 		{
+            if (disposed)
+                return;
+		    disposed = true;
 			cache.Dispose();
 #if !NET_3_5
             aggressiveCacheDuration.Dispose();
