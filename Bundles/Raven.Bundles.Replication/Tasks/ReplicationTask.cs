@@ -95,6 +95,11 @@ namespace Raven.Bundles.Replication.Tasks
                                 Task.Factory.StartNew(() => ReplicateTo(destination), TaskCreationOptions.LongRunning)
                                     .ContinueWith(completedTask =>
                                     {
+                                        if (completedTask.Exception != null)
+                                        {
+                                            log.ErrorException("Could not replicate to " + destination, completedTask.Exception);
+                                            return;
+                                        }
                                         if (completedTask.Result) // force re-evaluation of replication again
                                             docDb.WorkContext.NotifyAboutWork();
                                     });
@@ -164,6 +169,8 @@ namespace Raven.Bundles.Replication.Tasks
         {
             try
             {
+                if (docDb.Disposed)
+                    return false;
                 using (docDb.DisableAllTriggersForCurrentThread())
                 {
                     SourceReplicationInformation sourceReplicationInformation;
