@@ -150,7 +150,6 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
-	    private volatile bool disposed;
 #else
 		[ThreadStatic] private static TimeSpan? aggressiveCacheDuration;
 		[ThreadStatic] private static bool disableHttpCaching;
@@ -175,6 +174,7 @@ namespace Raven.Client.Connection
 			set { aggressiveCacheDuration = value; }
 		}
 #endif
+        private volatile bool disposed;
 
 		internal string GetCachedResponse(HttpJsonRequest httpJsonRequest)
 		{
