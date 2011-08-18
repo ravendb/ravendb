@@ -56,6 +56,8 @@ namespace Raven.Client.Connection
 		public HttpJsonRequest CreateHttpJsonRequest(IHoldProfilingInformation self, string url, string method, RavenJObject metadata,
 													 ICredentials credentials, DocumentConvention convention)
 		{
+            if (disposed)
+                throw new ObjectDisposedException(typeof (HttpJsonRequestFactory).FullName);
 			var request = new HttpJsonRequest(url, method, metadata, credentials, this, self)
 			{
 				ShouldCacheRequest = convention.ShouldCacheRequest(url)
@@ -172,6 +174,7 @@ namespace Raven.Client.Connection
 			set { aggressiveCacheDuration = value; }
 		}
 #endif
+        private volatile bool disposed;
 
 		internal string GetCachedResponse(HttpJsonRequest httpJsonRequest)
 		{
@@ -207,6 +210,9 @@ namespace Raven.Client.Connection
 		/// <filterpriority>2</filterpriority>
 		public void Dispose()
 		{
+            if (disposed)
+                return;
+		    disposed = true;
 			cache.Dispose();
 #if !NET_3_5
             aggressiveCacheDuration.Dispose();

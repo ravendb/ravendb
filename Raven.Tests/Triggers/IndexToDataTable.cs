@@ -36,7 +36,7 @@ namespace Raven.Tests.Triggers
                 this.parent = parent;
             }
 
-            public override void OnIndexEntryDeleted(string indexName, string entryKey)
+            public override void OnIndexEntryDeleted(string entryKey)
             {
                 var dataRows = parent.DataTable.Rows.Cast<DataRow>().Where(x => (string)x["entry"] == entryKey).ToArray();
                 foreach (var dataRow in dataRows)
@@ -45,7 +45,7 @@ namespace Raven.Tests.Triggers
                 }
             }
 
-            public override void OnIndexEntryCreated(string indexName, string entryKey, Lucene.Net.Documents.Document document)
+            public override void OnIndexEntryCreated(string entryKey, Lucene.Net.Documents.Document document)
             {
                 parent.DataTable.Rows.Add(entryKey, document.GetField("Project").StringValue());
             }
