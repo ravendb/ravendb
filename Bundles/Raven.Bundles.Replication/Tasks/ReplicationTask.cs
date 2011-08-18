@@ -110,7 +110,7 @@ namespace Raven.Bundles.Replication.Tasks
                 }
                 catch (Exception e)
                 {
-                    log.Error("Failed to perform replication", e);
+                    log.ErrorException("Failed to perform replication", e);
                 }
 
 				runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter);
