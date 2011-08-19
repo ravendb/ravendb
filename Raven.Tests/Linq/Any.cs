@@ -1,4 +1,4 @@
-﻿
+﻿using Raven.Abstractions;
 using System;
 using System.Linq;
 using Xunit;
@@ -48,10 +48,10 @@ namespace Raven.Tests.Linq
 			{
 				using (var session = store.OpenSession())
 				{
-
+					DateTime dateTime = SystemTime.Now();
 					var query = from a in session.Query<OrderableEntity>()
 													.Customize(x => x.WaitForNonStaleResultsAsOfNow())
-								where DateTime.Now < a.Order
+								where dateTime < a.Order
 								select a;
 
 					query.ToList();
