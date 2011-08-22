@@ -55,9 +55,8 @@ namespace Raven.Bundles.Authorization
 				select permission;
 
 			permissions = permissions.Concat( // permissions on user matching the document's tags
-				from tag in documentAuthorization.Tags
 				from permission in user.Permissions
-				where TagMatches(permission.Tag, tag)
+                where TagsMatch(permission.Tags, documentAuthorization.Tags)
 				select permission
 				);
 
@@ -67,8 +66,7 @@ namespace Raven.Bundles.Authorization
 				where role != null
 				from permission in role.Permissions
 				where OperationMatches(permission.Operation, operation)
-				from tag in documentAuthorization.Tags
-				where TagMatches(permission.Tag, tag)
+                where TagsMatch(permission.Tags, documentAuthorization.Tags)
 				select permission
 				);
 
@@ -179,9 +177,9 @@ namespace Raven.Bundles.Authorization
 			return op2.StartsWith(op1);
 		}
 
-		private static bool TagMatches(string tag1, string tag2)
+		private static bool TagsMatch(IEnumerable<string> permissionTags, IEnumerable<string> documentTags)
 		{
-			return tag2.StartsWith(tag1);
+            return permissionTags.All(p => documentTags.Any(d => d.StartsWith(p)));
 		}
 
 		private T GetDocumentAsEntity<T>(string documentId) where T : class
