@@ -3,8 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 #if !SILVERLIGHT
 using System.Transactions;
 #endif
@@ -35,6 +37,7 @@ namespace Raven.Client.Extensions
 		/// </remarks>
 		public static void EnsureDatabaseExists(this IDatabaseCommands self,string name)
 		{
+			AssertValidName(name);
 			var doc = RavenJObject.FromObject(new DatabaseDocument
 			{
 				Settings =
@@ -45,9 +48,7 @@ namespace Raven.Client.Extensions
 			var docId = "Raven/Databases/" + name;
 			if (self.Get(docId) != null)
 				return;
-#if !SILVERLIGHT
 			using (new TransactionScope(TransactionScopeOption.Suppress))
-#endif
 				self.Put(docId, null, doc, new RavenJObject());
 		}
 #endif
@@ -58,6 +59,7 @@ namespace Raven.Client.Extensions
 		///</summary>
 		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name)
 		{
+			AssertValidName(name);
 			var doc = RavenJObject.FromObject(new DatabaseDocument
 			{
 				Settings =
@@ -77,6 +79,19 @@ namespace Raven.Client.Extensions
 				})
                 .Unwrap();
 		}
+
 #endif
+
+		static readonly char[] invalidDbNameChars = new[] { '/', '\\', '"', '\'', '<', '>'};
+
+		private static void AssertValidName(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+			if (invalidDbNameChars.Any(name.Contains))
+			{
+				throw new ArgumentException("Database name cannot contain any of [" +
+											string.Join(", ", invalidDbNameChars) + "] but was: " + name);
+			}
+		}
 	}
 }
