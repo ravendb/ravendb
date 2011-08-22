@@ -464,6 +464,9 @@ task CreateNugetPackage {
   del $build_dir\NuPack\lib\net35\Newtonsoft.Json.*
   del $build_dir\NuPack\lib\net40\Newtonsoft.Json.*
   del $build_dir\NuPack\lib\sl40\Newtonsoft.Json.*
+  del $build_dir\NuPack\lib\net35\nlog.*
+  del $build_dir\NuPack\lib\net40\nlog.*
+  del $build_dir\NuPack\lib\sl40\nlog.*
   del $build_dir\NuPack-Embedded\lib\net40\Newtonsoft.Json.*
   del $build_dir\NuPack-Embedded\lib\net40\nlog.*
 
