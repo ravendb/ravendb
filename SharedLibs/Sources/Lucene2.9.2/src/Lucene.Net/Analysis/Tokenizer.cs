@@ -32,7 +32,7 @@ namespace Lucene.Net.Analysis
 	/// {@link Token#Clear()} before setting Token attributes.
 	/// </summary>
 	
-	public abstract class Tokenizer:TokenStream
+	public abstract class Tokenizer:TokenStream 
 	{
 		/// <summary>The text source for this Tokenizer. </summary>
 		protected internal System.IO.TextReader input;

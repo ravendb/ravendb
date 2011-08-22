@@ -1261,6 +1261,12 @@
             were cloned from.
             </summary>
         </member>
+        <member name="M:Lucene.Net.Store.IndexInput.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
+        </member>
         <member name="F:Lucene.Net.Store.BufferedIndexInput.BUFFER_SIZE">
             <summary>Default buffer size </summary>
         </member>
@@ -4723,6 +4729,12 @@
         <member name="M:Lucene.Net.Analysis.TokenStream.Close">
             <summary>Releases resources associated with this stream. </summary>
         </member>
+        <member name="M:Lucene.Net.Analysis.TokenStream.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
+        </member>
         <member name="T:Lucene.Net.Analysis.TokenStream.MethodSupport">
             <deprecated> Remove this when old API is removed! 
             </deprecated>
@@ -6959,6 +6971,12 @@
             </param>
             <deprecated> This will be removed (hardwired to true) in 3.0
             </deprecated>
+        </member>
+        <member name="M:Lucene.Net.Analysis.Standard.StandardAnalyzer.SavedStreams.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
         </member>
         <member name="T:Lucene.Net.Analysis.CharReader">
             <summary> CharReader is a Reader wrapper. It reads chars from
@@ -20130,6 +20148,12 @@
             </param>
             <throws>  IOException </throws>
         </member>
+        <member name="M:Lucene.Net.Index.TermVectorsReader.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
+        </member>
         <member name="T:Lucene.Net.Index.ParallelArrayTermVectorMapper">
             <summary> Models the existing parallel array structure</summary>
         </member>
@@ -20195,6 +20219,12 @@
         </member>
         <member name="T:Lucene.Net.Index.TermInfosReader.ThreadResources">
             <summary> Per-thread resources managed by ThreadLocal</summary>
+        </member>
+        <member name="M:Lucene.Net.Index.TermInfosReader.ThreadResources.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
         </member>
         <member name="M:Lucene.Net.Index.SegmentTermEnum.Next">
             <summary>Increments the enumeration to the next element.  True if one exists.</summary>
@@ -21500,6 +21530,12 @@
             This will have the most payoff on large fields.
             </summary>
         </member>
+        <member name="M:Lucene.Net.Index.FieldsReader.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
+        </member>
         <member name="T:Lucene.Net.Index.FieldsReader.LazyField">
             <summary> A Lazy implementation of Fieldable that differs loading of fields until asked for, instead of when the Document is
             loaded.
@@ -22680,6 +22716,12 @@
         </member>
         <member name="T:Lucene.Net.Analysis.StopAnalyzer.SavedStreams">
             <summary>Filters LowerCaseTokenizer with StopFilter. </summary>
+        </member>
+        <member name="M:Lucene.Net.Analysis.StopAnalyzer.SavedStreams.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
         </member>
         <member name="T:Lucene.Net.Analysis.CachingTokenFilter">
             <summary> This class can be used if the token attributes of a TokenStream

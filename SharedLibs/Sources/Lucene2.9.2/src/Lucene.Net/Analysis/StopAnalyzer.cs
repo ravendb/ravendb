@@ -262,7 +262,7 @@ namespace Lucene.Net.Analysis
 		}
 		
 		/// <summary>Filters LowerCaseTokenizer with StopFilter. </summary>
-		private class SavedStreams
+		private class SavedStreams : IDisposable
 		{
 			public SavedStreams(StopAnalyzer enclosingInstance)
 			{
@@ -283,6 +283,18 @@ namespace Lucene.Net.Analysis
 			}
 			internal Tokenizer source;
 			internal TokenStream result;
+
+			/// <summary>
+			/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+			/// </summary>
+			/// <filterpriority>2</filterpriority>
+			public void Dispose()
+			{
+				if(source != null)
+					source.Close();
+				if(result != null)
+					result.Close();
+			}
 		}
 		
 		public override TokenStream ReusableTokenStream(System.String fieldName, System.IO.TextReader reader)
