@@ -169,6 +169,7 @@
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
     <Compile Include="Bugs\Identifiers\WithBase64Characters.cs" />
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
+    <Compile Include="Bugs\Issue355.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\Place.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\Task.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\TaskSummary.cs" />
