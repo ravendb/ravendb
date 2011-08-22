@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -164,7 +165,7 @@ namespace Raven.Tests.Bugs
 					var items = new[]
 					            	{
 					            		new Doc {Date = null},
-					            		new Doc {Date = DateTime.Now},
+					            		new Doc {Date = SystemTime.Now()},
 					            	};
 					foreach (var item in items)
 						session.Store(item);

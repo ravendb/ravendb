@@ -1177,7 +1177,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			GC.SuppressFinalize(this);
 			if (ProfilingInformation != null)
 			{
-				ProfilingInformation.DurationMilliseconds = (DateTime.Now - ProfilingInformation.At).TotalMilliseconds;
+				ProfilingInformation.DurationMilliseconds = (SystemTime.Now() - ProfilingInformation.At).TotalMilliseconds;
 			}
 		}
 
