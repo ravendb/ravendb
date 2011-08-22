@@ -146,6 +146,19 @@ namespace Raven.Client.Embedded
             }
         }
 
+
+		/// <summary>
+		/// validate the configuration for the document store
+		/// </summary>
+		protected override void AssertValidConfiguration()
+		{
+			if (RunInMemory)
+				return;
+			if(string.IsNullOrEmpty(DataDirectory))  // if we don't have a data dir...
+				base.AssertValidConfiguration();	 // we need to check the configuration for url
+
+		}
+
         ///<summary>
         /// Whatever we should also host an HTTP endpoint for the document database
         ///</summary>
