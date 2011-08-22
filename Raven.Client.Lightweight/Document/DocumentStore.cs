@@ -124,7 +124,7 @@ namespace Raven.Client.Document
 		}
 
 		private string identifier;
-		DocumentSessionListeners listeners = new DocumentSessionListeners();
+	    readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 #if !SILVERLIGHT
 		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
@@ -416,6 +416,9 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public  IDocumentStore Initialize()
 		{
+            if (string.IsNullOrEmpty(Url))
+                throw new ArgumentException("Document store URL cannot be empty", "Url");
+
 #if !SILVERLIGHT
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
 #else

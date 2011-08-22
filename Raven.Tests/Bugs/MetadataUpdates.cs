@@ -3,6 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System.Linq;
+using Raven.Client.Document;
 using Xunit;
 using Raven.Json.Linq;
 
@@ -99,6 +102,37 @@ namespace Raven.Tests.Bugs
                     var metadata = session.Advanced.GetMetadataFor(foo);
 
 					Assert.Equal("bar", metadata["foo"].Value<string>());
+				}
+			}
+		}
+
+		[Fact]
+		public void Can_query_metadata()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var user1 = new User {Name = "Joe Schmoe"};
+				const string propertyName1 = "Test-Property-1";
+				const string propertyValue1 = "Test-Value-1";
+				using (var session = store.OpenSession())
+				{
+					session.Store(user1);
+					var metadata1 = session.Advanced.GetMetadataFor(user1);
+					metadata1[propertyName1] = propertyValue1;
+					session.Store(new User {Name = "Ralph Schmoe"});
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var result = session.Advanced.LuceneQuery<User>()
+						.WhereEquals("@metadata." + propertyName1, propertyValue1)
+						.ToList();
+
+					Assert.NotNull(result);
+					Assert.Equal(1, result.Count);
+					var metadata = session.Advanced.GetMetadataFor(result[0]);
+					Assert.Equal(propertyValue1, metadata[propertyName1]);
 				}
 			}
 		}
