@@ -72,7 +72,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
                 {
                     using (var update = new Update(session, mappedResults, JET_prep.Replace))
                     {
-                        Api.SetColumn(session, mappedResults, tblKeyColumn["timestamp"], SystemTime.Now());
+                        Api.SetColumn(session, mappedResults, tblKeyColumn["timestamp"], SystemTime.Now);
                         update.Save();
                     }
                 }

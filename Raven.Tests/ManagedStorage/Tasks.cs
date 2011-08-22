@@ -18,7 +18,7 @@ namespace Raven.Tests.ManagedStorage
 			{
                 tx.Batch(accessor => accessor.Indexing.AddIndex("test", false));
                 tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale("test", null, null))); 
-				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.Now()));
+				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.Now));
                 tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale("test", null, null)));
 			}
 		}
@@ -30,7 +30,7 @@ namespace Raven.Tests.ManagedStorage
 			{
                 tx.Batch(accessor => accessor.Indexing.AddIndex("test", false));
                 tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale("test", null, null)));
-				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.Now()));
+				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.Now));
                 tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale("test", null, null))); 
 				
 				int tasks = 0;
@@ -46,13 +46,13 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				var cutoff = DateTime.UtcNow;
+				var cutoff = SystemTime.UtcNow;
                 tx.Batch(mutator =>
                 {
                     mutator.Indexing.AddIndex("test", false);
                     mutator.Indexing.UpdateLastIndexed("test", Guid.NewGuid(), cutoff);
                 });
-				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, DateTime.UtcNow));
+				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.UtcNow));
                 tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale("test", null, null)));
                 tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale("test", cutoff.AddMinutes(1), null)));
                 tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale("test", cutoff.AddMinutes(-1), null)));
@@ -64,7 +64,7 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.Now()));
+				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.Now));
 				int tasks;
 				tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask(out tasks)));
 			}
@@ -75,7 +75,7 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" },SystemTime.Now()));
+				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" },SystemTime.Now));
 				int tasks;
 				tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask(out tasks)));
 				tx.Batch(mutator => Assert.Null(mutator.Tasks.GetMergedTask(out tasks)));
@@ -87,8 +87,8 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.Now()));
-                tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.Now()));
+                tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.Now));
+                tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, SystemTime.Now));
 				int tasks = 0;
 				tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask(out tasks)));
 				Assert.Equal(2, tasks);

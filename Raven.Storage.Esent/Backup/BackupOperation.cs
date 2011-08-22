@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.Isam.Esent.Interop;
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Backup;
@@ -86,7 +87,7 @@ namespace Raven.Storage.Esent.Backup
 
 				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				backupStatus.IsRunning = false;
-				backupStatus.Completed = DateTime.UtcNow;
+				backupStatus.Completed = SystemTime.UtcNow;
 				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
 							 jsonDocument.Metadata,
 							 null);
@@ -117,7 +118,7 @@ namespace Raven.Storage.Esent.Backup
 				backupStatus.Messages.Add(new BackupStatus.BackupMessage
 				{
 					Message = newMsg,
-					Timestamp = DateTime.UtcNow,
+					Timestamp = SystemTime.UtcNow,
 					Severity = severity
 				});
 				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus), jsonDocument.Metadata,

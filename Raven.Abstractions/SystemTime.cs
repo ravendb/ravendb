@@ -4,6 +4,8 @@
 
 	public static class SystemTime
 	{
-		public static Func<DateTime> Now = () => DateTime.Now;
+		public static DateTime Now { get { return UtcDateTime().ToLocalTime(); } }
+		public static DateTime UtcNow { get { return UtcDateTime(); } }
+		public static Func<DateTime> UtcDateTime = () => DateTime.UtcNow;
 	}
 }

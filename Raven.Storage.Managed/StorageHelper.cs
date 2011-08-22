@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Storage;
@@ -36,7 +37,7 @@ namespace Raven.Storage.Managed
                 return;
 
             var timeout = existingTx.Key.Value<DateTime>("timeout");
-            if (DateTime.UtcNow > timeout)
+            if (SystemTime.UtcNow > timeout)
             {
                 transactionStorageActions.RollbackTransaction(txId);
                 return;

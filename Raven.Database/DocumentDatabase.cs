@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Newtonsoft.Json;
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -428,7 +429,7 @@ namespace Raven.Database
 					continue;
 				var task = taskGenerator();
 				task.Index = indexName;
-				actions.Tasks.AddTask(task, DateTime.UtcNow);
+				actions.Tasks.AddTask(task, SystemTime.UtcNow);
 			}
 		}
 
@@ -1098,7 +1099,7 @@ namespace Raven.Database
 			}
 			Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(new BackupStatus
 			{
-				Started = DateTime.UtcNow,
+				Started = SystemTime.UtcNow,
 				IsRunning = true,
 			}), new RavenJObject(), null);
 			IndexStorage.FlushMapIndexes();

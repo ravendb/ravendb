@@ -31,7 +31,7 @@ namespace Raven.Client.Connection
 					let metadata = doc["@metadata"] as RavenJObject
 					let _ = doc.Remove("@metadata")
 					let key = Extract(metadata, "@id", string.Empty)
-					let lastModified = Extract(metadata, Constants.LastModified, SystemTime.Now(), (string d) => ConvertToUtcDate(d))
+					let lastModified = Extract(metadata, Constants.LastModified, SystemTime.Now, (string d) => ConvertToUtcDate(d))
 					let etag = Extract(metadata, "@etag", Guid.Empty, (string g) => new Guid(g))
 					let nai = Extract(metadata, "Non-Authoritive-Information", false, (string b) => Convert.ToBoolean(b))
 					select new JsonDocument

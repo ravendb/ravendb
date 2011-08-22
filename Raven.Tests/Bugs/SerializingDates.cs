@@ -39,7 +39,7 @@ namespace Raven.Tests.Bugs
 			public DateTime CreationDate { get; set; }
 			public DocItem()
 			{
-				CreationDate = SystemTime.Now();
+				CreationDate = SystemTime.Now;
 			}
 		}
 	}

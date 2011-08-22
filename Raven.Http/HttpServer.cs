@@ -150,7 +150,7 @@ namespace Raven.Http
         private void CleanupDatabases(object state)
         {
             var databasesToCleanup = databaseLastRecentlyUsed
-                .Where(x=>(SystemTime.Now() - x.Value).TotalMinutes > 10)
+                .Where(x=>(SystemTime.Now - x.Value).TotalMinutes > 10)
                 .Select(x=>x.Key)
                 .ToArray();
 
@@ -425,7 +425,7 @@ namespace Raven.Http
             	IResourceStore resourceStore;
             	if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
                 {
-                    databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now(), (s, time) => SystemTime.Now());
+                    databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
 
 					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
 					{

@@ -99,7 +99,7 @@ namespace Raven.Storage.Managed
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
 
-				Interlocked.Exchange(ref lastUsageTime, SystemTime.Now().ToBinary());
+				Interlocked.Exchange(ref lastUsageTime, SystemTime.Now.ToBinary());
 				using (tableStroage.BeginTransaction())
 				{
 					var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
@@ -188,7 +188,7 @@ namespace Raven.Storage.Managed
 		{
 			var ticks = Interlocked.Read(ref lastUsageTime);
 			var lastUsage = DateTime.FromBinary(ticks);
-			if ((SystemTime.Now() - lastUsage).TotalSeconds < 30)
+			if ((SystemTime.Now - lastUsage).TotalSeconds < 30)
 				return;
 
 			tableStroage.PerformIdleTasks();

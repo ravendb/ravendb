@@ -9,6 +9,7 @@ using System.IO;
 using Newtonsoft.Json.Linq;
 using Rhino.Licensing;
 using System.Linq;
+using Raven.Abstractions;
 using Raven.Database.Json;
 
 namespace Raven.Database.Commercial
@@ -37,7 +38,7 @@ namespace Raven.Database.Commercial
 			if (licenseValidator.TryLoadingLicenseValuesFromValidatedXml() == false)
 				throw new LicenseNotFoundException("Could not find valid license for RavenDB at: " + fullPath);
 			
-			if (DateTime.UtcNow < licenseValidator.ExpirationDate)
+			if (SystemTime.UtcNow < licenseValidator.ExpirationDate)
 				return;
 
 			LicenseValidatorOnLicenseInvalidated(InvalidationType.TimeExpired);
