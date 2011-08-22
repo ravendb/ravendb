@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
@@ -16,7 +17,7 @@ using Raven.Database.Json;
 
 namespace Raven.Storage.Managed
 {
-    public class MappedResultsStorageAction : IMappedResultsStorageAction
+	public class MappedResultsStorageAction : IMappedResultsStorageAction
     {
         private readonly TableStorage storage;
         private readonly IUuidGenerator generator;
@@ -38,7 +39,7 @@ namespace Raven.Storage.Managed
         		{"reduceKey", reduceKey},
         		{"docId", docId},
         		{"etag", byteArray},
-        		{"timestamp", DateTime.Now}
+        		{"timestamp", SystemTime.Now()}
         	};
         	storage.MappedResults.Put(key, ms.ToArray());
         }

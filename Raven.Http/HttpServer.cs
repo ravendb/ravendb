@@ -16,6 +16,7 @@ using System.Threading;
 using System.Linq;
 using Newtonsoft.Json;
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
@@ -149,7 +150,7 @@ namespace Raven.Http
         private void CleanupDatabases(object state)
         {
             var databasesToCleanup = databaseLastRecentlyUsed
-                .Where(x=>(DateTime.Now - x.Value).TotalMinutes > 10)
+                .Where(x=>(SystemTime.Now() - x.Value).TotalMinutes > 10)
                 .Select(x=>x.Key)
                 .ToArray();
 
@@ -424,7 +425,7 @@ namespace Raven.Http
             	IResourceStore resourceStore;
             	if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
                 {
-                    databaseLastRecentlyUsed.AddOrUpdate(tenantId, DateTime.Now, (s, time) => DateTime.Now);
+                    databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now(), (s, time) => SystemTime.Now());
 
 					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
 					{
