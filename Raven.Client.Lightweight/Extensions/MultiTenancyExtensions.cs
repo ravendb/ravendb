@@ -82,7 +82,7 @@ namespace Raven.Client.Extensions
 
 #endif
 
-		static readonly char[] invalidDbNameChars = new[] { '/', '\\', '"', '\'', '<', '>'};
+		static readonly string[] invalidDbNameChars = new[] { "/", "\\", "\"", "'", "<", ">"};
 
 		private static void AssertValidName(string name)
 		{
