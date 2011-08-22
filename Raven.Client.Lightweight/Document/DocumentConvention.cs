@@ -47,6 +47,13 @@ namespace Raven.Client.Document
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
 			FindClrType = (id, doc, metadata) => metadata.Value<string>(Abstractions.Data.Constants.RavenClrType);
+
+#if !SILVERLIGHT
+			FindClrTypeName = entityType => ReflectionUtil.GetFullNameWithoutVersionInformation(entityType);
+#else
+			FindClrTypeName = entityType => entityType.AssemblyQualifiedName;
+#endif
+
 			FindFullDocumentKeyFromNonStringIdentifier = DefaultFindFullDocumentKeyFromNonStringIdentifier;
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
 			FindTypeTagName = DefaultTypeTagName;
@@ -225,6 +232,10 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Func<string, RavenJObject, RavenJObject, string> FindClrType { get; set; }
 
+		/// <summary>
+		/// Gets or sets the function to find the clr type name from a clr type
+		/// </summary>
+		public Func<Type, string> FindClrTypeName { get; set; }
 
 		/// <summary>
 		/// Gets or sets the function to find the full document key based on the type of a document
@@ -328,6 +339,14 @@ namespace Raven.Client.Document
 		public string GetClrType(string id, RavenJObject document, RavenJObject metadata)
 		{
 			return FindClrType(id, document, metadata);
+		}
+
+		/// <summary>
+		///  Get the CLR type name to be stored in the entity metadata
+		/// </summary>
+		public string GetClrTypeName(Type entityType)
+		{
+			return FindClrTypeName(entityType);
 		}
 	}
 
