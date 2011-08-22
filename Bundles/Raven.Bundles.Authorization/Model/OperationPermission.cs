@@ -3,22 +3,27 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+using System.Collections.Generic;
 
 namespace Raven.Bundles.Authorization.Model
 {
 	public class OperationPermission : IPermission
 	{
 		public string Operation { get; set; }
-		public string Tag { get; set; }
+        public List<string> Tags { get; set; }
 		public bool Allow { get; set; }
 		public int Priority { get; set; }
+
+        public OperationPermission()
+		{
+            Tags = new List<string>();
+		}
 
 		public string Explain
 		{
 			get
 			{
-				return string.Format("Operation: {0}, Tag: {1}, Allow: {2}, Priority: {3}", Operation, Tag, Allow, Priority);
+				return string.Format("Operation: {0}, Tags: {1}, Allow: {2}, Priority: {3}", Operation, string.Join(", ", Tags ?? new List<string>()), Allow, Priority);
 			}
 		}
 	}
