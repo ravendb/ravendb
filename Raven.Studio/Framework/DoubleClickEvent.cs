@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Framework
+﻿using Raven.Abstractions;
+
+namespace Raven.Studio.Framework
 {
 	using System;
 	using System.Windows;
@@ -80,12 +82,12 @@
 
 			static Point clickPosition;
 			static bool firstClickDone;
-			static DateTime lastClick = DateTime.Now;
+			static DateTime lastClick = SystemTime.Now;
 
 			internal static bool IsDoubleClick(object sender, EventArgs args)
 			{
 				var element = sender as UIElement;
-				var clickTime = DateTime.Now;
+				var clickTime = SystemTime.Now;
 
 				var e = args as MouseEventArgs;
 				if (e == null)
@@ -97,7 +99,7 @@
 				{
 					clickPosition = e.GetPosition(element);
 					firstClickDone = true;
-					lastClick = DateTime.Now;
+					lastClick = SystemTime.Now;
 					return false;
 				}
 

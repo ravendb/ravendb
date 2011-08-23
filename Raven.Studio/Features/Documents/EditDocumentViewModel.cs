@@ -1,4 +1,5 @@
-﻿using Raven.Json.Linq;
+﻿using Raven.Abstractions;
+using Raven.Json.Linq;
 using Raven.Studio.Framework.Extensions;
 using Raven.Studio.Infrastructure.Navigation;
 
@@ -241,7 +242,7 @@ namespace Raven.Studio.Features.Documents
 				document.Metadata[Constants.RavenEntityName] = char.ToUpper(document.Key[0]) + document.Key.Substring(1, indexOf - 1);
 			}
 
-			LastModified = DateTime.Now;
+			LastModified = SystemTime.Now;
 			metadata = ParseJsonToDictionary(document.Metadata);
 			NotifyOfPropertyChange(() => Metadata);
 		}

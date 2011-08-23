@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Raven.Abstractions;
 using Raven.Client;
 using Raven.Client.Document;
 using Xunit;
@@ -26,7 +27,7 @@ namespace Raven.Tests.Bugs
                                         Content = new
                                                       {
                                                           Order = i,
-                                                          Inserted = DateTime.Now.AddDays(i)
+                                                          Inserted = SystemTime.Now.AddDays(i)
                                                       }
                                     });
                     }
@@ -67,7 +68,7 @@ namespace Raven.Tests.Bugs
                                         Body = new
                                                    {
                                                        Order = i,
-                                                       Inserted = DateTime.Now.AddDays(i)
+													   Inserted = SystemTime.Now.AddDays(i)
                                                    }
                                     });
                     }
@@ -78,7 +79,7 @@ namespace Raven.Tests.Bugs
                     IDocumentQuery<dynamic> query =
                         s.Advanced.LuceneQuery<dynamic>()
                             .WhereBetweenOrEqual("Body.Inserted",
-                                                 DateTime.Now.Date, DateTime.Now.AddDays(2))
+												 SystemTime.Now.Date, SystemTime.Now.AddDays(2))
                             .OrderBy("-Body.Order")
                             .Take(2)
                             .WaitForNonStaleResults();

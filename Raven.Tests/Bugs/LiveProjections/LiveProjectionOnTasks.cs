@@ -1,3 +1,4 @@
+using Raven.Abstractions;
 using Raven.Client;
 
 namespace Raven.Tests.Bugs.LiveProjections
@@ -37,8 +38,8 @@ namespace Raven.Tests.Bugs.LiveProjections
                         new Task()
                         {
                             Description = "Testing projections",
-                            Start = DateTime.UtcNow,
-                            End = DateTime.UtcNow.AddMinutes(30),
+							Start = SystemTime.UtcNow,
+							End = SystemTime.UtcNow.AddMinutes(30),
                             GiverId = 1,
                             TakerId = 2,
                             PlaceId = 1

@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Shell
+﻿using Raven.Abstractions;
+
+namespace Raven.Studio.Shell
 {
 	using System;
 	using System.ComponentModel.Composition;
@@ -64,7 +66,7 @@
 		void HandleTick(object sender, EventArgs e)
 		{
 			if (MostRecent == null) return;
-			if (DateTime.Now - MostRecent.CreatedAt > dismissAfter) MostRecent = null;
+			if (SystemTime.Now - MostRecent.CreatedAt > dismissAfter) MostRecent = null;
 		}
 	}
 }

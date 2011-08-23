@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Messages
+﻿using Raven.Abstractions;
+
+namespace Raven.Studio.Messages
 {
 	using System;
 
@@ -8,7 +10,7 @@
 		{
 			Message = message;
 			Level = level;
-			CreatedAt = DateTime.Now;
+			CreatedAt = SystemTime.Now;
 		}
 
 		public DateTime CreatedAt { get; private set; }

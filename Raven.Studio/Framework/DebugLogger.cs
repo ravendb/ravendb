@@ -7,6 +7,7 @@
 using System;
 using System.Diagnostics;
 using Caliburn.Micro;
+using Raven.Abstractions;
 
 namespace Raven.Studio.Framework
 {
@@ -29,10 +30,10 @@ namespace Raven.Studio.Framework
 
 		#region Helper Methods
 
-		private string CreateLogMessage(string format, params object[] args)
+		private static string CreateLogMessage(string format, params object[] args)
 		{
 			return string.Format("[{0}] {1}",
-			                     DateTime.Now.ToString("o"),
+								 SystemTime.Now.ToString("o"),
 			                     string.Format(format, args));
 		}
 

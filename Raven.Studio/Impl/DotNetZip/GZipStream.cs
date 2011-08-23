@@ -29,6 +29,7 @@
 
 using System;
 using System.IO;
+using Raven.Abstractions;
 
 namespace Ionic.Zlib
 {
@@ -867,7 +868,7 @@ namespace Ionic.Zlib
             header[i++] = flag;
 
             // mtime
-            if (!LastModified.HasValue) LastModified = DateTime.Now;
+			if (!LastModified.HasValue) LastModified = SystemTime.Now;
             System.TimeSpan delta = LastModified.Value - _unixEpoch;
             Int32 timet = (Int32)delta.TotalSeconds;
             Array.Copy(BitConverter.GetBytes(timet), 0, header, i, 4);

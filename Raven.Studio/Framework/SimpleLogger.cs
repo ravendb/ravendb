@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Framework
+﻿using Raven.Abstractions;
+
+namespace Raven.Studio.Framework
 {
 	using System;
 	using System.Collections.Generic;
@@ -18,12 +20,12 @@
 				Debug.WriteLine(task + " already executing...");
 
 				var started = tasks[task];
-				var delta = DateTime.Now - started;
+				var delta = SystemTime.Now - started;
 				Debug.WriteLine("- started " + delta.TotalMilliseconds + "ms ago.");
 			}
 			else
 			{
-				tasks[task] = DateTime.Now;
+				tasks[task] = SystemTime.Now;
 				Debug.WriteLine(task + " started");
 			}
 		}
@@ -33,7 +35,7 @@
 			if (tasks.ContainsKey(task))
 			{
 				var started = tasks[task];
-				var delta = DateTime.Now - started;
+				var delta = SystemTime.Now - started;
 				Debug.WriteLine(task + " end. " + delta.TotalMilliseconds + "ms");
 				tasks.Remove(task);
 			}
