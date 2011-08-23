@@ -4,12 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions;
 using Raven.Client.Document;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata
 {
-    public class LastModifiedRemote : RemoteClientTest
+	public class LastModifiedRemote : RemoteClientTest
     {
         [Fact]
         public void CanAccessLastModifiedAsMetadata()
@@ -24,9 +25,9 @@ namespace Raven.Tests.Bugs.Metadata
                 {
                     session.Store(new User());
 
-                    before = DateTime.UtcNow;
+                    before = SystemTime.UtcNow;
                     session.SaveChanges();
-                    after = DateTime.UtcNow;
+					after = SystemTime.UtcNow;
                 }
 
                 using (var session = store.OpenSession())

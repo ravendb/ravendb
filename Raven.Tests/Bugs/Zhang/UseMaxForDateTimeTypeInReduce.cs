@@ -36,9 +36,9 @@ select new {Name = g.Key, CreatedTime = createdTime}
 
                 using (var sesion = store.OpenSession())
                 {
-                    sesion.Store(new { Topic = "RavenDB is Hot", CreatedTime = SystemTime.Now(), Tags = new[] { new { Name = "DB" }, new { Name = "NoSQL" } } });
+                    sesion.Store(new { Topic = "RavenDB is Hot", CreatedTime = SystemTime.Now, Tags = new[] { new { Name = "DB" }, new { Name = "NoSQL" } } });
 
-                    sesion.Store(new { Topic = "RavenDB is Fast", CreatedTime = SystemTime.Now().AddMinutes(10), Tags = new[] { new { Name = "NoSQL" } } });
+                    sesion.Store(new { Topic = "RavenDB is Fast", CreatedTime = SystemTime.Now.AddMinutes(10), Tags = new[] { new { Name = "NoSQL" } } });
 
                     sesion.SaveChanges();
                 }

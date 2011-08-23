@@ -36,9 +36,9 @@ select new {Name = g.Key, CreatedTimeTicks = createdTimeTicks}
 
                 using (var sesion = store.OpenSession())
                 {
-                    sesion.Store(new { Topic = "RavenDB is Hot", CreatedTimeTicks = SystemTime.Now().Ticks, Tags = new[] { new { Name = "DB" }, new { Name = "NoSQL" } } });
+                    sesion.Store(new { Topic = "RavenDB is Hot", CreatedTimeTicks = SystemTime.Now.Ticks, Tags = new[] { new { Name = "DB" }, new { Name = "NoSQL" } } });
 
-                    sesion.Store(new { Topic = "RavenDB is Fast", CreatedTimeTicks = SystemTime.Now().AddMinutes(10).Ticks, Tags = new[] { new { Name = "NoSQL" } } });
+                    sesion.Store(new { Topic = "RavenDB is Fast", CreatedTimeTicks = SystemTime.Now.AddMinutes(10).Ticks, Tags = new[] { new { Name = "NoSQL" } } });
 
                     sesion.SaveChanges();
                 }

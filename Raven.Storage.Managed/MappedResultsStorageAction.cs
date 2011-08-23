@@ -39,7 +39,7 @@ namespace Raven.Storage.Managed
         		{"reduceKey", reduceKey},
         		{"docId", docId},
         		{"etag", byteArray},
-        		{"timestamp", SystemTime.Now()}
+        		{"timestamp", SystemTime.Now}
         	};
         	storage.MappedResults.Put(key, ms.ToArray());
         }

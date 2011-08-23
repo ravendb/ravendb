@@ -32,7 +32,7 @@ namespace Raven.Tests.Bugs
 									ClassificationId = "9000",
 									Click = new AdvertisementClick
 									{
-										ClickDate = SystemTime.Now()
+										ClickDate = SystemTime.Now
 									}
 
 								},
@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs
 									ClassificationId = "9000",
 									Click = new AdvertisementClick
 									{
-										ClickDate = SystemTime.Now()
+										ClickDate = SystemTime.Now
 									}
 
 								},

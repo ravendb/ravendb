@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -58,7 +59,7 @@ namespace Raven.Storage.Managed
 			storage.Transactions.UpdateKey(new RavenJObject
 			                               	{
 			                               		{"txId", transactionInformation.Id.ToByteArray()},
-			                               		{"timeout", DateTime.UtcNow.Add(transactionInformation.Timeout)}
+			                               		{"timeout", SystemTime.UtcNow.Add(transactionInformation.Timeout)}
 			                               	});
 
             var ms = new MemoryStream();
@@ -72,7 +73,7 @@ namespace Raven.Storage.Managed
 			                                            	{
 			                                            		{"key", key},
 			                                            		{"etag", newEtag.ToByteArray()},
-			                                            		{"modified", DateTime.UtcNow},
+			                                            		{"modified", SystemTime.UtcNow},
 			                                            		{"txId", transactionInformation.Id.ToByteArray()}
 			                                            	}, ms.ToArray());
 
@@ -122,7 +123,7 @@ namespace Raven.Storage.Managed
         	storage.Transactions.UpdateKey(new RavenJObject
         	                               	{
         	                               		{"txId", transactionInformation.Id.ToByteArray()},
-        	                               		{"timeout", DateTime.UtcNow.Add(transactionInformation.Timeout)}
+        	                               		{"timeout", SystemTime.UtcNow.Add(transactionInformation.Timeout)}
         	                               	});
 
             var newEtag = generator.CreateSequentialUuid();
@@ -130,7 +131,7 @@ namespace Raven.Storage.Managed
         	                                                  	{
         	                                                  		{"key", key},
         	                                                  		{"etag", newEtag.ToByteArray()},
-        	                                                  		{"modified", DateTime.UtcNow},
+        	                                                  		{"modified", SystemTime.UtcNow},
         	                                                  		{"deleted", true},
         	                                                  		{"txId", transactionInformation.Id.ToByteArray()}
         	                                                  	});
@@ -153,7 +154,7 @@ namespace Raven.Storage.Managed
             storage.Transactions.UpdateKey(new RavenJObject
             {
 				{"txId", toTxId.ToByteArray()},
-                {"timeout", DateTime.UtcNow.Add(timeout)}
+                {"timeout", SystemTime.UtcNow.Add(timeout)}
             });
 
             var transactionInformation = new TransactionInformation { Id = toTxId, Timeout = timeout };

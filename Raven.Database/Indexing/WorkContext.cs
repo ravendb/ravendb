@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
@@ -120,7 +121,7 @@ namespace Raven.Database.Indexing
 				Document = key,
 				Error = error,
 				Index = index,
-				Timestamp = DateTime.UtcNow
+				Timestamp = SystemTime.UtcNow
 			});
 			if (serverErrors.Count <= 50)
 				return;

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Web;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -133,7 +134,7 @@ namespace Raven.Tests
         [Fact]
         public void can_encode_and_decode_IndexQuery_CutOff()
         {
-            var expected = DateTime.UtcNow;
+            var expected = SystemTime.UtcNow;
             var indexQuery = new IndexQuery();
 
             indexQuery.Cutoff = expected;

@@ -329,7 +329,7 @@ namespace Raven.Tests.Document
 				documentStore.DatabaseCommands.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					PageSize = 10,
-					Cutoff = SystemTime.Now().AddHours(-1)
+					Cutoff = SystemTime.Now.AddHours(-1)
 				}, null);
 			}
 		}
@@ -1249,7 +1249,7 @@ namespace Raven.Tests.Document
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
 
-				var key = string.Format("{0}-{1}", "test", SystemTime.Now().ToFileTimeUtc());
+				var key = string.Format("{0}-{1}", "test", SystemTime.Now.ToFileTimeUtc());
 				var metadata = new RavenJObject {
 									{ "owner", 5 },
 									{ "Content-Type", "text/plain" },

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Linq;
 using Raven.Client.Indexes;
 using Xunit;
@@ -20,7 +21,7 @@ namespace Raven.Tests.Bugs
 					session.Store(new User {Name = "John Doe"} );
 					session.SaveChanges();
 
-					var dateTime = DateTools.DateToString(DateTime.UtcNow, DateTools.Resolution.MILLISECOND);
+					var dateTime = DateTools.DateToString(SystemTime.UtcNow, DateTools.Resolution.MILLISECOND);
 
 					var results = session.Advanced.LuceneQuery<object>(new RavenDocumentsByEntityName().IndexName)
 						.Where("LastModified:[* TO " + dateTime + "]")

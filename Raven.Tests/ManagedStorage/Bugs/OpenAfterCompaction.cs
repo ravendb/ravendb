@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions;
 using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;
@@ -11,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.ManagedStorage.Bugs
 {
-    public class OpenAfterCompaction 
+	public class OpenAfterCompaction 
     {
         [Fact]
         public void CanOpenAfterCompaction()
@@ -24,7 +25,7 @@ namespace Raven.Tests.ManagedStorage.Bugs
             {
                 {"key", "1"},
                 {"etag", Guid.NewGuid().ToByteArray()},
-                {"modified", DateTime.UtcNow},
+                {"modified", SystemTime.UtcNow},
                 {"id", 1},
                 {"entityName", "test"}
             }, new byte[512] );
@@ -33,7 +34,7 @@ namespace Raven.Tests.ManagedStorage.Bugs
             {
                 {"key", "2"},
                 {"etag", Guid.NewGuid().ToByteArray()},
-                {"modified", DateTime.UtcNow},
+                {"modified", SystemTime.UtcNow},
                 {"id", 1},
                 {"entityName", "test"}
             }, new byte[512] );
