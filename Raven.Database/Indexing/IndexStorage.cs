@@ -41,7 +41,7 @@ namespace Raven.Database.Indexing
 		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
-		private static readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
+		private readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 
         public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration)
 		{
@@ -136,6 +136,7 @@ namespace Raven.Database.Indexing
 			{
 				index.Dispose();
 			}
+			dummyAnalyzer.Close();
 		}
 
 		#endregion
