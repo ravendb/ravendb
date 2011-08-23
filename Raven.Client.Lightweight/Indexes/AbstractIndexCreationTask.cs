@@ -11,13 +11,13 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 #endif
+using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 
 namespace Raven.Client.Indexes
 {
-
 	/// <summary>
 	/// Base class for creating indexes
 	/// </summary>

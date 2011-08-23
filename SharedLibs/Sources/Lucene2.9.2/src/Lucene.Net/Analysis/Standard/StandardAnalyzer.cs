@@ -325,10 +325,22 @@ namespace Lucene.Net.Analysis.Standard
 			return result;
 		}
 		
-		private sealed class SavedStreams
+		private sealed class SavedStreams : IDisposable
 		{
 			internal StandardTokenizer tokenStream;
 			internal TokenStream filteredTokenStream;
+
+			/// <summary>
+			/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+			/// </summary>
+			/// <filterpriority>2</filterpriority>
+			public void Dispose()
+			{
+				if(tokenStream!=null)
+					tokenStream.Close();
+				if(filteredTokenStream!=null)
+					filteredTokenStream.Close();
+			}
 		}
 		
 		/// <summary>Default maximum allowed token length </summary>

@@ -898,7 +898,7 @@ more responsive application.
 			return objectAsJson;
 		}
 
-		private static void SetClrType(Type entityType, RavenJObject metadata)
+		private void SetClrType(Type entityType, RavenJObject metadata)
 		{
 			if(
 #if !NET_3_5
@@ -906,15 +906,11 @@ more responsive application.
 #endif
 				entityType == typeof(RavenJObject)) // dynamic types
 			{
-				if (metadata.ContainsKey(Raven.Abstractions.Data.Constants.RavenClrType))
+				if (metadata.ContainsKey(Constants.RavenClrType))
 					return;// do not overwrite the value
 			}
 
-#if !SILVERLIGHT
-			metadata[Raven.Abstractions.Data.Constants.RavenClrType] =  RavenJToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
-#else
-			metadata[Raven.Abstractions.Data.Constants.RavenClrType] =  RavenJToken.FromObject(entityType.AssemblyQualifiedName);
-#endif
+			metadata[Constants.RavenClrType] = Conventions.GetClrTypeName(entityType);
 		}
 
 		private RavenJObject GetObjectAsJson(object entity)

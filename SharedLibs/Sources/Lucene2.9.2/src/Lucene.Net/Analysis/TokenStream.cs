@@ -82,7 +82,7 @@ namespace Lucene.Net.Analysis
 	/// {@link AttributeSource#CaptureState} and {@link AttributeSource#RestoreState}
 	/// can be used.
 	/// </summary>
-	public abstract class TokenStream:AttributeSource
+	public abstract class TokenStream:AttributeSource, IDisposable
 	{
 		private void  InitBlock()
 		{
@@ -500,6 +500,15 @@ namespace Lucene.Net.Analysis
 		/// <summary>Releases resources associated with this stream. </summary>
 		public virtual void  Close()
 		{
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
+		public void Dispose()
+		{
+			Close();
 		}
 	}
 }

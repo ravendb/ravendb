@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs.MapRedue
 			      from version in document.Versions
 			      where (
 			            	(document.DateRemoved == null ||
-			            	 document.DateRemoved >= DateTime.Now)
+							 document.DateRemoved >= DateTime.Now) 
 			            )
 			      select new
 			      {

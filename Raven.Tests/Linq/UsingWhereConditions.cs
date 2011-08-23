@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
@@ -26,7 +27,7 @@ using System.Diagnostics;
  */
 namespace Raven.Tests.Linq
 {
-    public class UsingWhereConditions
+	public class UsingWhereConditions
     {
         [Fact]
         public void Can_Use_Where()
@@ -172,13 +173,13 @@ namespace Raven.Tests.Linq
 
         private void AddData(IDocumentSession documentSession)
         {
-            documentSession.Store(new CommitInfo { Author="kenny", PathInRepo="/src/test/", Repository=Repo, Revision=1, Date= DateTime.Now, CommitMessage="First commit" });
-			documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/FirstTest/", Repository = Repo, Revision = 2, Date = DateTime.Now, CommitMessage = "Second commit" });
-			documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/FirstTest/test.txt", Repository = Repo, Revision = 3, Date = DateTime.Now, CommitMessage = "Third commit" });
-			documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/test/SecondTest/", Repository = Repo, Revision = 4, Date = DateTime.Now, CommitMessage = "Fourth commit" });
-			documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/", Repository = Repo, Revision = 5, Date = DateTime.Now, CommitMessage = "Fifth commit" });
-			documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/test/SecondTest/test.txt", Repository = Repo, Revision = 6, Date = DateTime.Now, CommitMessage = "Sixt commit" });
-			documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/SecondTest/test1.txt", Repository = Repo, Revision = 7, Date = DateTime.Now, CommitMessage = "Seventh commit" });
+            documentSession.Store(new CommitInfo { Author="kenny", PathInRepo="/src/test/", Repository=Repo, Revision=1, Date= SystemTime.Now(), CommitMessage="First commit" });
+			documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/FirstTest/", Repository = Repo, Revision = 2, Date = SystemTime.Now(), CommitMessage = "Second commit" });
+			documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/FirstTest/test.txt", Repository = Repo, Revision = 3, Date = SystemTime.Now(), CommitMessage = "Third commit" });
+			documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/test/SecondTest/", Repository = Repo, Revision = 4, Date = SystemTime.Now(), CommitMessage = "Fourth commit" });
+			documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/", Repository = Repo, Revision = 5, Date = SystemTime.Now(), CommitMessage = "Fifth commit" });
+			documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/test/SecondTest/test.txt", Repository = Repo, Revision = 6, Date = SystemTime.Now(), CommitMessage = "Sixt commit" });
+			documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/SecondTest/test1.txt", Repository = Repo, Revision = 7, Date = SystemTime.Now(), CommitMessage = "Seventh commit" });
             documentSession.SaveChanges();
         }
     }

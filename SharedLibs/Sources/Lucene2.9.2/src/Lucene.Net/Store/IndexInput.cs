@@ -25,7 +25,7 @@ namespace Lucene.Net.Store
 	/// </summary>
 	/// <seealso cref="Directory">
 	/// </seealso>
-	public abstract class IndexInput : System.ICloneable
+	public abstract class IndexInput : System.ICloneable, IDisposable
 	{
 		private byte[] bytes; // used by readString()
 		private char[] chars; // used by readModifiedUTF8String()
@@ -281,6 +281,15 @@ namespace Lucene.Net.Store
 			}
 			
 			return map;
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
+		public void Dispose()
+		{
+			Close();
 		}
 	}
 }

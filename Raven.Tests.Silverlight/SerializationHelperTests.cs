@@ -1,4 +1,5 @@
-﻿using Raven.Client.Connection;
+﻿using Raven.Abstractions;
+using Raven.Client.Connection;
 using Raven.Json.Linq;
 
 namespace Raven.Tests.Silverlight
@@ -67,7 +68,7 @@ namespace Raven.Tests.Silverlight
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
 
-			var now = DateTime.Now;
+			var now = SystemTime.Now();
 
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
