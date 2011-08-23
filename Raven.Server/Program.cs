@@ -14,6 +14,7 @@ using System.ServiceProcess;
 using System.Xml;
 using NDesk.Options;
 using NLog.Config;
+using Raven.Abstractions;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Http;
@@ -285,7 +286,7 @@ Document Database for the .Net Platform
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
 Command line ptions:",
-        		DateTime.Now.Year);
+        		SystemTime.Now.Year);
 
 			optionSet.WriteOptionDescriptions(Console.Out);
 
