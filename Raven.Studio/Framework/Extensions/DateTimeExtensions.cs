@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Framework.Extensions
+﻿using Raven.Abstractions;
+
+namespace Raven.Studio.Framework.Extensions
 {
 	using System;
 
@@ -27,7 +29,7 @@
 		public static int[] TimePassedSince(this DateTime start)
 		{
 			//http://dotnet.org.za/hiltong/archive/2005/07/25/40283.aspx
-			var end = DateTime.UtcNow;
+			var end = SystemTime.UtcNow;
 			var startUtc = start.ToUniversalTime();
 
 			int years = end.Year - startUtc.Year;

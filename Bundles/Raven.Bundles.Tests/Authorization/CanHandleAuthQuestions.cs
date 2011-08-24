@@ -87,7 +87,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Tag = "Fortune 500"
+								Tags = { "Fortune 500" }
 							}
 						}
                 });
@@ -107,6 +107,140 @@ namespace Raven.Bundles.Tests.Authorization
             Assert.True(isAllowed);
         }
 
+        [Fact]
+        public void GivingPermissionToRoleOnMultiTagsAssociatedWithRoleWithMultiTagsOnDocumentWillAllow()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Roles = { "Authorization/Roles/Managers" }
+                });
+
+                s.Store(new AuthorizationRole
+                {
+                    Id = "Authorization/Roles/Managers",
+                    Permissions =
+						{
+							new OperationPermission
+							{
+								Allow = true,
+								Operation = operation,
+								Tags = { "Fortune 500", "Technology" }
+							}
+						}
+                });
+
+                s.Store(company);
+
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Tags = { "Fortune 500", "Technology/Application Software" }
+                });
+
+                s.SaveChanges();
+            }
+
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.True(isAllowed);
+        }
+
+        [Fact]
+        public void GivingPermissionToRoleOnMultiTagsAssociatedWithRoleWithoutMultiTagsOnDocumentWillDeny()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Roles = { "Authorization/Roles/Managers" }
+                });
+
+                s.Store(new AuthorizationRole
+                {
+                    Id = "Authorization/Roles/Managers",
+                    Permissions =
+						{
+							new OperationPermission
+							{
+								Allow = true,
+								Operation = operation,
+								Tags = { "Fortune 500", "Technology" }
+							}
+						}
+                });
+
+                s.Store(company);
+
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Tags = { "Fortune 500" }
+                });
+
+                s.SaveChanges();
+            }
+
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.False(isAllowed);
+        }
+
+        [Fact]
+        public void GivingPermissionToRoleOnMultiTagsAssociatedWithRoleWithMoreGeneralTagsOnDocumentWillDeny()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Roles = { "Authorization/Roles/Managers" }
+                });
+
+                s.Store(new AuthorizationRole
+                {
+                    Id = "Authorization/Roles/Managers",
+                    Permissions =
+						{
+							new OperationPermission
+							{
+								Allow = true,
+								Operation = operation,
+								Tags = { "Fortune 500", "Technology/Application Sofware" }
+							}
+						}
+                });
+
+                s.Store(company);
+
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Tags = { "Fortune 500", "Technology" }
+                });
+
+                s.SaveChanges();
+            }
+
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.False(isAllowed);
+        }
 
         [Fact]
         public void GivingPermissionToRoleOnTagAssociatedWithRoleWillAllow_OnClient()
@@ -133,7 +267,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Tag = "Fortune 500"
+								Tags = { "Fortune 500" }
 							}
 						}
                 });
@@ -172,7 +306,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = false,
 								Operation = operation,
-								Tag = "Important"
+								Tags = { "Important" }
 							}
 						}
                 });
@@ -207,7 +341,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Tag = "/Important"
+								Tags = { "/Important" }
 							}
 						}
                 });
@@ -241,7 +375,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = false,
 								Operation = operation,
-								Tag = "Important"
+								Tags = { "Important" }
 							}
 						}
                 });
@@ -328,7 +462,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Tag = "Companies/Important"
+								Tags = { "Companies/Important" }
 							}
 						}
                 });
@@ -367,7 +501,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Tag = "Companies"
+								Tags = { "Companies" }
 							}
 						}
                 });

@@ -48,7 +48,7 @@ namespace Raven.Tests.Linq
 			{
 				using (var session = store.OpenSession())
 				{
-					DateTime dateTime = SystemTime.Now();
+					DateTime dateTime = SystemTime.Now;
 					var query = from a in session.Query<OrderableEntity>()
 													.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 								where dateTime < a.Order

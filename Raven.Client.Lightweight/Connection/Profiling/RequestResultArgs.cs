@@ -17,7 +17,7 @@ namespace Raven.Client.Connection.Profiling
 		/// </summary>
 		public RequestResultArgs()
 		{
-			At = SystemTime.Now();
+			At = SystemTime.Now;
 			AdditionalInformation = new Dictionary<string, string>();
 		}
 

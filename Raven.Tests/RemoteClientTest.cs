@@ -151,9 +151,9 @@ namespace Raven.Tests
 
 		public double Timer(Action action)
 		{
-			var startTime = SystemTime.Now();
+			var startTime = SystemTime.Now;
 			action.Invoke();
-			var timeTaken = SystemTime.Now().Subtract(startTime);
+			var timeTaken = SystemTime.Now.Subtract(startTime);
 			Console.WriteLine("Time take (ms)- " + timeTaken.TotalMilliseconds);
 			return timeTaken.TotalMilliseconds;
 		}

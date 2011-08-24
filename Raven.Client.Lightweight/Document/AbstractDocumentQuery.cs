@@ -18,6 +18,7 @@ using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Batches;
 #endif
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
@@ -1111,7 +1112,7 @@ If you really want to do in memory filtering on the data returned from the query
         public void WaitForNonStaleResultsAsOfNow()
         {
             theWaitForNonStaleResults = true;
-            cutoff = DateTime.UtcNow;
+			cutoff = SystemTime.UtcNow;
             timeout = TimeSpan.FromSeconds(15);
         }
 
@@ -1191,7 +1192,7 @@ If you really want to do in memory filtering on the data returned from the query
         public void WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
         {
             theWaitForNonStaleResults = true;
-            cutoff = DateTime.UtcNow;
+            cutoff = SystemTime.UtcNow;
             timeout = waitTimeout;
         }
 

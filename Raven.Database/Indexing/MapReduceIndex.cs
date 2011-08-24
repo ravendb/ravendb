@@ -13,6 +13,7 @@ using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Newtonsoft.Json;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -173,7 +174,7 @@ namespace Raven.Database.Indexing
 				{
 					Index = name,
 					ReduceKeys = reduceKeys.ToArray()
-				}, DateTime.UtcNow);
+				}, SystemTime.UtcNow);
 
 			});
 			Write(context, (writer, analyzer) =>

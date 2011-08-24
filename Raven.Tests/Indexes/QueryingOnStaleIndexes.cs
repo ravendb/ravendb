@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
@@ -89,7 +90,7 @@ namespace Raven.Tests.Indexes
             {
                 PageSize = 2,
                 Start = 0,
-				Cutoff = DateTime.UtcNow.AddHours(-1)
+				Cutoff = SystemTime.UtcNow.AddHours(-1)
             }).IsStale);
         }
         

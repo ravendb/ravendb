@@ -123,7 +123,7 @@ namespace Raven.Database.Queries
 		{
 			foreach (var indexInfo in from index in temporaryIndexes
 									  let indexInfo = index.Value
-									  let timeSinceRun = SystemTime.Now().Subtract(indexInfo.LastRun)
+									  let timeSinceRun = SystemTime.Now.Subtract(indexInfo.LastRun)
 									  where timeSinceRun > documentDatabase.Configuration.TempIndexCleanupThreshold
 									  select indexInfo)
 			{
@@ -184,11 +184,11 @@ namespace Raven.Database.Queries
 		{
 			var indexInfo = temporaryIndexes.GetOrAdd(temporaryIndexName, s => new TemporaryIndexInfo
 			{
-				Created = SystemTime.Now(),
+				Created = SystemTime.Now,
 				RunCount = 0,
 				Name = temporaryIndexName
 			});
-			indexInfo.LastRun = SystemTime.Now();
+			indexInfo.LastRun = SystemTime.Now;
 			Interlocked.Increment(ref indexInfo.RunCount);
 			return indexInfo;
 		}
@@ -198,7 +198,7 @@ namespace Raven.Database.Queries
 			if (indexInfo.RunCount < documentDatabase.Configuration.TempIndexPromotionMinimumQueryCount)
 				return false;
 
-			var timeSinceCreation = SystemTime.Now().Subtract(indexInfo.Created);
+			var timeSinceCreation = SystemTime.Now.Subtract(indexInfo.Created);
 			var score = timeSinceCreation.TotalMilliseconds / indexInfo.RunCount;
 
 			return score < documentDatabase.Configuration.TempIndexPromotionThreshold;

@@ -101,7 +101,7 @@ namespace Raven.Tests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-            	DateTime firstTime = SystemTime.Now();
+            	DateTime firstTime = SystemTime.Now;
 
                 using (var s = store.OpenSession())
                 {
@@ -113,7 +113,7 @@ namespace Raven.Tests.Bugs.Caching
                     Assert.Equal(1, results.Length);
                 }
 
-            	DateTime secondTime = SystemTime.Now();
+            	DateTime secondTime = SystemTime.Now;
 
 				if (firstTime == secondTime) // avoid getting the exact same url
 					secondTime = secondTime.AddMilliseconds(100);

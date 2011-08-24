@@ -327,23 +327,27 @@ namespace Raven.Storage.Esent
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
-			if (disposed)
-			{
-				Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
-				return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
-			}
-			if (current.Value != null)
-			{
-				action(current.Value);
-				return;
-			}
+            if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
+            {
+                if (current.Value != null) // check again, just to be sure
+                {
+                    action(current.Value);
+                    return;
+                }
+            }
 			disposerLock.EnterReadLock();
 			try
 			{
 				ExecuteBatch(action);
 			}
 			catch (EsentErrorException e)
-			{
+            {
+                if (disposed)
+                {
+                    Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
+                    return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+                }
+			
 				switch (e.Error)
 				{
 					case JET_err.WriteConflict:
@@ -357,7 +361,8 @@ namespace Raven.Storage.Esent
 			finally
 			{
 				disposerLock.ExitReadLock();
-				current.Value = null;
+                if(disposed == false)
+                    current.Value = null;
 			}
 		}
 
