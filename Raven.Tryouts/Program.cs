@@ -1,4 +1,6 @@
 ﻿using System;
+using Raven.Client.Listeners;
+using Raven.Json.Linq;
 using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
