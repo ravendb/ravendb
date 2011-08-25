@@ -306,6 +306,7 @@ task CopyRootFiles -depends CreateDocs {
 	cp $base_dir\license.txt $build_dir\Output\license.txt
 	cp $base_dir\Scripts\Start.cmd $build_dir\Output\Start.cmd
 	cp $base_dir\Scripts\Raven-StartBackup.ps1 $build_dir\Output\Raven-StartBackup.ps1
+	cp $base_dir\Scripts\Raven-UpdateBundles.ps1 $build_dir\Output\Raven-UpdateBundles.ps1
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
 	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgments.txt $build_dir\Output\acknowledgments.txt
@@ -464,6 +465,9 @@ task CreateNugetPackage {
   del $build_dir\NuPack\lib\net35\Newtonsoft.Json.*
   del $build_dir\NuPack\lib\net40\Newtonsoft.Json.*
   del $build_dir\NuPack\lib\sl40\Newtonsoft.Json.*
+  del $build_dir\NuPack\lib\net35\nlog.*
+  del $build_dir\NuPack\lib\net40\nlog.*
+  del $build_dir\NuPack\lib\sl40\nlog.*
   del $build_dir\NuPack-Embedded\lib\net40\Newtonsoft.Json.*
   del $build_dir\NuPack-Embedded\lib\net40\nlog.*
 
