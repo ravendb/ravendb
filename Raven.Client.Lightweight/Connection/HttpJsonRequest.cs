@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -30,7 +31,7 @@ namespace Raven.Client.Connection
 		private byte[] bytesForNextWrite;
 
 
-		internal readonly HttpWebRequest webRequest;
+		internal HttpWebRequest webRequest;
 		// temporary create a strong reference to the cached data for this request
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
@@ -166,7 +167,85 @@ namespace Raven.Client.Connection
 				return false;
 
 
-			return conventions.HandleUnauthorizedResponse(webRequest, unauthorizedResponse);
+			if (conventions.HandleUnauthorizedResponse(webRequest, unauthorizedResponse) == false)
+				return false;
+
+			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
+
+			var newWebRequest = (HttpWebRequest) WebRequest.Create(Url);
+			newWebRequest.Method = webRequest.Method;
+			CopyHeaders(webRequest, newWebRequest);
+			newWebRequest.Credentials = webRequest.Credentials;
+
+			if(postedData != null)
+			{
+				WriteDataToRequest(newWebRequest, postedData);
+			}
+
+			webRequest = newWebRequest;
+			return true;
+		}
+
+		private static void CopyHeaders(HttpWebRequest src, HttpWebRequest dest)
+		{
+			foreach (string header in src.Headers)
+			{
+				var values = src.Headers.GetValues(header);
+				if(values == null)
+					continue;
+				if(WebHeaderCollection.IsRestricted(header))
+				{
+					switch (header)
+					{
+						case "Accept":
+							dest.Accept = src.Accept;
+							break;
+						case "Connection":
+							dest.Connection = src.Connection;
+							break;
+						case "Content-Length":
+							dest.ContentLength = src.ContentLength;
+							break;
+						case "Content-Type":
+							dest.ContentType = src.ContentType;
+							break;
+						case "Date":
+							break;
+						case "Expect":
+							// explicitly ignoring this
+							break;
+						case "Host":
+							dest.Host = src.Host;
+							break;
+						case "If-Modified-Since":
+							dest.IfModifiedSince = src.IfModifiedSince;
+							break;
+						case "Range":
+							throw new NotSupportedException("Range copying isn't supported at this stage, we don't support range queries anyway, so it shouldn't matter");
+						case "Referer":
+							dest.Referer = src.Referer;
+							break;
+						case "Transfer-Encoding":
+							dest.TransferEncoding = src.TransferEncoding;
+							break;
+						case "User-Agent":
+							dest.UserAgent = src.UserAgent;
+							break;
+						case "Proxy-Connection":
+							dest.Proxy = src.Proxy;
+							break;
+						default:
+							throw new ArgumentException("No idea how to handle restircted header: " + header);
+					}
+				}
+				else
+				{
+					foreach (var value in values)
+					{
+						dest.Headers.Add(header, value);
+					}
+				}
+			}
 		}
 
 
@@ -357,11 +436,16 @@ namespace Raven.Client.Connection
 		{
 			postedData = data;
 
+			WriteDataToRequest(webRequest, data);
+		}
+
+		private static void WriteDataToRequest(HttpWebRequest req, string data)
+		{
 			var byteArray = Encoding.UTF8.GetBytes(data);
 
-			webRequest.ContentLength = byteArray.Length;
+			req.ContentLength = byteArray.Length;
 
-			using (var dataStream = webRequest.GetRequestStream())
+			using (var dataStream = req.GetRequestStream())
 			{
 				dataStream.Write(byteArray, 0, byteArray.Length);
 				dataStream.Flush();
