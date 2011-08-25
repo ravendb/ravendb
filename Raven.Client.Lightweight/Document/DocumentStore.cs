@@ -501,6 +501,18 @@ namespace Raven.Client.Document
 			authRequest.ContentType = "application/json;charset=UTF-8";
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			
+			if(oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false && 
+				jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
+				throw new InvalidOperationException(
+@"Attempting to authenticate using basic security over HTTP would expose user credentials (including the password) in clear text to anyone sniffing the network.
+Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.
+You can setup the OAuth endpoint in the RavenDB server settings ('Raven/OAuthTokenServer' configuration value), or setup your own behavior by providing a value for:
+	documentStore.Conventions.HandleUnauthorizedResponse
+If you are on an internal network or requires this for testing, you can disable this warning by calling:
+	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = false;
+");
+				
+
 			using(var authResponse = authRequest.GetResponse())
 			using(var stream = authResponse.GetResponseStreamWithHttpDecompression())
 			using(var reader = new StreamReader(stream))
