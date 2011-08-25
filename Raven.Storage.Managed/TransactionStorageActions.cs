@@ -174,7 +174,12 @@ namespace Raven.Storage.Managed
             });
         }
 
-        public void CompleteTransaction(Guid txId, Action<DocumentInTransactionData> perDocumentModified)
+    	public bool TransactionExists(Guid txId)
+    	{
+    		return storage.Transactions.Read(new RavenJObject {{"txId", txId.ToByteArray()}}) != null;
+    	}
+
+    	public void CompleteTransaction(Guid txId, Action<DocumentInTransactionData> perDocumentModified)
         {
         	storage.Transactions.Remove(new RavenJObject {{"txId", txId.ToByteArray()}});
 
