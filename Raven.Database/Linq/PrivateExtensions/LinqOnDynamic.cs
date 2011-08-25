@@ -28,6 +28,11 @@ namespace Raven.Database.Linq.PrivateExtensions
 				yield return item;
 			}
 		}
+
+		public static IEnumerable<dynamic> DefaultIfEmpty(this IEnumerable<dynamic> self)
+		{
+			return self.DefaultIfEmpty<dynamic>(new DynamicNullObject());
+		}
         
 		public static IEnumerable<dynamic> SelectMany(this object source,
 		                                              Func<dynamic, int, IEnumerable<dynamic>> collectionSelector,
