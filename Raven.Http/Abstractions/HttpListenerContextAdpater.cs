@@ -66,9 +66,11 @@ namespace Raven.Http.Abstractions
 			get { return ResponseInternal; }
 		}
 
+		private IPrincipal internalUser;
 		public IPrincipal User
 		{
-			get { return ctx.User; }
+			get { return internalUser ?? ctx.User; }
+			set { internalUser = value; }
 		}
 
 		public void FinalizeResonse()

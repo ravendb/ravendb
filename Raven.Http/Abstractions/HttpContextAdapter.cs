@@ -68,6 +68,7 @@ namespace Raven.Http.Abstractions
 		public IPrincipal User
 		{
 			get { return context.User; }
+			set { context.User = value; }
 		}
 
 		public string GetRequestUrlForTenantSelection()
