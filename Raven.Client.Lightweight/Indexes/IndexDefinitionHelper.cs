@@ -65,7 +65,7 @@ namespace Raven.Client.Indexes
 				throw new InvalidOperationException("Canot understand how to parse the query");
 
 			linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
-			linqQuery = Regex.Replace(linqQuery, @"new ((VB\$)|(<>))[\w_]+`\d+", "new ");// remove anonymous types
+			linqQuery = Regex.Replace(linqQuery, @"new ((VB\$)|(<>))[\w_]+(`\d+)?", "new ");// remove anonymous types
 			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transperant identifiers
 			const string pattern = @"(\.Where\(|\.Select\(|\.GroupBy\(|\.SelectMany)";
 			linqQuery = Regex.Replace(linqQuery, pattern, "\r\n\t$1"); // formatting
@@ -88,7 +88,7 @@ namespace Raven.Client.Indexes
 
 		private static string ReplaceAnonymousTypeBraces(string linqQuery)
 		{
-			const string pattern = @"new ((VB\$)|(<>))[\w_]+`\d+";
+			const string pattern = @"new ((VB\$)|(<>))[\w_]+(`\d+)?";
 			var matches = Regex.Matches(linqQuery, pattern);
 			for (int i = 0; i < matches.Count; i++)
 			{
