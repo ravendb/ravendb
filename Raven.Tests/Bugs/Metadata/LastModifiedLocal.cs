@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata
@@ -22,9 +23,9 @@ namespace Raven.Tests.Bugs.Metadata
                 {
                     session.Store(new User());
 
-                    before = DateTime.UtcNow;
+                    before = SystemTime.UtcNow;
                     session.SaveChanges();
-                    after = DateTime.UtcNow;
+					after = SystemTime.UtcNow;
                 }
 
                 using (var session = store.OpenSession())

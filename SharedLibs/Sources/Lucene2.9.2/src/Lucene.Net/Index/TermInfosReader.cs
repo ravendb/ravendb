@@ -48,12 +48,24 @@ namespace Lucene.Net.Index
 		private const int DEFAULT_CACHE_SIZE = 1024;
 		
 		/// <summary> Per-thread resources managed by ThreadLocal</summary>
-		private sealed class ThreadResources
+		private sealed class ThreadResources : IDisposable
 		{
 			internal SegmentTermEnum termEnum;
 			
 			// Used for caching the least recently looked-up Terms
 			internal Lucene.Net.Util.Cache.Cache termInfoCache;
+
+			/// <summary>
+			/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+			/// </summary>
+			/// <filterpriority>2</filterpriority>
+			public void Dispose()
+			{
+				if (termEnum != null)
+					termEnum.Close();
+				if (termInfoCache != null)
+					termInfoCache.Close();
+			}
 		}
 		
 		internal TermInfosReader(Directory dir, System.String seg, FieldInfos fis, int readBufferSize, int indexDivisor)

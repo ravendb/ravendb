@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -38,7 +39,7 @@ namespace Raven.Tests.Bugs
 			public DateTime CreationDate { get; set; }
 			public DocItem()
 			{
-				CreationDate = DateTime.Now;
+				CreationDate = SystemTime.Now;
 			}
 		}
 	}

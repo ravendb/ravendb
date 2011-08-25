@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Database;
@@ -31,7 +32,7 @@ namespace Raven.Storage.Managed
 		private readonly Action onCommit;
 		private TableStorage tableStroage;
 		private IPersistentSource persistenceSource;
-		private bool disposed;
+		private volatile bool disposed;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private Timer idleTimer;
 		private long lastUsageTime;
@@ -60,6 +61,8 @@ namespace Raven.Storage.Managed
 			{
 				if (disposed)
 					return;
+                disposed = true;
+                current.Dispose();
 				if (documentCacher != null)
 					documentCacher.Dispose();
 				if (idleTimer != null)
@@ -71,7 +74,6 @@ namespace Raven.Storage.Managed
 			}
 			finally
 			{
-				disposed = true;
 				disposerLock.ExitWriteLock();
 			}
 		}
@@ -84,21 +86,25 @@ namespace Raven.Storage.Managed
 		[DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
-			if(current.Value != null)
-			{
-				action(current.Value);
-				return;
-			}
-			disposerLock.EnterReadLock();
+            if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
+            {
+                if (current.Value != null) // check again, just to be sure
+                {
+                    action(current.Value);
+                    return;
+                }
+            }
+		    disposerLock.EnterReadLock();
 			try
 			{
-				if (disposed)
-				{
-					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
-					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
-				}
+                if (disposed)
+                {
+                    Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
+                    return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+                }
+                    
 
-				Interlocked.Exchange(ref lastUsageTime, DateTime.Now.ToBinary());
+				Interlocked.Exchange(ref lastUsageTime, SystemTime.Now.ToBinary());
 				using (tableStroage.BeginTransaction())
 				{
 					var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
@@ -112,7 +118,8 @@ namespace Raven.Storage.Managed
 			finally
 			{
 				disposerLock.ExitReadLock();
-				current.Value = null;
+                if(disposed ==false)
+                    current.Value = null;
 			}
 		}
 
@@ -187,7 +194,7 @@ namespace Raven.Storage.Managed
 		{
 			var ticks = Interlocked.Read(ref lastUsageTime);
 			var lastUsage = DateTime.FromBinary(ticks);
-			if ((DateTime.Now - lastUsage).TotalSeconds < 30)
+			if ((SystemTime.Now - lastUsage).TotalSeconds < 30)
 				return;
 
 			tableStroage.PerformIdleTasks();

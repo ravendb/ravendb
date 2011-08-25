@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
@@ -151,13 +152,13 @@ namespace Raven.Tests
             IOExtensions.DeleteDirectory(DbDirectory);
         }
 
-        public double Timer(Action action)
-        {
-            var startTime = DateTime.Now;
-            action.Invoke();
-            var timeTaken = DateTime.Now.Subtract(startTime);
-            Console.WriteLine("Time take (ms)- " + timeTaken.TotalMilliseconds);
-            return timeTaken.TotalMilliseconds;
-        }
-    }
+		public double Timer(Action action)
+		{
+			var startTime = SystemTime.Now;
+			action.Invoke();
+			var timeTaken = SystemTime.Now.Subtract(startTime);
+			Console.WriteLine("Time take (ms)- " + timeTaken.TotalMilliseconds);
+			return timeTaken.TotalMilliseconds;
+		}
+	}
 }

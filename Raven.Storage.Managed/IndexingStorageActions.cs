@@ -209,5 +209,10 @@ namespace Raven.Storage.Managed
 
             storage.IndexingStats.UpdateKey(ravenJObject);
         }
+
+        public void Dispose()
+        {
+            currentIndex.Dispose();
+        }
     }
 }

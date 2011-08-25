@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Newtonsoft.Json;
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -264,6 +265,9 @@ namespace Raven.Database
 
 		public void Dispose()
 		{
+            if (disposed)
+                return;
+		    disposed = true;
 			workContext.StopWork();
 			foreach (var value in ExtensionsState.Values.OfType<IDisposable>())
 			{
@@ -282,6 +286,10 @@ namespace Raven.Database
 			var disposable = backgroundTaskScheduler as IDisposable;
 			if (disposable != null)
 				disposable.Dispose();
+
+		    Configuration.Dispose();
+            disableAllTriggers.Dispose();
+            workContext.Dispose();
 		}
 
 		public void StopBackgroundWokers()
@@ -428,7 +436,7 @@ namespace Raven.Database
 					continue;
 				var task = taskGenerator();
 				task.Index = indexName;
-				actions.Tasks.AddTask(task, DateTime.UtcNow);
+				actions.Tasks.AddTask(task, SystemTime.UtcNow);
 			}
 		}
 
@@ -1098,7 +1106,7 @@ namespace Raven.Database
 			}
 			Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(new BackupStatus
 			{
-				Started = DateTime.UtcNow,
+				Started = SystemTime.UtcNow,
 				IsRunning = true,
 			}), new RavenJObject(), null);
 			IndexStorage.FlushMapIndexes();
@@ -1160,8 +1168,9 @@ namespace Raven.Database
 		}
 
 		static string productVersion;
+	    private volatile bool disposed;
 
-		public static string ProductVersion
+	    public static string ProductVersion
 		{
 			get
 			{
@@ -1187,12 +1196,22 @@ namespace Raven.Database
 		/// <returns></returns>
 		public IDisposable DisableAllTriggersForCurrentThread()
 		{
+            if (disposed)
+                return new DisposableAction(() => { });
 			var old = disableAllTriggers.Value;
 			disableAllTriggers.Value = true;
 			return new DisposableAction(() => disableAllTriggers.Value = old);
 		}
 
-		/// <summary>
+        /// <summary>
+        /// Whatever this database has been disposed
+        /// </summary>
+	    public bool Disposed
+	    {
+	        get { return disposed; }
+	    }
+
+	    /// <summary>
 		/// Get the total size taken by the database on the disk.
 		/// This explicitly does NOT include in memory indexes or in memory database.
 		/// It does include any reserved space on the file system, which may significantly increase

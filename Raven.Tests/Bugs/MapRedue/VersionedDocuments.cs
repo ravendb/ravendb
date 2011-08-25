@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 
@@ -17,7 +18,7 @@ namespace Raven.Tests.Bugs.MapRedue
 			      from version in document.Versions
 			      where (
 			            	(document.DateRemoved == null ||
-			            	 document.DateRemoved >= DateTime.Now)
+							 document.DateRemoved >= SystemTime.Now) 
 			            )
 			      select new
 			      {

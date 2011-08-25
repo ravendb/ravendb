@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
@@ -12,7 +13,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Caching
 {
-    public class CachingOfDocumentInclude : RemoteClientTest
+	public class CachingOfDocumentInclude : RemoteClientTest
     {
         [Fact]
         public void Can_cache_document_with_includes()
@@ -100,7 +101,7 @@ namespace Raven.Tests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-            	DateTime firstTime = DateTime.Now;
+            	DateTime firstTime = SystemTime.Now;
 
                 using (var s = store.OpenSession())
                 {
@@ -112,7 +113,7 @@ namespace Raven.Tests.Bugs.Caching
                     Assert.Equal(1, results.Length);
                 }
 
-            	DateTime secondTime = DateTime.Now;
+            	DateTime secondTime = SystemTime.Now;
 
 				if (firstTime == secondTime) // avoid getting the exact same url
 					secondTime = secondTime.AddMilliseconds(100);

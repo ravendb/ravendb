@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions;
 
 namespace Raven.Client.Connection.Profiling
 {
@@ -44,7 +45,7 @@ namespace Raven.Client.Connection.Profiling
 		/// <summary>
 		/// The time when the session was created
 		/// </summary>
-		public DateTime At = DateTime.Now;
+		public DateTime At = SystemTime.Now;
 
 		/// <summary>
 		/// The duration this session was opened

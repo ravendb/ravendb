@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -130,7 +131,7 @@ namespace Raven.Tests.Storage
                     {
                         Index = "foo",
                         Keys = { "tasks/"+i },
-                    },DateTime.Now);
+                    },SystemTime.Now);
                 }
             });
 

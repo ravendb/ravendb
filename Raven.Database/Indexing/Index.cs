@@ -105,6 +105,7 @@ namespace Raven.Database.Indexing
 					indexWriter = null;
 					try
 					{
+						writer.GetAnalyzer().Close();
 						writer.Close();
 					}
 					catch (Exception e)

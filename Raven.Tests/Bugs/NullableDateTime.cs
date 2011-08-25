@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -74,7 +75,7 @@ namespace Raven.Tests.Bugs
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
 					IndexCreation.CreateIndexes(typeof(Doc).Assembly, documentStore);
-					session.Store(new Doc { Id = "test/doc1", Date = DateTime.UtcNow });
+					session.Store(new Doc { Id = "test/doc1", Date = SystemTime.UtcNow });
 					session.Store(new Doc { Id = "test/doc2", Date = null });
 					session.SaveChanges();
 
@@ -118,7 +119,7 @@ namespace Raven.Tests.Bugs
 					session.Store(new Doc
 					              	{
 					              		Id = "test/doc1",
-					              		Date = DateTime.UtcNow
+										Date = SystemTime.UtcNow
 					              	});
 					session.Store(new Doc {Id = "test/doc2", Date = null});
 					session.SaveChanges();
@@ -164,7 +165,7 @@ namespace Raven.Tests.Bugs
 					var items = new[]
 					            	{
 					            		new Doc {Date = null},
-					            		new Doc {Date = DateTime.Now},
+					            		new Doc {Date = SystemTime.Now},
 					            	};
 					foreach (var item in items)
 						session.Store(item);

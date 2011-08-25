@@ -16,6 +16,7 @@
  */
 
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
 
 namespace Lucene.Net.Util
@@ -47,18 +48,31 @@ namespace Lucene.Net.Util
     /// </remarks>
 	public class CloseableThreadLocal
 	{
-        ThreadLocal<object> self ;
+		readonly ThreadLocal<object> self ;
+		readonly ConcurrentDictionary<object, object> threadLocals = new ConcurrentDictionary<object, object>();
+
+		private static readonly object ignored = new object();
 
 	    public CloseableThreadLocal()
 	    {
-	        self = new ThreadLocal<object>(InitialValue);
+	        self = new ThreadLocal<object>(() => Track(InitialValue()));
 	    }
 
+		private object Track(object initialValue)
+		{
+			if(initialValue != null)
+			{
+				threadLocals.AddOrUpdate(initialValue, ignored, (o, o1) => ignored);
+			}
+			return initialValue;
+		}
 
-        public  virtual System.Object InitialValue()
+
+		public  virtual System.Object InitialValue()
         {
             return null;
         }
+
         public virtual System.Object Get()
         {
             return self.Value;
@@ -66,12 +80,28 @@ namespace Lucene.Net.Util
 		
 		public virtual void  Set(System.Object object_Renamed)
 		{
-		    self.Value = object_Renamed;
+			if(self.IsValueCreated && self.Value != null)
+			{
+				object _;
+				threadLocals.TryRemove(self.Value, out _);
+			}
+			self.Value = object_Renamed;
+			if(object_Renamed != null)
+			{
+				threadLocals.AddOrUpdate(object_Renamed, ignored, (k, v) => ignored);
+			}
 		}
 		
 		public virtual void  Close()
 		{
-		    self.Value = null;
+			foreach (var threadLocal in threadLocals)
+			{
+				using (threadLocal.Key as IDisposable)
+				{
+					
+				}
+			}
+            self.Dispose();
 		}
 	}
 }

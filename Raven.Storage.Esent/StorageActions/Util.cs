@@ -6,6 +6,7 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Database;
@@ -89,7 +90,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, Transactions, tableColumnsCache.TransactionsColumns["tx_id"], transactionInformation.Id.ToByteArray());
 				Api.SetColumn(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"],
-							  DateTime.UtcNow + transactionInformation.Timeout);
+							  SystemTime.UtcNow + transactionInformation.Timeout);
 				update.Save();
 			}
 		}
@@ -116,7 +117,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return;
 			}
 			var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
-			if (DateTime.UtcNow > timeout)// the timeout for the transaction has passed
+			if (SystemTime.UtcNow > timeout)// the timeout for the transaction has passed
 			{
 				RollbackTransaction(guid);
 				return;

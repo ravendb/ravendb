@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Linq;
 using Microsoft.Silverlight.Testing;
-
+using Raven.Abstractions;
 namespace Raven.Tests.Silverlight
 {
 	using System;
@@ -24,7 +24,7 @@ namespace Raven.Tests.Silverlight
 
 			return generateNewDatabaseName
 				.Substring(0, generateNewDatabaseName.IndexOf(">"))
-				.Replace("Raven.Tests.Silverlight.",string.Empty) + DateTime.Now.Ticks;
+				.Replace("Raven.Tests.Silverlight.",string.Empty) + SystemTime.Now.Ticks;
 		}
 	}
 }

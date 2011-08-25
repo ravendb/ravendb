@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Extensions;
+﻿using Raven.Abstractions;
+using Raven.Abstractions.Extensions;
 using Raven.Studio.Shell.MessageBox;
 
 namespace Raven.Studio.Commands
@@ -63,7 +64,7 @@ namespace Raven.Studio.Commands
 					inner.Key = put.Result.Key;
 					inner.Metadata = inner.Metadata.FilterHeaders(isServerDocument: false);
 					inner.Etag = put.Result.ETag;
-					inner.LastModified = DateTime.Now;
+					inner.LastModified = SystemTime.Now;
 					document.UpdateDocumentFromJsonDocument();
 
 					events.Publish(new DocumentUpdated(document));

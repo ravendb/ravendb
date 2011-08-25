@@ -36,7 +36,7 @@ namespace Lucene.Net.Index
 	/// </summary>
 	/// <version>  $Id: FieldsReader.java 801344 2009-08-05 18:05:06Z yonik $
 	/// </version>
-	public sealed class FieldsReader : System.ICloneable
+	public sealed class FieldsReader : System.ICloneable, IDisposable
 	{
 		private FieldInfos fieldInfos;
 		
@@ -770,6 +770,15 @@ namespace Lucene.Net.Index
 				this.storePositionWithTermVector = fi.storePositionWithTermVector;
 				this.storeTermVector = fi.storeTermVector;
 			}
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
+		public void Dispose()
+		{
+			Close();
 		}
 	}
 }

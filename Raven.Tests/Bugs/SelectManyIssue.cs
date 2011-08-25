@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Xunit;
@@ -31,7 +32,7 @@ namespace Raven.Tests.Bugs
 									ClassificationId = "9000",
 									Click = new AdvertisementClick
 									{
-										ClickDate = DateTime.Now
+										ClickDate = SystemTime.Now
 									}
 
 								},
@@ -41,7 +42,7 @@ namespace Raven.Tests.Bugs
 									ClassificationId = "9000",
 									Click = new AdvertisementClick
 									{
-										ClickDate = DateTime.Now
+										ClickDate = SystemTime.Now
 									}
 
 								},

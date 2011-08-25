@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
@@ -73,12 +74,12 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 				{
 					session.Store(new Post
 					{
-						PostedAt = DateTime.Now,
+						PostedAt = SystemTime.Now,
 						Tags = new List<string>{"C#", "Programming","NoSql"}
 					});
 					session.Store(new Post
 					{
-						PostedAt = DateTime.Now,
+						PostedAt = SystemTime.Now,
 						Tags = new List<string> { "Database", "NoSql" }
 					});
 					session.SaveChanges();
@@ -126,13 +127,13 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 		[Fact]
 		public void CanStoreAndRetrieveTimeLocal()
 		{
-			CanStoreAndRetrieveTime(DateTime.Now);
+			CanStoreAndRetrieveTime(SystemTime.Now);
 		}
 
 		[Fact]
 		public void CanStoreAndRetrieveTimeUtc()
 		{
-			CanStoreAndRetrieveTime(DateTime.UtcNow);
+			CanStoreAndRetrieveTime(SystemTime.UtcNow);
 		}
 
 		[Fact]
@@ -161,12 +162,12 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 				{
 					session.Store(new Post
 					{
-						PostedAt = DateTime.Now,
+						PostedAt = SystemTime.Now,
 						Tags = new List<string> { "C#", "Programming", "NoSql" }
 					});
 					session.Store(new Post
 					{
-						PostedAt = DateTime.Now,
+						PostedAt = SystemTime.Now,
 						Tags = new List<string> { "Database", "NoSql" }
 					});
 					session.SaveChanges();
@@ -181,12 +182,12 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 		
 					session.Store(new Post
 					{
-						PostedAt = DateTime.Now,
+						PostedAt = SystemTime.Now,
 						Tags = new List<string> { "C#", "Programming", "NoSql" }
 					});
 					session.Store(new Post
 					{
-						PostedAt = DateTime.Now,
+						PostedAt = SystemTime.Now,
 						Tags = new List<string> { "Database", "NoSql" }
 					});
 					session.SaveChanges();

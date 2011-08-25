@@ -169,6 +169,7 @@
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
     <Compile Include="Bugs\Identifiers\WithBase64Characters.cs" />
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
+    <Compile Include="Bugs\Issue355.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\Place.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\Task.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\TaskSummary.cs" />
@@ -183,7 +184,10 @@
     <Compile Include="Bugs\Metadata\Querying.cs" />
     <Compile Include="Bugs\OfflineConcurrency.cs" />
     <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
+    <Compile Include="Bugs\Queries\Boolean.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
+    <Compile Include="Bugs\RacielrodTest.cs" />
+    <Compile Include="Bugs\SelfReference.cs" />
     <Compile Include="Bugs\SerializingAndDeserializingWithRaven.cs" />
     <Compile Include="Bugs\CanGetScores.cs" />
     <Compile Include="Bugs\CanReadLuceneProjectedDateTimeOffset.cs" />
@@ -475,7 +479,8 @@
     <Compile Include="Document\TotalCountServerTest.cs" />
     <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
     <Compile Include="Document\ZoneCountResult.cs" />
-    <Compile Include="IISClientTest.cs" />
+    <Compile Include="IISDeploymentUtil.cs" />
+    <Compile Include="IISExpressTestClient.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
     <Compile Include="Indexes\CreateIndexesWithCasting.cs" />
@@ -607,6 +612,8 @@
     <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
     <Compile Include="Util\IISConfig.cs" />
+    <Compile Include="Util\IISExpressDriver.cs" />
+    <Compile Include="Util\ProcessDriver.cs" />
     <Compile Include="Util\RavenDBDriver.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
     <Compile Include="Util\RunExternalProcess.cs" />

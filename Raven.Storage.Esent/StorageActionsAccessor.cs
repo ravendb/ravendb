@@ -87,5 +87,10 @@ namespace Raven.Storage.Esent
 					return false;
 			}
 		}
+
+	    public void Dispose()
+	    {
+            // nothing to do here
+	    }
 	}
 }

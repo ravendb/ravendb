@@ -1,3 +1,4 @@
+using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Xunit;
@@ -6,7 +7,7 @@ using System;
 
 namespace Raven.Tests.Bugs.Zhang
 {
-    public class UseMaxForLongTypeInReduce : LocalClientTest
+	public class UseMaxForLongTypeInReduce : LocalClientTest
     {
         private const string map = @"
 from doc in docs
@@ -35,9 +36,9 @@ select new {Name = g.Key, CreatedTimeTicks = createdTimeTicks}
 
                 using (var sesion = store.OpenSession())
                 {
-                    sesion.Store(new { Topic = "RavenDB is Hot", CreatedTimeTicks = DateTime.Now.Ticks, Tags = new[] { new { Name = "DB" }, new { Name = "NoSQL" } } });
+                    sesion.Store(new { Topic = "RavenDB is Hot", CreatedTimeTicks = SystemTime.Now.Ticks, Tags = new[] { new { Name = "DB" }, new { Name = "NoSQL" } } });
 
-                    sesion.Store(new { Topic = "RavenDB is Fast", CreatedTimeTicks = DateTime.Now.AddMinutes(10).Ticks, Tags = new[] { new { Name = "NoSQL" } } });
+                    sesion.Store(new { Topic = "RavenDB is Fast", CreatedTimeTicks = SystemTime.Now.AddMinutes(10).Ticks, Tags = new[] { new { Name = "NoSQL" } } });
 
                     sesion.SaveChanges();
                 }

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Security.Principal;
+using Raven.Client.Document;
 using Xunit;
 using Xunit.Extensions;
 using Xunit.Sdk;
@@ -15,28 +16,29 @@ namespace Raven.Tests.Bugs.Identifiers
 {
 	public class SpecialCharactersOnIIS : WithNLog
 	{
-		[AdminOnlyWithIIS7Installed]
+		[IISExpressInstalled]
 		[InlineData("foo")]
 		[InlineData("SHA1-UdVhzPmv0o+wUez+Jirt0OFBcUY=")]
 		public void Can_load_entity(string entityId)
 		{
-			var testContext = new IISClientTest();
-
-			using (var store = testContext.GetDocumentStore())
+			using(var testContext = new IISExpressTestClient())
 			{
-				store.Initialize();
-
-				using (var session = store.OpenSession())
+				using (var store = testContext.GetDocumentStore())
 				{
-					var entity = new Entity {Id = entityId};
-					session.Store(entity);
-					session.SaveChanges();
-				}
+					store.Initialize();
 
-				using (var session = store.OpenSession())
-				{
-					var entity1 = session.Load<object>(entityId);
-					Assert.NotNull(entity1);
+					using (var session = store.OpenSession())
+					{
+						var entity = new WithBase64Characters.Entity { Id = entityId };
+						session.Store(entity);
+						session.SaveChanges();
+					}
+
+					using (var session = store.OpenSession())
+					{
+						var entity1 = session.Load<object>(entityId);
+						Assert.NotNull(entity1);
+					}
 				}
 			}
 		}
@@ -49,6 +51,27 @@ namespace Raven.Tests.Bugs.Identifiers
 		}
 
 		#endregion
+	}
+
+	public class IISExpressInstalled : TheoryAttribute
+	{
+		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
+		{
+			var displayName = method.TypeName + "." + method.Name;
+
+			if (File.Exists(@"c:\Program Files (x86)\IIS Express\iisexpress.exe") == false)
+			{
+				yield return
+						new SkipCommand(method, displayName,
+                                        "Could not execute " + displayName + " because it requires IIS Express and could not find it at c:\\Program Files (x86)\\.  Considering installing the MSI from http://www.microsoft.com/download/en/details.aspx?id=1038");
+				yield break;
+			}
+
+			foreach (var command in base.EnumerateTestCommands(method))
+			{
+				yield return command;
+			}
+		}
 	}
 
 	public class AdminOnlyWithIIS7Installed : TheoryAttribute
@@ -72,7 +95,7 @@ namespace Raven.Tests.Bugs.Identifiers
 				{
 					yield return
 						new SkipCommand(method, displayName,
-						                "Could not execute " + displayName +" because it requires Admin privileges");
+										"Could not execute " + displayName +" because it requires Admin privileges");
 					yield break;
 				}
 			}

@@ -17,13 +17,14 @@ using ICSharpCode.NRefactory.PrettyPrinter;
 using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Microsoft.CSharp.RuntimeBinder;
+using Raven.Abstractions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
 
 namespace Raven.Database.Linq
 {
-    public static class QueryParsingUtils
+	public static class QueryParsingUtils
     {
         public static string ToCSharp(this Expression expression)
         {
@@ -38,6 +39,7 @@ namespace Raven.Database.Linq
 
             var namespaces = new HashSet<string>
 			{
+				typeof (SystemTime).Namespace,
 				typeof (AbstractViewGenerator).Namespace,
 				typeof (Enumerable).Namespace,
 				typeof (IEnumerable<>).Namespace,
@@ -174,6 +176,7 @@ namespace Raven.Database.Linq
             var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
             var assemblies = new HashSet<string>
 			{
+				typeof (SystemTime).Assembly.Location,
 				typeof (AbstractViewGenerator).Assembly.Location,
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,

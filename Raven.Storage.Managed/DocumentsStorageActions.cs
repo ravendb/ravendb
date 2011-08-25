@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -253,7 +254,7 @@ namespace Raven.Storage.Managed
              {
                  {"key", key},
                  {"etag", newEtag.ToByteArray()},
-                 {"modified", DateTime.UtcNow},
+                 {"modified", SystemTime.UtcNow},
                  {"id", GetNextDocumentId()},
                  {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
              }, ms.ToArray());

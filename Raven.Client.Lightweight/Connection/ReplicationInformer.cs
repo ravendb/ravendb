@@ -17,6 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 #endif
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
@@ -74,11 +75,11 @@ namespace Raven.Client.Connection
 		/// <param name="serverClient">The server client.</param>
 		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
 		{
-			if (lastReplicationUpdate.AddMinutes(5) > DateTime.UtcNow)
+			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 				return;
 			lock (replicationLock)
 			{
-				if (lastReplicationUpdate.AddMinutes(5) > DateTime.UtcNow
+				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow
 #if !NET_3_5
 					|| refreshReplicationInformationTask != null
 #endif
@@ -206,7 +207,7 @@ namespace Raven.Client.Connection
 		{
 			var serverHash = GetServerHash(commands);
 
-			lastReplicationUpdate = DateTime.UtcNow;
+			lastReplicationUpdate = SystemTime.UtcNow;
 			JsonDocument document;
 			try
 			{
@@ -264,7 +265,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
+		private static void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
 		{
 			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 			{

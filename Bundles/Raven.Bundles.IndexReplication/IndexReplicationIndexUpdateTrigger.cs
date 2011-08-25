@@ -70,7 +70,7 @@ namespace Raven.Bundles.IndexReplication
                 }
             }
 
-            public override void OnIndexEntryCreated(string indexName, string entryKey, Document document)
+            public override void OnIndexEntryCreated(string entryKey, Document document)
             {
                 using (var cmd = Connection.CreateCommand())
                 {
@@ -137,7 +137,7 @@ namespace Raven.Bundles.IndexReplication
                 }
             }
 
-            public override void OnIndexEntryDeleted(string indexName, string entryKey)
+            public override void OnIndexEntryDeleted(string entryKey)
             {
                 using(var cmd = Connection.CreateCommand())
                 {

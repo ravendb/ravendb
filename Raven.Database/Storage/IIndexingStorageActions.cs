@@ -10,7 +10,7 @@ using Raven.Database.Data;
 
 namespace Raven.Database.Storage
 {
-	public interface IIndexingStorageActions
+    public interface IIndexingStorageActions : IDisposable
 	{
 		void SetCurrentIndexStatsTo(string index);
 

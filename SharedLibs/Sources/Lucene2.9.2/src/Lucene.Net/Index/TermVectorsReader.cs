@@ -26,7 +26,7 @@ namespace Lucene.Net.Index
 	
 	/// <version>  $Id: TermVectorsReader.java 687046 2008-08-19 13:01:11Z mikemccand $
 	/// </version>
-	public class TermVectorsReader : System.ICloneable
+	public class TermVectorsReader : System.ICloneable, IDisposable
 	{
 		
 		// NOTE: if you make a new format, it must be larger than
@@ -646,6 +646,15 @@ namespace Lucene.Net.Index
 			}
 			
 			return clone;
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
+		public void Dispose()
+		{
+			Close();
 		}
 	}
 	

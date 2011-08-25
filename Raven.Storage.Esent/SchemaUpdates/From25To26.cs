@@ -6,6 +6,7 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions;
 using Raven.Database;
 using Raven.Database.Impl;
 
@@ -43,7 +44,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 						grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 					}, defaultValue, defaultValue.Length, out columnid);
 
-					defaultValue = BitConverter.GetBytes(DateTime.UtcNow.AddSeconds(-1).ToOADate());
+					defaultValue = BitConverter.GetBytes(SystemTime.UtcNow.AddSeconds(-1).ToOADate());
 
 					Api.JetAddColumn(session, indexStats, "last_indexed_timestamp", new JET_COLUMNDEF
 					{

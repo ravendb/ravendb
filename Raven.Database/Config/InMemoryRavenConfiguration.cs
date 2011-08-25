@@ -528,5 +528,16 @@ namespace Raven.Database.Config
 			}
 			return DefaultStorageTypeName;
 		}
+
+	    public void Dispose()
+	    {
+            if (containerExternallySet)
+                return;
+            if (container == null)
+                return;
+
+            container.Dispose();
+	        container = null;
+	    }
 	}
 }

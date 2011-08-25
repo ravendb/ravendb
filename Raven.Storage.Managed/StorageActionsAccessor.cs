@@ -100,5 +100,10 @@ namespace Raven.Storage.Managed
             if (handler != null)
                 handler();
         }
+
+        public void Dispose()
+        {
+            Indexing.Dispose();
+        }
     }
 }

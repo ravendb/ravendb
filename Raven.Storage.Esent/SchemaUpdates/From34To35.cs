@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions;
 using Raven.Database.Impl;
 
 namespace Raven.Storage.Esent.SchemaUpdates
@@ -71,7 +72,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
                 {
                     using (var update = new Update(session, mappedResults, JET_prep.Replace))
                     {
-                        Api.SetColumn(session, mappedResults, tblKeyColumn["timestamp"], DateTime.Now);
+                        Api.SetColumn(session, mappedResults, tblKeyColumn["timestamp"], SystemTime.Now);
                         update.Save();
                     }
                 }

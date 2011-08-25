@@ -13,6 +13,7 @@ using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Newtonsoft.Json;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -173,7 +174,7 @@ namespace Raven.Database.Indexing
 				{
 					Index = name,
 					ReduceKeys = reduceKeys.ToArray()
-				}, DateTime.UtcNow);
+				}, SystemTime.UtcNow);
 
 			});
 			Write(context, (writer, analyzer) =>
@@ -218,7 +219,7 @@ namespace Raven.Database.Indexing
 							                 exception.Message
 								);
 						},
-						trigger => trigger.OnIndexEntryDeleted(name, entryKey));
+						trigger => trigger.OnIndexEntryDeleted(entryKey));
 				}
 				PropertyDescriptorCollection properties = null;
 				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
@@ -252,7 +253,7 @@ namespace Raven.Database.Indexing
 							                 exception.Message
 								);
 						},
-						trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
+						trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
 					logIndexing.Debug("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
 					AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
 					actions.Indexing.IncrementReduceSuccessIndexing();
@@ -260,7 +261,7 @@ namespace Raven.Database.Indexing
 				batchers.ApplyAndIgnoreAllErrors(
 					e =>
 					{
-						logIndexing.Warn("Failed to dispose on index update trigger", e);
+						logIndexing.WarnException("Failed to dispose on index update trigger", e);
 						context.AddError(name, null, e.Message);
 					},
 					x => x.Dispose());

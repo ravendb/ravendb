@@ -144,7 +144,7 @@ namespace Raven.Client.Connection
 				replicationInformer.IncrementFailureCount(url);
 			}
 
-			for (int i = 0; i < threadSafeCopy.Count; i++)
+			for (var i = 0; i < threadSafeCopy.Count; i++)
 			{
 				var replicationDestination = threadSafeCopy[i];
 				if (replicationInformer.ShouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)
@@ -1177,7 +1177,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			GC.SuppressFinalize(this);
 			if (ProfilingInformation != null)
 			{
-				ProfilingInformation.DurationMilliseconds = (DateTime.Now - ProfilingInformation.At).TotalMilliseconds;
+				ProfilingInformation.DurationMilliseconds = (SystemTime.Now - ProfilingInformation.At).TotalMilliseconds;
 			}
 		}
 

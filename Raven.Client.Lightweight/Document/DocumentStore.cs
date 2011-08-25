@@ -42,7 +42,7 @@ namespace Raven.Client.Document
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
 #endif
 		
-		private readonly HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory();
+		private HttpJsonRequestFactory jsonRequestFactory;
 
 		/// <summary>
 		/// Gets the shared operations headers.
@@ -72,8 +72,7 @@ namespace Raven.Client.Document
 		{
 			get
 			{
-				if (databaseCommandsGenerator == null)
-					throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
+				AssertInitialized();
 				var commands = databaseCommandsGenerator();
 				foreach (string key in SharedOperationsHeaders)
 				{
@@ -115,6 +114,7 @@ namespace Raven.Client.Document
 			ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
 
 #if !SILVERLIGHT
+			MaxNumberOfCachedRequests = 2048;
 			EnlistInDistributedTransactions = true;
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
 #else
@@ -124,7 +124,7 @@ namespace Raven.Client.Document
 		}
 
 		private string identifier;
-		DocumentSessionListeners listeners = new DocumentSessionListeners();
+	    readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 #if !SILVERLIGHT
 		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
@@ -246,7 +246,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public virtual void Dispose()
 		{
-			jsonRequestFactory.Dispose();
+			if (jsonRequestFactory != null) jsonRequestFactory.Dispose();
 			WasDisposed = true;
 			var afterDispose = AfterDispose;
 			if(afterDispose!=null)
@@ -416,6 +416,13 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public  IDocumentStore Initialize()
 		{
+            AssertValidConfiguration();
+
+#if !SILVERLIGHT
+			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
+#else
+			jsonRequestFactory = new HttpJsonRequestFactory();
+#endif
 			try
 			{
 #if !NET_3_5
@@ -447,6 +454,8 @@ namespace Raven.Client.Document
 				throw;
 			}
 
+            initialized = true;
+
 #if !SILVERLIGHT
 			if(string.IsNullOrEmpty(DefaultDatabase) == false)
 			{
@@ -455,6 +464,15 @@ namespace Raven.Client.Document
 #endif
 
 			return this;
+		}
+
+		/// <summary>
+		/// validate the configuration for the document store
+		/// </summary>
+		protected virtual void AssertValidConfiguration()
+		{
+			if (string.IsNullOrEmpty(Url))
+				throw new ArgumentException("Document store URL cannot be empty", "Url");
 		}
 
 		/// <summary>
@@ -522,6 +540,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IDisposable DisableAggressiveCaching()
 		{
+			AssertInitialized();
 #if !SILVERLIGHT
 			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = null;
@@ -543,6 +562,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
+			AssertInitialized();
 #if !SILVERLIGHT
 			if(cacheDuration.TotalSeconds < 1)
 				throw new ArgumentException("cacheDuration must be longer than a single second");
@@ -582,33 +602,35 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-        /// Opens the async session.
-        /// </summary>
-        /// <returns></returns>
-        public IAsyncDocumentSession OpenAsyncSession(string databaseName)
-        {
+		/// Opens the async session.
+		/// </summary>
+		/// <returns></returns>
+		public IAsyncDocumentSession OpenAsyncSession(string databaseName)
+		{
 			EnsureNotClosed();
 			
-        	var sessionId = Guid.NewGuid();
-        	currentSessionId = sessionId;
-        	try
-        	{
+			var sessionId = Guid.NewGuid();
+			currentSessionId = sessionId;
+			try
+			{
 				if (AsyncDatabaseCommands == null)
 					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
 				var session = new AsyncDocumentSession(this, AsyncDatabaseCommands.ForDatabase(databaseName), listeners, sessionId);
 				AfterSessionCreated(session);
 				return session;
-        	}
-        	finally
-        	{
-        		currentSessionId = null;
-        	}
-        }
+			}
+			finally
+			{
+				currentSessionId = null;
+			}
+		}
 #endif
 
 		private volatile EtagHolder lastEtag;
 		private readonly object lastEtagLocker = new object();
+		private bool initialized;
+
 		internal void UpdateLastWrittenEtag(Guid? etag)
 		{
 			if (etag == null)
@@ -672,6 +694,12 @@ namespace Raven.Client.Document
 				throw new ObjectDisposedException("DocumentStore", "The document store has already been disposed and cannot be used");
 		}
 
+		private void AssertInitialized()
+		{
+			if (!initialized)
+				throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
+		}
+
 		private class EtagHolder
 		{
 			public Guid Etag;
@@ -687,5 +715,12 @@ namespace Raven.Client.Document
 		/// Whatever the instance has been disposed
 		/// </summary>
 		public bool WasDisposed { get; private set; }
+
+#if !SILVERLIGHT
+		/// <summary>
+		/// Max number of cached requests (default: 2048)
+		/// </summary>
+		public int MaxNumberOfCachedRequests { get; set; }
+#endif
 	}
 }
