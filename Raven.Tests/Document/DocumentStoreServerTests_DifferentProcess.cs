@@ -60,6 +60,12 @@ namespace Raven.Tests.Document
 				using (var session2 = documentStore.OpenSession())
 					Assert.NotNull((session2.Load<Company>(company.Id)));
 
+				for (int i = 0; i < 15; i++) // we have to wait to be notified, too
+				{
+					if(durableEnlistment.WasCommitted == false)
+						Thread.Sleep(100);
+				}
+
 				Assert.True(durableEnlistment.WasCommitted);
 
 			}
