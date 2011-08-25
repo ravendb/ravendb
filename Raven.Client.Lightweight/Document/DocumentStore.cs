@@ -474,6 +474,10 @@ namespace Raven.Client.Document
 		private void InitializeSecurity()
 		{
 #if !SILVERLIGHT
+
+			if (Conventions.HandleUnauthorizedResponse != null)
+				return; // already setup by the user
+
 			string currentOauthToken = null;
 			jsonRequestFactory.ConfigureRequest += (sender, args) =>
 			{
