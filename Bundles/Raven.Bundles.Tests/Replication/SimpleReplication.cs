@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Threading;
 using Raven.Bundles.Tests.Versioning;
+using Raven.Client;
 using Xunit;
 
 namespace Raven.Bundles.Tests.Replication
@@ -25,23 +26,9 @@ namespace Raven.Bundles.Tests.Replication
                 session.SaveChanges();
             }
 
-
-            Company company = null;
-            for (int i = 0; i < RetriesCount; i++)
-            {
-                using (var session = store2.OpenSession())
-                {
-                    company = session.Load<Company>("companies/1");
-                    if (company != null)
-                        break;
-                    Thread.Sleep(100);
-                }
-            }
-            Assert.NotNull(company);
+            Company company = WaitForDocument<Company>(store2, "companies/1");
             Assert.Equal("Hibernating Rhinos", company.Name);
-
         }
-
 
         [Fact]
         public void Can_replicate_large_number_of_documents_between_two_instances()
