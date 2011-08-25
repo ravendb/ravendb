@@ -201,7 +201,7 @@ namespace Raven.Client.Connection
 							dest.Accept = src.Accept;
 							break;
 						case "Connection":
-							dest.Connection = src.Connection;
+							// explicitly ignoring this
 							break;
 						case "Content-Length":
 							dest.ContentLength = src.ContentLength;
