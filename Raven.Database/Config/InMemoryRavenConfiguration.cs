@@ -145,7 +145,8 @@ namespace Raven.Database.Config
 
 		private void SetupOAuth()
 		{
-			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ?? ServerUrl + "/OAuth/AccessToken";
+			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
+			                   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/AccessToken" : ServerUrl + "/OAuth/AccessToken");
 			OAuthTokenCertificate = GetCertificate();
 		}
 
