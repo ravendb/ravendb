@@ -557,14 +557,7 @@ more responsive application.
 			// we make the check here even if we just generated the key
 			// users can override the key generation behavior, and we need
 			// to detect if they generate duplicates.
-			if (id != null &&
-				id.EndsWith("/") == false // not a prefix id
-					&& entitiesByKey.ContainsKey(id))
-			{
-				if (ReferenceEquals(entitiesByKey[id], entity))
-					return; // calling Store twice on the same reference is a no-op
-				throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
-			}
+			AssertNoNonUniqueInstance(entity, id);
 
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
 			var metadata = new RavenJObject();
@@ -580,6 +573,14 @@ more responsive application.
 			});
 			if (id != null)
 				entitiesByKey[id] = entity;
+		}
+
+		protected virtual void AssertNoNonUniqueInstance(object entity, string id)
+		{
+			if (id == null || id.EndsWith("/") || !entitiesByKey.ContainsKey(id) || ReferenceEquals(entitiesByKey[id], entity))
+				return;
+			
+			throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
 		}
 
 		/// <summary>
