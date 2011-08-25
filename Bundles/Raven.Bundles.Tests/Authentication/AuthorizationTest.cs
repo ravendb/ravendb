@@ -45,7 +45,7 @@ namespace Raven.Bundles.Tests.Authentication
 				UseEmbeddedHttpServer = true,
 				Configuration =
 					{
-						AnonymousUserAccessMode = AnonymousUserAccessMode.All,
+						AnonymousUserAccessMode = AnonymousUserAccessMode.Get,
 						Catalog = {Catalogs = {new AssemblyCatalog(typeof (AuthenticationUser).Assembly)}},
 						DataDirectory = "Data",
 						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
