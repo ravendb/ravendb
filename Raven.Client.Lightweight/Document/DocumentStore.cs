@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -432,12 +433,16 @@ namespace Raven.Client.Document
 				}
 #endif
 				InitializeInternal();
+
+				InitializeSecurity();
+
 				if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 #if !SILVERLIGHT
 					var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
 					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
 #else
+
 					Conventions.DocumentKeyGenerator = entity =>
 					{
 						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
@@ -465,6 +470,48 @@ namespace Raven.Client.Document
 
 			return this;
 		}
+
+		private void InitializeSecurity()
+		{
+#if !SILVERLIGHT
+			string currentOauthToken = null;
+			jsonRequestFactory.ConfigureRequest += (sender, args) =>
+			{
+				if (string.IsNullOrEmpty(currentOauthToken))
+					return;
+				args.Request.Headers["Authorization"] = "Bearer " + currentOauthToken;
+			};
+			Conventions.HandleUnauthorizedResponse = (request, response) =>
+			{
+				return HandleUnauthorizedResponse(request, response, ref currentOauthToken);
+			};
+#endif
+		}
+
+#if !SILVERLIGHT
+		private bool HandleUnauthorizedResponse(HttpWebRequest request, HttpWebResponse unauthorizedResponse, ref string currentOAuthTokenValue)
+		{
+			var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
+			if (string.IsNullOrEmpty(oauthSource))
+				return false;
+			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
+			authRequest.Credentials = Credentials;
+			authRequest.PreAuthenticate = true;
+			authRequest.Headers["grant_type"] = "client_credentials";
+			authRequest.ContentType = "application/json;charset=UTF-8";
+			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
+			
+			using(var authResponse = authRequest.GetResponse())
+			using(var stream = authResponse.GetResponseStreamWithHttpDecompression())
+			using(var reader = new StreamReader(stream))
+			{
+				currentOAuthTokenValue = reader.ReadToEnd();
+				request.Headers["Authorization"] = "Bearer " + currentOAuthTokenValue;
+
+				return true;
+			}
+		}
+#endif
 
 		/// <summary>
 		/// validate the configuration for the document store
