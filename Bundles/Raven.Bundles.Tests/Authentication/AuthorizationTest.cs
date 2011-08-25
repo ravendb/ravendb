@@ -55,8 +55,14 @@ namespace Raven.Bundles.Tests.Authentication
 			};
 
 			embeddedStore.Initialize();
-			store = new DocumentStore { Url = embeddedStore.Configuration.ServerUrl };
+			store = new DocumentStore
+			{
+				Url = embeddedStore.Configuration.ServerUrl,
+			};
 			store.Initialize();
+			store.JsonRequestFactory.
+				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
+				true;
 			foreach (DictionaryEntry de in HttpRuntime.Cache)
 			{
 				HttpRuntime.Cache.Remove((string)de.Key);

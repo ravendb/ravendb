@@ -1,10 +1,5 @@
-using System;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using Raven.Bundles.Authentication;
 using Raven.Http.Security.OAuth;
 using Xunit;
