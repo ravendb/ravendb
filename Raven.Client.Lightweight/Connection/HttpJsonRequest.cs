@@ -214,9 +214,11 @@ namespace Raven.Client.Connection
 						case "Expect":
 							// explicitly ignoring this
 							break;
+#if !NET_3_5
 						case "Host":
 							dest.Host = src.Host;
 							break;
+#endif
 						case "If-Modified-Since":
 							dest.IfModifiedSince = src.IfModifiedSince;
 							break;
