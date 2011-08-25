@@ -177,6 +177,12 @@ namespace Raven.Http
                 //setup waiting for the next request
                 listener.BeginGetContext(GetContext, null);
             }
+			catch(AggregateException)
+			{
+				// can't get current request / end new one, probably
+				// listner shutdown
+				return;
+			}
             catch (InvalidOperationException)
             {
                 // can't get current request / end new one, probably
