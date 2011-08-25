@@ -47,20 +47,25 @@ namespace Raven.Http.Security.OAuth
 
 			if (identity == null)
 			{
-				context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+				context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+				context.Response.AddHeader("WWW-Authenticate", "Basic");
 				context.WriteJson(new { error = "invalid_client", error_description = "No client authentication was provided" });
 
 				return;
 			}
 
 			string[] authorizedDatabases;
-			if (!AuthenticateClient.Authenticate(ResourceStore, identity.Item1, identity.Item2, out authorizedDatabases) &&
-				!AuthenticateClient.Authenticate(DefaultResourceStore, identity.Item1, identity.Item2, out authorizedDatabases))
+			if (!AuthenticateClient.Authenticate(ResourceStore, identity.Item1, identity.Item2, out authorizedDatabases))
 			{
-				context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-				context.WriteJson(new { error = "unauthorized_client", error_description = "Invalid client credentials" });
+				if ((ResourceStore == DefaultResourceStore ||
+				     !AuthenticateClient.Authenticate(DefaultResourceStore, identity.Item1, identity.Item2, out authorizedDatabases)))
+				{
+					context.Response.StatusCode = (int) HttpStatusCode.Unauthorized;
+					context.Response.AddHeader("WWW-Authenticate", "Basic");
+					context.WriteJson(new {error = "unauthorized_client", error_description = "Invalid client credentials"});
 
-				return;
+					return;
+				}
 			}
 
 			var userId = identity.Item1;
