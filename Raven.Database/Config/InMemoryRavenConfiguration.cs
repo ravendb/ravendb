@@ -141,8 +141,10 @@ namespace Raven.Database.Config
 			// OAuth
 			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? "windows";
 
-			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase) == false) 
-				return;
+		}
+
+		private void SetupOAuth()
+		{
 			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ?? ServerUrl + "/OAuth/AccessToken";
 			OAuthTokenCertificate = GetCertificate();
 		}
@@ -317,14 +319,25 @@ namespace Raven.Database.Config
 		/// </summary>
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
-        /// <summary>
+		private string authenticationMode;
+
+		/// <summary>
         /// Defines which mode to use to authenticate requests
         /// Allowed values: Windows, OAuth
         /// Default: Windows
         /// </summary>
-        public string AuthenticationMode { get; set; }
+        public string AuthenticationMode
+		{
+			get { return authenticationMode; }
+			set
+			{
+				authenticationMode = value;
+				if(string.Equals(authenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
+					SetupOAuth();
+			}
+		}
 
-        /// <summary>
+		/// <summary>
         /// The certificate to use when verifying access token signatures for OAuth
         /// </summary>
         public X509Certificate2 OAuthTokenCertificate { get; set; }
