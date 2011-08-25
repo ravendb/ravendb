@@ -36,6 +36,7 @@ namespace Raven.Client.Connection
 		internal CachedRequest CachedRequestDetails;
 		private readonly HttpJsonRequestFactory factory;
 		private readonly IHoldProfilingInformation owner;
+		private readonly DocumentConvention conventions;
 		private string postedData;
 		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
@@ -46,11 +47,19 @@ namespace Raven.Client.Connection
 		/// <value>The response headers.</value>
 		public NameValueCollection ResponseHeaders { get; set; }
 
-		internal HttpJsonRequest(string url, string method, RavenJObject metadata, ICredentials credentials, HttpJsonRequestFactory factory, IHoldProfilingInformation owner)
+		internal HttpJsonRequest(
+			string url, 
+			string method, 
+			RavenJObject metadata, 
+			ICredentials credentials, 
+			HttpJsonRequestFactory factory, 
+			IHoldProfilingInformation owner,
+			DocumentConvention conventions)
 		{
 			this.Url = url;
 			this.factory = factory;
 			this.owner = owner;
+			this.conventions = conventions;
 			this.Method = method;
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
@@ -128,8 +137,38 @@ namespace Raven.Client.Connection
 				return result;
 			}
 
-			return ReadStringInternal(webRequest.GetResponse);
+			int retries = 0;
+			while(true)
+			{
+				try
+				{
+					return ReadStringInternal(webRequest.GetResponse);
+				}
+				catch (WebException e)
+				{
+					if (++retries >= 3)
+						throw;
+
+					var httpWebResponse = e.Response as HttpWebResponse;
+					if (httpWebResponse == null ||
+						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+						throw;
+
+					if(HandleUnauthorizedResponse(httpWebResponse) == false)
+						throw;
+				}
+			}
 		}
+
+		public bool HandleUnauthorizedResponse(HttpWebResponse unauthorizedResponse)
+		{
+			if (conventions.HandleUnauthorizedResponse == null)
+				return false;
+
+
+			return conventions.HandleUnauthorizedResponse(webRequest, unauthorizedResponse);
+		}
+
 
 		private string ReadStringInternal(Func<WebResponse> getResponse)
 		{
@@ -144,6 +183,7 @@ namespace Raven.Client.Connection
 				sp.Stop();
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse == null || 
+					httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
 					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
 						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{

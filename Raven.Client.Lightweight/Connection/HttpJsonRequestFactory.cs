@@ -58,7 +58,7 @@ namespace Raven.Client.Connection
 		{
             if (disposed)
                 throw new ObjectDisposedException(typeof (HttpJsonRequestFactory).FullName);
-			var request = new HttpJsonRequest(url, method, metadata, credentials, this, self)
+			var request = new HttpJsonRequest(url, method, metadata, credentials, this, self, convention)
 			{
 				ShouldCacheRequest = convention.ShouldCacheRequest(url)
 			};
@@ -244,5 +244,6 @@ namespace Raven.Client.Connection
 				DisableHttpCaching = oldHttpCaching;
 			});
 		}
+
 	}
 }
