@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
@@ -348,6 +349,11 @@ namespace Raven.Client.Document
 		{
 			return FindClrTypeName(entityType);
 		}
+
+		/// <summary>
+		/// Handles unauthenticate responses, usually by authenticating against the oauth server
+		/// </summary>
+		public Func<HttpWebRequest, HttpWebResponse, bool> HandleUnauthorizedResponse { get; set; }
 	}
 
 
