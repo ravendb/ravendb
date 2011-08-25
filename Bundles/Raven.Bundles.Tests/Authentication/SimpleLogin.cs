@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -38,24 +39,88 @@ namespace Raven.Bundles.Tests.Authentication
 			Assert.True(AccessToken.TryParseBody(embeddedStore.Configuration.OAuthTokenCertificate, response, out body));
 		}
 
-		public static string CompressString(string text)
+		[Fact]
+		public void CanLoginViaClientApi()
 		{
-			byte[] buffer = Encoding.UTF8.GetBytes(text);
-			var memoryStream = new MemoryStream();
-			using (var gZipStream = new DeflateStream(memoryStream, CompressionMode.Compress, true))
+			store.Credentials = new NetworkCredential("Ayende", "abc");
+
+			using (var session = embeddedStore.OpenSession())
 			{
-				gZipStream.Write(buffer, 0, buffer.Length);
+			    session.Store(new AuthenticationUser
+			    {
+			        Name = "Ayende",
+			        Id = "Raven/Users/Ayende",
+			        AllowedDatabases = new[] { "*" }
+			    }.SetPassword("abc"));
+			    session.SaveChanges();
+			}
+			
+			using (var session = store.OpenSession())
+			{
+				session.Store(new { Id ="Hal2001",  Name = "Sprite", Age = 321 });
+				session.SaveChanges();
 			}
 
-			memoryStream.Position = 0;
+			using (var session = store.OpenSession())
+			{
+				Assert.Equal("Sprite", session.Load<dynamic>("Hal2001").Name);
+			}
+		}
 
-			var compressedData = new byte[memoryStream.Length];
-			memoryStream.Read(compressedData, 0, compressedData.Length);
+		[Fact]
+		public void WillRememberToken()
+		{
+			store.Credentials = new NetworkCredential("Ayende", "abc");
 
-			var gZipBuffer = new byte[compressedData.Length + 4];
-			Buffer.BlockCopy(compressedData, 0, gZipBuffer, 4, compressedData.Length);
-			Buffer.BlockCopy(BitConverter.GetBytes(buffer.Length), 0, gZipBuffer, 0, 4);
-			return Convert.ToBase64String(gZipBuffer);
+			using (var session = embeddedStore.OpenSession())
+			{
+				session.Store(new AuthenticationUser
+				{
+					Name = "Ayende",
+					Id = "Raven/Users/Ayende",
+					AllowedDatabases = new[] { "*" }
+				}.SetPassword("abc"));
+				session.SaveChanges();
+			}
+
+			for (int i = 0; i < 5; i++)
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new { Id = "Hal2001", Name = "Sprite", Age = 321 });
+					session.SaveChanges();
+				}
+			}
+
+			var oAuthClientCredentialsTokenResponder = embeddedStore.HttpServer.RequestResponders.OfType<OAuthClientCredentialsTokenResponder>().First();
+			Assert.Equal(1, oAuthClientCredentialsTokenResponder.NumberOfTokensIssued);
+		}
+
+		[Fact]
+		public void WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists()
+		{
+			store.Credentials = new NetworkCredential("Ayende", "abc");
+
+			using (var session = store.OpenSession())
+			{
+				session.Store(new { Name = "Sprite", Age = 321 });
+				var webException = Assert.Throws<WebException>(() => session.SaveChanges());
+				Assert.Equal(HttpStatusCode.Unauthorized, ((HttpWebResponse) webException.Response).StatusCode);
+			}
+
+			//using (var session = embeddedStore.OpenSession())
+			//{
+			//    session.Store(new AuthenticationUser
+			//    {
+			//        Name = "Ayende",
+			//        Id = "Raven/Users/Ayende",
+			//        AllowedDatabases = new[] { "*" }
+			//    }.SetPassword("abc"));
+			//    session.SaveChanges();
+			//}
+
+			
+
 		}
 	}
 }

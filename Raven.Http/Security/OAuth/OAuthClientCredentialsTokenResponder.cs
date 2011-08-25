@@ -2,6 +2,7 @@
 using System.ComponentModel.Composition;
 using System.Net;
 using System.Text;
+using System.Threading;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 
@@ -23,6 +24,12 @@ namespace Raven.Http.Security.OAuth
 		public override string[] SupportedVerbs
 		{
 			get { return new[] { "GET" }; }
+		}
+
+		private int numberOfTokensIssued;
+		public int NumberOfTokensIssued
+		{
+			get { return numberOfTokensIssued; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -67,6 +74,8 @@ namespace Raven.Http.Security.OAuth
 					return;
 				}
 			}
+
+			Interlocked.Increment(ref numberOfTokensIssued);
 
 			var userId = identity.Item1;
 
