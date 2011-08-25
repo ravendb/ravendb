@@ -68,7 +68,7 @@ namespace Raven.Database.Data
 							String newDoc = string.Format("{0}Item", newDocumentSource.Replace(".", ""));
 
 							// from docNewDocItemsItem in doc.NewDoc.Items
-							String docInclude = string.Format("from {0} in (IEnumerable<dynamic>){1}", newDoc, newDocumentSource);
+							String docInclude = string.Format("from {0} in ((IEnumerable<dynamic>){1}).DefaultIfEmpty()", newDoc, newDocumentSource);
 							fromClauses.Add(docInclude);
 
 							// Start building the property again
