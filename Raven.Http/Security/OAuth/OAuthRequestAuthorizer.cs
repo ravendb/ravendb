@@ -1,5 +1,6 @@
 using System;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Principal;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 
@@ -14,14 +15,18 @@ namespace Raven.Http.Security.OAuth
             if (ctx.Request.RawUrl.StartsWith("/OAuth/AccessToken", StringComparison.InvariantCultureIgnoreCase))
                 return true;
 
-            if (Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
-                IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath))
-                return true;
+			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
+				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All || 
+			        Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
+			        IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
+			
 
             var token = GetToken(ctx);
             
             if (token == null)
             {
+				if (allowUnauthenticatedUsers)
+					return true;
 				WriteAuthorizationChallenge(ctx, 401, "invalid_request", "The access token is required");
                 
                 return false;
@@ -30,6 +35,8 @@ namespace Raven.Http.Security.OAuth
 			AccessTokenBody tokenBody;
 			if (!AccessToken.TryParseBody(Settings.OAuthTokenCertificate, token, out tokenBody))
             {
+				if (allowUnauthenticatedUsers)
+					return true;
 				WriteAuthorizationChallenge(ctx, 401, "invalid_token", "The access token is invalid");
 
                 return false;
@@ -37,6 +44,8 @@ namespace Raven.Http.Security.OAuth
 
             if (tokenBody.IsExpired())
             {
+				if (allowUnauthenticatedUsers)
+					return true;
 				WriteAuthorizationChallenge(ctx, 401, "invalid_token", "The access token is expired");
 
                 return false;
@@ -44,10 +53,15 @@ namespace Raven.Http.Security.OAuth
 
             if(!tokenBody.IsAuthorized(TenantId))
             {
+				if (allowUnauthenticatedUsers)
+					return true;
+
 				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", "Not authorized for tenant " + TenantId);
        
                 return false;
             }
+			
+			ctx.User = new OAuthPrincipal(tokenBody);
 
             return true;
         }
@@ -76,4 +90,44 @@ namespace Raven.Http.Security.OAuth
             ctx.Response.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
         }
     }
+
+	public class OAuthPrincipal : IPrincipal, IIdentity
+	{
+		private readonly AccessTokenBody tokenBody;
+
+		public OAuthPrincipal(AccessTokenBody tokenBody)
+		{
+			this.tokenBody = tokenBody;
+		}
+
+		public bool IsInRole(string role)
+		{
+			return false;
+		}
+
+		public string[] AuthorizedDatabases
+		{
+			get { return tokenBody.AuthorizedDatabases; }
+		}
+
+		public IIdentity Identity
+		{
+			get { return this; }
+		}
+
+		public string Name
+		{
+			get { return tokenBody.UserId; }
+		}
+
+		public string AuthenticationType
+		{
+			get { return "OAuth"; }
+		}
+
+		public bool IsAuthenticated
+		{
+			get { return true; }
+		}
+	}
 }
