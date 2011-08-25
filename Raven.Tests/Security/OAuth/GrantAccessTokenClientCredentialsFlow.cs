@@ -156,7 +156,7 @@ namespace Raven.Tests.Security.OAuth
             using (var server = GetNewServer(false))
             using (var response = request.MakeRequest())
             {
-                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
 
                 var result = RavenJObject.Parse(response.ReadToEnd());
 
