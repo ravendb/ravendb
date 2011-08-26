@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Bundles.Tests.Replication
 {
-	class Can_redo_lost_replication : ReplicationBase
+	public class MultihopReplication : ReplicationBase
 	{
 		IDocumentStore store1;
 		IDocumentStore store2;
