@@ -33,7 +33,6 @@ namespace Raven.Bundles.Tests.Replication
 			WaitForDocument<object>(store3, tracerId);
 		}
 
-		[Fact(Skip = "increased chance of bug in test")]
 		public void When_source_is_reset_can_replicate_back()
 		{
 			Can_run_replication_through_multiple_instances();
