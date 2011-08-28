@@ -484,6 +484,7 @@
     <Compile Include="Document\ZoneCountResult.cs" />
     <Compile Include="IISDeploymentUtil.cs" />
     <Compile Include="IISExpressTestClient.cs" />
+    <Compile Include="Indexes\AnalyzerResolution.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
     <Compile Include="Indexes\CreateIndexesWithCasting.cs" />

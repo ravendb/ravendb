@@ -165,6 +165,7 @@ namespace Raven.Database.Indexing
 			var encodedName = IndexDefinitionStorage.FixupIndexName(indexDefinition.Name,path);
 			log.Info("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
 
+            IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
 		    AssertAnalyzersValid(indexDefinition);
 
 		    indexes.AddOrUpdate(indexDefinition.Name, n =>

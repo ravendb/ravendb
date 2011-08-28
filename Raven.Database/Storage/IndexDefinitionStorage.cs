@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Lucene.Net.Analysis.Standard;
 using Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
@@ -234,5 +235,19 @@ namespace Raven.Database.Storage
 			}
 			return index;
 		}
+
+        public static void ResolveAnalyzers(IndexDefinition indexDefinition)
+        {
+            // Stick Lucene.Net's namespace to all analyzer aliases that are missing a namespace
+            var analyzerNames = (from analyzer in indexDefinition.Analyzers
+                            where analyzer.Value.IndexOf(".") == -1
+                            select analyzer).ToArray();
+
+            // Only do this for analyzer that actually exist; we do this here to be able to throw a correct error later on
+            foreach (var a in analyzerNames.Where(a => typeof (StandardAnalyzer).Assembly.GetType("Lucene.Net.Analysis." + a.Value) != null))
+            {
+                indexDefinition.Analyzers[a.Key] = "Lucene.Net.Analysis." + a.Value;
+            }
+        }
 	}
 }
