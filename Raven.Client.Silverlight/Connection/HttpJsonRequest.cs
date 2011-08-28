@@ -31,7 +31,7 @@ namespace Raven.Client.Silverlight.Connection
 	{
 		private readonly string url;
 		private readonly DocumentConvention conventions;
-		private HttpWebRequest webRequest;
+		internal HttpWebRequest webRequest;
 		private byte[] postedData;
 		private int retries;
 

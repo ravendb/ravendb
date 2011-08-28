@@ -68,8 +68,8 @@ namespace Raven.Client.Silverlight.Connection
 		/// <returns></returns>
 		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, metadata);
-			ConfigureRequest(self, new WebRequestEventArgs { Request = request.WebRequest });
+			var request = new HttpJsonRequest(url, method, metadata, convention);
+			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
 			return request;
 		}
 

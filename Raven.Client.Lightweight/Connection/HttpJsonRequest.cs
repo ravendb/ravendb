@@ -215,7 +215,7 @@ namespace Raven.Client.Connection
 
 			if (postedData != null)
 			{
-				WriteDataToRequest(newWebRequest, postedData);
+				HttpJsonRequestHelper.WriteDataToRequest(newWebRequest, postedData);
 			}
 
 			webRequest = newWebRequest;

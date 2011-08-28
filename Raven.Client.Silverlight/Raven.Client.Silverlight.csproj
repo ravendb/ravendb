@@ -126,9 +126,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
       <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\HttpJsonRequestHelper.cs">
-      <Link>Imports\Connection\HttpJsonRequestHelper.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\ConcurrentBoundedList.cs">
       <Link>Imports\Connection\Profiling\ConcurrentBoundedList.cs</Link>
     </Compile>
@@ -279,6 +276,7 @@
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
+    <Compile Include="Connection\HttpJsonRequestHelper.cs" />
     <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Data\ServerRequestError.cs" />
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
