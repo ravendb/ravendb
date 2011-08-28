@@ -30,6 +30,8 @@ namespace Raven.Http.Extensions
 		private static readonly string EmbeddedLastChangedDate =
 			File.GetLastWriteTime(typeof (HttpExtensions).Assembly.Location).Ticks.ToString("G");
 
+		private static readonly Encoding defaultEncoding = new UTF8Encoding(false);
+
 
 		private static Encoding GetRequestEncoding(IHttpContext context)
 		{
@@ -85,7 +87,7 @@ namespace Raven.Http.Extensions
 
 		public static void WriteJson(this IHttpContext context, RavenJToken obj)
 		{
-			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
+			var streamWriter = new StreamWriter(context.Response.OutputStream, defaultEncoding);
 			var jsonp = context.Request.QueryString["jsonp"];
 			if (string.IsNullOrEmpty(jsonp) == false)
 			{
@@ -126,7 +128,7 @@ namespace Raven.Http.Extensions
 			{
 				context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
 			}
-			WriteData(context, Encoding.UTF8.GetBytes(str), headers, etag);
+			WriteData(context, defaultEncoding.GetBytes(str), headers, etag);
 		}
 
 		public static void WriteData(this IHttpContext context, byte[] data, RavenJObject headers, Guid etag)
