@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Studio.Framework.Extensions;
 
 namespace Raven.Studio.Commands
 {
@@ -52,10 +53,11 @@ namespace Raven.Studio.Commands
 		void ExecuteDeletion(string documentId)
 		{
 			using (var session = server.OpenSession())
-			session.Advanced.AsyncDatabaseCommands.DeleteDocumentAsync(documentId);
-
-			events.Publish(new StatisticsUpdateRequested());
-			events.Publish(new DocumentDeleted(documentId));
+				session.Advanced.AsyncDatabaseCommands.DeleteDocumentAsync(documentId).ContinueOnSuccess(task =>
+				{
+					events.Publish(new StatisticsUpdateRequested());
+					events.Publish(new DocumentDeleted(documentId));
+				});
 		}
 	}
 }
