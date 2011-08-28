@@ -257,7 +257,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, url+ "/multi_get/", "POST",
 																		   credentials, convention);
 
-			return httpJsonRequest.WriteAsync(Encoding.UTF8.GetBytes(postedData))
+			return httpJsonRequest.WriteAsync(postedData)
 				.ContinueWith(
 					task =>
 					{
@@ -289,8 +289,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 					.ContinueWith(task => CompleteMultiGet(task));
 			}
 			request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
-			var array = Encoding.UTF8.GetBytes(new JArray(keys).ToString(Formatting.None));
-			return request.WriteAsync(array)
+			return request.WriteAsync(new JArray(keys).ToString(Formatting.None))
 				.ContinueWith(writeTask => request.ReadResponseStringAsync())
 				.ContinueWith(task => CompleteMultiGet(task.Result));
 				
@@ -388,52 +387,6 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Begins the async query.
-		/// </summary>
-		/// <param name="query">A string representation of a Linq query</param>
-		public Task<QueryResult> LinearQueryAsync(string linq, int start, int pageSize)
-		{
-			var query = @"{
-					Query: '" + linq + @"',
-                    Start: " + start + @",
-                    PageSize: " + pageSize + @"
-					}";
-
-			var metadata = new RavenJObject();
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/linearQuery", "POST", metadata, credentials, convention);
-			request.AddOperationHeaders(OperationsHeaders);
-
-			return request
-				.WriteAsync(Encoding.UTF8.GetBytes(query))
-				.ContinueWith(write =>
-					{
-						if (write.Exception != null)
-							throw new InvalidOperationException("Unable to write to server");
-
-						return request.ReadResponseStringAsync();
-					})
-				.ContinueWith(task =>
-				{
-					RavenJObject json;
-					using (var reader = new JsonTextReader(new StringReader(task.Result.Result)))
-						json = (RavenJObject)RavenJToken.Load(reader);
-
-					//TODO: the json includes LastScanResults and Errors, but it doesn't include the commented out properties below.
-					// Should this change?
-					return new QueryResult
-					{
-						//IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-						//IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-						//IndexEtag = new Guid(request.ResponseHeaders["ETag"].First()),
-						Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
-						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-						//SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-						//Includes = json["Includes"].Children().Cast<RavenJObject>().ToList(), 
-					};
-				});
-		}
-
-		/// <summary>
 		/// Deletes the document for the specified id asyncronously
 		/// </summary>
 		/// <param name="id">The id.</param>
@@ -461,7 +414,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, method, metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
-			return request.WriteAsync(Encoding.UTF8.GetBytes(document.ToString()))
+			return request.WriteAsync(document.ToString())
 				.ContinueWith(task =>
 				{
 					if (task.Exception != null)
@@ -556,7 +509,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
 					return request
-						.WriteAsync(Encoding.UTF8.GetBytes(serializeObject))
+						.WriteAsync(serializeObject)
 						.ContinueWith(writeTask => AttemptToProcessResponse( ()=> request
 							.ReadResponseStringAsync()
 							.ContinueWith(readStrTask => AttemptToProcessResponse( ()=>
@@ -697,9 +650,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 			var metadata = new RavenJObject();
 			var req = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-			var data = Encoding.UTF8.GetBytes(jArray.ToString(Formatting.None));
 
-			return req.WriteAsync(data)
+			return req.WriteAsync(jArray.ToString(Formatting.None))
 				.ContinueWith(writeTask => req.ReadResponseStringAsync())
 				.ContinueWith(task =>
 				{

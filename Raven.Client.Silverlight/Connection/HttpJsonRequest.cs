@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Browser;
+using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -20,7 +21,7 @@ namespace Raven.Client.Silverlight.Connection
 	/// A representation of an HTTP json request to the RavenDB server
 	/// Since we are using the ClientHttp stack for Silverlight, we don't need to implement
 	/// caching, it is already implemented for us.
-	/// Note: that the RavenDB server generate both an ETag and an Expires header to ensure proper
+	/// Note: that the RavenDB server generates both an ETag and an Expires header to ensure proper
 	/// Note: behavior from the silverlight http stack
 	/// </summary>
 	public class HttpJsonRequest
@@ -74,16 +75,6 @@ namespace Raven.Client.Silverlight.Connection
 				}
 				return ms.ToArray();
 			}
-		}
-
-		/// <summary>
-		/// Ends the reading of the response string.
-		/// </summary>
-		/// <param name="result">The result.</param>
-		/// <returns></returns>
-		public string EndReadResponseString(IAsyncResult result)
-		{
-			return ReadStringInternal(() => WebRequest.EndGetResponse(result));
 		}
 
 		private string ReadStringInternal(Func<WebResponse> getResponse)
@@ -177,21 +168,26 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Begins the write operation
 		/// </summary>
-		/// <param name="byteArray">The byte array.</param>
-		/// <param name="callback">The callback.</param>
-		/// <param name="state">The state.</param>
-		/// <returns></returns>
+		public Task WriteAsync(string data)
+		{
+			var byteArray = Encoding.UTF8.GetBytes(data);
+			return WriteAsync(byteArray);
+		}
+
+		/// <summary>
+		/// Begins the write operation
+		/// </summary>
 		public Task WriteAsync(byte[] byteArray)
 		{
 			return WebRequest.GetRequestStreamAsync().ContinueWith(t =>
-																	   {
-																		   var dataStream = t.Result;
-																		   using (dataStream)
-																		   {
-																			   dataStream.Write(byteArray, 0, byteArray.Length);
-																			   dataStream.Close();
-																		   }
-																	   });
+			{
+				var dataStream = t.Result;
+				using (dataStream)
+				{
+					dataStream.Write(byteArray, 0, byteArray.Length);
+					dataStream.Close();
+				}
+			});
 		}
 
 		/// <summary>
