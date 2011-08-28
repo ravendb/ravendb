@@ -484,11 +484,11 @@ namespace Raven.Client.Document
 				args.Request.Headers["Authorization"] = "Bearer " + currentOauthToken;
 			};
 #if !SILVERLIGHT
-			Conventions.HandleUnauthorizedResponse = (request, response) =>
+			Conventions.HandleUnauthorizedResponse = (response) =>
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
 				if (string.IsNullOrEmpty(oauthSource))
-					return false;
+					return null;
 			
 				var authRequest = PrepareOAuthRequest(oauthSource);
 
@@ -497,14 +497,13 @@ namespace Raven.Client.Document
 				using(var reader = new StreamReader(stream))
 				{
 					currentOauthToken = reader.ReadToEnd();
-					request.Headers["Authorization"] = "Bearer " + currentOauthToken;
-
-					return true;
+					return (Action<HttpWebRequest>) (request => request.Headers["Authorization"] = "Bearer " + currentOauthToken);
+						
 				}
 			};
 #endif
 #if !NET_3_5
-			Conventions.HandleUnauthorizedResponseAsync = (request, unauthorizedResponse) =>
+			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
 				if (string.IsNullOrEmpty(oauthSource))
@@ -522,7 +521,7 @@ namespace Raven.Client.Document
 						using (var reader = new StreamReader(stream))
 						{
 							currentOauthToken = reader.ReadToEnd();
-							request.Headers["Authorization"] = "Bearer " + currentOauthToken;
+							return (Action<HttpWebRequest>) (request => request.Headers["Authorization"] = "Bearer " + currentOauthToken);
 						}
 					});
 			};

@@ -356,14 +356,14 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Handles unauthenticate responses, usually by authenticating against the oauth server
 		/// </summary>
-		public Func<HttpWebRequest, HttpWebResponse, bool> HandleUnauthorizedResponse { get; set; }
+		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
 
 #if !NET_3_5
 		/// <summary>
 		/// Begins handling of unauthenticate responses, usually by authenticating against the oauth server
 		/// in async manner
 		/// </summary>
-		public Func<HttpWebRequest, HttpWebResponse, Task> HandleUnauthorizedResponseAsync { get; set; }
+		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
 #endif 
 	}
 

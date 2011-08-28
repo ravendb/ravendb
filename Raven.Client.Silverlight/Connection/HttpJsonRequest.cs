@@ -35,7 +35,7 @@ namespace Raven.Client.Silverlight.Connection
 		private byte[] postedData;
 		private int retries;
 
-		private Task RecreateWebRequest()
+		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{
 			retries++;
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
@@ -43,7 +43,7 @@ namespace Raven.Client.Silverlight.Connection
 			newWebRequest.Method = webRequest.Method;
 			HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
 			newWebRequest.Credentials = webRequest.Credentials;
-
+			result(newWebRequest);
 			webRequest = newWebRequest;
 
 			return postedData != null ? WriteAsync(postedData) : null;
@@ -99,19 +99,10 @@ namespace Raven.Client.Silverlight.Connection
 
 			
 			return authorizeResponse
-				.ContinueWith(_ =>
+				.ContinueWith(task1 =>
 				{
-					_.Wait();// throw if error
-					var maybeNeedToWait = RecreateWebRequest();
-					if (maybeNeedToWait == null)
-						return generator();
-
-					return maybeNeedToWait.ContinueWith(_2 =>
-					{
-						_2.Wait();
-						return generator();
-					})
-					.Unwrap();
+					task1.Wait();// throw if error
+					return generator();
 				})
 				.Unwrap();
 		}
@@ -121,12 +112,12 @@ namespace Raven.Client.Silverlight.Connection
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return null;
 
-			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(webRequest, unauthorizedResponse);
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse);
 
 			if (unauthorizedResponseAsync == null)
 				return null;
 
-			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest());
+			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest(task.Result)).Unwrap();
 		}
 
 		public Task<byte[]> ReadResponseBytesAsync()

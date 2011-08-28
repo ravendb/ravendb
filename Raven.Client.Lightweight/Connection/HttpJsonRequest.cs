@@ -183,10 +183,11 @@ namespace Raven.Client.Connection
 			if (conventions.HandleUnauthorizedResponse == null)
 				return false;
 
-			if (conventions.HandleUnauthorizedResponse(webRequest, unauthorizedResponse) == false)
+			var handleUnauthorizedResponse = conventions.HandleUnauthorizedResponse(unauthorizedResponse);
+			if (handleUnauthorizedResponse == null)
 				return false;
 
-			RecreateWebRequest();
+			RecreateWebRequest(handleUnauthorizedResponse);
 			return true;
 		}
 #if !NET_3_5
@@ -195,16 +196,16 @@ namespace Raven.Client.Connection
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return null;
 
-			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(webRequest, unauthorizedResponse);
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse);
 
 			if (unauthorizedResponseAsync == null)
 				return null;
 
-			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest());
+			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest(unauthorizedResponseAsync.Result));
 		}
 #endif
 
-		private void RecreateWebRequest()
+		private void RecreateWebRequest(Action<HttpWebRequest> action)
 		{
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
 
@@ -217,7 +218,7 @@ namespace Raven.Client.Connection
 			{
 				HttpJsonRequestHelper.WriteDataToRequest(newWebRequest, postedData);
 			}
-
+			action(newWebRequest);
 			webRequest = newWebRequest;
 		}
 
