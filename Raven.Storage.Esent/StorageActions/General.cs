@@ -198,6 +198,13 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
+		public bool TransactionExists(Guid txId)
+		{
+			Api.JetSetCurrentIndex(session, Transactions, "by_tx_id");
+			Api.MakeKey(session, Transactions, txId, MakeKeyGrbit.NewKey);
+			return Api.TrySeek(session, Transactions, SeekGrbit.SeekEQ);
+		}
+
 		public void CompleteTransaction(Guid txId, Action<DocumentInTransactionData> perDocumentModified)
 		{
 			Api.JetSetCurrentIndex(session, Transactions, "by_tx_id");

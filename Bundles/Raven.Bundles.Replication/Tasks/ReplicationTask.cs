@@ -173,11 +173,11 @@ namespace Raven.Bundles.Replication.Tasks
                     return false;
                 using (docDb.DisableAllTriggersForCurrentThread())
                 {
-                    SourceReplicationInformation sourceReplicationInformation;
+                    SourceReplicationInformation destinationsReplicationInformationForSource;
                     try
                     {
-                        sourceReplicationInformation = GetLastReplicatedEtagFrom(destination);
-                        if (sourceReplicationInformation == null)
+                        destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
+                        if (destinationsReplicationInformationForSource == null)
                             return false;
                     }
                     catch (Exception e)
@@ -187,7 +187,7 @@ namespace Raven.Bundles.Replication.Tasks
                     }
 
                     bool? replicated = null;
-                    switch (ReplicateDocuments(destination, sourceReplicationInformation))
+                    switch (ReplicateDocuments(destination, destinationsReplicationInformationForSource))
                     {
                         case true:
                             replicated = true;
@@ -196,7 +196,7 @@ namespace Raven.Bundles.Replication.Tasks
                             return false;
                     }
 
-                    switch (ReplicateAttachments(destination, sourceReplicationInformation))
+                    switch (ReplicateAttachments(destination, destinationsReplicationInformationForSource))
                     {
                         case true:
                             replicated = true;
@@ -215,9 +215,9 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool? ReplicateAttachments(RavenConnectionStringOptions destination, SourceReplicationInformation sourceReplicationInformation)
+        private bool? ReplicateAttachments(RavenConnectionStringOptions destination, SourceReplicationInformation destinationsReplicationInformationForSource)
         {
-            var attachments = GetAttachments(sourceReplicationInformation.LastAttachmentEtag);
+            var attachments = GetAttachments(destinationsReplicationInformationForSource);
 
             if (attachments == null || attachments.Length == 0)
                 return null;
@@ -239,9 +239,9 @@ namespace Raven.Bundles.Replication.Tasks
             return true;
         }
 
-        private bool? ReplicateDocuments(RavenConnectionStringOptions destination, SourceReplicationInformation sourceReplicationInformation)
+        private bool? ReplicateDocuments(RavenConnectionStringOptions destination, SourceReplicationInformation destinationsReplicationInformationForSource)
         {
-            var jsonDocuments = GetJsonDocuments(sourceReplicationInformation.LastDocumentEtag);
+            var jsonDocuments = GetJsonDocuments(destinationsReplicationInformationForSource);
             if (jsonDocuments == null || jsonDocuments.Length == 0)
                 return null;
             if (TryReplicationDocuments(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
@@ -372,19 +372,18 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private RavenJArray GetJsonDocuments(Guid etag)
+        private RavenJArray GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource)
         {
             RavenJArray jsonDocuments = null;
             try
             {
-                var instanceId = docDb.TransactionalStorage.Id.ToString();
+                var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+
                 docDb.TransactionalStorage.Batch(actions =>
                 {
-                    jsonDocuments = new RavenJArray(actions.Documents.GetDocumentsAfter(etag)
+                    jsonDocuments = new RavenJArray(actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag)
                         .Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
-                        .Where(x =>
-							x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == null ||
-							x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId) // only replicate documents created on this instance
+                        .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationId) // prevent replicating back to source
                         .Where(x=> x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
                         .Select(x=>
                         {
@@ -397,22 +396,23 @@ namespace Raven.Bundles.Replication.Tasks
             }
             catch (Exception e)
             {
-                log.Warn("Could not get documents to replicate after: " + etag, e);
+                log.Warn("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastDocumentEtag, e);
             }
             return jsonDocuments;
         }
 
-        private RavenJArray GetAttachments(Guid etag)
+        private RavenJArray GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource)
         {
             RavenJArray jsonAttachments = null;
             try
             {
-                var instanceId = docDb.TransactionalStorage.Id.ToString();
+                string destinationInstanceId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+
                 docDb.TransactionalStorage.Batch(actions =>
                 {
-                    jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(etag)
+                    jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(destinationsReplicationInformationForSource.LastAttachmentEtag)
                         .Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
-                        .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId) // only replicate documents created on this instance
+                        .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationInstanceId) // prevent replicating back to source
                         .Where(x => x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
                         .Take(100)
                         .Select(x => new RavenJObject
@@ -426,7 +426,7 @@ namespace Raven.Bundles.Replication.Tasks
             }
             catch (Exception e)
             {
-                log.Warn("Could not get documents to replicate after: " + etag, e);
+                log.Warn("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
             }
             return jsonAttachments;
         }

@@ -49,6 +49,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Authentication\AuthorizationTest.cs" />
+    <Compile Include="Authentication\HttpWebRequestExtensions.cs" />
+    <Compile Include="Authentication\SimpleLogin.cs" />
     <Compile Include="Authorization\AuthorizationTest.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
     <Compile Include="Authorization\Bugs\Kwal.cs" />
@@ -67,6 +70,7 @@
     <Compile Include="Replication\Bugs\MultipleWritesInReplicationWindow.cs" />
     <Compile Include="Replication\Bugs\ReplicatingDanish.cs" />
     <Compile Include="Replication\Bugs\SameEtagFromDifferentServers.cs" />
+    <Compile Include="Replication\MultihopReplication.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
@@ -83,6 +87,10 @@
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
+      <Project>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</Project>
+      <Name>Raven.Client.Embedded</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
@@ -108,6 +116,10 @@
     <ProjectReference Include="..\..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
       <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
       <Name>Raven.Storage.Managed</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Bundles.Authentication\Raven.Bundles.Authentication.csproj">
+      <Project>{53DA3AE4-1648-43B9-A814-BAFD89AEBF2A}</Project>
+      <Name>Raven.Bundles.Authentication</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
       <Project>{034FFD8F-F917-4A45-B920-9C460CD66BAF}</Project>

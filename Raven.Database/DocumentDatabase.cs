@@ -525,6 +525,16 @@ namespace Raven.Database
 				.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterCommit(key)));
 		}
 
+		public bool HasTransaction(Guid txId)
+		{
+			bool exists = false;
+			TransactionalStorage.Batch(accessor =>
+			{
+				exists = accessor.Transactions.TransactionExists(txId);
+			});
+			return exists;
+		}
+
 		public void Commit(Guid txId)
 		{
 			try

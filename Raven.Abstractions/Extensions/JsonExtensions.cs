@@ -5,8 +5,12 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Extensions
@@ -83,7 +87,7 @@ namespace Raven.Abstractions.Extensions
 		/// </summary>
 		public static T JsonDeserialization<T>(this byte [] self)
 		{
-			return (T)new JsonSerializer().Deserialize(new BsonReader(new MemoryStream(self)), typeof(T));
+			return (T)CreateDefaultJsonSerializer().Deserialize(new BsonReader(new MemoryStream(self)), typeof(T));
 		}
 
 		/// <summary>
@@ -91,12 +95,49 @@ namespace Raven.Abstractions.Extensions
 		/// </summary>
 		public static T JsonDeserialization<T>(this RavenJObject self)
 		{
-			return (T)new JsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
+			return (T)CreateDefaultJsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
+		}
+
+		private static readonly IContractResolver contractResolver = new DefaultServerContractResolver(shareCache: true)
+		{
+			DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+		};
+
+		private class DefaultServerContractResolver : DefaultContractResolver
+		{
+			public DefaultServerContractResolver(bool shareCache) : base(shareCache)
+			{
+			}
+
+			protected override System.Collections.Generic.List<MemberInfo> GetSerializableMembers(Type objectType)
+			{
+				var serializableMembers = base.GetSerializableMembers(objectType);
+				foreach (var toRemove in serializableMembers
+					.Where(MembersToFilterOut)
+					.ToArray())
+				{
+					serializableMembers.Remove(toRemove);
+				}
+				return serializableMembers;
+			}
+
+			private static bool MembersToFilterOut(MemberInfo info)
+			{
+				if (info is EventInfo)
+					return true;
+				var fieldInfo = info as FieldInfo;
+				if (fieldInfo != null && !fieldInfo.IsPublic)
+					return true;
+				return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Length > 0;
+			} 
 		}
 
 		public static JsonSerializer CreateDefaultJsonSerializer()
 		{
-			var jsonSerializer = new JsonSerializer();
+			var jsonSerializer = new JsonSerializer
+			{
+				ContractResolver = contractResolver
+			};
 			foreach (var defaultJsonConverter in Default.Converters)
 			{
 				jsonSerializer.Converters.Add(defaultJsonConverter);

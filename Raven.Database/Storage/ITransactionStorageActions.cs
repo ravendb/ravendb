@@ -19,5 +19,6 @@ namespace Raven.Database.Storage
         void ModifyTransactionId(Guid fromTxId, Guid toTxId, TimeSpan timeout);
         void CompleteTransaction(Guid txId, Action<DocumentInTransactionData> perDocumentModified);
         IEnumerable<Guid> GetTransactionIds();
+    	bool TransactionExists(Guid txId);
     }
 }

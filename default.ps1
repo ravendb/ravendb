@@ -14,8 +14,10 @@ properties {
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
-  $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
-    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+  $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", `
+                     "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", `
+                    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", `
+                    "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $client_dlls_3_5 = @( "nlog.???","Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Json-3.5.???", "Raven.Client.Lightweight-3.5.???");
      
@@ -307,6 +309,7 @@ task CopyRootFiles -depends CreateDocs {
 	cp $base_dir\Scripts\Start.cmd $build_dir\Output\Start.cmd
 	cp $base_dir\Scripts\Raven-StartBackup.ps1 $build_dir\Output\Raven-StartBackup.ps1
 	cp $base_dir\Scripts\Raven-UpdateBundles.ps1 $build_dir\Output\Raven-UpdateBundles.ps1
+	cp $base_dir\Scripts\Raven-GetBundles.ps1 $build_dir\Output\Raven-GetBundles.ps1
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
 	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgments.txt $build_dir\Output\acknowledgments.txt

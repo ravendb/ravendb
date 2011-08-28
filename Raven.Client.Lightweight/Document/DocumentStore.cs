@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -432,12 +433,16 @@ namespace Raven.Client.Document
 				}
 #endif
 				InitializeInternal();
+
+				InitializeSecurity();
+
 				if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 #if !SILVERLIGHT
 					var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
 					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
 #else
+
 					Conventions.DocumentKeyGenerator = entity =>
 					{
 						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
@@ -465,6 +470,64 @@ namespace Raven.Client.Document
 
 			return this;
 		}
+
+		private void InitializeSecurity()
+		{
+#if !SILVERLIGHT
+
+			if (Conventions.HandleUnauthorizedResponse != null)
+				return; // already setup by the user
+
+			string currentOauthToken = null;
+			jsonRequestFactory.ConfigureRequest += (sender, args) =>
+			{
+				if (string.IsNullOrEmpty(currentOauthToken))
+					return;
+				args.Request.Headers["Authorization"] = "Bearer " + currentOauthToken;
+			};
+			Conventions.HandleUnauthorizedResponse = (request, response) =>
+			{
+				return HandleUnauthorizedResponse(request, response, ref currentOauthToken);
+			};
+#endif
+		}
+
+#if !SILVERLIGHT
+		private bool HandleUnauthorizedResponse(HttpWebRequest request, HttpWebResponse unauthorizedResponse, ref string currentOAuthTokenValue)
+		{
+			var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
+			if (string.IsNullOrEmpty(oauthSource))
+				return false;
+			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
+			authRequest.Credentials = Credentials;
+			authRequest.PreAuthenticate = true;
+			authRequest.Headers["grant_type"] = "client_credentials";
+			authRequest.ContentType = "application/json;charset=UTF-8";
+			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
+			
+			if(oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false && 
+				jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
+				throw new InvalidOperationException(
+@"Attempting to authenticate using basic security over HTTP would expose user credentials (including the password) in clear text to anyone sniffing the network.
+Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.
+You can setup the OAuth endpoint in the RavenDB server settings ('Raven/OAuthTokenServer' configuration value), or setup your own behavior by providing a value for:
+	documentStore.Conventions.HandleUnauthorizedResponse
+If you are on an internal network or requires this for testing, you can disable this warning by calling:
+	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = false;
+");
+				
+
+			using(var authResponse = authRequest.GetResponse())
+			using(var stream = authResponse.GetResponseStreamWithHttpDecompression())
+			using(var reader = new StreamReader(stream))
+			{
+				currentOAuthTokenValue = reader.ReadToEnd();
+				request.Headers["Authorization"] = "Bearer " + currentOAuthTokenValue;
+
+				return true;
+			}
+		}
+#endif
 
 		/// <summary>
 		/// validate the configuration for the document store

@@ -18,8 +18,8 @@ namespace Raven.Database.Config
         {
         	LoadConfigurationAndInitialize(ConfigurationManager.AppSettings.AllKeys.Select(k=> Tuple.Create(k,ConfigurationManager.AppSettings[k])));
         }
-
-    	private void LoadConfigurationAndInitialize(IEnumerable<Tuple<string,string>> values)
+        
+        private void LoadConfigurationAndInitialize(IEnumerable<Tuple<string,string>> values)
     	{
     		foreach (var setting in values)
     		{

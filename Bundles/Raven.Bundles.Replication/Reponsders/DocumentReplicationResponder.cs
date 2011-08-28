@@ -72,7 +72,8 @@ namespace Raven.Bundles.Replication.Reponsders
                                  RavenJObject.FromObject(new SourceReplicationInformation
                                  {
                                      LastDocumentEtag = new Guid(lastEtag),
-                                     LastAttachmentEtag = lastAttachmentId
+                                     LastAttachmentEtag = lastAttachmentId,
+                                     ServerInstanceId = Database.TransactionalStorage.Id
                                  }),
                                  new RavenJObject(), null);
                 });

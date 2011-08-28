@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -30,12 +31,13 @@ namespace Raven.Client.Connection
 		private byte[] bytesForNextWrite;
 
 
-		internal readonly HttpWebRequest webRequest;
+		internal HttpWebRequest webRequest;
 		// temporary create a strong reference to the cached data for this request
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
 		private readonly HttpJsonRequestFactory factory;
 		private readonly IHoldProfilingInformation owner;
+		private readonly DocumentConvention conventions;
 		private string postedData;
 		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
@@ -46,11 +48,19 @@ namespace Raven.Client.Connection
 		/// <value>The response headers.</value>
 		public NameValueCollection ResponseHeaders { get; set; }
 
-		internal HttpJsonRequest(string url, string method, RavenJObject metadata, ICredentials credentials, HttpJsonRequestFactory factory, IHoldProfilingInformation owner)
+		internal HttpJsonRequest(
+			string url, 
+			string method, 
+			RavenJObject metadata, 
+			ICredentials credentials, 
+			HttpJsonRequestFactory factory, 
+			IHoldProfilingInformation owner,
+			DocumentConvention conventions)
 		{
 			this.Url = url;
 			this.factory = factory;
 			this.owner = owner;
+			this.conventions = conventions;
 			this.Method = method;
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
@@ -128,8 +138,118 @@ namespace Raven.Client.Connection
 				return result;
 			}
 
-			return ReadStringInternal(webRequest.GetResponse);
+			int retries = 0;
+			while(true)
+			{
+				try
+				{
+					return ReadStringInternal(webRequest.GetResponse);
+				}
+				catch (WebException e)
+				{
+					if (++retries >= 3)
+						throw;
+
+					var httpWebResponse = e.Response as HttpWebResponse;
+					if (httpWebResponse == null ||
+						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+						throw;
+
+					if(HandleUnauthorizedResponse(httpWebResponse) == false)
+						throw;
+				}
+			}
 		}
+
+		public bool HandleUnauthorizedResponse(HttpWebResponse unauthorizedResponse)
+		{
+			if (conventions.HandleUnauthorizedResponse == null)
+				return false;
+
+
+			if (conventions.HandleUnauthorizedResponse(webRequest, unauthorizedResponse) == false)
+				return false;
+
+			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
+
+			var newWebRequest = (HttpWebRequest) WebRequest.Create(Url);
+			newWebRequest.Method = webRequest.Method;
+			CopyHeaders(webRequest, newWebRequest);
+			newWebRequest.Credentials = webRequest.Credentials;
+
+			if(postedData != null)
+			{
+				WriteDataToRequest(newWebRequest, postedData);
+			}
+
+			webRequest = newWebRequest;
+			return true;
+		}
+
+		private static void CopyHeaders(HttpWebRequest src, HttpWebRequest dest)
+		{
+			foreach (string header in src.Headers)
+			{
+				var values = src.Headers.GetValues(header);
+				if(values == null)
+					continue;
+				if(WebHeaderCollection.IsRestricted(header))
+				{
+					switch (header)
+					{
+						case "Accept":
+							dest.Accept = src.Accept;
+							break;
+						case "Connection":
+							// explicitly ignoring this
+							break;
+						case "Content-Length":
+							dest.ContentLength = src.ContentLength;
+							break;
+						case "Content-Type":
+							dest.ContentType = src.ContentType;
+							break;
+						case "Date":
+							break;
+						case "Expect":
+							// explicitly ignoring this
+							break;
+#if !NET_3_5
+						case "Host":
+							dest.Host = src.Host;
+							break;
+#endif
+						case "If-Modified-Since":
+							dest.IfModifiedSince = src.IfModifiedSince;
+							break;
+						case "Range":
+							throw new NotSupportedException("Range copying isn't supported at this stage, we don't support range queries anyway, so it shouldn't matter");
+						case "Referer":
+							dest.Referer = src.Referer;
+							break;
+						case "Transfer-Encoding":
+							dest.TransferEncoding = src.TransferEncoding;
+							break;
+						case "User-Agent":
+							dest.UserAgent = src.UserAgent;
+							break;
+						case "Proxy-Connection":
+							dest.Proxy = src.Proxy;
+							break;
+						default:
+							throw new ArgumentException("No idea how to handle restircted header: " + header);
+					}
+				}
+				else
+				{
+					foreach (var value in values)
+					{
+						dest.Headers.Add(header, value);
+					}
+				}
+			}
+		}
+
 
 		private string ReadStringInternal(Func<WebResponse> getResponse)
 		{
@@ -144,6 +264,7 @@ namespace Raven.Client.Connection
 				sp.Stop();
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse == null || 
+					httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
 					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
 						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
@@ -317,11 +438,16 @@ namespace Raven.Client.Connection
 		{
 			postedData = data;
 
+			WriteDataToRequest(webRequest, data);
+		}
+
+		private static void WriteDataToRequest(HttpWebRequest req, string data)
+		{
 			var byteArray = Encoding.UTF8.GetBytes(data);
 
-			webRequest.ContentLength = byteArray.Length;
+			req.ContentLength = byteArray.Length;
 
-			using (var dataStream = webRequest.GetRequestStream())
+			using (var dataStream = req.GetRequestStream())
 			{
 				dataStream.Write(byteArray, 0, byteArray.Length);
 				dataStream.Flush();

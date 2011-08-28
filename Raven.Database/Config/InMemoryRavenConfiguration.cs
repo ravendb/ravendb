@@ -9,6 +9,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
@@ -136,7 +137,35 @@ namespace Raven.Database.Config
 			PluginsDirectory = Settings["Raven/PluginsDirectory"] ?? @"~\Plugins";
 			if (PluginsDirectory.StartsWith(@"~\"))
 				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
+
+			// OAuth
+			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? "windows";
+
 		}
+
+		private void SetupOAuth()
+		{
+			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
+			                   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/AccessToken" : ServerUrl + "/OAuth/AccessToken");
+			OAuthTokenCertificate = GetCertificate();
+		}
+
+		private X509Certificate2 GetCertificate()
+		{
+			var path = Settings["Raven/OAuthTokenCertificatePath"];
+			if (string.IsNullOrEmpty(path) == false)
+			{
+				var pwd = Settings["Raven/OAuthTokenCertificatePassword"];
+				if (string.IsNullOrEmpty(pwd) == false)
+				{
+					return new X509Certificate2(path, pwd);
+				}
+				return new X509Certificate2(path);
+			}
+
+			return CertGenerator.GenerateNewCertificate("RavenDB");
+		}
+
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
 		{
@@ -291,6 +320,29 @@ namespace Raven.Database.Config
 		/// </summary>
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
+		private string authenticationMode;
+
+		/// <summary>
+        /// Defines which mode to use to authenticate requests
+        /// Allowed values: Windows, OAuth
+        /// Default: Windows
+        /// </summary>
+        public string AuthenticationMode
+		{
+			get { return authenticationMode; }
+			set
+			{
+				authenticationMode = value;
+				if(string.Equals(authenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
+					SetupOAuth();
+			}
+		}
+
+		/// <summary>
+        /// The certificate to use when verifying access token signatures for OAuth
+        /// </summary>
+        public X509Certificate2 OAuthTokenCertificate { get; set; }
+
 #endregion
 
 #region Data settings
@@ -369,7 +421,9 @@ namespace Raven.Database.Config
 			}
 		}
 
-#endregion
+		public string OAuthTokenServer { get; set; }
+
+		#endregion
 
 		public CompositionContainer Container
 		{

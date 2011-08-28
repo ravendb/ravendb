@@ -23,6 +23,9 @@ using Raven.Abstractions.MEF;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
 using Raven.Http.Extensions;
+using Raven.Http.Security;
+using Raven.Http.Security.OAuth;
+using Raven.Http.Security.Windows;
 using Formatting = Newtonsoft.Json.Formatting;
 
 namespace Raven.Http
@@ -30,8 +33,9 @@ namespace Raven.Http
 	public abstract class HttpServer : IDisposable
     {
 		private const int MaxConcurrentRequests = 192;
-		protected readonly IResourceStore DefaultResourceStore;
-        protected readonly IRavenHttpConfiguration DefaultConfiguration;
+		public IResourceStore DefaultResourceStore { get; private set; }
+		public IRavenHttpConfiguration DefaultConfiguration { get; private set; }
+		readonly AbstractRequestAuthorizer requestAuthorizer;
 
         private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
         private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
@@ -50,6 +54,9 @@ namespace Raven.Http
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
+
+        [ImportMany]
+        public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
 
         public IRavenHttpConfiguration Configuration
         {
@@ -86,10 +93,25 @@ namespace Raven.Http
 
             configuration.Container.SatisfyImportsOnce(this);
 
-            foreach (var requestResponder in RequestResponders)
+            foreach (var responder in RequestResponders)
             {
-                requestResponder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+                responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
             }
+
+		    switch (configuration.AuthenticationMode.ToLowerInvariant())
+		    {
+                case "windows":
+		            requestAuthorizer = new WindowsRequestAuthorizer();
+                    break;
+                case "oauth":
+		            requestAuthorizer = new OAuthRequestAuthorizer();
+                    break;
+                default:
+		            throw new InvalidOperationException(
+						string.Format("Unknown AuthenticationMode {0}. Options are Windows and OAuth", configuration.AuthenticationMode));
+		    }
+
+            requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
         }
 
         #region IDisposable Members
@@ -117,34 +139,12 @@ namespace Raven.Http
             if (virtualDirectory.EndsWith("/") == false)
                 virtualDirectory = virtualDirectory + "/";
             listener.Prefixes.Add("http://" + (DefaultConfiguration.HostName ?? "+") + ":" + DefaultConfiguration.Port + virtualDirectory);
-            switch (DefaultConfiguration.AnonymousUserAccessMode)
+
+            foreach (var configureHttpListener in ConfigureHttpListeners)
             {
-                case AnonymousUserAccessMode.None:
-                    listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication;
-                    break;
-                case AnonymousUserAccessMode.All:
-					 listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
-                        AuthenticationSchemes.Anonymous;
-                    listener.AuthenticationSchemeSelectorDelegate = request =>
-                    {
-						if(request.RawUrl.StartsWith("/admin",StringComparison.InvariantCultureIgnoreCase))
-							return AuthenticationSchemes.IntegratedWindowsAuthentication;
-                        return AuthenticationSchemes.Anonymous;
-                    };
-                    break;
-                case AnonymousUserAccessMode.Get:
-                    listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
-                        AuthenticationSchemes.Anonymous;
-                    listener.AuthenticationSchemeSelectorDelegate = request =>
-                    {
-                    	return IsGetRequest(request.HttpMethod, request.Url.AbsolutePath) ?
-							AuthenticationSchemes.Anonymous | AuthenticationSchemes.IntegratedWindowsAuthentication :
-                            AuthenticationSchemes.IntegratedWindowsAuthentication;
-                    };
-                    break;
-                default:
-                    throw new ArgumentException("Cannot understand access mode: " + DefaultConfiguration.AnonymousUserAccessMode);
+                configureHttpListener.Value.Configure(listener, DefaultConfiguration);
             }
+
             databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             listener.Start();
             listener.BeginGetContext(GetContext, null);
@@ -177,6 +177,12 @@ namespace Raven.Http
                 //setup waiting for the next request
                 listener.BeginGetContext(GetContext, null);
             }
+			catch(AggregateException)
+			{
+				// can't get current request / end new one, probably
+				// listner shutdown
+				return;
+			}
             catch (InvalidOperationException)
             {
                 // can't get current request / end new one, probably
@@ -364,11 +370,13 @@ namespace Raven.Http
 
         private bool DispatchRequest(IHttpContext ctx)
         {
-            if (AssertSecurityRights(ctx) == false)
+            SetupRequestToProperDatabase(ctx);
+
+            CurrentOperationContext.Headers.Value = ctx.Request.Headers;
+
+            if (requestAuthorizer.Authorize(ctx) == false)
                 return false;
 
-            SetupRequestToProperDatabase(ctx);
-            CurrentOperationContext.Headers.Value = ctx.Request.Headers;
             try
             {
                 OnDispatchingRequest(ctx);
@@ -481,37 +489,7 @@ namespace Raven.Http
 
         }
 
-        private bool AssertSecurityRights(IHttpContext ctx)
-        {
-			if (DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx))
-			{
-				ctx.SetStatusToUnauthorized();
-				return false;
-			}
-
-
-        	IHttpRequest httpRequest = ctx.Request;
-        	if (DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get && 
-				IsInvalidUser(ctx) &&  
-				IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false )
-            {
-                ctx.SetStatusToUnauthorized();
-                return false;
-            }
-            return true;
-        }
-
-		protected virtual bool IsGetRequest(string httpMethod, string requestPath)
-		{
-			return (httpMethod == "GET" || httpMethod == "HEAD");
-		}
-
-		private static bool IsInvalidUser(IHttpContext ctx)
-		{
-			return (ctx.User == null || ctx.User.Identity == null || ctx.User.Identity.IsAuthenticated == false);
-		}
-
-		public void ResetNumberOfRequests()
+	    public void ResetNumberOfRequests()
 		{
 			Interlocked.Exchange(ref reqNum, 0);
 			Interlocked.Exchange(ref physicalRequestsCount, 0);

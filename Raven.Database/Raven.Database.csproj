@@ -60,6 +60,9 @@
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="BouncyCastle.Crypto">
+      <HintPath>..\SharedLibs\BouncyCastle.Crypto.dll</HintPath>
+    </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
@@ -114,6 +117,7 @@
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
+    <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Impl\CachedDocument.cs" />
     <Compile Include="Impl\DatabaseBulkOperations.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
@@ -370,6 +374,7 @@
     <Compile Include="Server\Responders\TransactionCommit.cs" />
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
+    <Compile Include="Server\Responders\TransactionStatus.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />

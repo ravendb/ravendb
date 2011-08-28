@@ -33,7 +33,7 @@ namespace Raven.Tests
 				Thread.Sleep(25);
 		}
 
-        protected RavenDbServer GetNewServer()
+        protected RavenDbServer GetNewServer(bool initializeDocumentsByEntitiyName = true)
         {
         	var ravenConfiguration = new RavenConfiguration
         	{
@@ -50,66 +50,69 @@ namespace Raven.Tests
 
         	var ravenDbServer = new RavenDbServer(ravenConfiguration);
 
-			using (var documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8080"
-			}.Initialize())
-			{
-				new RavenDocumentsByEntityName().Execute(documentStore);
+            if (initializeDocumentsByEntitiyName)
+            {
+                using (var documentStore = new DocumentStore
+				{
+					Url = "http://localhost:8080"
+				}.Initialize())
+				{
+					new RavenDocumentsByEntityName().Execute(documentStore);
+				}
 			}
 
-        	return ravenDbServer;
+            return ravenDbServer;
         }
 
-		protected virtual void ConfigureServer(RavenConfiguration ravenConfiguration)
-		{
-		}
+        protected virtual void ConfigureServer(RavenConfiguration ravenConfiguration)
+        {
+        }
 
-		protected void WaitForUserToContinueTheTest()
-		{
-			if (Debugger.IsAttached == false)
-				return;
+        protected void WaitForUserToContinueTheTest()
+        {
+            if (Debugger.IsAttached == false)
+                return;
 
-			using (var documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8080"
-			})
-			{
-				documentStore.Initialize();
-				documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-												   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }), new RavenJObject());
+            using (var documentStore = new DocumentStore
+            {
+                Url = "http://localhost:8080"
+            })
+            {
+                documentStore.Initialize();
+                documentStore.DatabaseCommands.Put("Pls Delete Me", null,
+                                                   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }), new RavenJObject());
 
-				Process.Start(documentStore.Url);// start the server
+                Process.Start(documentStore.Url);// start the server
 
-				do
-				{
-					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
-			}
+                do
+                {
+                    Thread.Sleep(100);
+                } while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
+            }
 
-		}
+        }
 
-		protected RavenDbServer GetNewServer(int port, string path)
-		{
-			var ravenDbServer = new RavenDbServer(new RavenConfiguration
-			{
-				Port = port, 
-				DataDirectory = path, 
-				RunInMemory = true,
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
-			});
+        protected RavenDbServer GetNewServer(int port, string path)
+        {
+            var ravenDbServer = new RavenDbServer(new RavenConfiguration
+            {
+                Port = port,
+                DataDirectory = path,
+                RunInMemory = true,
+                AnonymousUserAccessMode = AnonymousUserAccessMode.All
+            });
 
-			using (var documentStore = new DocumentStore
-			{
-				Url = "http://localhost:" + port
-			}.Initialize())
-			{
-				new RavenDocumentsByEntityName().Execute(documentStore);
-			}
-			return ravenDbServer;
-		}
+            using (var documentStore = new DocumentStore
+            {
+                Url = "http://localhost:" + port
+            }.Initialize())
+            {
+                new RavenDocumentsByEntityName().Execute(documentStore);
+            }
+            return ravenDbServer;
+        }
 
-		protected RavenDbServer GetNewServerWithoutAnonymousAccess(int port, string path)
+        protected RavenDbServer GetNewServerWithoutAnonymousAccess(int port, string path)
 		{
 			RavenDbServer newServerWithoutAnonymousAccess = new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.None });
 			using (var documentStore = new DocumentStore
@@ -122,32 +125,32 @@ namespace Raven.Tests
 			return newServerWithoutAnonymousAccess;
 		}
 
-		protected string GetPath(string subFolderName)
+        protected string GetPath(string subFolderName)
         {
             string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
             return Path.Combine(retPath, subFolderName).Substring(6); //remove leading file://
         }
-        
-		public RemoteClientTest()
-		{
-			try
-			{
-				new Uri("http://fail/first/time?only=%2bplus");
-			}
-			catch (Exception)
-			{
-			}
+
+        public RemoteClientTest()
+        {
+            try
+            {
+                new Uri("http://fail/first/time?only=%2bplus");
+            }
+            catch (Exception)
+            {
+            }
 
             ClearDatabaseDirectory();
 
-			Directory.CreateDirectory(DbDirectory);
-		}
+            Directory.CreateDirectory(DbDirectory);
+        }
 
-		protected void ClearDatabaseDirectory()
-		{
-			IOExtensions.DeleteDirectory(DbName);
-			IOExtensions.DeleteDirectory(DbDirectory);
-		}
+        protected void ClearDatabaseDirectory()
+        {
+            IOExtensions.DeleteDirectory(DbName);
+            IOExtensions.DeleteDirectory(DbDirectory);
+        }
 
 		public double Timer(Action action)
 		{

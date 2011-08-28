@@ -166,6 +166,7 @@
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
+    <Compile Include="Bugs\CreatingIndexes.cs" />
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
     <Compile Include="Bugs\Identifiers\WithBase64Characters.cs" />
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
@@ -187,6 +188,7 @@
     <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
     <Compile Include="Bugs\Queries\Boolean.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
+    <Compile Include="Bugs\QueryingOnEmptyArray.cs" />
     <Compile Include="Bugs\RacielrodTest.cs" />
     <Compile Include="Bugs\SelfReference.cs" />
     <Compile Include="Bugs\SerializingAndDeserializingWithRaven.cs" />
@@ -549,6 +551,10 @@
     <Compile Include="Querying\UsingDynamicQueryWithLocalServer.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithRemoteServer.cs" />
     <Compile Include="RemoteClientTest.cs" />
+    <Compile Include="Security\OAuth\AccessTokenAuthentication.cs" />
+    <Compile Include="Security\OAuth\CertHelper.cs" />
+    <Compile Include="Security\OAuth\GrantAccessTokenClientCredentialsFlow.cs" />
+    <Compile Include="Security\OAuth\HttpWebRequestExtensions.cs" />
     <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
     <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
     <Compile Include="Some.cs" />

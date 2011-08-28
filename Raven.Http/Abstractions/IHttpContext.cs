@@ -15,7 +15,7 @@ namespace Raven.Http.Abstractions
         IRavenHttpConfiguration Configuration { get; }
 		IHttpRequest Request { get; }
 		IHttpResponse Response { get; }
-		IPrincipal User { get; }
+		IPrincipal User { get; set; }
 		string GetRequestUrlForTenantSelection();
 		void FinalizeResonse();
 		void SetResponseFilter(Func<Stream, Stream> responseFilter);

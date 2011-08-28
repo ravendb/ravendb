@@ -11,6 +11,7 @@ namespace Raven.Bundles.Replication.Data
     {
         public Guid LastDocumentEtag { get; set; }
         public Guid LastAttachmentEtag { get; set; }
+        public Guid ServerInstanceId { get; set; }
 
         public override string ToString()
         {

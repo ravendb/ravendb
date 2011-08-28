@@ -44,7 +44,11 @@ namespace Raven.Http.Abstractions
 		public int StatusCode
 		{
 			get { return response.StatusCode; }
-			set { response.StatusCode = value; }
+			set
+			{
+				response.TrySkipIisCustomErrors = true;
+				response.StatusCode = value;
+			}
 		}
 
 		public string StatusDescription

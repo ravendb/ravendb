@@ -120,9 +120,11 @@ namespace Raven.Database.Server.Responders
 
 			public IHttpResponse Response { get; set; }
 
+			private IPrincipal currentUser;
 			public IPrincipal User
 			{
-				get { return realContext.User; }
+				get { return currentUser ?? realContext.User; }
+				set { currentUser = value; }
 			}
 
 

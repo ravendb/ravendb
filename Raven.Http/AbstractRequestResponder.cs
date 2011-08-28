@@ -32,6 +32,7 @@ namespace Raven.Http
 		public abstract string UrlPattern { get; }
 		public abstract string[] SupportedVerbs { get; }
 
+		public IResourceStore DefaultResourceStore { get { return server.DefaultResourceStore; } }
         public IResourceStore ResourceStore { get { return database(); } }
         public IRavenHttpConfiguration Settings { get { return settings(); } }
 		public string TenantId { get { return tenantId(); } }

@@ -2,6 +2,7 @@
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Document;
 
 namespace Raven.Tryouts
 {
@@ -9,24 +10,11 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			//var appender = new ConsoleAppender
-			//{
-			//    Layout = new SimpleLayout()
-			//};
-			//appender.AddFilter(new LoggerMatchFilter
-			//{
-			//    AcceptOnMatch = true,
-			//    LoggerToMatch = typeof(HttpServer).FullName
-			//});
-			//appender.AddFilter(new DenyAllFilter());
-
-			//BasicConfigurator.Configure(appender);
-
 			for (int i = 0; i < 8462; i++)
 			{
 				Console.WriteLine(i);
 				new ManyDocumentsViaDTC().WouldBeIndexedProperly();
-
+				new DocumentStoreServerTests_DifferentProcess().Can_promote_transactions();
 			}
 		}
 	}
