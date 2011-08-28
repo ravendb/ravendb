@@ -126,6 +126,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
       <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\HttpJsonRequestHelper.cs">
+      <Link>Imports\Connection\HttpJsonRequestHelper.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\ConcurrentBoundedList.cs">
       <Link>Imports\Connection\Profiling\ConcurrentBoundedList.cs</Link>
     </Compile>

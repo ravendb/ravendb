@@ -13,7 +13,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Silverlight.Connection
 {
@@ -26,21 +29,42 @@ namespace Raven.Client.Silverlight.Connection
 	/// </summary>
 	public class HttpJsonRequest
 	{
-		internal readonly WebRequest WebRequest;
+		private readonly string url;
+		private readonly DocumentConvention conventions;
+		private HttpWebRequest webRequest;
+		private byte[] postedData;
+		private int retries;
+
+		private Task RecreateWebRequest()
+		{
+			retries++;
+			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
+			var newWebRequest = (HttpWebRequest)WebRequest.Create(url);
+			newWebRequest.Method = webRequest.Method;
+			HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
+			newWebRequest.Credentials = webRequest.Credentials;
+
+			webRequest = newWebRequest;
+
+			return postedData != null ? WriteAsync(postedData) : null;
+		}
+
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
 		/// <value>The response headers.</value>
 		public IDictionary<string, IList<string>> ResponseHeaders { get; set; }
 
-		internal HttpJsonRequest(string url, string method, RavenJObject metadata)
+		internal HttpJsonRequest(string url, string method, RavenJObject metadata, DocumentConvention conventions)
 		{
-			WebRequest = WebRequestCreator.ClientHttp.Create(new Uri(url));
+			this.url = url;
+			this.conventions = conventions;
+			webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
 
 			WriteMetadata(metadata);
-			WebRequest.Method = method;
+			webRequest.Method = method;
 			if (method != "GET")
-				WebRequest.ContentType = "application/json; charset=utf-8";
+				webRequest.ContentType = "application/json; charset=utf-8";
 		}
 
 		/// <summary>
@@ -51,16 +75,67 @@ namespace Raven.Client.Silverlight.Connection
 		/// <returns></returns>
 		public Task<string> ReadResponseStringAsync()
 		{
-			return WebRequest
+			return webRequest
 				.GetResponseAsync()
-				.ContinueWith(t => ReadStringInternal(() => t.Result));
+				.ContinueWith(t => ReadStringInternal(() => t.Result))
+				.ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
+				.Unwrap();
+		}
+
+		private Task<T> RetryIfNeedTo<T>(Task<T> task, Func<Task<T>> generator)
+		{
+			var exception = task.Exception.ExtractSingleInnerException() as WebException;
+			if (exception == null || retries >= 3)
+				return task;
+
+			var webResponse = exception.Response as HttpWebResponse;
+			if (webResponse == null || webResponse.StatusCode != HttpStatusCode.Unauthorized)
+				return task;
+
+			var authorizeResponse = HandleUnauthorizedResponseAsync(webResponse);
+
+			if (authorizeResponse == null)
+				return task; // effectively throw
+
+			
+			return authorizeResponse
+				.ContinueWith(_ =>
+				{
+					_.Wait();// throw if error
+					var maybeNeedToWait = RecreateWebRequest();
+					if (maybeNeedToWait == null)
+						return generator();
+
+					return maybeNeedToWait.ContinueWith(_2 =>
+					{
+						_2.Wait();
+						return generator();
+					})
+					.Unwrap();
+				})
+				.Unwrap();
+		}
+
+		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
+		{
+			if (conventions.HandleUnauthorizedResponseAsync == null)
+				return null;
+
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(webRequest, unauthorizedResponse);
+
+			if (unauthorizedResponseAsync == null)
+				return null;
+
+			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest());
 		}
 
 		public Task<byte[]> ReadResponseBytesAsync()
 		{
-			return WebRequest
+			return webRequest
 				.GetResponseAsync()
-				.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes));
+				.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes))
+				.ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
+				.Unwrap(); ;
 		}
 
 		static byte[] ConvertStreamToBytes(Stream input)
@@ -129,12 +204,6 @@ namespace Raven.Client.Silverlight.Connection
 
 		private void WriteMetadata(RavenJObject metadata)
 		{
-			if (metadata == null || metadata.Count == 0)
-			{
-				WebRequest.ContentLength = 0;
-				return;
-			}
-
 			foreach (var prop in metadata)
 			{
 				if (prop.Value == null)
@@ -156,10 +225,10 @@ namespace Raven.Client.Silverlight.Connection
 					case "Content-Length":
 						break;
 					case "Content-Type":
-						WebRequest.ContentType = value;
+						webRequest.ContentType = value;
 						break;
 					default:
-						WebRequest.Headers[headerName] = value;
+						webRequest.Headers[headerName] = value;
 						break;
 				}
 			}
@@ -179,7 +248,8 @@ namespace Raven.Client.Silverlight.Connection
 		/// </summary>
 		public Task WriteAsync(byte[] byteArray)
 		{
-			return WebRequest.GetRequestStreamAsync().ContinueWith(t =>
+			postedData = byteArray;
+			return webRequest.GetRequestStreamAsync().ContinueWith(t =>
 			{
 				var dataStream = t.Result;
 				using (dataStream)
@@ -198,7 +268,7 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			foreach (var header in operationsHeaders)
 			{
-				WebRequest.Headers[header.Key] = header.Value;
+				webRequest.Headers[header.Key] = header.Value;
 			}
 			return this;
 		}
@@ -208,7 +278,7 @@ namespace Raven.Client.Silverlight.Connection
 		/// </summary>
 		public HttpJsonRequest AddOperationHeader(string key, string value)
 		{
-			WebRequest.Headers[key] = value;
+			webRequest.Headers[key] = value;
 			return this;
 		}
 	}
