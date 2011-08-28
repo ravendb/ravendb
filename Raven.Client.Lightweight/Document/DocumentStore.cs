@@ -473,8 +473,6 @@ namespace Raven.Client.Document
 
 		private void InitializeSecurity()
 		{
-#if !SILVERLIGHT
-
 			if (Conventions.HandleUnauthorizedResponse != null)
 				return; // already setup by the user
 
@@ -485,6 +483,7 @@ namespace Raven.Client.Document
 					return;
 				args.Request.Headers["Authorization"] = "Bearer " + currentOauthToken;
 			};
+#if !SILVERLIGHT
 			Conventions.HandleUnauthorizedResponse = (request, response) =>
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
@@ -503,6 +502,7 @@ namespace Raven.Client.Document
 					return true;
 				}
 			};
+#endif
 #if !NET_3_5
 			Conventions.HandleUnauthorizedResponseAsync = (request, unauthorizedResponse) =>
 			{
@@ -514,7 +514,11 @@ namespace Raven.Client.Document
 				return authRequest.GetResponseAsync()
 					.ContinueWith(task =>
 					{
-						using(var stream = task.Result.GetResponseStreamWithHttpDecompression())
+#if !SILVERLIGHT
+						using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
+#else
+						using(var stream = task.Result.GetResponseStream())
+#endif
 						using (var reader = new StreamReader(stream))
 						{
 							currentOauthToken = reader.ReadToEnd();
@@ -523,16 +527,15 @@ namespace Raven.Client.Document
 					});
 			};
 #endif
-#endif
 		}
-
-#if !SILVERLIGHT
 
 		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
 		{
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
 			authRequest.Credentials = Credentials;
+#if !SILVERLIGHT
 			authRequest.PreAuthenticate = true;
+#endif
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.ContentType = "application/json;charset=UTF-8";
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
@@ -542,7 +545,6 @@ namespace Raven.Client.Document
 				throw new InvalidOperationException(BasicOAuthOverHttpError);
 			return authRequest;
 		}
-#endif
 
 		/// <summary>
 		/// validate the configuration for the document store
