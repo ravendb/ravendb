@@ -9,6 +9,9 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
+#if !NET_3_5
+using System.Threading.Tasks;
+#endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -354,6 +357,13 @@ namespace Raven.Client.Document
 		/// Handles unauthenticate responses, usually by authenticating against the oauth server
 		/// </summary>
 		public Func<HttpWebRequest, HttpWebResponse, bool> HandleUnauthorizedResponse { get; set; }
+
+#if !NET_3_5
+		/// <summary>
+		/// Handles unauthenticate responses, usually by authenticating against the oauth server
+		/// </summary>
+		public Func<HttpWebRequest, HttpWebResponse, Task> HandleUnauthorizedResponseAsync { get; set; }
+#endif 
 	}
 
 

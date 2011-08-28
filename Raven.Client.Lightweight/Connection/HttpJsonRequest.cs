@@ -20,6 +20,7 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
 {
@@ -97,8 +98,34 @@ namespace Raven.Client.Connection
 				return tcs.Task;
 			}
 
+			return InternalReadResponseStringAsync(retries: 0);
+		}
+
+		private Task<string> InternalReadResponseStringAsync(int retries)
+		{
 			return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
-				.ContinueWith(task => ReadStringInternal(() => task.Result));
+				.ContinueWith(task => ReadStringInternal(() => task.Result))
+				.ContinueWith(task =>
+				{
+					var webException = task.Exception.ExtractSingleInnerException() as WebException;
+					if (webException == null || retries >= 3)
+						return task;// effectively throw
+
+					var httpWebResponse = webException.Response as HttpWebResponse;
+					if (httpWebResponse == null ||
+					    httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+						return task; // effectively throw
+
+					var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+
+					if (authorizeResponse == null)
+						return task; // effectively throw
+
+					return authorizeResponse
+						.ContinueWith(_ => InternalReadResponseStringAsync(retries+1))
+						.Unwrap();
+
+				}).Unwrap();
 		}
 #endif
 
@@ -152,10 +179,28 @@ namespace Raven.Client.Connection
 			if (conventions.HandleUnauthorizedResponse == null)
 				return false;
 
-
 			if (conventions.HandleUnauthorizedResponse(webRequest, unauthorizedResponse) == false)
 				return false;
 
+			RecreateWebRequest();
+			return true;
+		}
+
+		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
+		{
+			if (conventions.HandleUnauthorizedResponseAsync == null)
+				return null;
+
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(webRequest, unauthorizedResponse);
+
+			if (unauthorizedResponseAsync == null)
+				return null;
+
+			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest());
+		}
+
+		private void RecreateWebRequest()
+		{
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
 
 			var newWebRequest = (HttpWebRequest) WebRequest.Create(Url);
@@ -163,13 +208,12 @@ namespace Raven.Client.Connection
 			CopyHeaders(webRequest, newWebRequest);
 			newWebRequest.Credentials = webRequest.Credentials;
 
-			if(postedData != null)
+			if (postedData != null)
 			{
 				WriteDataToRequest(newWebRequest, postedData);
 			}
 
 			webRequest = newWebRequest;
-			return true;
 		}
 
 		private static void CopyHeaders(HttpWebRequest src, HttpWebRequest dest)
