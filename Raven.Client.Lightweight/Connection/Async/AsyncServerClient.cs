@@ -144,7 +144,7 @@ namespace Raven.Client.Connection.Async
 					request.AddOperationHeaders(OperationsHeaders);
 					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
 					return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite,serializeObject, null)
-						.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
+						.ContinueWith(writeTask =>  request.ReadResponseStringAsync()
 													.ContinueWith(readStrTask =>
 													{
 														var obj = new { index = "" };
@@ -196,7 +196,7 @@ namespace Raven.Client.Connection.Async
 					if (task.Exception != null)
 						throw new InvalidOperationException("Unable to write to server");
 
-					return Task.Factory.FromAsync<string>(request.BeginReadResponseString,request.EndReadResponseString, null)
+					return request.ReadResponseStringAsync()
 						.ContinueWith(task1 =>
 						{
 							try
@@ -275,7 +275,7 @@ namespace Raven.Client.Connection.Async
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, "GET", metadata, credentials, convention);
 
-			return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
+			return request.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					try
@@ -324,12 +324,12 @@ namespace Raven.Client.Connection.Async
 			{
 				path += "&" + string.Join("&", keys.Select(x => "id=" + x).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
-				return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
+				return request.ReadResponseStringAsync()
 					.ContinueWith(task => CompleteMultiGetAsync(task));
 			}
 			request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
 			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, new RavenJArray(keys).ToString(Formatting.None), null)
-				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null))
+				.ContinueWith(writeTask => request.ReadResponseStringAsync())
 				.Unwrap()
 				.ContinueWith(task => CompleteMultiGetAsync(task));
 		}
@@ -394,8 +394,7 @@ namespace Raven.Client.Connection.Async
 					task =>
 					{
 						task.Wait();// will throw on error
-						return Task.Factory.FromAsync<string>(httpJsonRequest.BeginReadResponseString, httpJsonRequest.EndReadResponseString,
-						                               null)
+						return httpJsonRequest.ReadResponseStringAsync()
 							.ContinueWith(replyTask =>
 							{
 								var responses = JsonConvert.DeserializeObject<GetResponse[]>(replyTask.Result);
@@ -437,7 +436,7 @@ namespace Raven.Client.Connection.Async
 			}
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 
-			return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
+			return request.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					RavenJObject json;
@@ -479,7 +478,7 @@ namespace Raven.Client.Connection.Async
 			request.AddOperationHeaders(OperationsHeaders);
 			var serializer = convention.CreateSerializer();
 
-			return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
+			return request.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
@@ -507,7 +506,7 @@ namespace Raven.Client.Connection.Async
 			var data = jArray.ToString(Formatting.None);
 
 			return Task.Factory.FromAsync(req.BeginWrite, req.EndWrite, data, null)
-				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(req.BeginReadResponseString, req.EndReadResponseString, null))
+				.ContinueWith(writeTask => req.ReadResponseStringAsync())
 				.Unwrap()
 				.ContinueWith(task =>
 				{

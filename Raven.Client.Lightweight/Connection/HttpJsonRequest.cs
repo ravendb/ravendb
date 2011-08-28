@@ -12,6 +12,9 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
+#if !NET_3_5
+using System.Threading.Tasks;
+#endif
 using Newtonsoft.Json.Linq;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
@@ -70,51 +73,34 @@ namespace Raven.Client.Connection
 			webRequest.ContentType = "application/json; charset=utf-8";
 		}
 
+#if !NET_3_5
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
-		/// <param name="callback">The callback.</param>
-		/// <param name="state">The state.</param>
-		/// <returns></returns>
-		public IAsyncResult BeginReadResponseString(AsyncCallback callback, object state)
+		public Task<string> ReadResponseStringAsync()
 		{
 			if (SkipServerCheck)
 			{
-				return new ImmediateCompletionResult();
-			}
-			
-			return webRequest.BeginGetResponse(callback, state);
-		}
-
-		/// <summary>
-		/// Ends the reading of the response string.
-		/// </summary>
-		/// <param name="result">The result.</param>
-		/// <returns></returns>
-		public string EndReadResponseString(IAsyncResult result)
-		{
-			if (SkipServerCheck)
-			{
-				var disposable = result as IDisposable;
-				if(disposable!=null)
-					disposable.Dispose();
-
+				var tcs = new TaskCompletionSource<string>();
 				var cachedResponse = factory.GetCachedResponse(this);
 				factory.InvokeLogRequest(owner, new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
-					HttpResult = (int)ResponseStatusCode,
+					HttpResult = (int) ResponseStatusCode,
 					Status = RequestStatus.AggresivelyCached,
 					Result = cachedResponse,
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
-				return cachedResponse;
+				tcs.SetResult(cachedResponse);
+				return tcs.Task;
 			}
 
-			return ReadStringInternal(() => webRequest.EndGetResponse(result));
+			return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
+				.ContinueWith(task => ReadStringInternal(() => task.Result));
 		}
+#endif
 
 		/// <summary>
 		/// Reads the response string.
