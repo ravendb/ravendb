@@ -17,6 +17,8 @@ namespace Raven.Client.Extensions
 		/// </returns>
 		public static Exception ExtractSingleInnerException(this AggregateException e)
 		{
+			if (e == null)
+				return null;
 			while (true)
 			{
 				if (e.InnerExceptions.Count != 1)

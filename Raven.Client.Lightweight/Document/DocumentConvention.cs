@@ -360,7 +360,8 @@ namespace Raven.Client.Document
 
 #if !NET_3_5
 		/// <summary>
-		/// Handles unauthenticate responses, usually by authenticating against the oauth server
+		/// Begins handling of unauthenticate responses, usually by authenticating against the oauth server
+		/// in async manner
 		/// </summary>
 		public Func<HttpWebRequest, HttpWebResponse, Task> HandleUnauthorizedResponseAsync { get; set; }
 #endif 

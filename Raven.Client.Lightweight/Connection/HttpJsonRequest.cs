@@ -185,7 +185,7 @@ namespace Raven.Client.Connection
 			RecreateWebRequest();
 			return true;
 		}
-
+#if !NET_3_5
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
 		{
 			if (conventions.HandleUnauthorizedResponseAsync == null)
@@ -198,6 +198,7 @@ namespace Raven.Client.Connection
 
 			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest());
 		}
+#endif
 
 		private void RecreateWebRequest()
 		{
