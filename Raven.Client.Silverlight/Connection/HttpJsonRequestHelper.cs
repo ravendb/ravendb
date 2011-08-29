@@ -30,6 +30,7 @@ namespace Raven.Client.Silverlight.Connection
 					case "Date":
 						break;
 					case "Expect":
+					case "Accept-Encoding":
 						// explicitly ignoring this
 						break;
 					case "Range":

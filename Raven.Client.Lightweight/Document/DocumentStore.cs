@@ -533,12 +533,14 @@ namespace Raven.Client.Document
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
 #if !SILVERLIGHT
 			authRequest.Credentials = Credentials;
+			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			authRequest.PreAuthenticate = true;
 #endif
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.ContentType = "application/json;charset=UTF-8";
-			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			
+			
+
 			if(oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false && 
 			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
 				throw new InvalidOperationException(BasicOAuthOverHttpError);
