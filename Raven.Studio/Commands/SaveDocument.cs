@@ -42,15 +42,15 @@ namespace Raven.Studio.Commands
 						{
 							if (box.WasSelected(MessageBoxOptions.Ok))
 							{
-								Delete(document);
+								HandleActualSave(document);
 							}
 						});
 				return;
 			}
-			Delete(document);
+			HandleActualSave(document);
 		}
 
-		private void Delete(EditDocumentViewModel document)
+		private void HandleActualSave(EditDocumentViewModel document)
 		{
 			document.PrepareForSave();
 
