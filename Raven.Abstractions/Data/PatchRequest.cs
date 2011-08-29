@@ -10,7 +10,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
-    /// <summary>
+	/// <summary>
 	/// A patch request for a specified document
 	/// </summary>
 	public class PatchRequest
@@ -47,27 +47,27 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The position.</value>
 		public int? Position { get; set; }
-        /// <summary>
-        /// Get or sets AllPositions. Set this property to true if you want to modify all items in an collection.
-        /// </summary>
-        /// <value>AllPositions true/false</value>
-        public bool? AllPositions { get; set; }
+		/// <summary>
+		/// Get or sets AllPositions. Set this property to true if you want to modify all items in an collection.
+		/// </summary>
+		/// <value>AllPositions true/false</value>
+		public bool? AllPositions { get; set; }
 
-        /// <summary>
+		/// <summary>
 		/// Translate this instance to json
 		/// </summary>
 		public RavenJObject ToJson()
-        {
-        	var jObject = new RavenJObject
-        	              	{
-        	              		{"Type", new RavenJValue(Type.ToString())},
-        	              		{"Value", Value},
-        	              		{"Name", new RavenJValue(Name)}
-        	              	};
-        	if (Position != null)
-        		jObject.Add("Position", new RavenJValue(Position.Value));
+		{
+			var jObject = new RavenJObject
+			              	{
+			              		{"Type", new RavenJValue(Type.ToString())},
+			              		{"Value", Value},
+			              		{"Name", new RavenJValue(Name)}
+			              	};
+			if (Position != null)
+				jObject.Add("Position", new RavenJValue(Position.Value));
 			if (Nested != null)
-        		jObject.Add("Nested",  new RavenJArray(Nested.Select(x => x.ToJson())));
+				jObject.Add("Nested",  new RavenJArray(Nested.Select(x => x.ToJson())));
 			if (AllPositions != null)
 				jObject.Add("AllPositions", new RavenJValue(AllPositions.Value));
 			if (PrevVal != null)
@@ -83,8 +83,8 @@ namespace Raven.Abstractions.Data
 		{
 			PatchRequest[] nested = null;
 			var nestedJson = patchRequestJson.Value<RavenJToken>("Nested");
-            if (nestedJson != null && nestedJson.Type != JTokenType.Null)
-                nested = patchRequestJson.Value<RavenJArray>("Nested").Cast<RavenJObject>().Select(FromJson).ToArray();
+			if (nestedJson != null && nestedJson.Type != JTokenType.Null)
+				nested = patchRequestJson.Value<RavenJArray>("Nested").Cast<RavenJObject>().Select(FromJson).ToArray();
 
 			return new PatchRequest
 			{
@@ -92,7 +92,7 @@ namespace Raven.Abstractions.Data
 				Name = patchRequestJson.Value<string>("Name"),
 				Nested = nested,
 				Position = patchRequestJson.Value<int?>("Position"),
-                AllPositions = patchRequestJson.Value<bool?>("AllPositions"),
+				AllPositions = patchRequestJson.Value<bool?>("AllPositions"),
 				PrevVal = patchRequestJson["PrevVal"],
 				Value = patchRequestJson["Value"],
 			};

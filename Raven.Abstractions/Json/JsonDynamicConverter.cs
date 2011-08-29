@@ -58,18 +58,18 @@ namespace Raven.Abstractions.Json
 		    if(val != null)
 		        return val.Value;
 		    var array = token as RavenJArray;
-            if (array != null)
-                return new DynamicJsonObject.DynamicList(array.Select(DynamicJsonObject.TransformToValue).ToArray());
+			if (array != null)
+				return new DynamicJsonObject.DynamicList(array.Select(DynamicJsonObject.TransformToValue).ToArray());
 
-            var typeName = token.Value<string>("$type");
-            if(typeName != null)
-            {
-                var type = Type.GetType(typeName, false);
-                if(type != null)
-                {
-                	return serializer.Deserialize(new RavenJTokenReader(token), type);
-                }
-            }
+			var typeName = token.Value<string>("$type");
+			if(typeName != null)
+			{
+				var type = Type.GetType(typeName, false);
+				if(type != null)
+				{
+					return serializer.Deserialize(new RavenJTokenReader(token), type);
+				}
+			}
 
 		    return new DynamicJsonObject((RavenJObject)((RavenJObject)token).CloneToken());
 		}

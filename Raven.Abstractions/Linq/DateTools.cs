@@ -50,13 +50,13 @@ namespace Raven.Abstractions.Linq
 	public class DateTools
 	{
 		
-        private static readonly System.String YEAR_FORMAT = "yyyy";
-        private static readonly System.String MONTH_FORMAT = "yyyyMM";
-        private static readonly System.String DAY_FORMAT = "yyyyMMdd";
-        private static readonly System.String HOUR_FORMAT = "yyyyMMddHH";
-        private static readonly System.String MINUTE_FORMAT = "yyyyMMddHHmm";
-        private static readonly System.String SECOND_FORMAT = "yyyyMMddHHmmss";
-        private static readonly System.String MILLISECOND_FORMAT = "yyyyMMddHHmmssfff";
+		private static readonly System.String YEAR_FORMAT = "yyyy";
+		private static readonly System.String MONTH_FORMAT = "yyyyMM";
+		private static readonly System.String DAY_FORMAT = "yyyyMMdd";
+		private static readonly System.String HOUR_FORMAT = "yyyyMMddHH";
+		private static readonly System.String MINUTE_FORMAT = "yyyyMMddHHmm";
+		private static readonly System.String SECOND_FORMAT = "yyyyMMddHHmmss";
+		private static readonly System.String MILLISECOND_FORMAT = "yyyyMMddHHmmssfff";
 		
 		private static readonly System.Globalization.Calendar calInstance = new System.Globalization.GregorianCalendar();
 		
@@ -94,7 +94,7 @@ namespace Raven.Abstractions.Linq
 		/// </returns>
 		public static System.String TimeToString(long time, Resolution resolution)
 		{
-            System.DateTime date = new System.DateTime(Round(time, resolution));
+			System.DateTime date = new System.DateTime(Round(time, resolution));
 			
 			if (resolution == Resolution.YEAR)
 			{
@@ -159,67 +159,67 @@ namespace Raven.Abstractions.Linq
 		/// </summary>
 		public static System.DateTime StringToDate(System.String dateString)
 		{
-            System.DateTime date;
-            if (dateString.Length == 4)
-            {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
-                    1, 1, 0, 0, 0, 0);
-            }
-            else if (dateString.Length == 6)
-            {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
-                    Convert.ToInt16(dateString.Substring(4, 2)),
-                    1, 0, 0, 0, 0);
-            }
-            else if (dateString.Length == 8)
-            {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
-                    Convert.ToInt16(dateString.Substring(4, 2)),
-                    Convert.ToInt16(dateString.Substring(6, 2)),
-                    0, 0, 0, 0);
-            }
-            else if (dateString.Length == 10)
-            {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
-                    Convert.ToInt16(dateString.Substring(4, 2)),
-                    Convert.ToInt16(dateString.Substring(6, 2)),
-                    Convert.ToInt16(dateString.Substring(8, 2)),
-                    0, 0, 0);
-            }
-            else if (dateString.Length == 12)
-            {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
-                    Convert.ToInt16(dateString.Substring(4, 2)),
-                    Convert.ToInt16(dateString.Substring(6, 2)),
-                    Convert.ToInt16(dateString.Substring(8, 2)),
-                    Convert.ToInt16(dateString.Substring(10, 2)),
-                    0, 0);
-            }
-            else if (dateString.Length == 14)
-            {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
-                    Convert.ToInt16(dateString.Substring(4, 2)),
-                    Convert.ToInt16(dateString.Substring(6, 2)),
-                    Convert.ToInt16(dateString.Substring(8, 2)),
-                    Convert.ToInt16(dateString.Substring(10, 2)),
-                    Convert.ToInt16(dateString.Substring(12, 2)),
-                    0);
-            }
-            else if (dateString.Length == 17)
-            {
-                date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
-                    Convert.ToInt16(dateString.Substring(4, 2)),
-                    Convert.ToInt16(dateString.Substring(6, 2)),
-                    Convert.ToInt16(dateString.Substring(8, 2)),
-                    Convert.ToInt16(dateString.Substring(10, 2)),
-                    Convert.ToInt16(dateString.Substring(12, 2)),
-                    Convert.ToInt16(dateString.Substring(14, 3)));
-            }
-            else
-            {
-                throw new System.FormatException("Input is not valid date string: " + dateString);
-            }
-            return date;
+			System.DateTime date;
+			if (dateString.Length == 4)
+			{
+				date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+					1, 1, 0, 0, 0, 0);
+			}
+			else if (dateString.Length == 6)
+			{
+				date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+					Convert.ToInt16(dateString.Substring(4, 2)),
+					1, 0, 0, 0, 0);
+			}
+			else if (dateString.Length == 8)
+			{
+				date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+					Convert.ToInt16(dateString.Substring(4, 2)),
+					Convert.ToInt16(dateString.Substring(6, 2)),
+					0, 0, 0, 0);
+			}
+			else if (dateString.Length == 10)
+			{
+				date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+					Convert.ToInt16(dateString.Substring(4, 2)),
+					Convert.ToInt16(dateString.Substring(6, 2)),
+					Convert.ToInt16(dateString.Substring(8, 2)),
+					0, 0, 0);
+			}
+			else if (dateString.Length == 12)
+			{
+				date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+					Convert.ToInt16(dateString.Substring(4, 2)),
+					Convert.ToInt16(dateString.Substring(6, 2)),
+					Convert.ToInt16(dateString.Substring(8, 2)),
+					Convert.ToInt16(dateString.Substring(10, 2)),
+					0, 0);
+			}
+			else if (dateString.Length == 14)
+			{
+				date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+					Convert.ToInt16(dateString.Substring(4, 2)),
+					Convert.ToInt16(dateString.Substring(6, 2)),
+					Convert.ToInt16(dateString.Substring(8, 2)),
+					Convert.ToInt16(dateString.Substring(10, 2)),
+					Convert.ToInt16(dateString.Substring(12, 2)),
+					0);
+			}
+			else if (dateString.Length == 17)
+			{
+				date = new System.DateTime(Convert.ToInt16(dateString.Substring(0, 4)),
+					Convert.ToInt16(dateString.Substring(4, 2)),
+					Convert.ToInt16(dateString.Substring(6, 2)),
+					Convert.ToInt16(dateString.Substring(8, 2)),
+					Convert.ToInt16(dateString.Substring(10, 2)),
+					Convert.ToInt16(dateString.Substring(12, 2)),
+					Convert.ToInt16(dateString.Substring(14, 3)));
+			}
+			else
+			{
+				throw new System.FormatException("Input is not valid date string: " + dateString);
+			}
+			return date;
 		}
 
 		/// <summary>
@@ -256,43 +256,43 @@ namespace Raven.Abstractions.Linq
 			
 			if (resolution == Resolution.YEAR)
 			{
-                dt = dt.AddMonths(1 - dt.Month);
-                dt = dt.AddDays(1 - dt.Day);
-                dt = dt.AddHours(0 - dt.Hour);
-                dt = dt.AddMinutes(0 - dt.Minute);
-                dt = dt.AddSeconds(0 - dt.Second);
-                dt = dt.AddMilliseconds(0 - dt.Millisecond);
-            }
+				dt = dt.AddMonths(1 - dt.Month);
+				dt = dt.AddDays(1 - dt.Day);
+				dt = dt.AddHours(0 - dt.Hour);
+				dt = dt.AddMinutes(0 - dt.Minute);
+				dt = dt.AddSeconds(0 - dt.Second);
+				dt = dt.AddMilliseconds(0 - dt.Millisecond);
+			}
 			else if (resolution == Resolution.MONTH)
 			{
-                dt = dt.AddDays(1 - dt.Day);
-                dt = dt.AddHours(0 - dt.Hour);
-                dt = dt.AddMinutes(0 - dt.Minute);
-                dt = dt.AddSeconds(0 - dt.Second);
-                dt = dt.AddMilliseconds(0 - dt.Millisecond);
-            }
+				dt = dt.AddDays(1 - dt.Day);
+				dt = dt.AddHours(0 - dt.Hour);
+				dt = dt.AddMinutes(0 - dt.Minute);
+				dt = dt.AddSeconds(0 - dt.Second);
+				dt = dt.AddMilliseconds(0 - dt.Millisecond);
+			}
 			else if (resolution == Resolution.DAY)
 			{
-                dt = dt.AddHours(0 - dt.Hour);
-                dt = dt.AddMinutes(0 - dt.Minute);
-                dt = dt.AddSeconds(0 - dt.Second);
-                dt = dt.AddMilliseconds(0 - dt.Millisecond);
-            }
+				dt = dt.AddHours(0 - dt.Hour);
+				dt = dt.AddMinutes(0 - dt.Minute);
+				dt = dt.AddSeconds(0 - dt.Second);
+				dt = dt.AddMilliseconds(0 - dt.Millisecond);
+			}
 			else if (resolution == Resolution.HOUR)
 			{
-                dt = dt.AddMinutes(0 - dt.Minute);
-                dt = dt.AddSeconds(0 - dt.Second);
-                dt = dt.AddMilliseconds(0 - dt.Millisecond);
-            }
+				dt = dt.AddMinutes(0 - dt.Minute);
+				dt = dt.AddSeconds(0 - dt.Second);
+				dt = dt.AddMilliseconds(0 - dt.Millisecond);
+			}
 			else if (resolution == Resolution.MINUTE)
 			{
-                dt = dt.AddSeconds(0 - dt.Second);
-                dt = dt.AddMilliseconds(0 - dt.Millisecond);
-            }
+				dt = dt.AddSeconds(0 - dt.Second);
+				dt = dt.AddMilliseconds(0 - dt.Millisecond);
+			}
 			else if (resolution == Resolution.SECOND)
 			{
-                dt = dt.AddMilliseconds(0 - dt.Millisecond);
-            }
+				dt = dt.AddMilliseconds(0 - dt.Millisecond);
+			}
 			else if (resolution == Resolution.MILLISECOND)
 			{
 				// don't cut off anything
@@ -364,8 +364,8 @@ namespace Raven.Abstractions.Linq
 			{
 				// times need to be normalized so the value doesn't depend on the 
 				// location the index is created/used:
-                // {{Aroush-2.1}}
-                /*
+				// {{Aroush-2.1}}
+				/*
 				YEAR_FORMAT.setTimeZone(GMT);
 				MONTH_FORMAT.setTimeZone(GMT);
 				DAY_FORMAT.setTimeZone(GMT);
@@ -373,7 +373,7 @@ namespace Raven.Abstractions.Linq
 				MINUTE_FORMAT.setTimeZone(GMT);
 				SECOND_FORMAT.setTimeZone(GMT);
 				MILLISECOND_FORMAT.setTimeZone(GMT);
-                */
+				*/
 			}
 		}
 	}

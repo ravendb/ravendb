@@ -57,20 +57,20 @@ namespace Raven.Abstractions.Commands
 			get; set;
 		}
 
-        /// <summary>
+		/// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
 		public RavenJObject ToJson()
-        {
-        	var ret = new RavenJObject
-        	       	{
+		{
+			var ret = new RavenJObject
+			       	{
 						{"Key", Key},
 						{"Method", Method},
 						{"Patches", new RavenJArray(Patches.Select(x => x.ToJson()))}
-        	       	};
+			       	};
 			if (Etag != null)
-        		ret.Add("Etag", Etag.ToString());
-        	return ret;
-        }
+				ret.Add("Etag", Etag.ToString());
+			return ret;
+		}
 	}
 }

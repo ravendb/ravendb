@@ -25,8 +25,8 @@ namespace Raven.Abstractions.Linq
 		{
 			foreach (var item in Inner)
 			{
-                if(item.Key[0] == '$')
-                    continue;
+				if(item.Key[0] == '$')
+					continue;
 
 				yield return new KeyValuePair<string,object>(item.Key, TransformToValue(item.Value));
 			}
@@ -158,7 +158,7 @@ namespace Raven.Abstractions.Linq
 					if(s != null)
 					{
 						DateTimeOffset dateTimeOffset;
-                        if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
+						if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
 							return dateTimeOffset;
 						DateTime dateTime;
 						if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
@@ -184,13 +184,13 @@ namespace Raven.Abstractions.Linq
 			{
 				return TransformToValue(value);
 			}
-            if(name.StartsWith("_"))
-            {
-                if (inner.TryGetValue(name.Substring(1), out value))
-                {
-                    return TransformToValue(value);
-                } 
-            }
+			if(name.StartsWith("_"))
+			{
+				if (inner.TryGetValue(name.Substring(1), out value))
+				{
+					return TransformToValue(value);
+				} 
+			}
 			if(name == "Id")
 			{
 				return GetDocumentId();
