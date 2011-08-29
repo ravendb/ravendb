@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Browser;
 using System.Windows.Browser;
+using Raven.Client.Document;
 using Raven.Client.Silverlight.Connection.Async;
 
 namespace Raven.Client.Silverlight.Connection
@@ -81,31 +82,16 @@ namespace Raven.Client.Silverlight.Connection
 			return new Uri(url);
 		}
 
-		public static HttpWebRequest ToRequest(this string url, IDictionary<string, string> operationsHeaders, ICredentials credentials, string verb)
-		{
-			var request = (HttpWebRequest)WebRequestCreator.ClientHttp.Create( url.ToUri() );
-			request.WithOperationHeaders(operationsHeaders);
-			request.Method = verb;
-			return request;
-		}
-
-		public static HttpWebRequest ToRequest(this string url, IDictionary<string, string> operationsHeaders, ICredentials credentials)
-		{
-			return ToRequest(url, operationsHeaders, credentials, "GET");
-		}
-
 		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, Document.DocumentConvention convention)
 		{
 			return requestor.JsonRequestFactory.CreateHttpJsonRequest(requestor, url, "GET", credentials, convention);
 		}
 
-		static HttpWebRequest WithOperationHeaders(this HttpWebRequest request, IDictionary<string, string> operationsHeaders)
-		{
-			foreach (var header in operationsHeaders)
-			{
-				request.Headers[header.Key] = header.Value;
-			}
-			return request;
-		}
+    	public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, DocumentConvention convention, IDictionary<string,string> operationsHeaders, string method)
+    	{
+    		var httpJsonRequest = requestor.JsonRequestFactory.CreateHttpJsonRequest(requestor, url, method, credentials, convention);
+    		httpJsonRequest.AddOperationHeaders(operationsHeaders);
+    		return httpJsonRequest;
+    	}
 	}
 }
