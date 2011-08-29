@@ -148,7 +148,7 @@ No one may perform operation Company/Bid on companies/1
 			{
 				s.SecureFor(UserId, "Company/Bid");
 
-                Assert.Equal(0, s.Advanced.LuceneQuery<Company>()
+				Assert.Equal(0, s.Advanced.LuceneQuery<Company>()
 									.WaitForNonStaleResults()
 				                	.ToList().Count);
 			}

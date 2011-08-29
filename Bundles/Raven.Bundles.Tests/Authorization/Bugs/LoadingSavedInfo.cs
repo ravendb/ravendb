@@ -11,120 +11,120 @@ using System.Linq;
 
 namespace Raven.Bundles.Tests.Authorization.Bugs
 {
-    public class LoadingSavedInfo : AuthorizationTest
-    {
-        [Fact]
-        public void BugWhenSavingDocumentWithPreviousAuthorization()
-        {
-            var company = new Company
-            {
-                Name = "Hibernating Rhinos"
-            };
-            using (var s = store.OpenSession())
-            {
-                s.Store(new AuthorizationUser
-                {
-                    Id = UserId,
-                    Name = "Ayende Rahien",
-                });
+	public class LoadingSavedInfo : AuthorizationTest
+	{
+		[Fact]
+		public void BugWhenSavingDocumentWithPreviousAuthorization()
+		{
+			var company = new Company
+			{
+				Name = "Hibernating Rhinos"
+			};
+			using (var s = store.OpenSession())
+			{
+				s.Store(new AuthorizationUser
+				{
+					Id = UserId,
+					Name = "Ayende Rahien",
+				});
 
-                s.Store(company);
+				s.Store(company);
 
-                s.SetAuthorizationFor(company, new DocumentAuthorization
-                {
-                    Permissions =
-                                       {
-                                               new DocumentPermission
-                                               {
-                                                       User = UserId,
-                                                       Allow = true,
-                                                       Operation = "Company/Bid"
-                                               }
-                                       }
-                });
+				s.SetAuthorizationFor(company, new DocumentAuthorization
+				{
+					Permissions =
+									   {
+											   new DocumentPermission
+											   {
+													   User = UserId,
+													   Allow = true,
+													   Operation = "Company/Bid"
+											   }
+									   }
+				});
 
-                s.SaveChanges();
-            }
+				s.SaveChanges();
+			}
 
-            for (int i = 0; i < 15; i++)
-            {
-                using (var s = store.OpenSession())
-                {
-                    s.SecureFor(UserId, "Company/Bid");
+			for (int i = 0; i < 15; i++)
+			{
+				using (var s = store.OpenSession())
+				{
+					s.SecureFor(UserId, "Company/Bid");
 
-                    var c = s.Load<Company>(company.Id);
-                    c.Name = "other " + i;
+					var c = s.Load<Company>(company.Id);
+					c.Name = "other " + i;
 
-                    s.SaveChanges();
-                }
+					s.SaveChanges();
+				}
 
-            }
+			}
 
-            using (var s = store.OpenSession())
-            {
-                s.SecureFor(UserId, "Company/Bid");
+			using (var s = store.OpenSession())
+			{
+				s.SecureFor(UserId, "Company/Bid");
 
-                var load = s.Load<Company>(company.Id);
-                Assert.NotNull(load);
-                Assert.Equal("other 14", load.Name);
-            }
-        }
+				var load = s.Load<Company>(company.Id);
+				Assert.NotNull(load);
+				Assert.Equal("other 14", load.Name);
+			}
+		}
 
-        [Fact]
-        public void BugWhenSavingDocumentWithPreviousAuthorization_WithQuery()
-        {
-            var company = new Company
-            {
-                Name = "Hibernating Rhinos"
-            };
-            using (var s = store.OpenSession())
-            {
-                s.Store(new AuthorizationUser
-                {
-                    Id = UserId,
-                    Name = "Ayende Rahien",
-                });
+		[Fact]
+		public void BugWhenSavingDocumentWithPreviousAuthorization_WithQuery()
+		{
+			var company = new Company
+			{
+				Name = "Hibernating Rhinos"
+			};
+			using (var s = store.OpenSession())
+			{
+				s.Store(new AuthorizationUser
+				{
+					Id = UserId,
+					Name = "Ayende Rahien",
+				});
 
-                s.Store(company);
+				s.Store(company);
 
-                s.SetAuthorizationFor(company, new DocumentAuthorization
-                {
-                    Permissions =
-                                       {
-                                               new DocumentPermission
-                                               {
-                                                       User = UserId,
-                                                       Allow = true,
-                                                       Operation = "Company/Bid"
-                                               }
-                                       }
-                });
+				s.SetAuthorizationFor(company, new DocumentAuthorization
+				{
+					Permissions =
+									   {
+											   new DocumentPermission
+											   {
+													   User = UserId,
+													   Allow = true,
+													   Operation = "Company/Bid"
+											   }
+									   }
+				});
 
-                s.SaveChanges();
-            }
+				s.SaveChanges();
+			}
 
-            for (int i = 0; i < 15; i++)
-            {
-                using (var s = store.OpenSession())
-                {
-                    s.SecureFor(UserId, "Company/Bid");
+			for (int i = 0; i < 15; i++)
+			{
+				using (var s = store.OpenSession())
+				{
+					s.SecureFor(UserId, "Company/Bid");
 
-                    var c = s.Query<Company>().Customize(x => x.WaitForNonStaleResults()).First();
-                    c.Name = "other " + i;
+					var c = s.Query<Company>().Customize(x => x.WaitForNonStaleResults()).First();
+					c.Name = "other " + i;
 
-                    s.SaveChanges();
-                }
+					s.SaveChanges();
+				}
 
-            }
+			}
 
-            using (var s = store.OpenSession())
-            {
-                s.SecureFor(UserId, "Company/Bid");
+			using (var s = store.OpenSession())
+			{
+				s.SecureFor(UserId, "Company/Bid");
 
-                var load = s.Load<Company>(company.Id);
-                Assert.NotNull(load);
-                Assert.Equal("other 14", load.Name);
-            }
-        }
-    }
+				var load = s.Load<Company>(company.Id);
+				Assert.NotNull(load);
+				Assert.Equal("other 14", load.Name);
+			}
+		}
+	}
 }

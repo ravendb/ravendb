@@ -36,7 +36,7 @@ namespace Raven.Bundles.Tests.Authorization
 		protected AuthorizationTest()
 		{
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
-            server = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
+			server = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
 			{
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All,
 				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly) } },

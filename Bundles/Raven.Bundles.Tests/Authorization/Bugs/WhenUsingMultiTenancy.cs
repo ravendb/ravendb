@@ -11,50 +11,50 @@ using Xunit;
 
 namespace Raven.Bundles.Tests.Authorization.Bugs
 {
-    public class WhenUsingMultiTenancy : AuthorizationTest
-    {
-        [Fact]
-        public void BugWhenSavingDocumentOnDatabase()
-        {
-            string database = "test_auth";
-            store.DatabaseCommands.EnsureDatabaseExists(database);
+	public class WhenUsingMultiTenancy : AuthorizationTest
+	{
+		[Fact]
+		public void BugWhenSavingDocumentOnDatabase()
+		{
+			string database = "test_auth";
+			store.DatabaseCommands.EnsureDatabaseExists(database);
 
-            var company = new Company
-            {
-                Name = "Hibernating Rhinos"
-            };
-            using (var s = store.OpenSession(database))
-            {
-                s.Store(new AuthorizationUser
-                {
-                    Id = UserId,
-                    Name = "Ayende Rahien",
-                });
+			var company = new Company
+			{
+				Name = "Hibernating Rhinos"
+			};
+			using (var s = store.OpenSession(database))
+			{
+				s.Store(new AuthorizationUser
+				{
+					Id = UserId,
+					Name = "Ayende Rahien",
+				});
 
-                s.Store(company);
+				s.Store(company);
 
-                s.SetAuthorizationFor(company, new DocumentAuthorization
-                {
-                    Permissions =
-                        {
-                            new DocumentPermission
-                            {
-                                User = UserId,
-                                Allow = true,
-                                Operation = "Company/Bid"
-                            }
-                        }
-                });
+				s.SetAuthorizationFor(company, new DocumentAuthorization
+				{
+					Permissions =
+						{
+							new DocumentPermission
+							{
+								User = UserId,
+								Allow = true,
+								Operation = "Company/Bid"
+							}
+						}
+				});
 
-                s.SaveChanges();
-            }
+				s.SaveChanges();
+			}
 
-            using (var s = store.OpenSession(database))
-            {
-                s.SecureFor(UserId, "Company/Bid");
+			using (var s = store.OpenSession(database))
+			{
+				s.SecureFor(UserId, "Company/Bid");
 
-                Assert.NotNull(s.Load<Company>(company.Id));
-            }
-        }
-    }
+				Assert.NotNull(s.Load<Company>(company.Id));
+			}
+		}
+	}
 }

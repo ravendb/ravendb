@@ -28,14 +28,14 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SetAuthorizationFor(company, new DocumentAuthorization
 				{
 					Permissions =
-                        {
-                            new DocumentPermission
-                            {
-                                Role = "Admins",
-                                Allow = true,
-                                Operation = "Company/Bid"
-                            }
-                        }
+						{
+							new DocumentPermission
+							{
+								Role = "Admins",
+								Allow = true,
+								Operation = "Company/Bid"
+							}
+						}
 				});
 
 				s.SaveChanges();

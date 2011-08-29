@@ -17,10 +17,10 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 					{
 						Id = "Raven/Databases/Testing",
 						Settings =
-                           {
-                               { "Raven/RunInMemory", "false" },
-                               { "Raven/DataDir", "~\\Testing" }
-                           }
+						   {
+							   { "Raven/RunInMemory", "false" },
+							   { "Raven/DataDir", "~\\Testing" }
+						   }
 					}
 				);
 
