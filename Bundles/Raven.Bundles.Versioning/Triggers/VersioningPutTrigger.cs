@@ -13,14 +13,14 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Versioning.Triggers
 {
-    public class VersioningPutTrigger : AbstractPutTrigger
-    {
-        public const string RavenDocumentRevision = "Raven-Document-Revision";
+	public class VersioningPutTrigger : AbstractPutTrigger
+	{
+		public const string RavenDocumentRevision = "Raven-Document-Revision";
 		public const string RavenDocumentParentRevision = "Raven-Document-Parent-Revision"; 
 		public const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
 
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
-        {
+		{
 			var jsonDocument = Database.Get(key, transactionInformation);
 			if (jsonDocument == null)
 				return VetoResult.Allowed;
@@ -32,19 +32,19 @@ namespace Raven.Bundles.Versioning.Triggers
 				default:
 					return VetoResult.Allowed;
 			}
-        }
+		}
 
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
-        {
+		{
 			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				return;
 
-            if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
-                return;
+			if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
+				return;
 
-            var versioningConfiguration = GetDocumentVersioningConfiguration(metadata);
+			var versioningConfiguration = GetDocumentVersioningConfiguration(metadata);
 
-            if (versioningConfiguration.Exclude)
+			if (versioningConfiguration.Exclude)
 				return;
 
 			
@@ -65,27 +65,27 @@ namespace Raven.Bundles.Versioning.Triggers
 											 transactionInformation);
 				int revision = int.Parse(newDoc.Key.Split('/').Last());
 
-                RemoveOldRevisions(key, revision, versioningConfiguration, transactionInformation);
+				RemoveOldRevisions(key, revision, versioningConfiguration, transactionInformation);
 
 				metadata[RavenDocumentRevisionStatus] = RavenJToken.FromObject("Current");
 				metadata[RavenDocumentRevision] = RavenJToken.FromObject(revision);
 			}
-        }
+		}
 
 		private VersioningConfiguration GetDocumentVersioningConfiguration(RavenJObject metadata)
 		{
 		    JsonDocument doc = null;
 
-            var entityName = metadata.Value<string>("Raven-Entity-Name");
-            if(entityName != null)
-            {
-                doc = Database.Get("Raven/Versioning/" + entityName, null);
-            }
+			var entityName = metadata.Value<string>("Raven-Entity-Name");
+			if(entityName != null)
+			{
+				doc = Database.Get("Raven/Versioning/" + entityName, null);
+			}
 
-            if(doc == null)
-            {
-                doc = Database.Get("Raven/Versioning/DefaultConfiguration", null);
-            }
+			if(doc == null)
+			{
+				doc = Database.Get("Raven/Versioning/DefaultConfiguration", null);
+			}
 
 		    if (doc != null)
 		    {
@@ -99,13 +99,13 @@ namespace Raven.Bundles.Versioning.Triggers
 		               };
 		}
 
-        private void RemoveOldRevisions(string key, int revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
-        {
-            int latestValidRevision = revision - versioningConfiguration.MaxRevisions;
-            if (latestValidRevision <= 0)
-                return;
+		private void RemoveOldRevisions(string key, int revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
+		{
+			int latestValidRevision = revision - versioningConfiguration.MaxRevisions;
+			if (latestValidRevision <= 0)
+				return;
 
-        	Database.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null, transactionInformation);
-        }
-    }
+			Database.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null, transactionInformation);
+		}
+	}
 }
