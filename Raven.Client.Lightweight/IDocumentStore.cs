@@ -60,7 +60,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for this store
 		/// </summary>
-        HttpJsonRequestFactory JsonRequestFactory { get; }
+		HttpJsonRequestFactory JsonRequestFactory { get; }
 
 		/// <summary>
 		/// Gets or sets the identifier for this store.
@@ -88,11 +88,11 @@ namespace Raven.Client
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession();
 
-        /// <summary>
-        /// Opens the async session.
-        /// </summary>
-        /// <returns></returns>
-        IAsyncDocumentSession OpenAsyncSession(string database);
+		/// <summary>
+		/// Opens the async session.
+		/// </summary>
+		/// <returns></returns>
+		IAsyncDocumentSession OpenAsyncSession(string database);
 #endif
 
 #if !SILVERLIGHT

@@ -52,7 +52,7 @@ namespace Raven.Client.Indexes
 #if !NET_3_5
 			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, translateIdentityProperty, typeof(TQueryRoot), queryRootName, expression);
 #else
-            var linqQuery =expression.ToString();
+			var linqQuery =expression.ToString();
 #endif
 
 			var querySourceName = expr.Parameters.First(x => x.Type != typeof(IClientSideDatabase)).Name;

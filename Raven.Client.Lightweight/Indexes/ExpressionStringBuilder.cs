@@ -249,21 +249,21 @@ namespace Raven.Client.Indexes
 		    CloseOutputTypeIfNeeded(member);
 		}
 
-        private void CloseOutputTypeIfNeeded(MemberInfo member)
-        {
-            var memberType = GetMemberType(member);
-            if (memberType == typeof(decimal) || 
-                memberType == typeof(double) ||
-                memberType == typeof(long) ||
-                memberType == typeof(float) ||
-                memberType == typeof(decimal?) ||
-                memberType == typeof(double?) ||
-                memberType == typeof(long?) ||
-                memberType == typeof(float?))
-            {
-                this.Out(")");
-            }
-        }
+		private void CloseOutputTypeIfNeeded(MemberInfo member)
+		{
+			var memberType = GetMemberType(member);
+			if (memberType == typeof(decimal) || 
+				memberType == typeof(double) ||
+				memberType == typeof(long) ||
+				memberType == typeof(float) ||
+				memberType == typeof(decimal?) ||
+				memberType == typeof(double?) ||
+				memberType == typeof(long?) ||
+				memberType == typeof(float?))
+			{
+				this.Out(")");
+			}
+		}
 
 		private void OutputTypeIfNeeded(MemberInfo member)
 		{

@@ -14,23 +14,23 @@ namespace Raven.Client.Shard.ShardStrategy
 	/// The shard strategy define how we access, select and resolve specific shards
 	/// inside the <see cref="ShardedDocumentStore"/>.
 	/// </summary>
-    public interface IShardStrategy
-    {
+	public interface IShardStrategy
+	{
 		/// <summary>
 		/// Gets the shard selection strategy.
 		/// </summary>
 		/// <value>The shard selection strategy.</value>
-        IShardSelectionStrategy ShardSelectionStrategy { get; }
+		IShardSelectionStrategy ShardSelectionStrategy { get; }
 		/// <summary>
 		/// Gets the shard resolution strategy.
 		/// </summary>
 		/// <value>The shard resolution strategy.</value>
-        IShardResolutionStrategy ShardResolutionStrategy { get; }
+		IShardResolutionStrategy ShardResolutionStrategy { get; }
 		/// <summary>
 		/// Gets the shard access strategy.
 		/// </summary>
 		/// <value>The shard access strategy.</value>
-        IShardAccessStrategy ShardAccessStrategy { get; }
-    }
+		IShardAccessStrategy ShardAccessStrategy { get; }
+	}
 }
 #endif

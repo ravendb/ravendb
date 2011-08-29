@@ -11,11 +11,11 @@ namespace Raven.Client.Shard.ShardStrategy.ShardResolution
 	/// Implementors of this interface provide a way to decide which shards will be queried
 	/// for a specified operation
 	/// </summary>
-    public interface IShardResolutionStrategy
-    {
+	public interface IShardResolutionStrategy
+	{
 		/// <summary>
 		/// Selects the shard ids appropriate for the specified data
 		/// </summary>
-        IList<string> SelectShardIds(ShardResolutionStrategyData srsd);
-    }
+		IList<string> SelectShardIds(ShardResolutionStrategyData srsd);
+	}
 }

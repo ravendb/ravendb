@@ -85,7 +85,7 @@ namespace Raven.Client
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		/// <param name="fields">The fields.</param>
-        IDocumentQueryCustomization CreateQueryForSelectedFields<TProjection>(params string[] fields);
+		IDocumentQueryCustomization CreateQueryForSelectedFields<TProjection>(params string[] fields);
 
 		/// <summary>
 		/// Filter matches to be inside the specified radius

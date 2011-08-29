@@ -7,7 +7,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Listeners
 {
-    /// <summary>
+	/// <summary>
 	/// Hook for users to provide additional logic on delete operations
 	/// </summary>
 	public interface IDocumentDeleteListener

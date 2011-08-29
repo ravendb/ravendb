@@ -10,25 +10,25 @@ using Raven.Client.Connection.Async;
 namespace Raven.Client
 {
 	/// <summary>
-    /// Advanced async session operations
-    /// </summary>
-    public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations
-    {
-        /// <summary>
-        /// Gets the async database commands.
-        /// </summary>
-        /// <value>The async database commands.</value>
-        IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+	/// Advanced async session operations
+	/// </summary>
+	public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations
+	{
+		/// <summary>
+		/// Gets the async database commands.
+		/// </summary>
+		/// <value>The async database commands.</value>
+		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
 
-        /// <summary>
-        /// Query the specified index using Lucene syntax
-        /// </summary>
-        IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index);
+		/// <summary>
+		/// Query the specified index using Lucene syntax
+		/// </summary>
+		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index);
 
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
+		/// <summary>
+		/// Dynamically query RavenDB using Lucene syntax
+		/// </summary>
 		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>();
-    }
+	}
 }
 #endif

@@ -13,8 +13,8 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 	/// <summary>
 	/// Apply an operation to all the shard session in sequence
 	/// </summary>
-    public class SequentialShardAccessStrategy : IShardAccessStrategy
-    {
+	public class SequentialShardAccessStrategy : IShardAccessStrategy
+	{
 		/// <summary>
 		/// Applies the specified action for all shard sessions.
 		/// </summary>
@@ -22,17 +22,17 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 		/// <param name="shardSessions">The shard sessions.</param>
 		/// <param name="operation">The operation.</param>
 		/// <returns></returns>
-        public IList<T> Apply<T>(IList<IDocumentSession> shardSessions, Func<IDocumentSession, IList<T>> operation)
-        {
-            var returnList = new List<T>();
+		public IList<T> Apply<T>(IList<IDocumentSession> shardSessions, Func<IDocumentSession, IList<T>> operation)
+		{
+			var returnList = new List<T>();
 
-            foreach (var shardSession in shardSessions)
-            {
-                returnList.AddRange(operation(shardSession));
-            }
+			foreach (var shardSession in shardSessions)
+			{
+				returnList.AddRange(operation(shardSession));
+			}
 
-            return returnList;
-        }
-    }
+			return returnList;
+		}
+	}
 }
 #endif
