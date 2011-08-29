@@ -33,7 +33,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Silverlight.Connection.Async
 {
-    /// <summary>
+	/// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands
@@ -41,8 +41,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
-    	private readonly Guid? sessionId;
-    	private readonly DocumentConvention convention;
+		private readonly Guid? sessionId;
+		private readonly DocumentConvention convention;
 		private readonly ProfilingInformation profilingInformation;
 
 		/// <summary>
@@ -247,11 +247,11 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return false;
 		}
 
-    	/// <summary>
-    	/// Perform a single POST requst containing multiple nested GET requests
-    	/// </summary>
-    	public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests)
-    	{
+		/// <summary>
+		/// Perform a single POST requst containing multiple nested GET requests
+		/// </summary>
+		public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests)
+		{
 			var postedData = JsonConvert.SerializeObject(requests);
 
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, url+ "/multi_get/", "POST",
@@ -266,9 +266,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 							.ContinueWith(replyTask => JsonConvert.DeserializeObject<GetResponse[]>(replyTask.Result));
 					})
 				.Unwrap();
-    	}
+		}
 
-    	/// <summary>
+		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
 		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes)
@@ -297,9 +297,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		private static MultiLoadResult CompleteMultiGet(Task<string> task)
-    	{
-    		try
-    		{
+		{
+			try
+			{
 				var result = RavenJObject.Parse(task.Result);
 
 				return new MultiLoadResult
@@ -307,18 +307,18 @@ namespace Raven.Client.Silverlight.Connection.Async
 					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
 					Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
 				};
-    		}
-    		catch (WebException e)
-    		{
-    			var httpWebResponse = e.Response as HttpWebResponse;
-    			if (httpWebResponse == null ||
-    			    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-    				throw;
-    			throw ThrowConcurrencyException(e);
-    		}
-    	}
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+				    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					throw;
+				throw ThrowConcurrencyException(e);
+			}
+		}
 
-    	/// <summary>
+		/// <summary>
 		/// Begins an async get operation for documents
 		/// </summary>
 		/// <param name="start">Paging start</param>
@@ -395,8 +395,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 			var query = @"{
 					Query: '" + linq + @"',
-                    Start: " + start + @",
-                    PageSize: " + pageSize + @"
+					Start: " + start + @",
+					PageSize: " + pageSize + @"
 					}";
 
 			var metadata = new RavenJObject();
@@ -918,42 +918,42 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		///<summary>
-        /// Get the possible terms for the specified field in the index asynchronously
-        /// You can page through the results by use fromValue parameter as the 
-        /// starting point for the next query
-        ///</summary>
-        ///<returns></returns>
+		/// Get the possible terms for the specified field in the index asynchronously
+		/// You can page through the results by use fromValue parameter as the 
+		/// starting point for the next query
+		///</summary>
+		///<returns></returns>
 	    public Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize)
 	    {
-            return url.Terms(index,field,fromValue,pageSize)
-                .NoCache()
-                .ToJsonRequest(this, credentials, convention)
-                .ReadResponseStringAsync()
-                .ContinueWith(task =>
-                {
-                    using (var reader = new JsonTextReader(new StringReader(task.Result)))
-                    {
-                        var json = RavenJArray.Load(reader);
-                        return json.Select(x => x.Value<string>()).ToArray();
-                    }
-                });
+			return url.Terms(index,field,fromValue,pageSize)
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = RavenJArray.Load(reader);
+						return json.Select(x => x.Value<string>()).ToArray();
+					}
+				});
 	    }
 
-    	/// <summary>
-    	/// Disable all caching within the given scope
-    	/// </summary>
-    	public IDisposable DisableAllCaching()
-    	{
-    		return null; // we dont implement this
-    	}
+		/// <summary>
+		/// Disable all caching within the given scope
+		/// </summary>
+		public IDisposable DisableAllCaching()
+		{
+			return null; // we dont implement this
+		}
 
-    	/// <summary>
-    	/// The profiling information
-    	/// </summary>
-    	public ProfilingInformation ProfilingInformation
-    	{
-    		get { return profilingInformation; }
-    	}
+		/// <summary>
+		/// The profiling information
+		/// </summary>
+		public ProfilingInformation ProfilingInformation
+		{
+			get { return profilingInformation; }
+		}
 	}
 }
 

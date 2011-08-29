@@ -156,9 +156,9 @@ namespace Raven.Client.Silverlight.Connection
 				var headerName = prop.Key;
 				if (headerName == "ETag")
 					headerName = "If-Match";
-                if(headerName.StartsWith("@") ||
+				if(headerName.StartsWith("@") ||
 					headerName == Constants.LastModified)
-                    continue;
+					continue;
 				var value = prop.Value.Value<object>().ToString();
 				switch (headerName)
 				{

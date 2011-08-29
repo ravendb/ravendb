@@ -7,7 +7,7 @@ using Raven.Client.Silverlight.Connection.Async;
 
 namespace Raven.Client.Silverlight.Connection
 {
-    public static class RavenUrlExtensions
+	public static class RavenUrlExtensions
 	{
 		public static string Indexes(this string url, string index)
 		{
@@ -44,10 +44,10 @@ namespace Raven.Client.Silverlight.Connection
 			return url + "/silverlight/ensureStartup";
 		}
 
-        public static string Terms(this string url, string index, string field, string fromValue, int pageSize)
-        {
-            return url + "/terms/" + index + "?field=" + field + "&fromValue=" + fromValue + "&pageSize=" + pageSize;
-        }
+		public static string Terms(this string url, string index, string field, string fromValue, int pageSize)
+		{
+			return url + "/terms/" + index + "?field=" + field + "&fromValue=" + fromValue + "&pageSize=" + pageSize;
+		}
 
 		public static string Docs(this string url, string key)
 		{
