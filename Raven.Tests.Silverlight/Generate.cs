@@ -4,16 +4,16 @@ using Raven.Json.Linq;
 
 namespace Raven.Tests.Silverlight
 {
-    using System.Collections.Generic;
+	using System.Collections.Generic;
 	using System.Linq;
-    using System.Threading.Tasks;
+	using System.Threading.Tasks;
 	using Client.Document;
-    using Document;
+	using Document;
 	using Entities;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-    /// <summary>
+	/// <summary>
 	/// Not actually a test, just an easy way for me to insert some sample data
 	/// </summary>
 	public class Generate : RavenTestBase
@@ -59,9 +59,9 @@ namespace Raven.Tests.Silverlight
 						new IndexDefinition
 						{
 							Map = @"
-                    from doc in docs
-                    where doc.type == ""page""
-                    select new {  f = 2 / doc.size };"
+					from doc in docs
+					where doc.type == ""page""
+					select new {  f = 2 / doc.size };"
 						}, true);
 
 			yield return store.AsyncDatabaseCommands

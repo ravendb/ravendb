@@ -4,11 +4,11 @@ using Raven.Abstractions.Indexing;
 
 namespace Raven.Tests.Silverlight
 {
-    using System.Collections.Generic;
+	using System.Collections.Generic;
 	using System.Threading.Tasks;
 	using Client.Document;
 	using Client.Extensions;
-    using Entities;
+	using Entities;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 
