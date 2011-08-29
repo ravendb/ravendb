@@ -20,7 +20,7 @@ namespace Raven.Storage.Esent.Backup
 		public RestoreOperation(string backupLocation, string databaseLocation)
 		{
 			this.backupLocation = backupLocation.ToFullPath();
-            this.databaseLocation = databaseLocation.ToFullPath();
+			this.databaseLocation = databaseLocation.ToFullPath();
 		}
 
 		public void Execute()
@@ -52,14 +52,14 @@ namespace Raven.Storage.Esent.Backup
 			try
 			{
 				new TransactionalStorageConfigurator(new RavenConfiguration()).ConfigureInstance(instance, databaseLocation);
-                Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
-                
-                var fileThatGetsCreatedButDoesntSeemLikeItShould = new FileInfo(Path.Combine(new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name + "Data"));
-                if (fileThatGetsCreatedButDoesntSeemLikeItShould.Exists)
-                {
-                    fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(Path.Combine(databaseLocation, "Data"));
-                }
-            }
+				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
+				
+				var fileThatGetsCreatedButDoesntSeemLikeItShould = new FileInfo(Path.Combine(new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name + "Data"));
+				if (fileThatGetsCreatedButDoesntSeemLikeItShould.Exists)
+				{
+					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(Path.Combine(databaseLocation, "Data"));
+				}
+			}
 			finally
 			{
 				Api.JetTerm(instance);

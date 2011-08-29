@@ -27,20 +27,20 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], view, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"], docId, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
-                Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key_and_view_hashed"], viewAndReduceKeyHashed);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key_and_view_hashed"], viewAndReduceKeyHashed);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"], data.ToBytes());
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.TransformToValueForEsentSorting());
-                Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"], SystemTime.Now);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"], SystemTime.Now);
 
 				update.Save();
 			}
 		}
 
-        public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
+		public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
 		{
-            Api.JetSetCurrentIndex(session, MappedResults, "by_reduce_key_and_view_hashed");
-        	foreach (var item in getMappedResultsParams)
-        	{
+			Api.JetSetCurrentIndex(session, MappedResults, "by_reduce_key_and_view_hashed");
+			foreach (var item in getMappedResultsParams)
+			{
 				Api.MakeKey(session, MappedResults, item.ViewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
 				if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
 					continue;
@@ -60,7 +60,7 @@ namespace Raven.Storage.Esent.StorageActions
 					
 					yield return Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).ToJObject();
 				} while (Api.TryMoveNext(session, MappedResults));
-        	}
+			}
 		}
 
 		public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
@@ -113,25 +113,25 @@ namespace Raven.Storage.Esent.StorageActions
 
 	    public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag)
 	    {
-            Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
-            Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
+			Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, MappedResults, lastReducedEtag, MakeKeyGrbit.None);
-            if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekLE) == false)
-                yield break;
+			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekLE) == false)
+				yield break;
 
 	        while (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]) == indexName)
 	        {
-                yield return new MappedResultInfo
-                {
-                    ReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]),
-                    Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
-                    Timestamp = Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value,
-                };
+				yield return new MappedResultInfo
+				{
+					ReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]),
+					Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
+					Timestamp = Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value,
+				};
 
-                // the index is view ascending and etag descending
-                // that means that we are going backward to go up
-                if (Api.TryMovePrevious(session, MappedResults) == false)
-                    yield break;
+				// the index is view ascending and etag descending
+				// that means that we are going backward to go up
+				if (Api.TryMovePrevious(session, MappedResults) == false)
+					yield break;
 	        }
 	    }
 	}

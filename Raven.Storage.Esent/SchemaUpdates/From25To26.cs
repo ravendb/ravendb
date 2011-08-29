@@ -19,12 +19,12 @@ namespace Raven.Storage.Esent.SchemaUpdates
 			get { return "2.5"; }
 		}
 
-        private IUuidGenerator uuidGenerator;
+		private IUuidGenerator uuidGenerator;
 
-        public void Init(IUuidGenerator generator)
-        {
-            uuidGenerator = generator;
-        }
+		public void Init(IUuidGenerator generator)
+		{
+			uuidGenerator = generator;
+		}
 
 
 		public void Update(Session session, JET_DBID dbid)

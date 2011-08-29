@@ -15,11 +15,11 @@ namespace Raven.Storage.Esent.StorageActions
 			get { return documents ?? (documents = new Table(session, dbid, "documents", OpenTableGrbit.None)); }
 		}
 
-        private Table queue;
-        protected Table Queue
-        {
-            get { return queue ?? (queue = new Table(session, dbid, "queue", OpenTableGrbit.None)); }
-        }
+		private Table queue;
+		protected Table Queue
+		{
+			get { return queue ?? (queue = new Table(session, dbid, "queue", OpenTableGrbit.None)); }
+		}
 
 
 		private Table transactions;

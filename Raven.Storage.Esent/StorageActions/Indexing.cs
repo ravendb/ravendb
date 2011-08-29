@@ -100,18 +100,18 @@ namespace Raven.Storage.Esent.StorageActions
 					IndexingErrors =
 						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
 
-                    LastIndexedEtag =
-                        Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting(),
-                    LastIndexedTimestamp =
-                        Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
-                        
-                    ReduceIndexingAttempts = hasReduce == false ? null : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
-                    ReduceIndexingSuccesses = hasReduce == false ? null : 
+					LastIndexedEtag =
+						Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting(),
+					LastIndexedTimestamp =
+						Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
+						
+					ReduceIndexingAttempts = hasReduce == false ? null : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
+					ReduceIndexingSuccesses = hasReduce == false ? null : 
 						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
-                    ReduceIndexingErrors = hasReduce == false ? null : 
+					ReduceIndexingErrors = hasReduce == false ? null : 
 						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
 					LastReducedEtag = hasReduce == false ? (Guid?)null : GetLastReduceIndexWithPotentialNull(),
-                    LastReducedTimestamp = hasReduce == false ? (DateTime?)null : GetLastReducedTimestampWithPotentialNull(),
+					LastReducedTimestamp = hasReduce == false ? (DateTime?)null : GetLastReducedTimestampWithPotentialNull(),
 				
 				};
 			}
@@ -147,15 +147,15 @@ namespace Raven.Storage.Esent.StorageActions
 				update.Save();
 			}
 
-            if (createMapReduce == false)
-                return;
+			if (createMapReduce == false)
+				return;
 
 			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Insert))
 			{
 				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["key"], name, Encoding.Unicode);
-                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"], Guid.Empty.TransformToValueForEsentSorting());
-                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue);
-                update.Save();
+				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"], Guid.Empty.TransformToValueForEsentSorting());
+				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue);
+				update.Save();
 			}
 		}
 
@@ -193,8 +193,8 @@ namespace Raven.Storage.Esent.StorageActions
 				Errors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
 				Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
 				ReduceAttempts = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]): null,
-                ReduceErrors = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]) : null,
-                ReduceSuccesses = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]) : null
+				ReduceErrors = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]) : null,
+				ReduceSuccesses = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]) : null
 			};
 		}
 
@@ -228,24 +228,24 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 		public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
-        {
-            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+		{
+			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
 			Api.MakeKey(session, IndexesStatsReduce, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
-                throw new IndexDoesNotExistsException("There is no reduce index named: " + index);
+				throw new IndexDoesNotExistsException("There is no reduce index named: " + index);
 
-            using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
-            {
-                Api.SetColumn(session, IndexesStatsReduce,
-                              tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"],
-                              etag.TransformToValueForEsentSorting());
-                Api.SetColumn(session, IndexesStatsReduce,
-                              tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"],
-                              timestamp);
-                update.Save();
-            }
-        }
+			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
+			{
+				Api.SetColumn(session, IndexesStatsReduce,
+							  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"],
+							  etag.TransformToValueForEsentSorting());
+				Api.SetColumn(session, IndexesStatsReduce,
+							  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"],
+							  timestamp);
+				update.Save();
+			}
+		}
 
 
-    }
+	}
 }

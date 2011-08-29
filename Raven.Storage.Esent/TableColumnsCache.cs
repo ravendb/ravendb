@@ -33,7 +33,7 @@ namespace Raven.Storage.Esent
 
 		public IDictionary<string, JET_COLUMNID> DetailsColumns { get; set; }
 
-        public IDictionary<string, JET_COLUMNID> QueueColumns { get; set; }
+		public IDictionary<string, JET_COLUMNID> QueueColumns { get; set; }
 
 	    public void InitColumDictionaries(JET_INSTANCE instance, string database)
 	    {
