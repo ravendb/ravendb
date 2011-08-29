@@ -417,6 +417,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public  IDocumentStore Initialize()
 		{
+            if (initialized) return this;
+
             AssertValidConfiguration();
 
 #if !SILVERLIGHT
