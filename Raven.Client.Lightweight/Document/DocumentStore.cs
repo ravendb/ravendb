@@ -481,7 +481,7 @@ namespace Raven.Client.Document
 			{
 				if (string.IsNullOrEmpty(currentOauthToken))
 					return;
-				args.Request.Headers["Authorization"] = "Bearer " + currentOauthToken;
+				args.Request.Headers["Authorization"] = currentOauthToken;
 			};
 #if !SILVERLIGHT
 			Conventions.HandleUnauthorizedResponse = (response) =>
@@ -496,8 +496,8 @@ namespace Raven.Client.Document
 				using(var stream = authResponse.GetResponseStreamWithHttpDecompression())
 				using(var reader = new StreamReader(stream))
 				{
-					currentOauthToken = reader.ReadToEnd();
-					return (Action<HttpWebRequest>) (request => request.Headers["Authorization"] = "Bearer " + currentOauthToken);
+					currentOauthToken = "Bearer " + reader.ReadToEnd();
+					return (Action<HttpWebRequest>) (request => request.Headers["Authorization"] = currentOauthToken);
 						
 				}
 			};
@@ -520,8 +520,8 @@ namespace Raven.Client.Document
 #endif
 						using (var reader = new StreamReader(stream))
 						{
-							currentOauthToken = reader.ReadToEnd();
-							return (Action<HttpWebRequest>) (request => request.Headers["Authorization"] = "Bearer " + currentOauthToken);
+							currentOauthToken = "Bearer " + reader.ReadToEnd();
+							return (Action<HttpWebRequest>) (request => request.Headers["Authorization"] = currentOauthToken);
 						}
 					});
 			};
@@ -531,8 +531,8 @@ namespace Raven.Client.Document
 		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
 		{
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
-			authRequest.Credentials = Credentials;
 #if !SILVERLIGHT
+			authRequest.Credentials = Credentials;
 			authRequest.PreAuthenticate = true;
 #endif
 			authRequest.Headers["grant_type"] = "client_credentials";
