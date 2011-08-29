@@ -5,13 +5,13 @@ using Raven.Tests.Util;
 
 namespace Raven.Tests
 {
-    class IISExpressTestClient : IDisposable
+    public class IISExpressTestClient : IDisposable
     {
         public static int Port = 8084;
 
         private IISExpressDriver _iisExpress;
 
-        public IDocumentStore GetDocumentStore()
+        public IDocumentStore NewDocumentStore()
         {
             if (_iisExpress == null)
             {
@@ -23,7 +23,7 @@ namespace Raven.Tests
             return new DocumentStore()
             {
                 Url = _iisExpress.Url
-            };
+            }.Initialize();
         }
 
         public void Dispose()

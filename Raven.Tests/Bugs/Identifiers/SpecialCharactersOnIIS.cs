@@ -23,7 +23,7 @@ namespace Raven.Tests.Bugs.Identifiers
 		{
 			using(var testContext = new IISExpressTestClient())
 			{
-				using (var store = testContext.GetDocumentStore())
+				using (var store = testContext.NewDocumentStore())
 				{
 					store.Initialize();
 
