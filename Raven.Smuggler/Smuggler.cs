@@ -25,14 +25,14 @@ namespace Raven.Smuggler
 				Console.WriteLine(@"
 Raven Smuggler - Import/Export utility
 Usage:
-    - Import the dump.raven file to a local instance:
-        Raven.Smuggler in http://localhost:8080/ dump.raven
-    - Export a local instance to dump.raven:
-        Raven.Smuggler out http://localhost:8080/ dump.raven
+	- Import the dump.raven file to a local instance:
+		Raven.Smuggler in http://localhost:8080/ dump.raven
+	- Export a local instance to dump.raven:
+		Raven.Smuggler out http://localhost:8080/ dump.raven
 
-      Optional arguments (after required arguments): 
-            --only-indexes : exports only index definitions
-            --include-attachments : also export attachments
+	  Optional arguments (after required arguments): 
+			--only-indexes : exports only index definitions
+			--include-attachments : also export attachments
 ");
 
 				Environment.Exit(-1);
