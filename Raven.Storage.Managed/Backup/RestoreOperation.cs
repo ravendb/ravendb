@@ -17,7 +17,7 @@ namespace Raven.Storage.Managed.Backup
 		public RestoreOperation(string backupLocation, string databaseLocation)
 		{
 			this.backupLocation = backupLocation.ToFullPath();
-            this.databaseLocation = databaseLocation.ToFullPath();
+			this.databaseLocation = databaseLocation.ToFullPath();
 		}
 
 		public void Execute()
@@ -34,7 +34,7 @@ namespace Raven.Storage.Managed.Backup
 			if (Directory.Exists(databaseLocation) == false)
 				Directory.CreateDirectory(databaseLocation);
 
-            CopyAll(new DirectoryInfo(backupLocation), new DirectoryInfo(databaseLocation));
+			CopyAll(new DirectoryInfo(backupLocation), new DirectoryInfo(databaseLocation));
 		}
 
 		private static void CopyAll(DirectoryInfo source, DirectoryInfo target)

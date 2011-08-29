@@ -14,111 +14,111 @@ using System.Linq;
 
 namespace Raven.Storage.Managed
 {
-    public class TasksStorageActions : ITasksStorageActions
-    {
-        private readonly TableStorage storage;
-        private readonly IUuidGenerator generator;
-    	private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+	public class TasksStorageActions : ITasksStorageActions
+	{
+		private readonly TableStorage storage;
+		private readonly IUuidGenerator generator;
+		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        public TasksStorageActions(TableStorage storage, IUuidGenerator generator)
-        {
-            this.storage = storage;
-            this.generator = generator;
-        }
+		public TasksStorageActions(TableStorage storage, IUuidGenerator generator)
+		{
+			this.storage = storage;
+			this.generator = generator;
+		}
 
-        public void AddTask(Task task, DateTime addedAt)
-        {
-            storage.Tasks.Put(new RavenJObject
-            {
-                {"index", task.Index},
-                {"id", generator.CreateSequentialUuid().ToByteArray()},
-                {"time", addedAt},
-                {"type", task.Type},
-                {"mergable", task.SupportsMerging}
-            }, task.AsBytes());
-        }
+		public void AddTask(Task task, DateTime addedAt)
+		{
+			storage.Tasks.Put(new RavenJObject
+			{
+				{"index", task.Index},
+				{"id", generator.CreateSequentialUuid().ToByteArray()},
+				{"time", addedAt},
+				{"type", task.Type},
+				{"mergable", task.SupportsMerging}
+			}, task.AsBytes());
+		}
 
-        public bool HasTasks
-        {
-            get { return ApproximateTaskCount > 0; }
-        }
+		public bool HasTasks
+		{
+			get { return ApproximateTaskCount > 0; }
+		}
 
-        public long ApproximateTaskCount
-        {
-            get { return storage.Tasks.Count; }
-        }
+		public long ApproximateTaskCount
+		{
+			get { return storage.Tasks.Count; }
+		}
 
-        public Task GetMergedTask(out int countOfMergedTasks)
-        {
-            foreach (var readResult in storage.Tasks)
-            {
-                Task task;
-                try
-                {
-                    task = Task.ToTask(readResult.Key.Value<string>("type"), readResult.Data());
-                }
-                catch (Exception e)
-                {
-                    logger.ErrorException(
+		public Task GetMergedTask(out int countOfMergedTasks)
+		{
+			foreach (var readResult in storage.Tasks)
+			{
+				Task task;
+				try
+				{
+					task = Task.ToTask(readResult.Key.Value<string>("type"), readResult.Data());
+				}
+				catch (Exception e)
+				{
+					logger.ErrorException(
 						string.Format("Could not create instance of a task: {0}", readResult.Key),
 						e);
-                    continue;
-                }
-                MergeSimilarTasks(task, readResult.Key.Value<byte[]>("id"), out countOfMergedTasks);
-                storage.Tasks.Remove(readResult.Key);
-                return task;
-            }
-            countOfMergedTasks = 0;
-            return null;
-        }
+					continue;
+				}
+				MergeSimilarTasks(task, readResult.Key.Value<byte[]>("id"), out countOfMergedTasks);
+				storage.Tasks.Remove(readResult.Key);
+				return task;
+			}
+			countOfMergedTasks = 0;
+			return null;
+		}
 
-        private void MergeSimilarTasks(Task task, byte [] taskId, out int taskCount)
-        {
-            taskCount = 1;
-            if (task.SupportsMerging == false)
-                return;
+		private void MergeSimilarTasks(Task task, byte [] taskId, out int taskCount)
+		{
+			taskCount = 1;
+			if (task.SupportsMerging == false)
+				return;
 
-            var keyForTaskToTryMergings = storage.Tasks["ByIndexAndType"].SkipTo(new RavenJObject
-            {
-                {"index", task.Index},
-                {"type", task.Type},
-            })
-            .Where(x => new Guid(x.Value<byte[]>("id")) != new Guid(taskId))
-                .TakeWhile(x =>
-                           StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("index"), task.Index) &&
-                           StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("type"), task.Type)
-                );
+			var keyForTaskToTryMergings = storage.Tasks["ByIndexAndType"].SkipTo(new RavenJObject
+			{
+				{"index", task.Index},
+				{"type", task.Type},
+			})
+			.Where(x => new Guid(x.Value<byte[]>("id")) != new Guid(taskId))
+				.TakeWhile(x =>
+						   StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("index"), task.Index) &&
+						   StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("type"), task.Type)
+				);
 
-            foreach (var keyForTaskToTryMerging in keyForTaskToTryMergings)
-            {
-                var readResult = storage.Tasks.Read(keyForTaskToTryMerging);
-                if(readResult == null)
-                    continue;
-                Task existingTask;
-                try
-                {
-                    existingTask = Task.ToTask(readResult.Key.Value<string>("type"), readResult.Data());
-                }
-                catch (Exception e)
-                {
-                    logger.ErrorException(
+			foreach (var keyForTaskToTryMerging in keyForTaskToTryMergings)
+			{
+				var readResult = storage.Tasks.Read(keyForTaskToTryMerging);
+				if(readResult == null)
+					continue;
+				Task existingTask;
+				try
+				{
+					existingTask = Task.ToTask(readResult.Key.Value<string>("type"), readResult.Data());
+				}
+				catch (Exception e)
+				{
+					logger.ErrorException(
 						string.Format("Could not create instance of a task: {0}", readResult.Key),
 						e);
-                    storage.Tasks.Remove(keyForTaskToTryMerging);
-                    continue;
-                }
+					storage.Tasks.Remove(keyForTaskToTryMerging);
+					continue;
+				}
 
-                if (task.TryMerge(existingTask) == false)
-                    continue;
+				if (task.TryMerge(existingTask) == false)
+					continue;
 
-                storage.Tasks.Remove(keyForTaskToTryMerging);
+				storage.Tasks.Remove(keyForTaskToTryMerging);
 
-                taskCount += 1;
+				taskCount += 1;
 
-                if (task.SupportsMerging == false)
-                    return;
-            }
-        }
+				if (task.SupportsMerging == false)
+					return;
+			}
+		}
 
-    }
+	}
 }
