@@ -393,8 +393,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 		public Task DeleteDocumentAsync(string id)
 		{
 			return url.Docs(id)
-				.ToRequest(OperationsHeaders, credentials, "DELETE")
-				.GetResponseAsync();
+				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
+				.ReadResponseStringAsync();
 		}
 
 		/// <summary>
@@ -418,7 +418,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				.ContinueWith(task =>
 				{
 					if (task.Exception != null)
-						throw new InvalidOperationException("Unable to write to server");
+						throw new InvalidOperationException("Unable to write to server", task.Exception);
 
 					return request.ReadResponseStringAsync()
 						.ContinueWith(task1 =>
@@ -537,8 +537,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 		public Task DeleteIndexAsync(string name)
 		{
 			return url.Indexes(name)
-				.ToRequest(OperationsHeaders, credentials, "DELETE")
-				.GetResponseAsync();
+				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
+				.ReadResponseStringAsync();
 		}
 
 		private static bool ShouldThrowForPutIndexAsync(WebException e)
