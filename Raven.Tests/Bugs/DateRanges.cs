@@ -11,113 +11,113 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-    public class DateRanges : LocalClientTest
-    {
-        [Fact]
-        public void CanQueryByDate()
-        {
-            using(var store = NewDocumentStore())
-            {
-                using(var session = store.OpenSession())
-                {
+	public class DateRanges : LocalClientTest
+	{
+		[Fact]
+		public void CanQueryByDate()
+		{
+			using(var store = NewDocumentStore())
+			{
+				using(var session = store.OpenSession())
+				{
 
-                    session.Store(new Record
-                    {
-                        Date = new DateTime(2001,1,1)
-                    });
-                    session.SaveChanges();
-                }
+					session.Store(new Record
+					{
+						Date = new DateTime(2001,1,1)
+					});
+					session.SaveChanges();
+				}
 
-                store.DatabaseCommands.PutIndex("Date",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from doc in docs select new { doc.Date}"
-                                                });
-
-
-                using(var session = store.OpenSession())
-                {
-                    var result = session.Advanced.LuceneQuery<Record>("Date")
-                        .Where("Date:" + DateTools.DateToString(new DateTime(2001,1,1), DateTools.Resolution.MILLISECOND))
-                        .WaitForNonStaleResults()
-                        .ToList();
-
-                    Assert.Equal(1, result.Count);
-                }
-            }
-        }
+				store.DatabaseCommands.PutIndex("Date",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Date}"
+												});
 
 
-        [Fact]
-        public void CanQueryByDateRange_LowerThan()
-        {
-            using (var store = NewDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Record
-                    {
-                        Date = new DateTime(2001, 1, 1)
-                    });
-                    session.SaveChanges();
-                }
+				using(var session = store.OpenSession())
+				{
+					var result = session.Advanced.LuceneQuery<Record>("Date")
+						.Where("Date:" + DateTools.DateToString(new DateTime(2001,1,1), DateTools.Resolution.MILLISECOND))
+						.WaitForNonStaleResults()
+						.ToList();
 
-                store.DatabaseCommands.PutIndex("Date",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from doc in docs select new { doc.Date}"
-                                                });
+					Assert.Equal(1, result.Count);
+				}
+			}
+		}
 
 
-                using (var session = store.OpenSession())
-                {
-                    var result = session.Advanced.LuceneQuery<Record>("Date")
-                        .Where("Date:[* TO " + DateTools.DateToString(new DateTime(2001, 1, 2), DateTools.Resolution.MILLISECOND) +"]")
-                        .WaitForNonStaleResults()
-                        .ToList();
+		[Fact]
+		public void CanQueryByDateRange_LowerThan()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Record
+					{
+						Date = new DateTime(2001, 1, 1)
+					});
+					session.SaveChanges();
+				}
 
-                    Assert.Equal(1, result.Count);
-                }
-            }
-        }
-
-
-        [Fact]
-        public void CanQueryByDateRange_GreaterThan()
-        {
-            using (var store = NewDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Record
-                    {
-                        Date = new DateTime(2001, 1, 1)
-                    });
-                    session.SaveChanges();
-                }
-
-                store.DatabaseCommands.PutIndex("Date",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from doc in docs select new { doc.Date}"
-                                                });
+				store.DatabaseCommands.PutIndex("Date",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Date}"
+												});
 
 
-                using (var session = store.OpenSession())
-                {
-                    var result = session.Advanced.LuceneQuery<Record>("Date")
-                        .Where("Date:[" + DateTools.DateToString(new DateTime(2000, 1, 1), DateTools.Resolution.MILLISECOND) + " TO NULL]")
-                        .WaitForNonStaleResults()
-                        .ToList();
+				using (var session = store.OpenSession())
+				{
+					var result = session.Advanced.LuceneQuery<Record>("Date")
+						.Where("Date:[* TO " + DateTools.DateToString(new DateTime(2001, 1, 2), DateTools.Resolution.MILLISECOND) +"]")
+						.WaitForNonStaleResults()
+						.ToList();
 
-                    Assert.Equal(1, result.Count);
-                }
-            }
-        }
-        public class Record
-        {
-            public string Id { get; set; }
-            public DateTime Date { get; set; }
-        }
-    }
+					Assert.Equal(1, result.Count);
+				}
+			}
+		}
+
+
+		[Fact]
+		public void CanQueryByDateRange_GreaterThan()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Record
+					{
+						Date = new DateTime(2001, 1, 1)
+					});
+					session.SaveChanges();
+				}
+
+				store.DatabaseCommands.PutIndex("Date",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Date}"
+												});
+
+
+				using (var session = store.OpenSession())
+				{
+					var result = session.Advanced.LuceneQuery<Record>("Date")
+						.Where("Date:[" + DateTools.DateToString(new DateTime(2000, 1, 1), DateTools.Resolution.MILLISECOND) + " TO NULL]")
+						.WaitForNonStaleResults()
+						.ToList();
+
+					Assert.Equal(1, result.Count);
+				}
+			}
+		}
+		public class Record
+		{
+			public string Id { get; set; }
+			public DateTime Date { get; set; }
+		}
+	}
 }

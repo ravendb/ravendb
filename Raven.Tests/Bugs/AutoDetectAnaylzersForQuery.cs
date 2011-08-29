@@ -33,7 +33,7 @@ namespace Raven.Tests.Bugs
 
 				using(var session = store.OpenSession())
 				{
-                    var foos = session.Advanced.LuceneQuery<Foo>("test")
+					var foos = session.Advanced.LuceneQuery<Foo>("test")
 						.Where("Name:Ayende")
 						.WaitForNonStaleResults()
 						.ToList();

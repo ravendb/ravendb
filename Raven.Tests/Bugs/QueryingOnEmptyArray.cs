@@ -17,8 +17,8 @@ namespace Raven.Tests.Bugs
  ""Value"": ""auto"",
  ""Translations"": [
    {
-     ""Value"": ""auto"",
-     ""LanguageCode"": ""en-EN""
+	 ""Value"": ""auto"",
+	 ""LanguageCode"": ""en-EN""
    }
  ],
  ""AliasList"": [],

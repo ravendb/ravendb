@@ -21,9 +21,9 @@ namespace Raven.Tests.Linq
 	{
 		private const string query =
 			@"
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = doc.size };
+	from doc in docs
+	where doc.type == ""page""
+	select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ";
 
 		[Fact]

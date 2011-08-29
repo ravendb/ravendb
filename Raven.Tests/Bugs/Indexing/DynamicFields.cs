@@ -94,9 +94,9 @@ namespace Raven.Tests.Bugs.Indexing
 					session.Store(new Product
 					{
 						Attributes = new List<Attribute>
-                        {
-                            new Attribute{Name = "Color", Value = "Red"}
-                        }
+						{
+							new Attribute{Name = "Color", Value = "Red"}
+						}
 					});
 
 					session.SaveChanges();
@@ -126,9 +126,9 @@ namespace Raven.Tests.Bugs.Indexing
 					session.Store(new Product
 					{
 						Attributes = new List<Attribute>
-                        {
-                            new Attribute{Name = "Color", Value = "Red", NumericValue = 30}
-                        }
+						{
+							new Attribute{Name = "Color", Value = "Red", NumericValue = 30}
+						}
 					});
 
 					session.SaveChanges();
@@ -158,9 +158,9 @@ namespace Raven.Tests.Bugs.Indexing
 					session.Store(new Product
 					{
 						Attributes = new List<Attribute>
-                        {
-                            new Attribute{Name = "Color", Value = "Red", NumericValue = 30}
-                        }
+						{
+							new Attribute{Name = "Color", Value = "Red", NumericValue = 30}
+						}
 					});
 
 					session.SaveChanges();
@@ -190,9 +190,9 @@ namespace Raven.Tests.Bugs.Indexing
 					session.Store(new Product
 					{
 						Attributes = new List<Attribute>
-                        {
-                            new Attribute{Name = "Color", Value = "Red", IntValue = 30}
-                        }
+						{
+							new Attribute{Name = "Color", Value = "Red", IntValue = 30}
+						}
 					});
 
 					session.SaveChanges();
@@ -222,9 +222,9 @@ namespace Raven.Tests.Bugs.Indexing
 					session.Store(new Product
 					{
 						Attributes = new List<Attribute>
-                        {
-                            new Attribute{Name = "Color", Value = "Red", NumericValue = 30}
-                        }
+						{
+							new Attribute{Name = "Color", Value = "Red", NumericValue = 30}
+						}
 					});
 
 					session.SaveChanges();

@@ -14,33 +14,33 @@ using Xunit;
 
 namespace Raven.Tests.Transactions
 {
-    public class MuiltipleDocuments : AbstractDocumentStorageTest
-    {
-        private readonly DocumentDatabase db;
+	public class MuiltipleDocuments : AbstractDocumentStorageTest
+	{
+		private readonly DocumentDatabase db;
 
 		public MuiltipleDocuments()
 		{
 			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
 		}
 
-        public override void Dispose()
-        {
-            db.Dispose();
-            base.Dispose();
-        }
+		public override void Dispose()
+		{
+			db.Dispose();
+			base.Dispose();
+		}
 
-        [Fact]
-        public void PutTwoDocumentsAndThenCommit()
-        {
-            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-            db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+		[Fact]
+		public void PutTwoDocumentsAndThenCommit()
+		{
+			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
-            db.Commit(transactionInformation.Id);
+			db.Commit(transactionInformation.Id);
 
-            Assert.NotNull(db.Get("ayende1", null));
-            Assert.NotNull(db.Get("ayende2", null));
-        }
+			Assert.NotNull(db.Get("ayende1", null));
+			Assert.NotNull(db.Get("ayende2", null));
+		}
 
 		[Fact]
 		public void CommittingWillOnlyCommitSingleTransaction()
@@ -68,20 +68,20 @@ namespace Raven.Tests.Transactions
 			Assert.NotNull(db.Get("ayende2", null));
 		}
 
-        [Fact]
-        public void WhileUpdatingSeveralDocumentsCannotAccessAnyOfThem()
-        {
-            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
-            db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+		[Fact]
+		public void WhileUpdatingSeveralDocumentsCannotAccessAnyOfThem()
+		{
+			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			Assert.True(db.Get("ayende1", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
 			Assert.Null(db.Get("ayende2", null)); 
-            db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			Assert.True(db.Get("ayende1", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
 			Assert.True(db.Get("ayende2", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
-            db.Commit(transactionInformation.Id);
+			db.Commit(transactionInformation.Id);
 
-            Assert.NotNull(db.Get("ayende1", null));
-            Assert.NotNull(db.Get("ayende2", null));
-        }
-    }
+			Assert.NotNull(db.Get("ayende1", null));
+			Assert.NotNull(db.Get("ayende2", null));
+		}
+	}
 }

@@ -154,7 +154,7 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Price_Range:{NULL TO Fx1.0}", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
-            Assert.Equal("Price_Range:{-3" + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator + "402823E+38 TO 1}", query.ToString());
+			Assert.Equal("Price_Range:{-3" + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator + "402823E+38 TO 1}", query.ToString());
 			Assert.True(query is NumericRangeQuery);
 			Assert.True(((NumericRangeQuery)query).GetMin() is float);
 			Assert.True(((NumericRangeQuery)query).GetMax() is float);

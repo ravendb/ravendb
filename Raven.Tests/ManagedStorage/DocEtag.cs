@@ -27,7 +27,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(viewer =>
+				tx.Batch(viewer =>
 				{
 					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
 					var doc2 = viewer.Documents.DocumentByKey("Oren", null);
@@ -44,7 +44,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator =>
+				tx.Batch(mutator =>
 				{
 					mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject());
 					mutator.Documents.AddDocument("Oren", null, RavenJObject.FromObject(new { Name = "Eini" }), new RavenJObject());
@@ -53,13 +53,13 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(viewer =>
+				tx.Batch(viewer =>
 				{
 					Assert.Equal(2, viewer.Documents.GetDocumentsAfter(Guid.Empty).Count());
 					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
 					Assert.Equal(1, viewer.Documents.GetDocumentsAfter(doc1.Etag.Value).Count());
-                    var doc2 = viewer.Documents.DocumentByKey("Oren", null);
-                    Assert.Equal(0, viewer.Documents.GetDocumentsAfter(doc2.Etag.Value).Count());
+					var doc2 = viewer.Documents.DocumentByKey("Oren", null);
+					Assert.Equal(0, viewer.Documents.GetDocumentsAfter(doc2.Etag.Value).Count());
 				});
 			}
 		}
@@ -70,7 +70,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator =>
+				tx.Batch(mutator =>
 				{
 					mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject());
 					mutator.Documents.AddDocument("Oren", null, RavenJObject.FromObject(new { Name = "Eini" }), new RavenJObject());
@@ -79,7 +79,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(viewer =>
+				tx.Batch(viewer =>
 				{
 					Assert.Equal(2, viewer.Documents.GetDocumentsByReverseUpdateOrder(0).Count());
 					var tuples = viewer.Documents.GetDocumentsByReverseUpdateOrder(0).ToArray();

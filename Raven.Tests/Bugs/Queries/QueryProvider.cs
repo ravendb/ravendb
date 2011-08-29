@@ -46,7 +46,7 @@ namespace Raven.Tests.Bugs.Queries
 									new Type[] { query.ElementType, body.Type },
 									exp, Expression.Quote(Expression.Lambda(body,
 											new ParameterExpression[] {
-                                                               Expression.Parameter(query.ElementType, "") })));
+															   Expression.Parameter(query.ElementType, "") })));
 
 					query = (IRavenQueryable<MyDoc>)query.Provider.CreateQuery(exp);
 					var res = query.ToArray();

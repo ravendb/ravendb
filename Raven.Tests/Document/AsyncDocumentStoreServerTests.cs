@@ -27,13 +27,13 @@ namespace Raven.Tests.Document
 
 		public void Dispose()
 		{
-            IOExtensions.DeleteDirectory(path);
+			IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
 
-        [Fact]
-        public void Can_insert_sync_and_get_async()
+		[Fact]
+		public void Can_insert_sync_and_get_async()
 		{
 			using (var server = GetNewServer(port, path))
 			{
@@ -56,8 +56,8 @@ namespace Raven.Tests.Document
 			}
 		}
 
-        [Fact]
-        public void Can_insert_async_and_get_sync()
+		[Fact]
+		public void Can_insert_async_and_get_sync()
 		{
 			using (var server = GetNewServer(port, path))
 			{
@@ -80,7 +80,7 @@ namespace Raven.Tests.Document
 			}
 		}
 
-        [Fact]
+		[Fact]
 		public void Can_insert_async_and_multi_get_async()
 		{
 			using (var server = GetNewServer(port, path))

@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Raven.Tests.Views
 {
-    public class MapReduce_IndependentSteps : AbstractDocumentStorageTest
+	public class MapReduce_IndependentSteps : AbstractDocumentStorageTest
 	{
 		private const string map =
 			@"from post in docs
@@ -38,7 +38,7 @@ select new {
 		private readonly DocumentDatabase db;
 
 
-        public MapReduce_IndependentSteps()
+		public MapReduce_IndependentSteps()
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
@@ -57,10 +57,10 @@ select new {
 		}
 
 		#endregion
-        [Fact]
-        public void CanGetReducedValues()
-        {
-            var values = new[]
+		[Fact]
+		public void CanGetReducedValues()
+		{
+			var values = new[]
 			{
 				"{blog_id: 3, comments: [{},{},{}]}",
 				"{blog_id: 5, comments: [{},{},{},{}]}",
@@ -74,30 +74,30 @@ select new {
 				"{blog_id: 3, comments: [{},{},{}]}",
 				"{blog_id: 5, comments: [{}]}",
 			};
-            for (int i = 0; i < values.Length; i++)
-            {
-                db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
-            }
+			for (int i = 0; i < values.Length; i++)
+			{
+				db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
+			}
 
-            db.SpinBackgroundWorkers();
+			db.SpinBackgroundWorkers();
 
-            QueryResult q = null;
-            for (var i = 0; i < 5; i++)
-            {
-                do
-                {
-                    q = db.Query("CommentsCountPerBlog", new IndexQuery
-                    {
-                        Query = "blog_id:3",
-                        Start = 0,
-                        PageSize = 10
-                    });
-                    Thread.Sleep(100);
-                } while (q.IsStale);
-            }
-        	q.Results[0].Remove("@metadata");
-            Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""14""}", q.Results[0].ToString(Formatting.None));
-        }
+			QueryResult q = null;
+			for (var i = 0; i < 5; i++)
+			{
+				do
+				{
+					q = db.Query("CommentsCountPerBlog", new IndexQuery
+					{
+						Query = "blog_id:3",
+						Start = 0,
+						PageSize = 10
+					});
+					Thread.Sleep(100);
+				} while (q.IsStale);
+			}
+			q.Results[0].Remove("@metadata");
+			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""14""}", q.Results[0].ToString(Formatting.None));
+		}
 
-    }
+	}
 }

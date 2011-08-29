@@ -2,13 +2,13 @@
 
 namespace Raven.Tests.Bugs
 {
-    public class Account
-    {
-        public Account()
-        {
-            Transactions = new List<Transaction>();
-        }
+	public class Account
+	{
+		public Account()
+		{
+			Transactions = new List<Transaction>();
+		}
 
-        public IList<Transaction> Transactions { get; private set; }
-    }
+		public IList<Transaction> Transactions { get; private set; }
+	}
 }

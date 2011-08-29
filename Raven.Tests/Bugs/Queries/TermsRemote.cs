@@ -14,85 +14,85 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Queries
 {
-    public class TermsRemote : RemoteClientTest
-    {
-        [Fact]
-        public void CanGetTermsForIndex()
-        {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
-            {
+	public class TermsRemote : RemoteClientTest
+	{
+		[Fact]
+		public void CanGetTermsForIndex()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
 
-                using (var s = store.OpenSession())
-                {
-                    for (int i = 0; i < 15; i++)
-                    {
-                        s.Store(new User { Name = "user" + i.ToString("000") });
-                    }
-                    s.SaveChanges();
-                }
+				using (var s = store.OpenSession())
+				{
+					for (int i = 0; i < 15; i++)
+					{
+						s.Store(new User { Name = "user" + i.ToString("000") });
+					}
+					s.SaveChanges();
+				}
 
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from doc in docs select new { doc.Name }"
-                                                });
+				store.DatabaseCommands.PutIndex("test",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Name }"
+												});
 
-                using (var s = store.OpenSession())
-                {
-                    s.Query<User>("test").Customize(x => x.WaitForNonStaleResults()).ToList();
-                }
+				using (var s = store.OpenSession())
+				{
+					s.Query<User>("test").Customize(x => x.WaitForNonStaleResults()).ToList();
+				}
 
-                var terms = store.DatabaseCommands.GetTerms("test", "Name", null, 10)
-                    .OrderBy(x => x)
-                    .ToArray();
+				var terms = store.DatabaseCommands.GetTerms("test", "Name", null, 10)
+					.OrderBy(x => x)
+					.ToArray();
 
-                Assert.Equal(10, terms.Count());
+				Assert.Equal(10, terms.Count());
 
-                for (int i = 0; i < 10; i++)
-                {
-                    Assert.Equal("user" + i.ToString("000"), terms.ElementAt(i));
-                }
-            }
-        }
+				for (int i = 0; i < 10; i++)
+				{
+					Assert.Equal("user" + i.ToString("000"), terms.ElementAt(i));
+				}
+			}
+		}
 
-        [Fact]
-        public void CanGetTermsForIndex_WithPaging()
-        {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
-            {
-                using (var s = store.OpenSession())
-                {
-                    for (int i = 0; i < 15; i++)
-                    {
-                        s.Store(new User { Name = "user" + i.ToString("000") });
-                    }
-                    s.SaveChanges();
-                }
+		[Fact]
+		public void CanGetTermsForIndex_WithPaging()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var s = store.OpenSession())
+				{
+					for (int i = 0; i < 15; i++)
+					{
+						s.Store(new User { Name = "user" + i.ToString("000") });
+					}
+					s.SaveChanges();
+				}
 
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from doc in docs select new { doc.Name }"
-                                                });
+				store.DatabaseCommands.PutIndex("test",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Name }"
+												});
 
-                using (var s = store.OpenSession())
-                {
-                    s.Query<User>("test").Customize(x => x.WaitForNonStaleResults()).ToList();
-                }
+				using (var s = store.OpenSession())
+				{
+					s.Query<User>("test").Customize(x => x.WaitForNonStaleResults()).ToList();
+				}
 
-                var terms = store.DatabaseCommands.GetTerms("test", "Name", "user009", 10)
-                    .OrderBy(x => x)
-                    .ToArray();
+				var terms = store.DatabaseCommands.GetTerms("test", "Name", "user009", 10)
+					.OrderBy(x => x)
+					.ToArray();
 
-                Assert.Equal(5, terms.Count());
+				Assert.Equal(5, terms.Count());
 
-                for (int i = 10; i < 15; i++)
-                {
-                    Assert.Equal("user" + i.ToString("000"), terms.ElementAt(i - 10));
-                }
-            }
-        }
-    }
+				for (int i = 10; i < 15; i++)
+				{
+					Assert.Equal("user" + i.ToString("000"), terms.ElementAt(i - 10));
+				}
+			}
+		}
+	}
 }

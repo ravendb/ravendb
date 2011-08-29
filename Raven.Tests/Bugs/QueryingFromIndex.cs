@@ -11,80 +11,80 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class QueryingFromIndex : LocalClientTest
-    {
-        [Fact]
-        public void LuceneQueryWithIndexIsCaseInsensitive()
-        {
-            using (var store = this.NewDocumentStore())
-            {
-                var definition = new IndexDefinitionBuilder<Company>
-                {
-                    Map = docs => from doc in docs
-                                  select new
-                                  {
-                                      doc.Name
-                                  }
-                }.ToIndexDefinition(store.Conventions);
-                store.DatabaseCommands.PutIndex("CompanyByName",
-                                                definition);
+	public class QueryingFromIndex : LocalClientTest
+	{
+		[Fact]
+		public void LuceneQueryWithIndexIsCaseInsensitive()
+		{
+			using (var store = this.NewDocumentStore())
+			{
+				var definition = new IndexDefinitionBuilder<Company>
+				{
+					Map = docs => from doc in docs
+								  select new
+								  {
+									  doc.Name
+								  }
+				}.ToIndexDefinition(store.Conventions);
+				store.DatabaseCommands.PutIndex("CompanyByName",
+												definition);
 
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Company { Name = "Google" });
-                    session.Store(new Company
-                    {
-                        Name =
-                            "HibernatingRhinos"
-                    });
-                    session.SaveChanges();
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Company { Name = "Google" });
+					session.Store(new Company
+					{
+						Name =
+							"HibernatingRhinos"
+					});
+					session.SaveChanges();
 
-                    var company =
-                        session.Advanced.LuceneQuery<Company>("CompanyByName")
-                            .Where("Name:Google")
-                            .WaitForNonStaleResults()
-                            .FirstOrDefault();
+					var company =
+						session.Advanced.LuceneQuery<Company>("CompanyByName")
+							.Where("Name:Google")
+							.WaitForNonStaleResults()
+							.FirstOrDefault();
 
-                    Assert.NotNull(company);
-                }
-            }
-        }
+					Assert.NotNull(company);
+				}
+			}
+		}
 
-        [Fact]
-        public void LinqQueryWithIndexIsCaseInsensitive()
-        {
-            using (var store = this.NewDocumentStore())
-            {
-                var definition = new IndexDefinitionBuilder<Company>
-                {
-                    Map = docs => from doc in docs
-                                  select new
-                                  {
-                                      doc.Name
-                                  }
-                }.ToIndexDefinition(store.Conventions);
-                store.DatabaseCommands.PutIndex("CompanyByName",
-                                                definition);
+		[Fact]
+		public void LinqQueryWithIndexIsCaseInsensitive()
+		{
+			using (var store = this.NewDocumentStore())
+			{
+				var definition = new IndexDefinitionBuilder<Company>
+				{
+					Map = docs => from doc in docs
+								  select new
+								  {
+									  doc.Name
+								  }
+				}.ToIndexDefinition(store.Conventions);
+				store.DatabaseCommands.PutIndex("CompanyByName",
+												definition);
 
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Company { Name = "Google" });
-                    session.Store(new Company
-                    {
-                        Name =
-                            "HibernatingRhinos"
-                    });
-                    session.SaveChanges();
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Company { Name = "Google" });
+					session.Store(new Company
+					{
+						Name =
+							"HibernatingRhinos"
+					});
+					session.SaveChanges();
 
-                    var company =
-                        session.Query<Company>("CompanyByName")
-                            .Customize(x=>x.WaitForNonStaleResults())
-                            .Where(x=>x.Name == "Google")
-                            .FirstOrDefault();
+					var company =
+						session.Query<Company>("CompanyByName")
+							.Customize(x=>x.WaitForNonStaleResults())
+							.Where(x=>x.Name == "Google")
+							.FirstOrDefault();
 
-                    Assert.NotNull(company);
-                }
-            }
-        }
-    }
+					Assert.NotNull(company);
+				}
+			}
+		}
+	}
 }

@@ -12,7 +12,7 @@ namespace Raven.Tests.Triggers
 {
 	public class CascadeDeleteTrigger : AbstractDeleteTrigger 
 	{
-        public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
+		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{
 			return VetoResult.Allowed;
 		}
@@ -22,7 +22,7 @@ namespace Raven.Tests.Triggers
 			var document = Database.Get(key, null);
 			if (document == null)
 				return;
-            Database.Delete(document.Metadata.Value<string>("Cascade-Delete"), null, null);
+			Database.Delete(document.Metadata.Value<string>("Cascade-Delete"), null, null);
 		}
 
 		public override void AfterCommit(string key)

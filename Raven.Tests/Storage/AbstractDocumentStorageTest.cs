@@ -13,12 +13,12 @@ namespace Raven.Tests.Storage
 	{
 		public AbstractDocumentStorageTest()
 		{
-            IOExtensions.DeleteDirectory("raven.db.test.esent");
+			IOExtensions.DeleteDirectory("raven.db.test.esent");
 		}
 
 		public virtual void Dispose()
 		{
-            IOExtensions.DeleteDirectory("raven.db.test.esent");
+			IOExtensions.DeleteDirectory("raven.db.test.esent");
 		}
 	}
 }

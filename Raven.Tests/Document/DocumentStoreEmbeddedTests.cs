@@ -35,16 +35,16 @@ namespace Raven.Tests.Document
 
 		public void Dispose()
 		{
-            IOExtensions.DeleteDirectory(path);
+			IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
 
-        private EmbeddableDocumentStore NewDocumentStore()
+		private EmbeddableDocumentStore NewDocumentStore()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-            var documentStore = new EmbeddableDocumentStore
+			var documentStore = new EmbeddableDocumentStore
 			{
 				Configuration =
 					{
@@ -58,29 +58,29 @@ namespace Raven.Tests.Document
 			return documentStore;
 		}
 
-        [Fact]
-        public void Can_use_transactions_to_isolate_saves()
-        {
-            using (var documentStore = NewDocumentStore())
-            {
-                var company = new Company { Name = "Company Name" };
-                var session = documentStore.OpenSession();
-                using (var tx = new TransactionScope())
-                {
-                    session.Store(company);
-                    session.SaveChanges();
+		[Fact]
+		public void Can_use_transactions_to_isolate_saves()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				using (var tx = new TransactionScope())
+				{
+					session.Store(company);
+					session.SaveChanges();
 
-                    using (new TransactionScope(TransactionScopeOption.Suppress))
-                    {
-                        using (var session2 = documentStore.OpenSession())
-                            Assert.Null(session2.Load<Company>(company.Id));
+					using (new TransactionScope(TransactionScopeOption.Suppress))
+					{
+						using (var session2 = documentStore.OpenSession())
+							Assert.Null(session2.Load<Company>(company.Id));
 
-                        tx.Complete();
-                    }
-                }
-                Assert.NotNull(session.Load<Company>(company.Id));
-            }  
-        }
+						tx.Complete();
+					}
+				}
+				Assert.NotNull(session.Load<Company>(company.Id));
+			}  
+		}
 
 		[Fact]
 		public void Can_get_index_names()
@@ -148,8 +148,8 @@ namespace Raven.Tests.Document
 					{
 						using (var session2 = documentStore.OpenSession())
 						{
-                            session2.Advanced.AllowNonAuthoritiveInformation = false;
-                            session2.Advanced.NonAuthoritiveInformationTimeout = TimeSpan.Zero;
+							session2.Advanced.AllowNonAuthoritiveInformation = false;
+							session2.Advanced.NonAuthoritiveInformationTimeout = TimeSpan.Zero;
 							Assert.Throws<NonAuthoritiveInformationException>(()=>session2.Load<Company>(company.Id));
 						}
 					}
@@ -186,27 +186,27 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
-        public void Can_refresh_entity_from_database()
-        {
-            using (var documentStore = NewDocumentStore())
-            {
-                var company = new Company {Name = "Company Name"};
-                var session = documentStore.OpenSession();
-                session.Store(company);
-                session.SaveChanges();
+		public void Can_refresh_entity_from_database()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company {Name = "Company Name"};
+				var session = documentStore.OpenSession();
+				session.Store(company);
+				session.SaveChanges();
 
-                var session2 = documentStore.OpenSession();
-                var company2 = session2.Load<Company>(company.Id);
-                company2.Name = "Hibernating Rhinos";
-                session2.Store(company2);
-                session2.SaveChanges();
+				var session2 = documentStore.OpenSession();
+				var company2 = session2.Load<Company>(company.Id);
+				company2.Name = "Hibernating Rhinos";
+				session2.Store(company2);
+				session2.SaveChanges();
 
-                session.Advanced.Refresh(company);
+				session.Advanced.Refresh(company);
 
-                Assert.Equal(company2.Name, company.Name);
-              
-            }
-        }
+				Assert.Equal(company2.Name, company.Name);
+			  
+			}
+		}
 
 		[Fact]
 		public void Will_set_id_from_query()
@@ -222,7 +222,7 @@ namespace Raven.Tests.Document
 
 				using(var session2 = documentStore.OpenSession())
 				{
-                    var companyFromRaven = session2.Advanced.LuceneQuery<Company>()
+					var companyFromRaven = session2.Advanced.LuceneQuery<Company>()
 						.WaitForNonStaleResults()
 						.First();
 					Assert.Equal(companyFromRaven.Id, company.Id);
@@ -293,7 +293,7 @@ namespace Raven.Tests.Document
 
 				using (var session2 = documentStore.OpenSession())
 				{
-                    var companyFromRaven = session2.Advanced.LuceneQuery<Company>()
+					var companyFromRaven = session2.Advanced.LuceneQuery<Company>()
 						.WaitForNonStaleResults()
 						.First();
 
@@ -308,41 +308,41 @@ namespace Raven.Tests.Document
 			}
 		}
 
-        [Fact]
-        public void Can_use_transactions_to_isolate_delete()
-        {
-            using (var documentStore = NewDocumentStore())
-            {
-                var company = new Company { Name = "Company Name" };
-                var session = documentStore.OpenSession();
-                session.Store(company);
-                session.SaveChanges();
-                
-                using (var tx = new TransactionScope())
-                {
-                    session.Delete(company);
-                    session.SaveChanges();
+		[Fact]
+		public void Can_use_transactions_to_isolate_delete()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				session.Store(company);
+				session.SaveChanges();
+				
+				using (var tx = new TransactionScope())
+				{
+					session.Delete(company);
+					session.SaveChanges();
 
-                    using (new TransactionScope(TransactionScopeOption.Suppress))
-                    {
-                        using(var session2 = documentStore.OpenSession())
-                            Assert.NotNull(session2.Load<Company>(company.Id));
+					using (new TransactionScope(TransactionScopeOption.Suppress))
+					{
+						using(var session2 = documentStore.OpenSession())
+							Assert.NotNull(session2.Load<Company>(company.Id));
 
-                    }
+					}
 
 					tx.Complete();
-                }
-            	for (int i = 0; i < 15; i++)// wait for commit
-            	{
+				}
+				for (int i = 0; i < 15; i++)// wait for commit
+				{
 					using (var session2 = documentStore.OpenSession())
 						if (session2.Load<Company>(company.Id) == null)
 							break;
 					Thread.Sleep(100);
-            	}
+				}
 				using (var session2 = documentStore.OpenSession())
 					Assert.Null(session2.Load<Company>(company.Id));
-            }
-        }
+			}
+		}
 
 		
 		[Fact]
@@ -359,41 +359,41 @@ namespace Raven.Tests.Document
 			}
 		}
 
-        [Fact]
-        public void While_in_transaction_can_read_values_private_for_the_Transaction()
-        {
-            using (var documentStore = NewDocumentStore())
-            {
-                var company = new Company { Name = "Company Name" };
-                var session = documentStore.OpenSession();
-                using (new TransactionScope())
-                {
-                    session.Store(company);
-                    session.SaveChanges();
+		[Fact]
+		public void While_in_transaction_can_read_values_private_for_the_Transaction()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				using (new TransactionScope())
+				{
+					session.Store(company);
+					session.SaveChanges();
 
-                    Assert.NotNull(session.Load<Company>(company.Id));
-                }
-            }
-        }
+					Assert.NotNull(session.Load<Company>(company.Id));
+				}
+			}
+		}
 
 
-        [Fact]
-        public void After_tx_rollback_value_will_not_be_in_the_database()
-        {
-            using (var documentStore = NewDocumentStore())
-            {
-                var company = new Company { Name = "Company Name" };
-                var session = documentStore.OpenSession();
-                using (new TransactionScope())
-                {
-                    session.Store(company);
-                    session.SaveChanges();
+		[Fact]
+		public void After_tx_rollback_value_will_not_be_in_the_database()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				using (new TransactionScope())
+				{
+					session.Store(company);
+					session.SaveChanges();
 
-                }
-                using (var session2 = documentStore.OpenSession())
-                    Assert.Null(session2.Load<Company>(company.Id));
-            }
-        }
+				}
+				using (var session2 = documentStore.OpenSession())
+					Assert.Null(session2.Load<Company>(company.Id));
+			}
+		}
 
 		[Fact]
 		public void Should_Load_entity_back_with_document_Id_mapped_to_Id()
@@ -532,97 +532,97 @@ namespace Raven.Tests.Document
 				var id = company.Id;
 				company.Name = "Company 2";
 				session.SaveChanges();
-                using (var session2 = documentStore.OpenSession())
-                {
-                    var companyFound = session2.Load<Company>(company.Id);
-                    Assert.Equal("Company 2", companyFound.Name);
-                    Assert.Equal(id, company.Id);
-                }
+				using (var session2 = documentStore.OpenSession())
+				{
+					var companyFound = session2.Load<Company>(company.Id);
+					Assert.Equal("Company 2", companyFound.Name);
+					Assert.Equal(id, company.Id);
+				}
 			}
 		}
 
-        [Fact]
-        public void Can_project_from_index()
-        {
-            using (var documentStore = NewDocumentStore())
-            {
-                var session = documentStore.OpenSession();
-                var company = new Company { Name = "Company 1", Phone = 5};
-                session.Store(company);
-                session.SaveChanges();
+		[Fact]
+		public void Can_project_from_index()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var session = documentStore.OpenSession();
+				var company = new Company { Name = "Company 1", Phone = 5};
+				session.Store(company);
+				session.SaveChanges();
 
-                documentStore.DatabaseCommands.PutIndex("company_by_name",
-                                                        new IndexDefinition
-                                                        {
-                                                            Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+														new IndexDefinition
+														{
+															Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
 															Stores = {{"Name", FieldStorage.Yes}, {"Phone",FieldStorage.Yes}},
-                                                            Indexes = { { "Name", FieldIndexing.NotAnalyzed}},
-                                                        });
+															Indexes = { { "Name", FieldIndexing.NotAnalyzed}},
+														});
 
-            	var q = session
-                   .Advanced.LuceneQuery<Company>("company_by_name")
-            		.SelectFields<Company>("Name", "Phone")
-            		.WaitForNonStaleResults();
-                var single = q.Single();
-                Assert.Equal("Company 1", single.Name);
-                Assert.Equal(5, single.Phone);
-            }
-        }
+				var q = session
+				   .Advanced.LuceneQuery<Company>("company_by_name")
+					.SelectFields<Company>("Name", "Phone")
+					.WaitForNonStaleResults();
+				var single = q.Single();
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal(5, single.Phone);
+			}
+		}
 
-        [Fact]
-        public void Can_sort_from_index()
-        {
-            using (var documentStore = NewDocumentStore())
-            {
-                var session = documentStore.OpenSession();
-                session.Store(new Company { Name = "Company 1", Phone = 5 });
-                session.Store(new Company { Name = "Company 2", Phone = 3 });
-                session.SaveChanges();
+		[Fact]
+		public void Can_sort_from_index()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var session = documentStore.OpenSession();
+				session.Store(new Company { Name = "Company 1", Phone = 5 });
+				session.Store(new Company { Name = "Company 2", Phone = 3 });
+				session.SaveChanges();
 
-            	documentStore.DatabaseCommands.PutIndex("company_by_name",
-            	                                        new IndexDefinition
-            	                                        {
-                                                            Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-            	                                        	Indexes = {{"Phone", FieldIndexing.Analyzed}}
-            	                                        });
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+				                                        new IndexDefinition
+				                                        {
+															Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+				                                        	Indexes = {{"Phone", FieldIndexing.Analyzed}}
+				                                        });
 
 				// Wait until the index is built
-                session.Advanced.LuceneQuery<Company>("company_by_name")
+				session.Advanced.LuceneQuery<Company>("company_by_name")
 					.WaitForNonStaleResults()
 					.ToArray();
 
-                var companies = session.Advanced.LuceneQuery<Company>("company_by_name")
-                    .OrderBy("Phone")
-                    .WaitForNonStaleResults()
-                    .ToArray();
+				var companies = session.Advanced.LuceneQuery<Company>("company_by_name")
+					.OrderBy("Phone")
+					.WaitForNonStaleResults()
+					.ToArray();
 
-                Assert.Equal("Company 2", companies[0].Name);
-                Assert.Equal("Company 1", companies[1].Name);
-            }
-        }
+				Assert.Equal("Company 2", companies[0].Name);
+				Assert.Equal("Company 1", companies[1].Name);
+			}
+		}
 
-        [Fact]
-        public void Optimistic_concurrency()
-        {
-            using (var documentStore = NewDocumentStore())
-            {
-                var session = documentStore.OpenSession();
-                session.Advanced.UseOptimisticConcurrency = true;
-                var company = new Company { Name = "Company 1" };
-                session.Store(company);
-                session.SaveChanges();
+		[Fact]
+		public void Optimistic_concurrency()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var session = documentStore.OpenSession();
+				session.Advanced.UseOptimisticConcurrency = true;
+				var company = new Company { Name = "Company 1" };
+				session.Store(company);
+				session.SaveChanges();
 
-                using(var session2 = documentStore.OpenSession())
-                {
-                    var company2 = session2.Load<Company>(company.Id);
-                    company2.Name = "foo";
-                    session2.SaveChanges();
-                }
+				using(var session2 = documentStore.OpenSession())
+				{
+					var company2 = session2.Load<Company>(company.Id);
+					company2.Name = "foo";
+					session2.SaveChanges();
+				}
 
-                company.Name = "Company 2";
-                Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
-            }
-        }
+				company.Name = "Company 2";
+				Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+			}
+		}
 
 		[Fact]
 		public void Should_update_retrieved_entity()
@@ -644,24 +644,24 @@ namespace Raven.Tests.Document
 			}
 		}
 
-        [Fact]
-        public void Session_implements_unit_of_work()
-        {
-            using (var documentStore = NewDocumentStore())
-            {
-                var session1 = documentStore.OpenSession();
-                var company = new Company { Name = "Company 1" };
-                session1.Store(company);
-                session1.SaveChanges();
+		[Fact]
+		public void Session_implements_unit_of_work()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var session1 = documentStore.OpenSession();
+				var company = new Company { Name = "Company 1" };
+				session1.Store(company);
+				session1.SaveChanges();
 
-                Assert.Same(company, session1.Load<Company>(company.Id));
+				Assert.Same(company, session1.Load<Company>(company.Id));
 
-                var companyId = company.Id;
+				var companyId = company.Id;
 
-                var session2 = documentStore.OpenSession();
-                Assert.Same(session2.Load<Company>(companyId), session2.Load<Company>(companyId));
-            }
-        }
+				var session2 = documentStore.OpenSession();
+				Assert.Same(session2.Load<Company>(companyId), session2.Load<Company>(companyId));
+			}
+		}
 
 		[Fact]
 		public void Should_retrieve_all_entities()
@@ -674,7 +674,7 @@ namespace Raven.Tests.Document
 			
 				session1.SaveChanges();
 				var session2 = documentStore.OpenSession();
-                var companyFound = session2.Advanced.LuceneQuery<Company>()
+				var companyFound = session2.Advanced.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -685,7 +685,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Should_retrieve_all_entities_using_connection_string()
 		{
-            using (var documentStore = new EmbeddableDocumentStore
+			using (var documentStore = new EmbeddableDocumentStore
 			{
 				ConnectionStringName = "Local",
 				Configuration =
@@ -704,7 +704,7 @@ namespace Raven.Tests.Document
 
 				session1.SaveChanges();
 				var session2 = documentStore.OpenSession();
-                var companyFound = session2.Advanced.LuceneQuery<Company>()
+				var companyFound = session2.Advanced.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -734,7 +734,7 @@ namespace Raven.Tests.Document
 
 					session.SaveChanges();
 
-                    LinqIndexesFromClient.User single = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
+					LinqIndexesFromClient.User single = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
 						.Where("Name:Yael")
 						.WaitForNonStaleResults()
 						.Single();
@@ -755,7 +755,7 @@ namespace Raven.Tests.Document
 					session.Store(entity);
 					session.SaveChanges();
 
-                    session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+					session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 				}
 
 				store.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
@@ -765,7 +765,7 @@ namespace Raven.Tests.Document
 
 				using (var session = store.OpenSession())
 				{
-                    Assert.Empty(session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
+					Assert.Empty(session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
 				}
 			}
 		}
@@ -781,7 +781,7 @@ namespace Raven.Tests.Document
 					session.Store(entity);
 					session.SaveChanges();
 
-                    session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+					session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 				}
 
 				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery

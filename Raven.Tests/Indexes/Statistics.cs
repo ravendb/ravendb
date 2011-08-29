@@ -31,10 +31,10 @@ namespace Raven.Tests.Indexes
 			            new IndexDefinition
 			            {
 							Map = @"
-                    from doc in docs
-                    where doc.type == ""page""
-                    select new {  f = 2 / doc.size };
-                "
+					from doc in docs
+					where doc.type == ""page""
+					select new {  f = 2 / doc.size };
+				"
 			            });
 		}
 
@@ -62,15 +62,15 @@ namespace Raven.Tests.Indexes
 			db.Put("1", Guid.Empty,
 			       RavenJObject.Parse(
 			       	@"{
-                type: 'page', 
-                some: 'val', 
-                other: 'var', 
-                content: 'this is the content', 
-                title: 'hello world', 
-                size: 1,
-                '@metadata': {'@id': 1}
-            }"),
-                   new RavenJObject(), null);
+				type: 'page', 
+				some: 'val', 
+				other: 'var', 
+				content: 'this is the content', 
+				title: 'hello world', 
+				size: 1,
+				'@metadata': {'@id': 1}
+			}"),
+				   new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -97,27 +97,27 @@ namespace Raven.Tests.Indexes
 			db.Put("1", Guid.Empty,
 			       RavenJObject.Parse(
 			       	@"{
-                type: 'page', 
-                some: 'val', 
-                other: 'var', 
-                content: 'this is the content', 
-                title: 'hello world', 
-                size: 0,
-                '@metadata': {'@id': 1}
-            }"),
-                   new RavenJObject(), null);
+				type: 'page', 
+				some: 'val', 
+				other: 'var', 
+				content: 'this is the content', 
+				title: 'hello world', 
+				size: 0,
+				'@metadata': {'@id': 1}
+			}"),
+				   new RavenJObject(), null);
 			db.Put("2", Guid.Empty,
 			       RavenJObject.Parse(
 			       	@"{
-                type: 'page', 
-                some: 'val', 
-                other: 'var', 
-                content: 'this is the content', 
-                title: 'hello world', 
-                size: 1,
-                '@metadata': {'@id': 1}
-            }"),
-                   new RavenJObject(), null);
+				type: 'page', 
+				some: 'val', 
+				other: 'var', 
+				content: 'this is the content', 
+				title: 'hello world', 
+				size: 1,
+				'@metadata': {'@id': 1}
+			}"),
+				   new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -145,15 +145,15 @@ namespace Raven.Tests.Indexes
 			db.Put("1", Guid.Empty,
 			       RavenJObject.Parse(
 			       	@"{
-                type: 'page', 
-                some: 'val', 
-                other: 'var', 
-                content: 'this is the content', 
-                title: 'hello world', 
-                size: 0,
-                '@metadata': {'@id': 1}
-            }"),
-                   new RavenJObject(), null);
+				type: 'page', 
+				some: 'val', 
+				other: 'var', 
+				content: 'this is the content', 
+				title: 'hello world', 
+				size: 0,
+				'@metadata': {'@id': 1}
+			}"),
+				   new RavenJObject(), null);
 
 			QueryResult docs;
 			do

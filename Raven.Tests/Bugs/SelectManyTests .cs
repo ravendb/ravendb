@@ -57,18 +57,18 @@ namespace Raven.Tests.Bugs
 				{
 					Name = "Test1",
 					Categories = new List<Category>
-                                                       {
-                                                           new Category { Id = "categories/1", Name = "Cat1" },
-                                                           new Category { Id = "categories/2", Name = "Cat2" }
-                                                       }
+													   {
+														   new Category { Id = "categories/1", Name = "Cat1" },
+														   new Category { Id = "categories/2", Name = "Cat2" }
+													   }
 				});
 				session.Store(new Product
 				{
 					Name = "Test2",
 					Categories = new List<Category>
-                                                       {
-                                                           new Category { Id = "categories/2", Name = "Cat2" }
-                                                       }
+													   {
+														   new Category { Id = "categories/2", Name = "Cat2" }
+													   }
 				});
 				session.SaveChanges();
 			}
@@ -103,6 +103,6 @@ namespace Raven.Tests.Bugs
 							  };
 			}
 		}
- 
+
 	}
 }

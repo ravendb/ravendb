@@ -72,7 +72,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void Daniil_CanSaveProperly()
 		{
-            IOExtensions.DeleteDirectory("Data");
+			IOExtensions.DeleteDirectory("Data");
 			try
 			{
 				using(new RavenDbServer(new RavenConfiguration
@@ -99,13 +99,13 @@ namespace Raven.Tests.Bugs
 					{
 						Customer = "customers/ayende",
 						OrderLines =
-                                {
-                                    new OrderLine
-                                    {
-                                        ProductId = product.Id,
-                                        Quantity = 3
-                                    },
-                                }
+								{
+									new OrderLine
+									{
+										ProductId = product.Id,
+										Quantity = 3
+									},
+								}
 					});
 					session.SaveChanges();
 
@@ -113,17 +113,17 @@ namespace Raven.Tests.Bugs
 			}
 			finally
 			{
-                IOExtensions.DeleteDirectory("Data");
+				IOExtensions.DeleteDirectory("Data");
 			}
 		}
 
 		[Fact]
 		public void WillNotSerializeEvents()
 		{
-            IOExtensions.DeleteDirectory("Data");
-            try
+			IOExtensions.DeleteDirectory("Data");
+			try
 			{
-                using (var documentStore = new EmbeddableDocumentStore())
+				using (var documentStore = new EmbeddableDocumentStore())
 				{
 					documentStore.Configuration.DataDirectory = "Data";
 					documentStore.Conventions.CustomizeJsonSerializer = x => x.TypeNameHandling = TypeNameHandling.Auto;
@@ -142,7 +142,7 @@ namespace Raven.Tests.Bugs
 			}
 			finally
 			{
-                IOExtensions.DeleteDirectory("Data");
+				IOExtensions.DeleteDirectory("Data");
 			}
 		}
 	}

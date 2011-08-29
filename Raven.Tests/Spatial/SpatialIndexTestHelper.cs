@@ -17,7 +17,7 @@ namespace Raven.Tests.Spatial
 		public static Event[] GetEvents()
 		{
 			return new Event[]
-            {
+			{
 				new Event("McCormick &amp, Schmick's Seafood Restaurant", 38.9579000, -77.3572000),
 				new Event("Jimmy's Old Town Tavern", 38.9690000, -77.3862000),
 				new Event("Ned Devine's", 38.9510000, -77.4107000),
@@ -39,7 +39,7 @@ namespace Raven.Tests.Spatial
 				new Event("Midway Island", 25.7, -171.7),
 				new Event("North Pole Way", 55.0, 4.0),
 
-            };
+			};
 		}
 
 		public static IndexDefinition CreateIndexDefinition()

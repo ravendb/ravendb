@@ -165,67 +165,67 @@ namespace Raven.Tests.Linq
 			Assert.Equal("Name:ayende", q.ToString());
 		}
 
-        [Fact]
-        public void CanUnderstandSimpleContainsWithClauses()
-        {
-            var indexedUsers = GetRavenQueryInspector();
-        	var q = from x in indexedUsers
-        	        where x.Name.Contains("ayende")
-        	        select x;
-                    
+		[Fact]
+		public void CanUnderstandSimpleContainsWithClauses()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from x in indexedUsers
+			        where x.Name.Contains("ayende")
+			        select x;
+					
 
-            Assert.NotNull(q);
-            Assert.Equal("Name:ayende", q.ToString());
-        }
+			Assert.NotNull(q);
+			Assert.Equal("Name:ayende", q.ToString());
+		}
 
-        [Fact]
-        public void CanUnderstandSimpleContainsInExpresssion1()
-        {
-            var indexedUsers = GetRavenQueryInspector();
-        	var q = from x in indexedUsers
-        	        where x.Name.Contains("ayende")
-        	        select x;
+		[Fact]
+		public void CanUnderstandSimpleContainsInExpresssion1()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from x in indexedUsers
+			        where x.Name.Contains("ayende")
+			        select x;
 
-            Assert.NotNull(q);
-            Assert.Equal("Name:ayende", q.ToString());
-        }
+			Assert.NotNull(q);
+			Assert.Equal("Name:ayende", q.ToString());
+		}
 
-        [Fact]
-        public void CanUnderstandSimpleContainsInExpresssion2()
-        {
-            var indexedUsers = GetRavenQueryInspector();
-        	var q = from x in indexedUsers
-        	        where x.Name.Contains("ayende")
-        	        select x;
+		[Fact]
+		public void CanUnderstandSimpleContainsInExpresssion2()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from x in indexedUsers
+			        where x.Name.Contains("ayende")
+			        select x;
 
-            Assert.NotNull(q);
-            Assert.Equal("Name:ayende", q.ToString());
-        }
+			Assert.NotNull(q);
+			Assert.Equal("Name:ayende", q.ToString());
+		}
 
-        [Fact]
-        public void CanUnderstandSimpleStartsWithInExpresssion1()
-        {
-            var indexedUsers = GetRavenQueryInspector();
-        	var q = from x in indexedUsers
-        	        where  x.Name.StartsWith("ayende")
-        	        select x;
+		[Fact]
+		public void CanUnderstandSimpleStartsWithInExpresssion1()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from x in indexedUsers
+			        where  x.Name.StartsWith("ayende")
+			        select x;
 
-            Assert.NotNull(q);
-            Assert.Equal("Name:ayende*", q.ToString());
-        }
+			Assert.NotNull(q);
+			Assert.Equal("Name:ayende*", q.ToString());
+		}
 
 
-        [Fact]
-        public void CanUnderstandSimpleStartsWithInExpresssion2()
-        {
-            var indexedUsers = GetRavenQueryInspector();
-        	var q = from indexedUser in indexedUsers
-        	        where indexedUser.Name.StartsWith("ayende")
-        	        select indexedUser;
+		[Fact]
+		public void CanUnderstandSimpleStartsWithInExpresssion2()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = from indexedUser in indexedUsers
+			        where indexedUser.Name.StartsWith("ayende")
+			        select indexedUser;
 
-            Assert.NotNull(q);
-            Assert.Equal("Name:ayende*", q.ToString());
-        }
+			Assert.NotNull(q);
+			Assert.Equal("Name:ayende*", q.ToString());
+		}
 
 
 		[Fact]
@@ -300,17 +300,17 @@ namespace Raven.Tests.Linq
 			Assert.Equal("Birthday:{* TO 20100515000000000}", q.ToString());
 		}
 
-        [Fact]
-        public void NegatingSubClauses()
-        {
-            var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null)).Not
-                .OpenSubclause()
-                .WhereEquals("IsPublished", true)
-                .AndAlso()
-                .WhereEquals("Tags.Length", 0)
-                .CloseSubclause();
-            Assert.Equal("-(IsPublished:true AND Tags.Length:0)", query.ToString());
-        }
+		[Fact]
+		public void NegatingSubClauses()
+		{
+			var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null)).Not
+				.OpenSubclause()
+				.WhereEquals("IsPublished", true)
+				.AndAlso()
+				.WhereEquals("Tags.Length", 0)
+				.CloseSubclause();
+			Assert.Equal("-(IsPublished:true AND Tags.Length:0)", query.ToString());
+		}
 
 		[Fact]
 		public void CanUnderstandEqualOnDate()

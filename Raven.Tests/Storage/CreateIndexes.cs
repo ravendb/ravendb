@@ -40,9 +40,9 @@ namespace Raven.Tests.Storage
 						new IndexDefinition
 						{
 							Map = @"
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = doc.size };
+	from doc in docs
+	where doc.type == ""page""
+	select new { Key = doc.title, Value = doc.content, Size = doc.size };
 "
 						});
 
@@ -50,9 +50,9 @@ namespace Raven.Tests.Storage
 						new IndexDefinition
 						{
 							Map = @"
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = doc.size };
+	from doc in docs
+	where doc.type == ""page""
+	select new { Key = doc.title, Value = doc.content, Size = doc.size };
 "
 						});
 		}
@@ -64,9 +64,9 @@ namespace Raven.Tests.Storage
 			            new IndexDefinition
 			            {
 							Map = @"
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = doc.size };
+	from doc in docs
+	where doc.type == ""page""
+	select new { Key = doc.title, Value = doc.content, Size = doc.size };
 "
 			            });
 			var indexNames = db.IndexDefinitionStorage.IndexNames.Where(x=>x.StartsWith("Raven") == false).ToArray();
@@ -96,9 +96,9 @@ namespace Raven.Tests.Storage
 		{
 			const string definition =
 				@" 
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = doc.size };
+	from doc in docs
+	where doc.type == ""page""
+	select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ";
 			db.PutIndex("pagesByTitle", new IndexDefinition{Map = definition});
 			var actualDefinition = db.IndexDefinitionStorage.GetIndexDefinition("pagesByTitle");

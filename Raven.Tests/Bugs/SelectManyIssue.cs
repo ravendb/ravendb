@@ -82,12 +82,12 @@ namespace Raven.Tests.Bugs
 				return new IndexDefinition
 				{
 					Map = @"from request in docs.AdvertisementRequests
-                        from imp in Hierarchy(request, \""Impressions\"")
-                        select new {ClassificationId = imp.ClassificationId,Count = 1,ClickCount = imp.Click == null?0:1}",
+						from imp in Hierarchy(request, \""Impressions\"")
+						select new {ClassificationId = imp.ClassificationId,Count = 1,ClickCount = imp.Click == null?0:1}",
 
 					Reduce = @"from result in results group result by new {ClassificationId= result.ClassificationId} into g
-                        select new {ClassificationId = g.Key.ClassificationId,
-                        Count = g.Sum(x=>x.Count),ClickCount = g.Sum(x => x.ClickCount) }"
+						select new {ClassificationId = g.Key.ClassificationId,
+						Count = g.Sum(x=>x.Count),ClickCount = g.Sum(x => x.ClickCount) }"
 				};
 
 			}

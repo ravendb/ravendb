@@ -32,20 +32,20 @@ namespace Raven.Tests.Bugs
 					session.Store(new Registration
 					{
 						RegisteredAt = new DateTime(2010, 1, 1),
-                        Name = "ayende"
+						Name = "ayende"
 					});
 					session.SaveChanges();
 				}
 
 				using (var session = store.OpenSession())
 				{
-                    var registration = session.Advanced.LuceneQuery<Registration>("Regs")
+					var registration = session.Advanced.LuceneQuery<Registration>("Regs")
 						.SelectFields<Registration>("RegisteredAt")
 						.WaitForNonStaleResults()
 						.First();
 					Assert.Equal(new DateTime(2010, 1, 1,0,0,0,DateTimeKind.Local), registration.RegisteredAt);
 					Assert.NotNull(registration.Id);
-                    Assert.Null(registration.Name);
+					Assert.Null(registration.Name);
 				}
 			}
 		}

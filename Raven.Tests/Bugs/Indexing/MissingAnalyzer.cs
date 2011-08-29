@@ -10,27 +10,27 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-    public class MissingAnalyzer : LocalClientTest
-    {
-        [Fact]
-        public void Should_give_clear_error_when_starting()
-        {
-            using (var store = NewDocumentStore())
-            {
-                Assert.Throws<ArgumentException>(() => store.DatabaseCommands.PutIndex("foo",
-                                                                                               new IndexDefinition
-                                                                                               {
-                                                                                                   Map =
-                                                                                                       "from doc in docs select new { doc.Name}",
-                                                                                                   Analyzers =
-                                                                                                       {
-                                                                                                           {
-                                                                                                               "Name",
-                                                                                                               "foo bar"
-                                                                                                               }
-                                                                                                       }
-                                                                                               }));
-            }
-        }
-    }
+	public class MissingAnalyzer : LocalClientTest
+	{
+		[Fact]
+		public void Should_give_clear_error_when_starting()
+		{
+			using (var store = NewDocumentStore())
+			{
+				Assert.Throws<ArgumentException>(() => store.DatabaseCommands.PutIndex("foo",
+																							   new IndexDefinition
+																							   {
+																								   Map =
+																									   "from doc in docs select new { doc.Name}",
+																								   Analyzers =
+																									   {
+																										   {
+																											   "Name",
+																											   "foo bar"
+																											   }
+																									   }
+																							   }));
+			}
+		}
+	}
 }

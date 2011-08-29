@@ -13,7 +13,7 @@ namespace Raven.Tests.Triggers
 {
 	public class AuditPutTrigger : AbstractPutTrigger
 	{
-        public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			return VetoResult.Allowed;
 		}

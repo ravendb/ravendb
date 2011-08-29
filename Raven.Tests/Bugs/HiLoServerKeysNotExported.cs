@@ -19,68 +19,68 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class HiLoServerKeysNotExported : IDisposable
-    {
-        private DocumentStore documentStore;
-        private RavenDbServer server;
+	public class HiLoServerKeysNotExported : IDisposable
+	{
+		private DocumentStore documentStore;
+		private RavenDbServer server;
 
-        public HiLoServerKeysNotExported()
-        {
-            CreateServer(true);
+		public HiLoServerKeysNotExported()
+		{
+			CreateServer(true);
 
 
-        }
+		}
 
-        private void CreateServer(bool initDocStore = false)
-        {
-            IOExtensions.DeleteDirectory("HiLoData");
-            server = new RavenDbServer(new RavenConfiguration
-            {
-            	Port = 8080, 
+		private void CreateServer(bool initDocStore = false)
+		{
+			IOExtensions.DeleteDirectory("HiLoData");
+			server = new RavenDbServer(new RavenConfiguration
+			{
+				Port = 8080, 
 				DataDirectory = "HiLoData", 
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
-            });
+			});
 
-            if (initDocStore) {
-                documentStore = new DocumentStore() { Url = "http://localhost:8080/" };
-                documentStore.Initialize();
-            }
-        }
+			if (initDocStore) {
+				documentStore = new DocumentStore() { Url = "http://localhost:8080/" };
+				documentStore.Initialize();
+			}
+		}
 
-        [Fact]
-        public void Export_And_Import_Retains_HiLoState()
-        {
-            using (var session = documentStore.OpenSession()) {
-                var foo = new Foo() { Something = "something2" };
-                Assert.Null(foo.Id);
-                session.Store(foo);
-                Assert.NotNull(foo.Id);
-                session.SaveChanges();
-            }
+		[Fact]
+		public void Export_And_Import_Retains_HiLoState()
+		{
+			using (var session = documentStore.OpenSession()) {
+				var foo = new Foo() { Something = "something2" };
+				Assert.Null(foo.Id);
+				session.Store(foo);
+				Assert.NotNull(foo.Id);
+				session.SaveChanges();
+			}
 
-            if (File.Exists("hilo-export.dump"))
+			if (File.Exists("hilo-export.dump"))
 				File.Delete("hilo-export.dump");
 			Smuggler.Smuggler.ExportData(new Smuggler.Smuggler.ExportSpec("http://localhost:8080/", "hilo-export.dump", false, false));
 			Assert.True(File.Exists("hilo-export.dump"));
 
-            using (var session = documentStore.OpenSession()) {
-                var hilo = session.Load<HiLoKey>("Raven/Hilo/foos");
-                Assert.NotNull(hilo);
-                Assert.Equal(1024, hilo.Max);
-            }
+			using (var session = documentStore.OpenSession()) {
+				var hilo = session.Load<HiLoKey>("Raven/Hilo/foos");
+				Assert.NotNull(hilo);
+				Assert.Equal(1024, hilo.Max);
+			}
 
-            server.Dispose();
-            CreateServer();
+			server.Dispose();
+			CreateServer();
 
 			Smuggler.Smuggler.ImportData("http://localhost:8080/", "hilo-export.dump");
 
-            using (var session = documentStore.OpenSession()) {
-                var hilo = session.Load<HiLoKey>("Raven/Hilo/foos");
-                Assert.NotNull(hilo);
+			using (var session = documentStore.OpenSession()) {
+				var hilo = session.Load<HiLoKey>("Raven/Hilo/foos");
+				Assert.NotNull(hilo);
 				Assert.Equal(1024, hilo.Max);
 			}
-        }
+		}
 
 		[Fact]
 		public void Export_And_Import_Retains_Attachment_Metadata()
@@ -102,24 +102,24 @@ namespace Raven.Tests.Bugs
 			Assert.True(attachment.Metadata.Value<bool>("Test"));
 		}
 
-        public class Foo
-        {
-            public string Id { get; set; }
-            public string Something { get; set; }
-        }
+		public class Foo
+		{
+			public string Id { get; set; }
+			public string Something { get; set; }
+		}
 
-        private class HiLoKey
-        {
-            public long Max { get; set; }
+		private class HiLoKey
+		{
+			public long Max { get; set; }
 
-        }
+		}
 
-        public void Dispose()
-        {
-            documentStore.Dispose();
-            server.Dispose();
-            IOExtensions.DeleteDirectory("HiLoData");
-        }
+		public void Dispose()
+		{
+			documentStore.Dispose();
+			server.Dispose();
+			IOExtensions.DeleteDirectory("HiLoData");
+		}
 
-    }
+	}
 }

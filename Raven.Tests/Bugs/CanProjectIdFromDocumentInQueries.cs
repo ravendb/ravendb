@@ -13,172 +13,172 @@ using Raven.Client.Indexes;
 
 namespace Raven.Tests.Bugs
 {
-    public class CanProjectIdFromDocumentInQueries : LocalClientTest
-    {
-        [Fact]
-        public void CanProjectIdFromTransformResults()
-        {
-            using (var store = NewDocumentStore())
-            {
-            	var indexDefinition = new IndexDefinitionBuilder<Shipment, Shipment>()
-            	                      	{
-            	                      		Map = docs => from doc in docs
-            	                      		              select new
-            	                      		                     	{
-            	                      		                     		doc.Id
-            	                      		                     	},
-            	                      		TransformResults = (database, results)  => from doc in results
-            	                      		                                           select new 
-            	                      		                                                  	{
-            	                      		                                                  		Id = doc.Id,
-            	                      		                                                  		Name = doc.Name
-            	                      		                                                  	}
-                                                   
-            	                      	}.ToIndexDefinition(store.Conventions);
-            	store.DatabaseCommands.PutIndex(
-                    "AmazingIndex",
-                    indexDefinition);
+	public class CanProjectIdFromDocumentInQueries : LocalClientTest
+	{
+		[Fact]
+		public void CanProjectIdFromTransformResults()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var indexDefinition = new IndexDefinitionBuilder<Shipment, Shipment>()
+				                      	{
+				                      		Map = docs => from doc in docs
+				                      		              select new
+				                      		                     	{
+				                      		                     		doc.Id
+				                      		                     	},
+				                      		TransformResults = (database, results)  => from doc in results
+				                      		                                           select new 
+				                      		                                                  	{
+				                      		                                                  		Id = doc.Id,
+				                      		                                                  		Name = doc.Name
+				                      		                                                  	}
+												   
+				                      	}.ToIndexDefinition(store.Conventions);
+				store.DatabaseCommands.PutIndex(
+					"AmazingIndex",
+					indexDefinition);
 
 
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Shipment()
-                    {
-                        Id = "shipment1",
-                        Name = "Some shipment"
-                    });
-                    session.SaveChanges();
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Shipment()
+					{
+						Id = "shipment1",
+						Name = "Some shipment"
+					});
+					session.SaveChanges();
 
-                    var shipment = session.Query<Shipment>("AmazingIndex")
-                        .Customize(x=>x.WaitForNonStaleResults())
-                        .Select(x => new Shipment
-                        {
-                            Id = x.Id,
-                            Name = x.Name
-                        }).Take(1).SingleOrDefault();
-                    
-                    Assert.NotNull(shipment.Id);
-                }
-            }
-        }
+					var shipment = session.Query<Shipment>("AmazingIndex")
+						.Customize(x=>x.WaitForNonStaleResults())
+						.Select(x => new Shipment
+						{
+							Id = x.Id,
+							Name = x.Name
+						}).Take(1).SingleOrDefault();
+					
+					Assert.NotNull(shipment.Id);
+				}
+			}
+		}
 
-        [Fact]
-        public void CanProjectAnyOtherPropertyFromTransformResults()
-        {
-            using (var store = NewDocumentStore())
-            {
+		[Fact]
+		public void CanProjectAnyOtherPropertyFromTransformResults()
+		{
+			using (var store = NewDocumentStore())
+			{
 
-                store.DatabaseCommands.PutIndex(
-                    "AmazingIndex",
-                    new IndexDefinitionBuilder<Shipment, Shipment>()
-                    {
-                        Map = docs => from doc in docs
-                                      select new
-                                      {
-                                          doc.Id
-                                      },
-                        TransformResults = (database, results) => from doc in results
-                                                                  select new
-                                                                  {
-                                                                      Id = doc.Id,
-                                                                      Name = doc.Name
-                                                                  }
+				store.DatabaseCommands.PutIndex(
+					"AmazingIndex",
+					new IndexDefinitionBuilder<Shipment, Shipment>()
+					{
+						Map = docs => from doc in docs
+									  select new
+									  {
+										  doc.Id
+									  },
+						TransformResults = (database, results) => from doc in results
+																  select new
+																  {
+																	  Id = doc.Id,
+																	  Name = doc.Name
+																  }
 
-                    }.ToIndexDefinition(store.Conventions));
-
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Shipment()
-                    {
-                        Id = "shipment1",
-                        Name = "Some shipment"
-                    });
-                    session.SaveChanges();
-
-                    var shipment = session.Query<Shipment>("AmazingIndex")
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Select(x => new Shipment
-                        {
-                            Id = x.Id,
-                            Name = x.Name
-                        }).Take(1).SingleOrDefault();
-
-                    Assert.NotNull(shipment.Name);
-                }
-            }
-        }
-        [Fact]
-        public void SelectIdFromDocumentWithIndexedQuery()
-        {
-            using (var store = NewDocumentStore())
-            {
-
-                store.DatabaseCommands.PutIndex(
-                    "AmazingIndex",
-                    new IndexDefinitionBuilder<Shipment>()
-                    {
-                        Map = docs => from doc in docs
-                                      select new
-                                      {
-                                          doc.Id
-                                      }
-                    }.ToIndexDefinition(store.Conventions));
+					}.ToIndexDefinition(store.Conventions));
 
 
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Shipment()
-                    {
-                        Id = "shipment1",
-                        Name = "Some shipment"
-                    });
-                    session.SaveChanges();
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Shipment()
+					{
+						Id = "shipment1",
+						Name = "Some shipment"
+					});
+					session.SaveChanges();
 
-                    var shipment = session.Query<Shipment>("AmazingIndex")
-                        .Customize(x=>x.WaitForNonStaleResults())
-                        .Select(x => new Shipment
-                        {
-                            Id = x.Id,
-                            Name = x.Name
-                        }).Take(1).SingleOrDefault();
+					var shipment = session.Query<Shipment>("AmazingIndex")
+						.Customize(x => x.WaitForNonStaleResults())
+						.Select(x => new Shipment
+						{
+							Id = x.Id,
+							Name = x.Name
+						}).Take(1).SingleOrDefault();
 
-                    Assert.NotNull(shipment.Id);
-                }
-            }
-        }
+					Assert.NotNull(shipment.Name);
+				}
+			}
+		}
+		[Fact]
+		public void SelectIdFromDocumentWithIndexedQuery()
+		{
+			using (var store = NewDocumentStore())
+			{
 
-        [Fact]
-        public void SelectIdFromDocumentWithDynamicQuery()
-        {
-            using (var store = NewDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Shipment()
-                    {
-                        Id = "shipment1",
-                        Name = "Some shipment"
-                    });
-                    session.SaveChanges();
+				store.DatabaseCommands.PutIndex(
+					"AmazingIndex",
+					new IndexDefinitionBuilder<Shipment>()
+					{
+						Map = docs => from doc in docs
+									  select new
+									  {
+										  doc.Id
+									  }
+					}.ToIndexDefinition(store.Conventions));
 
-                    var shipment = session.Query<Shipment>()
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Select(x => new Shipment()
-                        {
-                            Id = x.Id,
-                            Name = x.Name
-                        }).SingleOrDefault();
 
-                    Assert.NotNull(shipment.Id);
-                }
-            }
-        }
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Shipment()
+					{
+						Id = "shipment1",
+						Name = "Some shipment"
+					});
+					session.SaveChanges();
 
-        public class Shipment
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-        }
-    }
+					var shipment = session.Query<Shipment>("AmazingIndex")
+						.Customize(x=>x.WaitForNonStaleResults())
+						.Select(x => new Shipment
+						{
+							Id = x.Id,
+							Name = x.Name
+						}).Take(1).SingleOrDefault();
+
+					Assert.NotNull(shipment.Id);
+				}
+			}
+		}
+
+		[Fact]
+		public void SelectIdFromDocumentWithDynamicQuery()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Shipment()
+					{
+						Id = "shipment1",
+						Name = "Some shipment"
+					});
+					session.SaveChanges();
+
+					var shipment = session.Query<Shipment>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Select(x => new Shipment()
+						{
+							Id = x.Id,
+							Name = x.Name
+						}).SingleOrDefault();
+
+					Assert.NotNull(shipment.Id);
+				}
+			}
+		}
+
+		public class Shipment
+		{
+			public string Id { get; set; }
+			public string Name { get; set; }
+		}
+	}
 }

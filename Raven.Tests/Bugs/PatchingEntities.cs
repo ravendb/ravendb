@@ -42,29 +42,29 @@ namespace Raven.Tests.Bugs
 					   Query = "note:" + oldTagName
 				   },
 				   new[]
-                   {
-                       new PatchRequest
-                       {
-                           Name = "Comment",
-                           Type = PatchCommandType.Modify,
-                           AllPositions = true,
-                           Nested = new[]
-                           {
-                               new PatchRequest
-                               {
-                                   Type = PatchCommandType.Remove,
+				   {
+					   new PatchRequest
+					   {
+						   Name = "Comment",
+						   Type = PatchCommandType.Modify,
+						   AllPositions = true,
+						   Nested = new[]
+						   {
+							   new PatchRequest
+							   {
+								   Type = PatchCommandType.Remove,
 								   Name = "Notes",
-                                   Value = oldTagName
-                               },
-                               new PatchRequest
-                               {
-                                   Type = PatchCommandType.Add,
+								   Value = oldTagName
+							   },
+							   new PatchRequest
+							   {
+								   Type = PatchCommandType.Add,
 								   Name = "Notes",
-                                   Value = "new"
-                               }
-                           }
-                       }
-                   },
+								   Value = "new"
+							   }
+						   }
+					   }
+				   },
 				   false
 			   );
 
