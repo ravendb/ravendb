@@ -13,24 +13,24 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Expiration
 {
-    public class ExpirationReadTrigger : AbstractReadTrigger
-    {
-        public const string RavenExpirationDate = "Raven-Expiration-Date";
+	public class ExpirationReadTrigger : AbstractReadTrigger
+	{
+		public const string RavenExpirationDate = "Raven-Expiration-Date";
 
 		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation,
-                                                 TransactionInformation transactionInformation)
-        {
-            if(metadata == null)
-                return ReadVetoResult.Allowed;
-            var property = metadata[RavenExpirationDate];
-            if (property == null)
-                return ReadVetoResult.Allowed;
-            var dateTime = property.Value<DateTime>();
-            if(dateTime > GetCurrentUtcDate())
-                return ReadVetoResult.Allowed;
-            return ReadVetoResult.Ignore;
-        }
+												 TransactionInformation transactionInformation)
+		{
+			if(metadata == null)
+				return ReadVetoResult.Allowed;
+			var property = metadata[RavenExpirationDate];
+			if (property == null)
+				return ReadVetoResult.Allowed;
+			var dateTime = property.Value<DateTime>();
+			if(dateTime > GetCurrentUtcDate())
+				return ReadVetoResult.Allowed;
+			return ReadVetoResult.Ignore;
+		}
 
-        public static Func<DateTime> GetCurrentUtcDate = () => DateTime.UtcNow;
-    }
+		public static Func<DateTime> GetCurrentUtcDate = () => DateTime.UtcNow;
+	}
 }
