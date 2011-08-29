@@ -3,15 +3,15 @@ using System.Globalization;
 
 namespace Raven.Json.Utilities
 {
-    internal static class MiscellaneousUtils
-    {
+	internal static class MiscellaneousUtils
+	{
 
-        public static ArgumentOutOfRangeException CreateArgumentOutOfRangeException(string paramName, object actualValue, string message)
-        {
-            string newMessage = message + Environment.NewLine + @"Actual value was {0}.".FormatWith(CultureInfo.InvariantCulture, actualValue);
+		public static ArgumentOutOfRangeException CreateArgumentOutOfRangeException(string paramName, object actualValue, string message)
+		{
+			string newMessage = message + Environment.NewLine + @"Actual value was {0}.".FormatWith(CultureInfo.InvariantCulture, actualValue);
 
-            return new ArgumentOutOfRangeException(paramName, newMessage);
-        }
+			return new ArgumentOutOfRangeException(paramName, newMessage);
+		}
 
 		public static int ByteArrayCompare(byte[] a1, byte[] a2)
 		{
@@ -28,5 +28,5 @@ namespace Raven.Json.Utilities
 
 			return 0;
 		}
-    }
+	}
 }

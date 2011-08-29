@@ -10,15 +10,15 @@ using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
-    public class RavenJArray : RavenJToken, IEnumerable<RavenJToken>
-    {
-        /// <summary>
+	public class RavenJArray : RavenJToken, IEnumerable<RavenJToken>
+	{
+		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJArray"/> class.
-        /// </summary>
-        public RavenJArray()
-        {
-        	Items = new List<RavenJToken>();
-        }
+		/// </summary>
+		public RavenJArray()
+		{
+			Items = new List<RavenJToken>();
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJArray"/> class with the specified content.
@@ -57,14 +57,14 @@ namespace Raven.Json.Linq
 			Items.AddRange(content);
 		}
 
-    	/// <summary>
-        /// Gets the node type for this <see cref="RavenJToken"/>.
-        /// </summary>
-        /// <value>The type.</value>
-        public override JTokenType Type
-        {
-            get { return JTokenType.Array; }
-        }
+		/// <summary>
+		/// Gets the node type for this <see cref="RavenJToken"/>.
+		/// </summary>
+		/// <value>The type.</value>
+		public override JTokenType Type
+		{
+			get { return JTokenType.Array; }
+		}
 
 		/// <summary>
 		/// Gets or sets the <see cref="RavenJToken"/> at the specified index.
@@ -76,17 +76,17 @@ namespace Raven.Json.Linq
 			set { Items[index] = value; }
 		}
 
-        public override RavenJToken CloneToken()
-        {
+		public override RavenJToken CloneToken()
+		{
 			return CloneTokenImpl(new RavenJArray());
-        }
+		}
 
-        public int Length { get { return Items.Count; } }
+		public int Length { get { return Items.Count; } }
 
-    	private List<RavenJToken> Items { get; set; }
+		private List<RavenJToken> Items { get; set; }
 
-    	public new static RavenJArray Load(JsonReader reader)
-        {
+		public new static RavenJArray Load(JsonReader reader)
+		{
 			if (reader.TokenType == JsonToken.None)
 			{
 				if (!reader.Read())
@@ -99,34 +99,34 @@ namespace Raven.Json.Linq
 			if (reader.Read() == false)
 				throw new Exception("Unexpected end of json array");
 
-        	var ar = new RavenJArray();
-            RavenJToken val = null;
-            do
-            {
-                switch (reader.TokenType)
-                {
-                    case JsonToken.Comment:
-                        // ignore comments
-                        break;
-                    case JsonToken.EndArray:
-                        return ar;
-                    case JsonToken.StartObject:
-                        val = RavenJObject.Load(reader);
-                        ar.Items.Add(val);
-                        break;
-                    case JsonToken.StartArray:
-                        val = RavenJArray.Load(reader);
-                        ar.Items.Add(val);
-                        break;
-                    default:
-                        val = RavenJValue.Load(reader);
-                        ar.Items.Add(val);
-                        break;
-                }
-            } while (reader.Read());
+			var ar = new RavenJArray();
+			RavenJToken val = null;
+			do
+			{
+				switch (reader.TokenType)
+				{
+					case JsonToken.Comment:
+						// ignore comments
+						break;
+					case JsonToken.EndArray:
+						return ar;
+					case JsonToken.StartObject:
+						val = RavenJObject.Load(reader);
+						ar.Items.Add(val);
+						break;
+					case JsonToken.StartArray:
+						val = RavenJArray.Load(reader);
+						ar.Items.Add(val);
+						break;
+					default:
+						val = RavenJValue.Load(reader);
+						ar.Items.Add(val);
+						break;
+				}
+			} while (reader.Read());
 
-            throw new Exception("Error reading RavenJArray from JsonReader.");
-        }
+			throw new Exception("Error reading RavenJArray from JsonReader.");
+		}
 
 		/// <summary>
 		/// Load a <see cref="RavenJArray"/> from a string that contains JSON.
@@ -160,7 +160,7 @@ namespace Raven.Json.Linq
 			writer.WriteEndArray();
 		}
 
-    	#region IEnumerable<RavenJToken> Members
+		#region IEnumerable<RavenJToken> Members
 
 		public IEnumerator<RavenJToken> GetEnumerator()
 		{
@@ -184,10 +184,10 @@ namespace Raven.Json.Linq
 		#endregion
 
 
-    	public void Add(RavenJToken token)
-    	{
-    		Items.Add(token);
-    	}
+		public void Add(RavenJToken token)
+		{
+			Items.Add(token);
+		}
 
 		public bool Remove(RavenJToken token)
 		{
@@ -218,5 +218,5 @@ namespace Raven.Json.Linq
 		{
 			Add(token);
 		}
-    }
+	}
 }

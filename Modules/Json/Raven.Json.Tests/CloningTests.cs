@@ -5,8 +5,8 @@ using Xunit;
 
 namespace Raven.Tests.Json
 {
-    public class CloningTests
-    {
+	public class CloningTests
+	{
 
 
 		public class Blog
@@ -60,31 +60,31 @@ namespace Raven.Tests.Json
 			Assert.True(f.Count == 2);
 		}
 
-        [Fact]
-        public void CloningTestsWorksCorrectly()
-        {
-            var f = new RavenJObject();
-            f["1"] = new RavenJValue(1);
-            f["2"] = new RavenJValue(2);
+		[Fact]
+		public void CloningTestsWorksCorrectly()
+		{
+			var f = new RavenJObject();
+			f["1"] = new RavenJValue(1);
+			f["2"] = new RavenJValue(2);
 
-            var f1 = (RavenJObject)f.CloneToken();
-            f1["2"] = new RavenJValue(3);
+			var f1 = (RavenJObject)f.CloneToken();
+			f1["2"] = new RavenJValue(3);
 
-            var val = (RavenJValue) f["2"];
-            Assert.Equal(2, val.Value);
-            val = (RavenJValue)f1["2"];
-            Assert.Equal(3, val.Value);
+			var val = (RavenJValue) f["2"];
+			Assert.Equal(2, val.Value);
+			val = (RavenJValue)f1["2"];
+			Assert.Equal(3, val.Value);
 
-            var f2 = (RavenJObject)f1.CloneToken();
-            val = (RavenJValue)f2["2"];
-            Assert.Equal(3, val.Value);
+			var f2 = (RavenJObject)f1.CloneToken();
+			val = (RavenJValue)f2["2"];
+			Assert.Equal(3, val.Value);
 
-            f["2"] = f2;
-            f1 = (RavenJObject) f.CloneToken();
-            f.Remove("2");
-        	Assert.Null(f["2"]);
-            Assert.NotNull(f1["2"]);
-        }
+			f["2"] = f2;
+			f1 = (RavenJObject) f.CloneToken();
+			f.Remove("2");
+			Assert.Null(f["2"]);
+			Assert.NotNull(f1["2"]);
+		}
 
 		[Fact]
 		public void ChangingValuesOfParent()
@@ -140,5 +140,5 @@ namespace Raven.Tests.Json
 			                       		Assert.True(copy.ContainsKey("@id"));
 			                       	});
 		}
-    }
+	}
 }
