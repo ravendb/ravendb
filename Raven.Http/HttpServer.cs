@@ -44,7 +44,7 @@ namespace Raven.Http
         protected readonly ConcurrentDictionary<string, IResourceStore> ResourcesStoresCache =
             new ConcurrentDictionary<string, IResourceStore>(StringComparer.InvariantCultureIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>();
+		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 
 
 		public int NumberOfRequests
@@ -159,16 +159,33 @@ namespace Raven.Http
 
             foreach (var db in databasesToCleanup)
             {
-                DateTime _;
-                databaseLastRecentlyUsed.TryRemove(db, out _);
-
-                IResourceStore database;
-                if(ResourcesStoresCache.TryRemove(db, out database))
-                    database.Dispose();
+				// intentionally inside the loop, so we get better concurrency overall
+				// since shutting down a database can take a while
+                CleanupDatabase(db);
+				
             }
         }
 
-        private void GetContext(IAsyncResult ar)
+		private void CleanupDatabase(string db)
+		{
+			lock (ResourcesStoresCache) 
+			{
+				DateTime time;
+				databaseLastRecentlyUsed.TryGetValue(db, out time);
+				if ((SystemTime.Now - time).TotalMinutes <= 10)
+					return;// someone just started using it...
+
+				databaseLastRecentlyUsed.TryRemove(db, out time);
+
+				IResourceStore database;
+				if (ResourcesStoresCache.TryRemove(db, out database))
+					database.Dispose();
+
+				
+			}
+		}
+
+		private void GetContext(IAsyncResult ar)
         {
             IHttpContext ctx;
             try
