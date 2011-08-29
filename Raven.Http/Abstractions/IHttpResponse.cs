@@ -10,7 +10,7 @@ namespace Raven.Http.Abstractions
 {
 	public interface IHttpResponse
 	{
-        string RedirectionPrefix { get; set; }
+		string RedirectionPrefix { get; set; }
 		void AddHeader(string name, string value);
 		Stream OutputStream { get; }
 		long ContentLength64 { get; set; }

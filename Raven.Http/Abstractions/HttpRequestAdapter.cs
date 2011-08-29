@@ -20,7 +20,7 @@ namespace Raven.Http.Abstractions
 		    this.request = request;
 		    Url = this.request.Url;
 	        RawUrl = this.request.RawUrl;
-            this.queryString = System.Web.HttpUtility.ParseQueryString(Uri.UnescapeDataString(request.Url.Query));
+			this.queryString = System.Web.HttpUtility.ParseQueryString(Uri.UnescapeDataString(request.Url.Query));
 	       
 		}
 

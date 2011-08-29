@@ -18,19 +18,19 @@ namespace Raven.Http.Abstractions
 		private readonly HttpContext context;
 		private readonly HttpRequestAdapter request;
 		private readonly HttpResponseAdapter response;
-        private readonly IRavenHttpConfiguration configuration;
+		private readonly IRavenHttpConfiguration configuration;
 
 		private static readonly Regex maxAgeFinder = new Regex(@"max-age \s* = \s* (\d+)",
 		                                                       RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase |
 		                                                       RegexOptions.Compiled);
-        public HttpContextAdapter(HttpContext context, IRavenHttpConfiguration configuration)
+		public HttpContextAdapter(HttpContext context, IRavenHttpConfiguration configuration)
 		{
 			this.context = context;
 			this.configuration = configuration;
 			request = new HttpRequestAdapter(context.Request);
 			response = new HttpResponseAdapter(context.Response);
 
-        	SetMaxAge();
+			SetMaxAge();
 		}
 
 		private void SetMaxAge()

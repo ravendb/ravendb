@@ -18,8 +18,8 @@ namespace Raven.Http
 	{
 		private readonly string[] supportedVerbsCached;
 		protected readonly Regex urlMatcher;
-        private Func<IRavenHttpConfiguration> settings;
-        private Func<IResourceStore> database;
+		private Func<IRavenHttpConfiguration> settings;
+		private Func<IResourceStore> database;
 		protected HttpServer server;
 		private Func<string> tenantId;
 
@@ -33,19 +33,19 @@ namespace Raven.Http
 		public abstract string[] SupportedVerbs { get; }
 
 		public IResourceStore DefaultResourceStore { get { return server.DefaultResourceStore; } }
-        public IResourceStore ResourceStore { get { return database(); } }
-        public IRavenHttpConfiguration Settings { get { return settings(); } }
+		public IResourceStore ResourceStore { get { return database(); } }
+		public IRavenHttpConfiguration Settings { get { return settings(); } }
 		public string TenantId { get { return tenantId(); } }
 
-        public virtual bool IsUserInterfaceRequest { get { return false; } }
+		public virtual bool IsUserInterfaceRequest { get { return false; } }
 
-        public void Initialize(Func<IResourceStore> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
-        {
-        	this.server = theServer;
-            this.database = databaseGetter;
-            this.settings = settingsGetter;
-        	this.tenantId = tenantIdGetter;
-        }
+		public void Initialize(Func<IResourceStore> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
+		{
+			this.server = theServer;
+			this.database = databaseGetter;
+			this.settings = settingsGetter;
+			this.tenantId = tenantIdGetter;
+		}
 
 		public bool WillRespond(IHttpContext context)
 		{
@@ -53,21 +53,21 @@ namespace Raven.Http
 			return match.Success && supportedVerbsCached.Contains(context.Request.HttpMethod);
 		}
 
-        public abstract void Respond(IHttpContext context);
+		public abstract void Respond(IHttpContext context);
 
-        protected TransactionInformation GetRequestTransaction(IHttpContext context)
-        {
-            var txInfo = context.Request.Headers["Raven-Transaction-Information"];
-            if (string.IsNullOrEmpty(txInfo))
-                return null;
-            var parts = txInfo.Split(new[]{", "}, StringSplitOptions.RemoveEmptyEntries);
-            if(parts.Length != 2)
-                throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss");
-            return new TransactionInformation
-            {
-                Id = new Guid(parts[0]),
-                Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
-            };
-        }
+		protected TransactionInformation GetRequestTransaction(IHttpContext context)
+		{
+			var txInfo = context.Request.Headers["Raven-Transaction-Information"];
+			if (string.IsNullOrEmpty(txInfo))
+				return null;
+			var parts = txInfo.Split(new[]{", "}, StringSplitOptions.RemoveEmptyEntries);
+			if(parts.Length != 2)
+				throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss");
+			return new TransactionInformation
+			{
+				Id = new Guid(parts[0]),
+				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
+			};
+		}
 	}
 }

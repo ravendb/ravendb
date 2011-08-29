@@ -10,10 +10,10 @@ using System.Collections.Generic;
 
 namespace Raven.Http
 {
-    public interface IResourceStore : IDisposable
-    {
+	public interface IResourceStore : IDisposable
+	{
 		string SilverlightXapName { get; }
-        IRavenHttpConfiguration Configuration { get; }
+		IRavenHttpConfiguration Configuration { get; }
 		ConcurrentDictionary<string, object> ExternalState { get; set; }
-    }
+	}
 }

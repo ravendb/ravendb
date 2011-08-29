@@ -6,14 +6,14 @@ using Raven.Http.Extensions;
 
 namespace Raven.Http.Security.OAuth
 {
-    public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
-    {
+	public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
+	{
 		public override bool Authorize(IHttpContext ctx)
 		{
 			var httpRequest = ctx.Request;
 
-            if (ctx.Request.RawUrl.StartsWith("/OAuth/AccessToken", StringComparison.InvariantCultureIgnoreCase))
-                return true;
+			if (ctx.Request.RawUrl.StartsWith("/OAuth/AccessToken", StringComparison.InvariantCultureIgnoreCase))
+				return true;
 
 			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
 				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All || 
@@ -21,75 +21,75 @@ namespace Raven.Http.Security.OAuth
 			        IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
 			
 
-            var token = GetToken(ctx);
-            
-            if (token == null)
-            {
+			var token = GetToken(ctx);
+			
+			if (token == null)
+			{
 				if (allowUnauthenticatedUsers)
 					return true;
 				WriteAuthorizationChallenge(ctx, 401, "invalid_request", "The access token is required");
-                
-                return false;
-            }
+				
+				return false;
+			}
 
 			AccessTokenBody tokenBody;
 			if (!AccessToken.TryParseBody(Settings.OAuthTokenCertificate, token, out tokenBody))
-            {
+			{
 				if (allowUnauthenticatedUsers)
 					return true;
 				WriteAuthorizationChallenge(ctx, 401, "invalid_token", "The access token is invalid");
 
-                return false;
-            }
+				return false;
+			}
 
-            if (tokenBody.IsExpired())
-            {
+			if (tokenBody.IsExpired())
+			{
 				if (allowUnauthenticatedUsers)
 					return true;
 				WriteAuthorizationChallenge(ctx, 401, "invalid_token", "The access token is expired");
 
-                return false;
-            }
+				return false;
+			}
 
-            if(!tokenBody.IsAuthorized(TenantId))
-            {
+			if(!tokenBody.IsAuthorized(TenantId))
+			{
 				if (allowUnauthenticatedUsers)
 					return true;
 
 				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", "Not authorized for tenant " + TenantId);
-       
-                return false;
-            }
+	   
+				return false;
+			}
 			
 			ctx.User = new OAuthPrincipal(tokenBody);
 
-            return true;
-        }
+			return true;
+		}
 
-        static string GetToken(IHttpContext ctx)
-        {
-            const string bearerPrefix = "Bearer ";
+		static string GetToken(IHttpContext ctx)
+		{
+			const string bearerPrefix = "Bearer ";
 
-            var auth = ctx.Request.Headers["Authorization"];
+			var auth = ctx.Request.Headers["Authorization"];
 
-            if (auth == null || auth.Length <= bearerPrefix.Length || !auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
-                return null;
+			if (auth == null || auth.Length <= bearerPrefix.Length || !auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+				return null;
 
-            var token = auth.Substring(bearerPrefix.Length, auth.Length - bearerPrefix.Length);
-            
-            return token;
-        }
+			var token = auth.Substring(bearerPrefix.Length, auth.Length - bearerPrefix.Length);
+			
+			return token;
+		}
 
-        void WriteAuthorizationChallenge(IHttpContext ctx, int statusCode, string error, string errorDescription)
-        {
+		void WriteAuthorizationChallenge(IHttpContext ctx, int statusCode, string error, string errorDescription)
+		{
 			if (string.IsNullOrEmpty(Settings.OAuthTokenServer) == false)
 			{
 				ctx.Response.AddHeader("OAuth-Source", Settings.OAuthTokenServer);
 			}
-        	ctx.Response.StatusCode = statusCode;
-            ctx.Response.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
-        }
-    }
+			ctx.Response.StatusCode = statusCode;
+			ctx.Response.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
+		}
+	}
 
 	public class OAuthPrincipal : IPrincipal, IIdentity
 	{

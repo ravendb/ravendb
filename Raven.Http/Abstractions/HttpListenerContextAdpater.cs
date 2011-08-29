@@ -16,12 +16,12 @@ namespace Raven.Http.Abstractions
 	public class HttpListenerContextAdpater : IHttpContext
 	{
 		private readonly HttpListenerContext ctx;
-        private readonly IRavenHttpConfiguration configuration;
+		private readonly IRavenHttpConfiguration configuration;
 		private static readonly Regex maxAgeFinder = new Regex(@"max-age \s* = \s* (\d+)",
 														   RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase |
 														   RegexOptions.Compiled);
-      
-        public HttpListenerContextAdpater(HttpListenerContext ctx, IRavenHttpConfiguration configuration)
+	  
+		public HttpListenerContextAdpater(HttpListenerContext ctx, IRavenHttpConfiguration configuration)
 		{
 			this.ctx = ctx;
 			this.configuration = configuration;
@@ -48,7 +48,7 @@ namespace Raven.Http.Abstractions
 			ctx.Response.AddHeader("Cache-Control", "max-age=" + timeInSeconds);
 		}
 
-        public IRavenHttpConfiguration Configuration
+		public IRavenHttpConfiguration Configuration
 		{
 			get { return configuration; }
 		}

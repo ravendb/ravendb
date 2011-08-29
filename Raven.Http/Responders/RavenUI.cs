@@ -18,13 +18,13 @@ namespace Raven.Http.Responders
 			get { return "^/raven/"; }
 		}
 
-        public override bool IsUserInterfaceRequest
-        {
-            get
-            {
-                return true;
-            }
-        }
+		public override bool IsUserInterfaceRequest
+		{
+			get
+			{
+				return true;
+			}
+		}
 
 		public override string[] SupportedVerbs
 		{
