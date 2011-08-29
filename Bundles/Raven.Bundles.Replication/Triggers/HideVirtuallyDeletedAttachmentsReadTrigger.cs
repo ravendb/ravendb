@@ -12,13 +12,13 @@ namespace Raven.Bundles.Replication.Triggers
 {
 	[ExportMetadata("Order", 10000)]
 	public class HideVirtuallyDeletedAttachmentsReadTrigger : AbstractAttachmentReadTrigger
-    {
+	{
 		public override ReadVetoResult AllowRead(string key, byte[] data, RavenJObject metadata, ReadOperation operation)
-        {
-            RavenJToken value;
-            if (metadata.TryGetValue("Raven-Delete-Marker", out value))
-                return ReadVetoResult.Ignore;
-            return ReadVetoResult.Allowed;
-        }
-    }
+		{
+			RavenJToken value;
+			if (metadata.TryGetValue("Raven-Delete-Marker", out value))
+				return ReadVetoResult.Ignore;
+			return ReadVetoResult.Allowed;
+		}
+	}
 }

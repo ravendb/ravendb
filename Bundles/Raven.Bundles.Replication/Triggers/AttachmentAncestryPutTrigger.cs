@@ -12,29 +12,29 @@ namespace Raven.Bundles.Replication.Triggers
 {
 	[ExportMetadata("Order", 10000)]
 	public class AttachmentAncestryPutTrigger : AbstractAttachmentPutTrigger
-    {
-        private ReplicationHiLo hiLo;
-        public override void Initialize()
-        {
-            base.Initialize();
-            hiLo = new ReplicationHiLo
-            {
-                Database = Database
-            };
-        }
+	{
+		private ReplicationHiLo hiLo;
+		public override void Initialize()
+		{
+			base.Initialize();
+			hiLo = new ReplicationHiLo
+			{
+				Database = Database
+			};
+		}
 
 		public override void OnPut(string key, byte[] data, RavenJObject metadata)
-        {
-            if (key.StartsWith("Raven/")) // we don't deal with system attachment
-                return;
-            var attachment = Database.GetStatic(key);
-            if (attachment != null)
-            {
+		{
+			if (key.StartsWith("Raven/")) // we don't deal with system attachment
+				return;
+			var attachment = Database.GetStatic(key);
+			if (attachment != null)
+			{
 				var history = attachment.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ??
 				              new RavenJArray();
-            	metadata[ReplicationConstants.RavenReplicationHistory] = history;
+				metadata[ReplicationConstants.RavenReplicationHistory] = history;
 
-            	history.Add(new RavenJObject
+				history.Add(new RavenJObject
 				{
 					{ReplicationConstants.RavenReplicationVersion, attachment.Metadata[ReplicationConstants.RavenReplicationVersion]},
 					{ReplicationConstants.RavenReplicationSource, attachment.Metadata[ReplicationConstants.RavenReplicationSource]}
@@ -45,9 +45,9 @@ namespace Raven.Bundles.Replication.Triggers
 				{
 					history.RemoveAt(0);
 				}
-            }
+			}
 			metadata[ReplicationConstants.RavenReplicationVersion] = RavenJToken.FromObject(hiLo.NextId());
-            metadata[ReplicationConstants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
-        }
-    }
+			metadata[ReplicationConstants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
+		}
+	}
 }

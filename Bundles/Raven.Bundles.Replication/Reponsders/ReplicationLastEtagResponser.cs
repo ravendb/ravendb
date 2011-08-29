@@ -12,57 +12,57 @@ using Raven.Http.Extensions;
 
 namespace Raven.Bundles.Replication.Reponsders
 {
-    public class ReplicationLastEtagResponser : RequestResponder
-    {
-    	private Logger log = LogManager.GetCurrentClassLogger();
+	public class ReplicationLastEtagResponser : RequestResponder
+	{
+		private Logger log = LogManager.GetCurrentClassLogger();
 
-        public override void Respond(IHttpContext context)
-        {
-            var src = context.Request.QueryString["from"];
-            if (string.IsNullOrEmpty(src))
-            {
-                context.SetStatusToBadRequest();
-                return;
-            }
-            while (src.EndsWith("/"))
-                src = src.Substring(0, src.Length - 1);// remove last /, because that has special meaning for Raven
-            if (string.IsNullOrEmpty(src))
-            {
-                context.SetStatusToBadRequest();
-                return;
-            }
+		public override void Respond(IHttpContext context)
+		{
+			var src = context.Request.QueryString["from"];
+			if (string.IsNullOrEmpty(src))
+			{
+				context.SetStatusToBadRequest();
+				return;
+			}
+			while (src.EndsWith("/"))
+				src = src.Substring(0, src.Length - 1);// remove last /, because that has special meaning for Raven
+			if (string.IsNullOrEmpty(src))
+			{
+				context.SetStatusToBadRequest();
+				return;
+			}
 			using (Database.DisableAllTriggersForCurrentThread())
-            {
-                var document = Database.Get(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null);
+			{
+				var document = Database.Get(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null);
 
-                SourceReplicationInformation sourceReplicationInformation = null;
+				SourceReplicationInformation sourceReplicationInformation = null;
 
-                if (document == null)
-                {
-                    sourceReplicationInformation = new SourceReplicationInformation()
-                    {
-                        ServerInstanceId = Database.TransactionalStorage.Id
-                    };
-                }
-                else
-                {
-                    sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-                    sourceReplicationInformation.ServerInstanceId = Database.TransactionalStorage.Id;
-                }
+				if (document == null)
+				{
+					sourceReplicationInformation = new SourceReplicationInformation()
+					{
+						ServerInstanceId = Database.TransactionalStorage.Id
+					};
+				}
+				else
+				{
+					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+					sourceReplicationInformation.ServerInstanceId = Database.TransactionalStorage.Id;
+				}
 
-                log.Debug("Got replication last etag request from {0}: [{1}]", src, sourceReplicationInformation);
-                context.WriteJson(sourceReplicationInformation);
-            }
-        }
+				log.Debug("Got replication last etag request from {0}: [{1}]", src, sourceReplicationInformation);
+				context.WriteJson(sourceReplicationInformation);
+			}
+		}
 
-        public override string UrlPattern
-        {
-            get { return "^/replication/lastEtag$"; }
-        }
+		public override string UrlPattern
+		{
+			get { return "^/replication/lastEtag$"; }
+		}
 
-        public override string[] SupportedVerbs
-        {
-            get { return new[] { "GET" }; }
-        }
-    }
+		public override string[] SupportedVerbs
+		{
+			get { return new[] { "GET" }; }
+		}
+	}
 }
