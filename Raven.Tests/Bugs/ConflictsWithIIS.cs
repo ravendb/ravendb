@@ -12,6 +12,13 @@ namespace Raven.Tests.Bugs
 {
     public class ConflictsWithIIS : IISExpressTestClient
     {
+        public class DeviceStatusRecord
+        {
+            public int DeviceId { get; set; }
+            public DateTimeOffset Timestamp { get; set; }
+            public int StatusId { get; set; }
+        }
+
         [Fact]
         public void MultiThreadedInsert()
         {
@@ -52,7 +59,7 @@ namespace Raven.Tests.Bugs
         {
             using (var session = store.OpenSession())
             {
-                session.Store(new
+                session.Store(new DeviceStatusRecord
                                   {
                                       DeviceId = deviceId,
                                       Timestamp = DateTime.Now,
@@ -67,7 +74,7 @@ namespace Raven.Tests.Bugs
             using (var store = new DocumentStore {Url = url}.Initialize())
             using (var session = store.OpenSession())
             {
-                session.Store(new
+                session.Store(new DeviceStatusRecord
                                   {
                                       DeviceId = deviceId,
                                       Timestamp = DateTime.Now,
