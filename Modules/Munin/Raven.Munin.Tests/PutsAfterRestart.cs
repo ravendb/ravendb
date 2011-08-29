@@ -9,42 +9,42 @@ using Xunit;
 
 namespace Raven.Munin.Tests
 {
-    public class PutsAfterRestart : SimpleFileTest
-    {
-        [Fact]
-        public void CanStartAndStopPersistentDictionary()
-        {
-            Reopen();
-        }
+	public class PutsAfterRestart : SimpleFileTest
+	{
+		[Fact]
+		public void CanStartAndStopPersistentDictionary()
+		{
+			Reopen();
+		}
 
-        [Fact]
-        public void RestartBeforeTxCommitMeansNoData()
-        {
+		[Fact]
+		public void RestartBeforeTxCommitMeansNoData()
+		{
 
 
 			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
-            
-            Reopen();
+			
+			Reopen();
 
 			var data = Table.Read(RavenJToken.FromObject("123"));
-            
-            Assert.Null(data);
-        }
+			
+			Assert.Null(data);
+		}
 
-        [Fact]
-        public void AfterCommitValueIsVisibleToAllTxEvenAfterReopen()
-        {
+		[Fact]
+		public void AfterCommitValueIsVisibleToAllTxEvenAfterReopen()
+		{
 
 
 			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 			Assert.True(Table.Put(RavenJToken.FromObject("431"), new byte[] { 1, 3, 4, 5 }));
 
-            Commit();
+			Commit();
 
-            Reopen();
+			Reopen();
 
 			Assert.Equal(new byte[] { 1, 2, 4, 5 }, Table.Read(RavenJToken.FromObject("123")).Data());
 			Assert.Equal(new byte[] { 1, 3, 4, 5 }, Table.Read(RavenJToken.FromObject("431")).Data());
-        }
-    }
+		}
+	}
 }

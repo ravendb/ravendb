@@ -9,44 +9,44 @@ using Xunit;
 
 namespace Raven.Munin.Tests
 {
-    public class CanWorkWithTwoDicsInSameFile : MultiDicInSingleFile
-    {
-        [Fact]
-        public void StoringSameKeyInBothDicWithTwoDifferentValues()
-        {
-            tableOne.Put(RavenJToken.FromObject(1), new byte[] { 1, 2 });
+	public class CanWorkWithTwoDicsInSameFile : MultiDicInSingleFile
+	{
+		[Fact]
+		public void StoringSameKeyInBothDicWithTwoDifferentValues()
+		{
+			tableOne.Put(RavenJToken.FromObject(1), new byte[] { 1, 2 });
 			tableTwo.Put(RavenJToken.FromObject(1), new byte[] { 2, 3 });
 
 			Assert.Equal(new byte[] { 1, 2, }, tableOne.Read(RavenJToken.FromObject(1)).Data());
 			Assert.Equal(new byte[] { 2, 3 }, tableTwo.Read(RavenJToken.FromObject(1)).Data());
-        }
+		}
 
-        [Fact]
-        public void StoringSameKeyInBothDicWithTwoDifferentValuesAfterCommit()
-        {
+		[Fact]
+		public void StoringSameKeyInBothDicWithTwoDifferentValuesAfterCommit()
+		{
 
 
 			tableOne.Put(RavenJToken.FromObject(1), new byte[] { 1, 2 });
 			tableTwo.Put(RavenJToken.FromObject(1), new byte[] { 2, 3 });
 
-            Commit();
+			Commit();
 
 			Assert.Equal(new byte[] { 1, 2, }, tableOne.Read(RavenJToken.FromObject(1)).Data());
 			Assert.Equal(new byte[] { 2, 3 }, tableTwo.Read(RavenJToken.FromObject(1)).Data());
-        }
+		}
 
-        [Fact]
-        public void StoringSameKeyInBothDicWithTwoDifferentValuesAfterCommitAndReopen()
-        {
+		[Fact]
+		public void StoringSameKeyInBothDicWithTwoDifferentValuesAfterCommitAndReopen()
+		{
 			tableOne.Put(RavenJToken.FromObject(1), new byte[] { 1, 2 });
 			tableTwo.Put(RavenJToken.FromObject(1), new byte[] { 2, 3 });
 
-            Database.Commit();
+			Database.Commit();
 
-            Reopen();
+			Reopen();
 
 			Assert.Equal(new byte[] { 1, 2, }, tableOne.Read(RavenJToken.FromObject(1)).Data());
 			Assert.Equal(new byte[] { 2, 3 }, tableTwo.Read(RavenJToken.FromObject(1)).Data());
-        }
-    }
+		}
+	}
 }

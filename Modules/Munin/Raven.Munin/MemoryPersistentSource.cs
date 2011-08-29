@@ -11,58 +11,58 @@ using System.Threading;
 
 namespace Raven.Munin
 {
-    public class MemoryPersistentSource : AbstractPersistentSource
-    {
-        private MemoryStream log;
+	public class MemoryPersistentSource : AbstractPersistentSource
+	{
+		private MemoryStream log;
 
-        public MemoryPersistentSource()
-        {
-            log = new MemoryStream();
-            CreatedNew = true;
-        }
+		public MemoryPersistentSource()
+		{
+			log = new MemoryStream();
+			CreatedNew = true;
+		}
 
-        protected override Stream CreateClonedStreamForReadOnlyPurposes()
-        {
-            return new MemoryStream(log.GetBuffer(), 0, (int)Log.Length, false);
-        }
+		protected override Stream CreateClonedStreamForReadOnlyPurposes()
+		{
+			return new MemoryStream(log.GetBuffer(), 0, (int)Log.Length, false);
+		}
 
-        public MemoryPersistentSource(byte[] data)
-        {
-            log = new MemoryStream(data);
-            CreatedNew = true;
-        }
+		public MemoryPersistentSource(byte[] data)
+		{
+			log = new MemoryStream(data);
+			CreatedNew = true;
+		}
 
-        protected override Stream Log { get { return log; } }
+		protected override Stream Log { get { return log; } }
 
-        #region IPersistentSource Members
+		#region IPersistentSource Members
 
-        public override void ReplaceAtomically(Stream newLog)
-        {
-            this.log = (MemoryStream)newLog;
-        }
+		public override void ReplaceAtomically(Stream newLog)
+		{
+			this.log = (MemoryStream)newLog;
+		}
 
-        public override Stream CreateTemporaryStream()
-        {
-            return new MemoryStream();
-        }
+		public override Stream CreateTemporaryStream()
+		{
+			return new MemoryStream();
+		}
 
-        public override void FlushLog()
-        {
-        }
+		public override void FlushLog()
+		{
+		}
 
-        public override RemoteManagedStorageState CreateRemoteAppDomainState()
-        {
-            return new RemoteManagedStorageState
-            {
-                Log = ((MemoryStream)Log).ToArray(),
-            };
-        }
+		public override RemoteManagedStorageState CreateRemoteAppDomainState()
+		{
+			return new RemoteManagedStorageState
+			{
+				Log = ((MemoryStream)Log).ToArray(),
+			};
+		}
 
-    	public override void EnsureCapacity(int value)
-    	{
-    		log.Capacity = value;
-    	}
+		public override void EnsureCapacity(int value)
+		{
+			log.Capacity = value;
+		}
 
-    	#endregion
-    }
+		#endregion
+	}
 }

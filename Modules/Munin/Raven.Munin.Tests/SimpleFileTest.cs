@@ -8,64 +8,64 @@ using System.IO;
 
 namespace Raven.Munin.Tests
 {
-    public class SimpleFileTest : IDisposable
-    {
-        protected Table Table;
-        protected FileBasedPersistentSource PersistentSource;
-        private readonly string tempPath;
-        private Database database;
+	public class SimpleFileTest : IDisposable
+	{
+		protected Table Table;
+		protected FileBasedPersistentSource PersistentSource;
+		private readonly string tempPath;
+		private Database database;
 
-        public SimpleFileTest()
-        {
-            tempPath = Path.GetTempPath();
-        	var path = Path.Combine(tempPath, "test.ravendb");
+		public SimpleFileTest()
+		{
+			tempPath = Path.GetTempPath();
+			var path = Path.Combine(tempPath, "test.ravendb");
 			if (File.Exists(path))
 				File.Delete(path);
-            OpenDictionary();
-        }
+			OpenDictionary();
+		}
 
-        protected void Reopen()
-        {
-            PersistentSource.Dispose();
-            OpenDictionary();
-        }
+		protected void Reopen()
+		{
+			PersistentSource.Dispose();
+			OpenDictionary();
+		}
 
-        protected void OpenDictionary()
-        {
-            PersistentSource = new FileBasedPersistentSource(tempPath, "test", writeThrough: true);
-            database = new Database(PersistentSource);
-            Table = database.Add(new Table("Test"));
-            database.Initialze();
-            database.BeginTransaction();
-        }
+		protected void OpenDictionary()
+		{
+			PersistentSource = new FileBasedPersistentSource(tempPath, "test", writeThrough: true);
+			database = new Database(PersistentSource);
+			Table = database.Add(new Table("Test"));
+			database.Initialze();
+			database.BeginTransaction();
+		}
 
-        protected void SupressTx(Action action)
-        {
-            using (database.SuppressTransaction())
-                action();
-        }
+		protected void SupressTx(Action action)
+		{
+			using (database.SuppressTransaction())
+				action();
+		}
 
-        protected void PerformIdleTasks()
-        {
-            database.PerformIdleTasks();
-        }
+		protected void PerformIdleTasks()
+		{
+			database.PerformIdleTasks();
+		}
 
-        protected void Rollback()
-        {
-            database.Rollback();
-            database.BeginTransaction();
-        }
+		protected void Rollback()
+		{
+			database.Rollback();
+			database.BeginTransaction();
+		}
 
-        protected void Commit()
-        {
-            database.Commit();
-            database.BeginTransaction();
-        }
+		protected void Commit()
+		{
+			database.Commit();
+			database.BeginTransaction();
+		}
 
-        public void Dispose()
-        {
-            PersistentSource.Dispose();
-            PersistentSource.Delete();
-        }
-    }
+		public void Dispose()
+		{
+			PersistentSource.Dispose();
+			PersistentSource.Delete();
+		}
+	}
 }

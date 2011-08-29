@@ -9,17 +9,17 @@ using Xunit;
 
 namespace Raven.Munin.Tests
 {
-    public class Removes : SimpleFileTest
-    {
-        [Fact]
-        public void RemovingNonExistantIsNoOp()
-        {
+	public class Removes : SimpleFileTest
+	{
+		[Fact]
+		public void RemovingNonExistantIsNoOp()
+		{
 			Assert.True(Table.Remove(RavenJToken.FromObject("a")));
-        }
+		}
 
-        [Fact]
-        public void PutThenRemoveInSameTxWillResultInMissingValue()
-        {
+		[Fact]
+		public void PutThenRemoveInSameTxWillResultInMissingValue()
+		{
 
 
 			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
@@ -27,38 +27,38 @@ namespace Raven.Munin.Tests
 			Assert.True(Table.Remove(RavenJToken.FromObject("123")));
 
 			var data = Table.Read(RavenJToken.FromObject("123"));
-            
-            Assert.Null(data);
-        }
+			
+			Assert.Null(data);
+		}
 
-        [Fact]
-        public void BeforeCommitRemoveIsNotVisibleOutsideTheTx()
-        {
+		[Fact]
+		public void BeforeCommitRemoveIsNotVisibleOutsideTheTx()
+		{
 
 			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Commit();
+			Commit();
 
 			Assert.True(Table.Remove(RavenJToken.FromObject("123")));
 
-            Table.ReadResult data = null;
+			Table.ReadResult data = null;
 			SupressTx(() => data = Table.Read(RavenJToken.FromObject("123")));
 
-            Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
-        }
+			Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
+		}
 
-        [Fact]
-        public void AfterCommitRemoveIsVisibleOutsideTheTx()
-        {
+		[Fact]
+		public void AfterCommitRemoveIsVisibleOutsideTheTx()
+		{
 			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Commit();
+			Commit();
 
 			Assert.True(Table.Remove(RavenJToken.FromObject("123")));
 
-            Commit();
+			Commit();
 
 			Assert.Null(Table.Read(RavenJToken.FromObject("123")));
-        }
-    }
+		}
+	}
 }
