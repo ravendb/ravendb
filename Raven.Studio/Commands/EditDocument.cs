@@ -1,9 +1,9 @@
 ﻿namespace Raven.Studio.Commands
 {
-    using System.Collections;
-    using System.ComponentModel.Composition;
-    using System.Linq;
-    using Caliburn.Micro;
+	using System.Collections;
+	using System.ComponentModel.Composition;
+	using System.Linq;
+	using Caliburn.Micro;
 	using Features.Documents;
 	using Messages;
 

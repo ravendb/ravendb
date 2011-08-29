@@ -20,14 +20,14 @@ namespace Raven.Studio
 	using Shell;
 	using Shell.MessageBox;
 
-    public class AppBootstrapper : Bootstrapper<IShell>
+	public class AppBootstrapper : Bootstrapper<IShell>
 	{
 		CompositionContainer container;
 
-    	static AppBootstrapper()
-    	{
+		static AppBootstrapper()
+		{
 			LogManager.GetLog = type => new DebugLogger(type);	
-    	}
+		}
 
 		protected override void OnStartup(object sender, StartupEventArgs e)
 		{
@@ -53,7 +53,7 @@ namespace Raven.Studio
 				AssemblySource.Instance.Select(assembly => new AssemblyCatalog(assembly))
 					.Cast<ComposablePartCatalog>());
 
-            RegisterSettings();
+			RegisterSettings();
 			RegisterTypesByConvention(catalog);
 			
 			container = CompositionHost.Initialize(catalog);
@@ -68,7 +68,7 @@ namespace Raven.Studio
 			container.Compose(batch);
 		}
 
-        static void RegisterTypesByConvention(AggregateCatalog master)
+		static void RegisterTypesByConvention(AggregateCatalog master)
 		{
 			var catalog = new ConventionalCatalog();
 			
@@ -113,15 +113,15 @@ namespace Raven.Studio
 			ViewLocator.LocateForModelType = (t, v, c) => { return StudioViewLocator.LocateForModelType(t, v, c, original); };
 
 		    MessageBinder.SpecialValues["$selecteditems"] = context => {
-                ListBox listBox;
+				ListBox listBox;
 
-                if (context.Source is ListBox)
-                    listBox = (ListBox)context.Source;
-                else {
-                    var viewAware = (ViewAware)context.Source.Tag;
-                    var parentView = (FrameworkElement)viewAware.GetView();
-                    listBox = (ListBox)parentView.FindName("DocumentPageContainer");
-                }
+				if (context.Source is ListBox)
+					listBox = (ListBox)context.Source;
+				else {
+					var viewAware = (ViewAware)context.Source.Tag;
+					var parentView = (FrameworkElement)viewAware.GetView();
+					listBox = (ListBox)parentView.FindName("DocumentPageContainer");
+				}
 
 		        return listBox.SelectedItems;
 		    };
@@ -130,7 +130,7 @@ namespace Raven.Studio
 		void ShowMessageBox(string message, string title, MessageBoxOptions options = MessageBoxOptions.Ok,
 							Action<IMessageBox> callback = null)
 		{
-            Execute.OnUIThread( ()=>{
+			Execute.OnUIThread( ()=>{
 			var box = container.GetExportedValue<IMessageBox>();
 
 			box.DisplayName = title;
@@ -141,32 +141,32 @@ namespace Raven.Studio
 				box.Deactivated += (s, e) => callback(box);
 
 			container.GetExportedValue<IWindowManager>().ShowDialog(box);
-            });
+			});
 		}
 
-        private static void RegisterSettings()
-        {
-            using (var manifestResourceStream = typeof(AppBootstrapper).Assembly.GetManifestResourceStream("Raven.Studio.Settings.dat"))
-            {
-                if (manifestResourceStream == null || manifestResourceStream.Length == 0)
-                    return;
+		private static void RegisterSettings()
+		{
+			using (var manifestResourceStream = typeof(AppBootstrapper).Assembly.GetManifestResourceStream("Raven.Studio.Settings.dat"))
+			{
+				if (manifestResourceStream == null || manifestResourceStream.Length == 0)
+					return;
 
-                using (var reader = new BinaryReader(manifestResourceStream))
-                {
-                    using (var aes = new AesManaged())
-                    {
-                        aes.Key = reader.ReadBytes(32);
-                        aes.IV = reader.ReadBytes(16);
+				using (var reader = new BinaryReader(manifestResourceStream))
+				{
+					using (var aes = new AesManaged())
+					{
+						aes.Key = reader.ReadBytes(32);
+						aes.IV = reader.ReadBytes(16);
 
-                        using (var cryptoStream = new CryptoStream(manifestResourceStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
-                        using (var cryptoReader = new BinaryReader(cryptoStream))
-                        {
-                            ActiproSoftware.Products.ActiproLicenseManager.RegisterLicense(
-                                cryptoReader.ReadString(), cryptoReader.ReadString());
-                        }
-                    }
-                }
-            }
-        }
+						using (var cryptoStream = new CryptoStream(manifestResourceStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
+						using (var cryptoReader = new BinaryReader(cryptoStream))
+						{
+							ActiproSoftware.Products.ActiproLicenseManager.RegisterLicense(
+								cryptoReader.ReadString(), cryptoReader.ReadString());
+						}
+					}
+				}
+			}
+		}
 	}
 }

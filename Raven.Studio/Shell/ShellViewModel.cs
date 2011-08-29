@@ -38,7 +38,7 @@
 			IKeyboardShortcutBinder binder,
 			IEventAggregator events)
 		{
-            this.databaseScreen = databaseScreen;
+			this.databaseScreen = databaseScreen;
 			this.navigation = navigation;
 			this.notifications = notifications;
 			this.busyStatus = busyStatus;

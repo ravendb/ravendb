@@ -69,28 +69,28 @@ using Interop=System.Runtime.InteropServices;
 
 namespace Ionic.Zlib
 {
-    /// <summary>
-    /// A general purpose exception class for exceptions in the Zlib library.
-    /// </summary>
-    [Interop.GuidAttribute("ebc25cf6-9120-4283-b972-0e5520d0000E")]
-    public class ZlibException : System.Exception
-    {
-        /// <summary>
-        /// The ZlibException class captures exception information generated
-        /// by the Zlib library. 
-        /// </summary>
-        public ZlibException()
-            : base()
-        {
-        }
+	/// <summary>
+	/// A general purpose exception class for exceptions in the Zlib library.
+	/// </summary>
+	[Interop.GuidAttribute("ebc25cf6-9120-4283-b972-0e5520d0000E")]
+	public class ZlibException : System.Exception
+	{
+		/// <summary>
+		/// The ZlibException class captures exception information generated
+		/// by the Zlib library. 
+		/// </summary>
+		public ZlibException()
+			: base()
+		{
+		}
 
-        /// <summary>
-        /// This ctor collects a message attached to the exception.
-        /// </summary>
-        /// <param name="s"></param>
-        public ZlibException(System.String s)
-            : base(s)
-        {
-        }
-    }
+		/// <summary>
+		/// This ctor collects a message attached to the exception.
+		/// </summary>
+		/// <param name="s"></param>
+		public ZlibException(System.String s)
+			: base(s)
+		{
+		}
+	}
 }

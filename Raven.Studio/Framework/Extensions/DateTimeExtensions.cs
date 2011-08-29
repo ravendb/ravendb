@@ -8,7 +8,7 @@ namespace Raven.Studio.Framework.Extensions
 	{
 		public static string HowLongSince(this DateTime start)
 		{
-            if (start == default(DateTime)) return "unknown";
+			if (start == default(DateTime)) return "unknown";
 
 			var values = start.TimePassedSince();
 

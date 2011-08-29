@@ -18,7 +18,7 @@ namespace Raven.Studio.Features.Indexes
 	using Messages;
 	using Plugins;
 
-    public class EditIndexViewModel : RavenScreen
+	public class EditIndexViewModel : RavenScreen
 	{
 		readonly IndexDefinition index;
 		bool isDirty;

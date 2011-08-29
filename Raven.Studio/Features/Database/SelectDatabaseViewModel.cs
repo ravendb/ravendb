@@ -2,76 +2,76 @@ using Raven.Studio.Infrastructure.Navigation;
 
 namespace Raven.Studio.Features.Database
 {
-    using System.ComponentModel.Composition;
-    using System.Windows;
-    using Caliburn.Micro;
-    using Framework;
-    using Messages;
-    using Plugins;
+	using System.ComponentModel.Composition;
+	using System.Windows;
+	using Caliburn.Micro;
+	using Framework;
+	using Messages;
+	using Plugins;
 
-    [Export]
-    public class SelectDatabaseViewModel : RavenScreen
-    {
-        private string newDatabaseName;
-        private Visibility showCreateDatabaseForm;
+	[Export]
+	public class SelectDatabaseViewModel : RavenScreen
+	{
+		private string newDatabaseName;
+		private Visibility showCreateDatabaseForm;
 
-        [ImportingConstructor]
+		[ImportingConstructor]
 		public SelectDatabaseViewModel()
-        {
-            DisplayName = "Home";
-            ShowCreateDatabaseForm = Visibility.Collapsed;
-        }
+		{
+			DisplayName = "Home";
+			ShowCreateDatabaseForm = Visibility.Collapsed;
+		}
 
-        public Visibility ShowCreateDatabaseForm
-        {
-            get { return showCreateDatabaseForm; }
-            set
-            {
-                showCreateDatabaseForm = value;
-                NotifyOfPropertyChange(() => ShowCreateDatabaseForm);
-            }
-        }
+		public Visibility ShowCreateDatabaseForm
+		{
+			get { return showCreateDatabaseForm; }
+			set
+			{
+				showCreateDatabaseForm = value;
+				NotifyOfPropertyChange(() => ShowCreateDatabaseForm);
+			}
+		}
 
-        public string NewDatabaseName
-        {
-            get { return newDatabaseName; }
-            set
-            {
-                newDatabaseName = value;
-                NotifyOfPropertyChange(() => NewDatabaseName);
-            }
-        }
+		public string NewDatabaseName
+		{
+			get { return newDatabaseName; }
+			set
+			{
+				newDatabaseName = value;
+				NotifyOfPropertyChange(() => NewDatabaseName);
+			}
+		}
 
-        public void OpenSelectedDatabase()
-        {
-            SelectDatabase(Server.CurrentDatabase);
-        }
+		public void OpenSelectedDatabase()
+		{
+			SelectDatabase(Server.CurrentDatabase);
+		}
 
-        public void SelectDatabase(string database)
-        {
-            WorkStarted();
+		public void SelectDatabase(string database)
+		{
+			WorkStarted();
 
-            Server.OpenDatabase(database, () =>
-            {
-                Events.Publish(new DisplayCurrentDatabaseRequested());
-                WorkCompleted();
-            });
-        }
+			Server.OpenDatabase(database, () =>
+			{
+				Events.Publish(new DisplayCurrentDatabaseRequested());
+				WorkCompleted();
+			});
+		}
 
-        public void BeginCreateNewDatabase()
-        {
-            ShowCreateDatabaseForm = Visibility.Visible;
-        }
+		public void BeginCreateNewDatabase()
+		{
+			ShowCreateDatabaseForm = Visibility.Visible;
+		}
 
-        public void CreateNewDatabase()
-        {
-            WorkStarted("creating database");
-            Server.CreateDatabase(NewDatabaseName, ()=>
-                {
-                    WorkCompleted("creating database");
-                    ShowCreateDatabaseForm = Visibility.Collapsed;
-                    NewDatabaseName = string.Empty;
-                });
-        }
-    }
+		public void CreateNewDatabase()
+		{
+			WorkStarted("creating database");
+			Server.CreateDatabase(NewDatabaseName, ()=>
+				{
+					WorkCompleted("creating database");
+					ShowCreateDatabaseForm = Visibility.Collapsed;
+					NewDatabaseName = string.Empty;
+				});
+		}
+	}
 }

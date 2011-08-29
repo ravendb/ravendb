@@ -1,7 +1,7 @@
 ﻿namespace Raven.Studio.Shell.MessageBox
 {
-    using System;
+	using System;
 
-    public delegate void ShowMessageBox(
+	public delegate void ShowMessageBox(
 		string message, string title, MessageBoxOptions options = MessageBoxOptions.Ok, Action<IMessageBox> callback = null);
 }

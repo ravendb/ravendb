@@ -9,7 +9,7 @@
 	using Messages;
 	using Action = System.Action;
 
-    public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
+	public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
 	{
 		public BindablePagedQuery(Func<int, int, Task<T[]>> query)
 			: base(query, t => t)
@@ -45,17 +45,17 @@
 		public Size? ItemElementSize { get; set; }
 		public Size PageElementSize { get; set; }
 
-        public void ClearResults()
-        {
-            hasLoadedFirstPage = false;
-            
-            Clear();
+		public void ClearResults()
+		{
+			hasLoadedFirstPage = false;
+			
+			Clear();
 
-            NumberOfPages = 0;
-            CurrentPage = 0;
+			NumberOfPages = 0;
+			CurrentPage = 0;
 
 			NotifyOfPropertyChange("HasResults");
-        }
+		}
 
 		public void AdjustResultsForPageSize()
 		{

@@ -117,20 +117,20 @@ namespace Raven.Studio.Framework.Extensions
 			//    return "Silverlight is not able to connect to the specified address for the server. Is it running?";
 
 		    var webException = single as WebException;
-            if(webException != null)
-            {
-                var httpWebResponse = webException.Response as HttpWebResponse;
-                if(httpWebResponse != null)
-                {
-                    using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
-                    {
-                        return "The remote server returned an error: " + httpWebResponse.StatusDescription +
-                               Environment.NewLine + 
-                               reader.ReadToEnd();
-                    }
+			if(webException != null)
+			{
+				var httpWebResponse = webException.Response as HttpWebResponse;
+				if(httpWebResponse != null)
+				{
+					using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+					{
+						return "The remote server returned an error: " + httpWebResponse.StatusDescription +
+							   Environment.NewLine + 
+							   reader.ReadToEnd();
+					}
 
-                }
-            }
+				}
+			}
 
 		    return ( single == null) 
 			       	? null
