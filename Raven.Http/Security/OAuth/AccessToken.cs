@@ -72,7 +72,7 @@ namespace Raven.Http.Security.OAuth
         {
             var issued = (DateTime.UtcNow - DateTime.MinValue).TotalMilliseconds;
             
-            var body = RavenJObject.FromObject(new { UserId = userId, AuthorizedDatabases = databases ?? new string[0], Issued = issued })
+            var body = RavenJObject.FromObject(new AccessTokenBody{ UserId = userId, AuthorizedDatabases = databases ?? new string[0], Issued = issued })
                     .ToString(Formatting.None);
 
             var signature = Sign(body, cert);
