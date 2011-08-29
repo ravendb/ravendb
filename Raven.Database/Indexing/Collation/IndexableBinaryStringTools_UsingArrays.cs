@@ -79,7 +79,7 @@ namespace Raven.Database.Indexing.Collation
 		/// <throws>  IllegalArgumentException If the given ByteBuffer is not backed by an array </throws>
 		public static int GetEncodedLength(System.Collections.Generic.IList<byte> original)
 		{
-            return (original.Count == 0) ? 0 : ((original.Count * 8 + 14) / 15) + 1;
+			return (original.Count == 0) ? 0 : ((original.Count * 8 + 14) / 15) + 1;
 		}
 		
 		/// <summary> Returns the number of bytes required to decode the given char sequence.
@@ -90,19 +90,19 @@ namespace Raven.Database.Indexing.Collation
 		/// <returns> The number of bytes required to decode the given char sequence
 		/// </returns>
 		/// <throws>  IllegalArgumentException If the given CharBuffer is not backed by an array </throws>
-        public static int GetDecodedLength(System.Collections.Generic.IList<char> encoded)
+		public static int GetDecodedLength(System.Collections.Generic.IList<char> encoded)
 		{
-            int numChars = encoded.Count - 1;
-            if (numChars <= 0)
-            {
-                return 0;
-            }
-            else
-            {
-                int numFullBytesInFinalChar = encoded[encoded.Count - 1];
-                int numEncodedChars = numChars - 1;
-                return ((numEncodedChars * 15 + 7) / 8 + numFullBytesInFinalChar);
-            }
+			int numChars = encoded.Count - 1;
+			if (numChars <= 0)
+			{
+				return 0;
+			}
+			else
+			{
+				int numFullBytesInFinalChar = encoded[encoded.Count - 1];
+				int numEncodedChars = numChars - 1;
+				return ((numEncodedChars * 15 + 7) / 8 + numFullBytesInFinalChar);
+			}
 		}
 		
 		/// <summary> Encodes the input byte sequence into the output char sequence.  Before
@@ -120,60 +120,60 @@ namespace Raven.Database.Indexing.Collation
 		/// </summary>
 		public static void  Encode(byte[] input, char[] output)
 		{
-            int outputLength = GetEncodedLength(input);
-            // only adjust capacity if needed
-            if (output.Length < outputLength)
-            {
-                throw new ArgumentException("Insufficent array length");
-            }
+			int outputLength = GetEncodedLength(input);
+			// only adjust capacity if needed
+			if (output.Length < outputLength)
+			{
+				throw new ArgumentException("Insufficent array length");
+			}
 
-            if (input.Length > 0)
-            {
-                int inputByteNum = 0;
-                int caseNum = 0;
-                int outputCharNum = 0;
-                CodingCase codingCase;
-                for (; inputByteNum + CODING_CASES[caseNum].numBytes <= input.Length; ++outputCharNum)
-                {
-                    codingCase = CODING_CASES[caseNum];
-                    if (2 == codingCase.numBytes)
-                    {
-                        output[outputCharNum] = (char)(((input[inputByteNum] & 0xFF) << codingCase.initialShift) + ((SupportClass.Number.URShift((input[inputByteNum + 1] & 0xFF), codingCase.finalShift)) & codingCase.finalMask) & (short)0x7FFF);
-                    }
-                    else
-                    {
-                        // numBytes is 3
-                        output[outputCharNum] = (char)(((input[inputByteNum] & 0xFF) << codingCase.initialShift) + ((input[inputByteNum + 1] & 0xFF) << codingCase.middleShift) + ((SupportClass.Number.URShift((input[inputByteNum + 2] & 0xFF), codingCase.finalShift)) & codingCase.finalMask) & (short)0x7FFF);
-                    }
-                    inputByteNum += codingCase.advanceBytes;
-                    if (++caseNum == CODING_CASES.Length)
-                    {
-                        caseNum = 0;
-                    }
-                }
-                // Produce final char (if any) and trailing count chars.
-                codingCase = CODING_CASES[caseNum];
+			if (input.Length > 0)
+			{
+				int inputByteNum = 0;
+				int caseNum = 0;
+				int outputCharNum = 0;
+				CodingCase codingCase;
+				for (; inputByteNum + CODING_CASES[caseNum].numBytes <= input.Length; ++outputCharNum)
+				{
+					codingCase = CODING_CASES[caseNum];
+					if (2 == codingCase.numBytes)
+					{
+						output[outputCharNum] = (char)(((input[inputByteNum] & 0xFF) << codingCase.initialShift) + ((SupportClass.Number.URShift((input[inputByteNum + 1] & 0xFF), codingCase.finalShift)) & codingCase.finalMask) & (short)0x7FFF);
+					}
+					else
+					{
+						// numBytes is 3
+						output[outputCharNum] = (char)(((input[inputByteNum] & 0xFF) << codingCase.initialShift) + ((input[inputByteNum + 1] & 0xFF) << codingCase.middleShift) + ((SupportClass.Number.URShift((input[inputByteNum + 2] & 0xFF), codingCase.finalShift)) & codingCase.finalMask) & (short)0x7FFF);
+					}
+					inputByteNum += codingCase.advanceBytes;
+					if (++caseNum == CODING_CASES.Length)
+					{
+						caseNum = 0;
+					}
+				}
+				// Produce final char (if any) and trailing count chars.
+				codingCase = CODING_CASES[caseNum];
 
-                if (inputByteNum + 1 < input.Length)
-                {
-                    // codingCase.numBytes must be 3
-                    output[outputCharNum++] = (char) ((((input[inputByteNum] & 0xFF) << codingCase.initialShift) + ((input[inputByteNum + 1] & 0xFF) << codingCase.middleShift)) & (short) 0x7FFF);
-                    // Add trailing char containing the number of full bytes in final char
-                    output[outputCharNum++] = (char) 1;
-                }
-                else if (inputByteNum < input.Length)
-                {
-                    output[outputCharNum++] = (char) (((input[inputByteNum] & 0xFF) << codingCase.initialShift) & (short) 0x7FFF);
-                    // Add trailing char containing the number of full bytes in final char
-                    output[outputCharNum++] = caseNum == 0?(char) 1:(char) 0;
-                }
-                else
-                {
-                    // No left over bits - last char is completely filled.
-                    // Add trailing char containing the number of full bytes in final char
-                    output[outputCharNum++] = (char) 1;
-                }
-            }
+				if (inputByteNum + 1 < input.Length)
+				{
+					// codingCase.numBytes must be 3
+					output[outputCharNum++] = (char) ((((input[inputByteNum] & 0xFF) << codingCase.initialShift) + ((input[inputByteNum + 1] & 0xFF) << codingCase.middleShift)) & (short) 0x7FFF);
+					// Add trailing char containing the number of full bytes in final char
+					output[outputCharNum++] = (char) 1;
+				}
+				else if (inputByteNum < input.Length)
+				{
+					output[outputCharNum++] = (char) (((input[inputByteNum] & 0xFF) << codingCase.initialShift) & (short) 0x7FFF);
+					// Add trailing char containing the number of full bytes in final char
+					output[outputCharNum++] = caseNum == 0?(char) 1:(char) 0;
+				}
+				else
+				{
+					// No left over bits - last char is completely filled.
+					// Add trailing char containing the number of full bytes in final char
+					output[outputCharNum++] = (char) 1;
+				}
+			}
 		}
 		
 		/// <summary> Decodes the input char sequence into the output byte sequence.  Before
@@ -191,74 +191,74 @@ namespace Raven.Database.Indexing.Collation
 		/// </summary>
 		private static void Decode(char[] input, byte[] output)
 		{
-            int numOutputBytes = GetDecodedLength(input);
-            if (output.Length < numOutputBytes)
-            {
-                throw new ArgumentException("Insufficent length in the array");
-            }
+			int numOutputBytes = GetDecodedLength(input);
+			if (output.Length < numOutputBytes)
+			{
+				throw new ArgumentException("Insufficent length in the array");
+			}
 
-            if (input.Length > 0)
-            {
-                int caseNum = 0;
-                int outputByteNum = 0;
-                int inputCharNum = 0;
-                short inputChar;
-                CodingCase codingCase;
-                for (; inputCharNum < input.Length - 2; ++inputCharNum)
-                {
-                    codingCase = CODING_CASES[caseNum];
-                    inputChar = (short) input[inputCharNum];
-                    if (2 == codingCase.numBytes)
-                    {
-                        if (0 == caseNum)
-                        {
-                            output[outputByteNum] = (byte) (SupportClass.Number.URShift(inputChar, codingCase.initialShift));
-                        }
-                        else
-                        {
-                            output[outputByteNum] = (byte) (output[outputByteNum] + (byte) (SupportClass.Number.URShift(inputChar, codingCase.initialShift)));
-                        }
-                        output[outputByteNum + 1] = (byte) ((inputChar & codingCase.finalMask) << codingCase.finalShift);
-                    }
-                    else
-                    {
-                        // numBytes is 3
-                        output[outputByteNum] = (byte) (output[outputByteNum] + (byte) (SupportClass.Number.URShift(inputChar, codingCase.initialShift)));
-                        output[outputByteNum + 1] = (byte) (SupportClass.Number.URShift((inputChar & codingCase.middleMask), codingCase.middleShift));
-                        output[outputByteNum + 2] = (byte) ((inputChar & codingCase.finalMask) << codingCase.finalShift);
-                    }
-                    outputByteNum += codingCase.advanceBytes;
-                    if (++caseNum == CODING_CASES.Length)
-                    {
-                        caseNum = 0;
-                    }
-                }
-                // Handle final char
-                inputChar = (short) input[inputCharNum];
-                codingCase = CODING_CASES[caseNum];
-                if (0 == caseNum)
-                {
-                    output[outputByteNum] = 0;
-                }
-                output[outputByteNum] = (byte) (output[outputByteNum] + (byte) (SupportClass.Number.URShift(inputChar, codingCase.initialShift)));
-                long bytesLeft = numOutputBytes - outputByteNum;
-                if (bytesLeft > 1)
-                {
-                    if (2 == codingCase.numBytes)
-                    {
-                        output[outputByteNum + 1] = (byte) (SupportClass.Number.URShift((inputChar & codingCase.finalMask), codingCase.finalShift));
-                    }
-                    else
-                    {
-                        // numBytes is 3
-                        output[outputByteNum + 1] = (byte) (SupportClass.Number.URShift((inputChar & codingCase.middleMask), codingCase.middleShift));
-                        if (bytesLeft > 2)
-                        {
-                            output[outputByteNum + 2] = (byte) ((inputChar & codingCase.finalMask) << codingCase.finalShift);
-                        }
-                    }
-                }
-            }
+			if (input.Length > 0)
+			{
+				int caseNum = 0;
+				int outputByteNum = 0;
+				int inputCharNum = 0;
+				short inputChar;
+				CodingCase codingCase;
+				for (; inputCharNum < input.Length - 2; ++inputCharNum)
+				{
+					codingCase = CODING_CASES[caseNum];
+					inputChar = (short) input[inputCharNum];
+					if (2 == codingCase.numBytes)
+					{
+						if (0 == caseNum)
+						{
+							output[outputByteNum] = (byte) (SupportClass.Number.URShift(inputChar, codingCase.initialShift));
+						}
+						else
+						{
+							output[outputByteNum] = (byte) (output[outputByteNum] + (byte) (SupportClass.Number.URShift(inputChar, codingCase.initialShift)));
+						}
+						output[outputByteNum + 1] = (byte) ((inputChar & codingCase.finalMask) << codingCase.finalShift);
+					}
+					else
+					{
+						// numBytes is 3
+						output[outputByteNum] = (byte) (output[outputByteNum] + (byte) (SupportClass.Number.URShift(inputChar, codingCase.initialShift)));
+						output[outputByteNum + 1] = (byte) (SupportClass.Number.URShift((inputChar & codingCase.middleMask), codingCase.middleShift));
+						output[outputByteNum + 2] = (byte) ((inputChar & codingCase.finalMask) << codingCase.finalShift);
+					}
+					outputByteNum += codingCase.advanceBytes;
+					if (++caseNum == CODING_CASES.Length)
+					{
+						caseNum = 0;
+					}
+				}
+				// Handle final char
+				inputChar = (short) input[inputCharNum];
+				codingCase = CODING_CASES[caseNum];
+				if (0 == caseNum)
+				{
+					output[outputByteNum] = 0;
+				}
+				output[outputByteNum] = (byte) (output[outputByteNum] + (byte) (SupportClass.Number.URShift(inputChar, codingCase.initialShift)));
+				long bytesLeft = numOutputBytes - outputByteNum;
+				if (bytesLeft > 1)
+				{
+					if (2 == codingCase.numBytes)
+					{
+						output[outputByteNum + 1] = (byte) (SupportClass.Number.URShift((inputChar & codingCase.finalMask), codingCase.finalShift));
+					}
+					else
+					{
+						// numBytes is 3
+						output[outputByteNum + 1] = (byte) (SupportClass.Number.URShift((inputChar & codingCase.middleMask), codingCase.middleShift));
+						if (bytesLeft > 2)
+						{
+							output[outputByteNum + 2] = (byte) ((inputChar & codingCase.finalMask) << codingCase.finalShift);
+						}
+					}
+				}
+			}
 		}
 		
 		/// <summary> Decodes the given char sequence, which must have been encoded by
@@ -274,9 +274,9 @@ namespace Raven.Database.Indexing.Collation
 		/// <throws>  IllegalArgumentException If the input buffer is not backed by an </throws>
 		/// <summary>  array
 		/// </summary>
-        public static byte[] Decode(char[] input)
+		public static byte[] Decode(char[] input)
 		{
-            var output = new byte[GetDecodedLength(input)];
+			var output = new byte[GetDecodedLength(input)];
 			Decode(input, output);
 			return output;
 		}

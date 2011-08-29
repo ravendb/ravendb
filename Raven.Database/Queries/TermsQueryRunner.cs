@@ -28,8 +28,8 @@ namespace Raven.Database.Queries
 			var result = new HashSet<string>();
 			IndexSearcher currentIndexSearcher;
 			using(database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
-            {
-                var termEnum = currentIndexSearcher.GetIndexReader().Terms(new Term(field, fromValue ?? string.Empty));
+			{
+				var termEnum = currentIndexSearcher.GetIndexReader().Terms(new Term(field, fromValue ?? string.Empty));
 				try
 				{
 					if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value

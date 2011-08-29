@@ -121,7 +121,7 @@ namespace Raven.Database.Linq
 
 			mapDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForMap, null);
 
-            HandleTransformResults(ctor);
+			HandleTransformResults(ctor);
 
 			HandleReduceDefintion(ctor);
 
@@ -134,10 +134,10 @@ namespace Raven.Database.Linq
 				compiledQueryText += Environment.NewLine + indexDefinition.Reduce.Replace("\"", "\"\"");
 			}
 
-            if (indexDefinition.TransformResults != null)
-            {
-                compiledQueryText += Environment.NewLine + indexDefinition.TransformResults.Replace("\"", "\"\"");
-            }
+			if (indexDefinition.TransformResults != null)
+			{
+				compiledQueryText += Environment.NewLine + indexDefinition.TransformResults.Replace("\"", "\"\"");
+			}
 
 			compiledQueryText += "\"";
 			CompiledQueryText = CompiledQueryText.Replace("\"" + mapReduceTextToken + "\"",
@@ -150,7 +150,7 @@ namespace Raven.Database.Linq
 				return;
 
 			VariableDeclaration translatorDeclaration;
-                
+				
 			if (indexDefinition.TransformResults.Trim().StartsWith("from"))
 			{
 				translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.TransformResults, requiresSelectNewAnonymousType:false);
@@ -295,18 +295,18 @@ Reduce Fields: {1}
 			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Map);
 			AddEntityNameFilteringIfNeeded(variableDeclaration, out entityName);
 
-            variableDeclaration.AcceptVisitor(new AddDocumentIdToLambdas(), null);
+			variableDeclaration.AcceptVisitor(new AddDocumentIdToLambdas(), null);
 			return variableDeclaration;
 		}
 
-        public class AddDocumentIdToLambdas : ICSharpCode.NRefactory.Visitors.AbstractAstTransformer
-        {
-            public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
-            {
-                AddDocumentIdFieldToLambdaIfCreatingNewObject(lambdaExpression);
-                return base.VisitLambdaExpression(lambdaExpression, data);
-            }
-        }
+		public class AddDocumentIdToLambdas : ICSharpCode.NRefactory.Visitors.AbstractAstTransformer
+		{
+			public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
+			{
+				AddDocumentIdFieldToLambdaIfCreatingNewObject(lambdaExpression);
+				return base.VisitLambdaExpression(lambdaExpression, data);
+			}
+		}
 
 		private void AddEntityNameFilteringIfNeeded(VariableDeclaration variableDeclaration, out string entityName)
 		{
@@ -397,8 +397,8 @@ Reduce Fields: {1}
 			}
 			var selectOrGroupClause = queryExpression.SelectOrGroupClause;
 			var projection = ((QueryExpressionSelectClause) selectOrGroupClause).Projection;
-            if(projection is ObjectCreateExpression == false)
-                return variableDeclaration;
+			if(projection is ObjectCreateExpression == false)
+				return variableDeclaration;
 
 			var objectInitializer = ((ObjectCreateExpression) projection).ObjectInitializer;
 

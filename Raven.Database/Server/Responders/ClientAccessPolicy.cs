@@ -25,12 +25,12 @@ namespace Raven.Database.Server.Responders
 <access-policy>
  <cross-domain-access>
    <policy>
-     <allow-from http-methods='*' http-request-headers='*'>
-       <domain uri='*' />
-     </allow-from>
-     <grant-to>
-       <resource include-subpaths='true' path='/' />
-     </grant-to>
+	 <allow-from http-methods='*' http-request-headers='*'>
+	   <domain uri='*' />
+	 </allow-from>
+	 <grant-to>
+	   <resource include-subpaths='true' path='/' />
+	 </grant-to>
    </policy>
  </cross-domain-access>
 </access-policy>");

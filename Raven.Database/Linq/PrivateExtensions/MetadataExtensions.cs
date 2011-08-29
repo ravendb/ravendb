@@ -11,13 +11,13 @@ using Raven.Abstractions.Linq;
 
 namespace Raven.Database.Linq.PrivateExtensions
 {
-    public static class MetadataExtensions
-    {
-        public static IEnumerable<dynamic> WhereEntityIs(this IEnumerable<dynamic> self, params string[] metadata)
-        {
-            return self.Where(doc => metadata.Any(
+	public static class MetadataExtensions
+	{
+		public static IEnumerable<dynamic> WhereEntityIs(this IEnumerable<dynamic> self, params string[] metadata)
+		{
+			return self.Where(doc => metadata.Any(
 				m => string.Equals(m, doc[Constants.Metadata][Constants.RavenEntityName], StringComparison.InvariantCultureIgnoreCase)));
-        }
+		}
 
 		public static dynamic IfEntityIs(this object self, string name)
 		{
@@ -26,5 +26,5 @@ namespace Raven.Database.Linq.PrivateExtensions
 
 			return new DynamicNullObject();
 		}
-    }
+	}
 }

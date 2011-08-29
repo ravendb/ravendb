@@ -8,20 +8,20 @@ using Raven.Database.Impl;
 
 namespace Raven.Database.Storage
 {
-    public interface ITransactionalStorage : IDisposable
+	public interface ITransactionalStorage : IDisposable
 	{
-        /// <summary>
-        /// This is used mostly for replication
-        /// </summary>
+		/// <summary>
+		/// This is used mostly for replication
+		/// </summary>
 		Guid Id { get; }
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSyncronization(Action action);
-        bool Initialize(IUuidGenerator generator);
+		bool Initialize(IUuidGenerator generator);
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory);
 		void Restore(string backupLocation, string databaseLocation);
-    	long GetDatabaseSizeInBytes();
+		long GetDatabaseSizeInBytes();
 
-    	string FriendlyName { get; }
-    	bool HandleException(Exception exception);
+		string FriendlyName { get; }
+		bool HandleException(Exception exception);
 	}
 }

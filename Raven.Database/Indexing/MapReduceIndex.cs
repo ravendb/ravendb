@@ -48,9 +48,9 @@ namespace Raven.Database.Indexing
 			actions.Indexing.SetCurrentIndexStatsTo(name);
 			var count = 0;
 			Func<object, object> documentIdFetcher = null;
-            // we mark the reduce keys to delete when we delete the mapped results, then we remove
-            // any reduce key that is actually being used to generate new mapped results
-            // this way, only reduces that removed data will force us to use the tasks approach
+			// we mark the reduce keys to delete when we delete the mapped results, then we remove
+			// any reduce key that is actually being used to generate new mapped results
+			// this way, only reduces that removed data will force us to use the tasks approach
 			var reduceKeysToDelete = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 			var documentsWrapped = documents.Select(doc =>
 			{
@@ -187,9 +187,9 @@ namespace Raven.Database.Indexing
 		}
 
 
-        // This method may be called concurrently, by both the ReduceTask (for removal)
-        // and by the ReducingExecuter (for add/modify). This is okay with us, since the 
-        // Write() call is already handling locking properly
+		// This method may be called concurrently, by both the ReduceTask (for removal)
+		// and by the ReducingExecuter (for add/modify). This is okay with us, since the 
+		// Write() call is already handling locking properly
 		public void ReduceDocuments(AbstractViewGenerator viewGenerator,
 									IEnumerable<object> mappedResults,
 									WorkContext context,

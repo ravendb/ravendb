@@ -138,7 +138,7 @@ namespace Raven.Database.Impl
 			if (cache.TryGetValue(key, out doc))
 				return doc;
 			doc = actions.Documents.DocumentByKey(key, null);
-            EnsureIdInMetadata(doc);
+			EnsureIdInMetadata(doc);
 			cache[key] = doc;
 			return doc;
 		}

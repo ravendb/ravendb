@@ -39,7 +39,7 @@ namespace Raven.Database.Server.Responders
 					var json = context.ReadJson();
 					var id = Database.Put(null, Guid.NewGuid(), json,
 										  context.Request.Headers.FilterHeaders(isServerDocument: true),
-                                          GetRequestTransaction(context));
+										  GetRequestTransaction(context));
 					context.SetStatusToCreated("/docs/" + id);
 					context.WriteJson(id);
 					break;

@@ -9,17 +9,17 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Queries
 {
-    public static class DynamicQueryExtensions
-    {
-        public static QueryResult ExecuteDynamicQuery(this DocumentDatabase self, string entityName, IndexQuery indexQuery)
-        {
-            var dynamicQueryRunner = (DynamicQueryRunner)self.ExtensionsState.GetOrAddAtomically(typeof(DynamicQueryExtensions), o => new DynamicQueryRunner(self));
-            return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery);
-        }
+	public static class DynamicQueryExtensions
+	{
+		public static QueryResult ExecuteDynamicQuery(this DocumentDatabase self, string entityName, IndexQuery indexQuery)
+		{
+			var dynamicQueryRunner = (DynamicQueryRunner)self.ExtensionsState.GetOrAddAtomically(typeof(DynamicQueryExtensions), o => new DynamicQueryRunner(self));
+			return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery);
+		}
 
-        public static string FindDynamicIndexName(this DocumentDatabase self, string entityName, IndexQuery query)
-        {
-        	return new DynamicQueryOptimizer(self).SelectAppropriateIndex(entityName, query);
-        }
-    }
+		public static string FindDynamicIndexName(this DocumentDatabase self, string entityName, IndexQuery query)
+		{
+			return new DynamicQueryOptimizer(self).SelectAppropriateIndex(entityName, query);
+		}
+	}
 }

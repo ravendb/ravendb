@@ -4,31 +4,31 @@ using Raven.Http.Extensions;
 
 namespace Raven.Database.Server.Responders
 {
-    public class AdminStopIndexing : RequestResponder
-    {
-        public override string UrlPattern
-        {
-            get { return "^/admin/stopindexing$"; }
-        }
+	public class AdminStopIndexing : RequestResponder
+	{
+		public override string UrlPattern
+		{
+			get { return "^/admin/stopindexing$"; }
+		}
 
-        public override string[] SupportedVerbs
-        {
-            get { return new[]{"POST"}; }
-        }
+		public override string[] SupportedVerbs
+		{
+			get { return new[]{"POST"}; }
+		}
 
-        public override void Respond(IHttpContext context)
-        {
-            if (context.IsAdministrator() == false)
-            {
-                context.SetStatusToUnauthorized();
-                context.WriteJson(new
-                {
-                    Error = "Only administrators can stop indexing"
-                });
-                return;
-            }
+		public override void Respond(IHttpContext context)
+		{
+			if (context.IsAdministrator() == false)
+			{
+				context.SetStatusToUnauthorized();
+				context.WriteJson(new
+				{
+					Error = "Only administrators can stop indexing"
+				});
+				return;
+			}
 
-            Database.StopBackgroundWokers();
-        }
-    }
+			Database.StopBackgroundWokers();
+		}
+	}
 }

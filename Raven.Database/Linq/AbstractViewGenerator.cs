@@ -19,11 +19,11 @@ namespace Raven.Database.Linq
 	/// Map and MapReduce indexes are being re-written into this class and then compiled and executed
 	/// against the data in RavenDB
 	/// </summary>
-    [InheritedExport]
+	[InheritedExport]
 	public abstract class AbstractViewGenerator
 	{
-        private readonly HashSet<string> fields = new HashSet<string>();
-        private bool? containsProjection;
+		private readonly HashSet<string> fields = new HashSet<string>();
+		private bool? containsProjection;
 		private int? countOfSelectMany;
 		private bool? hasWhereClause;
 		private readonly HashSet<string> mapFields = new HashSet<string>();
@@ -46,26 +46,26 @@ namespace Raven.Database.Linq
 
 		public int CountOfFields { get { return fields.Count;  } }
 
-    	public IndexingFunc MapDefinition { get; set; }
+		public IndexingFunc MapDefinition { get; set; }
 		
-        public IndexingFunc ReduceDefinition { get; set; }
+		public IndexingFunc ReduceDefinition { get; set; }
 
-        public TranslatorFunc TransformResultsDefinition { get; set; }
+		public TranslatorFunc TransformResultsDefinition { get; set; }
 		
-        public GroupByKeyFunc GroupByExtraction { get; set; }
-        
-        public string ViewText { get; set; }
-        
-        public IDictionary<string, FieldStorage> Stores { get; set; }
-        
-        public IDictionary<string, FieldIndexing> Indexes { get; set; }
+		public GroupByKeyFunc GroupByExtraction { get; set; }
+		
+		public string ViewText { get; set; }
+		
+		public IDictionary<string, FieldStorage> Stores { get; set; }
+		
+		public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
-    	public string ForEntityName { get; set; }
+		public string ForEntityName { get; set; }
 
-    	public string[] Fields
-    	{
-    		get { return fields.ToArray(); }
-    	}
+		public string[] Fields
+		{
+			get { return fields.ToArray(); }
+		}
 
 		public bool HasWhereClause
 		{
@@ -80,23 +80,23 @@ namespace Raven.Database.Linq
 		}
 
 		protected AbstractViewGenerator()
-        {
-            Stores = new Dictionary<string, FieldStorage>();
-            Indexes = new Dictionary<string, FieldIndexing>();
-        }
+		{
+			Stores = new Dictionary<string, FieldStorage>();
+			Indexes = new Dictionary<string, FieldIndexing>();
+		}
 
-        protected IEnumerable<dynamic> Project(object self, Func<dynamic, dynamic> func)
-        {
-            if (self == null)
-                yield break;
-            if (self is IEnumerable == false || self is string)
-                throw new InvalidOperationException("Attempted to enumerate over " + self.GetType().Name);
+		protected IEnumerable<dynamic> Project(object self, Func<dynamic, dynamic> func)
+		{
+			if (self == null)
+				yield break;
+			if (self is IEnumerable == false || self is string)
+				throw new InvalidOperationException("Attempted to enumerate over " + self.GetType().Name);
 
-            foreach (var item in ((IEnumerable)self))
-            {
-                yield return func(item);
-            }
-        }
+			foreach (var item in ((IEnumerable)self))
+			{
+				yield return func(item);
+			}
+		}
 
 		protected IEnumerable<dynamic> Hierarchy(object source, string name)
 		{
@@ -116,30 +116,30 @@ namespace Raven.Database.Linq
 			mapFields.Add(field);
 		}
 
-    	public void AddQueryParameterForReduce(string field)
-    	{
-    		reduceFields.Add(field);
-    	}
+		public void AddQueryParameterForReduce(string field)
+		{
+			reduceFields.Add(field);
+		}
 
-        public void AddField(string field)
-        {
-            fields.Add(field);
-        }
+		public void AddField(string field)
+		{
+			fields.Add(field);
+		}
 
 		public virtual bool ContainsFieldOnMap(string field)
 		{
 			return mapFields.Contains(field);
 		}
 
-        public virtual bool ContainsField(string field)
-        {
-            if (fields.Contains(field))
-                return true;
-            if (containsProjection == null)
-            {
-                containsProjection = ViewText != null && ViewText.Contains("Project(");
-            }
-            return containsProjection.Value;
-        }
+		public virtual bool ContainsField(string field)
+		{
+			if (fields.Contains(field))
+				return true;
+			if (containsProjection == null)
+			{
+				containsProjection = ViewText != null && ViewText.Contains("Project(");
+			}
+			return containsProjection.Value;
+		}
 	}
 }

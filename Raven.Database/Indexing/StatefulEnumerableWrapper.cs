@@ -23,7 +23,7 @@ namespace Raven.Database.Indexing
 		{
 			get
 			{
-                if (calledMoveNext == false || enumerationCompleted)
+				if (calledMoveNext == false || enumerationCompleted)
 					return default(T);
 				return inner.Current;
 			}
@@ -67,8 +67,8 @@ namespace Raven.Database.Indexing
 			{
 				statefulEnumerableWrapper.calledMoveNext = true;
 			    var moveNext = inner.MoveNext();
-                if (moveNext == false)
-                    statefulEnumerableWrapper.enumerationCompleted = true;
+				if (moveNext == false)
+					statefulEnumerableWrapper.enumerationCompleted = true;
 			    return moveNext;
 			}
 

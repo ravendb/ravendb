@@ -10,7 +10,7 @@ using Raven.Database.Data;
 
 namespace Raven.Database.Storage
 {
-    public interface IIndexingStorageActions : IDisposable
+	public interface IIndexingStorageActions : IDisposable
 	{
 		void SetCurrentIndexStatsTo(string index);
 
@@ -32,7 +32,7 @@ namespace Raven.Database.Storage
 		IndexFailureInformation GetFailureRate(string index);
 
 		void UpdateLastIndexed(string index, Guid etag, DateTime timestamp);
-        void UpdateLastReduced(string index, Guid etag, DateTime timestamp);
+		void UpdateLastReduced(string index, Guid etag, DateTime timestamp);
 		void TouchIndexEtag(string index);
 	}
 }

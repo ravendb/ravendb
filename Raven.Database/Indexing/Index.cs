@@ -399,7 +399,7 @@ namespace Raven.Database.Indexing
 		private void RecreateSearcher()
 		{
 			var oldSearcher = currentIndexSearcherHolder;
-            
+			
 		    if (indexWriter == null)
 		    {
 		    	currentIndexSearcherHolder = new IndexSearcherHolder(new IndexSearcher(directory, true));
@@ -410,14 +410,14 @@ namespace Raven.Database.Indexing
 				currentIndexSearcherHolder = new IndexSearcherHolder(new IndexSearcher(indexReader));
 		    }
 
-            if (oldSearcher != null)
-            {
-            	IndexSearcher _;
-            	using(oldSearcher.GetSearcher(out _))
-            	{
-            		oldSearcher.DisposeSafely();
-            	}
-            }
+			if (oldSearcher != null)
+			{
+				IndexSearcher _;
+				using(oldSearcher.GetSearcher(out _))
+				{
+					oldSearcher.DisposeSafely();
+				}
+			}
 		}
 
 	    protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)

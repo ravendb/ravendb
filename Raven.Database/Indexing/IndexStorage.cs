@@ -43,13 +43,13 @@ namespace Raven.Database.Indexing
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		private readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 
-        public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration)
+		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration)
 		{
-            this.indexDefinitionStorage = indexDefinitionStorage;
-            this.configuration = configuration;
-        	path = configuration.IndexStoragePath;
+			this.indexDefinitionStorage = indexDefinitionStorage;
+			this.configuration = configuration;
+			path = configuration.IndexStoragePath;
 
-            if (Directory.Exists(path) == false && configuration.RunInMemory == false)
+			if (Directory.Exists(path) == false && configuration.RunInMemory == false)
 		        Directory.CreateDirectory(path);
 
 		    foreach (var indexDirectory in indexDefinitionStorage.IndexNames)
@@ -121,12 +121,12 @@ namespace Raven.Database.Indexing
 			get { return indexes.Keys.ToArray(); }
 		}
 
-        public bool HasIndex(string index)
-        {
+		public bool HasIndex(string index)
+		{
 			if (index == null)
 				return false;
-            return indexes.ContainsKey(index);
-        }
+			return indexes.ContainsKey(index);
+		}
 
 		#region IDisposable Members
 
@@ -187,9 +187,9 @@ namespace Raven.Database.Indexing
 	    }
 
 	    public IEnumerable<IndexQueryResult> Query(
-            string index, 
-            IndexQuery query, 
-            Func<IndexQueryResult, bool> shouldIncludeInResults,
+			string index, 
+			IndexQuery query, 
+			Func<IndexQueryResult, bool> shouldIncludeInResults,
 			FieldsToFetch fieldsToFetch)
 	    {
 	    	Index value;
@@ -270,15 +270,15 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-        /// <summary>
-        /// if you are calling this method, you _have_ to call 
-        /// searcher.GetIndexReader().DecRef();
-        /// when you are done searching
-        /// </summary>
-        internal IDisposable GetCurrentIndexSearcher(string indexName, out IndexSearcher searcher)
-        {
-        	return GetIndexByName(indexName).GetSearcher(out searcher);
-        }
+		/// <summary>
+		/// if you are calling this method, you _have_ to call 
+		/// searcher.GetIndexReader().DecRef();
+		/// when you are done searching
+		/// </summary>
+		internal IDisposable GetCurrentIndexSearcher(string indexName, out IndexSearcher searcher)
+		{
+			return GetIndexByName(indexName).GetSearcher(out searcher);
+		}
 
 		private Index GetIndexByName(string indexName)
 		{

@@ -87,8 +87,8 @@ namespace Raven.Database
 
 
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
-        private System.Threading.Tasks.Task indexingBackgroundTask;
-        private System.Threading.Tasks.Task reducingBackgroundTask;
+		private System.Threading.Tasks.Task indexingBackgroundTask;
+		private System.Threading.Tasks.Task reducingBackgroundTask;
 		private System.Threading.Tasks.Task tasksBackgroundTask;
 	    private readonly TaskScheduler backgroundTaskScheduler;
 
@@ -265,8 +265,8 @@ namespace Raven.Database
 
 		public void Dispose()
 		{
-            if (disposed)
-                return;
+			if (disposed)
+				return;
 		    disposed = true;
 			workContext.StopWork();
 			foreach (var value in ExtensionsState.Values.OfType<IDisposable>())
@@ -280,16 +280,16 @@ namespace Raven.Database
 				tasksBackgroundTask.Wait(); 
 			if (indexingBackgroundTask != null)
 				indexingBackgroundTask.Wait();
-            if (reducingBackgroundTask != null)
-                reducingBackgroundTask.Wait();
+			if (reducingBackgroundTask != null)
+				reducingBackgroundTask.Wait();
 
 			var disposable = backgroundTaskScheduler as IDisposable;
 			if (disposable != null)
 				disposable.Dispose();
 
 		    Configuration.Dispose();
-            disableAllTriggers.Dispose();
-            workContext.Dispose();
+			disableAllTriggers.Dispose();
+			workContext.Dispose();
 		}
 
 		public void StopBackgroundWokers()
@@ -310,15 +310,15 @@ namespace Raven.Database
 		public void SpinBackgroundWorkers()
 		{
 			workContext.StartWork();
-            indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 		        new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
-                CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-            reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-                new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
-                CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-            tasksBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-                new TasksExecuter(TransactionalStorage, workContext).Execute,
-                CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
+				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+			tasksBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+				new TasksExecuter(TransactionalStorage, workContext).Execute,
+				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
 		private long sequentialUuidCounter;
@@ -363,7 +363,7 @@ namespace Raven.Database
 				.ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
 		}
 
-        public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			log.Debug("Putting a document with key: {0} and etag {1}", key, etag);
 
@@ -484,7 +484,7 @@ namespace Raven.Database
 			}
 		}
 
-        private static void RemoveReservedProperties(RavenJObject document)
+		private static void RemoveReservedProperties(RavenJObject document)
 		{
 			var toRemove = new HashSet<string>();
 			foreach (var propertyName in document.Keys.Where(propertyName => propertyName.StartsWith("@")))
@@ -499,7 +499,7 @@ namespace Raven.Database
 
 		public void Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
-            log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
+			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
 			TransactionalStorage.Batch(actions =>
 			{
 				if (transactionInformation == null)
@@ -1206,16 +1206,16 @@ namespace Raven.Database
 		/// <returns></returns>
 		public IDisposable DisableAllTriggersForCurrentThread()
 		{
-            if (disposed)
-                return new DisposableAction(() => { });
+			if (disposed)
+				return new DisposableAction(() => { });
 			var old = disableAllTriggers.Value;
 			disableAllTriggers.Value = true;
 			return new DisposableAction(() => disableAllTriggers.Value = old);
 		}
 
-        /// <summary>
-        /// Whatever this database has been disposed
-        /// </summary>
+		/// <summary>
+		/// Whatever this database has been disposed
+		/// </summary>
 	    public bool Disposed
 	    {
 	        get { return disposed; }
