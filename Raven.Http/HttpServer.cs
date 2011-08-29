@@ -166,15 +166,11 @@ namespace Raven.Http
             }
         }
 
-		private void CleanupDatabase(string db)
+		protected void CleanupDatabase(string db)
 		{
 			lock (ResourcesStoresCache) 
 			{
 				DateTime time;
-				databaseLastRecentlyUsed.TryGetValue(db, out time);
-				if ((SystemTime.Now - time).TotalMinutes <= 10)
-					return;// someone just started using it...
-
 				databaseLastRecentlyUsed.TryRemove(db, out time);
 
 				IResourceStore database;
