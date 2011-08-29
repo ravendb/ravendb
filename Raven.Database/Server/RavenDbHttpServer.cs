@@ -12,6 +12,7 @@ using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Impl;
 using Raven.Database.Json;
+using Raven.Database.Plugins.Builtins;
 using Raven.Http;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
@@ -31,6 +32,15 @@ namespace Raven.Database.Server
 		public RavenDbHttpServer(IRavenHttpConfiguration configuration, IResourceStore database)
 			: base(configuration, database)
 		{
+			RemoveTenantDatabase.Occured.Subscribe(TenantDatabaseRemoved);
+		}
+
+		private void TenantDatabaseRemoved(object sender, RemoveTenantDatabase.Event @event)
+		{
+			if (@event.Database != DefaultResourceStore)
+				return; // we ignore anything that isn't from the root db
+
+			CleanupDatabase(@event.Name);
 		}
 
 		protected override void OnDispatchingRequest(IHttpContext ctx)
