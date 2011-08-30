@@ -35,7 +35,7 @@ namespace Raven.Client.Connection
 		private byte[] bytesForNextWrite;
 
 
-		internal HttpWebRequest webRequest;
+		internal volatile HttpWebRequest webRequest;
 		// temporary create a strong reference to the cached data for this request
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
@@ -124,11 +124,10 @@ namespace Raven.Client.Connection
 					return authorizeResponse
 						.ContinueWith(_ =>
 						{
-							_.Wait();//throw on error
+							_.Wait(); //throw on error
 							return InternalReadResponseStringAsync(retries + 1);
 						})
 						.Unwrap();
-
 				}).Unwrap();
 		}
 #endif
@@ -213,12 +212,12 @@ namespace Raven.Client.Connection
 			newWebRequest.Method = webRequest.Method;
 			HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
 			newWebRequest.Credentials = webRequest.Credentials;
+			action(newWebRequest);
 
 			if (postedData != null)
 			{
 				HttpJsonRequestHelper.WriteDataToRequest(newWebRequest, postedData);
 			}
-			action(newWebRequest);
 			webRequest = newWebRequest;
 		}
 

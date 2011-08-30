@@ -49,6 +49,8 @@ namespace Raven.Client.Connection.Async
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.url = url;
+			if (this.url.EndsWith("/"))
+				this.url = this.url.Substring(0, this.url.Length-1);
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
 			this.convention = convention;
