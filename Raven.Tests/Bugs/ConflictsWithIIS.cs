@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -29,7 +30,8 @@ namespace Raven.Tests.Bugs
 			{
 				for (int i = 1; i <= threadCount; i++)
 				{
-					var taskHandle = Task.Factory.StartNew(() => DoInsert(store, i));
+					var copy = i;
+					var taskHandle = Task.Factory.StartNew(() => DoInsert(store, copy));
 					tasks.Add(taskHandle);
 				}
 
@@ -47,7 +49,8 @@ namespace Raven.Tests.Bugs
 			{
 				for (int i = 1; i <= threadCount; i++)
 				{
-					var taskHandle = Task.Factory.StartNew(() => DoInefficientInsert(store.Url, i));
+					var copy = i;
+					var taskHandle = Task.Factory.StartNew(() => DoInefficientInsert(store.Url, copy));
 					tasks.Add(taskHandle);
 				}
 
