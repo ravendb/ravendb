@@ -25,8 +25,7 @@ namespace Raven.Tests.Bugs.TransformResults
 				WaitForAllRequestsToComplete(server);
 				server.Server.ResetNumberOfRequests();
 
-				var Content = "This is doable";
-				var UserId = @"user\222";
+				const string Content = "This is doable";
 
 				using (var session = store.OpenSession())
 				{

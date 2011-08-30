@@ -15,6 +15,7 @@ namespace Raven.Tests.Bugs.MapRedue
 		/// <summary>
 		/// Version number of document
 		/// </summary>
+		[CLSCompliant(false)]
 		public uint Version { get; set; }
 
 		/// <summary>

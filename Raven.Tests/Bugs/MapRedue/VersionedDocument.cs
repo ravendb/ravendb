@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Bugs.MapRedue
+﻿using System;
+
+namespace Raven.Tests.Bugs.MapRedue
 {
 	/// <summary>
 	/// Document with ID and version number
@@ -13,6 +15,7 @@
 		/// <summary>
 		/// Version number of document
 		/// </summary>
+		[CLSCompliant(false)]
 		public uint Version { get; set; }
 
 		/// <summary>
