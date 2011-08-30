@@ -25,7 +25,7 @@ namespace Raven.Bundles.Tests.Authentication
 			var req = (HttpWebRequest) WebRequest.Create(embeddedStore.Configuration.ServerUrl + "OAuth/AccessToken");
 			var response = req
 				.WithBasicCredentials("Ayende", "abc")
-				.WithConentType("application/json;charset=UTF-8")
+				.WithAccept("application/json;charset=UTF-8")
 				.WithHeader("grant_type", "client_credentials")
 				.MakeRequest()
 				.ReadToEnd();
