@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
+using Raven.Abstractions;
 
 namespace Raven.Tests.Util
 {
@@ -11,6 +14,10 @@ namespace Raven.Tests.Util
 	{
 		protected Process _process;
 		private string _name;
+
+		protected BlockingCollection<string> output = new BlockingCollection<string>(new ConcurrentQueue<string>());
+		protected BlockingCollection<string> error = new BlockingCollection<string>(new ConcurrentQueue<string>());
+		protected BlockingCollection<string> input = new BlockingCollection<string>(new ConcurrentQueue<string>());
 
 		protected void StartProcess(string exePath, string arguments = "")
 		{
@@ -28,6 +35,32 @@ namespace Raven.Tests.Util
 			psi.CreateNoWindow = true;
 
 			_process = Process.Start(psi);
+
+			Task.Factory.StartNew(() =>
+			{
+				string line;
+				while ((line = _process.StandardOutput.ReadLine()) != null)
+				{
+					output.Add(line);
+				}
+			});
+
+			Task.Factory.StartNew(() =>
+			{
+				string line;
+				while ((line = _process.StandardError.ReadLine()) != null)
+				{
+					error.Add(line);
+				}
+			});
+
+			Task.Factory.StartNew(() =>
+			{
+				while (_process.HasExited == false)
+				{
+					_process.StandardInput.WriteLine(input.Take());
+				}
+			});
 		}
 
 		protected virtual void Shutdown() { }
@@ -47,20 +80,18 @@ namespace Raven.Tests.Util
 
 		protected Match WaitForConsoleOutputMatching(string pattern, int msMaxWait = 10000, int msWaitInterval = 500)
 		{
-			int totalWaited = 0;
+			DateTime t = SystemTime.Now;
 
 			Match match;
 			while(true)
 			{
-				var nextLine = _process.StandardOutput.ReadLine();
+				var nextLine = output.Take();
 
 				if (nextLine == null)
 				{
-					if (totalWaited > msMaxWait)
+					if ((SystemTime.Now - t).TotalMilliseconds > msMaxWait)
 						throw new TimeoutException("Timeout waiting for regular expression " + pattern);
 					
-					Thread.Sleep(msWaitInterval);
-					totalWaited += msWaitInterval;
 					continue;
 				}
 

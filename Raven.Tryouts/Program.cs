@@ -13,8 +13,8 @@ namespace Raven.Tryouts
 			for (int i = 0; i < 8462; i++)
 			{
 				Console.WriteLine(i);
-				new ManyDocumentsViaDTC().WouldBeIndexedProperly();
-				new DocumentStoreServerTests_DifferentProcess().Can_promote_transactions();
+				using (var conflictsWithIis = new ConflictsWithIIS())
+					conflictsWithIis.InnefficientMultiThreadedInsert();
 			}
 		}
 	}
