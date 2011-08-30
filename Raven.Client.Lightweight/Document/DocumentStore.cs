@@ -6,17 +6,20 @@
 using System;
 using System.IO;
 using System.Net;
+#if SILVERLIGHT
+using System.Net.Browser;
+#endif
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
+using Raven.Client.Extensions;
 using Raven.Client.Document.Async;
 #endif
 using System.Linq;
 #if !SILVERLIGHT
-using Raven.Client.Extensions;
 using Raven.Client.Listeners;
 #else
 using Raven.Client.Listeners;
@@ -530,20 +533,21 @@ namespace Raven.Client.Document
 
 		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
 		{
-			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
 #if !SILVERLIGHT
+			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
 			authRequest.Credentials = Credentials;
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			authRequest.PreAuthenticate = true;
+#else
+			var authRequest = (HttpWebRequest) WebRequestCreator.ClientHttp.Create(new Uri(oauthSource));
 #endif
 			authRequest.Headers["grant_type"] = "client_credentials";
-			authRequest.ContentType = "application/json;charset=UTF-8";
-			
+			authRequest.Accept = "application/json;charset=UTF-8";
 			
 
-			if(oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false && 
-			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
-				throw new InvalidOperationException(BasicOAuthOverHttpError);
+			//if(oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false && 
+			//   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
+			//    throw new InvalidOperationException(BasicOAuthOverHttpError);
 			return authRequest;
 		}
 
