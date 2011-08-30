@@ -420,7 +420,9 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public  IDocumentStore Initialize()
 		{
-			AssertValidConfiguration();
+            if (initialized) return this;
+
+            AssertValidConfiguration();
 
 #if !SILVERLIGHT
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
