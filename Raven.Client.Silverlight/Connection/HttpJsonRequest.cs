@@ -39,7 +39,7 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			retries++;
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
-			var newWebRequest = (HttpWebRequest)WebRequest.Create(url);
+			var newWebRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
 			newWebRequest.Method = webRequest.Method;
 			HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
 			newWebRequest.Credentials = webRequest.Credentials;
