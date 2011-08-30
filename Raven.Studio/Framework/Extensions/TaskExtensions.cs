@@ -132,9 +132,9 @@ namespace Raven.Studio.Framework.Extensions
                 }
             }
 
-		    return ( single == null) 
+			return (single == null)
 			       	? null
-			       	: single.Message;
+			       	: single.ToString();
 		}
 
 		public static void ExecuteInSequence(this IEnumerable<Task> tasks, Action<bool> callback, Action<Exception> handleException = null)
