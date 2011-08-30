@@ -57,7 +57,7 @@ namespace Raven.Tests.Security.OAuth
         {
             var request = ((HttpWebRequest)WebRequest.Create(baseUrl + ":" + port + tokenUrl))
                 .WithBasicCredentials(baseUrl, validClientUsername, validClientPassword)
-                .WithConentType("application/json;charset=UTF-8")
+                .WithAccept("application/json;charset=UTF-8")
                 .WithHeader("grant_type", "client_credentials");
 
             return request;
@@ -87,10 +87,10 @@ namespace Raven.Tests.Security.OAuth
         }
 
         [Fact]
-        public void RequestWithoutUrlEncodedContentTypeShouldBeRejected()
+        public void RequestWithoutUExpectedAcceptShouldBeRejected()
         {
             var request = GetNewValidTokenRequest()
-                .WithConentType("text/plain");
+                .WithAccept("text/plain");
 
             using (var server = GetNewServer(false))
             using (var response = request.MakeRequest())
@@ -102,7 +102,7 @@ namespace Raven.Tests.Security.OAuth
                 Assert.Contains("error", result.Keys);
                 Assert.Equal("invalid_request", result["error"]);
                 Assert.Contains("error_description", result.Keys);
-                Assert.Contains("Content-Type", result["error_description"].Value<string>());
+                Assert.Contains("Accept", result["error_description"].Value<string>());
             }
         }
 

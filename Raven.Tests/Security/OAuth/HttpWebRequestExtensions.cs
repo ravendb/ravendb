@@ -39,9 +39,9 @@ namespace Raven.Tests.Security.OAuth
             return request;
         }
 
-        public static HttpWebRequest WithConentType(this HttpWebRequest request, string contentType)
+        public static HttpWebRequest WithAccept(this HttpWebRequest request, string contentType)
         {
-            request.ContentType = contentType;
+            request.Accept = contentType;
 
             return request;
         }

@@ -34,10 +34,10 @@ namespace Raven.Http.Security.OAuth
 
 		public override void Respond(IHttpContext context)
 		{
-			if (context.Request.Headers["Content-Type"] != TokenContentType)
+			if (context.Request.Headers["Accept"] != TokenContentType)
 			{
 				context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-				context.WriteJson(new { error = "invalid_request", error_description = "Content-Type should be: " + TokenContentType });
+				context.WriteJson(new { error = "invalid_request", error_description = "Accept should be: " + TokenContentType });
 
 				return;
 			}
