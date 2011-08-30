@@ -12,10 +12,10 @@ using System.Net.Browser;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
+using Raven.Client.Extensions;
 using Raven.Client.Connection.Profiling;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
-using Raven.Client.Extensions;
 using Raven.Client.Document.Async;
 #endif
 using System.Linq;
