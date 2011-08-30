@@ -6,6 +6,7 @@ using System.Threading;
 
 namespace Raven.Tests.Util
 {
+	[CLSCompliant(false)]
 	public abstract class ProcessDriver
 	{
 		protected Process _process;

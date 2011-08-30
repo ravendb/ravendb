@@ -30,7 +30,7 @@ namespace Raven.Http.Security.OAuth
 		public static bool TryParseBody(X509Certificate2 cert, string token, out AccessTokenBody body)
 		{
 			AccessToken accessToken;
-			if(TryParse(token, out accessToken) == false)
+			if (TryParse(token, out accessToken) == false)
 			{
 				body = null;
 				return false;
@@ -68,12 +68,12 @@ namespace Raven.Http.Security.OAuth
 			}
 		}
 
-        public static AccessToken Create(X509Certificate2 cert, string userId, string[] databases)
-        {
-            var issued = (DateTime.UtcNow - DateTime.MinValue).TotalMilliseconds;
-            
-            var body = RavenJObject.FromObject(new AccessTokenBody{ UserId = userId, AuthorizedDatabases = databases ?? new string[0], Issued = issued })
-                    .ToString(Formatting.None);
+		public static AccessToken Create(X509Certificate2 cert, string userId, string[] databases)
+		{
+			var issued = (DateTime.UtcNow - DateTime.MinValue).TotalMilliseconds;
+
+			var body = RavenJObject.FromObject(new AccessTokenBody { UserId = userId, AuthorizedDatabases = databases ?? new string[0], Issued = issued })
+					.ToString(Formatting.None);
 
 			var signature = Sign(body, cert);
 

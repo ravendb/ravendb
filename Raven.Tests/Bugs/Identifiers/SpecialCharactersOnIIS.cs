@@ -3,6 +3,7 @@
 // //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // // </copyright>
 // //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -14,6 +15,7 @@ using Xunit.Sdk;
 
 namespace Raven.Tests.Bugs.Identifiers
 {
+	[CLSCompliant(false)]
 	public class SpecialCharactersOnIIS : WithNLog
 	{
 		[IISExpressInstalled]
@@ -53,6 +55,7 @@ namespace Raven.Tests.Bugs.Identifiers
 		#endregion
 	}
 
+	[CLSCompliant(false)]
 	public class IISExpressInstalled : TheoryAttribute
 	{
 		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
@@ -74,6 +77,7 @@ namespace Raven.Tests.Bugs.Identifiers
 		}
 	}
 
+	[CLSCompliant(false)]
 	public class AdminOnlyWithIIS7Installed : TheoryAttribute
 	{
 		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)

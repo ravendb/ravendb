@@ -12,6 +12,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Tests.Util
 {
+	[CLSCompliant(false)]
 	public class RavenDBDriver : ProcessDriver, IDisposable
 	{
 		readonly string _shardName;

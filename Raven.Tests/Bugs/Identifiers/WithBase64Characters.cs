@@ -31,7 +31,6 @@ namespace Raven.Tests.Bugs.Identifiers
 				{
 					store.Initialize();
 
-					object id;
 					using (var session = store.OpenSession())
 					{
 						var entity = new Entity() { Id = specialId };
