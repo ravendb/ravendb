@@ -1,5 +1,6 @@
+extern alias client;
+using client::Raven.Bundles.Authorization.Model;
 using Raven.Abstractions.Data;
-using Raven.Bundles.Authorization.Model;
 using Xunit;
 using Raven.Client.Extensions;
 

@@ -314,6 +314,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 
 	}
 
+	[CLSCompliant(false)]
 	public class FactIfSqlServerIsAvailable : FactAttribute
 	{
 

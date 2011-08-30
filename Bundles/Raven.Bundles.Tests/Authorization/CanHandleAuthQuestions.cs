@@ -3,12 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Web;
+extern alias client;
+using client::Raven.Client.Authorization;
+using client::Raven.Bundles.Authorization.Model;
+
 using Raven.Bundles.Authorization;
-using Raven.Bundles.Authorization.Model;
 using Raven.Bundles.Tests.Versioning;
 using Xunit;
-using Raven.Client.Authorization;
+
 
 namespace Raven.Bundles.Tests.Authorization
 {

@@ -8,8 +8,8 @@ using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Bundles.Authorization;
-using Raven.Bundles.Authorization.Model;
 using System.Linq;
+using Raven.Bundles.Authorization.Model;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
 

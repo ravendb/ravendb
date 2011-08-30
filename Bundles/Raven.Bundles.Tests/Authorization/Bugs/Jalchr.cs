@@ -3,9 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+extern alias client;
+using client::Raven.Client.Authorization;
+using client::Raven.Bundles.Authorization.Model;
+
 using System.Collections.Generic;
-using Raven.Bundles.Authorization.Model;
-using Raven.Client.Authorization;
 using Xunit;
 
 namespace Raven.Bundles.Tests.Authorization.Bugs
@@ -44,7 +46,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			using (var s = store.OpenSession())
 			{
 				var authorizationUser = s.Load<AuthorizationUser>(userId);
-				Assert.True(s.IsAllowed(authorizationUser, operation));
+				Assert.True(AuthorizationClientExtensions.IsAllowed(s, authorizationUser, operation));
 			}
 		}
 	}

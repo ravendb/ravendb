@@ -47,8 +47,26 @@
     <Compile Include="..\Raven.Bundles.Authorization\Constants.cs">
       <Link>Constants.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Bundles.Authorization\Model\AuthorizationRole.cs">
+      <Link>Model\AuthorizationRole.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Bundles.Authorization\Model\AuthorizationUser.cs">
+      <Link>Model\AuthorizationUser.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Bundles.Authorization\Model\DocumentAuthorization.cs">
+      <Link>Model\DocumentAuthorization.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Bundles.Authorization\Model\DocumentPermission.cs">
+      <Link>Model\DocumentPermission.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Bundles.Authorization\Model\IPermission.cs">
+      <Link>Model\IPermission.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Bundles.Authorization\Model\OperationPermission.cs">
+      <Link>Model\OperationPermission.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Bundles.Authorization\OperationAllowedResult.cs">
-      <Link>OperationAllowedResult.cs</Link>
+      <Link>Model\OperationAllowedResult.cs</Link>
     </Compile>
     <Compile Include="AuthorizationClientExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -61,10 +79,6 @@
     <ProjectReference Include="..\..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
-      <Project>{034FFD8F-F917-4A45-B920-9C460CD66BAF}</Project>
-      <Name>Raven.Bundles.Authorization</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
