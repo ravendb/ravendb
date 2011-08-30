@@ -45,7 +45,7 @@
 		</Grid.Resources>
 		<VisualStateManager.VisualStateGroups>
 			<VisualStateGroup x:Name="Common">
-				<VisualState x:Name="Loaded" />
+				<VisualState x:Name="Done" />
 				<VisualState x:Name="Loading">
 					<Storyboard>
 						<DoubleAnimation Duration="0:0:0.2"

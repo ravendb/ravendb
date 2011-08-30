@@ -86,7 +86,7 @@
 			var source = (IBindablePagedQuery) e.NewValue;
 			source.IsLoadingChanged += ( s, args ) =>
 			                           	{
-			                           		var state = args.Value ? "Loading" : "Loaded";
+			                           		var state = args.Value ? "Loading" : "Done";
 			                           		Execute.OnUIThread(() => VisualStateManager.GoToState(pager, state, true));
 			                           	};
 			Action.SetTarget(pager.LayoutRoot, e.NewValue);
