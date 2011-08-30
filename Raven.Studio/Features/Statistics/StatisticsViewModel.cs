@@ -8,7 +8,7 @@ namespace Raven.Studio.Features.Statistics
 	using Caliburn.Micro;
 	using Plugins.Statistics;
 
-    [Export]
+	[Export]
 	public class StatisticsViewModel : IStatisticsSet
 	{
 		readonly IEventAggregator events;

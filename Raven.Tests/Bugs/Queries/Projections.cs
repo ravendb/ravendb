@@ -14,45 +14,45 @@ namespace Raven.Tests.Bugs.Queries
 	using Document;
 
 	public class Projections : LocalClientTest
-    {
-        [Fact]
-        public void Can_project_value_from_collection()
-        {
-            using (var store = NewDocumentStore())
-            {
-                using (var s = store.OpenSession())
-                {
-                    s.Store(new User
-                    {
-                        Addresses = new[]
-                        {
-                            new LiveProjection.Address
-                            {
-                                Name = "Hadera"
-                            },
-                            new LiveProjection.Address
-                            {
-                                Name = "Tel Aviv"
-                            },
-               
-                        }
-                    });
-                    s.SaveChanges();
-                }
+	{
+		[Fact]
+		public void Can_project_value_from_collection()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new User
+					{
+						Addresses = new[]
+						{
+							new LiveProjection.Address
+							{
+								Name = "Hadera"
+							},
+							new LiveProjection.Address
+							{
+								Name = "Tel Aviv"
+							},
+			   
+						}
+					});
+					s.SaveChanges();
+				}
 
-                var queryResult = store.DatabaseCommands.Query("dynamic",
-                                                               new IndexQuery
-                                                               {
-                                                                   FieldsToFetch = new[] { "Addresses,Name" }
-                                                               }, 
-                                                               new string[0]);
+				var queryResult = store.DatabaseCommands.Query("dynamic",
+															   new IndexQuery
+															   {
+																   FieldsToFetch = new[] { "Addresses,Name" }
+															   }, 
+															   new string[0]);
 
-            	var array = (RavenJArray)queryResult.Results[0]["Addresses"];
-            	Assert.Equal(2, array.Length);
+				var array = (RavenJArray)queryResult.Results[0]["Addresses"];
+				Assert.Equal(2, array.Length);
 				Assert.Equal("Hadera", array[0].Value<string>("Name"));
 				Assert.Equal("Tel Aviv", array[1].Value<string>("Name"));
-            }
-        }
+			}
+		}
 
 
 		[Fact]
@@ -82,10 +82,10 @@ namespace Raven.Tests.Bugs.Queries
 			}
 		}
 
-        public class User
-        {
-            public LiveProjection.Address[] Addresses { get; set; }
-        }
+		public class User
+		{
+			public LiveProjection.Address[] Addresses { get; set; }
+		}
 
 
 
@@ -93,5 +93,5 @@ namespace Raven.Tests.Bugs.Queries
 		{
 			public string Name { get; set; }
 		}
-    }
+	}
 }

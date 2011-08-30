@@ -29,7 +29,7 @@ namespace Raven.Tests.Bugs
 
 		public void Dispose()
 		{
-            IOExtensions.DeleteDirectory(path);
+			IOExtensions.DeleteDirectory(path);
 		}
 
 		[Fact]
@@ -52,7 +52,7 @@ namespace Raven.Tests.Bugs
 					Indexes =
 					    {
 					        { "NameForSorting", FieldIndexing.NotAnalyzed },
-                            { "Name", FieldIndexing.Analyzed },
+							{ "Name", FieldIndexing.Analyzed },
 					    }
 				});
 
@@ -65,14 +65,14 @@ namespace Raven.Tests.Bugs
 					session.Store(new Company {Name = "Nunc volutpat malesuada"});
 					session.SaveChanges();
 
-                    session.Advanced.LuceneQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();
+					session.Advanced.LuceneQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();
 						// wait for the index to settle down
 				}
 
 				using (var session = documentStore.OpenSession())
 				{
 					var q = session
-                        .Advanced.LuceneQuery<Company>("CompaniesByName")
+						.Advanced.LuceneQuery<Company>("CompaniesByName")
 						.OrderBy("NameForSorting")
 						.ToArray();
 
@@ -83,7 +83,7 @@ namespace Raven.Tests.Bugs
 					Assert.Equal("Quisque vulputate eros", q[4].Name);
 
 					q = session
-                        .Advanced.LuceneQuery<Company>("CompaniesByName")
+						.Advanced.LuceneQuery<Company>("CompaniesByName")
 						.Where("Name:vul*")
 						.OrderBy("NameForSorting")
 						.Take(3)

@@ -1,8 +1,8 @@
 ﻿namespace Raven.Studio.Shell.MessageBox
 {
-    using System.Windows.Controls;
+	using System.Windows.Controls;
 
-    public partial class MessageBoxView : UserControl
+	public partial class MessageBoxView : UserControl
 	{
 		public MessageBoxView()
 		{

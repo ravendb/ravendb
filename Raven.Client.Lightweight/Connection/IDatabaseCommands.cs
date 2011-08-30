@@ -29,19 +29,19 @@ namespace Raven.Client.Connection
 		NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
-        /// Retrieves documents for the specified key prefix
+		/// Retrieves documents for the specified key prefix
 		/// </summary>
 		JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize);
 
 		/// <summary>
-        /// Retrieves the document for the specified key
+		/// Retrieves the document for the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
 		JsonDocument Get(string key);
 
 		/// <summary>
-        /// Retrieves documents with the specified ids, optionally specifying includes to fetch along
+		/// Retrieves documents with the specified ids, optionally specifying includes to fetch along
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
@@ -49,7 +49,7 @@ namespace Raven.Client.Connection
 		MultiLoadResult Get(string[] ids, string[] includes);
 
 		/// <summary>
-        /// Puts the document in the database with the specified key
+		/// Puts the document in the database with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
@@ -74,7 +74,7 @@ namespace Raven.Client.Connection
 		/// <param name="metadata">The metadata.</param>
 		void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata);
 		
-        /// <summary>
+		/// <summary>
 		/// Retrieves the attachment with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -115,17 +115,17 @@ namespace Raven.Client.Connection
 		/// <param name="indexDef">The index def.</param>
 		string PutIndex(string name, IndexDefinition indexDef);
 
-        /// <summary>
-        /// Creates an index with the specified name, based on an index definition
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="indexDef">The index def.</param>
-        /// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
-        string PutIndex(string name, IndexDefinition indexDef, bool overwrite);
+		/// <summary>
+		/// Creates an index with the specified name, based on an index definition
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
+		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
+		string PutIndex(string name, IndexDefinition indexDef, bool overwrite);
 
 		/// <summary>
-        /// Creates an index with the specified name, based on an index definition that is created by the supplied
-        /// IndexDefinitionBuilder
+		/// Creates an index with the specified name, based on an index definition that is created by the supplied
+		/// IndexDefinitionBuilder
 		/// </summary>
 		/// <typeparam name="TDocument">The type of the document.</typeparam>
 		/// <typeparam name="TReduceResult">The type of the reduce result.</typeparam>
@@ -135,8 +135,8 @@ namespace Raven.Client.Connection
 		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef);
 
 		/// <summary>
-        /// Creates an index with the specified name, based on an index definition that is created by the supplied
-        /// IndexDefinitionBuilder
+		/// Creates an index with the specified name, based on an index definition that is created by the supplied
+		/// IndexDefinitionBuilder
 		/// </summary>
 		/// <typeparam name="TDocument">The type of the document.</typeparam>
 		/// <typeparam name="TReduceResult">The type of the reduce result.</typeparam>

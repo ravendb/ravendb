@@ -21,132 +21,132 @@ using Raven.Database.Json;
 namespace Raven.Tests.Indexes
 {
 	public class CompiledIndex : AbstractDocumentStorageTest
-    {
-        private readonly DocumentDatabase db;
+	{
+		private readonly DocumentDatabase db;
 
-        public CompiledIndex()
-        {
-            db = new DocumentDatabase(new RavenConfiguration
-            {
-                DataDirectory = "raven.db.test.esent",
-                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                Catalog = { Catalogs = { new TypeCatalog(typeof(ShoppingCartEventsToShopingCart), typeof(MapOnlyView)) } }
-            });
-            db.SpinBackgroundWorkers();
-        }
+		public CompiledIndex()
+		{
+			db = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = "raven.db.test.esent",
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				Catalog = { Catalogs = { new TypeCatalog(typeof(ShoppingCartEventsToShopingCart), typeof(MapOnlyView)) } }
+			});
+			db.SpinBackgroundWorkers();
+		}
 
-        #region IDisposable Members
+		#region IDisposable Members
 
-        public override void Dispose()
-        {
-            db.Dispose();
-            base.Dispose();
-        }
+		public override void Dispose()
+		{
+			db.Dispose();
+			base.Dispose();
+		}
 
-        #endregion
+		#endregion
 
-        [Fact]
-        public void CanGetDataFromCompiledIndex()
-        {
-            db.Put("events/1", null, RavenJObject.FromObject(new
-            {
-                For = "ShoppingCart",
-                Type = "Create",
-                Timestamp = SystemTime.Now,
-                ShoppingCartId = "shoppingcarts/12",
-                CustomerId = "users/ayende",
-                CustomerName = "Ayende Rahien"
-            }), new RavenJObject(), null);
+		[Fact]
+		public void CanGetDataFromCompiledIndex()
+		{
+			db.Put("events/1", null, RavenJObject.FromObject(new
+			{
+				For = "ShoppingCart",
+				Type = "Create",
+				Timestamp = SystemTime.Now,
+				ShoppingCartId = "shoppingcarts/12",
+				CustomerId = "users/ayende",
+				CustomerName = "Ayende Rahien"
+			}), new RavenJObject(), null);
 
-            QueryResult queryResult;
-            do
-            {
-                queryResult = db.Query("Compiled/View", new IndexQuery
-                {
-                    Query = "CustomerId:users/ayende"
-                });
-                if (queryResult.IsStale)
-                    Thread.Sleep(100);
-            } while (queryResult.IsStale);
+			QueryResult queryResult;
+			do
+			{
+				queryResult = db.Query("Compiled/View", new IndexQuery
+				{
+					Query = "CustomerId:users/ayende"
+				});
+				if (queryResult.IsStale)
+					Thread.Sleep(100);
+			} while (queryResult.IsStale);
 
-            Assert.Equal(1, queryResult.TotalResults);
+			Assert.Equal(1, queryResult.TotalResults);
 
-        }
+		}
 
-        [Fact]
-        public void CompileIndexWillTurnEventsToAggregate()
-        {
-            var events = new object[]
-            {
-                new
-                {
-                    For = "ShoppingCart",
-                    Type = "Create",
-                    Timestamp = SystemTime.Now,
-                    ShoppingCartId = "shoppingcarts/12",
-                    CustomerId = "users/ayende",
-                    CustomerName = "Ayende Rahien"
-                },
-                new
-                {
-                    For = "ShoppingCart",
-                    Type = "Add",
-                    Timestamp = SystemTime.Now,
-                    ShoppingCartId = "shoppingcarts/12",
-                    ProductId = "products/8123",
-                    ProductName = "Fish & Chips",
-                    Price = 8.5m
-                },
-                new
-                {
-                    For = "ShoppingCart",
-                    Type = "Add",
-                    Timestamp = SystemTime.Now,
-                    ShoppingCartId = "shoppingcarts/12",
-                    ProductId = "products/3214",
-                    ProductName = "Guinness",
-                    Price = 2.1m
-                },
-                new
-                {
-                    For = "ShoppingCart",
-                    Type = "Remove",
-                    Timestamp = SystemTime.Now,
-                    ShoppingCartId = "shoppingcarts/12",
-                    ProductId = "products/8123"
-                },
-                new
-                {
-                    For = "ShoppingCart",
-                    Type = "Add",
-                    Timestamp = SystemTime.Now,
-                    ShoppingCartId = "shoppingcarts/12",
-                    ProductId = "products/8121",
-                    ProductName = "Beef Pie",
-                    Price = 9.0m
-                },
-            };
-            for (int i = 0; i < events.Length; i++)
-            {
-                db.Put("events/" + (i + 1), null, RavenJObject.FromObject(events[i]), new RavenJObject(), null);
-            }
+		[Fact]
+		public void CompileIndexWillTurnEventsToAggregate()
+		{
+			var events = new object[]
+			{
+				new
+				{
+					For = "ShoppingCart",
+					Type = "Create",
+					Timestamp = SystemTime.Now,
+					ShoppingCartId = "shoppingcarts/12",
+					CustomerId = "users/ayende",
+					CustomerName = "Ayende Rahien"
+				},
+				new
+				{
+					For = "ShoppingCart",
+					Type = "Add",
+					Timestamp = SystemTime.Now,
+					ShoppingCartId = "shoppingcarts/12",
+					ProductId = "products/8123",
+					ProductName = "Fish & Chips",
+					Price = 8.5m
+				},
+				new
+				{
+					For = "ShoppingCart",
+					Type = "Add",
+					Timestamp = SystemTime.Now,
+					ShoppingCartId = "shoppingcarts/12",
+					ProductId = "products/3214",
+					ProductName = "Guinness",
+					Price = 2.1m
+				},
+				new
+				{
+					For = "ShoppingCart",
+					Type = "Remove",
+					Timestamp = SystemTime.Now,
+					ShoppingCartId = "shoppingcarts/12",
+					ProductId = "products/8123"
+				},
+				new
+				{
+					For = "ShoppingCart",
+					Type = "Add",
+					Timestamp = SystemTime.Now,
+					ShoppingCartId = "shoppingcarts/12",
+					ProductId = "products/8121",
+					ProductName = "Beef Pie",
+					Price = 9.0m
+				},
+			};
+			for (int i = 0; i < events.Length; i++)
+			{
+				db.Put("events/" + (i + 1), null, RavenJObject.FromObject(events[i]), new RavenJObject(), null);
+			}
 
-            QueryResult queryResult = null;
-            for (int i = 0; i < 500; i++)
-            {
-                queryResult = db.Query("Aggregates/ShoppingCart", new IndexQuery());
-                if (queryResult.IsStale)
-                    Thread.Sleep(100);
-                else
-                    break;
-            }
+			QueryResult queryResult = null;
+			for (int i = 0; i < 500; i++)
+			{
+				queryResult = db.Query("Aggregates/ShoppingCart", new IndexQuery());
+				if (queryResult.IsStale)
+					Thread.Sleep(100);
+				else
+					break;
+			}
 
 			Assert.Equal(1, queryResult.Results.Count);
 
 			Assert.Equal("shoppingcarts/12", queryResult.Results[0].Value<string>("ShoppingCartId"));
-        	var ravenJObject = queryResult.Results[0].Value<RavenJObject>("Aggregate");
-        	var cart = ravenJObject.JsonDeserialization<ShoppingCartEventsToShopingCart.ShoppingCart>();
-            Assert.Equal(2, cart.Items.Count);
-        }
-    }
+			var ravenJObject = queryResult.Results[0].Value<RavenJObject>("Aggregate");
+			var cart = ravenJObject.JsonDeserialization<ShoppingCartEventsToShopingCart.ShoppingCart>();
+			Assert.Equal(2, cart.Items.Count);
+		}
+	}
 }

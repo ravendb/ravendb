@@ -4,14 +4,14 @@ using Raven.Studio.Framework.Extensions;
 namespace Raven.Studio.Commands
 {
 	using System.ComponentModel.Composition;
-    using System.Linq;
-    using Caliburn.Micro;
+	using System.Linq;
+	using Caliburn.Micro;
 	using Messages;
 	using Plugins;
 	using Shell.MessageBox;
 
 	[Export]
-    public class DeleteDocument
+	public class DeleteDocument
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;

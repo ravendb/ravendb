@@ -11,19 +11,19 @@ namespace Raven.Http.Abstractions
 	public class HttpResponseAdapter : IHttpResponse
 	{
 		private readonly HttpResponse response;
-        
+		
 		public HttpResponseAdapter(HttpResponse response)
 		{
 			this.response = response;
 		}
 
-        public string RedirectionPrefix { get; set; }
+		public string RedirectionPrefix { get; set; }
 
 		public void AddHeader(string name, string value)
 		{
 			if (name == "ETag" && string.IsNullOrEmpty(response.CacheControl))
 				response.AddHeader("Expires", "Sat, 01 Jan 2000 00:00:00 GMT");
-    		
+			
 			response.AddHeader(name, value);
 		}
 

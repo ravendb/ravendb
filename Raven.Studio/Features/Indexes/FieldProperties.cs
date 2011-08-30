@@ -2,7 +2,7 @@
 
 namespace Raven.Studio.Features.Indexes
 {
-    public class FieldProperties
+	public class FieldProperties
 	{
 		public string Name { get; set; }
 

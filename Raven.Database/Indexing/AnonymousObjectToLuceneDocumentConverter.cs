@@ -48,27 +48,27 @@ namespace Raven.Database.Indexing
 			        select field);
 		}
 
-        public IEnumerable<AbstractField> Index(RavenJObject document, IndexDefinition indexDefinition, Field.Store defaultStorage)
-        {
-        	return (from property in document
-        	        let name = property.Key
+		public IEnumerable<AbstractField> Index(RavenJObject document, IndexDefinition indexDefinition, Field.Store defaultStorage)
+		{
+			return (from property in document
+			        let name = property.Key
 					where name != Constants.DocumentIdFieldName
-        	        let value = GetPropertyValue(property.Value)
-        	        from field in CreateFields(name, value, indexDefinition, defaultStorage)
-        	        select field);
-        }
+			        let value = GetPropertyValue(property.Value)
+			        from field in CreateFields(name, value, indexDefinition, defaultStorage)
+			        select field);
+		}
 
-        private static object GetPropertyValue(RavenJToken property)
-        {
-            switch (property.Type)
-            {
-                case JTokenType.Array:
-                case JTokenType.Object:
-                    return property.ToString(Formatting.None);
-                default:
-                    return property.Value<object>();
-            }
-        }
+		private static object GetPropertyValue(RavenJToken property)
+		{
+			switch (property.Type)
+			{
+				case JTokenType.Array:
+				case JTokenType.Object:
+					return property.ToString(Formatting.None);
+				default:
+					return property.Value<object>();
+			}
+		}
 
 		/// <summary>
 		/// This method generate the fields for indexing documents in lucene from the values.
@@ -83,14 +83,14 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		private IEnumerable<AbstractField> CreateFields(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{
-            if(string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
+			if(string.IsNullOrWhiteSpace(name))
+				throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
 
-            if (char.IsLetter(name[0]) == false &&
-                name[0] != '_')
-            {
-                name = "_" + name;
-            }
+			if (char.IsLetter(name[0]) == false &&
+				name[0] != '_')
+			{
+				name = "_" + name;
+			}
 
 			if (value == null)
 			{
@@ -108,25 +108,25 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
-            if(value is AbstractField)
-            {
-                yield return (AbstractField)value;
-                yield break;
-            }
+			if(value is AbstractField)
+			{
+				yield return (AbstractField)value;
+				yield break;
+			}
 
 
 			var itemsToIndex = value as IEnumerable;
 			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
-                yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 				int count = 1;
-                foreach (var itemToIndex in itemsToIndex)
+				foreach (var itemToIndex in itemsToIndex)
 				{
 					multipleItemsSameFieldCount.Add(count++);
-                    foreach (var field in CreateFields(name, itemToIndex, indexDefinition, defaultStorage))
-                    {
-                        yield return field;
-                    }
+					foreach (var field in CreateFields(name, itemToIndex, indexDefinition, defaultStorage))
+					{
+						yield return field;
+					}
 					multipleItemsSameFieldCount.RemoveAt(multipleItemsSameFieldCount.Count - 1);
 				}
 				yield break;
@@ -134,7 +134,7 @@ namespace Raven.Database.Indexing
 
 			var fieldIndexingOptions = indexDefinition.GetIndex(name, null);
 			if (fieldIndexingOptions == Field.Index.NOT_ANALYZED || fieldIndexingOptions == Field.Index.NOT_ANALYZED_NO_NORMS)// explicitly not analyzed
-            {
+			{
 				if (value is DateTime)
 				{
 				    var val = (DateTime) value;
@@ -152,14 +152,14 @@ namespace Raven.Database.Indexing
 					yield return CreateFieldWithCaching(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
 										   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
-            	yield break;
+				yield break;
 			    
-            }
+			}
 			if (value is string) 
 			{
 			    var index = indexDefinition.GetIndex(name, Field.Index.ANALYZED);
 				yield return CreateFieldWithCaching(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
-                                 index); 
+								 index); 
 				yield break;
 			}
 
@@ -175,12 +175,12 @@ namespace Raven.Database.Indexing
 					indexDefinition.GetStorage(name, defaultStorage),
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
-            else if(value is bool)
-            {
-                yield return new Field(name, ((bool) value) ? "true" : "false", indexDefinition.GetStorage(name, defaultStorage),
+			else if(value is bool)
+			{
+				yield return new Field(name, ((bool) value) ? "true" : "false", indexDefinition.GetStorage(name, defaultStorage),
 							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 
-            }
+			}
 			else if(value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
 				var convert = ((IConvertible) value);
@@ -257,20 +257,20 @@ namespace Raven.Database.Indexing
 
 		private static bool ShouldTreatAsEnumerable(IEnumerable itemsToIndex)
 	    {
-            if (itemsToIndex == null)
-                return false;
+			if (itemsToIndex == null)
+				return false;
 
 			if (itemsToIndex is DynamicJsonObject)
 				return false;
 
-            if (itemsToIndex is string)
-                return false;
+			if (itemsToIndex is string)
+				return false;
 
-            if (itemsToIndex is RavenJObject)
-                return false;
+			if (itemsToIndex is RavenJObject)
+				return false;
 
-            if (itemsToIndex is IDictionary)
-                return false;
+			if (itemsToIndex is IDictionary)
+				return false;
 
 	        return true;
 	    }

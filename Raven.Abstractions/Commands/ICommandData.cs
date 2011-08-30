@@ -12,8 +12,8 @@ namespace Raven.Abstractions.Commands
 	/// <summary>
 	/// A single operation inside a batch
 	/// </summary>
-    public interface ICommandData
-    {
+	public interface ICommandData
+	{
 		/// <summary>
 		/// Gets the key.
 		/// </summary>
@@ -31,11 +31,11 @@ namespace Raven.Abstractions.Commands
 		Guid? Etag { get; }
 
 		TransactionInformation TransactionInformation { get; set; }
-    	RavenJObject Metadata { get; }
+		RavenJObject Metadata { get; }
 
-        /// <summary>
+		/// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
 		RavenJObject ToJson();
-    }
+	}
 }

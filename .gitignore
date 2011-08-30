@@ -66,5 +66,5 @@ ClientBin/
 /Raven.Json/Raven.Json.g.3.5.csproj
 /Modules/Json/Raven.Json/Raven.Json.g.3.5.csproj
 *.docstates
-
+StyleCop.Cache
 /Raven.Studio/Settings.dat

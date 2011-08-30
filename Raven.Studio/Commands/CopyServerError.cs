@@ -4,7 +4,7 @@ namespace Raven.Studio.Commands
 {
 	using System.Windows;
 
-    public class CopyServerError
+	public class CopyServerError
 	{
 		public void Execute(ServerError error)
 		{

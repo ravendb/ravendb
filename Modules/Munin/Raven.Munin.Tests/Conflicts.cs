@@ -9,44 +9,44 @@ using Xunit;
 
 namespace Raven.Munin.Tests
 {
-    public class Conflicts : SimpleFileTest
-    {
-        [Fact]
-        public void TwoTxCannotAddSameDataBeforeCmmmit()
-        {
+	public class Conflicts : SimpleFileTest
+	{
+		[Fact]
+		public void TwoTxCannotAddSameDataBeforeCmmmit()
+		{
 			Assert.True(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 }));
 
 			SupressTx(() => Assert.False(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 })));
-        }
+		}
 
-        [Fact]
-        public void OneTxCannotDeleteTxThatAnotherTxAddedBeforeCommit()
-        {
+		[Fact]
+		public void OneTxCannotDeleteTxThatAnotherTxAddedBeforeCommit()
+		{
 			Assert.True(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 }));
 
 			SupressTx(() => Assert.False(Table.Remove(RavenJToken.FromObject("a"))));
-        }
+		}
 
 
-        [Fact]
-        public void TwoTxCanAddSameDataAfterCmmmit()
-        {
+		[Fact]
+		public void TwoTxCanAddSameDataAfterCmmmit()
+		{
 			Assert.True(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 }));
 
-            Commit();
+			Commit();
 
 			Assert.True(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 }));
-        }
+		}
 
-        [Fact]
-        public void OneTxCanDeleteTxThatAnotherTxAddedAfterCommit()
-        {
+		[Fact]
+		public void OneTxCanDeleteTxThatAnotherTxAddedAfterCommit()
+		{
 
 			Assert.True(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 }));
 
-            Commit();
+			Commit();
 
 			Assert.True(Table.Remove(RavenJToken.FromObject("a")));
-        }
-    }
+		}
+	}
 }

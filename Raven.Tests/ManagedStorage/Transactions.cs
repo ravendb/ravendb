@@ -30,7 +30,7 @@ namespace Raven.Tests.ManagedStorage
 				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
-                tx.Batch(viewer =>
+				tx.Batch(viewer =>
 					Assert.True(viewer.Documents.DocumentByKey("Ayende", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists)));
 			}
 		}
@@ -46,7 +46,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
 				var txInfo2 = new TransactionInformation
@@ -55,10 +55,10 @@ namespace Raven.Tests.ManagedStorage
 					Timeout = TimeSpan.FromDays(1)
 				};
 
-                tx.Batch(mutator => mutator.Transactions.ModifyTransactionId(transactionInformation.Id, txInfo2.Id, txInfo2.Timeout));
+				tx.Batch(mutator => mutator.Transactions.ModifyTransactionId(transactionInformation.Id, txInfo2.Id, txInfo2.Timeout));
 
 
-                tx.Batch(viewer =>
+				tx.Batch(viewer =>
 					Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", txInfo2)));
 			}
 		}
@@ -74,10 +74,10 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
-                tx.Batch(mutator => mutator.Transactions.CompleteTransaction(transactionInformation.Id, data =>
+				tx.Batch(mutator => mutator.Transactions.CompleteTransaction(transactionInformation.Id, data =>
 				{
 					if (data.Delete)
 					{
@@ -87,7 +87,7 @@ namespace Raven.Tests.ManagedStorage
 					else
 						mutator.Documents.AddDocument(data.Key, null, data.Data, data.Metadata);
 				}));
-                tx.Batch(viewer =>
+				tx.Batch(viewer =>
 					Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", null)));
 			}
 		}
@@ -103,15 +103,15 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject(),
 					transactionInformation));
 
-                tx.Batch(viewer =>
+				tx.Batch(viewer =>
 					Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", transactionInformation)));
 
-                tx.Batch(mutator => mutator.Transactions.RollbackTransaction(transactionInformation.Id));
+				tx.Batch(mutator => mutator.Transactions.RollbackTransaction(transactionInformation.Id));
 
-                tx.Batch(viewer =>
+				tx.Batch(viewer =>
 					Assert.Null(viewer.Documents.DocumentByKey("Ayende", transactionInformation)));
 			
 			}
@@ -159,7 +159,7 @@ namespace Raven.Tests.ManagedStorage
 				         			                                           new TransactionInformation
 				         			                                           {
 				         			                                               Id = Guid.NewGuid(),
-                                                                                   Timeout = TimeSpan.FromMinutes(1)
+																				   Timeout = TimeSpan.FromMinutes(1)
 				         			                                           })));
 			}
 		}

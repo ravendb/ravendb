@@ -19,12 +19,12 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
+				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 			}
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.GetDocumentsAfter(Guid.Empty).Select(x=>x.Key).ToArray()));
+				tx.Batch(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.GetDocumentsAfter(Guid.Empty).Select(x=>x.Key).ToArray()));
 			}
 		}
 	}

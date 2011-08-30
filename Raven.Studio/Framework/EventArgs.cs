@@ -1,14 +1,14 @@
 ﻿namespace Raven.Studio.Framework
 {
-    using System;
+	using System;
 
-    public class EventArgs<T> : EventArgs
-    {
-        public EventArgs(T value)
-        {
-            Value = value;
-        }
+	public class EventArgs<T> : EventArgs
+	{
+		public EventArgs(T value)
+		{
+			Value = value;
+		}
 
-        public T Value { get; set; }
-    }
+		public T Value { get; set; }
+	}
 }

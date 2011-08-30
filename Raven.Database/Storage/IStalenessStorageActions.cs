@@ -7,16 +7,16 @@ using System;
 
 namespace Raven.Database.Storage
 {
-    public interface IStalenessStorageActions
-    {
-        bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag);
+	public interface IStalenessStorageActions
+	{
+		bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag);
 
-        bool IsReduceStale(string name);
-        bool IsMapStale(string name);
+		bool IsReduceStale(string name);
+		bool IsMapStale(string name);
 
-        Tuple<DateTime, Guid> IndexLastUpdatedAt(string name);
-        Guid GetMostRecentDocumentEtag();
-        Guid? GetMostRecentReducedEtag(string name);
-    	int GetIndexTouchCount(string indexName);
-    }
+		Tuple<DateTime, Guid> IndexLastUpdatedAt(string name);
+		Guid GetMostRecentDocumentEtag();
+		Guid? GetMostRecentReducedEtag(string name);
+		int GetIndexTouchCount(string indexName);
+	}
 }

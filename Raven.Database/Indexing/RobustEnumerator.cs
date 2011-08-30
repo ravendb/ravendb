@@ -11,20 +11,20 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Indexing
 {
-    public class RobustEnumerator
-    {
-        public Action BeforeMoveNext = delegate { };
-        public Action CancelMoveNext = delegate { };
-        public Action<Exception, object> OnError = delegate { };
-    	private int numberOfConsecutiveErrors;
+	public class RobustEnumerator
+	{
+		public Action BeforeMoveNext = delegate { };
+		public Action CancelMoveNext = delegate { };
+		public Action<Exception, object> OnError = delegate { };
+		private int numberOfConsecutiveErrors;
 
-    	public RobustEnumerator(int numberOfConsecutiveErrors)
-    	{
-    		this.numberOfConsecutiveErrors = numberOfConsecutiveErrors;
-    	}
+		public RobustEnumerator(int numberOfConsecutiveErrors)
+		{
+			this.numberOfConsecutiveErrors = numberOfConsecutiveErrors;
+		}
 
-    	public IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func)
-        {
+		public IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func)
+		{
 			using (var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator()))
 			{
 				IEnumerator<dynamic> en;
@@ -54,25 +54,25 @@ namespace Raven.Database.Indexing
 					} while (maxNumberOfConsecutiveErrors > 0);
 				}
 			}
-        }
+		}
 
-        private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator)
-        {
-            try
-            {
-                BeforeMoveNext();
-                var moveNext = en.MoveNext();
-                if (moveNext == false)
-                {
-                    CancelMoveNext();
-                }
-                return moveNext;
-            }
-            catch (Exception e)
-            {
-                OnError(e, innerEnumerator.Current);
-            }
-            return null;
-        }
-    }
+		private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator)
+		{
+			try
+			{
+				BeforeMoveNext();
+				var moveNext = en.MoveNext();
+				if (moveNext == false)
+				{
+					CancelMoveNext();
+				}
+				return moveNext;
+			}
+			catch (Exception e)
+			{
+				OnError(e, innerEnumerator.Current);
+			}
+			return null;
+		}
+	}
 }

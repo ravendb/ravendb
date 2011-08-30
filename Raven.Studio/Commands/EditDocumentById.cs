@@ -8,13 +8,13 @@
 	using Plugins;
 	using Shell.MessageBox;
 
-    public class EditDocumentById
+	public class EditDocumentById
 	{
 		readonly IEventAggregator events;
 		readonly IServer server;
-        readonly ShowMessageBox showMessageBox;
+		readonly ShowMessageBox showMessageBox;
 
-        [ImportingConstructor]
+		[ImportingConstructor]
 		public EditDocumentById(IEventAggregator events, IServer server, ShowMessageBox showMessageBox)
 		{
 			this.events = events;
@@ -33,13 +33,13 @@
 
 									events.Publish(new WorkCompleted("searching for document by id"));
 
-                                    if(get.Result == null)
-                                    {
+									if(get.Result == null)
+									{
 										var msg = string.Format("Could not locate a document with id {0}.", documentId);
-                                    	events.Publish(new NotificationRaised(msg));
-                                    	showMessageBox(msg, "Document Not found");
-                                        return;
-                                    }
+										events.Publish(new NotificationRaised(msg));
+										showMessageBox(msg, "Document Not found");
+										return;
+									}
 
 				               		var doc = IoC.Get<EditDocumentViewModel>();
 									doc.Initialize(get.Result);

@@ -125,7 +125,7 @@ namespace Raven.Tests.Bugs
 					for (int i = 0; i < 5; i++)
 					{
 						var clone = s.Load<User>("users/" + (i + 1));
-                        Assert.Equal("users/" + (i + 1), s.Advanced.GetDocumentId(clone));
+						Assert.Equal("users/" + (i + 1), s.Advanced.GetDocumentId(clone));
 					}
 				}
 			}

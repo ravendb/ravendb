@@ -24,7 +24,7 @@ namespace Raven.Tests.Document
 
 		public void Dispose()
 		{
-            IOExtensions.DeleteDirectory(path);
+			IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
@@ -34,7 +34,7 @@ namespace Raven.Tests.Document
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-            var documentStore = new EmbeddableDocumentStore
+			var documentStore = new EmbeddableDocumentStore
 			{
 				Configuration =
 				{
@@ -59,39 +59,39 @@ namespace Raven.Tests.Document
 									{
 										Map =
 											@"from doc in docs where doc.DataUploadId != null 
-                && doc.RealmName != null 
-                && doc.Region != null 
-                && doc.CharacterName != null 
-                && doc.Zone != null 
-                && doc.SubZone != null
-    select new
-    {
-        DataUploadId = doc.DataUploadId,
-        RealmName = doc.RealmName,
-        Region = doc.Region,
-        CharacterName = doc.CharacterName,
-        Zone = doc.Zone,
-        Count = 1
-    };",
+				&& doc.RealmName != null 
+				&& doc.Region != null 
+				&& doc.CharacterName != null 
+				&& doc.Zone != null 
+				&& doc.SubZone != null
+	select new
+	{
+		DataUploadId = doc.DataUploadId,
+		RealmName = doc.RealmName,
+		Region = doc.Region,
+		CharacterName = doc.CharacterName,
+		Zone = doc.Zone,
+		Count = 1
+	};",
 										Reduce =
 											@"from result in results
-        group result by new
-        {
-            DataUploadId = result.DataUploadId,
-            RealmName = result.RealmName,
-            Region = result.Region,
-            CharacterName = result.CharacterName,
-            Zone = result.Zone
-        } into g
-        select new
-        {
-            DataUploadId = g.Key.DataUploadId,
-            RealmName = g.Key.RealmName,
-            Region = g.Key.Region,
-            CharacterName = g.Key.CharacterName,
-            Zone = g.Key.Zone,
-            Count = g.Sum(x => (int)x.Count).ToString()      
-        };"
+		group result by new
+		{
+			DataUploadId = result.DataUploadId,
+			RealmName = result.RealmName,
+			Region = result.Region,
+			CharacterName = result.CharacterName,
+			Zone = result.Zone
+		} into g
+		select new
+		{
+			DataUploadId = g.Key.DataUploadId,
+			RealmName = g.Key.RealmName,
+			Region = g.Key.Region,
+			CharacterName = g.Key.CharacterName,
+			Zone = g.Key.Zone,
+			Count = g.Sum(x => (int)x.Count).ToString()      
+		};"
 									});
 
 				using (var documentSession = store.OpenSession())
@@ -239,7 +239,7 @@ namespace Raven.Tests.Document
 					documentSession.SaveChanges();
 
 					var darykalSumResults =
-                        documentSession.Advanced.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
+						documentSession.Advanced.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
 							.Where("RealmName:Moonglade AND Region:SingleRegion AND DataUploadId:10 ")
 							.SelectFields<ZoneCountResult>("Zone", "Count")
 							.WaitForNonStaleResults(TimeSpan.FromDays(1))
@@ -358,7 +358,7 @@ namespace Raven.Tests.Document
 					documentSession.SaveChanges();
 
 					var darykalSumResults =
-                        documentSession.Advanced.LuceneQuery<dynamic>("GameEventCountZoneBySpecificCharacter")
+						documentSession.Advanced.LuceneQuery<dynamic>("GameEventCountZoneBySpecificCharacter")
 							.Where("CharacterName:Darykal AND RealmName:Moonglade AND Region:SingleRegion AND DataUploadId:10 ")
 							.WaitForNonStaleResults(TimeSpan.FromDays(1))
 							.ToArray();

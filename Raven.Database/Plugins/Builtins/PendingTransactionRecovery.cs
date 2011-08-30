@@ -29,32 +29,32 @@ namespace Raven.Database.Plugins.Builtins
 					}
 					else
 					{
-                        Guid resourceManagerId;
-                        if (Guid.TryParse(attachment.Metadata.Value<string>("Resource-Manager-Id"), out resourceManagerId) == false)
+						Guid resourceManagerId;
+						if (Guid.TryParse(attachment.Metadata.Value<string>("Resource-Manager-Id"), out resourceManagerId) == false)
 					    {
-                            actions.Transactions.RollbackTransaction(txId);
+							actions.Transactions.RollbackTransaction(txId);
 					    }
 					    else
-                        {
-                            try
-                            {
-                                TransactionManager.Reenlist(resourceManagerId, attachment.Data, new InternalEnlistment(database, txId));
-                                resourceManagersRequiringRecovery.Add(resourceManagerId);
-                            }
-                            catch (Exception e)
-                            {
-                                logger.ErrorException("Failed to re-enlist in distributed transaction, transaction has been rolled back", e);
-                                actions.Transactions.RollbackTransaction(txId);
-                                actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
-                            }
-                        }
+						{
+							try
+							{
+								TransactionManager.Reenlist(resourceManagerId, attachment.Data, new InternalEnlistment(database, txId));
+								resourceManagersRequiringRecovery.Add(resourceManagerId);
+							}
+							catch (Exception e)
+							{
+								logger.ErrorException("Failed to re-enlist in distributed transaction, transaction has been rolled back", e);
+								actions.Transactions.RollbackTransaction(txId);
+								actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
+							}
+						}
 					}
 				}
 			});
-            foreach (var rm in resourceManagersRequiringRecovery)
-            {
-                TransactionManager.RecoveryComplete(rm);
-            }
+			foreach (var rm in resourceManagersRequiringRecovery)
+			{
+				TransactionManager.RecoveryComplete(rm);
+			}
 			
 		}
 

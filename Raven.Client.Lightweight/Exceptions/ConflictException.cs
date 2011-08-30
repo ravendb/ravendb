@@ -13,39 +13,39 @@ namespace Raven.Client.Exceptions
 	/// Usually this required a user to manually resolve the conflict.
 	/// </summary>
 #if !SILVERLIGHT
-    [Serializable]
+	[Serializable]
 #endif
 	public class ConflictException : Exception
-    {
+	{
 		/// <summary>
 		/// Gets or sets the conflicted version ids.
 		/// </summary>
 		/// <value>The conflicted version ids.</value>
-        public string[] ConflictedVersionIds { get; set; }
+		public string[] ConflictedVersionIds { get; set; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
-        public ConflictException()
-        {
-        }
+		public ConflictException()
+		{
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
 		/// <param name="message">The message.</param>
-        public ConflictException(string message) : base(message)
-        {
-        }
+		public ConflictException(string message) : base(message)
+		{
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
 		/// <param name="message">The message.</param>
 		/// <param name="inner">The inner.</param>
-        public ConflictException(string message, Exception inner) : base(message, inner)
-        {
-        }
+		public ConflictException(string message, Exception inner) : base(message, inner)
+		{
+		}
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -55,11 +55,11 @@ namespace Raven.Client.Exceptions
 		/// <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination.</param>
 		/// <exception cref="T:System.ArgumentNullException">The <paramref name="info"/> parameter is null. </exception>
 		/// <exception cref="T:System.Runtime.Serialization.SerializationException">The class name is null or <see cref="P:System.Exception.HResult"/> is zero (0). </exception>
-        protected ConflictException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context)
-        {
-        }
+		protected ConflictException(
+			SerializationInfo info,
+			StreamingContext context) : base(info, context)
+		{
+		}
 #endif
 	}
 }

@@ -10,60 +10,60 @@ using SpellChecker.Net.Search.Spell;
 
 namespace Raven.Database.Queries
 {
-    public class SuggestionQueryRunner
-    {
-        private readonly DocumentDatabase _database;
+	public class SuggestionQueryRunner
+	{
+		private readonly DocumentDatabase _database;
 
-        public SuggestionQueryRunner(DocumentDatabase database)
-        {
-            _database = database;
-        }
+		public SuggestionQueryRunner(DocumentDatabase database)
+		{
+			_database = database;
+		}
 
-        public SuggestionQueryResult ExecuteSuggestionQuery(string indexName, SuggestionQuery suggestionQuery)
-        {
-            if (suggestionQuery == null) throw new ArgumentNullException("suggestionQuery");
-            if (string.IsNullOrWhiteSpace(suggestionQuery.Term)) throw new ArgumentNullException("suggestionQuery.Term");
-            if (string.IsNullOrWhiteSpace(indexName)) throw new ArgumentNullException("indexName");
-            if (string.IsNullOrWhiteSpace(suggestionQuery.Field)) throw new ArgumentNullException("suggestionQuery.Field");
-            if (suggestionQuery.MaxSuggestions <= 0) suggestionQuery.MaxSuggestions = 10;
-            if (suggestionQuery.Accuracy <= 0 || suggestionQuery.Accuracy > 1) suggestionQuery.Accuracy = 0.5f;
+		public SuggestionQueryResult ExecuteSuggestionQuery(string indexName, SuggestionQuery suggestionQuery)
+		{
+			if (suggestionQuery == null) throw new ArgumentNullException("suggestionQuery");
+			if (string.IsNullOrWhiteSpace(suggestionQuery.Term)) throw new ArgumentNullException("suggestionQuery.Term");
+			if (string.IsNullOrWhiteSpace(indexName)) throw new ArgumentNullException("indexName");
+			if (string.IsNullOrWhiteSpace(suggestionQuery.Field)) throw new ArgumentNullException("suggestionQuery.Field");
+			if (suggestionQuery.MaxSuggestions <= 0) suggestionQuery.MaxSuggestions = 10;
+			if (suggestionQuery.Accuracy <= 0 || suggestionQuery.Accuracy > 1) suggestionQuery.Accuracy = 0.5f;
 
-            suggestionQuery.MaxSuggestions = Math.Min(suggestionQuery.MaxSuggestions,
-                                                      _database.Configuration.MaxPageSize);
+			suggestionQuery.MaxSuggestions = Math.Min(suggestionQuery.MaxSuggestions,
+													  _database.Configuration.MaxPageSize);
 
-        	var indexExtensionKey = suggestionQuery.Field + "/" + suggestionQuery.Distance + "/" + suggestionQuery.Accuracy;
+			var indexExtensionKey = suggestionQuery.Field + "/" + suggestionQuery.Distance + "/" + suggestionQuery.Accuracy;
 
-        	var indexExtension = _database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
+			var indexExtension = _database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
 
 			if (indexExtension != null)
 				return indexExtension.Query(suggestionQuery);
 
 
-        	IndexSearcher currentSearcher;
+			IndexSearcher currentSearcher;
 			using(_database.IndexStorage.GetCurrentIndexSearcher(indexName,out currentSearcher))
-            {
-                var indexReader = currentSearcher.GetIndexReader();
+			{
+				var indexReader = currentSearcher.GetIndexReader();
 
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(GetStringDistance(suggestionQuery), suggestionQuery.Field, suggestionQuery.Accuracy);
 				suggestionQueryIndexExtension.Init(indexReader);
 
-            	_database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
+				_database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 
-            	return suggestionQueryIndexExtension.Query(suggestionQuery);
-            }
-        }
+				return suggestionQueryIndexExtension.Query(suggestionQuery);
+			}
+		}
 
-        private static StringDistance GetStringDistance(SuggestionQuery query)
-        {
-            switch (query.Distance)
-            {
-                case StringDistanceTypes.NGram:
-                    return new NGramDistance();
-                case StringDistanceTypes.JaroWinkler:
-                    return new JaroWinklerDistance();
-                default:
-                    return new LevenshteinDistance();
-            }
-        }
-    }
+		private static StringDistance GetStringDistance(SuggestionQuery query)
+		{
+			switch (query.Distance)
+			{
+				case StringDistanceTypes.NGram:
+					return new NGramDistance();
+				case StringDistanceTypes.JaroWinkler:
+					return new JaroWinklerDistance();
+				default:
+					return new LevenshteinDistance();
+			}
+		}
+	}
 }

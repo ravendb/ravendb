@@ -12,26 +12,26 @@ using Raven.Client.Extensions;
 
 namespace Raven.Sample.MultiTenancy
 {
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            using(var store = new DocumentStore
-            {
-                Url = "http://localhost:8080"
-            }.Initialize())
-            {
-                store.DatabaseCommands.EnsureDatabaseExists("Brisbane");
+	class Program
+	{
+		static void Main(string[] args)
+		{
+			using(var store = new DocumentStore
+			{
+				Url = "http://localhost:8080"
+			}.Initialize())
+			{
+				store.DatabaseCommands.EnsureDatabaseExists("Brisbane");
 
-                store.DatabaseCommands.EnsureDatabaseExists("Melbroune");
-                store.DatabaseCommands.EnsureDatabaseExists("Sidney");
+				store.DatabaseCommands.EnsureDatabaseExists("Melbroune");
+				store.DatabaseCommands.EnsureDatabaseExists("Sidney");
 
-                using (var documentSession = store.OpenSession("Brisbane"))
-                {
-                    documentSession.Store(new { Name = "Ayende"});
-                    documentSession.SaveChanges();
-                }
-            }
-        }
-    }
+				using (var documentSession = store.OpenSession("Brisbane"))
+				{
+					documentSession.Store(new { Name = "Ayende"});
+					documentSession.SaveChanges();
+				}
+			}
+		}
+	}
 }

@@ -66,17 +66,17 @@ namespace Raven.Tests.Bugs.Indexing
 					{
 						ContainerName = expectedContainerName,
 						Items = new[]
-                        {
-                            new NestedObject()
-                            {
-                                Name = expectedItemName,
-                                Quantity = expectedQuantity
-                            },
-                            new NestedObject()
-                            {
-                                Name = "something Else",
-                                Quantity = 345
-                            }
+						{
+							new NestedObject()
+							{
+								Name = expectedItemName,
+								Quantity = expectedQuantity
+							},
+							new NestedObject()
+							{
+								Name = "something Else",
+								Quantity = 345
+							}
 		                }
 					});
 

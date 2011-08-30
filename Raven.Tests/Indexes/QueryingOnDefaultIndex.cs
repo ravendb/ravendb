@@ -55,65 +55,65 @@ namespace Raven.Tests.Indexes
 		}
 
 
-        [Fact]
-        public void CanPageOverDefaultIndex()
-        {
-            db.Put("users/ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"),
-                   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
-            db.Put("users/rob", null, RavenJObject.Parse("{'email':'robashton@codeofrob.com'}"),
-                   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
-            db.Put("users/joe", null, RavenJObject.Parse("{'email':'joe@bloggs.com'}"),
-                   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+		[Fact]
+		public void CanPageOverDefaultIndex()
+		{
+			db.Put("users/ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"),
+				   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+			db.Put("users/rob", null, RavenJObject.Parse("{'email':'robashton@codeofrob.com'}"),
+				   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+			db.Put("users/joe", null, RavenJObject.Parse("{'email':'joe@bloggs.com'}"),
+				   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
 
-            QueryResult queryResultPageOne;
-            QueryResult queryResultPageTwo;
-            QueryResult queryResultPageThree;
-            do
-            {
-                queryResultPageOne = db.Query("Raven/DocumentsByEntityName", new IndexQuery
-                {
-                    Query = "Tag:[[Users]]",
-                    Start = 0,
+			QueryResult queryResultPageOne;
+			QueryResult queryResultPageTwo;
+			QueryResult queryResultPageThree;
+			do
+			{
+				queryResultPageOne = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Users]]",
+					Start = 0,
 					PageSize = 2,
 					SortedFields = new [] { new SortedField("__document_id"), }
-                });
-            } while (queryResultPageOne.IsStale);
-            do
-            {
-                queryResultPageTwo = db.Query("Raven/DocumentsByEntityName", new IndexQuery
-                {
-                    Query = "Tag:[[Users]]",
-                    Start = 1,
+				});
+			} while (queryResultPageOne.IsStale);
+			do
+			{
+				queryResultPageTwo = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Users]]",
+					Start = 1,
 					PageSize = 2,
 					SortedFields = new [] { new SortedField("__document_id"), }
-                });
-            } while (queryResultPageTwo.IsStale);
+				});
+			} while (queryResultPageTwo.IsStale);
 
-            do
-            {
-                queryResultPageThree = db.Query("Raven/DocumentsByEntityName", new IndexQuery
-                {
-                    Query = "Tag:[[Users]]",
-                    Start = 2,
-                    PageSize = 2,
+			do
+			{
+				queryResultPageThree = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Users]]",
+					Start = 2,
+					PageSize = 2,
 					SortedFields = new []{new SortedField("__document_id"), }
-                });
-            } while (queryResultPageThree.IsStale);
+				});
+			} while (queryResultPageThree.IsStale);
 
-            // Page one
+			// Page one
 			Assert.Equal(2, queryResultPageOne.Results.Count);
 			Assert.Equal("ayende@ayende.com", queryResultPageOne.Results[0].Value<string>("email"));
 			Assert.Equal("joe@bloggs.com", queryResultPageOne.Results[1].Value<string>("email"));
 
-            // Page two
+			// Page two
 			Assert.Equal(2, queryResultPageTwo.Results.Count);
 			Assert.Equal("joe@bloggs.com", queryResultPageTwo.Results[0].Value<string>("email"));
 			Assert.Equal("robashton@codeofrob.com", queryResultPageTwo.Results[1].Value<string>("email"));
 
-            // Page three
+			// Page three
 			Assert.Equal(1, queryResultPageThree.Results.Count);
 			Assert.Equal("robashton@codeofrob.com", queryResultPageThree.Results[0].Value<string>("email"));
-        }
+		}
 		
 	}
 }

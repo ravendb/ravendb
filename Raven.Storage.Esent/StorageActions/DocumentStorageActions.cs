@@ -99,7 +99,7 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					Size =  Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]).Value,
 					Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
-                    Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
+					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 					Metadata = RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
 				};
 			}
@@ -117,7 +117,7 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					Size = Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]).Value,
 					Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
-                    Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
+					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 					Metadata = RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
 				};
 			} while (Api.TryMoveNext(session, Files));

@@ -10,8 +10,8 @@ using Raven.Munin.Tree;
 
 namespace Raven.Munin
 {
-    public class PersistentDictionaryState
-    {
+	public class PersistentDictionaryState
+	{
 		public IBinarySearchTree<RavenJToken, PositionInFile> KeyToFilePositionInFiles { get; set; }
 
 		public List<IBinarySearchTree<IComparable, IBinarySearchTree<RavenJToken, RavenJToken>>> SecondaryIndicesState { get; set; }
@@ -19,15 +19,15 @@ namespace Raven.Munin
 		public IComparerAndEquality<RavenJToken> Comparer { get; set; }
 
 		public PersistentDictionaryState(IComparerAndEquality<RavenJToken> comparer)
-        {
-            Comparer = comparer;
+		{
+			Comparer = comparer;
 			SecondaryIndicesState = new List<IBinarySearchTree<IComparable, IBinarySearchTree<RavenJToken, RavenJToken>>>();
 			KeyToFilePositionInFiles = new EmptyAVLTree<RavenJToken, PositionInFile>(Comparer, RavenJTokenCloner.Clone, file => new PositionInFile
-            {
-                Key = file.Key.CloneToken(),
-                Position = file.Position,
-                Size = file.Size
-            });
-        }
-    }
+			{
+				Key = file.Key.CloneToken(),
+				Position = file.Position,
+				Size = file.Size
+			});
+		}
+	}
 }

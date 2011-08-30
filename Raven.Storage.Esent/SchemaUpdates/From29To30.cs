@@ -19,12 +19,12 @@ namespace Raven.Storage.Esent.SchemaUpdates
 			get { return "2.9"; }
 		}
 
-        private IUuidGenerator uuidGenerator;
+		private IUuidGenerator uuidGenerator;
 
-        public void Init(IUuidGenerator generator)
-        {
-            uuidGenerator = generator;
-        }
+		public void Init(IUuidGenerator generator)
+		{
+			uuidGenerator = generator;
+		}
 
 		public void Update(Session session, JET_DBID dbid)
 		{
@@ -41,7 +41,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 					{
 						using (var update = new Update(session, files, JET_prep.Replace))
 						{
-                            Api.SetColumn(session, files, columnid, uuidGenerator.CreateSequentialUuid().TransformToValueForEsentSorting());
+							Api.SetColumn(session, files, columnid, uuidGenerator.CreateSequentialUuid().TransformToValueForEsentSorting());
 							update.Save();
 						}
 						if (count++ % rowsInTxCount == 0)
@@ -64,7 +64,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 					{
 						using (var update = new Update(session, documents, JET_prep.Replace))
 						{
-                            Api.SetColumn(session, documents, columnid, uuidGenerator.CreateSequentialUuid().TransformToValueForEsentSorting());
+							Api.SetColumn(session, documents, columnid, uuidGenerator.CreateSequentialUuid().TransformToValueForEsentSorting());
 							update.Save();
 						}
 						if (count++ % rowsInTxCount == 0)
@@ -110,7 +110,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 					{
 						using (var update = new Update(session, documentsModifiedByTransaction, JET_prep.Replace))
 						{
-                            Api.SetColumn(session, documentsModifiedByTransaction, columnid, uuidGenerator.CreateSequentialUuid().TransformToValueForEsentSorting());
+							Api.SetColumn(session, documentsModifiedByTransaction, columnid, uuidGenerator.CreateSequentialUuid().TransformToValueForEsentSorting());
 							update.Save();
 						}
 						if (count++ % rowsInTxCount == 0)
@@ -134,7 +134,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 					{
 						using (var update = new Update(session, mappedResults, JET_prep.Replace))
 						{
-                            Api.SetColumn(session, mappedResults, columnid, uuidGenerator.CreateSequentialUuid().TransformToValueForEsentSorting());
+							Api.SetColumn(session, mappedResults, columnid, uuidGenerator.CreateSequentialUuid().TransformToValueForEsentSorting());
 							update.Save();
 						}
 						if (count++ % rowsInTxCount == 0)

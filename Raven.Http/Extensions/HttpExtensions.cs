@@ -161,9 +161,9 @@ namespace Raven.Http.Extensions
 	    private static string GetHeaderValue(RavenJToken header)
 	    {
 	    	if (header.Type == JTokenType.Date)
-            {
-                return header.Value<DateTime>().ToString("r");
-            }
+			{
+				return header.Value<DateTime>().ToString("r");
+			}
 
 	        return StripQuotesIfNeeded(header.ToString(Formatting.None));
 	    }
@@ -281,12 +281,12 @@ namespace Raven.Http.Extensions
 			}
 		}
 
-        public static bool GetSkipTransformResults(this IHttpContext context)
-        {
-            bool result;
-            bool.TryParse(context.Request.QueryString["skipTransformResults"], out result);
-            return result;
-        }
+		public static bool GetSkipTransformResults(this IHttpContext context)
+		{
+			bool result;
+			bool.TryParse(context.Request.QueryString["skipTransformResults"], out result);
+			return result;
+		}
 
 		public static int GetPageSize(this IHttpContext context, int maxPageSize)
 		{

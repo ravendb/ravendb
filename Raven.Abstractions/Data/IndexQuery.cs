@@ -95,11 +95,11 @@ namespace Raven.Abstractions.Data
 		/// </remarks>
 		public Guid? CutoffEtag { get; set; }
 
-        /// <summary>
-        /// If set to true, RavenDB won't execute the transform results function
-        /// returning just the raw results instead
-        /// </summary>
-        public bool SkipTransformResults { get; set; }
+		/// <summary>
+		/// If set to true, RavenDB won't execute the transform results function
+		/// returning just the raw results instead
+		/// </summary>
+		public bool SkipTransformResults { get; set; }
 
 		/// <summary>
 		/// Gets or sets the number of skipped results.

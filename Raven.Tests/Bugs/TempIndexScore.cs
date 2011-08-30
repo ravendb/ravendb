@@ -40,24 +40,24 @@ namespace Raven.Tests.Bugs
 				Title = "one",
 				Category = "Ravens",
 				Tags = new BlogTag[]{
-                     new BlogTag(){ Name = "Birds" }
-                 }
+					 new BlogTag(){ Name = "Birds" }
+				 }
 			};
 			var blogTwo = new Blog
 			{
 				Title = "two",
 				Category = "Rhinos",
 				Tags = new BlogTag[]{
-                     new BlogTag(){ Name = "Mammals" }
-                 }
+					 new BlogTag(){ Name = "Mammals" }
+				 }
 			};
 			var blogThree = new Blog
 			{
 				Title = "three",
 				Category = "Rhinos",
 				Tags = new BlogTag[]{
-                     new BlogTag(){ Name = "Mammals" }
-                 }
+					 new BlogTag(){ Name = "Mammals" }
+				 }
 			};
 
 			using (var store = this.NewDocumentStore())

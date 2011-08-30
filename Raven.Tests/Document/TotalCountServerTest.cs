@@ -12,15 +12,15 @@ using Raven.Client.Document;
 
 namespace Raven.Tests.Document
 {
-    public class TotalCountServerTest : RemoteClientTest, IDisposable
-    {
+	public class TotalCountServerTest : RemoteClientTest, IDisposable
+	{
 		private readonly string path;
-        private readonly int port;
+		private readonly int port;
 
-        public TotalCountServerTest()
+		public TotalCountServerTest()
 		{
-            port = 8080;
-            path = GetPath("TestDb");
+			port = 8080;
+			path = GetPath("TestDb");
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
 		}
 
@@ -28,56 +28,56 @@ namespace Raven.Tests.Document
 
 		public void Dispose()
 		{
-            IOExtensions.DeleteDirectory(path);
+			IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
 
-        [Fact]
-        public void TotalResultIsIncludedInQueryResult()
-        {
-            using (var server = GetNewServer(port, path))
-            {
-                using (var store = new DocumentStore { Url = "http://localhost:" + port })
-                {
-                    store.Initialize();
+		[Fact]
+		public void TotalResultIsIncludedInQueryResult()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				using (var store = new DocumentStore { Url = "http://localhost:" + port })
+				{
+					store.Initialize();
 
-                    using (var session = store.OpenSession())
-                    {
-                        Company company1 = new Company()
-                        {
-                            Name = "Company1",
-                            Address1 = "",
-                            Address2 = "",
-                            Address3 = "",
-                            Contacts = new List<Contact>(),
-                            Phone = 2
-                        };
-                        Company company2 = new Company()
-                        {
-                            Name = "Company2",
-                            Address1 = "",
-                            Address2 = "",
-                            Address3 = "",
-                            Contacts = new List<Contact>(),
-                            Phone = 2
-                        };
+					using (var session = store.OpenSession())
+					{
+						Company company1 = new Company()
+						{
+							Name = "Company1",
+							Address1 = "",
+							Address2 = "",
+							Address3 = "",
+							Contacts = new List<Contact>(),
+							Phone = 2
+						};
+						Company company2 = new Company()
+						{
+							Name = "Company2",
+							Address1 = "",
+							Address2 = "",
+							Address3 = "",
+							Contacts = new List<Contact>(),
+							Phone = 2
+						};
 
-                        session.Store(company1);
-                        session.Store(company2);
-                        session.SaveChanges();
-                    }
+						session.Store(company1);
+						session.Store(company2);
+						session.SaveChanges();
+					}
 
-                    using (var session = store.OpenSession())
-                    {
-                        int resultCount = session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().QueryResult.TotalResults;
-                        Assert.Equal(2, resultCount);
-                    }
-                }
-            }
-              
-           
+					using (var session = store.OpenSession())
+					{
+						int resultCount = session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().QueryResult.TotalResults;
+						Assert.Equal(2, resultCount);
+					}
+				}
+			}
+			  
+		   
 
-        }
-    }
+		}
+	}
 }

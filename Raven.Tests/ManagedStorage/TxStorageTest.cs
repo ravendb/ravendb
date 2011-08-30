@@ -21,17 +21,17 @@ namespace Raven.Tests.ManagedStorage
 				Directory.Delete("test", true);
 		}
 
-        public ITransactionalStorage NewTransactionalStorage()
-        {
-            var newTransactionalStorage = new TransactionalStorage(new RavenConfiguration
-            {
-                DataDirectory = "test",
-            }, () => { })
-            {
-                DocumentCodecs = new OrderedPartCollection<AbstractDocumentCodec>()
-            };
-            newTransactionalStorage.Initialize(new DummyUuidGenerator());
-            return newTransactionalStorage;
-        }
+		public ITransactionalStorage NewTransactionalStorage()
+		{
+			var newTransactionalStorage = new TransactionalStorage(new RavenConfiguration
+			{
+				DataDirectory = "test",
+			}, () => { })
+			{
+				DocumentCodecs = new OrderedPartCollection<AbstractDocumentCodec>()
+			};
+			newTransactionalStorage.Initialize(new DummyUuidGenerator());
+			return newTransactionalStorage;
+		}
 	}
 }

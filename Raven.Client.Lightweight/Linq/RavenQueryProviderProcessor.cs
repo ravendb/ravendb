@@ -779,10 +779,10 @@ namespace Raven.Client.Linq
 				case ExpressionType.New:                
 					var newExpression = ((NewExpression) body);
 			        newExpressionType = newExpression.Type;
-                    foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
-                    {
+					foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
+					{
 						AddToFieldsToFetch(field);
-                    }
+					}
 			        break;
 				//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
 				case ExpressionType.MemberInit:

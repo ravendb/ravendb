@@ -23,45 +23,45 @@ namespace Raven.Tests.Indexes
 {
 	public class LinqIndexesFromClient
 	{
-        [Fact]
-        public void Convert_select_many_will_keep_doc_id()
-        {
-            IndexDefinition indexDefinition = new IndexDefinitionBuilder<Order>
-            {
-                Map = orders => from order in orders
-                                from line in order.OrderLines
-                                select new { line.ProductId }
-            }.ToIndexDefinition(new DocumentConvention());
+		[Fact]
+		public void Convert_select_many_will_keep_doc_id()
+		{
+			IndexDefinition indexDefinition = new IndexDefinitionBuilder<Order>
+			{
+				Map = orders => from order in orders
+								from line in order.OrderLines
+								select new { line.ProductId }
+			}.ToIndexDefinition(new DocumentConvention());
 			var generator = new DynamicViewCompiler("test", indexDefinition,  ".")
-                .GenerateInstance();
+				.GenerateInstance();
 
 
-            var results = generator.MapDefinition(new[]
+			var results = generator.MapDefinition(new[]
 			{
 				GetDocumentFromString(
 				@"
-                {
-                    '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 1},
-                    'OrderLines': [{'ProductId': 2}, {'ProductId': 3}]
-                }"),
+				{
+					'@metadata': {'Raven-Entity-Name': 'Orders', '@id': 1},
+					'OrderLines': [{'ProductId': 2}, {'ProductId': 3}]
+				}"),
 				  GetDocumentFromString(
 				@"
-                {
-                    '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 2},
-                    'OrderLines': [{'ProductId': 5}, {'ProductId': 4}]
-                }")
+				{
+					'@metadata': {'Raven-Entity-Name': 'Orders', '@id': 2},
+					'OrderLines': [{'ProductId': 5}, {'ProductId': 4}]
+				}")
 			}).Cast<object>().ToArray();
 
-            foreach (var result in results)
-            {
-                Assert.NotNull(TypeDescriptor.GetProperties(result).Find("__document_id", true));
-            }
-        }
+			foreach (var result in results)
+			{
+				Assert.NotNull(TypeDescriptor.GetProperties(result).Find("__document_id", true));
+			}
+		}
 
-        public static dynamic GetDocumentFromString(string json)
-        {
-            return JsonToExpando.Convert(RavenJObject.Parse(json));
-        }
+		public static dynamic GetDocumentFromString(string json)
+		{
+			return JsonToExpando.Convert(RavenJObject.Parse(json));
+		}
 
 		[Fact]
 		public void CanCompileComplexQuery()
@@ -75,7 +75,7 @@ namespace Raven.Tests.Indexes
 			}.ToIndexDefinition(new DocumentConvention());
 
 			new DynamicViewCompiler("test", indexDefinition,  ".")
-                .GenerateInstance();
+				.GenerateInstance();
 		}
 
 		public class Person
@@ -163,111 +163,111 @@ namespace Raven.Tests.Indexes
 			Assert.Equal(original, generated);
 		}
 
-        [Fact]
-        public void Convert_map_reduce_query()
-        {
-            IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>
-            {
-                Map = users => from user in users
-                               select new { user.Location, Count = 1 },
-                Reduce = counts => from agg in counts
-                                   group agg by agg.Location
-                                       into g
-                                       select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-            }.ToIndexDefinition(new DocumentConvention());
-            var original = new IndexDefinition
-            {
-                Map = @"docs.Users
+		[Fact]
+		public void Convert_map_reduce_query()
+		{
+			IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>
+			{
+				Map = users => from user in users
+							   select new { user.Location, Count = 1 },
+				Reduce = counts => from agg in counts
+								   group agg by agg.Location
+									   into g
+									   select new { Location = g.Key, Count = g.Sum(x => x.Count) },
+			}.ToIndexDefinition(new DocumentConvention());
+			var original = new IndexDefinition
+			{
+				Map = @"docs.Users
 	.Select(user => new {Location = user.Location, Count = 1})",
-                Reduce = @"results
+				Reduce = @"results
 	.GroupBy(agg => agg.Location)
 	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
-            };
+			};
 
-            Assert.Equal(original, generated);
-        }
+			Assert.Equal(original, generated);
+		}
 
 
 #if !NET_3_5        
-        public void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
-        {
-            IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>
-            {
-                Map = mapExpression,
-                Reduce = counts => from agg in counts
-                                   group agg by agg.Location
-                                       into g
-                                       select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-            }.ToIndexDefinition(new DocumentConvention());
-            var original = new IndexDefinition
-            {
-                Map = expectedIndexString,
-                Reduce = @"results
+		public void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
+		{
+			IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>
+			{
+				Map = mapExpression,
+				Reduce = counts => from agg in counts
+								   group agg by agg.Location
+									   into g
+									   select new { Location = g.Key, Count = g.Sum(x => x.Count) },
+			}.ToIndexDefinition(new DocumentConvention());
+			var original = new IndexDefinition
+			{
+				Map = expectedIndexString,
+				Reduce = @"results
 	.GroupBy(agg => agg.Location)
 	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
-            };
+			};
 
-            Assert.Equal(original, generated);
-        }
+			Assert.Equal(original, generated);
+		}
 
-        [Fact]
-        public void Convert_map_reduce_preserving_parenthesis()
-        {
-            Convert_map_reduce_query_with_map_(
+		[Fact]
+		public void Convert_map_reduce_preserving_parenthesis()
+		{
+			Convert_map_reduce_query_with_map_(
 users => from user in users
-         select new { Location = user.Location, Count = (user.Age + 3) * (user.Age + 4) },
+		 select new { Location = user.Location, Count = (user.Age + 3) * (user.Age + 4) },
 @"docs.Users
 	.Select(user => new {Location = user.Location, Count = (user.Age + 3) * (user.Age + 4)})");
-        }
+		}
 
-        [Fact]
-        public void Convert_map_reduce_query_with_trinary_conditional()
-        {
-            Convert_map_reduce_query_with_map_(
+		[Fact]
+		public void Convert_map_reduce_query_with_trinary_conditional()
+		{
+			Convert_map_reduce_query_with_map_(
 users => from user in users
-         select new { Location = user.Location, Count = user.Age >= 1 ? 1 : 0 }, 
+		 select new { Location = user.Location, Count = user.Age >= 1 ? 1 : 0 }, 
 @"docs.Users
 	.Select(user => new {Location = user.Location, Count = user.Age >= 1 ? 1 : 0})");
-        }
+		}
 
-        [Fact]
-        public void Convert_map_reduce_query_with_enum_comparison()
-        {
-            Convert_map_reduce_query_with_map_(
+		[Fact]
+		public void Convert_map_reduce_query_with_enum_comparison()
+		{
+			Convert_map_reduce_query_with_map_(
 users => from user in users
-        select new { Location = user.Location, Count = user.Gender == Gender.Female ? 1 : 0},
+		select new { Location = user.Location, Count = user.Gender == Gender.Female ? 1 : 0},
 @"docs.Users
 	.Select(user => new {Location = user.Location, Count = user.Gender == ""Female"" ? 1 : 0})");
-        }
+		}
 
-        [Fact]
-        public void Convert_map_reduce_query_with_type_check()
-        {
-            Convert_map_reduce_query_with_map_(
+		[Fact]
+		public void Convert_map_reduce_query_with_type_check()
+		{
+			Convert_map_reduce_query_with_map_(
 users => from user in users
-         select new { Location = user.Location, Count = user.Location is String ? 1 : 0 },
+		 select new { Location = user.Location, Count = user.Location is String ? 1 : 0 },
 @"docs.Users
 	.Select(user => new {Location = user.Location, Count = user.Location is String ? 1 : 0})");
-        }
+		}
 
 
 
 #endif
 
-        public enum Gender
-        {
-            Male,
-            Female
-        }
+		public enum Gender
+		{
+			Male,
+			Female
+		}
 
-        public class User
+		public class User
 		{
 			public string Id { get; set; }
 			public string Name { get; set; }
 			public string Location { get; set; }
 
 			public int Age { get; set; }
-            public Gender Gender { get; set; }
+			public Gender Gender { get; set; }
 		}
 
 		public class Named
@@ -287,22 +287,22 @@ users => from user in users
 			public decimal Age { get; set; }
 		}
 
-        public class Order
-        {
-            public string Id { get; set; }
-            public string Customer { get; set; }
-            public IList<OrderLine> OrderLines { get; set; }
+		public class Order
+		{
+			public string Id { get; set; }
+			public string Customer { get; set; }
+			public IList<OrderLine> OrderLines { get; set; }
 
-            public Order()
-            {
-                OrderLines = new List<OrderLine>();
-            }
-        }
+			public Order()
+			{
+				OrderLines = new List<OrderLine>();
+			}
+		}
 
-        public class OrderLine
-        {
-            public string ProductId { get; set; }
-            public int Quantity { get; set; }
-        }
+		public class OrderLine
+		{
+			public string ProductId { get; set; }
+			public int Quantity { get; set; }
+		}
 	}
 }

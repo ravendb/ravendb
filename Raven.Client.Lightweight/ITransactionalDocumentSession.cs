@@ -13,10 +13,10 @@ namespace Raven.Client
 	/// </summary>
 	public interface ITransactionalDocumentSession
 	{
-        /// <summary>
-        /// The transaction resource manager identifier
-        /// </summary>
-        Guid ResourceManagerId { get; }
+		/// <summary>
+		/// The transaction resource manager identifier
+		/// </summary>
+		Guid ResourceManagerId { get; }
 
 		/// <summary>
 		/// Commits the transaction specified.

@@ -28,8 +28,8 @@ namespace Raven.Database.Plugins
 	    {
 	    }
 
-        int workCounter;
-        public void BackgroundTask()
+		int workCounter;
+		public void BackgroundTask()
 		{
 			var context = Database.WorkContext;
 			while (context.DoWork)

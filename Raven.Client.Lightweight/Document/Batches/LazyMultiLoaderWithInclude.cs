@@ -10,44 +10,44 @@ namespace Raven.Client.Document.Batches
 	public class LazyMultiLoaderWithInclude<T> : ILazyLoaderWithInclude<T>
 	{
 		private readonly DocumentSession session;
-        private readonly List<string> includes = new List<string>();
+		private readonly List<string> includes = new List<string>();
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        public ILazyLoaderWithInclude<T> Include(string path)
-        {
-            includes.Add(path);
-            return this;
-        }
+		/// <summary>
+		/// Includes the specified path.
+		/// </summary>
+		/// <param name="path">The path.</param>
+		public ILazyLoaderWithInclude<T> Include(string path)
+		{
+			includes.Add(path);
+			return this;
+		}
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        public ILazyLoaderWithInclude<T> Include(Expression<Func<T, object>> path)
-        {
-            return Include(path.ToPropertyPath());
-        }
+		/// <summary>
+		/// Includes the specified path.
+		/// </summary>
+		/// <param name="path">The path.</param>
+		public ILazyLoaderWithInclude<T> Include(Expression<Func<T, object>> path)
+		{
+			return Include(path.ToPropertyPath());
+		}
 
-        /// <summary>
-        /// Loads the specified ids.
-        /// </summary>
-        /// <param name="ids">The ids.</param>
-        public Lazy<T[]> Load(params string[] ids)
-        {
-            return session.LazyLoadInternal<T>(ids, includes.ToArray(), null);
-        }
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		public Lazy<T[]> Load(params string[] ids)
+		{
+			return session.LazyLoadInternal<T>(ids, includes.ToArray(), null);
+		}
 
-        /// <summary>
-        /// Loads the specified id.
-        /// </summary>
-        public Lazy<T> Load(string id)
-        {
-        	var results = session.LazyLoadInternal<T>(new[] { id }, includes.ToArray(), null);
-        	return new Lazy<T>(() => results.Value.First());
-        }
+		/// <summary>
+		/// Loads the specified id.
+		/// </summary>
+		public Lazy<T> Load(string id)
+		{
+			var results = session.LazyLoadInternal<T>(new[] { id }, includes.ToArray(), null);
+			return new Lazy<T>(() => results.Value.First());
+		}
 
 
 		/// <summary>
@@ -68,35 +68,35 @@ namespace Raven.Client.Document.Batches
 			return Load(idAsStr);
 		}
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="LazyMultiLoaderWithInclude{T}"/> class.
-        /// </summary>
-        /// <param name="session">The session.</param>
-        public LazyMultiLoaderWithInclude(DocumentSession session)
-        {
-            this.session = session;
-        }
+		/// <summary>
+		/// Initializes a new instance of the <see cref="LazyMultiLoaderWithInclude{T}"/> class.
+		/// </summary>
+		/// <param name="session">The session.</param>
+		public LazyMultiLoaderWithInclude(DocumentSession session)
+		{
+			this.session = session;
+		}
 
-        /// <summary>
-        /// Loads the specified ids.
-        /// </summary>
-        /// <typeparam name="TResult"></typeparam>
-        /// <param name="ids">The ids.</param>
-        public Lazy<TResult[]> Load<TResult>(params string[] ids)
-        {
-            return session.LazyLoadInternal<TResult>(ids, includes.ToArray(), null);
-        }
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <typeparam name="TResult"></typeparam>
+		/// <param name="ids">The ids.</param>
+		public Lazy<TResult[]> Load<TResult>(params string[] ids)
+		{
+			return session.LazyLoadInternal<TResult>(ids, includes.ToArray(), null);
+		}
 
-        /// <summary>
-        /// Loads the specified id.
-        /// </summary>
-        /// <typeparam name="TResult"></typeparam>
-        /// <param name="id">The id.</param>
-        public Lazy<TResult> Load<TResult>(string id)
-        {
-        	var lazy = Load<TResult>(new[] {id});
-        	return new Lazy<TResult>(() => lazy.Value.FirstOrDefault());
-        }
+		/// <summary>
+		/// Loads the specified id.
+		/// </summary>
+		/// <typeparam name="TResult"></typeparam>
+		/// <param name="id">The id.</param>
+		public Lazy<TResult> Load<TResult>(string id)
+		{
+			var lazy = Load<TResult>(new[] {id});
+			return new Lazy<TResult>(() => lazy.Value.FirstOrDefault());
+		}
 
 		/// <summary>
 		/// Loads the specified entities with the specified id after applying

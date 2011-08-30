@@ -323,11 +323,11 @@ namespace Raven.Database.Config
 		private string authenticationMode;
 
 		/// <summary>
-        /// Defines which mode to use to authenticate requests
-        /// Allowed values: Windows, OAuth
-        /// Default: Windows
-        /// </summary>
-        public string AuthenticationMode
+		/// Defines which mode to use to authenticate requests
+		/// Allowed values: Windows, OAuth
+		/// Default: Windows
+		/// </summary>
+		public string AuthenticationMode
 		{
 			get { return authenticationMode; }
 			set
@@ -339,9 +339,9 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
-        /// The certificate to use when verifying access token signatures for OAuth
-        /// </summary>
-        public X509Certificate2 OAuthTokenCertificate { get; set; }
+		/// The certificate to use when verifying access token signatures for OAuth
+		/// </summary>
+		public X509Certificate2 OAuthTokenCertificate { get; set; }
 
 #endregion
 
@@ -545,12 +545,12 @@ namespace Raven.Database.Config
 
 	    public void Dispose()
 	    {
-            if (containerExternallySet)
-                return;
-            if (container == null)
-                return;
+			if (containerExternallySet)
+				return;
+			if (container == null)
+				return;
 
-            container.Dispose();
+			container.Dispose();
 	        container = null;
 	    }
 	}

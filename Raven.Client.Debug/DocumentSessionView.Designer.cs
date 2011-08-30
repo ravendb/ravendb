@@ -47,10 +47,10 @@
 			// Requests
 			// 
 			this.Requests.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.Method,
-            this.HttpResult,
-            this.Status,
-            this.Url});
+			this.Method,
+			this.HttpResult,
+			this.Status,
+			this.Url});
 			this.Requests.Dock = System.Windows.Forms.DockStyle.Top;
 			this.Requests.FullRowSelect = true;
 			this.Requests.Location = new System.Drawing.Point(0, 0);

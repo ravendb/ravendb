@@ -13,44 +13,44 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-    public class QueryAfterAdHocIndexIsReset : LocalClientTest
-    {
-        [Fact]
-        public void ShouldStillWork()
-        {
-            using(var store = NewDocumentStore())
-            {
-                store.DatabaseCommands.Put("ayende", null, new RavenJObject{ {"Name", "Ayende"}}, new RavenJObject());
-            	var baseLineIndexCount = store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Length;
+	public class QueryAfterAdHocIndexIsReset : LocalClientTest
+	{
+		[Fact]
+		public void ShouldStillWork()
+		{
+			using(var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.Put("ayende", null, new RavenJObject{ {"Name", "Ayende"}}, new RavenJObject());
+				var baseLineIndexCount = store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Length;
 
-            	var queryResult = store.DatabaseCommands.Query("dynamic", new IndexQuery
-                {
-                    Query = "Name:Ayende",
-                }, new string[0]);
+				var queryResult = store.DatabaseCommands.Query("dynamic", new IndexQuery
+				{
+					Query = "Name:Ayende",
+				}, new string[0]);
 
-                Assert.NotEmpty(queryResult.Results);
+				Assert.NotEmpty(queryResult.Results);
 
 				Assert.Equal(baseLineIndexCount+1, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Length);
-                
-                store.DocumentDatabase.StopBackgroundWokers();
+				
+				store.DocumentDatabase.StopBackgroundWokers();
 
-                store.Configuration.TempIndexCleanupThreshold = TimeSpan.Zero;
+				store.Configuration.TempIndexCleanupThreshold = TimeSpan.Zero;
 
-                store.DocumentDatabase.ExtensionsState.Values.OfType<DynamicQueryRunner>().First().CleanupCache();
+				store.DocumentDatabase.ExtensionsState.Values.OfType<DynamicQueryRunner>().First().CleanupCache();
 
 				Assert.Equal(baseLineIndexCount, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Length);
 
-                store.Configuration.TempIndexCleanupThreshold = TimeSpan.FromMinutes(5);
- 
-                store.DocumentDatabase.SpinBackgroundWorkers();
+				store.Configuration.TempIndexCleanupThreshold = TimeSpan.FromMinutes(5);
 
-                 queryResult = store.DatabaseCommands.Query("dynamic", new IndexQuery
-                {
-                    Query = "Name:Ayende",
-                }, new string[0]);
+				store.DocumentDatabase.SpinBackgroundWorkers();
 
-                Assert.NotEmpty(queryResult.Results);
-            }
-        }
-    }
+				 queryResult = store.DatabaseCommands.Query("dynamic", new IndexQuery
+				{
+					Query = "Name:Ayende",
+				}, new string[0]);
+
+				Assert.NotEmpty(queryResult.Results);
+			}
+		}
+	}
 }

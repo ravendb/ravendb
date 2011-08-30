@@ -13,60 +13,60 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class OverwriteIndexRemotely : RemoteClientTest, IDisposable
-    {
-        private readonly string path;
-        private readonly int port;
+	public class OverwriteIndexRemotely : RemoteClientTest, IDisposable
+	{
+		private readonly string path;
+		private readonly int port;
 
-        public OverwriteIndexRemotely()
-        {
-            port = 8080;
-            path = GetPath("TestDb");
-            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
-        }
+		public OverwriteIndexRemotely()
+		{
+			port = 8080;
+			path = GetPath("TestDb");
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+		}
 
-        #region IDisposable Members
+		#region IDisposable Members
 
-        public void Dispose()
-        {
-            IOExtensions.DeleteDirectory(path);
-        }
+		public void Dispose()
+		{
+			IOExtensions.DeleteDirectory(path);
+		}
 
-        #endregion
+		#endregion
 
-        [Fact]
-        public void CanOverwriteIndex()
-        {
-            using (var server = GetNewServer(port, path))
-            {
-                var store = new DocumentStore { Url = "http://localhost:" + port };
-                store.Initialize();
+		[Fact]
+		public void CanOverwriteIndex()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var store = new DocumentStore { Url = "http://localhost:" + port };
+				store.Initialize();
 
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from doc in docs select new { doc.Name }"
-                                                }, overwrite: true);
+				store.DatabaseCommands.PutIndex("test",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Name }"
+												}, overwrite: true);
 
 
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from doc in docs select new { doc.Name }"
-                                                }, overwrite: true);
+				store.DatabaseCommands.PutIndex("test",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Name }"
+												}, overwrite: true);
 
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from doc in docs select new { doc.Email }"
-                                                }, overwrite: true);
+				store.DatabaseCommands.PutIndex("test",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Email }"
+												}, overwrite: true);
 
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Map = "from doc in docs select new { doc.Email }"
-                                                }, overwrite: true);
-            }
-        }
-    }
+				store.DatabaseCommands.PutIndex("test",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Email }"
+												}, overwrite: true);
+			}
+		}
+	}
 }

@@ -51,6 +51,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>favicon.ico</ApplicationIcon>
@@ -183,6 +184,7 @@
     <Content Include="favicon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Target Name="BeforeBuild">
     <CreateItem Include="WebUI\**\*.*">
       <Output ItemName="EmbeddedResource" TaskParameter="Include" />

@@ -2,14 +2,14 @@
 
 namespace Raven.Munin.Tests
 {
-    public class ToDo
-    {
-        public string Action { get; set; }
-        public DateTime Date { get; set; }
+	public class ToDo
+	{
+		public string Action { get; set; }
+		public DateTime Date { get; set; }
 
-        public override string ToString()
-        {
-            return Action;
-        }
-    }
+		public override string ToString()
+		{
+			return Action;
+		}
+	}
 }

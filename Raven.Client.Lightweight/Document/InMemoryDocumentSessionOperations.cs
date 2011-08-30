@@ -737,7 +737,7 @@ more responsive application.
 		/// <returns></returns>
 		protected SaveChangesData PrepareForSaveChanges()
 		{
-            cachedJsonDocs.Clear();
+			cachedJsonDocs.Clear();
 			var result = new SaveChangesData
 			{
 				Entities = new List<object>(),
@@ -920,10 +920,10 @@ more responsive application.
 			if (jObject != null)
 				return jObject;
 
-            if (cachedJsonDocs != null && cachedJsonDocs.TryGetValue(entity, out jObject))
-                return jObject;
-            
-            jObject = RavenJObject.FromObject(entity, Conventions.CreateSerializer());
+			if (cachedJsonDocs != null && cachedJsonDocs.TryGetValue(entity, out jObject))
+				return jObject;
+			
+			jObject = RavenJObject.FromObject(entity, Conventions.CreateSerializer());
 			if (cachedJsonDocs != null)
 				cachedJsonDocs[entity] = jObject;
 		    return jObject;

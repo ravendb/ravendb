@@ -11,23 +11,23 @@ namespace Raven.Client.Shard
 	/// <summary>
 	/// Holds a list of shards
 	/// </summary>
-    public class Shards : List<IDocumentStore>
-    {
+	public class Shards : List<IDocumentStore>
+	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Shards"/> class.
 		/// </summary>
-        public Shards()
-        {
+		public Shards()
+		{
 
-        }
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Shards"/> class.
 		/// </summary>
 		/// <param name="shards">The shards.</param>
-        public Shards(IEnumerable<IDocumentStore> shards) : base(shards)
-        {
+		public Shards(IEnumerable<IDocumentStore> shards) : base(shards)
+		{
 
-        }
-    }
+		}
+	}
 }

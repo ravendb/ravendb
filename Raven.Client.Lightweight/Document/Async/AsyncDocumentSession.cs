@@ -30,8 +30,8 @@ namespace Raven.Client.Document.Async
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
 		public AsyncDocumentSession(DocumentStore documentStore, 
-            IAsyncDatabaseCommands asyncDatabaseCommands, 
-            DocumentSessionListeners listeners, 
+			IAsyncDatabaseCommands asyncDatabaseCommands, 
+			DocumentSessionListeners listeners, 
 			Guid id)
 			: base(documentStore, listeners, id)
 		{
@@ -44,46 +44,46 @@ namespace Raven.Client.Document.Async
 		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
 
-	    /// <summary>
-	    /// Query the specified index using Lucene syntax
-	    /// </summary>
-	    public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index)
-	    {
-	        return new AsyncDocumentQuery<T>(this, 
+		/// <summary>
+		/// Query the specified index using Lucene syntax
+		/// </summary>
+		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index)
+		{
+			return new AsyncDocumentQuery<T>(this, 
 #if !SILVERLIGHT
 					null,
 #endif
 				AsyncDatabaseCommands, index, new string[0], listeners.QueryListeners);
-	    }
+		}
 
-	    /// <summary>
-	    /// Dynamically query RavenDB using Lucene syntax
-	    /// </summary>
+		/// <summary>
+		/// Dynamically query RavenDB using Lucene syntax
+		/// </summary>
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
-	    {
-	    	var indexName = "dynamic";
+		{
+			var indexName = "dynamic";
 			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-            return new AsyncDocumentQuery<T>(this, 
+			return new AsyncDocumentQuery<T>(this, 
 #if !SILVERLIGHT
 					null,
 #endif
 					AsyncDatabaseCommands, indexName, new string[0], listeners.QueryListeners);
-	    }
+		}
 
-	    /// <summary>
-        /// Get the accessor for advanced operations
-        /// </summary>
-        /// <remarks>
-        /// Those operations are rarely needed, and have been moved to a separate 
-        /// property to avoid cluttering the API
-        /// </remarks>
-	    public IAsyncAdvancedSessionOperations Advanced
-	    {
-            get { return this; }
-	    }
+		/// <summary>
+		/// Get the accessor for advanced operations
+		/// </summary>
+		/// <remarks>
+		/// Those operations are rarely needed, and have been moved to a separate 
+		/// property to avoid cluttering the API
+		/// </remarks>
+		public IAsyncAdvancedSessionOperations Advanced
+		{
+			get { return this; }
+		}
 
 		/// <summary>
 		/// Begin a load while including the specified path 
@@ -121,7 +121,7 @@ namespace Raven.Client.Document.Async
 			return LoadAsync<T>(documentKey);
 		}
 
-	    /// <summary>
+		/// <summary>
 		/// Begins the async load operation
 		/// </summary>
 		/// <param name="id">The id.</param>
@@ -129,16 +129,16 @@ namespace Raven.Client.Document.Async
 		public Task<T> LoadAsync<T>(string id)
 		{
 			object entity;
-            if (entitiesByKey.TryGetValue(id, out entity))
-            {
-                var tcs = new TaskCompletionSource<T>();
-                tcs.TrySetResult((T)entity);
-                return tcs.Task;
-            }
+			if (entitiesByKey.TryGetValue(id, out entity))
+			{
+				var tcs = new TaskCompletionSource<T>();
+				tcs.TrySetResult((T)entity);
+				return tcs.Task;
+			}
 			IncrementRequestCount();
-	    	var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
+			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
 			return CompleteLoadAsync<T>(id, loadOperation);
-               
+			   
 		}
 
 		private Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
@@ -164,9 +164,9 @@ namespace Raven.Client.Document.Async
 		/// <param name="ids">The ids.</param>
 		/// <returns></returns>
 		public Task<T[]> LoadAsync<T>(string[] ids)
-	    {
-	    	return LoadAsyncInternal<T>(ids, new string[0]);
-	    }
+		{
+			return LoadAsyncInternal<T>(ids, new string[0]);
+		}
 
 
 		/// <summary>
@@ -212,14 +212,14 @@ namespace Raven.Client.Document.Async
 		}
 
 		/// <summary>
-        /// Get the json document by key from the store
-        /// </summary>
-	    protected override JsonDocument GetJsonDocument(string documentKey)
-	    {
-	        throw new NotSupportedException("Cannot get a document in a syncronous manner using async document session");
-	    }
+		/// Get the json document by key from the store
+		/// </summary>
+		protected override JsonDocument GetJsonDocument(string documentKey)
+		{
+			throw new NotSupportedException("Cannot get a document in a syncronous manner using async document session");
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Commits the specified tx id.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
@@ -271,14 +271,14 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 				null,
 #endif
- Advanced.AsyncDatabaseCommands),
+				Advanced.AsyncDatabaseCommands),
 				ravenQueryStatistics,
 				indexName,
 				null,
 #if !SILVERLIGHT
- null,
+				null,
 #endif
- Advanced.AsyncDatabaseCommands);
+				Advanced.AsyncDatabaseCommands);
 		}
 
 		/// <summary>

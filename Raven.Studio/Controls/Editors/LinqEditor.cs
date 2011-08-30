@@ -4,18 +4,18 @@
 	using ActiproSoftware.Windows.Controls.SyntaxEditor;
 
 	public class LinqEditor : SyntaxEditor
-    {
-        private static readonly ISyntaxLanguage DefaultLanguage;
+	{
+		private static readonly ISyntaxLanguage DefaultLanguage;
 
-        static LinqEditor()
-        {
-            DefaultLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("CSharp.langdef");
-        }
+		static LinqEditor()
+		{
+			DefaultLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("CSharp.langdef");
+		}
 
-        public LinqEditor()
-        {
-            Document.Language = DefaultLanguage;
+		public LinqEditor()
+		{
+			Document.Language = DefaultLanguage;
 			IsTextDataBindingEnabled = true; 
-        }
-    }
+		}
+	}
 }

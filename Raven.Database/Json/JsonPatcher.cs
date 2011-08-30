@@ -46,7 +46,7 @@ namespace Raven.Database.Json
 						SetProperty(patchCmd, patchCmd.Name, token as RavenJValue);
 						break;
 					case PatchCommandType.Unset:
-                        RemoveProperty(patchCmd, patchCmd.Name, token, parent);
+						RemoveProperty(patchCmd, patchCmd.Name, token, parent);
 						break;
 					case PatchCommandType.Add:
 						AddValue(patchCmd, patchCmd.Name, token);

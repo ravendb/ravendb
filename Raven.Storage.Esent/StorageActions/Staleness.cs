@@ -15,31 +15,31 @@ using System.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
 {
-    public partial class DocumentStorageActions : IStalenessStorageActions
-    {
-        public bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag)
-        {
-            Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-            Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-            {
-                return false;
-            }
+	public partial class DocumentStorageActions : IStalenessStorageActions
+	{
+		public bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag)
+		{
+			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+			{
+				return false;
+			}
 
-            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-            Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
+			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 
-            if (IsMapStale(name) || hasReduce && IsReduceStale(name))
-            {
-                if (cutOff != null)
-                {
-                    var lastIndexedTimestamp =
-                        Api.RetrieveColumnAsDateTime(session, IndexesStats,
-                                                     tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
-                            .Value;
-                    if (cutOff.Value >= lastIndexedTimestamp)
-                        return true;
+			if (IsMapStale(name) || hasReduce && IsReduceStale(name))
+			{
+				if (cutOff != null)
+				{
+					var lastIndexedTimestamp =
+						Api.RetrieveColumnAsDateTime(session, IndexesStats,
+													 tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
+							.Value;
+					if (cutOff.Value >= lastIndexedTimestamp)
+						return true;
 
 					if (hasReduce)
 					{
@@ -50,7 +50,7 @@ namespace Raven.Storage.Esent.StorageActions
 						if (cutOff.Value >= lastIndexedTimestamp)
 							return true;
 					}
-                }
+				}
 				else if(cutoffEtag != null)
 				{
 					var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
@@ -59,88 +59,88 @@ namespace Raven.Storage.Esent.StorageActions
 					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.Value.ToByteArray()) < 0)
 						return true;
 				}
-                else
-                {
-                    return true;
-                }
-            }
+				else
+				{
+					return true;
+				}
+			}
 
-            Api.JetSetCurrentIndex(session, Tasks, "by_index");
-            Api.MakeKey(session, Tasks, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
-            {
-                return false;
-            }
-            if (cutOff == null)
-                return true;
-            // we are at the first row for this index
-            var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
-            return cutOff.Value >= addedAt;
-        }
+			Api.JetSetCurrentIndex(session, Tasks, "by_index");
+			Api.MakeKey(session, Tasks, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
+			{
+				return false;
+			}
+			if (cutOff == null)
+				return true;
+			// we are at the first row for this index
+			var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
+			return cutOff.Value >= addedAt;
+		}
 
-        public bool IsReduceStale(string name)
-        {
-            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-            Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
-                return false;// not a map/reduce index
+		public bool IsReduceStale(string name)
+		{
+			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
+				return false;// not a map/reduce index
 
-            var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
+			var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
 
-            var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
-            if (mostRecentReducedEtag == null)
-            	return false;// there are no mapped results, maybe there are documents to be indexed, not stale
+			var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
+			if (mostRecentReducedEtag == null)
+				return false;// there are no mapped results, maybe there are documents to be indexed, not stale
 
 			if (lastReducedEtag == null)
 				return true; // first reduce did not happen
 
-            return Buffers.Compare(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
-        }
+			return Buffers.Compare(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
+		}
 
-        public bool IsMapStale(string name)
-        {
-             Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-            Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-                return false;
+		public bool IsMapStale(string name)
+		{
+			 Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+				return false;
 
-            var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
-        	                                         tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
-        	Api.JetSetCurrentIndex(session, Documents, "by_etag");
-        	if (!Api.TryMoveLast(session, Documents))
-        	{
-        		return false;
-        	}
-        	var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
+			var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
+			                                         tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
+			Api.JetSetCurrentIndex(session, Documents, "by_etag");
+			if (!Api.TryMoveLast(session, Documents))
+			{
+				return false;
+			}
+			var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
 			return Buffers.Compare(lastEtag, lastIndexedEtag) > 0;
-        }
+		}
 
-        public Tuple<DateTime, Guid> IndexLastUpdatedAt(string name)
-        {
-            Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-            Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-            {
-                throw new IndexDoesNotExistsException("Could not find index named: " + name);
-            }
-            var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats,
-                                                                  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
-                .Value;
-            var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
-                                                                      tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting();
-            return Tuple.Create(lastIndexedTimestamp, lastIndexedEtag);
-        }
+		public Tuple<DateTime, Guid> IndexLastUpdatedAt(string name)
+		{
+			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+			{
+				throw new IndexDoesNotExistsException("Could not find index named: " + name);
+			}
+			var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats,
+																  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
+				.Value;
+			var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
+																	  tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting();
+			return Tuple.Create(lastIndexedTimestamp, lastIndexedEtag);
+		}
 
-        public Guid GetMostRecentDocumentEtag()
-        {
-            Api.JetSetCurrentIndex(session, Documents, "by_etag");
-            if (!Api.TryMoveLast(session, Documents))
-            {
-                return Guid.Empty;
-            }
-            var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
-            return new Guid(lastEtag);
-        }
+		public Guid GetMostRecentDocumentEtag()
+		{
+			Api.JetSetCurrentIndex(session, Documents, "by_etag");
+			if (!Api.TryMoveLast(session, Documents))
+			{
+				return Guid.Empty;
+			}
+			var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
+			return new Guid(lastEtag);
+		}
 
 		public int GetIndexTouchCount(string name)
 		{
@@ -153,29 +153,29 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-    	public Guid? GetMostRecentReducedEtag(string name)
-        {
-            Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
-            Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if(Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false) // find the next greater view
-                return null;
+		public Guid? GetMostRecentReducedEtag(string name)
+		{
+			Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
+			Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if(Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false) // find the next greater view
+				return null;
 
-            // did we find the last item on the view?
-            if (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode) == name)
-                return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
+			// did we find the last item on the view?
+			if (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode) == name)
+				return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
 
-            // maybe we are at another view?
-            if (Api.TryMovePrevious(session, MappedResults) == false) // move one step back, now we are at the highest etag for this view, maybe
-                return null;
+			// maybe we are at another view?
+			if (Api.TryMovePrevious(session, MappedResults) == false) // move one step back, now we are at the highest etag for this view, maybe
+				return null;
 
-            //could't find the name in the table 
-            if(Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"],Encoding.Unicode) != name)
-                return null;
+			//could't find the name in the table 
+			if(Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"],Encoding.Unicode) != name)
+				return null;
 
-            return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
-        }
+			return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
+		}
 
-    	
+		
 
-    }
+	}
 }

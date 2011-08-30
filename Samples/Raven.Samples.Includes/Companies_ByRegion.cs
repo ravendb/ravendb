@@ -9,12 +9,12 @@ using Raven.Client.Indexes;
 
 namespace Raven.Samples.Includes
 {
-    public class Companies_ByRegion : AbstractIndexCreationTask<Company>
-    {
-        public Companies_ByRegion()
-        {
-            Map = companies => from company in companies
-                               select new {company.Region};
-        }
-    }
+	public class Companies_ByRegion : AbstractIndexCreationTask<Company>
+	{
+		public Companies_ByRegion()
+		{
+			Map = companies => from company in companies
+							   select new {company.Region};
+		}
+	}
 }

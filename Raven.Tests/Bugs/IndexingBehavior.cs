@@ -75,7 +75,7 @@ namespace Raven.Tests.Bugs
 				bool isIndexStale = false;
 				db.TransactionalStorage.Batch(actions =>
 				{
-                    isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
+					isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
 				});
 				if (isIndexStale == false)
 					break;
@@ -105,7 +105,7 @@ namespace Raven.Tests.Bugs
 				bool isIndexStale = false;
 				db.TransactionalStorage.Batch(actions =>
 				{
-                    isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
+					isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
 				});
 				if (isIndexStale == false)
 					break;

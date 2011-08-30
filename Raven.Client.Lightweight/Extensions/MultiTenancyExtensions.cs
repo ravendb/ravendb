@@ -18,12 +18,12 @@ using Raven.Json.Linq;
 namespace Raven.Client.Extensions
 {
 #if !NET_3_5
-    using Raven.Client.Connection.Async;
+	using Raven.Client.Connection.Async;
 	using System.Threading.Tasks;
 
 #endif
 
-    ///<summary>
+	///<summary>
 	/// Extension methods to create mutli tenants databases
 	///</summary>
 	public static class MultiTenancyExtensions
@@ -72,12 +72,12 @@ namespace Raven.Client.Extensions
 			return self.GetAsync(docId)
 				.ContinueWith(get =>
 				{
-                    if (get.Result != null)
-                        return get;
+					if (get.Result != null)
+						return get;
 
-                    return (Task)self.PutAsync(docId, null, doc, new RavenJObject());
+					return (Task)self.PutAsync(docId, null, doc, new RavenJObject());
 				})
-                .Unwrap();
+				.Unwrap();
 		}
 
 #endif

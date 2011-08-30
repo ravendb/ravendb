@@ -31,18 +31,18 @@ using Formatting = Newtonsoft.Json.Formatting;
 namespace Raven.Http
 {
 	public abstract class HttpServer : IDisposable
-    {
+	{
 		private const int MaxConcurrentRequests = 192;
 		public IResourceStore DefaultResourceStore { get; private set; }
 		public IRavenHttpConfiguration DefaultConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
-        private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
-        private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
-        private readonly ThreadLocal<IRavenHttpConfiguration> currentConfiguration = new ThreadLocal<IRavenHttpConfiguration>();
+		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
+		private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
+		private readonly ThreadLocal<IRavenHttpConfiguration> currentConfiguration = new ThreadLocal<IRavenHttpConfiguration>();
 
-        protected readonly ConcurrentDictionary<string, IResourceStore> ResourcesStoresCache =
-            new ConcurrentDictionary<string, IResourceStore>(StringComparer.InvariantCultureIgnoreCase);
+		protected readonly ConcurrentDictionary<string, IResourceStore> ResourcesStoresCache =
+			new ConcurrentDictionary<string, IResourceStore>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -55,30 +55,30 @@ namespace Raven.Http
 		[ImportMany]
 		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
-        [ImportMany]
-        public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
+		[ImportMany]
+		public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
 
-        public IRavenHttpConfiguration Configuration
-        {
-            get
-            {
-                return DefaultConfiguration;
-            }
-        }
+		public IRavenHttpConfiguration Configuration
+		{
+			get
+			{
+				return DefaultConfiguration;
+			}
+		}
 
-        public abstract Regex TenantsQuery { get; }
+		public abstract Regex TenantsQuery { get; }
 
-        private HttpListener listener;
+		private HttpListener listener;
 
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        private int reqNum;
+		private int reqNum;
 
 
-        // concurrent requests
-        // we set 1/4 aside for handling background tasks
-        private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(MaxConcurrentRequests);
-        private Timer databasesCleanupTimer;
+		// concurrent requests
+		// we set 1/4 aside for handling background tasks
+		private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(MaxConcurrentRequests);
+		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
 
 		public bool HasPendingRequests
@@ -87,75 +87,75 @@ namespace Raven.Http
 		}
 
 		protected HttpServer(IRavenHttpConfiguration configuration, IResourceStore resourceStore)
-        {
-            DefaultResourceStore = resourceStore;
-            DefaultConfiguration = configuration;
+		{
+			DefaultResourceStore = resourceStore;
+			DefaultConfiguration = configuration;
 
-            configuration.Container.SatisfyImportsOnce(this);
+			configuration.Container.SatisfyImportsOnce(this);
 
-            foreach (var responder in RequestResponders)
-            {
-                responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
-            }
+			foreach (var responder in RequestResponders)
+			{
+				responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+			}
 
 		    switch (configuration.AuthenticationMode.ToLowerInvariant())
 		    {
-                case "windows":
+				case "windows":
 		            requestAuthorizer = new WindowsRequestAuthorizer();
-                    break;
-                case "oauth":
+					break;
+				case "oauth":
 		            requestAuthorizer = new OAuthRequestAuthorizer();
-                    break;
-                default:
+					break;
+				default:
 		            throw new InvalidOperationException(
 						string.Format("Unknown AuthenticationMode {0}. Options are Windows and OAuth", configuration.AuthenticationMode));
 		    }
 
-            requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
-        }
+			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+		}
 
-        #region IDisposable Members
+		#region IDisposable Members
 
-        public void Dispose()
-        {
-            databasesCleanupTimer.Dispose();
-            if (listener != null && listener.IsListening)
-                listener.Stop();
-            currentConfiguration.Dispose();
-            currentDatabase.Dispose();
-            currentTenantId.Dispose();
-            foreach (var documentDatabase in ResourcesStoresCache)
-            {
-                documentDatabase.Value.Dispose();
-            }
-        }
+		public void Dispose()
+		{
+			databasesCleanupTimer.Dispose();
+			if (listener != null && listener.IsListening)
+				listener.Stop();
+			currentConfiguration.Dispose();
+			currentDatabase.Dispose();
+			currentTenantId.Dispose();
+			foreach (var documentDatabase in ResourcesStoresCache)
+			{
+				documentDatabase.Value.Dispose();
+			}
+		}
 
-        #endregion
+		#endregion
 
-        public void Start()
-        {
-            listener = new HttpListener();
-            string virtualDirectory = DefaultConfiguration.VirtualDirectory;
-            if (virtualDirectory.EndsWith("/") == false)
-                virtualDirectory = virtualDirectory + "/";
-            listener.Prefixes.Add("http://" + (DefaultConfiguration.HostName ?? "+") + ":" + DefaultConfiguration.Port + virtualDirectory);
+		public void Start()
+		{
+			listener = new HttpListener();
+			string virtualDirectory = DefaultConfiguration.VirtualDirectory;
+			if (virtualDirectory.EndsWith("/") == false)
+				virtualDirectory = virtualDirectory + "/";
+			listener.Prefixes.Add("http://" + (DefaultConfiguration.HostName ?? "+") + ":" + DefaultConfiguration.Port + virtualDirectory);
 
-            foreach (var configureHttpListener in ConfigureHttpListeners)
-            {
-                configureHttpListener.Value.Configure(listener, DefaultConfiguration);
-            }
+			foreach (var configureHttpListener in ConfigureHttpListeners)
+			{
+				configureHttpListener.Value.Configure(listener, DefaultConfiguration);
+			}
 
-            databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-            listener.Start();
-            listener.BeginGetContext(GetContext, null);
-        }
+			databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+			listener.Start();
+			listener.BeginGetContext(GetContext, null);
+		}
 
-        private void CleanupDatabases(object state)
-        {
-            var databasesToCleanup = databaseLastRecentlyUsed
-                .Where(x=>(SystemTime.Now - x.Value).TotalMinutes > 10)
-                .Select(x=>x.Key)
-                .ToArray();
+		private void CleanupDatabases(object state)
+		{
+			var databasesToCleanup = databaseLastRecentlyUsed
+				.Where(x=>(SystemTime.Now - x.Value).TotalMinutes > 10)
+				.Select(x=>x.Key)
+				.ToArray();
 
             foreach (var db in databasesToCleanup)
             {
@@ -196,61 +196,61 @@ namespace Raven.Http
 				// listner shutdown
 				return;
 			}
-            catch (InvalidOperationException)
-            {
-                // can't get current request / end new one, probably
-                // listner shutdown
-                return;
-            }
-            catch (HttpListenerException)
-            {
-                // can't get current request / end new one, probably
-                // listner shutdown
-                return;
-            }
+			catch (InvalidOperationException)
+			{
+				// can't get current request / end new one, probably
+				// listner shutdown
+				return;
+			}
+			catch (HttpListenerException)
+			{
+				// can't get current request / end new one, probably
+				// listner shutdown
+				return;
+			}
 
-            if (concurretRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
-            {
-                HandleTooBusyError(ctx);
-                return;
-            }
-            try
-            {
-            	Interlocked.Increment(ref physicalRequestsCount);
-                HandleActualRequest(ctx);
-            }
-            finally
-            {
-                concurretRequestSemaphore.Release();
-            }
-        }
+			if (concurretRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
+			{
+				HandleTooBusyError(ctx);
+				return;
+			}
+			try
+			{
+				Interlocked.Increment(ref physicalRequestsCount);
+				HandleActualRequest(ctx);
+			}
+			finally
+			{
+				concurretRequestSemaphore.Release();
+			}
+		}
 
-        public void HandleActualRequest(IHttpContext ctx)
-        {
-            var sw = Stopwatch.StartNew();
-            bool ravenUiRequest = false;
-            try
-            {
-                ravenUiRequest = DispatchRequest(ctx);
-            }
-            catch (Exception e)
-            {
-                HandleException(ctx, e);
+		public void HandleActualRequest(IHttpContext ctx)
+		{
+			var sw = Stopwatch.StartNew();
+			bool ravenUiRequest = false;
+			try
+			{
+				ravenUiRequest = DispatchRequest(ctx);
+			}
+			catch (Exception e)
+			{
+				HandleException(ctx, e);
 				if (ShouldLogException(e))
 					logger.WarnException("Error on request", e);
-            }
-            finally
-            {
-            	try
-            	{
-            		FinalizeRequestProcessing(ctx, sw, ravenUiRequest);
-            	}
-            	catch (Exception e)
-            	{
-            		logger.ErrorException("Could not finalize request properly", e);
-            	}
-            }
-        }
+			}
+			finally
+			{
+				try
+				{
+					FinalizeRequestProcessing(ctx, sw, ravenUiRequest);
+				}
+				catch (Exception e)
+				{
+					logger.ErrorException("Could not finalize request properly", e);
+				}
+			}
+		}
 
 		protected virtual bool ShouldLogException(Exception exception)
 		{
@@ -285,227 +285,227 @@ namespace Raven.Http
 		}
 
 		private void LogHttpRequestStats(LogHttpRequestStatsParams logHttpRequestStatsParams)
-    	{
+		{
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
-    		if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25) 
+			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25) 
 				return;
 
-    		var curReq = Interlocked.Increment(ref reqNum);
-    		logger.Debug("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
-    		                   curReq, 
+			var curReq = Interlocked.Increment(ref reqNum);
+			logger.Debug("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
+			                   curReq, 
 							   logHttpRequestStatsParams.HttpMethod, 
 							   logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds, 
 							   logHttpRequestStatsParams.ResponseStatusCode,
-    		                   logHttpRequestStatsParams.RequestUri,
-    		                   currentTenantId.Value);
-    	}
+			                   logHttpRequestStatsParams.RequestUri,
+			                   currentTenantId.Value);
+		}
 
-    	private void HandleException(IHttpContext ctx, Exception e)
-        {
-            try
-            {
-                if (e is BadRequestException)
-                    HandleBadRequest(ctx, (BadRequestException)e);
-                else if (e is ConcurrencyException)
-                    HandleConcurrencyException(ctx, (ConcurrencyException)e);
-                else if (TryHandleException(ctx, e))
-                    return;
-                else
-                    HandleGenericException(ctx, e);
-            }
-            catch (Exception)
-            {
-                logger.ErrorException("Failed to properly handle error, further error handling is ignored", e);
-            }
-        }
+		private void HandleException(IHttpContext ctx, Exception e)
+		{
+			try
+			{
+				if (e is BadRequestException)
+					HandleBadRequest(ctx, (BadRequestException)e);
+				else if (e is ConcurrencyException)
+					HandleConcurrencyException(ctx, (ConcurrencyException)e);
+				else if (TryHandleException(ctx, e))
+					return;
+				else
+					HandleGenericException(ctx, e);
+			}
+			catch (Exception)
+			{
+				logger.ErrorException("Failed to properly handle error, further error handling is ignored", e);
+			}
+		}
 
-        protected abstract bool TryHandleException(IHttpContext ctx, Exception exception);
+		protected abstract bool TryHandleException(IHttpContext ctx, Exception exception);
 
-       
-        private static void HandleTooBusyError(IHttpContext ctx)
-        {
-            ctx.Response.StatusCode = 503;
-            ctx.Response.StatusDescription = "Service Unavailable";
-            SerializeError(ctx, new
-            {
-                Url = ctx.Request.RawUrl,
-                Error = "The server is too busy, could not acquire transactional access"
-            });
-        }
+	   
+		private static void HandleTooBusyError(IHttpContext ctx)
+		{
+			ctx.Response.StatusCode = 503;
+			ctx.Response.StatusDescription = "Service Unavailable";
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				Error = "The server is too busy, could not acquire transactional access"
+			});
+		}
 
 
-        private static void HandleGenericException(IHttpContext ctx, Exception e)
-        {
-            ctx.Response.StatusCode = 500;
-            ctx.Response.StatusDescription = "Internal Server Error";
-            SerializeError(ctx, new
-            {
-                Url = ctx.Request.RawUrl,
-                Error = e.ToString()
-            });
-        }
+		private static void HandleGenericException(IHttpContext ctx, Exception e)
+		{
+			ctx.Response.StatusCode = 500;
+			ctx.Response.StatusDescription = "Internal Server Error";
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				Error = e.ToString()
+			});
+		}
 
-        private static void HandleBadRequest(IHttpContext ctx, BadRequestException e)
-        {
-            ctx.SetStatusToBadRequest();
-            SerializeError(ctx, new
-            {
-                Url = ctx.Request.RawUrl,
-                e.Message,
-                Error = e.Message
-            });
-        }
+		private static void HandleBadRequest(IHttpContext ctx, BadRequestException e)
+		{
+			ctx.SetStatusToBadRequest();
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				e.Message,
+				Error = e.Message
+			});
+		}
 
-        private static void HandleConcurrencyException(IHttpContext ctx, ConcurrencyException e)
-        {
-            ctx.Response.StatusCode = 409;
-            ctx.Response.StatusDescription = "Conflict";
-            SerializeError(ctx, new
-            {
-                Url = ctx.Request.RawUrl,
-                e.ActualETag,
-                e.ExpectedETag,
-                Error = e.Message
-            });
-        }
+		private static void HandleConcurrencyException(IHttpContext ctx, ConcurrencyException e)
+		{
+			ctx.Response.StatusCode = 409;
+			ctx.Response.StatusDescription = "Conflict";
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				e.ActualETag,
+				e.ExpectedETag,
+				Error = e.Message
+			});
+		}
 
-        protected static void SerializeError(IHttpContext ctx, object error)
-        {
-            var sw = new StreamWriter(ctx.Response.OutputStream);
-            new JsonSerializer().Serialize(new JsonTextWriter(sw)
-            {
-                Formatting = Formatting.Indented,
-            }, error);
-            sw.Flush();
-        }
+		protected static void SerializeError(IHttpContext ctx, object error)
+		{
+			var sw = new StreamWriter(ctx.Response.OutputStream);
+			new JsonSerializer().Serialize(new JsonTextWriter(sw)
+			{
+				Formatting = Formatting.Indented,
+			}, error);
+			sw.Flush();
+		}
 
-        private bool DispatchRequest(IHttpContext ctx)
-        {
-            SetupRequestToProperDatabase(ctx);
+		private bool DispatchRequest(IHttpContext ctx)
+		{
+			SetupRequestToProperDatabase(ctx);
 
-            CurrentOperationContext.Headers.Value = ctx.Request.Headers;
+			CurrentOperationContext.Headers.Value = ctx.Request.Headers;
 
-            if (requestAuthorizer.Authorize(ctx) == false)
-                return false;
+			if (requestAuthorizer.Authorize(ctx) == false)
+				return false;
 
-            try
-            {
-                OnDispatchingRequest(ctx);
+			try
+			{
+				OnDispatchingRequest(ctx);
 
-                if (DefaultConfiguration.HttpCompression)
-                    AddHttpCompressionIfClientCanAcceptIt(ctx);
+				if (DefaultConfiguration.HttpCompression)
+					AddHttpCompressionIfClientCanAcceptIt(ctx);
 
-                AddAccessControlAllowOriginHeader(ctx);
+				AddAccessControlAllowOriginHeader(ctx);
 
-                foreach (var requestResponderLazy in RequestResponders)
-                {
-                	var requestResponder = requestResponderLazy.Value;
-                    if (requestResponder.WillRespond(ctx))
-                    {
-                        requestResponder.Respond(ctx);
-                        return requestResponder.IsUserInterfaceRequest;
-                    }
-                }
-                ctx.SetStatusToBadRequest();
-                if (ctx.Request.HttpMethod == "HEAD")
-                    return false;
-                ctx.Write(
-                    @"
+				foreach (var requestResponderLazy in RequestResponders)
+				{
+					var requestResponder = requestResponderLazy.Value;
+					if (requestResponder.WillRespond(ctx))
+					{
+						requestResponder.Respond(ctx);
+						return requestResponder.IsUserInterfaceRequest;
+					}
+				}
+				ctx.SetStatusToBadRequest();
+				if (ctx.Request.HttpMethod == "HEAD")
+					return false;
+				ctx.Write(
+					@"
 <html>
-    <body>
-        <h1>Could not figure out what to do</h1>
-        <p>Your request didn't match anything that Raven knows to do, sorry...</p>
-    </body>
+	<body>
+		<h1>Could not figure out what to do</h1>
+		<p>Your request didn't match anything that Raven knows to do, sorry...</p>
+	</body>
 </html>
 ");
-            }
-            finally
-            {
-                CurrentOperationContext.Headers.Value = new NameValueCollection();
-                currentDatabase.Value = DefaultResourceStore;
-                currentConfiguration.Value = DefaultConfiguration;
-            }
-            return false;
-        }
+			}
+			finally
+			{
+				CurrentOperationContext.Headers.Value = new NameValueCollection();
+				currentDatabase.Value = DefaultResourceStore;
+				currentConfiguration.Value = DefaultConfiguration;
+			}
+			return false;
+		}
 
-        protected virtual void OnDispatchingRequest(IHttpContext ctx){}
+		protected virtual void OnDispatchingRequest(IHttpContext ctx){}
 
-        private void SetupRequestToProperDatabase(IHttpContext ctx)
-        {
-            var requestUrl = ctx.GetRequestUrlForTenantSelection();
-            var match = TenantsQuery.Match(requestUrl);
+		private void SetupRequestToProperDatabase(IHttpContext ctx)
+		{
+			var requestUrl = ctx.GetRequestUrlForTenantSelection();
+			var match = TenantsQuery.Match(requestUrl);
 
-        	if (match.Success == false)
-        	{
-        		currentTenantId.Value = Constants.DefaultDatabase;
-                currentDatabase.Value = DefaultResourceStore;
-                currentConfiguration.Value = DefaultConfiguration;
-            } 
-            else
-            {
-                var tenantId = match.Groups[1].Value;
-            	IResourceStore resourceStore;
-            	if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
-                {
-                    databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
+			if (match.Success == false)
+			{
+				currentTenantId.Value = Constants.DefaultDatabase;
+				currentDatabase.Value = DefaultResourceStore;
+				currentConfiguration.Value = DefaultConfiguration;
+			} 
+			else
+			{
+				var tenantId = match.Groups[1].Value;
+				IResourceStore resourceStore;
+				if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
+				{
+					databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
 
 					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
 					{
 						ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
 					}
-                	else
+					else
 					{
 						ctx.AdjustUrl(match.Value);
 					}
-                    currentTenantId.Value = tenantId;
-                    currentDatabase.Value = resourceStore;
-                    currentConfiguration.Value = resourceStore.Configuration;
-                }
-                else
-                {
-                    throw new BadRequestException("Could not find a database named: " + tenantId);
-                }
-            }
-        }
+					currentTenantId.Value = tenantId;
+					currentDatabase.Value = resourceStore;
+					currentConfiguration.Value = resourceStore.Configuration;
+				}
+				else
+				{
+					throw new BadRequestException("Could not find a database named: " + tenantId);
+				}
+			}
+		}
 
-        protected abstract bool TryGetOrCreateResourceStore(string name, out IResourceStore database);
+		protected abstract bool TryGetOrCreateResourceStore(string name, out IResourceStore database);
 
 
-        private void AddAccessControlAllowOriginHeader(IHttpContext ctx)
-        {
-            if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlAllowOrigin))
-                return;
-        	ctx.Response.AddHeader("Access-Control-Allow-Origin", DefaultConfiguration.AccessControlAllowOrigin);
-        }
+		private void AddAccessControlAllowOriginHeader(IHttpContext ctx)
+		{
+			if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlAllowOrigin))
+				return;
+			ctx.Response.AddHeader("Access-Control-Allow-Origin", DefaultConfiguration.AccessControlAllowOrigin);
+		}
 
-        private static void AddHttpCompressionIfClientCanAcceptIt(IHttpContext ctx)
-        {
-            var acceptEncoding = ctx.Request.Headers["Accept-Encoding"];
+		private static void AddHttpCompressionIfClientCanAcceptIt(IHttpContext ctx)
+		{
+			var acceptEncoding = ctx.Request.Headers["Accept-Encoding"];
 
-            if (string.IsNullOrEmpty(acceptEncoding))
-                return;
+			if (string.IsNullOrEmpty(acceptEncoding))
+				return;
 
-            // gzip must be first, because chrome has an issue accepting deflate data
-            // when sending it json text
-            if ((acceptEncoding.IndexOf("gzip", StringComparison.InvariantCultureIgnoreCase) != -1))
-            {
-                ctx.SetResponseFilter(s => new GZipStream(s, CompressionMode.Compress, true));
-                ctx.Response.AddHeader("Content-Encoding","gzip");
-            }
-            else if (acceptEncoding.IndexOf("deflate", StringComparison.InvariantCultureIgnoreCase) != -1)
-            {
-                ctx.SetResponseFilter(s => new DeflateStream(s, CompressionMode.Compress, true));
-            	ctx.Response.AddHeader("Content-Encoding", "deflate");
-            }
+			// gzip must be first, because chrome has an issue accepting deflate data
+			// when sending it json text
+			if ((acceptEncoding.IndexOf("gzip", StringComparison.InvariantCultureIgnoreCase) != -1))
+			{
+				ctx.SetResponseFilter(s => new GZipStream(s, CompressionMode.Compress, true));
+				ctx.Response.AddHeader("Content-Encoding","gzip");
+			}
+			else if (acceptEncoding.IndexOf("deflate", StringComparison.InvariantCultureIgnoreCase) != -1)
+			{
+				ctx.SetResponseFilter(s => new DeflateStream(s, CompressionMode.Compress, true));
+				ctx.Response.AddHeader("Content-Encoding", "deflate");
+			}
 
-        }
+		}
 
 	    public void ResetNumberOfRequests()
 		{
 			Interlocked.Exchange(ref reqNum, 0);
 			Interlocked.Exchange(ref physicalRequestsCount, 0);
 		}
-    }
+	}
 }

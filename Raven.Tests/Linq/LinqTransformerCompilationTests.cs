@@ -19,9 +19,9 @@ namespace Raven.Tests.Linq
 	{
 		private const string query =
 			@"
-    from doc in docs
-    where doc.Type == ""page""
-    select new { Key = doc.Title, Value = doc.Content, Size = doc.Size };
+	from doc in docs
+	where doc.Type == ""page""
+	select new { Key = doc.Title, Value = doc.Content, Size = doc.Size };
 ";
 
 		[Fact]
@@ -60,30 +60,30 @@ namespace Raven.Tests.Linq
 			{
 				GetDocumentFromString(
 					@"
-                {
-                    '@metadata': {'@id': 1},
-                    'Type': 'page',
-                    'Title': 'doc1',
-                    'Content': 'Foobar',
-                    'Size': 31
-                }")
+				{
+					'@metadata': {'@id': 1},
+					'Type': 'page',
+					'Title': 'doc1',
+					'Content': 'Foobar',
+					'Size': 31
+				}")
 				,
 				GetDocumentFromString(
 					@"
-                {
-                    '@metadata': {'@id': 2},
-                    'Type': 'not a page',
-                }")
+				{
+					'@metadata': {'@id': 2},
+					'Type': 'not a page',
+				}")
 				,
 				GetDocumentFromString(
 					@"
-                {
-                    '@metadata': {'@id': 3},
-                    'Type': 'page',
-                    'Title': 'doc2',
-                    'Content': 'Foobar',
-                    'Size': 31
-                }")
+				{
+					'@metadata': {'@id': 3},
+					'Type': 'page',
+					'Title': 'doc2',
+					'Content': 'Foobar',
+					'Size': 31
+				}")
 				,
 			}).Cast<object>().ToArray();
 
@@ -114,10 +114,10 @@ namespace Raven.Tests.Linq
 			{
 				GetDocumentFromString(
 				@"
-                {
-                    '@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
-                    'Location': 'Tel Aviv'
-                }")
+				{
+					'@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
+					'Location': 'Tel Aviv'
+				}")
 			}).Cast<object>().ToArray();
 
 			var expected = new[]
@@ -149,16 +149,16 @@ namespace Raven.Tests.Linq
 			{
 				GetDocumentFromString(
 				@"
-                {
-                    '@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
-                    'Location': 'Tel Aviv'
-                }"),
+				{
+					'@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
+					'Location': 'Tel Aviv'
+				}"),
 				  GetDocumentFromString(
 				@"
-                {
-                    '@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
-                    'Location': 'Tel Aviv'
-                }")
+				{
+					'@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
+					'Location': 'Tel Aviv'
+				}")
 			})).Cast<object>().ToArray();
 
 			var expected = new[]

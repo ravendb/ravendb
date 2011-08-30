@@ -420,7 +420,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public  IDocumentStore Initialize()
 		{
-            AssertValidConfiguration();
+			AssertValidConfiguration();
 
 #if !SILVERLIGHT
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
@@ -462,7 +462,7 @@ namespace Raven.Client.Document
 				throw;
 			}
 
-            initialized = true;
+			initialized = true;
 
 #if !SILVERLIGHT
 			if(string.IsNullOrEmpty(DefaultDatabase) == false)

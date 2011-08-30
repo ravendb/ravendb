@@ -378,7 +378,7 @@ namespace Raven.Munin
 			{
 				table.Dispose();
 			}
-            CurrentTransactionId .Dispose();
+			CurrentTransactionId .Dispose();
 		}
 	}
 }

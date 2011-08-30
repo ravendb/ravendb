@@ -10,13 +10,13 @@ namespace Raven.Bundles.Authorization.Model
 	public class OperationPermission : IPermission
 	{
 		public string Operation { get; set; }
-        public List<string> Tags { get; set; }
+		public List<string> Tags { get; set; }
 		public bool Allow { get; set; }
 		public int Priority { get; set; }
 
-        public OperationPermission()
+		public OperationPermission()
 		{
-            Tags = new List<string>();
+			Tags = new List<string>();
 		}
 
 		public string Explain

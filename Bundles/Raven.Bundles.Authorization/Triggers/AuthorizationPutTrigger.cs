@@ -28,8 +28,8 @@ namespace Raven.Bundles.Authorization.Triggers
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-                var user = CurrentOperationContext.Headers.Value[Constants.RavenAuthorizationUser];
-                var operation = CurrentOperationContext.Headers.Value[Constants.RavenAuthorizationOperation];
+				var user = CurrentOperationContext.Headers.Value[Constants.RavenAuthorizationUser];
+				var operation = CurrentOperationContext.Headers.Value[Constants.RavenAuthorizationOperation];
 				if (string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(user))
 					return VetoResult.Allowed;
 

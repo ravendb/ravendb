@@ -100,33 +100,33 @@ namespace Raven.Tests.Views
 			transactionalStorage.Batch(actions =>
 			{
 				var strings = actions.MappedResults.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"))).Select(x => x.ToString()).ToArray();
-                Assert.Equal(2, strings.Length);
-                Assert.Contains("abc", strings[0]);
+				Assert.Equal(2, strings.Length);
+				Assert.Contains("abc", strings[0]);
 				Assert.Contains("def", strings[1]);
 			});
 		}
 
-        [Fact]
-        public void CanUpdateValueAndGetUpdatedValues()
-        {
-            transactionalStorage.Batch(actions =>
-            {
-                actions.MappedResults.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"), MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"));
-            });
+		[Fact]
+		public void CanUpdateValueAndGetUpdatedValues()
+		{
+			transactionalStorage.Batch(actions =>
+			{
+				actions.MappedResults.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"), MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"));
+			});
 
 
-            transactionalStorage.Batch(actions =>
-            {
-                actions.MappedResults.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog");
+			transactionalStorage.Batch(actions =>
+			{
+				actions.MappedResults.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog");
 				actions.MappedResults.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}"), MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"));
-            });
+			});
 
-            transactionalStorage.Batch(actions =>
-            {
-                var strings = actions.MappedResults.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"))).Select(x => x.ToString()).ToArray();
-                Assert.Contains("def", strings[0]);
-            });
-        }
+			transactionalStorage.Batch(actions =>
+			{
+				var strings = actions.MappedResults.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"))).Select(x => x.ToString()).ToArray();
+				Assert.Contains("def", strings[0]);
+			});
+		}
 
 
 		[Fact]

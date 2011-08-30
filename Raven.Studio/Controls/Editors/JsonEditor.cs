@@ -4,18 +4,18 @@
 	using ActiproSoftware.Windows.Controls.SyntaxEditor;
 
 	public class JsonEditor : SyntaxEditor
-    {
-        private static readonly ISyntaxLanguage DefaultLanguage;
+	{
+		private static readonly ISyntaxLanguage DefaultLanguage;
 
-        static JsonEditor()
-        {
-            DefaultLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("JScript.langdef");
-        }
+		static JsonEditor()
+		{
+			DefaultLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("JScript.langdef");
+		}
 
-        public JsonEditor()
-        {
-            Document.Language = DefaultLanguage;
+		public JsonEditor()
+		{
+			Document.Language = DefaultLanguage;
 			IsTextDataBindingEnabled = true;
-        }
-    }
+		}
+	}
 }

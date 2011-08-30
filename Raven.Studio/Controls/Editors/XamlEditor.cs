@@ -4,18 +4,18 @@
 	using ActiproSoftware.Windows.Controls.SyntaxEditor;
 
 	public class XamlEditor : SyntaxEditor
-    {
-        private static readonly ISyntaxLanguage DefaultLanguage;
+	{
+		private static readonly ISyntaxLanguage DefaultLanguage;
 
-        static XamlEditor()
-        {
-            DefaultLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("Xaml.langdef");
-        }
+		static XamlEditor()
+		{
+			DefaultLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("Xaml.langdef");
+		}
 
-        public XamlEditor()
-        {
-            Document.Language = DefaultLanguage;
+		public XamlEditor()
+		{
+			Document.Language = DefaultLanguage;
 			IsTextDataBindingEnabled = true;
-        }
-    }
+		}
+	}
 }

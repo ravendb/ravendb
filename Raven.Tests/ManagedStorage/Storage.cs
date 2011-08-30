@@ -44,7 +44,7 @@ namespace Raven.Tests.ManagedStorage
 
 				lengthAfterFirstTransaction = new FileInfo(fileName).Length;
 
-                tx.Batch(mutator => mutator.Documents.AddDocument("Oren", null, RavenJObject.FromObject(new { Name = "Eini" }), new RavenJObject()));
+				tx.Batch(mutator => mutator.Documents.AddDocument("Oren", null, RavenJObject.FromObject(new { Name = "Eini" }), new RavenJObject()));
 
 			}
 
@@ -55,8 +55,8 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-                tx.Batch(viewer => Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", null)));
-                tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Oren", null)));
+				tx.Batch(viewer => Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", null)));
+				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Oren", null)));
 			}
 		}
 

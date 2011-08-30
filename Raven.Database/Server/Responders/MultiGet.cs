@@ -213,10 +213,10 @@ namespace Raven.Database.Server.Responders
 			}
 		}
 
-        public void Dispose()
-        {
-            recursive.Dispose();
-        }
+		public void Dispose()
+		{
+			recursive.Dispose();
+		}
 
 		public class MultiGetHttpResponse : IHttpResponse
 		{
@@ -290,7 +290,7 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
-          
+		  
 		}
 	}
 

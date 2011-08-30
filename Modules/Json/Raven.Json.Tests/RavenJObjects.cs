@@ -35,8 +35,8 @@ namespace Raven.Tests.Json
 				Title = "one",
 				Category = "Ravens",
 				Tags = new Tag[]{
-                     new Tag(){ Name = "birds" }
-                },
+					 new Tag(){ Name = "birds" }
+				},
 			};
 			var o = RavenJObject.FromObject(blogOne);
 		}

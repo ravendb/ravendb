@@ -27,7 +27,7 @@ namespace Raven.Abstractions.Json
 			return text;
 		}
 
- 
+
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
 			string value = reader.Value as string;
@@ -41,7 +41,7 @@ namespace Raven.Abstractions.Json
 			if (reader.Value == null)
 				return null;
 			return Convert.ChangeType(reader.Value, typeof(float), CultureInfo.InvariantCulture);
-      
+	  
 		}
 
 		public override bool CanConvert(Type objectType)

@@ -29,11 +29,11 @@ namespace Raven.Http.Responders
 		}
 
 		public override bool IsUserInterfaceRequest
-        {
-            get
-            {
-                return true;
-            }
-        }
+		{
+			get
+			{
+				return true;
+			}
+		}
 	}
 }

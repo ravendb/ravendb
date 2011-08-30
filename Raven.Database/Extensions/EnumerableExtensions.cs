@@ -25,19 +25,19 @@ namespace Raven.Database.Extensions
 			return self;
 		}
 
-        public static void ApplyAndIgnoreAllErrors<T>(this IEnumerable<T> self, Action<Exception> errorAction, Action<T> action)
-        {
-            foreach (var item in self)
-            {
-                try
-                {
-                    action(item);
-                }
-                catch (Exception e)
-                {
-                    errorAction(e);
-                }
-            }
-        }
+		public static void ApplyAndIgnoreAllErrors<T>(this IEnumerable<T> self, Action<Exception> errorAction, Action<T> action)
+		{
+			foreach (var item in self)
+			{
+				try
+				{
+					action(item);
+				}
+				catch (Exception e)
+				{
+					errorAction(e);
+				}
+			}
+		}
 	}
 }

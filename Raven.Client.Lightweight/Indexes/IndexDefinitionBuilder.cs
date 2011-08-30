@@ -30,11 +30,11 @@ namespace Raven.Client.Indexes
 		/// <value>The reduce.</value>
 		public Expression<Func<IEnumerable<TReduceResult>, IEnumerable>> Reduce { get; set; }
 
-        /// <summary>
-        /// Gets or sets the reduce function
-        /// </summary>
-        /// <value>The reduce.</value>
-        public Expression<Func<IClientSideDatabase,IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
+		/// <summary>
+		/// Gets or sets the reduce function
+		/// </summary>
+		/// <value>The reduce.</value>
+		public Expression<Func<IClientSideDatabase,IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
 
 	    /// <summary>
 		/// Gets or sets the stores options
@@ -51,10 +51,10 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <value>The sort options.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
-        /// <summary>
-        /// Get os set the analyzers
-        /// </summary>
-        public IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers { get; set; }
+		/// <summary>
+		/// Get os set the analyzers
+		/// </summary>
+		public IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers { get; set; }
 
 	    /// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
@@ -64,7 +64,7 @@ namespace Raven.Client.Indexes
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
-            Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
+			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 		}
 
 		/// <summary>
@@ -93,7 +93,7 @@ namespace Raven.Client.Indexes
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions),
-                Analyzers = ConvertToStringDictionary(Analyzers)
+				Analyzers = ConvertToStringDictionary(Analyzers)
 			};
 		}
 
@@ -138,24 +138,24 @@ namespace Raven.Client.Indexes
 	    }
 
 	    private class WhereEntityIsVisitor : ExpressionVisitor
-        {
-            public bool HasWhereEntityIs { get; set; }
+		{
+			public bool HasWhereEntityIs { get; set; }
 
-            protected override Expression VisitMethodCall(MethodCallExpression node)
-            {
-                if (node.Method.Name == "WhereEntityIs")
-                    HasWhereEntityIs = true;
-                return base.VisitMethodCall(node);
-            }
-        }
+			protected override Expression VisitMethodCall(MethodCallExpression node)
+			{
+				if (node.Method.Name == "WhereEntityIs")
+					HasWhereEntityIs = true;
+				return base.VisitMethodCall(node);
+			}
+		}
 #else
-         private static bool ContainsWhereEntityIs(Expression body)
+		 private static bool ContainsWhereEntityIs(Expression body)
 	    {
 	        return body.ToString().Contains("WhereEntityIs");
 	    }
 #endif
 
-        private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
+		private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
 		{
 			var result = new Dictionary<string, TValue>();
 			foreach (var value in input)
@@ -174,7 +174,7 @@ namespace Raven.Client.Indexes
 
 	}
 
-    /// <summary>
+	/// <summary>
 	/// This class provides a way to define a strongly typed index on the client.
 	/// </summary>
 	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, TDocument> { }

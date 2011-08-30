@@ -23,7 +23,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["for_index"], task.Index, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.Type, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"], task.SupportsMerging);
-                Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["added_at"], addedAt);
+				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["added_at"], addedAt);
 
 				update.Save(bookmark, bookmark.Length, out actualBookmarkSize);
 			}

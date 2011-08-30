@@ -126,11 +126,11 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public override IndexDefinition CreateIndexDefinition()
 		{
-            return new IndexDefinitionBuilder<TDocument, TReduceResult>
+			return new IndexDefinitionBuilder<TDocument, TReduceResult>
 			{
 				Indexes = Indexes,
 				SortOptions = SortOptions,
-                Analyzers = Analyzers,
+				Analyzers = Analyzers,
 				Map = Map,
 				Reduce = Reduce,
 				TransformResults = TransformResults,
@@ -175,14 +175,14 @@ namespace Raven.Client.Indexes
 		}
 
 
-        /// <summary>
-        /// Index sort options
-        /// </summary>
-        protected IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers
-        {
-            get;
-            set;
-        }
+		/// <summary>
+		/// Index sort options
+		/// </summary>
+		protected IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers
+		{
+			get;
+			set;
+		}
 
 
 		/// <summary>
@@ -202,7 +202,7 @@ namespace Raven.Client.Indexes
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
-            Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
+			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 		}
 
 

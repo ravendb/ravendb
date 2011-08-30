@@ -16,16 +16,16 @@ namespace Raven.Bundles.Replication.Triggers
 {
 	[ExportMetadata("Order", 10000)]
 	public class HideVirtuallyDeletedDocumentsReadTrigger : AbstractReadTrigger
-    {
+	{
 		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation,
-                                                 TransactionInformation transactionInformation)
-        {
+												 TransactionInformation transactionInformation)
+		{
 			if(metadata == null)
 				return ReadVetoResult.Allowed; // this is a projection, it is allowed
-            RavenJToken value;
-            if (metadata.TryGetValue("Raven-Delete-Marker", out value))
-                return ReadVetoResult.Ignore;
-            return ReadVetoResult.Allowed;
-        }
-    }
+			RavenJToken value;
+			if (metadata.TryGetValue("Raven-Delete-Marker", out value))
+				return ReadVetoResult.Ignore;
+			return ReadVetoResult.Allowed;
+		}
+	}
 }

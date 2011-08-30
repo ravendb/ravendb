@@ -1,9 +1,9 @@
 ﻿namespace Ionic.Zlib
 {
-    internal enum DeflateFlavor
-    {
-        Store,
-        Fast,
-        Slow
-    }
+	internal enum DeflateFlavor
+	{
+		Store,
+		Fast,
+		Slow
+	}
 }

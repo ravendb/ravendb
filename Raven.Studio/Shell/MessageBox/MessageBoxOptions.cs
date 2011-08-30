@@ -1,8 +1,8 @@
 ﻿namespace Raven.Studio.Shell.MessageBox
 {
-    using System;
+	using System;
 
-    [Flags]
+	[Flags]
 	public enum MessageBoxOptions
 	{
 		Ok = 2,

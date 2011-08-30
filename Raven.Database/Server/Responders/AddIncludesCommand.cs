@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Responders
 			DocumentDatabase database, 
 			TransactionInformation transactionInformation, 
 			Action<Guid, RavenJObject> add, 
-            string[] includes,
+			string[] includes,
 			HashSet<string> loadedIds)
 		{
 			Add = add;

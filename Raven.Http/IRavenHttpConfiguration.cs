@@ -9,21 +9,21 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Raven.Http
 {
-    public interface IRavenHttpConfiguration
-    {
-        string VirtualDirectory { get; }
-        AnonymousUserAccessMode AnonymousUserAccessMode { get; }
-        string AuthenticationMode { get; }
+	public interface IRavenHttpConfiguration
+	{
+		string VirtualDirectory { get; }
+		AnonymousUserAccessMode AnonymousUserAccessMode { get; }
+		string AuthenticationMode { get; }
 		X509Certificate2  OAuthTokenCertificate { get; }
-        string HostName { get; }
-        int Port { get; }
-        CompositionContainer Container { get; set; }
-        bool HttpCompression { get; }
-        string WebDir { get; }
-        string AccessControlAllowOrigin { get; }
-        NameValueCollection Settings { get; }
-    	string PluginsDirectory { get; set; }
-    	string OAuthTokenServer { get; set; }
-    	string GetFullUrl(string url);
-    }
+		string HostName { get; }
+		int Port { get; }
+		CompositionContainer Container { get; set; }
+		bool HttpCompression { get; }
+		string WebDir { get; }
+		string AccessControlAllowOrigin { get; }
+		NameValueCollection Settings { get; }
+		string PluginsDirectory { get; set; }
+		string OAuthTokenServer { get; set; }
+		string GetFullUrl(string url);
+	}
 }

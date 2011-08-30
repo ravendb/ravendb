@@ -10,25 +10,25 @@ using Raven.Json.Linq;
 namespace Raven.Munin
 {
 	// TODO: Why not use RavenJToken.Clone?!!!
-    public class RavenJTokenCloner
-    {
+	public class RavenJTokenCloner
+	{
 		public static RavenJToken Clone(RavenJToken token)
-        {
-            switch (token.Type)
-            {
-                case JTokenType.Object:
-                case JTokenType.Array:
-                case JTokenType.Integer:
-                case JTokenType.Float:
-                case JTokenType.String:
-                case JTokenType.Boolean:
-                case JTokenType.Date:
-                case JTokenType.Null:
-                case JTokenType.Bytes:
+		{
+			switch (token.Type)
+			{
+				case JTokenType.Object:
+				case JTokenType.Array:
+				case JTokenType.Integer:
+				case JTokenType.Float:
+				case JTokenType.String:
+				case JTokenType.Boolean:
+				case JTokenType.Date:
+				case JTokenType.Null:
+				case JTokenType.Bytes:
 					return token.CloneToken();
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-    }
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+	}
 }

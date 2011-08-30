@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs
 				session.Store(entity);
 
 				Assert.Equal("http://localhost:8080/docs/users/1",
-                    session.Advanced.GetDocumentUrl(entity));
+					session.Advanced.GetDocumentUrl(entity));
 
 			}
 		}
@@ -39,7 +39,7 @@ namespace Raven.Tests.Bugs
 		public void CanGetFullUrlWithSlashOnTheEnd()
 		{
 			using (var store = NewDocumentStore())
-            using (var server = new RavenDbHttpServer(store.Configuration, store.DocumentDatabase))
+			using (var server = new RavenDbHttpServer(store.Configuration, store.DocumentDatabase))
 			{
 				server.Start();
 				var documentStore = new DocumentStore
@@ -53,7 +53,7 @@ namespace Raven.Tests.Bugs
 				session.Store(entity);
 
 				Assert.Equal("http://localhost:8080/docs/users/1",
-                    session.Advanced.GetDocumentUrl(entity));
+					session.Advanced.GetDocumentUrl(entity));
 
 			}
 		}

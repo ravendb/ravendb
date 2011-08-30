@@ -21,17 +21,17 @@ namespace Raven.Abstractions.Extensions
 	public static class JsonExtensions
 	{
 	    public static RavenJObject ToJObject(object result)
-        {
+		{
 #if !NET_3_5
-            var dynamicJsonObject = result as Linq.DynamicJsonObject;
-            if (dynamicJsonObject != null)
-                return dynamicJsonObject.Inner;
+			var dynamicJsonObject = result as Linq.DynamicJsonObject;
+			if (dynamicJsonObject != null)
+				return dynamicJsonObject.Inner;
 #endif
-            if (result is string || result is ValueType)
+			if (result is string || result is ValueType)
 				return new RavenJObject { { "Value", new RavenJValue(result) } };
 
-            return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
-        }
+			return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
+		}
 
 		/// <summary>
 		/// Convert a byte array to a RavenJObject
@@ -44,16 +44,16 @@ namespace Raven.Abstractions.Extensions
 			});
 		}
 
-        /// <summary>
-        /// Convert a byte array to a RavenJObject
-        /// </summary>
-        public static RavenJObject ToJObject(this Stream self)
-        {
-            return RavenJObject.Load(new BsonReader(self)
-            {
-                DateTimeKindHandling = DateTimeKind.Utc,
-            });
-        }
+		/// <summary>
+		/// Convert a byte array to a RavenJObject
+		/// </summary>
+		public static RavenJObject ToJObject(this Stream self)
+		{
+			return RavenJObject.Load(new BsonReader(self)
+			{
+				DateTimeKindHandling = DateTimeKind.Utc,
+			});
+		}
 
 		/// <summary>
 		/// Convert a RavenJToken to a byte array
@@ -70,16 +70,16 @@ namespace Raven.Abstractions.Extensions
 			}
 		}
 
-        /// <summary>
-        /// Convert a RavenJToken to a byte array
-        /// </summary>
-        public static void WriteTo(this RavenJToken self, Stream stream)
-        {
-            self.WriteTo(new BsonWriter(stream)
-            {
-                DateTimeKindHandling = DateTimeKind.Unspecified
-            });
-        }
+		/// <summary>
+		/// Convert a RavenJToken to a byte array
+		/// </summary>
+		public static void WriteTo(this RavenJToken self, Stream stream)
+		{
+			self.WriteTo(new BsonWriter(stream)
+			{
+				DateTimeKindHandling = DateTimeKind.Unspecified
+			});
+		}
 
 
 	    /// <summary>

@@ -32,7 +32,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-                    var movies = s.Advanced.LuceneQuery<Movie>("Movies/ByActor")
+					var movies = s.Advanced.LuceneQuery<Movie>("Movies/ByActor")
 						.Where("Name:Dolly")
 						.WaitForNonStaleResults()
 						.ToList();
@@ -48,7 +48,7 @@ namespace Raven.Tests.Bugs
 		    {
 		        Map = movies => from movie in movies
 		                        select new {movie.Name};
-                Index(x=>x.Name, FieldIndexing.Analyzed);
+				Index(x=>x.Name, FieldIndexing.Analyzed);
 		    }
 		}
 

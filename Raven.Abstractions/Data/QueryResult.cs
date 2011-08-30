@@ -31,11 +31,11 @@ namespace Raven.Abstractions.Data
 		/// <value><c>true</c> if the index is stale; otherwise, <c>false</c>.</value>
 		public bool IsStale { get; set; }
 
-        /// <summary>
-        /// The last time the index was updated.
-        /// This can be used to determine the freshness of the data.
-        /// </summary>
-        public DateTime IndexTimestamp { get; set; }
+		/// <summary>
+		/// The last time the index was updated.
+		/// This can be used to determine the freshness of the data.
+		/// </summary>
+		public DateTime IndexTimestamp { get; set; }
 
 		/// <summary>
 		/// Gets or sets the total results for this query
@@ -46,18 +46,18 @@ namespace Raven.Abstractions.Data
 		/// Gets or sets the skipped results (duplicate documents);
 		/// </summary>
 		/// <value>The skipped results.</value>
-        public int SkippedResults { get; set; }
+		public int SkippedResults { get; set; }
 
 		/// <summary>
 		/// The index used to answer this query
 		/// </summary>
 		public string IndexName { get; set; }
 
-        /// <summary>
-        /// The last etag indexed by the index.
-        /// This can be used to determine whatever the results can be cached.
-        /// </summary>
-        public Guid IndexEtag { get; set; }
+		/// <summary>
+		/// The last etag indexed by the index.
+		/// This can be used to determine whatever the results can be cached.
+		/// </summary>
+		public Guid IndexEtag { get; set; }
 
 	    /// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.

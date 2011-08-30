@@ -111,8 +111,8 @@ namespace Raven.Client.Embedded
 
 		private JsonDocument EnsureLocalDate(JsonDocument jsonDocument)
 		{
-      if(jsonDocument == null)
-        return null;
+	  if(jsonDocument == null)
+		return null;
 			if (jsonDocument.LastModified != null)
 				jsonDocument.LastModified = jsonDocument.LastModified.Value.ToLocalTime();
 			return jsonDocument;

@@ -24,7 +24,7 @@ namespace Raven.Tests.Document
 
 		public void Dispose()
 		{
-            IOExtensions.DeleteDirectory(path);
+			IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
@@ -34,7 +34,7 @@ namespace Raven.Tests.Document
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-            var documentStore = new EmbeddableDocumentStore
+			var documentStore = new EmbeddableDocumentStore
 			{
 				Configuration = 
 				{
@@ -56,7 +56,7 @@ namespace Raven.Tests.Document
 				session.Store(new Post{Title = "test", Body = "casing"});
 				session.SaveChanges();
 
-                var single = session.Advanced.LuceneQuery<Post>()
+				var single = session.Advanced.LuceneQuery<Post>()
 					.WaitForNonStaleResults()
 					.Single();
 
@@ -74,7 +74,7 @@ namespace Raven.Tests.Document
 				session.Store(entity);
 				session.SaveChanges();
 
-                var single = session.Advanced.LuceneQuery<Post>()
+				var single = session.Advanced.LuceneQuery<Post>()
 					.WaitForNonStaleResults()
 					.Single();
 

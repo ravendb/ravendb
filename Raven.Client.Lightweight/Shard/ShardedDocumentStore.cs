@@ -114,14 +114,14 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Shared document store doesn't support async operations");
 		}
 
-        /// <summary>
-        /// Opens the async session.
-        /// </summary>
-        /// <returns></returns>
-        public IAsyncDocumentSession OpenAsyncSession(string databaseName)
-        {
-            throw new NotSupportedException("Shared document store doesn't support async operations");
-        }
+		/// <summary>
+		/// Opens the async session.
+		/// </summary>
+		/// <returns></returns>
+		public IAsyncDocumentSession OpenAsyncSession(string databaseName)
+		{
+			throw new NotSupportedException("Shared document store doesn't support async operations");
+		}
 
 #endif
 

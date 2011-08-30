@@ -145,7 +145,7 @@ namespace Raven.Client.Document
 			return conventions.FindTypeTagName(entity.GetType()).ToLower() + "/";
 		}
 
-        private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
+		private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
 
 		/// <summary>
 		/// Get the default tag name for the specified type.
@@ -153,8 +153,8 @@ namespace Raven.Client.Document
 		public static string DefaultTypeTagName(Type t)
 		{
 		    string result;
-            if (cachedDefaultTypeTagNames.TryGetValue(t, out result))
-                return result;
+			if (cachedDefaultTypeTagNames.TryGetValue(t, out result))
+				return result;
 
 			if (t.Name.Contains("<>"))
 				return null;
@@ -316,11 +316,11 @@ namespace Raven.Client.Document
 					{
 						new JsonLuceneDateTimeConverter(),
 						new JsonFloatConverter(),
-                        new JsonNumericConverter<int>(int.TryParse),
-                        new JsonNumericConverter<long>(long.TryParse),
-                        new JsonNumericConverter<decimal>(decimal.TryParse),
-                        new JsonNumericConverter<double>(double.TryParse),
-                        new JsonNumericConverter<short>(short.TryParse),
+						new JsonNumericConverter<int>(int.TryParse),
+						new JsonNumericConverter<long>(long.TryParse),
+						new JsonNumericConverter<decimal>(decimal.TryParse),
+						new JsonNumericConverter<double>(double.TryParse),
+						new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
 #if !NET_3_5 && !SILVERLIGHT
 						new JsonDynamicConverter()

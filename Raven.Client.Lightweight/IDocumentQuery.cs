@@ -20,12 +20,12 @@ namespace Raven.Client
 	public interface IDocumentQuery<T> : IEnumerable<T>, IDocumentQueryBase<T, IDocumentQuery<T>>
 	{
 
-        /// <summary>
-        /// Selects the specified fields directly from the index
-        /// </summary>
-        /// <typeparam name="TProjection">The type of the projection.</typeparam>
-        /// <param name="fields">The fields.</param>
-        IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
+		/// <summary>
+		/// Selects the specified fields directly from the index
+		/// </summary>
+		/// <typeparam name="TProjection">The type of the projection.</typeparam>
+		/// <param name="fields">The fields.</param>
+		IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
 
 
 #if !SILVERLIGHT

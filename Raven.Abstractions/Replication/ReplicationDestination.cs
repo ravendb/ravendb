@@ -8,8 +8,8 @@ namespace Raven.Abstractions.Replication
 	/// <summary>
 	/// Data class for replication destination documents
 	/// </summary>
-    public class ReplicationDestination
-    {
+	public class ReplicationDestination
+	{
 		/// <summary>
 		/// The name of the connection string specified in the 
 		/// </summary>
@@ -19,6 +19,6 @@ namespace Raven.Abstractions.Replication
 		/// Gets or sets the URL of the replication destination
 		/// </summary>
 		/// <value>The URL.</value>
-        public string Url { get; set; }
-    }
+		public string Url { get; set; }
+	}
 }

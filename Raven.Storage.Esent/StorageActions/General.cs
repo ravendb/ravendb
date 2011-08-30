@@ -46,11 +46,11 @@ namespace Raven.Storage.Esent.StorageActions
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public DocumentStorageActions(
-            JET_INSTANCE instance, 
-            string database, 
-            TableColumnsCache tableColumnsCache, 
-            OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
-            IUuidGenerator uuidGenerator,
+			JET_INSTANCE instance, 
+			string database, 
+			TableColumnsCache tableColumnsCache, 
+			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
+			IUuidGenerator uuidGenerator,
 			IDocumentCacher cacher)
 		{
 			this.tableColumnsCache = tableColumnsCache;
@@ -75,8 +75,8 @@ namespace Raven.Storage.Esent.StorageActions
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Dispose()
 		{
-            if(queue != null)
-                queue.Dispose();
+			if(queue != null)
+				queue.Dispose();
 
 			if(directories != null)
 				directories.Dispose();

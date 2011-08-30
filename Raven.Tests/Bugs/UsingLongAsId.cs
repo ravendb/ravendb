@@ -9,31 +9,31 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class UsingLongAsId : LocalClientTest
-    {
-        [Fact]
-        public void Can_use_long_as_id()
-        {
-            using(var store = NewDocumentStore())
-            {
-                using(var s = store.OpenSession())
-                {
-                    var entity = new Sun{Name = "Terra"};
-                    s.Store(entity);
+	public class UsingLongAsId : LocalClientTest
+	{
+		[Fact]
+		public void Can_use_long_as_id()
+		{
+			using(var store = NewDocumentStore())
+			{
+				using(var s = store.OpenSession())
+				{
+					var entity = new Sun{Name = "Terra"};
+					s.Store(entity);
 
-                    s.SaveChanges();
+					s.SaveChanges();
 
-                    Assert.Equal(1, entity.Id);
-                    Assert.Equal("suns/1", s.Advanced.GetDocumentId(entity));
-                }
-            }
-            
-        }
+					Assert.Equal(1, entity.Id);
+					Assert.Equal("suns/1", s.Advanced.GetDocumentId(entity));
+				}
+			}
+			
+		}
 
-        public class Sun
-        {
-            public long Id { get; set; }
-            public string Name { get; set; }
-        }
-    }
+		public class Sun
+		{
+			public long Id { get; set; }
+			public string Name { get; set; }
+		}
+	}
 }

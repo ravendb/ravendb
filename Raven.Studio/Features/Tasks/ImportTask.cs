@@ -22,7 +22,7 @@ namespace Raven.Studio.Features.Tasks
 	using Newtonsoft.Json.Linq;
 	using Plugins;
 
-    [Plugins.Tasks.ExportTask("Import Database")]
+	[Plugins.Tasks.ExportTask("Import Database")]
 	public class ImportTask : ConsoleOutputTask
 	{
 		[ImportingConstructor]
