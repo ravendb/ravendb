@@ -13,7 +13,7 @@ namespace Raven.Json.Linq
 
 		private readonly DictionaryWithParentSnapshot parentSnapshot;
 		private bool isSnapshot;
-		private int count;
+		private int count = -1;
 
 		protected IDictionary<string, RavenJToken> LocalChanges { get; private set; }
 
