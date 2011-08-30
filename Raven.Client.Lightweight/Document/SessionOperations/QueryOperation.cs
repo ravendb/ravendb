@@ -134,11 +134,22 @@ namespace Raven.Client.Document.SessionOperations
 					return (T)(object)new DynamicJsonObject(result);
 				}
 #endif
+
+                var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
+
+                if (!string.IsNullOrEmpty(documentId) && typeof(T) == typeof(string) && // __document_id is present, and result type is a string
+                    projectionFields != null && projectionFields.Length == 1 && // We are projecting one field only (although that could be derived from the
+                                                                                // previous check, one could never be too careful
+                    ((metadata != null && result.Count == 2) || (metadata == null && result.Count == 1)) // there are no more props in the result object
+                    )
+                {
+                    return (T)(object)documentId;
+                }
+
 				HandleInternalMetadata(result);
 
 				var deserializedResult = DeserializedResult<T>(result);
 
-				var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
 				if (string.IsNullOrEmpty(documentId) == false)
 				{
 					// we need to make an addtional check, since it is possible that a value was explicitly stated
