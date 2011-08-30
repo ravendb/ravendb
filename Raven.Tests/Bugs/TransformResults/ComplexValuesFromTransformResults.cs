@@ -367,9 +367,8 @@ namespace Raven.Tests.Bugs.TransformResults
 			{
 				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
 
-				var Title = "How to do this in RavenDb?";
-				var Content = "This is doable";
-				var UserId = @"user\222";
+				const string Content = "This is doable";
+				const string UserId = @"user\222";
 
 				const string answerId = @"answer\540";
 				using (IDocumentSession session = documentStore.OpenSession())

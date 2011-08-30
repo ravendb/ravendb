@@ -40,8 +40,8 @@ namespace Raven.Database.Storage
 
 		public IndexDefinitionStorage(
 			InMemoryRavenConfiguration configuration,
-			ITransactionalStorage  transactionalStorage,
-			string path, 
+			ITransactionalStorage transactionalStorage,
+			string path,
 			IEnumerable<AbstractViewGenerator> compiledGenerators,
 			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
@@ -126,7 +126,7 @@ namespace Raven.Database.Storage
 		public string AddIndex(IndexDefinition indexDefinition)
 		{
 			DynamicViewCompiler transformer = AddAndCompileIndex(indexDefinition);
-			if(configuration.RunInMemory == false)
+			if (configuration.RunInMemory == false)
 			{
 				var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
 				var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
@@ -146,7 +146,7 @@ namespace Raven.Database.Storage
 			{
 				if (definition.IsCompiled)
 					throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
-				return indexDefinition;   
+				return indexDefinition;
 			});
 			logger.Info("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
 							  transformer.CompiledQueryText);
@@ -183,7 +183,7 @@ namespace Raven.Database.Storage
 		{
 			IndexDefinition value;
 			indexDefinitions.TryGetValue(name, out value);
-			if(value != null &&  value.Name == null) // backward compact, mostly
+			if (value != null && value.Name == null) // backward compact, mostly
 				value.Name = name;
 			return value;
 		}
@@ -224,7 +224,7 @@ namespace Raven.Database.Storage
 			{
 				prefix = index.Substring(0, 5);
 			}
-			if (path.Length + index.Length > 230 || 
+			if (path.Length + index.Length > 230 ||
 				Encoding.Unicode.GetByteCount(index) >= 255)
 			{
 				using (var md5 = MD5.Create())
@@ -236,18 +236,18 @@ namespace Raven.Database.Storage
 			return index;
 		}
 
-        public static void ResolveAnalyzers(IndexDefinition indexDefinition)
-        {
-            // Stick Lucene.Net's namespace to all analyzer aliases that are missing a namespace
-            var analyzerNames = (from analyzer in indexDefinition.Analyzers
-                            where analyzer.Value.IndexOf(".") == -1
-                            select analyzer).ToArray();
+		public static void ResolveAnalyzers(IndexDefinition indexDefinition)
+		{
+			// Stick Lucene.Net's namespace to all analyzer aliases that are missing a namespace
+			var analyzerNames = (from analyzer in indexDefinition.Analyzers
+								 where analyzer.Value.IndexOf(".") == -1
+								 select analyzer).ToArray();
 
-            // Only do this for analyzer that actually exist; we do this here to be able to throw a correct error later on
-            foreach (var a in analyzerNames.Where(a => typeof (StandardAnalyzer).Assembly.GetType("Lucene.Net.Analysis." + a.Value) != null))
-            {
-                indexDefinition.Analyzers[a.Key] = "Lucene.Net.Analysis." + a.Value;
-            }
-        }
+			// Only do this for analyzer that actually exist; we do this here to be able to throw a correct error later on
+			foreach (var a in analyzerNames.Where(a => typeof(StandardAnalyzer).Assembly.GetType("Lucene.Net.Analysis." + a.Value) != null))
+			{
+				indexDefinition.Analyzers[a.Key] = "Lucene.Net.Analysis." + a.Value;
+			}
+		}
 	}
 }

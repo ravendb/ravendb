@@ -36,8 +36,8 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
-	    private readonly IndexDefinitionStorage indexDefinitionStorage;
-	    private readonly InMemoryRavenConfiguration configuration;
+		private readonly IndexDefinitionStorage indexDefinitionStorage;
+		private readonly InMemoryRavenConfiguration configuration;
 		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
@@ -50,20 +50,20 @@ namespace Raven.Database.Indexing
 			path = configuration.IndexStoragePath;
 
 			if (Directory.Exists(path) == false && configuration.RunInMemory == false)
-		        Directory.CreateDirectory(path);
+				Directory.CreateDirectory(path);
 
-		    foreach (var indexDirectory in indexDefinitionStorage.IndexNames)
-		    {
-		        log.Debug("Loading saved index {0}", indexDirectory);
+			foreach (var indexDirectory in indexDefinitionStorage.IndexNames)
+			{
+				log.Debug("Loading saved index {0}", indexDirectory);
 
-		        var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
-		        if (indexDefinition == null)
-		            continue;
+				var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
+				if (indexDefinition == null)
+					continue;
 
-		    	var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition);
-		    	var indexImplementation = CreateIndexImplementation(indexDirectory, indexDefinition, luceneDirectory);
-		    	indexes.TryAdd(indexDirectory, indexImplementation);
-		    }
+				var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition);
+				var indexImplementation = CreateIndexImplementation(indexDirectory, indexDefinition, luceneDirectory);
+				indexes.TryAdd(indexDirectory, indexImplementation);
+			}
 		}
 
 
@@ -90,7 +90,7 @@ namespace Raven.Database.Indexing
 				{
 					// forcefully unlock locked indexes if any
 					if (IndexWriter.IsLocked(directory))
-					    IndexWriter.Unlock(directory);
+						IndexWriter.Unlock(directory);
 				}
 			}
 
@@ -99,18 +99,18 @@ namespace Raven.Database.Indexing
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
 		{
-			var newDir =  FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path)))));
+			var newDir = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path)))));
 			Lucene.Net.Store.Directory.Copy(ramDir, newDir, true);
 			return newDir;
 		}
 
 		private Index CreateIndexImplementation(string directoryPath, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
 		{
-		    var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
+			var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
 			var indexImplementation = indexDefinition.IsMapReduce
-			                          	? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator)
-			                          	: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator);
-			
+										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator)
+										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator);
+
 			configuration.Container.SatisfyImportsOnce(indexImplementation);
 
 			return indexImplementation;
@@ -153,8 +153,8 @@ namespace Raven.Database.Indexing
 			value.Dispose();
 			Index ignored;
 			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(name));
-			
-			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk)) 
+
+			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk))
 				return;
 
 			IOExtensions.DeleteDirectory(dirOnDisk);
@@ -162,45 +162,45 @@ namespace Raven.Database.Indexing
 
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
-			var encodedName = IndexDefinitionStorage.FixupIndexName(indexDefinition.Name,path);
+			var encodedName = IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
 			log.Info("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
 
-            IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
-		    AssertAnalyzersValid(indexDefinition);
+			IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
+			AssertAnalyzersValid(indexDefinition);
 
-		    indexes.AddOrUpdate(indexDefinition.Name, n =>
+			indexes.AddOrUpdate(indexDefinition.Name, n =>
 			{
 				var directory = OpenOrCreateLuceneDirectory(indexDefinition, encodedName);
 				return CreateIndexImplementation(encodedName, indexDefinition, directory);
 			}, (s, index) => index);
 		}
 
-	    private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
-	    {
-	        foreach (var analyzer in from analyzer in indexDefinition.Analyzers
-	                                 let analyzerType = typeof (StandardAnalyzer).Assembly.GetType(analyzer.Value) ?? Type.GetType(analyzer.Value, throwOnError: false)
-	                                 where analyzerType == null
-	                                 select analyzer)
-	        {
-	            throw new ArgumentException("Could not create analyzer for field: " + analyzer.Key +
-	                "' because the type was not found: " + analyzer.Value);
-	        }
-	    }
+		private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
+		{
+			foreach (var analyzer in from analyzer in indexDefinition.Analyzers
+									 let analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzer.Value) ?? Type.GetType(analyzer.Value, throwOnError: false)
+									 where analyzerType == null
+									 select analyzer)
+			{
+				throw new ArgumentException("Could not create analyzer for field: " + analyzer.Key +
+					"' because the type was not found: " + analyzer.Value);
+			}
+		}
 
-	    public IEnumerable<IndexQueryResult> Query(
-			string index, 
-			IndexQuery query, 
+		public IEnumerable<IndexQueryResult> Query(
+			string index,
+			IndexQuery query,
 			Func<IndexQueryResult, bool> shouldIncludeInResults,
 			FieldsToFetch fieldsToFetch)
-	    {
-	    	Index value;
-	    	if (indexes.TryGetValue(index, out value) == false)
-	    	{
-	    		log.Debug("Query on non existing index {0}", index);
-	    		throw new InvalidOperationException("Index " + index + " does not exists");
-	    	}
-	    	return new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch).Query();
-	    }
+		{
+			Index value;
+			if (indexes.TryGetValue(index, out value) == false)
+			{
+				log.Debug("Query on non existing index {0}", index);
+				throw new InvalidOperationException("Index " + index + " does not exists");
+			}
+			return new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch).Query();
+		}
 
 		protected internal static IDisposable EnsureInvariantCulture()
 		{
@@ -230,9 +230,9 @@ namespace Raven.Database.Indexing
 			value.Remove(keys, context);
 		}
 
-		public void Index(string index, 
-			AbstractViewGenerator viewGenerator, 
-			IEnumerable<dynamic> docs, 
+		public void Index(string index,
+			AbstractViewGenerator viewGenerator,
+			IEnumerable<dynamic> docs,
 			WorkContext context,
 			IStorageActionsAccessor actions,
 			DateTime minimumTimestamp)
@@ -244,7 +244,7 @@ namespace Raven.Database.Indexing
 				return;
 			}
 			using (EnsureInvariantCulture())
-			using(DocumentCacher.SkipSettingDocumentsInDocumentCache())
+			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
 				value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
 			}
@@ -265,7 +265,7 @@ namespace Raven.Database.Indexing
 				log.Warn("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
 				return;
 			}
-			using(EnsureInvariantCulture())
+			using (EnsureInvariantCulture())
 			{
 				mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
 			}
@@ -295,7 +295,7 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values)
 			{
-				if(value.IsMapReduce)
+				if (value.IsMapReduce)
 					continue;
 				value.Flush();
 			}

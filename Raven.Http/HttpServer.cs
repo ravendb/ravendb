@@ -98,18 +98,18 @@ namespace Raven.Http
 				responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
 			}
 
-		    switch (configuration.AuthenticationMode.ToLowerInvariant())
-		    {
+			switch (configuration.AuthenticationMode.ToLowerInvariant())
+			{
 				case "windows":
-		            requestAuthorizer = new WindowsRequestAuthorizer();
+					requestAuthorizer = new WindowsRequestAuthorizer();
 					break;
 				case "oauth":
-		            requestAuthorizer = new OAuthRequestAuthorizer();
+					requestAuthorizer = new OAuthRequestAuthorizer();
 					break;
 				default:
-		            throw new InvalidOperationException(
+					throw new InvalidOperationException(
 						string.Format("Unknown AuthenticationMode {0}. Options are Windows and OAuth", configuration.AuthenticationMode));
-		    }
+			}
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
 		}
@@ -153,22 +153,22 @@ namespace Raven.Http
 		private void CleanupDatabases(object state)
 		{
 			var databasesToCleanup = databaseLastRecentlyUsed
-				.Where(x=>(SystemTime.Now - x.Value).TotalMinutes > 10)
-				.Select(x=>x.Key)
+				.Where(x => (SystemTime.Now - x.Value).TotalMinutes > 10)
+				.Select(x => x.Key)
 				.ToArray();
 
-            foreach (var db in databasesToCleanup)
-            {
+			foreach (var db in databasesToCleanup)
+			{
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-                CleanupDatabase(db);
-				
-            }
-        }
+				CleanupDatabase(db);
+
+			}
+		}
 
 		protected void CleanupDatabase(string db)
 		{
-			lock (ResourcesStoresCache) 
+			lock (ResourcesStoresCache)
 			{
 				DateTime time;
 				databaseLastRecentlyUsed.TryRemove(db, out time);
@@ -177,20 +177,20 @@ namespace Raven.Http
 				if (ResourcesStoresCache.TryRemove(db, out database))
 					database.Dispose();
 
-				
+
 			}
 		}
 
 		private void GetContext(IAsyncResult ar)
-        {
-            IHttpContext ctx;
-            try
-            {
-                ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar), DefaultConfiguration);
-                //setup waiting for the next request
-                listener.BeginGetContext(GetContext, null);
-            }
-			catch(AggregateException)
+		{
+			IHttpContext ctx;
+			try
+			{
+				ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar), DefaultConfiguration);
+				//setup waiting for the next request
+				listener.BeginGetContext(GetContext, null);
+			}
+			catch (AggregateException)
 			{
 				// can't get current request / end new one, probably
 				// listner shutdown
@@ -263,10 +263,10 @@ namespace Raven.Http
 			try
 			{
 				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
-					sw, 
-					ctx.Request.Headers, 
-					ctx.Request.HttpMethod, 
-					ctx.Response.StatusCode, 
+					sw,
+					ctx.Request.Headers,
+					ctx.Request.HttpMethod,
+					ctx.Response.StatusCode,
 					ctx.Request.Url.PathAndQuery);
 			}
 			catch (Exception e)
@@ -277,7 +277,7 @@ namespace Raven.Http
 			ctx.FinalizeResonse();
 			sw.Stop();
 
-			if (ravenUiRequest || logHttpRequestStatsParam == null) 
+			if (ravenUiRequest || logHttpRequestStatsParam == null)
 				return;
 
 			LogHttpRequestStats(logHttpRequestStatsParam);
@@ -289,17 +289,17 @@ namespace Raven.Http
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
-			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25) 
+			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25)
 				return;
 
 			var curReq = Interlocked.Increment(ref reqNum);
 			logger.Debug("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
-			                   curReq, 
-							   logHttpRequestStatsParams.HttpMethod, 
-							   logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds, 
+							   curReq,
+							   logHttpRequestStatsParams.HttpMethod,
+							   logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
 							   logHttpRequestStatsParams.ResponseStatusCode,
-			                   logHttpRequestStatsParams.RequestUri,
-			                   currentTenantId.Value);
+							   logHttpRequestStatsParams.RequestUri,
+							   currentTenantId.Value);
 		}
 
 		private void HandleException(IHttpContext ctx, Exception e)
@@ -323,7 +323,7 @@ namespace Raven.Http
 
 		protected abstract bool TryHandleException(IHttpContext ctx, Exception exception);
 
-	   
+
 		private static void HandleTooBusyError(IHttpContext ctx)
 		{
 			ctx.Response.StatusCode = 503;
@@ -430,7 +430,7 @@ namespace Raven.Http
 			return false;
 		}
 
-		protected virtual void OnDispatchingRequest(IHttpContext ctx){}
+		protected virtual void OnDispatchingRequest(IHttpContext ctx) { }
 
 		private void SetupRequestToProperDatabase(IHttpContext ctx)
 		{
@@ -442,12 +442,12 @@ namespace Raven.Http
 				currentTenantId.Value = Constants.DefaultDatabase;
 				currentDatabase.Value = DefaultResourceStore;
 				currentConfiguration.Value = DefaultConfiguration;
-			} 
+			}
 			else
 			{
 				var tenantId = match.Groups[1].Value;
 				IResourceStore resourceStore;
-				if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
+				if (TryGetOrCreateResourceStore(tenantId, out resourceStore))
 				{
 					databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
 
@@ -492,7 +492,7 @@ namespace Raven.Http
 			if ((acceptEncoding.IndexOf("gzip", StringComparison.InvariantCultureIgnoreCase) != -1))
 			{
 				ctx.SetResponseFilter(s => new GZipStream(s, CompressionMode.Compress, true));
-				ctx.Response.AddHeader("Content-Encoding","gzip");
+				ctx.Response.AddHeader("Content-Encoding", "gzip");
 			}
 			else if (acceptEncoding.IndexOf("deflate", StringComparison.InvariantCultureIgnoreCase) != -1)
 			{
@@ -502,7 +502,7 @@ namespace Raven.Http
 
 		}
 
-	    public void ResetNumberOfRequests()
+		public void ResetNumberOfRequests()
 		{
 			Interlocked.Exchange(ref reqNum, 0);
 			Interlocked.Exchange(ref physicalRequestsCount, 0);

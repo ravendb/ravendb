@@ -37,7 +37,8 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// The current session id - only used during contsruction
 		/// </summary>
-		[ThreadStatic] protected static Guid? currentSessionId;
+		[ThreadStatic]
+		protected static Guid? currentSessionId;
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -45,7 +46,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
 #endif
-		
+
 		private HttpJsonRequestFactory jsonRequestFactory;
 
 		/// <summary>
@@ -53,7 +54,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value>The shared operations headers.</value>
 #if !SILVERLIGHT
-	
+
 		public System.Collections.Specialized.NameValueCollection SharedOperationsHeaders { get; private set; }
 #else
 		public System.Collections.Generic.IDictionary<string,string> SharedOperationsHeaders { get; private set; }
@@ -81,7 +82,7 @@ namespace Raven.Client.Document
 				foreach (string key in SharedOperationsHeaders)
 				{
 					var values = SharedOperationsHeaders.GetValues(key);
-					if(values == null)
+					if (values == null)
 						continue;
 					foreach (var value in values)
 					{
@@ -128,7 +129,7 @@ namespace Raven.Client.Document
 		}
 
 		private string identifier;
-	    readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
+		readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 #if !SILVERLIGHT
 		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
@@ -154,9 +155,9 @@ namespace Raven.Client.Document
 		{
 			get
 			{
-				if (identifier != null) 
+				if (identifier != null)
 					return identifier;
-				if(Url == null)
+				if (Url == null)
 					return null;
 				if (DefaultDatabase != null)
 					return Url + " (DB: " + DefaultDatabase + ")";
@@ -164,7 +165,7 @@ namespace Raven.Client.Document
 			}
 			set { identifier = value; }
 		}
-	
+
 #if !SILVERLIGHT
 		private string connectionStringName;
 
@@ -199,14 +200,14 @@ namespace Raven.Client.Document
 		{
 			if (options.ResourceManagerId != Guid.Empty)
 				ResourceManagerId = options.ResourceManagerId;
-			if(options.Credentials != null)
+			if (options.Credentials != null)
 				Credentials = options.Credentials;
 			if (string.IsNullOrEmpty(options.Url) == false)
 				Url = options.Url;
 			if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
 				DefaultDatabase = options.DefaultDatabase;
 
-			EnlistInDistributedTransactions= options.EnlistInDistributedTransactions;
+			EnlistInDistributedTransactions = options.EnlistInDistributedTransactions;
 		}
 
 		/// <summary>
@@ -253,7 +254,7 @@ namespace Raven.Client.Document
 			if (jsonRequestFactory != null) jsonRequestFactory.Dispose();
 			WasDisposed = true;
 			var afterDispose = AfterDispose;
-			if(afterDispose!=null)
+			if (afterDispose != null)
 				afterDispose(this, EventArgs.Empty);
 		}
 
@@ -267,7 +268,7 @@ namespace Raven.Client.Document
 		public IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
 			EnsureNotClosed();
-			
+
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -293,7 +294,7 @@ namespace Raven.Client.Document
 		public IDocumentSession OpenSession()
 		{
 			EnsureNotClosed();
-			
+
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -318,7 +319,7 @@ namespace Raven.Client.Document
 		public IDocumentSession OpenSession(string database)
 		{
 			EnsureNotClosed();
-			
+
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -343,7 +344,7 @@ namespace Raven.Client.Document
 		public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
 			EnsureNotClosed();
-			
+
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -381,7 +382,7 @@ namespace Raven.Client.Document
 		private void AfterSessionCreated(InMemoryDocumentSessionOperations session)
 		{
 			var onSessionCreatedInternal = SessionCreatedInternal;
-			if(onSessionCreatedInternal!=null)
+			if (onSessionCreatedInternal != null)
 				onSessionCreatedInternal(session);
 		}
 
@@ -398,7 +399,7 @@ namespace Raven.Client.Document
 		public Guid ResourceManagerId { get; set; }
 
 #if !NET_3_5
-		
+
 		private readonly ProfilingContext profilingContext = new ProfilingContext();
 #endif
 
@@ -418,11 +419,11 @@ namespace Raven.Client.Document
 		/// Initializes this instance.
 		/// </summary>
 		/// <returns></returns>
-		public  IDocumentStore Initialize()
+		public IDocumentStore Initialize()
 		{
-            if (initialized) return this;
+			if (initialized) return this;
 
-            AssertValidConfiguration();
+			AssertValidConfiguration();
 
 #if !SILVERLIGHT
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
@@ -432,7 +433,7 @@ namespace Raven.Client.Document
 			try
 			{
 #if !NET_3_5
-				if(Conventions.DisableProfiling == false)
+				if (Conventions.DisableProfiling == false)
 				{
 					jsonRequestFactory.LogRequest += profilingContext.RecordAction;
 				}
@@ -441,7 +442,7 @@ namespace Raven.Client.Document
 
 				InitializeSecurity();
 
-				if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
+				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 #if !SILVERLIGHT
 					var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
@@ -467,7 +468,7 @@ namespace Raven.Client.Document
 			initialized = true;
 
 #if !SILVERLIGHT
-			if(string.IsNullOrEmpty(DefaultDatabase) == false)
+			if (string.IsNullOrEmpty(DefaultDatabase) == false)
 			{
 				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase);
 			}
@@ -494,16 +495,16 @@ namespace Raven.Client.Document
 				var oauthSource = response.Headers["OAuth-Source"];
 				if (string.IsNullOrEmpty(oauthSource))
 					return null;
-			
+
 				var authRequest = PrepareOAuthRequest(oauthSource);
 
-				using(var authResponse = authRequest.GetResponse())
-				using(var stream = authResponse.GetResponseStreamWithHttpDecompression())
-				using(var reader = new StreamReader(stream))
+				using (var authResponse = authRequest.GetResponse())
+				using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
+				using (var reader = new StreamReader(stream))
 				{
 					currentOauthToken = "Bearer " + reader.ReadToEnd();
-					return (Action<HttpWebRequest>) (request => request.Headers["Authorization"] = currentOauthToken);
-						
+					return (Action<HttpWebRequest>)(request => request.Headers["Authorization"] = currentOauthToken);
+
 				}
 			};
 #endif
@@ -526,7 +527,7 @@ namespace Raven.Client.Document
 						using (var reader = new StreamReader(stream))
 						{
 							currentOauthToken = "Bearer " + reader.ReadToEnd();
-							return (Action<HttpWebRequest>) (request => request.Headers["Authorization"] = currentOauthToken);
+							return (Action<HttpWebRequest>)(request => request.Headers["Authorization"] = currentOauthToken);
 						}
 					});
 			};
@@ -545,7 +546,7 @@ namespace Raven.Client.Document
 #endif
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
-			
+
 
 			//if(oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false && 
 			//   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
@@ -651,7 +652,7 @@ namespace Raven.Client.Document
 		{
 			AssertInitialized();
 #if !SILVERLIGHT
-			if(cacheDuration.TotalSeconds < 1)
+			if (cacheDuration.TotalSeconds < 1)
 				throw new ArgumentException("cacheDuration must be longer than a single second");
 
 			jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
@@ -695,7 +696,7 @@ namespace Raven.Client.Document
 		public IAsyncDocumentSession OpenAsyncSession(string databaseName)
 		{
 			EnsureNotClosed();
-			
+
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -725,9 +726,9 @@ namespace Raven.Client.Document
 
 			var newEtag = etag.Value.ToByteArray();
 
-			if(lastEtag == null)
+			if (lastEtag == null)
 			{
-				lock(lastEtagLocker)
+				lock (lastEtagLocker)
 				{
 					if (lastEtag == null)
 					{

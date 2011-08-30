@@ -99,19 +99,19 @@ namespace Raven.Tests
 			}
 		}
 
-        public void can_work_with_default_db()
-        {
-            using (var store = new DocumentStore())
-            {
-                store.ParseConnectionString("Url=http://localhost:8080/;DefaultDatabase=DevMachine;ResourceManagerId=d5723e19-92ad-4531-adad-8611e6e05c8a;");
+		public void can_work_with_default_db()
+		{
+			using (var store = new DocumentStore())
+			{
+				store.ParseConnectionString("Url=http://localhost:8080/;DefaultDatabase=DevMachine;ResourceManagerId=d5723e19-92ad-4531-adad-8611e6e05c8a;");
 
-                Assert.Equal("http://localhost:8080/", store.Url);
-                Assert.Equal("http://localhost:8080/ (DB: DevMachine)", store.Identifier);
-                Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.ResourceManagerId.ToString());
-                Assert.NotNull(store.Credentials);
-                Assert.Equal("DevMachine", store.DefaultDatabase);
-                Assert.True(store.EnlistInDistributedTransactions);
-            }
-        }
+				Assert.Equal("http://localhost:8080/", store.Url);
+				Assert.Equal("http://localhost:8080/ (DB: DevMachine)", store.Identifier);
+				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.ResourceManagerId.ToString());
+				Assert.NotNull(store.Credentials);
+				Assert.Equal("DevMachine", store.DefaultDatabase);
+				Assert.True(store.EnlistInDistributedTransactions);
+			}
+		}
 	}
 }

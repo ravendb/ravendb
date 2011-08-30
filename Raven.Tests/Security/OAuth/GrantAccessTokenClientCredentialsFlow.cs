@@ -43,7 +43,7 @@ namespace Raven.Tests.Security.OAuth
 		{
 			public bool Authenticate(IResourceStore currentStore, string username, string password, out string[] allowedDatabases)
 			{
-				allowedDatabases = new[] {"*"};
+				allowedDatabases = new[] { "*" };
 				return string.IsNullOrEmpty(password) == false;
 			}
 		}
@@ -53,12 +53,12 @@ namespace Raven.Tests.Security.OAuth
 			IOExtensions.DeleteDirectory(path);
 		}
 
-        public HttpWebRequest GetNewValidTokenRequest()
-        {
-            var request = ((HttpWebRequest)WebRequest.Create(baseUrl + ":" + port + tokenUrl))
-                .WithBasicCredentials(baseUrl, validClientUsername, validClientPassword)
-                .WithAccept("application/json;charset=UTF-8")
-                .WithHeader("grant_type", "client_credentials");
+		public HttpWebRequest GetNewValidTokenRequest()
+		{
+			var request = ((HttpWebRequest)WebRequest.Create(baseUrl + ":" + port + tokenUrl))
+				.WithBasicCredentials(baseUrl, validClientUsername, validClientPassword)
+				.WithAccept("application/json;charset=UTF-8")
+				.WithHeader("grant_type", "client_credentials");
 
 			return request;
 		}
@@ -83,14 +83,14 @@ namespace Raven.Tests.Security.OAuth
 				Assert.False(body.IsExpired());
 			}
 
-		  
+
 		}
 
-        [Fact]
-        public void RequestWithoutUExpectedAcceptShouldBeRejected()
-        {
-            var request = GetNewValidTokenRequest()
-                .WithAccept("text/plain");
+		[Fact]
+		public void RequestWithoutUExpectedAcceptShouldBeRejected()
+		{
+			var request = GetNewValidTokenRequest()
+				.WithAccept("text/plain");
 
 			using (var server = GetNewServer(false))
 			using (var response = request.MakeRequest())
@@ -99,12 +99,12 @@ namespace Raven.Tests.Security.OAuth
 
 				var result = RavenJObject.Parse(response.ReadToEnd());
 
-                Assert.Contains("error", result.Keys);
-                Assert.Equal("invalid_request", result["error"]);
-                Assert.Contains("error_description", result.Keys);
-                Assert.Contains("Accept", result["error_description"].Value<string>());
-            }
-        }
+				Assert.Contains("error", result.Keys);
+				Assert.Equal("invalid_request", result["error"]);
+				Assert.Contains("error_description", result.Keys);
+				Assert.Contains("Accept", result["error_description"].Value<string>());
+			}
+		}
 
 		[Fact]
 		public void RequestWithoutAGrantTypeShouldBeRejected()
@@ -165,7 +165,7 @@ namespace Raven.Tests.Security.OAuth
 				Assert.Contains("error_description", result.Keys);
 			}
 		}
-		
+
 		[Fact]
 		public void RequestWithInvalidClientPasswordShouldBeRejected()
 		{

@@ -435,7 +435,6 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Will_not_store_if_entity_did_not_change()
 		{
-			var stored = 0;
 			using (var documentStore = NewDocumentStore())
 			{
 				var company = new Company { Name = "Company Name" };

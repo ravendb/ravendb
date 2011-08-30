@@ -21,7 +21,7 @@ namespace Raven.Tests.Bugs.Identifiers
 		[InlineData("SHA1-UdVhzPmv0o+wUez+Jirt0OFBcUY=")]
 		public void Can_load_entity(string entityId)
 		{
-			using(var testContext = new IISExpressTestClient())
+			using (var testContext = new IISExpressTestClient())
 			{
 				using (var store = testContext.NewDocumentStore())
 				{
@@ -95,7 +95,7 @@ namespace Raven.Tests.Bugs.Identifiers
 				{
 					yield return
 						new SkipCommand(method, displayName,
-										"Could not execute " + displayName +" because it requires Admin privileges");
+										"Could not execute " + displayName + " because it requires Admin privileges");
 					yield break;
 				}
 			}

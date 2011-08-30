@@ -62,7 +62,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		public static string DocsStartingWith(this string url, string prefix, int start, int pageSize)
 		{
-			return Docs(url,start,pageSize) + "&startsWith=" + HttpUtility.HtmlEncode(prefix);
+			return Docs(url, start, pageSize) + "&startsWith=" + HttpUtility.HtmlEncode(prefix);
 		}
 
 		public static string Queries(this string url)
@@ -70,7 +70,7 @@ namespace Raven.Client.Silverlight.Connection
 			return url + "/queries/";
 		}
 
-		public static string NoCache(this string  url)
+		public static string NoCache(this string url)
 		{
 			return (url.Contains("?"))
 				? url + "&noCache=" + Guid.NewGuid().GetHashCode()
@@ -87,11 +87,11 @@ namespace Raven.Client.Silverlight.Connection
 			return requestor.JsonRequestFactory.CreateHttpJsonRequest(requestor, url, "GET", credentials, convention);
 		}
 
-    	public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, DocumentConvention convention, IDictionary<string,string> operationsHeaders, string method)
-    	{
-    		var httpJsonRequest = requestor.JsonRequestFactory.CreateHttpJsonRequest(requestor, url, method, credentials, convention);
-    		httpJsonRequest.AddOperationHeaders(operationsHeaders);
-    		return httpJsonRequest;
-    	}
+		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, DocumentConvention convention, IDictionary<string, string> operationsHeaders, string method)
+		{
+			var httpJsonRequest = requestor.JsonRequestFactory.CreateHttpJsonRequest(requestor, url, method, credentials, convention);
+			httpJsonRequest.AddOperationHeaders(operationsHeaders);
+			return httpJsonRequest;
+		}
 	}
 }
