@@ -32,8 +32,8 @@ namespace Raven.Storage.Esent.StorageActions
 					throw new ConcurrencyException("PUT attempted on attachment '" + key +
 						"' using a non current etag")
 					{
-						ActualETag = etag.Value,
-						ExpectedETag = existingEtag
+						ActualETag = existingEtag,
+						ExpectedETag = etag.Value
 					};
 				}
 			}
@@ -75,8 +75,8 @@ namespace Raven.Storage.Esent.StorageActions
 				throw new ConcurrencyException("DELETE attempted on attachment '" + key +
 					"' using a non current etag")
 				{
-					ActualETag = etag.Value,
-					ExpectedETag = fileEtag
+					ActualETag = fileEtag,
+					ExpectedETag = etag.Value
 				};
 			}
 

@@ -28,8 +28,8 @@ namespace Raven.Storage.Esent.StorageActions
 				throw new ConcurrencyException(method + " attempted on document '" + key +
 											   "' using a non current etag")
 				{
-					ActualETag = etag.Value,
-					ExpectedETag = existingEtag
+					ActualETag = existingEtag,
+					ExpectedETag = etag.Value
 				};
 			}
 			return existingEtag;
@@ -55,8 +55,8 @@ namespace Raven.Storage.Esent.StorageActions
 				throw new ConcurrencyException("PUT attempted on document '" + key +
 											   "' using a non current etag")
 				{
-					ActualETag = etag.Value,
-					ExpectedETag = existingEtag
+					ActualETag = existingEtag,
+					ExpectedETag = etag.Value
 				};
 			}
 		}
