@@ -89,7 +89,7 @@ namespace Raven.Client.Indexes
 			{
 				Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument>(Map, convention, querySource, translateIdentityProperty:true),
 				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument>(Reduce, convention, "results", translateIdentityProperty: false),
-				TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument>(TransformResults, convention, "results", translateIdentityProperty: false),
+				TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument>(TransformResults, convention, "results", translateIdentityProperty: true),
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions),
