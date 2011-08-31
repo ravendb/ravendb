@@ -40,13 +40,14 @@ namespace Raven.Abstractions.Commands
 		}
 
 		/// <summary>
-		/// Gets the etag.
+		/// Gets or sets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
 		public Guid? Etag
 		{
 			get; set;
 		}
+
 		public TransactionInformation TransactionInformation
 		{
 			get; set;
