@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Bugs.Identifiers;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -20,7 +21,7 @@ namespace Raven.Tests.Bugs
 			public int StatusId { get; set; }
 		}
 
-		[Fact]
+		[IISExpressInstalled]
 		public void MultiThreadedInsert()
 		{
 			const int threadCount = 4;
@@ -39,7 +40,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[IISExpressInstalled]
 		public void InnefficientMultiThreadedInsert()
 		{
 			const int threadCount = 4;
