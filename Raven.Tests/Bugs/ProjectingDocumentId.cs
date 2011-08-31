@@ -134,5 +134,39 @@ namespace Raven.Tests.Bugs
                 }
             }
         }
+
+		[Fact]
+		public void simple_usage()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var artist = new Artist { Name = "foo" };
+					session.Store(artist);
+
+					var album = new Album
+					{
+						ArtistId = artist.Id,
+						Title = "All the shows"
+					};
+					session.Store(album);
+
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+
+				using (var session = store.OpenSession())
+				{
+					var artistIDs = (from artist in session.Query<Artist>()
+									 where artist.Name == "foo"
+									 select artist.Id).ToArray();
+
+					Assert.NotEmpty(artistIDs);
+				}
+			}
+		}
+
     }
 }
