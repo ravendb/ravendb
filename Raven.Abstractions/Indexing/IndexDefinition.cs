@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Abstractions.Indexing
 {
@@ -201,6 +202,29 @@ namespace Raven.Abstractions.Indexing
 				if (IsCompiled) return "Compiled";
 				if (IsMapReduce) return "MapReduce";
 				return "Map";
+			}
+		}
+
+		/// <summary>
+		/// Remove the default values that we don't actually need
+		/// </summary>
+		public void RemoveDefaultValues()
+		{
+			foreach (var toRemove in Stores.Where(x=>x.Value == FieldStorage.No).ToArray())
+			{
+				Stores.Remove(toRemove);
+			}
+			foreach (var toRemove in Indexes.Where(x=>x.Value == FieldIndexing.Default).ToArray())
+			{
+				Indexes.Remove(toRemove);
+			}
+			foreach (var toRemove in SortOptions.Where(x=>x.Value == Indexing.SortOptions.None).ToArray())
+			{
+				SortOptions.Remove(toRemove);
+			}
+			foreach (var toRemove in Analyzers.Where(x => string.IsNullOrEmpty(x.Value)).ToArray())
+			{
+				Analyzers.Remove(toRemove);
 			}
 		}
 	}

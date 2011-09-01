@@ -622,6 +622,7 @@ namespace Raven.Database
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 			definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
+			definition.RemoveDefaultValues();
 			switch (IndexDefinitionStorage.FindIndexCreationOptions(definition))
 			{
 				case IndexCreationOptions.Noop:
