@@ -65,7 +65,7 @@ namespace Raven.Studio.Features.Database
 		}
 
 		public bool HasCurrentDatabase { get { return !string.IsNullOrEmpty(CurrentDatabase); } }
-		public IDocumentStore Store { get; private set; }
+		public DocumentStore Store { get; private set; }
 
 		public string Status
 		{
@@ -164,12 +164,9 @@ namespace Raven.Studio.Features.Database
 
 		void LoadPlugins()
 		{
-			var jsonRequestFactory = new HttpJsonRequestFactory();
 			var baseUrl = (Address + "/silverlight/plugins").NoCache();
-			var credentials = new NetworkCredential();
-			var convention = new DocumentConvention();
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, baseUrl, "GET", credentials, convention);
+			var request = Store.JsonRequestFactory.CreateHttpJsonRequest(this, baseUrl, "GET", Store.Credentials, Store.Conventions);
 			var response = request.ReadResponseStringAsync();
 
 			response.ContinueWith(_ => Execute.OnUIThread(() =>
