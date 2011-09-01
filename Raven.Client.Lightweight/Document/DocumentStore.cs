@@ -548,9 +548,9 @@ namespace Raven.Client.Document
 			authRequest.Accept = "application/json;charset=UTF-8";
 
 
-			//if(oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false && 
-			//   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
-			//    throw new InvalidOperationException(BasicOAuthOverHttpError);
+			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
+			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
+				throw new InvalidOperationException(BasicOAuthOverHttpError);
 			return authRequest;
 		}
 
