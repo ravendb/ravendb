@@ -111,6 +111,11 @@ namespace Raven.Database.Server.Responders
 				return getResponse;
 			}
 
+			public bool RequiresAuthentication
+			{
+				get { return false; }
+			}
+
 			public IRavenHttpConfiguration Configuration
 			{
 				get { return configuration; }

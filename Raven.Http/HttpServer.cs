@@ -387,7 +387,8 @@ namespace Raven.Http
 
 			CurrentOperationContext.Headers.Value = ctx.Request.Headers;
 
-			if (requestAuthorizer.Authorize(ctx) == false)
+			if (ctx.RequiresAuthentication &&
+				requestAuthorizer.Authorize(ctx) == false)
 				return false;
 
 			try

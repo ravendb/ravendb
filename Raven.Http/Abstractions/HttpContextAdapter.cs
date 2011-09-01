@@ -50,6 +50,11 @@ namespace Raven.Http.Abstractions
 			context.Response.Cache.SetMaxAge(TimeSpan.FromSeconds(timeInSeconds));
 		}
 
+		public bool RequiresAuthentication
+		{
+			get { return true; }
+		}
+
 		public IRavenHttpConfiguration Configuration
 		{
 			get { return configuration; }

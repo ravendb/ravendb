@@ -12,6 +12,7 @@ namespace Raven.Http.Abstractions
 {
 	public interface IHttpContext
 	{
+		bool RequiresAuthentication { get; }
 		IRavenHttpConfiguration Configuration { get; }
 		IHttpRequest Request { get; }
 		IHttpResponse Response { get; }

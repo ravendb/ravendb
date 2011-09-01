@@ -48,6 +48,11 @@ namespace Raven.Http.Abstractions
 			ctx.Response.AddHeader("Cache-Control", "max-age=" + timeInSeconds);
 		}
 
+		public bool RequiresAuthentication
+		{
+			get { return true; }
+		}
+
 		public IRavenHttpConfiguration Configuration
 		{
 			get { return configuration; }
