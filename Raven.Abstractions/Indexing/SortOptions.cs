@@ -10,6 +10,10 @@ namespace Raven.Abstractions.Indexing
 	/// </summary>
 	public enum SortOptions
 	{
+		/// <summary>
+		/// No sort options
+		/// </summary>
+		None = 0,
 		/// <summary>Sort using term values as Strings.  Sort values are String and lower
 		/// values are at the front. 
 		/// </summary>

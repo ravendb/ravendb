@@ -130,7 +130,7 @@ namespace Raven.Database.Extensions
 									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
 								}
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
-								if (sortOptions == null)
+								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
 								return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
 							})

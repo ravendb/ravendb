@@ -66,7 +66,8 @@ namespace Raven.Database.Queries
 							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
 							{
 								SortOptions value;
-								if (indexDefinition.SortOptions.TryGetValue(sortedField.Field, out value) == false)
+								if (indexDefinition.SortOptions.TryGetValue(sortedField.Field, out value) == false ||
+									value != SortOptions.None)
 									return false;
 							}
 						}
