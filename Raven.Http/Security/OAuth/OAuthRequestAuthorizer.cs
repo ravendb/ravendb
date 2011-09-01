@@ -13,6 +13,8 @@ namespace Raven.Http.Security.OAuth
 				"/OAuth/AccessToken",
 				// allow to get files that are static and are never secret, for example, the studio, the cross domain
 				// policy and the fav icon
+				"/",
+				"/raven/studio.html",
 				"/silverlight/Raven.Studio.xap",
 				"/favicon.ico",
 				"/clientaccesspolicy.xml",
