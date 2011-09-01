@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs.Identifiers
 	[CLSCompliant(false)]
 	public class SpecialCharactersOnIIS : WithNLog
 	{
-		[IISExpressInstalled]
+		[IISExpressInstalledTheory]
 		[InlineData("foo")]
 		[InlineData("SHA1-UdVhzPmv0o+wUez+Jirt0OFBcUY=")]
 		public void Can_load_entity(string entityId)
@@ -56,7 +56,29 @@ namespace Raven.Tests.Bugs.Identifiers
 	}
 
 	[CLSCompliant(false)]
-	public class IISExpressInstalled : TheoryAttribute
+	public class IISExpressInstalledTheoryAttribute : TheoryAttribute
+	{
+		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
+		{
+			var displayName = method.TypeName + "." + method.Name;
+
+			if (File.Exists(@"c:\Program Files (x86)\IIS Express\iisexpress.exe") == false)
+			{
+				yield return
+						new SkipCommand(method, displayName,
+										"Could not execute " + displayName + " because it requires IIS Express and could not find it at c:\\Program Files (x86)\\.  Considering installing the MSI from http://www.microsoft.com/download/en/details.aspx?id=1038");
+				yield break;
+			}
+
+			foreach (var command in base.EnumerateTestCommands(method))
+			{
+				yield return command;
+			}
+		}
+	}
+
+	[CLSCompliant(false)]
+	public class IISExpressInstalledFactAttribute : FactAttribute
 	{
 		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
 		{
