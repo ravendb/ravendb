@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Converters
+﻿using Raven.Abstractions.Indexing;
+
+namespace Raven.Studio.Converters
 {
 	using System;
 	using System.Globalization;
@@ -8,7 +10,7 @@
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			return (int) value;
+			return value;
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

@@ -170,7 +170,7 @@
 											<c:Label Content="storage"
 													 Grid.Row="2" />
 											<ComboBox ItemsSource="{Binding Storage, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
-													  SelectedIndex="{Binding Storage, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+													  SelectedItem="{Binding Storage, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
 													  Grid.Row="2"
 													  Grid.Column="1"
 													  MinWidth="80" />
@@ -180,14 +180,14 @@
 													 Grid.Column="2"
 													 Margin="8,0,4,0" />
 											<ComboBox ItemsSource="{Binding Indexing, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
-													  SelectedIndex="{Binding Indexing, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+													  SelectedItem="{Binding Indexing, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
 													  Grid.Row="2"
 													  Grid.Column="3" />
 
 											<c:Label Content="sort"
 													 Grid.Row="4" />
 											<ComboBox ItemsSource="{Binding Sort, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
-													  SelectedIndex="{Binding Sort, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+													  SelectedItem="{Binding Sort, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
 													  Grid.Row="4"
 													  Grid.Column="1" />
 
