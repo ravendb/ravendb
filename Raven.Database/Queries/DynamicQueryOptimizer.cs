@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Database.Data;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Queries
@@ -63,12 +64,38 @@ namespace Raven.Database.Queries
 						
 						if (indexQuery.SortedFields != null)
 						{
+							var sortInfo = DynamicQueryMapping.GetSortInfo(s => { });
+
 							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
 							{
 								SortOptions value;
-								if (indexDefinition.SortOptions.TryGetValue(sortedField.Field, out value) == false ||
-									value != SortOptions.None)
+
+								var dynamicSortInfo = sortInfo.FirstOrDefault(x=>x.Field == sortedField.Field);
+								if((indexDefinition.SortOptions.TryGetValue(sortedField.Field, out value) == false || value == SortOptions.None) && 
+									dynamicSortInfo == null)
+									continue; // no special sorting specified, this is okay
+
+								if (dynamicSortInfo == null)
+								{
+									if (value == SortOptions.None || value == SortOptions.String)
+										continue;// this is the default, so None == String for most cases
 									return false;
+								}
+
+								switch (value)
+								{
+									case SortOptions.String:
+									case SortOptions.None:
+										switch (dynamicSortInfo.FieldType)
+										{
+											case SortOptions.None:
+											case SortOptions.String:
+												continue;
+										}
+										break;
+								}
+
+								return false; // different sort order, there is a problem here
 							}
 						}
 

@@ -127,7 +127,7 @@ namespace Raven.Database.Data
 
 			foreach (var descriptor in SortDescriptors)
 			{
-				index.SortOptions[descriptor.Field] =  (SortOptions)Enum.Parse(typeof(SortOptions), descriptor.FieldType);
+				index.SortOptions[descriptor.Field] =  descriptor.FieldType;
 			}
 			return index;
 		}
@@ -239,7 +239,11 @@ namespace Raven.Database.Data
 				AggregationOperation = query.AggregationOperation.RemoveOptionals(),
 				DynamicAggregation = query.AggregationOperation.HasFlag(AggregationOperation.Dynamic),
 				ForEntityName = entityName,
-				SortDescriptors = GetSortInfo(fields)
+				SortDescriptors = GetSortInfo(fieldName =>
+				{
+					if (fields.Any(x => x.Item2 == fieldName || x.Item2 == (fieldName + "_Range")) == false)
+						fields.Add(Tuple.Create(fieldName, fieldName));
+				})
 			};
 			dynamicQueryMapping.SetupFieldsToIndex(query, fields);
 			dynamicQueryMapping.FindIndexName(database, dynamicQueryMapping, query);
@@ -285,7 +289,7 @@ namespace Raven.Database.Data
 			
 		}
 
-		private static DynamicSortInfo[] GetSortInfo(HashSet<Tuple<string, string>> fields)
+		public static DynamicSortInfo[] GetSortInfo(Action<string> addField)
 		{
 			var headers = CurrentOperationContext.Headers.Value;
 			var sortInfo = new List<DynamicSortInfo>();
@@ -302,11 +306,10 @@ namespace Raven.Database.Data
 				sortInfo.Add(new DynamicSortInfo
 				{
 					Field = fieldName,
-					FieldType = fieldType
+					FieldType = (SortOptions)Enum.Parse(typeof(SortOptions), fieldType)
 				});
 
-				if (fields.Any(x=> x.Item2 == fieldName || x.Item2 == (fieldName + "_Range")) == false)
-					fields.Add(Tuple.Create(fieldName, fieldName));
+				addField(fieldName);
 			}
 			return sortInfo.ToArray();
 		}
@@ -377,7 +380,7 @@ namespace Raven.Database.Data
 		public class DynamicSortInfo
 		{
 			public string Field { get; set; }
-			public string FieldType { get; set; }
+			public SortOptions FieldType { get; set; }
 		}
 	}
 }
