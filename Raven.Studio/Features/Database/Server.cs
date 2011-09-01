@@ -95,51 +95,55 @@ namespace Raven.Studio.Features.Database
 				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 				true;
 
-			LoadPlugins();
+			LoadPlugins()
+				.ContinueWith(task1 =>
+				{
+					task1.Wait(); // throw on error
 
-			using (var session = Store.OpenAsyncSession())
-				session.Advanced.AsyncDatabaseCommands
-					.GetDatabaseNamesAsync()
-					.ContinueWith(t =>
-					{
-						if (t.IsFaulted)
-							return t;
-						CheckForSystemErrors();
-						return t;
-					})
-					.Unwrap()
-					.ContinueWith(
-						task =>
-						{
-							Status = "Connected";
-							var dbs = new List<string>
+					using (var session = Store.OpenAsyncSession())
+						session.Advanced.AsyncDatabaseCommands
+							.GetDatabaseNamesAsync()
+							.ContinueWith(t =>
+							{
+								if (t.IsFaulted)
+									return t;
+								CheckForSystemErrors();
+								return t;
+							})
+							.Unwrap()
+							.ContinueWith(
+								task =>
+								{
+									Status = "Connected";
+									var dbs = new List<string>
 							{
 								DefaultDatabaseName
 							};
-							dbs.AddRange(task.Result);
-							Databases = dbs;
+									dbs.AddRange(task.Result);
+									Databases = dbs;
 
-							OpenDatabase(dbs[0], () =>
-							{
-								Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
+									OpenDatabase(dbs[0], () =>
+									{
+										Execute.OnUIThread(() => { if (!timer.IsEnabled) timer.Start(); });
 
-								if (callback != null) callback();
-							});
+										if (callback != null) callback();
+									});
 
-							SetBuildNumber();
-						},
-						faulted =>
-						{
-							var error = "Unable to connect to " + Address;
-							Status = error;
-							events.Publish(new NotificationRaised(error, NotificationLevel.Error));
-							callback();
-						});
+									SetBuildNumber();
+								},
+								faulted =>
+								{
+									var error = "Unable to connect to " + Address;
+									Status = error;
+									events.Publish(new NotificationRaised(error, NotificationLevel.Error));
+									callback();
+								});
+				});
 		}
 
 		private void CheckForSystemErrors()
 		{
-			using(var session = this.OpenSession())
+			using (var session = this.OpenSession())
 			{
 				session.Advanced.AsyncDatabaseCommands.GetAsync("Raven/WarningMessages")
 					.ContinueWith(task =>
@@ -162,14 +166,14 @@ namespace Raven.Studio.Features.Database
 			}
 		}
 
-		void LoadPlugins()
+		private Task LoadPlugins()
 		{
 			var baseUrl = (Address + "/silverlight/plugins").NoCache();
 
 			var request = Store.JsonRequestFactory.CreateHttpJsonRequest(this, baseUrl, "GET", Store.Credentials, Store.Conventions);
 			var response = request.ReadResponseStringAsync();
 
-			response.ContinueWith(_ => Execute.OnUIThread(() =>
+			return response.ContinueWith(_ => Execute.OnUIThread(() =>
 			{
 				{
 					var urls = from item in JArray.Parse(_.Result)
@@ -227,12 +231,12 @@ namespace Raven.Studio.Features.Database
 			var request = Store.JsonRequestFactory.CreateHttpJsonRequest(this, Address + "/build/version", "GET", null, Store.Conventions);
 			request.ReadResponseStringAsync()
 				.ContinueOnSuccess(task =>
-				                   	{
-				                   		var result = RavenJObject.Parse(task.Result);
+									{
+										var result = RavenJObject.Parse(task.Result);
 										var ravenJToken = result["BuildVersion"];
 										BuildNumber = ravenJToken.Value<string>();
 										NotifyOfPropertyChange(() => BuildNumber);
-				                   	});
+									});
 		}
 
 		public string BuildNumber { get; private set; }
