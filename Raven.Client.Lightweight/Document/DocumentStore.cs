@@ -542,7 +542,7 @@ namespace Raven.Client.Document
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			authRequest.PreAuthenticate = true;
 #else
-			var authRequest = (HttpWebRequest) WebRequestCreator.ClientHttp.Create(new Uri(oauthSource));
+			var authRequest = (HttpWebRequest) WebRequestCreator.ClientHttp.Create(new Uri(oauthSource.NoCache()));
 #endif
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
