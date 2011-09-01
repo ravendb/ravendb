@@ -88,6 +88,13 @@ namespace Raven.Studio.Features.Database
 			Store = new DocumentStore { Url = Address };
 			Store.Initialize();
 
+			// We explicitly enable this for the Studio, we rely on SL to actually get us the credentials, and that 
+			// already gives the user a clear warning about the dangers of sending passwords in the clear. I think that 
+			// this is sufficent warning and we don't require an additional step, so we can disable this check safely.
+			Store.JsonRequestFactory.
+				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
+				true;
+
 			LoadPlugins();
 
 			using (var session = Store.OpenAsyncSession())
