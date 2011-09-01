@@ -1,18 +1,31 @@
 using System;
-using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
+using System.Linq;
 
 namespace Raven.Http.Security.OAuth
 {
 	public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
 	{
+		readonly string[] neverSecretUrls = new[]
+			{
+				// allow to actually handle the authentication
+				"/OAuth/AccessToken",
+				// allow to get files that are static and are never secret, for example, the studio, the cross domain
+				// policy and the fav icon
+				"/silverlight/Raven.Studio.xap",
+				"/favicon.ico",
+				"/clientaccesspolicy.xml",
+				"/build/version",
+			};
+
 		public override bool Authorize(IHttpContext ctx)
 		{
 			var httpRequest = ctx.Request;
 
-			if (ctx.Request.RawUrl.StartsWith("/OAuth/AccessToken", StringComparison.InvariantCultureIgnoreCase))
+			var requestUrl = ctx.GetRequestUrl();
+			
+			if (neverSecretUrls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
 				return true;
 
 			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
