@@ -43,6 +43,8 @@ namespace Raven.Database.Config
 			Catalog.Changed += (sender, args) => ResetContainer();
 		}
 
+		public string DatabaseName { get; set; }
+
 		public void Initialize()
 		{
 			// Core settings

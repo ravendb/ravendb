@@ -71,6 +71,12 @@ namespace Raven.Database
 		[ImportMany]
 		public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
 
+		/// <summary>
+		/// The name of the database.
+		/// Defaults to null for the root database (or embedded database), or the name of the database if this db is a tenant database
+		/// </summary>
+		public string Name { get; private set; }
+
 		private readonly WorkContext workContext;
 
 		private readonly ConcurrentDictionary<Guid, CommittableTransaction> promotedTransactions = new ConcurrentDictionary<Guid, CommittableTransaction>();
@@ -99,7 +105,7 @@ namespace Raven.Database
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
 			ExternalState = new ConcurrentDictionary<string, object>();
-
+			Name = configuration.DatabaseName;
 			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
 			{
 				backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(

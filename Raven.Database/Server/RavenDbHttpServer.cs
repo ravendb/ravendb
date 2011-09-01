@@ -122,6 +122,8 @@ namespace Raven.Database.Server
 				}
 				config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 
+				config.DatabaseName = tenantId;
+
 				config.Initialize();
 				var documentDatabase = new DocumentDatabase(config);
 				documentDatabase.SpinBackgroundWorkers();
