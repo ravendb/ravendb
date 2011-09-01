@@ -30,7 +30,7 @@ namespace Raven.Bundles.Authentication
 
 			if (database.Configuration.RunInMemory == false)
 			{
-				var authConfigPath = Path.Combine(Path.GetDirectoryName(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile), "authorization.config");
+				var authConfigPath = Path.Combine(Path.GetDirectoryName(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile), "authentication.config");
 
 				File.WriteAllText(authConfigPath,
 @"Since no users were found in the database, and the database authentication mode was set to OAuth, the following user was automatically created.
