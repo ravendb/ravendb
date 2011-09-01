@@ -36,8 +36,7 @@ namespace Raven.Bundles.Authentication
 Username: Admin
 Password: " + pwd + @"
 
-You can use those credentials to login to RavenDB. 
-");
+You can use those credentials to login to RavenDB.");
 
 				logger.Info(@"Since no users were found, and the database authentication mode was set to OAuth, a default user was generated name 'Admin'.
 Credentials for this user can be found in the following file: {0}", authConfigPath);
