@@ -588,13 +588,29 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <param name="definition">The definition.</param>
-		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
+		/// <param name="overwrite">if set to <c>true</c> overwrite the index.</param>
 		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition, bool overwrite)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
 
 			string requestUri = url + "/indexes/" + name;
+
+			var checkIndexExists = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "HEAD", credentials, convention);
+			checkIndexExists.AddOperationHeaders(OperationsHeaders);
+
+			try
+			{
+				checkIndexExists.ReadResponseString();
+				if (overwrite == false)
+					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+					throw;
+			}
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
