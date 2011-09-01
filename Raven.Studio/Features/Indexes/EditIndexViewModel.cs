@@ -217,9 +217,18 @@ namespace Raven.Studio.Features.Indexes
 
 			foreach (var item in Fields.Where(item => item.Name != null))
 			{
-				index.Indexes[item.Name] = item.Indexing;
-				index.Stores[item.Name] = item.Storage;
-				index.SortOptions[item.Name] = item.Sort;
+				if(item.Indexing != FieldIndexing.Default)
+				{
+					index.Indexes[item.Name] = item.Indexing;
+				}
+				if(item.Storage != FieldStorage.No)
+				{
+					index.Stores[item.Name] = item.Storage;
+				}
+				if(item.Sort != SortOptions.None)
+				{
+					index.SortOptions[item.Name] = item.Sort;
+				}
 
 				if (!string.IsNullOrEmpty(item.Analyzer))
 					index.Analyzers[item.Name] = item.Analyzer;
