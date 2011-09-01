@@ -477,20 +477,16 @@ namespace Raven.Client.Silverlight.Connection.Async
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
 			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name);
-			var webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(requestUri));
-			AddOperationHeaders(webRequest);
-			webRequest.Method = "HEAD";
-			webRequest.Credentials = credentials;
+			var webRequest = requestUri
+				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "HEAD");
 
-			return webRequest.GetResponseAsync()
+			return webRequest.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					try
 					{
-						task.Result.Close();
 						if (overwrite == false)
 							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-
 					}
 					catch (AggregateException e)
 					{
