@@ -1,7 +1,9 @@
 using System;
 using System.IO;
+using Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -43,17 +45,18 @@ Credentials for this user can be found in the following file: {0}", authConfigPa
 			}
 
 
-			var newlyDefinedUser = new AuthenticationUser
+			var ravenJTokenWriter = new RavenJTokenWriter();
+			JsonExtensions.CreateDefaultJsonSerializer().Serialize(ravenJTokenWriter, new AuthenticationUser
 			{
 				AllowedDatabases = new[] { "*" },
 				Name = "Admin"
-			}.SetPassword(pwd);
+			}.SetPassword(pwd));
 
-			var userDoc = RavenJObject.FromObject(newlyDefinedUser);
-			userDoc.Remove("Id");
 
+			var userDoc = (RavenJObject)ravenJTokenWriter.Token;
 			database.Put("Raven/Users/Admin", null,
-						 userDoc, new RavenJObject
+						 userDoc, 
+						 new RavenJObject
 						{
 							{Constants.RavenEntityName, "AuthenticationUsers"},
 							{
