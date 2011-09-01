@@ -119,13 +119,6 @@ namespace Raven.Studio.Features.Database
 			using (var sampleData = typeof(SummaryViewModel).Assembly.GetManifestResourceStream("Raven.Studio.SampleData.MvcMusicStore_Dump.json"))
 			using (var streamReader = new StreamReader(sampleData))
 			{
-				var putTask = documentSession.Advanced.AsyncDatabaseCommands
-					.DeleteDocumentAsync("forceAuth_" + Guid.NewGuid());
-
-				yield return putTask;
-
-				if (putTask.Exception != null) yield break;
-
 				var musicStoreData = (RavenJObject)RavenJToken.ReadFrom(new JsonTextReader(streamReader));
 				foreach (var index in musicStoreData.Value<RavenJArray>("Indexes"))
 				{
@@ -201,7 +194,8 @@ namespace Raven.Studio.Features.Database
 							RecentDocuments = new BindableCollection<DocumentViewModel>(x.Result.Select(jdoc => new DocumentViewModel(jdoc)));
 							NotifyOfPropertyChange(() => RecentDocuments);
 
-							ShowCreateSampleData = !RecentDocuments.Any();
+							ShowCreateSampleData = RecentDocuments.Count == 0 || 
+								RecentDocuments.Count == 1 && RecentDocuments[0].Id == "Raven/Users/Admin";
 
 							RecentDocumentsStatus = RecentDocuments.Any() ? string.Empty : "The database contains no documents.";
 
