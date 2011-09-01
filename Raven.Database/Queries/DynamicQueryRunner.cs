@@ -33,7 +33,7 @@ namespace Raven.Database.Queries
 		{
 			// Create the map
 			var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
-			
+
 			var touchTemporaryIndexResult = GetAppropriateIndexToQuery(entityName, query, map);
 
 			map.IndexName = touchTemporaryIndexResult.Item1;
@@ -53,7 +53,7 @@ namespace Raven.Database.Queries
 			if (query.SortedFields == null) return;
 			foreach (var sortedField in query.SortedFields)
 			{
-				var item = map.Items.FirstOrDefault(x=>x.From == sortedField.Field);
+				var item = map.Items.FirstOrDefault(x => x.From == sortedField.Field);
 				if (item != null)
 					sortedField.Field = item.To;
 			}
@@ -61,11 +61,11 @@ namespace Raven.Database.Queries
 
 		private static void UpdateFieldsInArray(DynamicQueryMapping map, string[] fields)
 		{
-			if (fields == null) 
+			if (fields == null)
 				return;
 			for (var i = 0; i < fields.Length; i++)
 			{
-				var item = map.Items.FirstOrDefault(x=>x.From == fields[i]);
+				var item = map.Items.FirstOrDefault(x => x.From == fields[i]);
 				if (item != null)
 					fields[i] = item.To;
 			}
@@ -79,22 +79,22 @@ namespace Raven.Database.Queries
 			while (true)
 			{
 				result = documentDatabase.Query(map.IndexName,
-				                                new IndexQuery
-				                                {
-				                                	Cutoff = query.Cutoff,
-				                                	PageSize = query.PageSize,
-				                                	Query = realQuery,
-				                                	Start = query.Start,
-				                                	FieldsToFetch = query.FieldsToFetch,
-				                                	GroupBy = query.GroupBy,
-				                                	AggregationOperation = query.AggregationOperation,
-				                                	SortedFields = query.SortedFields,
-				                                });
+												new IndexQuery
+												{
+													Cutoff = query.Cutoff,
+													PageSize = query.PageSize,
+													Query = realQuery,
+													Start = query.Start,
+													FieldsToFetch = query.FieldsToFetch,
+													GroupBy = query.GroupBy,
+													AggregationOperation = query.AggregationOperation,
+													SortedFields = query.SortedFields,
+												});
 
 				if (!touchTemporaryIndexResult.Item2 ||
-				    !result.IsStale ||
-				    result.Results.Count >= query.PageSize ||
-				    sp.Elapsed.TotalSeconds > 15)
+					!result.IsStale ||
+					result.Results.Count >= query.PageSize ||
+					sp.Elapsed.TotalSeconds > 15)
 				{
 					return result;
 				}
@@ -110,13 +110,13 @@ namespace Raven.Database.Queries
 			{
 				if (appropriateIndex.StartsWith("Temp/"))// temporary index, we need to increase its usage
 				{
-					return  TouchTemporaryIndex(appropriateIndex, "Auto/" + appropriateIndex.Substring(5),
-					                                                () => documentDatabase.IndexDefinitionStorage.GetIndexDefinition(appropriateIndex));
+					return TouchTemporaryIndex(appropriateIndex, "Auto/" + appropriateIndex.Substring(5),
+																	() => documentDatabase.IndexDefinitionStorage.GetIndexDefinition(appropriateIndex));
 				}
 				return Tuple.Create(appropriateIndex, false);
 			}
 			return TouchTemporaryIndex(map.TemporaryIndexName, map.PermanentIndexName,
-			                                                map.CreateIndexDefinition);
+															map.CreateIndexDefinition);
 		}
 
 		public void CleanupCache()
@@ -167,7 +167,7 @@ namespace Raven.Database.Queries
 
 		private void TempIndexToPermenantIndex(string temporaryIndexName, string permanentIndexName, Func<IndexDefinition> createDefinition)
 		{
-			lock(createIndexLock)
+			lock (createIndexLock)
 			{
 				if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)
 					return;
@@ -176,7 +176,7 @@ namespace Raven.Database.Queries
 				documentDatabase.DeleteIndex(temporaryIndexName);
 				documentDatabase.PutIndex(permanentIndexName, indexDefinition);
 				TemporaryIndexInfo ignored;
-				temporaryIndexes.TryRemove(temporaryIndexName, out ignored);	
+				temporaryIndexes.TryRemove(temporaryIndexName, out ignored);
 			}
 		}
 

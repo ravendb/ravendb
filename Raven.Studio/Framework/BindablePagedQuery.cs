@@ -31,7 +31,7 @@
 			this.query = query;
 			this.transform = transform;
 			PageSize = 8;
-			GetTotalResults = ()=> 0;
+			GetTotalResults = () => 0;
 		}
 
 		public event EventHandler<EventArgs<bool>> IsLoadingChanged = delegate { };
@@ -48,7 +48,7 @@
 		public void ClearResults()
 		{
 			hasLoadedFirstPage = false;
-			
+
 			Clear();
 
 			NumberOfPages = 0;
@@ -60,7 +60,7 @@
 		public void AdjustResultsForPageSize()
 		{
 			if (!hasLoadedFirstPage) return;
-			if(IsLoading) return;
+			if (IsLoading) return;
 
 			IsLoading = true;
 
@@ -72,7 +72,7 @@
 			{
 				RequestAdditionalResults();
 			}
-			
+
 		}
 		void RemoveOverflowResults()
 		{
@@ -89,7 +89,7 @@
 		void AdjustNumberOfPages()
 		{
 			var total = GetTotalResults();
-			if(PageSize == 0 ) return;
+			if (PageSize == 0) return;
 			NumberOfPages = Convert.ToInt32(total / PageSize + (total % PageSize == 0 ? 0 : 1));
 		}
 
@@ -100,27 +100,27 @@
 
 			query(start, delta)
 				.ContinueWith(x =>
-				              	{
-				              		IsNotifying = false;
-				              		AddRange(x.Result.Select(transform));
-				              		IsNotifying = true;
+								{
+									IsNotifying = false;
+									AddRange(x.Result.Select(transform));
+									IsNotifying = true;
 
 									AdjustNumberOfPages();
 
-				              		Refresh();
+									Refresh();
 
-				              		IsLoading = false;
-				              	});
+									IsLoading = false;
+								});
 		}
 
 		int CalculateItemsPerPage()
-		{	
-			if(!ItemElementSize.HasValue) return pageSize;
+		{
+			if (!ItemElementSize.HasValue) return pageSize;
 
 			var itemSize = ItemElementSize.Value;
 
-			var cols = Math.Floor(PageElementSize.Width /itemSize.Width);
-			var rows = Math.Floor(PageElementSize.Height /itemSize.Height);
+			var cols = Math.Floor(PageElementSize.Width / itemSize.Width);
+			var rows = Math.Floor(PageElementSize.Height / itemSize.Height);
 
 			return (int)(cols * rows);
 		}
@@ -223,7 +223,8 @@
 								});
 		}
 
-		void HandleLoadPageResults(IEnumerable<TResult> results, int page) {
+		void HandleLoadPageResults(IEnumerable<TResult> results, int page)
+		{
 			hasLoadedFirstPage = true;
 
 			IsNotifying = false;
