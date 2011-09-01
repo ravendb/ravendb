@@ -15,7 +15,7 @@ namespace Raven.Tests.Security.OAuth
 	public class AccessTokenAuthentication : RemoteClientTest, IDisposable
 	{
 		readonly string path;
-		const string relativeUrl = "/raven/studio.html";
+		const string relativeUrl = "/docs";
 		const string baseUrl = "http://localhost";
 		const int port = 8080;
 
