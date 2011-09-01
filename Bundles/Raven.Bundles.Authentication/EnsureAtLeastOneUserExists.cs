@@ -54,6 +54,7 @@ Credentials for this user can be found in the following file: {0}", authConfigPa
 
 
 			var userDoc = (RavenJObject)ravenJTokenWriter.Token;
+			userDoc.Remove("Id");
 			database.Put("Raven/Users/Admin", null,
 						 userDoc, 
 						 new RavenJObject
