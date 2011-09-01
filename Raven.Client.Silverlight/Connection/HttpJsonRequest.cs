@@ -46,7 +46,13 @@ namespace Raven.Client.Silverlight.Connection
 			result(newWebRequest);
 			webRequest = newWebRequest;
 
-			return postedData != null ? WriteAsync(postedData) : null;
+			if (postedData == null)
+			{
+				var taskCompletionSource = new TaskCompletionSource<object>();
+				taskCompletionSource.SetResult(null);
+				return taskCompletionSource.Task;
+			}
+			else return WriteAsync(postedData);
 		}
 
 		/// <summary>
