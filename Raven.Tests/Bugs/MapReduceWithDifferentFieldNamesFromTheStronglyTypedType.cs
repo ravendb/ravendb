@@ -10,16 +10,22 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WhenTheAnonymousTypeResultIsNotTheSameAsTheStronglyType_ShouldThrowAnException()
 		{
-			Assert.Throws<InvalidOperationException>(() => new Posts_ByMonthPublished_Count_ShouldFail().Execute(NewDocumentStore()));
+		    using(var embeddableDocumentStore = NewDocumentStore())
+		    {
+		        Assert.Throws<InvalidOperationException>(() => new Posts_ByMonthPublished_Count_ShouldFail().Execute(embeddableDocumentStore));
+		    }
 		}
 
-		[Fact]
+	    [Fact]
 		public void WhenTheAnonymousTypeResultIsTheSameAsTheStronglyType_ShouldNotThrowAnException()
-		{
-			Assert.DoesNotThrow(() => new Posts_ByMonthPublished_Count_ShouldPass().Execute(NewDocumentStore()));
-		}
+	    {
+            using (var embeddableDocumentStore = NewDocumentStore())
+            {
+                Assert.DoesNotThrow(() => new Posts_ByMonthPublished_Count_ShouldPass().Execute(embeddableDocumentStore));
+            }
+	    }
 
-		private class Posts_ByMonthPublished_Count_ShouldFail : AbstractIndexCreationTask<CreateIndexesRemotely.Post, CreateIndexesRemotely.PostCountByMonth>
+	    private class Posts_ByMonthPublished_Count_ShouldFail : AbstractIndexCreationTask<CreateIndexesRemotely.Post, CreateIndexesRemotely.PostCountByMonth>
 		{
 			public Posts_ByMonthPublished_Count_ShouldFail()
 			{
@@ -28,7 +34,7 @@ namespace Raven.Tests.Bugs
 				Reduce = results => from result in results
 				                    group result by new { result.Year, result.Month }
 				                    into g
-										select new { YearNameDoesNotMatch = g.Key.Year, g.Key.Month, Count = g.Sum(x => x.Count) };
+										select new {g.Key.Year, g.Key.Month, Count = g.Sum(x => x.Count) };
 			}
 		}
 
