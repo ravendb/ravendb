@@ -109,7 +109,7 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
 			{
-				new QuestionWithVoteTotalIndex().Execute(store);
+				new Answers_ByAnswerEntity().Execute(store);
 
 				string answerId = ComplexValuesFromTransformResults.CreateEntities(store);
 				// Working
