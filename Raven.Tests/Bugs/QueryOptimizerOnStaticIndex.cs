@@ -7,36 +7,36 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class QueryOptimizerOnStaticIndex : RemoteClientTest
-    {
-        public class GameServers_ByName : AbstractIndexCreationTask<DynamicQuerySorting.GameServer>
-        {
-            public GameServers_ByName()
-            {
-                Map = gameServers => from gameServer in gameServers
-                                     select new { gameServer.Name };
-            }
-        }
+	public class QueryOptimizerOnStaticIndex : RemoteClientTest
+	{
+		public class GameServers_ByName : AbstractIndexCreationTask<DynamicQuerySorting.GameServer>
+		{
+			public GameServers_ByName()
+			{
+				Map = gameServers => from gameServer in gameServers
+									 select new { gameServer.Name };
+			}
+		}
 
-        [Fact]
-        public void WillSelectTheStaticField()
-        {
-            using(GetNewServer())
-            using(var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
-            {
-                IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(GameServers_ByName))), store);
+		[Fact]
+		public void WillSelectTheStaticField()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(GameServers_ByName))), store);
 
-                RavenQueryStatistics stats;
-                using (var session = store.OpenSession())
-                {
-                    session.Query<DynamicQuerySorting.GameServer>()
-                        .Statistics(out stats)
-                        .OrderBy(x => x.Name)
-                        .ToList();
-                }
-                Assert.Equal("GameServers/ByName", stats.IndexName);
-            }
-        }
- 
-    }
+				RavenQueryStatistics stats;
+				using (var session = store.OpenSession())
+				{
+					session.Query<DynamicQuerySorting.GameServer>()
+						.Statistics(out stats)
+						.OrderBy(x => x.Name)
+						.ToList();
+				}
+				Assert.Equal("GameServers/ByName", stats.IndexName);
+			}
+		}
+
+	}
 }

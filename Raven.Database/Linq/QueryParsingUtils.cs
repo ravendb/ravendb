@@ -68,13 +68,13 @@ namespace Raven.Database.Linq
 			return output.Text;
 		}
 
-        public static string ToText(AbstractNode node)
-        {
-            var output = new CSharpOutputVisitor();
-            node.AcceptVisitor(output, null);
+		public static string ToText(AbstractNode node)
+		{
+			var output = new CSharpOutputVisitor();
+			node.AcceptVisitor(output, null);
 
-            return output.Text;
-        }
+			return output.Text;
+		}
 
 		public static VariableDeclaration GetVariableDeclarationForLinqQuery(string query, bool requiresSelectNewAnonymousType)
 		{
@@ -161,17 +161,17 @@ namespace Raven.Database.Linq
 		public static LambdaExpression AsLambdaExpression(this Expression expression)
 		{
 			var lambdaExpression = expression as LambdaExpression;
-			if(lambdaExpression != null)
+			if (lambdaExpression != null)
 				return lambdaExpression;
 
 			var castExpression = expression as CastExpression;
-			if(castExpression != null)
+			if (castExpression != null)
 			{
 				return AsLambdaExpression(castExpression.Expression);
 			}
 
 			var parenthesizedExpression = expression as ParenthesizedExpression;
-			if(parenthesizedExpression != null)
+			if (parenthesizedExpression != null)
 			{
 				return AsLambdaExpression(parenthesizedExpression.Expression);
 			}

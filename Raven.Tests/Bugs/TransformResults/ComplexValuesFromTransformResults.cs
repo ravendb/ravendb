@@ -285,7 +285,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			{
 				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
-                new QuestionWithVoteTotalIndex().Execute(documentStore);
+				new QuestionWithVoteTotalIndex().Execute(documentStore);
 				Guid questionId = Guid.NewGuid();
 				Guid answerId = Guid.NewGuid();
 
@@ -365,7 +365,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		{
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
-                new QuestionWithVoteTotalIndex().Execute(documentStore);
+				new QuestionWithVoteTotalIndex().Execute(documentStore);
 
 				const string Content = "This is doable";
 				const string UserId = @"user\222";

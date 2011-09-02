@@ -24,7 +24,7 @@ namespace Raven.Tests.Bugs
 								  select new
 								  {
 									  tag.Name,
-                                      Count = 1
+									  Count = 1
 								  },
 					Reduce = results => from result in results
 										group result by result.Name into g

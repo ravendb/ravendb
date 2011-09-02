@@ -24,7 +24,7 @@ namespace Raven.Database.Linq
 
 		public override object VisitInvocationExpression(InvocationExpression invocationExpression, object data)
 		{
-		    var memberReferenceExpression = invocationExpression.TargetObject as MemberReferenceExpression;
+			var memberReferenceExpression = invocationExpression.TargetObject as MemberReferenceExpression;
 
 			if (memberReferenceExpression == null)
 				return base.VisitInvocationExpression(invocationExpression, data);
@@ -54,20 +54,20 @@ namespace Raven.Database.Linq
 			return base.VisitInvocationExpression(invocationExpression, data);
 		}
 
-	    private bool queryProcessed;
+		private bool queryProcessed;
 
 		private void ProcessQuery(Expression queryExpressionSelectClause)
 		{
-            var objectCreateExpression = queryExpressionSelectClause as ObjectCreateExpression;
+			var objectCreateExpression = queryExpressionSelectClause as ObjectCreateExpression;
 			if (objectCreateExpression == null ||
 				objectCreateExpression.IsAnonymousType == false)
 				return;
 
-            // we only want the outer most value
-            if (queryProcessed)
-                return;
+			// we only want the outer most value
+			if (queryProcessed)
+				return;
 
-		    queryProcessed = true;
+			queryProcessed = true;
 
 			foreach (
 				var expression in
@@ -91,10 +91,10 @@ namespace Raven.Database.Linq
 			}
 		}
 
-	    public void Clear()
-	    {
-	        queryProcessed = false;
-            FieldNames.Clear();
-	    }
+		public void Clear()
+		{
+			queryProcessed = false;
+			FieldNames.Clear();
+		}
 	}
 }
