@@ -31,7 +31,7 @@ namespace Raven.Bundles.Tests.Versioning
 			ravenDbServer = new RavenDbServer(
 				new database::Raven.Database.Config.RavenConfiguration
 				{
-					Port = 58080,
+					Port = 8080,
 					DataDirectory = path,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					Catalog =
@@ -44,7 +44,7 @@ namespace Raven.Bundles.Tests.Versioning
 				});
 			documentStore = new DocumentStore
 			{
-				Url = "http://localhost:58080"
+				Url = "http://localhost:8080"
 			};
 			documentStore.Initialize();
 			using(var s = documentStore.OpenSession())
