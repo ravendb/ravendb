@@ -26,6 +26,8 @@
     border: 1px solid black;
     border-radius: 2px;
     padding: 0.1em;
+    z-index: 2147483647;
+    cursor: pointer;
 }
 
 .ravendb-profiler-results
@@ -38,6 +40,7 @@
     background: white;
     padding: 2em;
     border-radius: 5px;
+    z-index: 2147483647;
 }
 .rdbResultHolder
 {
