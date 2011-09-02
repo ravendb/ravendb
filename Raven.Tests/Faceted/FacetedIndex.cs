@@ -10,6 +10,9 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Linq;
 using Xunit;
+using Raven.Abstractions.Indexing;
+using System.Threading;
+using System.Linq.Expressions;
 
 namespace Raven.Tests.Faceted
 {
@@ -41,21 +44,23 @@ namespace Raven.Tests.Faceted
 								 new Facet {Name = "Manufacturer"}, //default is term query		                         
 								 //In Lucene [ is inclusive, { is exclusive
 								 new Facet { Name = "Cost",
+                                            Mode = FacetMode.Ranges,
 											Ranges = {
-												 "[NULL TO 200.0}",
-												 "[200.0 TO 400.0}",
-												 "[400.0 TO 600.0}",
-												 "[600.0 TO 800.0}",
-												 "[800.0 TO NULL]",
+												 "[NULL TO Dx200.0]", //}
+												 "[Dx200.0 TO Dx400.0]", //{
+												 "[Dx400.0 TO Dx600.0]", //{
+												 "[Dx600.0 TO Dx800.0]", //{
+												 "[Dx800.0 TO NULL]",
 											 }
 									 },
-								 new Facet { Name = "Megapixels",		                                 
-										 Ranges =
+								 new Facet { Name = "Megapixels",	
+	                                        Mode = FacetMode.Ranges,
+										    Ranges =
 											 {
-												 "[NULL TO 3.0}",
-												 "[3.0 TO 7.0}",
-												 "[7.0 TO 10.0}",
-												 "[10.0 TO NULL]",
+												 "[NULL TO Dx3.0]", //{
+												 "[Dx3.0 TO Dx7.0]", //{
+												 "[Dx7.0 TO Dx10.0]", //{
+												 "[Dx10.0 TO NULL]", //{
 											 }
 									 }
 							 };
@@ -67,6 +72,20 @@ namespace Raven.Tests.Faceted
 					s.Store(new FacetSetup {Id = "facets/CameraFacets", Facets = facets});
 					s.SaveChanges();
 
+                    store.DatabaseCommands.PutIndex("CameraCost",
+                                        new IndexDefinition
+                                        {
+                                            Map = @"from camera in docs 
+                                                        select new 
+                                                        { 
+                                                            camera.Manufacturer, 
+                                                            camera.Model, 
+                                                            camera.Cost,
+                                                            camera.DateOfListing,
+                                                            camera.Megapixels
+                                                        }"
+                                        });
+
 					var counter = 0;
 					var setupTime = TimeIt(() =>
 											   {
@@ -75,46 +94,128 @@ namespace Raven.Tests.Faceted
 													   s.Store(camera);
 													   counter++;
 
-													   if (counter%1024 == 0)
+													   if (counter % 1024 == 0)
 														   s.SaveChanges();
 												   }
+                                                   s.SaveChanges();
 											   });                    
 					Log("Took {0:0.00} secs to setup {1} items in RavenDB, {2:0.00} docs per/sec\n",
 							setupTime / 1000.0, NumCameras.ToString("N0"), NumCameras / (setupTime / 1000.0));
 
+                    RavenQueryStatistics stats;
+                    do
+                    {
+                        Thread.Sleep(500);
+                        s.Query<Camera>("CameraCost")
+                            .Statistics(out stats)
+                            .ToList();
+                    } while (stats.IsStale);
+
 					//WaitForUserToContinueTheTest(store);
+                   
+                    var expressions = new Expression<Func<Camera, bool>> []
+                                {
+                                    x => x.Cost >= 100 && x.Cost <= 300,
+                                    x => x.DateOfListing > new DateTime(2000, 1, 1),
+                                    x => x.Megapixels > 5.0m && x.Cost < 500
+                                };
 
-					var facetResults = s.Query<Camera>()
-						.Where(x => x.Cost >= 100 && x.Cost <= 300)
-						.ToFacets("CameraFacets");
-					foreach (var facet in facetResults["Manufacturer"])
-					{
-						Console.WriteLine("{0}: {1}", facet.Range, facet.Count);
-					}
+                    foreach (var exp in expressions)
+                    {
+                        Console.WriteLine("Query: " + exp.ToString());
+
+                        var facetQueryTimer = Stopwatch.StartNew();
+                        var facetResults = s.Query<Camera>("CameraCost")
+                            .Where(exp)
+                            .ToFacets("facets/CameraFacets");
+                        facetQueryTimer.Stop();
+
+                        Console.WriteLine("Took {0:0.00} msecs", facetQueryTimer.ElapsedMilliseconds);
+                        PrintFacetResults(facetResults);
+
+                        var filteredData = _data.Where(exp.Compile()).ToList();
+                        CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
+                    }
 				}
-			}		    								  			
-
-			//DisplayFacetDocInfo(_db);                       
-
-			//var testFacetedQuery = new FacetedIndexQuery
-			//                            {
-			//                                Query = "Cost_Range:[Dx100.0 TO Dx300.0]",
-			//                                Facets = new List<string> { "Manufacturer", "Cost", "Megapixels" },                
-			//                            };
-			////var qrlString = testFacetedQuery.GetIndexQueryUrl("localhost:8080", "cameraInfo", "indexes");
-			//var manufacturerFacets = _data.Where(x => x.Cost >= 100.0m && x.Cost <= 300.0m)
-			//                                .GroupBy(x => x.Manufacturer);
-			//Log("In-memory LINQ facets:");
-			//Array.ForEach(manufacturerFacets.ToArray(), x => Log("\t{0} - {1}", x.Key , x.Count()));            
-
-			//Log("Issuing faceted query..");
-			//QueryResult result = WaitForQueryToComplete("cameraInfo", testFacetedQuery);
-			//Log("Facet results:");
-			//Array.ForEach(result.Facets.ToArray(), facet => Log("\t" + facet.ToString()));            
-						
-			////QueryResult tempResult = WaitForQueryToComplete("advancedFeatures", new FacetedIndexQuery { Query = "" });          
-			////tempResult.Facets.ForEach(x => Log(x.ToString()));
+			}
 		}
+
+        private void PrintFacetResults(IDictionary<string, IEnumerable<FacetValue>> facetResults)
+        {
+            foreach (var kvp in facetResults)
+            {
+                Console.WriteLine(kvp.Key + ":");
+                foreach (var facet in kvp.Value)
+                {
+                    Console.WriteLine("    {0}: {1}", facet.Range, facet.Count);
+                }
+                Console.WriteLine();
+            }
+        }
+
+        private void CheckFacetResultsMatchInMemoryData(
+                    IDictionary<string, IEnumerable<FacetValue>> facetResults, 
+                    List<Camera> filteredData)
+        {
+            foreach (var facet in facetResults["Manufacturer"])
+            {
+                var inMemoryCount = filteredData.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
+                Assert.Equal(inMemoryCount, facet.Count);
+                //Console.WriteLine("{0} - Expected {1}, Got {2} {3}",
+                //    facet.Range, inMemoryCount, facet.Count, inMemoryCount != facet.Count ? "*****" : "");
+            }
+
+            //In Lucene [ is inclusive, { is exclusive
+            foreach (var facet in facetResults["Cost"])
+            {
+                var inMemoryCount = 0;
+                switch (facet.Range)
+                {
+                    case "[NULL TO 200.0]":
+                        inMemoryCount = filteredData.Where(x => x.Cost <= 200.0m).Count();
+                        break;
+                    case "[200.0 TO 400.0]":
+                        inMemoryCount = filteredData.Where(x => x.Cost >= 200.0m && x.Cost <= 400).Count();
+                        break;
+                    case "[400.0 TO 600.0]":
+                        inMemoryCount = filteredData.Where(x => x.Cost >= 400.0m && x.Cost <= 600.0m).Count();
+                        break;
+                    case "[600.0 TO 800.0]":
+                        inMemoryCount = filteredData.Where(x => x.Cost >= 600.0m && x.Cost <= 800.0m).Count();
+                        break;
+                    case "[800.0 TO NULL]":
+                        inMemoryCount = filteredData.Where(x => x.Cost >= 800.0m).Count();
+                        break;
+                }
+                Assert.Equal(inMemoryCount, facet.Count);
+                //Console.WriteLine("{0} - Expected {1}, Got {2} {3}",
+                //    facet.Range, inMemoryCount, facet.Count, inMemoryCount != facet.Count ? "*****" : "");
+            }
+
+            //In Lucene [ is inclusive, { is exclusive
+            foreach (var facet in facetResults["Megapixels"])
+            {
+                var inMemoryCount = 0;
+                switch (facet.Range)
+                {
+                    case "[NULL TO 3.0]":
+                        inMemoryCount = filteredData.Where(x => x.Megapixels <= 3.0m).Count();
+                        break;
+                    case "[3.0 TO 7.0]":
+                        inMemoryCount = filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count();
+                        break;
+                    case "[7.0 TO 10.0]":
+                        inMemoryCount = filteredData.Where(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m).Count();
+                        break;
+                    case "[10.0 TO NULL]":
+                        inMemoryCount = filteredData.Where(x => x.Megapixels >= 10.0m).Count();
+                        break;
+                }
+                Assert.Equal(inMemoryCount, facet.Count);
+                //Console.WriteLine("{0} - Expected {1}, Got {2} {3}", 
+                //    facet.Range, inMemoryCount, facet.Count, inMemoryCount != facet.Count ? "*****" : "");
+            }
+        }
 
 		[Fact]
 		public void CanPerformFacetedSearch()

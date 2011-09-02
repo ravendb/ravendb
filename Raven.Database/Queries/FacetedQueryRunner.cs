@@ -4,6 +4,7 @@ using System.Linq;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Queries
 {
@@ -18,7 +19,8 @@ namespace Raven.Database.Queries
 
 		public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc)
 		{
-			var facets = new List<Facet>();
+            var facetSetup = database.Get(facetSetupDoc, null);
+            var facets = facetSetup.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
 
 			var results = new Dictionary<string, IEnumerable<FacetValue>>();
 
@@ -55,10 +57,12 @@ namespace Raven.Database.Queries
 			foreach (var range in facet.Ranges)
 			{
 				var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery);
+                ///TODO the built-in parser can't handle [NULL TO 100.0}, i.e. a mix of [ and }
+                ///so we need to handle this ourselves (greater and less-than-or-equal)
 				var rangeQuery = database.IndexStorage.GetLuceneQuery(index, new IndexQuery
 				{
 					Query = facet.Name + ":" + range
-				});
+				});                
 
 				var joinedQuery = new BooleanQuery();
 				joinedQuery.Add(baseQuery, BooleanClause.Occur.MUST);
@@ -66,13 +70,17 @@ namespace Raven.Database.Queries
 
 				var topDocs = currentIndexSearcher.Search(joinedQuery, 1);
 
-				if (topDocs.totalHits > 0)
-					rangeResults.Add(new FacetValue
-					{
-						Count = topDocs.totalHits,
-						Range = range
-					});
+                if (topDocs.totalHits > 0)
+                {
+                    rangeResults.Add(new FacetValue
+                    {
+                        Count = topDocs.totalHits,
+                        Range = range
+                    });
+                }
 			}
+
+            //if (rangeResults.Count > 0)
 			results[facet.Name] = rangeResults;
 		}
 
@@ -82,9 +90,10 @@ namespace Raven.Database.Queries
 													  facet.Name,null,
 													  database.Configuration.MaxPageSize);
 			var termResults = new List<FacetValue>();
+            var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery);
+
 			foreach (var term in terms)
-			{
-				var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery);
+			{				
 				var termQuery = new TermQuery(new Term(facet.Name, term));
 
 				var joinedQuery = new BooleanQuery();
@@ -93,14 +102,17 @@ namespace Raven.Database.Queries
 
 				var topDocs = currentIndexSearcher.Search(joinedQuery, 1);
 
-				if(topDocs.totalHits > 0)
-					termResults.Add(new FacetValue
-					{
-						Count = topDocs.totalHits,
-						Range = term
-					});
+                if (topDocs.totalHits > 0)
+                {
+                    termResults.Add(new FacetValue
+                    {
+                        Count = topDocs.totalHits,
+                        Range = term
+                    });
+                }
 			}
 
+            //if (termResults.Count > 0)
 			results[facet.Name] = termResults;
 		}
 	}
