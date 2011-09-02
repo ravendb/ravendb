@@ -211,7 +211,7 @@ namespace Raven.Database.Linq
 			reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 			reduceDefiniton.Initializer.AcceptChildren(captureQueryParameterNamesVisitorForReduce, null);
 
-			//ValidateMapReduceFields(mapFields);
+			ValidateMapReduceFields(mapFields);
 
 			// this.ReduceDefinition = from result in results...;
 			ctor.Body.AddChild(new ExpressionStatement(
@@ -247,12 +247,12 @@ namespace Raven.Database.Linq
 		{
 			mapFields.Remove("__document_id");
 			var reduceFields = captureSelectNewFieldNamesVisitor.FieldNames;
-			if (reduceFields.IsProperSubsetOf(mapFields) == false)
+			if (reduceFields.SetEquals(mapFields) == false)
 			{
 				throw new InvalidOperationException(string.Format(@"The result type is not consistent across map and reduce:
 Map	Fields   : {0}
 Reduce Fields: {1}
-", string.Join(", ", mapFields), string.Join(", ", reduceFields)));
+", string.Join(", ", mapFields.OrderBy(x => x)), string.Join(", ", reduceFields.OrderBy(x => x))));
 			}
 		}
 
