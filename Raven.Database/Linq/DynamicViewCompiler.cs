@@ -116,7 +116,6 @@ namespace Raven.Database.Linq
 			                   			ExpressionBody = mapDefinition.Initializer
 			                   		})));
 
-
 			mapDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 
 			mapDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForMap, null);
@@ -207,7 +206,7 @@ namespace Raven.Database.Linq
 			}
 
 			var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToList();
-			captureSelectNewFieldNamesVisitor.FieldNames.Clear();// reduce override the map fields
+			captureSelectNewFieldNamesVisitor.Clear();// reduce override the map fields
 			reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 			reduceDefiniton.Initializer.AcceptChildren(captureQueryParameterNamesVisitorForReduce, null);
 

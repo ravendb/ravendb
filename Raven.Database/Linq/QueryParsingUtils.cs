@@ -68,6 +68,14 @@ namespace Raven.Database.Linq
 			return output.Text;
 		}
 
+        public static string ToText(AbstractNode node)
+        {
+            var output = new CSharpOutputVisitor();
+            node.AcceptVisitor(output, null);
+
+            return output.Text;
+        }
+
 		public static VariableDeclaration GetVariableDeclarationForLinqQuery(string query, bool requiresSelectNewAnonymousType)
 		{
 			var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
