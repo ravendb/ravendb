@@ -141,7 +141,7 @@ namespace Raven.Tests.Linq
 				Reduce =
 					@"results
 	.GroupBy(agg => agg.Location)
-	.Select(g => new {Loction = g.Key, Count = g.Sum(x => x.Count}))"
+	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count}))"
 			},  ".").GenerateInstance();
 
 
@@ -163,7 +163,7 @@ namespace Raven.Tests.Linq
 
 			var expected = new[]
 			{
-				"{ Loction = Tel Aviv, Count = 2 }",
+				"{ Location = Tel Aviv, Count = 2 }",
 			};
 
 			for (var i = 0; i < results.Length; i++)
