@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Queries
 {
@@ -14,5 +15,5 @@ namespace Raven.Database.Queries
         {
             return new TermsQueryRunner(self).GetTerms(index, field, fromValue, Math.Min(pageSize, self.Configuration.MaxPageSize));
         }
-    }
+    }    
 }

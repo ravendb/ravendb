@@ -111,8 +111,8 @@ namespace Raven.Client.Embedded
 
 		private JsonDocument EnsureLocalDate(JsonDocument jsonDocument)
 		{
-      if(jsonDocument == null)
-        return null;
+	  if(jsonDocument == null)
+		return null;
 			if (jsonDocument.LastModified != null)
 				jsonDocument.LastModified = jsonDocument.LastModified.Value.ToLocalTime();
 			return jsonDocument;
@@ -506,6 +506,19 @@ namespace Raven.Client.Embedded
 	 
 		}
 
+	    /// <summary>
+	    /// Using the given Index, calculate the facets as per the specified doc
+	    /// </summary>
+	    /// <param name="index"></param>
+	    /// <param name="query"></param>
+	    /// <param name="facetSetupDoc"></param>
+	    /// <returns></returns>
+	    public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			return database.ExecuteGetTermsQuery(index, query, facetSetupDoc);
+		}
+
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
@@ -525,14 +538,14 @@ namespace Raven.Client.Embedded
 		public void Patch(string key, PatchRequest[] patches, Guid? etag)
 		{
 			Batch(new[]
-			      	{
-			      		new PatchCommandData
-			      			{
-			      				Key = key,
-			      				Patches = patches,
-			      				Etag = etag
-			      			}
-			      	});
+					{
+						new PatchCommandData
+							{
+								Key = key,
+								Patches = patches,
+								Etag = etag
+							}
+					});
 		}
 
 		/// <summary>

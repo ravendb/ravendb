@@ -1083,8 +1083,6 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 			return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 		}
-
-
 		
 		///<summary>
 		/// Get the possible terms for the specified field in the index 
@@ -1119,7 +1117,18 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return json.Values<string>();
 		}
 
-		/// <summary>
+        /// <summary>
+        /// Using the given Index, calculate the facets as per the specified doc
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="facetSetupDoc"></param>
+        /// <returns></returns>
+	    public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    /// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>

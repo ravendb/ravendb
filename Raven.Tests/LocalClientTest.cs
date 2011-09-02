@@ -20,45 +20,45 @@ using Raven.Tests.Document;
 namespace Raven.Tests
 {
 	public abstract class LocalClientTest : WithNLog
-    {
-        private string path;
-        
+	{
+		private string path;
+		
 		protected void EnableDebugLog()
 		{
 		
 		}
 
 		public EmbeddableDocumentStore NewDocumentStore()
-        {
-            return NewDocumentStore("munin", true, null);
-        }
+		{
+			return NewDocumentStore("munin", true, null);
+		}
 
 		public EmbeddableDocumentStore NewDocumentStore(string storageType, bool inMemory)
 		{
 			return NewDocumentStore(storageType, inMemory, null);
 		}
 		public EmbeddableDocumentStore NewDocumentStore(string storageType, bool inMemory, int? allocatedMemory)
-        {
-            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-            path = Path.Combine(path, "TestDb").Substring(6);
+		{
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
+			path = Path.Combine(path, "TestDb").Substring(6);
 
 
-            var documentStore = new EmbeddableDocumentStore()
-            {
-                Configuration =
-                {
-                    DataDirectory = path,
-                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                    DefaultStorageTypeName = storageType,
-                    RunInMemory = inMemory,
-                }
-            };
+			var documentStore = new EmbeddableDocumentStore()
+			{
+				Configuration =
+				{
+					DataDirectory = path,
+					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+					DefaultStorageTypeName = storageType,
+					RunInMemory = inMemory,
+				}
+			};
 
 			ModifyConfiguration(documentStore.Configuration);
 
 			if (documentStore.Configuration.RunInMemory == false)
-                IOExtensions.DeleteDirectory(path);
-            documentStore.Initialize();
+				IOExtensions.DeleteDirectory(path);
+			documentStore.Initialize();
 
 			new RavenDocumentsByEntityName().Execute(documentStore);
 
@@ -68,10 +68,10 @@ namespace Raven.Tests
 				transactionalStorage.EnsureCapacity(allocatedMemory.Value);
 			}
 
-            return documentStore;
-        }
+			return documentStore;
+		}
 
-    	static public void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore)
+		static public void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore)
 		{
 			if (Debugger.IsAttached == false)
 				return;
@@ -93,16 +93,16 @@ namespace Raven.Tests
 			}
 		}
 
-    	protected virtual void ModifyConfiguration(RavenConfiguration configuration)
-    	{
-    	}
+		protected virtual void ModifyConfiguration(RavenConfiguration configuration)
+		{
+		}
 
-    	public void WaitForIndexing(EmbeddableDocumentStore store)
-        {
-            while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
-            {
-                Thread.Sleep(100);
-            }
-        }
-    }
+		public void WaitForIndexing(EmbeddableDocumentStore store)
+		{
+			while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
+			{
+				Thread.Sleep(100);
+			}
+		}
+	}
 }

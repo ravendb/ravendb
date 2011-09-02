@@ -68,3 +68,4 @@ ClientBin/
 *.docstates
 
 /Raven.Studio/Settings.dat
+*.vs10x

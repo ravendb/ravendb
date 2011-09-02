@@ -12,8 +12,8 @@ using Raven.Http.Extensions;
 
 namespace Raven.Database.Extensions
 {
-    public static class HttpContextExtensions
-    {
+	public static class HttpContextExtensions
+	{
 		public static Facet[] GetFacetsFromHttpContext(this IHttpContext context)
 		{
 			var dictionary = new Dictionary<string, Facet>();
@@ -52,37 +52,42 @@ namespace Raven.Database.Extensions
 			return dictionary.Values.ToArray();
 		}
 
-    	public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
-        {
-            var query = new IndexQuery
-            {
-                Query = context.Request.QueryString["query"] ?? "",
-                Start = context.GetStart(),
-                Cutoff = context.GetCutOff(),
+		public static string GetFacetSetupDocFromHttpContext(this IHttpContext context)
+		{
+			return context.Request.QueryString["facetDoc"] ?? "";
+		}
+
+		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
+		{
+			var query = new IndexQuery
+			{
+				Query = context.Request.QueryString["query"] ?? "",
+				Start = context.GetStart(),
+				Cutoff = context.GetCutOff(),
 				CutoffEtag = context.GetCutOffEtag(),
-                PageSize = context.GetPageSize(maxPageSize),
-                SkipTransformResults = context.GetSkipTransformResults(),
-                FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
+				PageSize = context.GetPageSize(maxPageSize),
+				SkipTransformResults = context.GetSkipTransformResults(),
+				FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
 				GroupBy = context.Request.QueryString.GetValues("groupBy"),
 				AggregationOperation = context.GetAggregationOperation(),
-                SortedFields = context.Request.QueryString.GetValues("sort")
-                    .EmptyIfNull()
-                    .Select(x => new SortedField(x))
-                    .ToArray()
-            };
+				SortedFields = context.Request.QueryString.GetValues("sort")
+					.EmptyIfNull()
+					.Select(x => new SortedField(x))
+					.ToArray()
+			};
 
-            double lat = context.GetLat(), lng = context.GetLng(), radius = context.GetRadius();
-            if (lat != 0 || lng != 0 || radius != 0)
-            {
-                return new SpatialIndexQuery(query)
-                {
-                    Latitude = lat,
-                    Longitude = lng,
-                    Radius = radius,
-                };
-            }
-            return query;
-        }
-        
-    }
+			double lat = context.GetLat(), lng = context.GetLng(), radius = context.GetRadius();
+			if (lat != 0 || lng != 0 || radius != 0)
+			{
+				return new SpatialIndexQuery(query)
+				{
+					Latitude = lat,
+					Longitude = lng,
+					Radius = radius,
+				};
+			}
+			return query;
+		}
+		
+	}
 }
