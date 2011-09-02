@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs
 				using (var documentStore = new DocumentStore { Url = "http://localhost:8080" })
 				{
 					documentStore.Initialize();
-					IndexCreation.CreateIndexes(typeof(UsersIndexTask).Assembly, documentStore);
+					new UsersIndexTask().Execute(documentStore);
 					using (IDocumentSession session = documentStore.OpenSession())
 					{
 						var user = session.Query<Account, UsersIndexTask>()

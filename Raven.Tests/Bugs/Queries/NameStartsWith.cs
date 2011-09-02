@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs.Queries
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				IndexCreation.CreateIndexes(typeof(User_Entity).Assembly, documentStore);
+				new User_Entity().Execute(documentStore);
 
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
