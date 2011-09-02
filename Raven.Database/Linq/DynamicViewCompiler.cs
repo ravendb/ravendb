@@ -249,10 +249,16 @@ namespace Raven.Database.Linq
 			var reduceFields = captureSelectNewFieldNamesVisitor.FieldNames;
 			if (reduceFields.SetEquals(mapFields) == false)
 			{
-				throw new InvalidOperationException(string.Format(@"The result type is not consistent across map and reduce:
-Map	Fields   : {0}
-Reduce Fields: {1}
-", string.Join(", ", mapFields.OrderBy(x => x)), string.Join(", ", reduceFields.OrderBy(x => x))));
+			    throw new InvalidOperationException(
+			        string.Format(
+			            @"The result type is not consistent across map and reduce:
+Common fields: {0}
+Map	only fields   : {1}
+Reduce only fields: {2}
+",
+			            string.Join(", ", mapFields.Intersect(reduceFields).OrderBy(x => x)),
+			            string.Join(", ", mapFields.Except(reduceFields).OrderBy(x => x)),
+			            string.Join(", ", reduceFields.Except(mapFields).OrderBy(x => x))));
 			}
 		}
 
