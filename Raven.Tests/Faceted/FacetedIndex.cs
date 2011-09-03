@@ -13,6 +13,7 @@ using Xunit;
 using Raven.Abstractions.Indexing;
 using System.Threading;
 using System.Linq.Expressions;
+using Raven.Client.Document;
 
 namespace Raven.Tests.Faceted
 {
@@ -30,46 +31,57 @@ namespace Raven.Tests.Faceted
 		}
 	}  
 
-	public class FacetedIndex : LocalClientTest
+	//public class FacetedIndex : LocalClientTest
+    public class FacetedIndex : RemoteClientTest
 	{		
 		private readonly IList<Camera> _data;
-		private const int NumCameras = 3000; //500000; //100000
+        private readonly List<Facet> _facets;
+		private const int NumCameras = 1000;
 
 		public FacetedIndex()
 		{			
 			_data = FacetedIndexTestHelper.GetCameras(NumCameras);
 
-			var facets = new List<Facet>
-							 {
-								 new Facet {Name = "Manufacturer"}, //default is term query		                         
-								 //In Lucene [ is inclusive, { is exclusive
-								 new Facet { Name = "Cost",
-                                            Mode = FacetMode.Ranges,
-											Ranges = {
-												 "[NULL TO Dx200.0]", //}
-												 "[Dx200.0 TO Dx400.0]", //{
-												 "[Dx400.0 TO Dx600.0]", //{
-												 "[Dx600.0 TO Dx800.0]", //{
-												 "[Dx800.0 TO NULL]",
-											 }
-									 },
-								 new Facet { Name = "Megapixels",	
-	                                        Mode = FacetMode.Ranges,
-										    Ranges =
-											 {
-												 "[NULL TO Dx3.0]", //{
-												 "[Dx3.0 TO Dx7.0]", //{
-												 "[Dx7.0 TO Dx10.0]", //{
-												 "[Dx10.0 TO NULL]", //{
-											 }
-									 }
-							 };
+			_facets = new List<Facet>
+							{
+								new Facet {Name = "Manufacturer"}, //default is term query		                         
+								//In Lucene [ is inclusive, { is exclusive
+								new Facet { Name = "Cost",
+                                        Mode = FacetMode.Ranges,
+										Ranges = {
+												"[NULL TO 200.0]", //"[NULL TO Dx200.0]", 
+												"[200.0 TO 400.0]", //"[Dx200.0 TO Dx400.0]",
+												"[Dx400.0 TO Dx600.0]",
+												"[Dx600.0 TO Dx800.0]",
+												"[Dx800.0 TO NULL]",
+											}
+									},
+								new Facet { Name = "Megapixels",	
+	                                    Mode = FacetMode.Ranges,
+										Ranges =
+											{
+												"[NULL TO Dx3.0]", 
+												"[Dx3.0 TO Dx7.0]",
+												"[Dx7.0 TO Dx10.0]",
+												"[Dx10.0 TO NULL]", 
+											}
+									}
+							};
+        }
 
-			using (var store = NewDocumentStore())
-			{
+        [Fact]
+		public void CanPerformFacetedSearch()
+		{		
+			//using (var store = NewDocumentStore())
+            using(GetNewServer())
+            using(var store = new DocumentStore
+            {
+                Url = "http://localhost:8080"
+            }.Initialize())
+            {                
 				using (var s = store.OpenSession())
 				{
-					s.Store(new FacetSetup {Id = "facets/CameraFacets", Facets = facets});
+					s.Store(new FacetSetup {Id = "facets/CameraFacets", Facets = _facets});
 					s.SaveChanges();
 
                     store.DatabaseCommands.PutIndex("CameraCost",
@@ -85,22 +97,17 @@ namespace Raven.Tests.Faceted
                                                             camera.Megapixels
                                                         }"
                                         });
+					
+                    var counter = 0;
+					foreach (var camera in _data)
+					{
+						s.Store(camera);
+						counter++;
 
-					var counter = 0;
-					var setupTime = TimeIt(() =>
-											   {
-												   foreach (var camera in _data)
-												   {
-													   s.Store(camera);
-													   counter++;
-
-													   if (counter % 1024 == 0)
-														   s.SaveChanges();
-												   }
-                                                   s.SaveChanges();
-											   });                    
-					Log("Took {0:0.00} secs to setup {1} items in RavenDB, {2:0.00} docs per/sec\n",
-							setupTime / 1000.0, NumCameras.ToString("N0"), NumCameras / (setupTime / 1000.0));
+						if (counter % 1024 == 0)
+							s.SaveChanges();
+					}
+                    s.SaveChanges();				                  
 
                     RavenQueryStatistics stats;
                     do
@@ -144,12 +151,15 @@ namespace Raven.Tests.Faceted
         {
             foreach (var kvp in facetResults)
             {
-                Console.WriteLine(kvp.Key + ":");
-                foreach (var facet in kvp.Value)
+                if (kvp.Value.Count() > 0)
                 {
-                    Console.WriteLine("    {0}: {1}", facet.Range, facet.Count);
+                    Console.WriteLine(kvp.Key + ":");
+                    foreach (var facet in kvp.Value)
+                    {
+                        Console.WriteLine("    {0}: {1}", facet.Range, facet.Count);
+                    }
+                    Console.WriteLine();
                 }
-                Console.WriteLine();
             }
         }
 
@@ -215,13 +225,7 @@ namespace Raven.Tests.Faceted
                 //Console.WriteLine("{0} - Expected {1}, Got {2} {3}", 
                 //    facet.Range, inMemoryCount, facet.Count, inMemoryCount != facet.Count ? "*****" : "");
             }
-        }
-
-		[Fact]
-		public void CanPerformFacetedSearch()
-		{
-
-		}					
+        }						
 
 		private static void Log(string text, params object[] args)
 		{

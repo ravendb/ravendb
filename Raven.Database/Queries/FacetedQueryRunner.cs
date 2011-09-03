@@ -79,8 +79,7 @@ namespace Raven.Database.Queries
                     });
                 }
 			}
-
-            //if (rangeResults.Count > 0)
+          
 			results[facet.Name] = rangeResults;
 		}
 
@@ -111,8 +110,7 @@ namespace Raven.Database.Queries
                     });
                 }
 			}
-
-            //if (termResults.Count > 0)
+          
 			results[facet.Name] = termResults;
 		}
 	}
