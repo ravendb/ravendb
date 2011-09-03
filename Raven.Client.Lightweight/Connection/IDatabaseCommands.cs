@@ -73,7 +73,7 @@ namespace Raven.Client.Connection
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
 		void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata);
-		
+
 		/// <summary>
 		/// Retrieves the attachment with the specified key
 		/// </summary>
@@ -107,7 +107,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="name">The name.</param>
 		IndexDefinition GetIndex(string name);
-		
+
 		/// <summary>
 		/// Creates an index with the specified name, based on an index definition
 		/// </summary>
@@ -266,14 +266,14 @@ namespace Raven.Client.Connection
 		///</summary>
 		///<returns></returns>
 		IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize);
-	
-        /// <summary>
-        /// Using the given Index, calculate the facets as per the specified doc
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="query"></param>
-        /// <param name="facetSetupDoc"></param>
-        /// <returns></returns>
+
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc
+		/// </summary>
+		/// <param name="index"></param>
+		/// <param name="query"></param>
+		/// <param name="facetSetupDoc"></param>
+		/// <returns></returns>
 		IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc);
 
 		/// <summary>
@@ -299,7 +299,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>
-		GetResponse[] MultiGet(GetRequest[] requests);				
+		GetResponse[] MultiGet(GetRequest[] requests);
 	}
 }
 #endif

@@ -9,12 +9,12 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Queries
 {
-    public static class FacetedQueryRunnerExtensions
-    {
-        public static IDictionary<string, IEnumerable<FacetValue>> ExecuteGetTermsQuery(this DocumentDatabase self, 
-            string index, IndexQuery query, string facetSetupDoc)
-        {
-            return new FacetedQueryRunner(self).GetFacets(index, query, facetSetupDoc);
-        }
-    }
+	public static class FacetedQueryRunnerExtensions
+	{
+		public static IDictionary<string, IEnumerable<FacetValue>> ExecuteGetTermsQuery(this DocumentDatabase self,
+			string index, IndexQuery query, string facetSetupDoc)
+		{
+			return new FacetedQueryRunner(self).GetFacets(index, query, facetSetupDoc);
+		}
+	}
 }

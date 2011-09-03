@@ -354,7 +354,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					//webRequest.ContentLength = long.Parse(formattedHeaderValue); 	
 				}
 				else if (matchString == "Content-Type")
-					webRequest.ContentType = formattedHeaderValue;                
+					webRequest.ContentType = formattedHeaderValue;
 				else
 					webRequest.Headers[header.Key] = formattedHeaderValue;
 			}
@@ -380,8 +380,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.InternalServerError)
 					throw;
 
-				using(var stream = httpWebResponse.GetResponseStream())
-				using(var reader = new StreamReader(stream))
+				using (var stream = httpWebResponse.GetResponseStream())
+				using (var reader = new StreamReader(stream))
 				{
 					throw new InvalidOperationException("Internal Server Error: " + Environment.NewLine + reader.ReadToEnd());
 				}
@@ -468,7 +468,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <returns></returns>
 		public string[] GetIndexNames(int start, int pageSize)
 		{
-			return ExecuteWithReplication("GET",u => DirectGetIndexNames(start, pageSize, u));
+			return ExecuteWithReplication("GET", u => DirectGetIndexNames(start, pageSize, u));
 		}
 
 		/// <summary>
@@ -843,7 +843,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <param name="recoveryInformation">The recovery information.</param>
 		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
 		{
-			ExecuteWithReplication<object>("PUT",u =>
+			ExecuteWithReplication<object>("PUT", u =>
 			{
 				var webRequest = (HttpWebRequest)WebRequest.Create(u + "/static/transactions/recoveryInformation/" + txId);
 				AddOperationHeaders(webRequest);
@@ -1070,7 +1070,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 			return new SuggestionQueryResult
 			{
-				Suggestions = ((RavenJArray)json["Suggestions"]).Select(x=>x.Value<string>()).ToArray(),
+				Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
 			};
 		}
 
@@ -1083,13 +1083,13 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var multiGetOperation = new MultiGetOperation(this, convention, url, requests);
 
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, multiGetOperation.RequestUri, "POST",
-			                                                               credentials, convention);
-			
+																		   credentials, convention);
+
 			var requestsForServer = multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
 
 			var postedData = JsonConvert.SerializeObject(requestsForServer);
 
-			if(multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest, postedData))
+			if (multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest, postedData))
 			{
 				return multiGetOperation.HandleCachingResponse(new GetResponse[requests.Length], jsonRequestFactory);
 			}
@@ -1099,7 +1099,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 			return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 		}
-		
+
 		///<summary>
 		/// Get the possible terms for the specified field in the index 
 		/// You can page through the results by use fromValue parameter as the 
@@ -1133,23 +1133,23 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return json.Values<string>();
 		}
 
-        /// <summary>
-        /// Using the given Index, calculate the facets as per the specified doc
-        /// </summary>
-        /// <param name="query"></param>
-        /// <param name="facetSetupDoc"></param>
-        /// <returns></returns>
-	    public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc)
-	    {
-            var requestUri = url + string.Format("/facets/{0}?facetDoc={1}&query={2}",
-                Uri.EscapeUriString(index),
-                Uri.EscapeDataString(facetSetupDoc),                
-                Uri.EscapeDataString(query.Query));
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc
+		/// </summary>
+		/// <param name="query"></param>
+		/// <param name="facetSetupDoc"></param>
+		/// <returns></returns>
+		public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc)
+		{
+			var requestUri = url + string.Format("/facets/{0}?facetDoc={1}&query={2}",
+				Uri.EscapeUriString(index),
+				Uri.EscapeDataString(facetSetupDoc),
+				Uri.EscapeDataString(query.Query));
 
-            var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
-            request.AddOperationHeaders(OperationsHeaders);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
 
-            RavenJObject json;
+			RavenJObject json;
 			try
 			{
 				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
@@ -1162,11 +1162,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw new InvalidOperationException("could not execute suggestions at this time");
 				throw;
 			}
-            var jsonAsType =  json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
-            return jsonAsType;
-	    }
+			var jsonAsType = json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
+			return jsonAsType;
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
