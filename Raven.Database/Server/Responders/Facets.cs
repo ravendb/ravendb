@@ -33,8 +33,8 @@ namespace Raven.Database.Server.Responders
 
 			var results = new Dictionary<string, List<FacetValue>>();
 
-			var currentIndexSearcher = Database.IndexStorage.GetCurrentIndexSearcher(index);
-			try
+			IndexSearcher currentIndexSearcher;
+			using(Database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
 				foreach (var facet in facets)
 				{
@@ -51,10 +51,6 @@ namespace Raven.Database.Server.Responders
 					}
 				}
 
-			}
-			finally
-			{
-				currentIndexSearcher.GetIndexReader().DecRef();
 			}
 
 			context.WriteJson(results);

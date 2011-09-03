@@ -16,13 +16,6 @@ namespace Raven.Database.Extensions
 {
 	public static class HttpContextExtensions
 	{
-		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
-		{
-			var query = new IndexQuery
-			{
-				Query = context.Request.QueryString["query"] ?? "",
-				Start = context.GetStart(),
-				Cutoff = context.GetCutOff(),
 		public static Facet[] GetFacetsFromHttpContext(this IHttpContext context)
 		{
 			var dictionary = new Dictionary<string, Facet>();
@@ -61,13 +54,13 @@ namespace Raven.Database.Extensions
 			return dictionary.Values.ToArray();
 		}
 
-    	public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
-        {
-            var query = new IndexQuery
-            {
-                Query = context.Request.QueryString["query"] ?? "",
-                Start = context.GetStart(),
-                Cutoff = context.GetCutOff(),
+		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
+		{
+			var query = new IndexQuery
+			{
+				Query = context.Request.QueryString["query"] ?? "",
+				Start = context.GetStart(),
+				Cutoff = context.GetCutOff(),
 				CutoffEtag = context.GetCutOffEtag(),
 				PageSize = context.GetPageSize(maxPageSize),
 				SkipTransformResults = context.GetSkipTransformResults(),

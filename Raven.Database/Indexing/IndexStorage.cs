@@ -200,10 +200,10 @@ namespace Raven.Database.Indexing
 
 		}
 
-	    public IEnumerable<IndexQueryResult> Query(
-            string index, 
-            IndexQuery query, 
-            Func<IndexQueryResult, bool> shouldIncludeInResults,
+		public IEnumerable<IndexQueryResult> Query(
+			string index,
+			IndexQuery query,
+			Func<IndexQueryResult, bool> shouldIncludeInResults,
 			FieldsToFetch fieldsToFetch)
 		{
 			Index value;
