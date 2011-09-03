@@ -266,6 +266,15 @@ namespace Raven.Client.Connection
 		///</summary>
 		///<returns></returns>
 		IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize);
+	
+        /// <summary>
+        /// Using the given Index, calculate the facets as per the specified doc
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="query"></param>
+        /// <param name="facetSetupDoc"></param>
+        /// <returns></returns>
+		IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc);
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
@@ -290,7 +299,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>
-		GetResponse[] MultiGet(GetRequest[] requests);
+		GetResponse[] MultiGet(GetRequest[] requests);				
 	}
 }
 #endif

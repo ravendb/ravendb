@@ -68,3 +68,4 @@ ClientBin/
 *.docstates
 StyleCop.Cache
 /Raven.Studio/Settings.dat
+*.vs10x

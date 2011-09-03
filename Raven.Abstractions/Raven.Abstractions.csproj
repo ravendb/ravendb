@@ -68,6 +68,8 @@
     <Compile Include="Data\EnumerableExtension.cs" />
     <Compile Include="Data\FacetMode.cs" />
     <Compile Include="Data\Facet.cs" />
+    <Compile Include="Data\FacetSetup.cs" />
+    <Compile Include="Data\FacetValue.cs" />
     <Compile Include="Data\GetRequest.cs" />
     <Compile Include="Data\GetResponse.cs" />
     <Compile Include="Data\IJsonDocumentMetadata.cs" />

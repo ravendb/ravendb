@@ -1099,8 +1099,6 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 			return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 		}
-
-
 		
 		///<summary>
 		/// Get the possible terms for the specified field in the index 
@@ -1135,7 +1133,40 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return json.Values<string>();
 		}
 
-		/// <summary>
+        /// <summary>
+        /// Using the given Index, calculate the facets as per the specified doc
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="facetSetupDoc"></param>
+        /// <returns></returns>
+	    public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc)
+	    {
+            var requestUri = url + string.Format("/facets/{0}?facetDoc={1}&query={2}",
+                Uri.EscapeUriString(index),
+                Uri.EscapeDataString(facetSetupDoc),                
+                Uri.EscapeDataString(query.Query));
+
+            var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+            request.AddOperationHeaders(OperationsHeaders);
+
+            RavenJObject json;
+			try
+			{
+				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
+					json = (RavenJObject)RavenJToken.Load(reader);
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
+					throw new InvalidOperationException("could not execute suggestions at this time");
+				throw;
+			}
+            var jsonAsType =  json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
+            return jsonAsType;
+	    }
+
+	    /// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>

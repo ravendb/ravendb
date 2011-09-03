@@ -7,8 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
-using Raven.Database.Server.Responders;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 
@@ -52,6 +50,11 @@ namespace Raven.Database.Extensions
 				}
 			}
 			return dictionary.Values.ToArray();
+		}
+
+		public static string GetFacetSetupDocFromHttpContext(this IHttpContext context)
+		{
+			return context.Request.QueryString["facetDoc"] ?? "";
 		}
 
 		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
