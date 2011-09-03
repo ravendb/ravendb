@@ -21,6 +21,9 @@ namespace Raven.Http
 		bool HttpCompression { get; }
 		string WebDir { get; }
 		string AccessControlAllowOrigin { get; }
+		string AccessControlMaxAge { get; }
+		string AccessControlAllowMethods { get; }
+		string AccessControlRequestHeaders { get; }
 		NameValueCollection Settings { get; }
 		string PluginsDirectory { get; set; }
 		string OAuthTokenServer { get; set; }
