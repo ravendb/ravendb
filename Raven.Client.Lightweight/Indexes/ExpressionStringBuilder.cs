@@ -1296,11 +1296,17 @@ namespace Raven.Client.Indexes
 				{
 					this.Out(", ");
 				}
-				if (node.Members != null)
+				this.Out(node.Members[i].Name);
+				this.Out(" = ");
+
+				var constantExpression = node.Arguments[i] as ConstantExpression;
+				if (constantExpression != null && constantExpression.Value == null)
 				{
-					this.Out(node.Members[i].Name);
-					this.Out(" = ");
+					this.Out("(");
+					this.Out(GetMemberType(node.Members[i]).FullName);
+					this.Out(")");
 				}
+
 				this.Visit(node.Arguments[i]);
 			}
 			this.Out(")");
