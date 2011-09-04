@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using ICSharpCode.NRefactory.Ast;
@@ -103,20 +104,24 @@ namespace Raven.Database.Linq
 		    AddAdditionalInformation(ctor);
 
 			CompiledQueryText = QueryParsingUtils.GenerateText(type, extensions);
-			var compiledQueryText = "@\"" + indexDefinition.Map.Replace("\"", "\"\"");
+			var sb = new StringBuilder("@\"");
+			foreach (var map in indexDefinition.Maps)
+			{
+				sb.AppendLine(map.Replace("\"", "\"\""));
+			}
 			if (indexDefinition.Reduce != null)
 			{
-				compiledQueryText += Environment.NewLine + indexDefinition.Reduce.Replace("\"", "\"\"");
+				sb.AppendLine(indexDefinition.Reduce.Replace("\"", "\"\"")).AppendLine();
 			}
 
 			if (indexDefinition.TransformResults != null)
 			{
-				compiledQueryText += Environment.NewLine + indexDefinition.TransformResults.Replace("\"", "\"\"");
+				sb.AppendLine(indexDefinition.TransformResults.Replace("\"", "\"\"")).AppendLine();
 			}
 
-			compiledQueryText += "\"";
+			sb.Append("\"");
 			CompiledQueryText = CompiledQueryText.Replace("\"" + mapReduceTextToken + "\"",
-			                                              compiledQueryText);
+			                                              sb.ToString());
 		}
 
 		private void HandleMapFunction(ConstructorDeclaration ctor, string map)
