@@ -7,10 +7,6 @@ namespace Raven.Tests.Bugs.MultiMap
 {
 	public class MultiMapReduce : LocalClientTest
 	{
-		protected override void CreateDefaultIndexes(Client.Embedded.EmbeddableDocumentStore documentStore)
-		{
-		}
-
 		[Fact]
 		public void CanGetDataFromMultipleDocumentSources()
 		{
