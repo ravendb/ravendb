@@ -25,7 +25,7 @@ namespace Raven.Tryouts
 			//MemoryTest();
 
 			var temp = new FacetedIndex();
-			temp.CanPerformFacetedSearch();
+			temp.CanPerformFacetedSearch_Embedded();
 		}
 
 		private static void MemoryTest()

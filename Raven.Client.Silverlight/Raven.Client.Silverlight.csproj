@@ -82,6 +82,18 @@
     <Compile Include="..\Raven.Abstractions\Data\EnumerableExtension.cs">
       <Link>Imports\Data\EnumerableExtension.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\Facet.cs">
+      <Link>Imports\Data\Facet.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\FacetMode.cs">
+      <Link>Imports\Data\FacetMode.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\FacetSetup.cs">
+      <Link>Imports\Data\FacetSetup.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\FacetValue.cs">
+      <Link>Imports\Data\FacetValue.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\GetRequest.cs">
       <Link>Imports\Data\GetRequest.cs</Link>
     </Compile>
