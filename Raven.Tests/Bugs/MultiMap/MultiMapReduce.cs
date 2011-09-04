@@ -44,7 +44,48 @@ namespace Raven.Tests.Bugs.MultiMap
 						.Customize(x=>x.WaitForNonStaleResults())
 						.ToList();
 
-					WaitForUserToContinueTheTest(store);
+					Assert.Equal(1, userPostingStatses.Count);
+
+					Assert.Equal(5, userPostingStatses[0].PostCount);
+					Assert.Equal("Ayende Rahien", userPostingStatses[0].UserName);
+				}
+			}
+
+		}
+
+		[Fact]
+		public void CanQueryFromMultipleSources()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new PostCountsByUser_WithName().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					var user = new User
+					{
+						Name = "Ayende Rahien"
+					};
+					session.Store(user);
+
+					for (int i = 0; i < 5; i++)
+					{
+						session.Store(new Post
+						{
+							AuthorId = user.Id,
+							Title = "blah"
+						});
+					}
+
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var userPostingStatses = session.Query<UserPostingStats, PostCountsByUser_WithName>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x=>x.UserName.StartsWith("aye"))
+						.ToList();
 
 					Assert.Equal(1, userPostingStatses.Count);
 
@@ -54,6 +95,50 @@ namespace Raven.Tests.Bugs.MultiMap
 			}
 
 		}
+
+		[Fact]
+		public void CanQueryFromMultipleSources2()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new PostCountsByUser_WithName().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					var user = new User
+					{
+						Name = "Ayende Rahien"
+					};
+					session.Store(user);
+
+					for (int i = 0; i < 5; i++)
+					{
+						session.Store(new Post
+						{
+							AuthorId = user.Id,
+							Title = "blah"
+						});
+					}
+
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var userPostingStatses = session.Query<UserPostingStats, PostCountsByUser_WithName>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x => x.UserName.StartsWith("rah"))
+						.ToList();
+
+					Assert.Equal(1, userPostingStatses.Count);
+
+					Assert.Equal(5, userPostingStatses[0].PostCount);
+					Assert.Equal("Ayende Rahien", userPostingStatses[0].UserName);
+				}
+			}
+
+		}
+
 
 		public class User
 		{
