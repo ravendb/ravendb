@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Raven.Client.Indexes;
 using Xunit;
@@ -20,6 +21,34 @@ namespace Raven.Tests.Bugs.MultiMap
 			}
 		}
 
+		[Fact]
+		public void CanQueryUsingMutliMap()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new CatsAndDogs().Execute(store);
+
+				using(var documentSession = store.OpenSession())
+				{
+					documentSession.Store(new Cat{Name = "Tom"});
+					documentSession.Store(new Dog{Name = "Oscar"});
+					documentSession.SaveChanges();
+				}
+
+				using(var session = store.OpenSession())
+				{
+					var haveNames = session.Query<IHaveName, CatsAndDogs>()
+						.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
+						.OrderBy(x => x.Name)
+						.ToList();
+
+					Assert.Equal(2, haveNames.Count);
+					Assert.IsType<Dog>(haveNames[0]);
+					Assert.IsType<Cat>(haveNames[1]);
+				}
+			}
+		}
+
 		public class CatsAndDogs : AbstractMultiMapIndexCreationTask
 		{
 			public CatsAndDogs()
@@ -32,12 +61,17 @@ namespace Raven.Tests.Bugs.MultiMap
 			}
 		}
 
-		public class Cat
+		public interface IHaveName
+		{
+			string Name { get; }
+		}
+
+		public class Cat : IHaveName
 		{
 			public string Name { get; set; }
 		}
 
-		public class Dog
+		public class Dog : IHaveName
 		{
 			public string Name { get; set; }
 		}

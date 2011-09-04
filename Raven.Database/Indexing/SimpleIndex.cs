@@ -85,9 +85,6 @@ namespace Raven.Database.Indexing
 
 					if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
 					{
-						
-
-
 						madeChanges = true;
 						luceneDoc.GetFields().Clear();
 						documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
