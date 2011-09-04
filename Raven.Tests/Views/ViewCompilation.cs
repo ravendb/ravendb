@@ -77,7 +77,7 @@ select new {
 		{
 			var dynamicViewCompiler = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce },  ".");
 			var abstractViewGenerator = dynamicViewCompiler.GenerateInstance();
-			var mapResults = abstractViewGenerator.ExecuteAllMaps(source).ToArray();
+			var mapResults = abstractViewGenerator.MapDefinitions[0](source).ToArray();
 			var results = abstractViewGenerator.ReduceDefinition(mapResults).ToArray();
 			Assert.Equal("{ blog_id = 3, comments_length = 14 }", results[0].ToString());
 			Assert.Equal("{ blog_id = 5, comments_length = 7 }", results[1].ToString());

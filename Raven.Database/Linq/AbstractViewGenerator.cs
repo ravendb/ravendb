@@ -148,10 +148,5 @@ namespace Raven.Database.Linq
 		{
 			MapDefinitions.Add(mapDef);
 		}
-
-		public IEnumerable<object> ExecuteAllMaps(IEnumerable<object> source)
-		{
-			return MapDefinitions.SelectMany(mapDefinition => mapDefinition(source));
-		}
 	}
 }
