@@ -8,16 +8,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Web;
 using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.PrettyPrinter;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
-using Raven.Database.Indexing;
 using System.Linq;
 using Raven.Database.Plugins;
 
@@ -127,6 +123,7 @@ namespace Raven.Database.Linq
 			                                              sb.ToString());
 		}
 
+		private bool firstMap = true;
 		private void HandleMapFunction(ConstructorDeclaration ctor, string map)
 		{
 			string entityName;
@@ -155,7 +152,33 @@ namespace Raven.Database.Linq
 			                   	                         }}
 			                   		)));
 
-			mapDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
+
+			if(firstMap)
+			{
+				mapDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
+				firstMap = false;
+			}
+			else
+			{
+				var secondMapFieldNames = new CaptureSelectNewFieldNamesVisitor();
+				mapDefinition.Initializer.AcceptVisitor(secondMapFieldNames, null);
+				if(secondMapFieldNames.FieldNames.SetEquals(captureSelectNewFieldNamesVisitor.FieldNames) == false)
+				{
+					var message = string.Format(@"Map functions defined as part of a multi map index must return identical types.
+Baseline map		: {0}
+Non matching map	: {1}
+
+Common fields		: {2}
+Missing fields		: {3}
+Additional fields	: {4}", indexDefinition.Maps.First(),
+					                            map,
+					                            string.Join(", ", captureSelectNewFieldNamesVisitor.FieldNames.Intersect(secondMapFieldNames.FieldNames)),
+					                            string.Join(", ", captureSelectNewFieldNamesVisitor.FieldNames.Except(secondMapFieldNames.FieldNames)),
+					                            string.Join(", ", secondMapFieldNames.FieldNames.Except(captureSelectNewFieldNamesVisitor.FieldNames))
+						);
+					throw new InvalidOperationException(message);
+				}
+			}
 
 			mapDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForMap, null);
 		}
