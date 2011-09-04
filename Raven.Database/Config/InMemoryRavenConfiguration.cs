@@ -174,8 +174,24 @@ namespace Raven.Database.Config
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
 		{
-			var totalPhysicalMemoryMegabytes =
-				(int) (new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory/1024/1024);
+			int totalPhysicalMemoryMegabytes;
+			if (Type.GetType("Mono.Runtime") != null)
+			{
+				var pc = new System.Diagnostics.PerformanceCounter ("Mono Memory", "Total Physical Memory");
+				totalPhysicalMemoryMegabytes = (int)(pc.RawValue/1024/1024);
+				if (totalPhysicalMemoryMegabytes == 0)
+					totalPhysicalMemoryMegabytes = 128; // 128MB, the Mono runtime default
+			}
+			else
+			{
+#if __MonoCS__
+				throw new PlatformNotSupportedException("This build can only run on Mono");
+#else
+				totalPhysicalMemoryMegabytes =
+					(int)(new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory/1024/1024);
+#endif
+			}
+
 			// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
 
 			var val = (totalPhysicalMemoryMegabytes / 2)  - 

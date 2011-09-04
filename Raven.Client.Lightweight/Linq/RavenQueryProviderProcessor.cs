@@ -773,7 +773,6 @@ namespace Raven.Client.Linq
 
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
-			var member = ((MemberExpression) expression.Body).Member;
 			var propertyInfo = ((MemberExpression)expression.Body).Member as PropertyInfo;
 			var fieldInfo = ((MemberExpression)expression.Body).Member as FieldInfo;
 			var expressionMemberInfo = GetMember(expression.Body);
