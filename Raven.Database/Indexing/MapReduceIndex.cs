@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -47,7 +48,7 @@ namespace Raven.Database.Indexing
 		{
 			actions.Indexing.SetCurrentIndexStatsTo(name);
 			var count = 0;
-			Func<object, object> documentIdFetcher = null;
+			
 			// we mark the reduce keys to delete when we delete the mapped results, then we remove
 			// any reduce key that is actually being used to generate new mapped results
 			// this way, only reduces that removed data will force us to use the tasks approach
@@ -65,7 +66,7 @@ namespace Raven.Database.Indexing
 			{
 				count++;
 
-				documentIdFetcher = CreateDocumentIdFetcherIfNeeded(documentIdFetcher, doc);
+				var documentIdFetcher = GetOrCreateDocumentIdFetcher(doc);
 
 				var docIdValue = documentIdFetcher(doc);
 				if (docIdValue == null)
@@ -112,24 +113,19 @@ namespace Raven.Database.Indexing
 			return RavenJObject.FromObject(doc, JsonExtensions.CreateDefaultJsonSerializer());
 		}
 
-		private static Func<object, object> CreateDocumentIdFetcherIfNeeded(Func<object, object> documentIdFetcher, object doc)
+		private readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache = new ConcurrentDictionary<Type, Func<object, object>>();
+		private Func<object, object> GetOrCreateDocumentIdFetcher(object doc)
 		{
-			if (documentIdFetcher != null)
+			return documentIdFetcherCache.GetOrAdd(doc.GetType(), type =>
 			{
-				return documentIdFetcher;
-			}
-			// document may be DynamicJsonObject if we are using
-			// compiled views
-			if (doc is DynamicJsonObject)
-			{
-				documentIdFetcher = i => ((dynamic)i).__document_id;
-			}
-			else
-			{
+				// document may be DynamicJsonObject if we are using compiled views
+				if (typeof(DynamicJsonObject) == type)
+				{
+					return i => ((dynamic) i).__document_id;
+				}
 				var docIdProp = TypeDescriptor.GetProperties(doc).Find(Abstractions.Data.Constants.DocumentIdFieldName, false);
-				documentIdFetcher = docIdProp.GetValue;
-			}
-			return documentIdFetcher;
+				return docIdProp.GetValue;
+			});
 		}
 
 		public static byte[] ComputeHash(string name, string reduceKey)

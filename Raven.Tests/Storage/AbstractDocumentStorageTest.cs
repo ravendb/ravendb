@@ -9,7 +9,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Tests.Storage
 {
-	public class AbstractDocumentStorageTest : WithDebugging, IDisposable
+	public class AbstractDocumentStorageTest : IDisposable
 	{
 		public AbstractDocumentStorageTest()
 		{

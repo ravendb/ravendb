@@ -4,10 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using System.Xml;
+using NLog.Config;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
@@ -25,7 +28,15 @@ namespace Raven.Tests
 		
 		protected void EnableDebugLog()
 		{
-		
+			var nlogPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "NLog.config");
+			if (File.Exists(nlogPath))
+				return;// that overrides the default config
+
+			using (var stream = typeof(LocalClientTest).Assembly.GetManifestResourceStream("Raven.Tests.DefaultLogging.config"))
+			using (var reader = XmlReader.Create(stream))
+			{
+				NLog.LogManager.Configuration = new XmlLoggingConfiguration(reader, "default-config");
+			}
 		}
 
 		public EmbeddableDocumentStore NewDocumentStore()
@@ -60,7 +71,7 @@ namespace Raven.Tests
 				IOExtensions.DeleteDirectory(path);
 			documentStore.Initialize();
 
-			new RavenDocumentsByEntityName().Execute(documentStore);
+			CreateDefaultIndexes(documentStore);
 
 			if (allocatedMemory != null && inMemory)
 			{
@@ -69,6 +80,11 @@ namespace Raven.Tests
 			}
 
 			return documentStore;
+		}
+
+		protected virtual void CreateDefaultIndexes(EmbeddableDocumentStore documentStore)
+		{
+			new RavenDocumentsByEntityName().Execute(documentStore);
 		}
 
 		static public void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore)

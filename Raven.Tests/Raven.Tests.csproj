@@ -600,7 +600,6 @@
     <Compile Include="Storage\GeneralStorage.cs" />
     <Compile Include="Storage\IndexStaleViaEtags.cs" />
     <Compile Include="Storage\ReduceStaleness.cs" />
-    <Compile Include="Storage\WithDebugging.cs" />
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
