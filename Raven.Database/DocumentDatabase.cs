@@ -433,13 +433,6 @@ namespace Raven.Database
 		{
 			foreach (var indexName in IndexDefinitionStorage.IndexNames)
 			{
-				var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
-				if (viewGenerator == null)
-					continue;
-				var entityName = metadata.Value<string>(Constants.RavenEntityName);
-				if (viewGenerator.ForEntityName != null &&
-						viewGenerator.ForEntityName != entityName)
-					continue;
 				var task = taskGenerator();
 				task.Index = indexName;
 				actions.Tasks.AddTask(task, SystemTime.UtcNow);
