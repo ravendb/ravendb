@@ -88,12 +88,12 @@ namespace Raven.Database.Linq
 			                                      new List<ParameterDeclarationExpression>(), null);
 			type.Children.Add(ctor);
 			ctor.Body = new BlockStatement();
-			//this.ForEntityName = entityName;
+			//this.ForEntityNames.Add(entityName);
 			ctor.Body.AddChild(new ExpressionStatement(
-								new AssignmentExpression(
-									new MemberReferenceExpression(new ThisReferenceExpression(), "ForEntityName"),
-									AssignmentOperatorType.Assign,
-									new PrimitiveExpression(entityName, entityName))));
+								new InvocationExpression(
+									new MemberReferenceExpression(new MemberReferenceExpression(new ThisReferenceExpression(), "ForEntityNames"), "Add"),
+									new List<Expression> { new PrimitiveExpression(entityName, entityName) })
+									));
 
 			// this.ViewText = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185"; // Will be replaced later
 			ctor.Body.AddChild(new ExpressionStatement(
