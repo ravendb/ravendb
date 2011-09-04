@@ -46,7 +46,7 @@ namespace Raven.Database.Linq
 
 		public int CountOfFields { get { return fields.Count;  } }
 
-		public IndexingFunc MapDefinition { get; private set; }
+		public List<IndexingFunc> MapDefinitions { get; private set; }
 		
 		public IndexingFunc ReduceDefinition { get; set; }
 
@@ -81,6 +81,7 @@ namespace Raven.Database.Linq
 
 		protected AbstractViewGenerator()
 		{
+			MapDefinitions = new List<IndexingFunc>();
 			ForEntityNames = new List<string>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<string, FieldIndexing>();
@@ -145,7 +146,12 @@ namespace Raven.Database.Linq
 
 		protected void AddMapDefinition(IndexingFunc mapDef)
 		{
-			MapDefinition = mapDef;
+			MapDefinitions.Add(mapDef);
+		}
+
+		public IEnumerable<object> ExecuteAllMaps(IEnumerable<object> source)
+		{
+			return MapDefinitions.SelectMany(mapDefinition => mapDefinition(source));
 		}
 	}
 }

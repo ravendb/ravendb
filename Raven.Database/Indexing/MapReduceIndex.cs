@@ -61,7 +61,7 @@ namespace Raven.Database.Indexing
 				}
 				return doc;
 			});
-			foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
+			foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.ExecuteAllMaps, actions, context))
 			{
 				count++;
 

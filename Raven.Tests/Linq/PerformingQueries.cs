@@ -38,7 +38,7 @@ namespace Raven.Tests.Linq
 ]");
 			var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query },  ".");
 			var compiledQuery = transformer.GenerateInstance();
-			var actual = compiledQuery.MapDefinition(documents)
+			var actual = compiledQuery.ExecuteAllMaps(documents)
 				.Cast<object>().ToArray();
 			var expected = new[]
 			{
@@ -69,7 +69,7 @@ select new { GeoHash = SampleGeoLocation.GeoHash(doc.loc, doc.lang) }
 													  	new SampleDynamicCompilationExtension()
 													  }, ".", new InMemoryRavenConfiguration());
 			var compiledQuery = transformer.GenerateInstance();
-			var actual = compiledQuery.MapDefinition(documents)
+			var actual = compiledQuery.ExecuteAllMaps(documents)
 				.Cast<object>().ToArray();
 			var expected = new[]
 			{

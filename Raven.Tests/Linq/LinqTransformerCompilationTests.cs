@@ -56,7 +56,7 @@ namespace Raven.Tests.Linq
 		{
 			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query },  ".");
 			var generator = dynamicQueryCompiler.GenerateInstance();
-			var results = generator.MapDefinition(new[]
+			var results = generator.ExecuteAllMaps(new[]
 			{
 				GetDocumentFromString(
 					@"
@@ -110,7 +110,7 @@ namespace Raven.Tests.Linq
 			},  ".").GenerateInstance();
 
 
-			var results = viewGenerator.MapDefinition(new[]
+			var results = viewGenerator.ExecuteAllMaps(new[]
 			{
 				GetDocumentFromString(
 				@"
@@ -145,7 +145,7 @@ namespace Raven.Tests.Linq
 			},  ".").GenerateInstance();
 
 
-			var results = viewGenerator.ReduceDefinition(viewGenerator.MapDefinition(new[]
+			var results = viewGenerator.ReduceDefinition(viewGenerator.ExecuteAllMaps(new[]
 			{
 				GetDocumentFromString(
 				@"

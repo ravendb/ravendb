@@ -36,7 +36,7 @@ namespace Raven.Tests.Indexes
 				.GenerateInstance();
 
 
-			var results = generator.MapDefinition(new[]
+			var results = generator.ExecuteAllMaps(new[]
 			{
 				GetDocumentFromString(
 				@"
