@@ -195,6 +195,7 @@
     <Compile Include="Bugs\Queries\Boolean.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
     <Compile Include="Bugs\QueryingOnEmptyArray.cs" />
+    <Compile Include="Bugs\QueryOptimizerOnStaticIndex.cs" />
     <Compile Include="Bugs\RacielrodTest.cs" />
     <Compile Include="Bugs\RoundCrisis.cs" />
     <Compile Include="Bugs\SelfReference.cs" />

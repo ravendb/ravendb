@@ -39,7 +39,7 @@ namespace Raven.Bundles.Tests.IndexReplication
 			ravenDbServer = new RavenDbServer(
 				new database::Raven.Database.Config.RavenConfiguration
 				{
-					Port = 58080,
+					Port = 8080,
 					DataDirectory = path,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					Catalog =
@@ -53,7 +53,7 @@ namespace Raven.Bundles.Tests.IndexReplication
 			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
 			documentStore = new DocumentStore
 			{
-				Url = "http://localhost:58080"
+				Url = "http://localhost:8080"
 			};
 			documentStore.Initialize();
 

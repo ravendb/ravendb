@@ -57,7 +57,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 			using (var store = NewDocumentStore())
 			{
-				IndexCreation.CreateIndexes(typeof(NestedObjectIndex).Assembly, store);
+				new NestedObjectIndex().Execute(store);
 
 
 				using (var s = store.OpenSession())

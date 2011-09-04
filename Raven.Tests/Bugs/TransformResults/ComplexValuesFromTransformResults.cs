@@ -115,7 +115,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		{
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
-				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
+				new QuestionWithVoteTotalIndex().Execute(documentStore);
 
 				const string questionId = @"question\259";
 				using (IDocumentSession session = documentStore.OpenSession())
@@ -157,7 +157,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		{
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
-				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
+				new Answers_ByAnswerEntity().Execute(documentStore);
 
 				const string questionId = @"question\259";
 				string answerId = CreateEntities(documentStore);
@@ -182,7 +182,8 @@ namespace Raven.Tests.Bugs.TransformResults
 		{
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
-				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
+				new Answers_ByAnswerEntity().Execute(documentStore);
+				new Votes_ByAnswerEntity().Execute(documentStore);
 
 				string answerId = CreateEntities(documentStore);
 				// Working
@@ -221,7 +222,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			{
 				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
-				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
+				new Answers_ByAnswerEntity2().Execute(documentStore);
 				Guid questionId = Guid.NewGuid();
 				Guid answerId = Guid.NewGuid();
 
@@ -285,7 +286,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			{
 				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
-				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
+				new Answers_ByAnswerEntity2().Execute(documentStore);
 				Guid questionId = Guid.NewGuid();
 				Guid answerId = Guid.NewGuid();
 
@@ -365,7 +366,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		{
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
-				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, documentStore);
+				new Answers_ByAnswerEntity().Execute(documentStore);
 
 				const string Content = "This is doable";
 				const string UserId = @"user\222";

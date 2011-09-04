@@ -116,7 +116,6 @@ namespace Raven.Database.Linq
 			                   			ExpressionBody = mapDefinition.Initializer
 			                   		})));
 
-
 			mapDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 
 			mapDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForMap, null);
@@ -207,11 +206,11 @@ namespace Raven.Database.Linq
 			}
 
 			var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToList();
-			captureSelectNewFieldNamesVisitor.FieldNames.Clear();// reduce override the map fields
+			captureSelectNewFieldNamesVisitor.Clear();// reduce override the map fields
 			reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 			reduceDefiniton.Initializer.AcceptChildren(captureQueryParameterNamesVisitorForReduce, null);
 
-			//ValidateMapReduceFields(mapFields);
+			ValidateMapReduceFields(mapFields);
 
 			// this.ReduceDefinition = from result in results...;
 			ctor.Body.AddChild(new ExpressionStatement(
@@ -247,12 +246,18 @@ namespace Raven.Database.Linq
 		{
 			mapFields.Remove("__document_id");
 			var reduceFields = captureSelectNewFieldNamesVisitor.FieldNames;
-			if (reduceFields.IsProperSubsetOf(mapFields) == false)
+			if (reduceFields.SetEquals(mapFields) == false)
 			{
-				throw new InvalidOperationException(string.Format(@"The result type is not consistent across map and reduce:
-Map	Fields   : {0}
-Reduce Fields: {1}
-", string.Join(", ", mapFields), string.Join(", ", reduceFields)));
+			    throw new InvalidOperationException(
+			        string.Format(
+			            @"The result type is not consistent across map and reduce:
+Common fields: {0}
+Map	only fields   : {1}
+Reduce only fields: {2}
+",
+			            string.Join(", ", mapFields.Intersect(reduceFields).OrderBy(x => x)),
+			            string.Join(", ", mapFields.Except(reduceFields).OrderBy(x => x)),
+			            string.Join(", ", reduceFields.Except(mapFields).OrderBy(x => x))));
 			}
 		}
 
