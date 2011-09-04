@@ -57,6 +57,7 @@ namespace Raven.Tests
 					}
 			};
 
+			ModifyStore(documentStore);
 			ModifyConfiguration(documentStore.Configuration);
 
 			if (documentStore.Configuration.RunInMemory == false)
@@ -72,6 +73,11 @@ namespace Raven.Tests
 			}
 
 			return documentStore;
+		}
+
+		protected virtual void ModifyStore(EmbeddableDocumentStore documentStore)
+		{
+			
 		}
 
 		static public void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore)

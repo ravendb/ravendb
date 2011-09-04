@@ -4,48 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Database.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class Game : RemoteClientTest, IDisposable
+	public class Game : RemoteClientTest
 	{
-		private string path;
-
-		#region IDisposable Members
-
-		public void Dispose()
-		{
-			IOExtensions.DeleteDirectory(path);
-		}
-
-		#endregion
-
-
-		private DocumentStore NewDocumentStore()
-		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			var documentStore = new EmbeddableDocumentStore
-			{
-				Configuration =
-				{
-					DataDirectory = path
-				}
-			};
-			documentStore.Initialize();
-			return documentStore;
-		}
-
-
+		
 		/// <summary>
 		/// http://groups.google.com/group/ravendb/browse_thread/thread/e9f045e073d7a698
 		/// </summary>

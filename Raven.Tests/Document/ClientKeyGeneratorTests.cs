@@ -4,44 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
 using Raven.Client.Document;
-using System.Reflection;
-using Raven.Client.Embedded;
 using Raven.Database.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class ClientKeyGeneratorTests : RemoteClientTest, IDisposable
+	public class ClientKeyGeneratorTests : RemoteClientTest
 	{
-		private string path;
-
-		#region IDisposable Members
-
-		public void Dispose()
-		{
-			IOExtensions.DeleteDirectory(path);
-		}
-
-		#endregion
-		
-		private DocumentStore NewDocumentStore()
-		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			var documentStore = new EmbeddableDocumentStore()
-			{
-				Configuration =
-					{
-						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-						DataDirectory = path
-					}
-			};
-			documentStore.Initialize();
-			return documentStore;
-		}
-
 		[Fact]
 		public void IdIsSetFromGeneratorOnStore()
 		{
