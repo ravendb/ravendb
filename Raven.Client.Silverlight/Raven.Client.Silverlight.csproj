@@ -205,6 +205,12 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\ExceptionExtensions.cs">
       <Link>Imports\Extensions\ExceptionExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractGenericIndexCreationTask.cs">
+      <Link>Imports\Indexes\AbstractGenericIndexCreationTask.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractMultiMapIndexCreationTask.cs">
+      <Link>Imports\Indexes\AbstractMultiMapIndexCreationTask.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs">
       <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
     </Compile>
