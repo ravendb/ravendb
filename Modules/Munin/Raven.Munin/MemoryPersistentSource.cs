@@ -23,7 +23,8 @@ namespace Raven.Munin
 
 		protected override Stream CreateClonedStreamForReadOnlyPurposes()
 		{
-			return new MemoryStream(log.GetBuffer(), 0, (int)Log.Length, false);
+			var memoryStream = log;
+			return new MemoryStream(memoryStream.GetBuffer(), 0, (int)memoryStream.Length, false);
 		}
 
 		public MemoryPersistentSource(byte[] data)
