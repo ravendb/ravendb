@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Client.Linq;
 using Xunit;
 using Raven.Abstractions.Indexing;
@@ -31,8 +32,7 @@ namespace Raven.Tests.Faceted
 		}
 	}
 
-	//public class FacetedIndex : LocalClientTest
-	public class FacetedIndex : RemoteClientTest
+	public class FacetedIndex : RavenTest
 	{
 		private readonly IList<Camera> _data;
 		private readonly List<Facet> _facets;
@@ -53,10 +53,8 @@ namespace Raven.Tests.Faceted
 			          				Mode = FacetMode.Ranges,
 			          				Ranges =
 			          					{
-			          						"[NULL TO 200.0]",
-			          						//"[NULL TO Dx200.0]", 
-			          						"[200.0 TO 400.0]",
-			          						//"[Dx200.0 TO Dx400.0]",
+			          						"[NULL TO Dx200.0]",
+			          						"[Dx200.0 TO Dx400.0]",
 			          						"[Dx400.0 TO Dx600.0]",
 			          						"[Dx600.0 TO Dx800.0]",
 			          						"[Dx800.0 TO NULL]",
@@ -78,24 +76,39 @@ namespace Raven.Tests.Faceted
 		}
 
 		[Fact]
-		public void CanPerformFacetedSearch()
+		public void CanPerformFacetedSearch_Remotely()
 		{
-			//using (var store = NewDocumentStore())
 			using (GetNewServer())
 			using (var store = new DocumentStore
 			{
 				Url = "http://localhost:8080"
 			}.Initialize())
 			{
-				using (var s = store.OpenSession())
-				{
-					s.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = _facets });
-					s.SaveChanges();
+				ExecuteTest(store);
+			}
+		}
 
-					store.DatabaseCommands.PutIndex("CameraCost",
-										new IndexDefinition
-										{
-											Map = @"from camera in docs 
+		[Fact]
+		public void CanPerformFacetedSearch_Embedded()
+		{
+			using (var store = NewDocumentStore())
+			{
+				ExecuteTest(store);
+			}
+		}
+
+
+		private void ExecuteTest(IDocumentStore store)
+		{
+			using (var s = store.OpenSession())
+			{
+				s.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = _facets });
+				s.SaveChanges();
+
+				store.DatabaseCommands.PutIndex("CameraCost",
+				                                new IndexDefinition
+				                                {
+				                                	Map = @"from camera in docs 
                                                         select new 
                                                         { 
                                                             camera.Manufacturer, 
@@ -104,48 +117,47 @@ namespace Raven.Tests.Faceted
                                                             camera.DateOfListing,
                                                             camera.Megapixels
                                                         }"
-										});
+				                                });
 
-					var counter = 0;
-					foreach (var camera in _data)
-					{
-						s.Store(camera);
-						counter++;
+				var counter = 0;
+				foreach (var camera in _data)
+				{
+					s.Store(camera);
+					counter++;
 
-						if (counter % 1024 == 0)
-							s.SaveChanges();
-					}
-					s.SaveChanges();
+					if (counter % 1024 == 0)
+						s.SaveChanges();
+				}
+				s.SaveChanges();
 
-					s.Query<Camera>("CameraCost")
-						.Customize(x => x.WaitForNonStaleResults())
-						.ToList();
+				s.Query<Camera>("CameraCost")
+					.Customize(x => x.WaitForNonStaleResults())
+					.ToList();
 
-					//WaitForUserToContinueTheTest(store);
+				//WaitForUserToContinueTheTest(store);
 
-					var expressions = new Expression<Func<Camera, bool>>[]
-					                  	{
-					                  		x => x.Cost >= 100 && x.Cost <= 300,
-					                  		x => x.DateOfListing > new DateTime(2000, 1, 1),
-					                  		x => x.Megapixels > 5.0m && x.Cost < 500
-					                  	};
+				var expressions = new Expression<Func<Camera, bool>>[]
+				{
+					x => x.Cost >= 100 && x.Cost <= 300,
+					x => x.DateOfListing > new DateTime(2000, 1, 1),
+					x => x.Megapixels > 5.0m && x.Cost < 500
+				};
 
-					foreach (var exp in expressions)
-					{
-						Console.WriteLine("Query: " + exp);
+				foreach (var exp in expressions)
+				{
+					Console.WriteLine("Query: " + exp);
 
-						var facetQueryTimer = Stopwatch.StartNew();
-						var facetResults = s.Query<Camera>("CameraCost")
-							.Where(exp)
-							.ToFacets("facets/CameraFacets");
-						facetQueryTimer.Stop();
+					var facetQueryTimer = Stopwatch.StartNew();
+					var facetResults = s.Query<Camera>("CameraCost")
+						.Where(exp)
+						.ToFacets("facets/CameraFacets");
+					facetQueryTimer.Stop();
 
-						Console.WriteLine("Took {0:0.00} msecs", facetQueryTimer.ElapsedMilliseconds);
-						PrintFacetResults(facetResults);
+					Console.WriteLine("Took {0:0.00} msecs", facetQueryTimer.ElapsedMilliseconds);
+					PrintFacetResults(facetResults);
 
-						var filteredData = _data.Where(exp.Compile()).ToList();
-						CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
-					}
+					var filteredData = _data.Where(exp.Compile()).ToList();
+					CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
 				}
 			}
 		}
