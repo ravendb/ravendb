@@ -117,14 +117,9 @@ namespace Raven.Tests.Faceted
 					}
 					s.SaveChanges();
 
-					RavenQueryStatistics stats;
-					do
-					{
-						Thread.Sleep(500);
-						s.Query<Camera>("CameraCost")
-							.Statistics(out stats)
-							.ToList();
-					} while (stats.IsStale);
+					s.Query<Camera>("CameraCost")
+						.Customize(x => x.WaitForNonStaleResults())
+						.ToList();
 
 					//WaitForUserToContinueTheTest(store);
 
@@ -137,7 +132,7 @@ namespace Raven.Tests.Faceted
 
 					foreach (var exp in expressions)
 					{
-						Console.WriteLine("Query: " + exp.ToString());
+						Console.WriteLine("Query: " + exp);
 
 						var facetQueryTimer = Stopwatch.StartNew();
 						var facetResults = s.Query<Camera>("CameraCost")
