@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs.CompiledIndexes
 	{
 		public NetworkEventsToNetworkTemp()
 		{
-			MapDefinition = docs => docs.Where(doc => doc["@metadata"]["Raven-Entity-Name"].ToString().Contains("NetworkList"));
+			AddMapDefinition(docs => docs.Where(doc => doc["@metadata"]["Raven-Entity-Name"].ToString().Contains("NetworkList")));
 
 			GroupByExtraction = source => source.Network;
 			ReduceDefinition = Reduce;

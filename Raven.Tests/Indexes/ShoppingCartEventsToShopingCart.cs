@@ -18,7 +18,7 @@ namespace Raven.Tests.Indexes
 	{
 		public ShoppingCartEventsToShopingCart()
 		{
-			MapDefinition = docs => docs.Where(document => document.For == "ShoppingCart");
+			AddMapDefinition(docs => docs.Where(document => document.For == "ShoppingCart"));
 			GroupByExtraction = source => source.ShoppingCartId;
 			ReduceDefinition = Reduce;
 
