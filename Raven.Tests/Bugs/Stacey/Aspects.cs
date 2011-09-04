@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Stacey {
@@ -144,6 +146,87 @@ namespace Raven.Tests.Bugs.Stacey {
 					Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(results.Path.Steps[0].Requirements[1]));
 				}
 			});
+		}
+
+		[Fact]
+		public void Index_can_be_queried()
+		{
+			using (var database = DocumentStore())
+			{
+				database.DatabaseCommands.PutIndex("AspectsByName", new IndexDefinitionBuilder<Aspect>
+				{
+					Map = orders => from order in orders
+									select new { order.Name }
+				});
+				database.DatabaseCommands.PutIndex("test", new IndexDefinitionBuilder<Entity>()
+				{
+					Map = docs => from i in docs.WhereEntityIs<Entity>("Aspects", "Currencies")
+								  select new { i.Name }
+				}.ToIndexDefinition(database.Conventions));
+
+				// arrange
+				var aspects = new Aspect[2] {
+					new Aspect{
+						Name = "Strength",
+						Kind = Kind.Attribute,
+						Category = Category.Physical
+					},
+					new Aspect {
+						Name = "Stamina",
+						Kind = Kind.Attribute,
+						Category = Category.Physical
+					}
+				};
+
+
+				// assert
+				Assert.DoesNotThrow(() =>
+				{
+					using (var session = database.OpenSession())
+					{
+						// ensure optimistic concurrency
+						session.Advanced.UseOptimisticConcurrency = true;
+
+						// try to insert the aspects into the database
+						session.Store(aspects[0]);
+						session.Store(aspects[1]);
+
+						session.SaveChanges();
+
+						// try to query each of the newly inserted aspects.
+						var query = session.Query<Aspect>().ToList();
+
+						// unit test each aspect.
+						foreach (var aspect in query)
+						{
+							Assert.NotNull(aspect.Id);
+							Assert.NotNull(aspect.Name);
+							Assert.NotNull(aspect.Kind);
+							Assert.NotNull(aspect.Category);
+						}
+					}
+				});
+
+				// assert
+				Assert.DoesNotThrow(() =>
+				{
+					using (var session = database.OpenSession())
+					{
+						// ensure optimistic concurrency
+						session.Advanced.UseOptimisticConcurrency = true;
+
+						// create an array to hold the results.
+						// try to query each of the newly inserted aspects.
+
+						var results = session.Query<Aspect>("AspectsByName")
+							.Customize(n => n.WaitForNonStaleResults())
+							.Where(n => n.Name == "Strength")
+							.ToList();
+
+						Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(results));
+					}
+				});
+			}
 		}
 	}
 }
