@@ -317,7 +317,7 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IndexingFunc func,
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IEnumerable<IndexingFunc> funcs,
 		                                                     IStorageActionsAccessor actions, WorkContext context)
 		{
 			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
@@ -346,7 +346,7 @@ namespace Raven.Database.Indexing
 							e);
 					}
 				}
-			}.RobustEnumeration(input, func);
+			}.RobustEnumeration(input, funcs);
 		}
 
 		protected IEnumerable<object> RobustEnumerationReduce(IEnumerable<object> input, IndexingFunc func,

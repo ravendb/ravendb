@@ -112,7 +112,7 @@ namespace Raven.Tests.Bugs
 				Thread.Sleep(100);
 			}
 
-			Assert.Throws<IndexDisabledException>(() => db.Query("test", new IndexQuery { Query = "Name:Ayende" }));
+			Assert.Throws<IndexDisabledException>(() => db.Query("test", new IndexQuery { Query = "User:Ayende" }));
 		}
 
 		[Fact]

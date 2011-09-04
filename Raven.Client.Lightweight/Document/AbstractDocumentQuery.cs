@@ -193,6 +193,16 @@ namespace Raven.Client.Document
 		private Action<QueryResult> afterQueryExecuted;
 		private Guid? cutoffEtag;
 
+		private TimeSpan DefaultTimeout
+		{
+			get
+			{
+				if (Debugger.IsAttached) // increase timeout if we are debugging
+					return TimeSpan.FromMinutes(15);
+				return TimeSpan.FromSeconds(15);
+			}
+		}
+
 #if !SILVERLIGHT && !NET_3_5
 		/// <summary>
 		///   Initializes a new instance of the <see cref = "DocumentQuery&lt;T&gt;" /> class.
@@ -1113,7 +1123,7 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			theWaitForNonStaleResults = true;
 			cutoff = SystemTime.UtcNow;
-			timeout = TimeSpan.FromSeconds(15);
+			timeout = DefaultTimeout;
 		}
 
 		/// <summary>
@@ -1203,7 +1213,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		public void WaitForNonStaleResultsAsOf(DateTime cutOff)
 		{
-			WaitForNonStaleResultsAsOf(cutOff, TimeSpan.FromSeconds(15));
+			WaitForNonStaleResultsAsOf(cutOff, DefaultTimeout);
 		}
 
 		/// <summary>
@@ -1226,7 +1236,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WaitForNonStaleResultsAsOfLastWrite()
 		{
-			WaitForNonStaleResultsAsOfLastWrite(TimeSpan.FromSeconds(15));
+			WaitForNonStaleResultsAsOfLastWrite(DefaultTimeout);
 		}
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
@@ -1247,7 +1257,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WaitForNonStaleResults()
 		{
-			WaitForNonStaleResults(TimeSpan.FromSeconds(15));
+			WaitForNonStaleResults(DefaultTimeout);
 		}
 
 		/// <summary>

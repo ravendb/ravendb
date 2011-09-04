@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace Raven.Abstractions.Indexing
 {
@@ -20,10 +21,37 @@ namespace Raven.Abstractions.Indexing
 		public string Name { get; set; }
 
 		/// <summary>
-		/// Gets or sets the map function
+		/// Gets or sets the map function, if there is only one
 		/// </summary>
-		/// <value>The map.</value>
-		public string Map { get; set; }
+		/// <remarks>
+		/// This property only exists for backward compatability purposes
+		/// </remarks>
+		[JsonIgnore]
+		public string Map
+		{
+			get
+			{
+				if (Maps.Count == 0)
+					return null;
+				if (Maps.Count == 1)
+					return Maps[0];
+				throw new InvalidOperationException("Index Defintion " + Name+" has more than a single Map, cannot use the Map property");
+			} 
+			set
+			{
+				if (Maps.Count == 0)
+					Maps.Add(value);
+				else if (Maps.Count == 1)
+					Maps[0] = value;
+				else
+					throw new InvalidOperationException("Index Defintion " + Name + " has more than a single Map, cannot use the Map property");
+			}
+		}
+
+		/// <summary>
+		/// All the map functions for this index
+		/// </summary>
+		public List<string> Maps { get; set; }
 
 		/// <summary>
 		/// Gets or sets the reduce function
@@ -88,6 +116,7 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public IndexDefinition()
 		{
+			Maps = new List<string>();
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
@@ -104,7 +133,7 @@ namespace Raven.Abstractions.Indexing
 		{
 			if (ReferenceEquals(null, other)) return false;
 			if (ReferenceEquals(this, other)) return true;
-			return Equals(other.Map, Map) && 
+			return Maps.SequenceEqual(other.Maps) &&
 				Equals(other.Name, Name) &&
 				Equals(other.Reduce, Reduce) && 
 				Equals(other.TransformResults, TransformResults) && 
@@ -182,7 +211,7 @@ namespace Raven.Abstractions.Indexing
 		{
 			unchecked
 			{
-				int result = (Map != null ? Map.GetHashCode() : 0);
+				int result = Maps.Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
 				result = (result*397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
 				result = (result*397) ^ DictionaryHashCode(Stores);
 				result = (result*397) ^ DictionaryHashCode(Indexes);
