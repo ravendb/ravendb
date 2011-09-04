@@ -18,20 +18,6 @@ using Raven.Client.Document;
 
 namespace Raven.Tests.Faceted
 {
-	//Eventually move this into LinqExtensions.cs in "Raven.Client.Lightweight\Linq"
-	public static class Extensions
-	{
-		public static IDictionary<string, IEnumerable<FacetValue>> ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
-		{
-			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
-			var query = ravenQueryInspector.ToString();
-			var provider = queryable.Provider as IRavenQueryProvider;
-
-			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried,
-																  new IndexQuery { Query = query }, facetDoc);
-		}
-	}
-
 	public class FacetedIndex : RavenTest
 	{
 		private readonly IList<Camera> _data;

@@ -26,6 +26,18 @@ namespace Raven.Client.Linq
 	public static partial class LinqExtensions
 	{
 		/// <summary>
+		/// Query the facets results for this query using the specified facet document
+		/// </summary>
+		public static IDictionary<string, IEnumerable<FacetValue>> ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
+		{
+			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
+			var query = ravenQueryInspector.ToString();
+			var provider = queryable.Provider as IRavenQueryProvider;
+
+			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried,
+																  new IndexQuery { Query = query }, facetDoc);
+		}
+		/// <summary>
 		/// Project using a different type
 		/// </summary>
 		public static IQueryable<TResult> As<TResult>(this IQueryable queryable)
