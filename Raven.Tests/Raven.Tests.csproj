@@ -563,6 +563,7 @@
     <Compile Include="Querying\UsingDocumentQuery.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithLocalServer.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithRemoteServer.cs" />
+    <Compile Include="RavenTest.cs" />
     <Compile Include="RemoteClientTest.cs" />
     <Compile Include="Security\OAuth\AccessTokenAuthentication.cs" />
     <Compile Include="Security\OAuth\CertHelper.cs" />
