@@ -1286,15 +1286,18 @@ namespace Raven.Client.Indexes
 				{
 					Out(", ");
 				}
-				Out(node.Members[i].Name);
-				Out(" = ");
-
-				var constantExpression = node.Arguments[i] as ConstantExpression;
-				if (constantExpression != null && constantExpression.Value == null)
+				if (node.Members != null && node.Members[i] != null)
 				{
-					Out("(");
-					Out(GetMemberType(node.Members[i]).FullName);
-					Out(")");
+					Out(node.Members[i].Name);
+					Out(" = ");
+
+					var constantExpression = node.Arguments[i] as ConstantExpression;
+					if (constantExpression != null && constantExpression.Value == null)
+					{
+						Out("(");
+						Out(GetMemberType(node.Members[i]).FullName);
+						Out(")");
+					}
 				}
 
 				Visit(node.Arguments[i]);
