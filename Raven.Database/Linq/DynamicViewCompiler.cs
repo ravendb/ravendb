@@ -95,7 +95,10 @@ namespace Raven.Database.Linq
 			                   		AssignmentOperatorType.Assign,
 			                   		new PrimitiveExpression(mapReduceTextToken, mapReduceTextToken))));
 
-			HandleMapFunction(ctor, indexDefinition.Map);
+			foreach (var map in indexDefinition.Maps)
+			{
+				HandleMapFunction(ctor, map);
+			}
 
 			HandleTransformResults(ctor);
 
