@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using System.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -25,14 +26,25 @@ namespace Raven.Database.Indexing
 
 		public IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func)
 		{
-			return RobustEnumeration(input, new[] {func,});
+			return RobustEnumeration(input, new[] { func, });
 		}
 
 		public IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IEnumerable<IndexingFunc> funcs)
 		{
-			using (var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator()))
+			List<object> onlyIterateOverEnumableOnce;
+			try
 			{
-				foreach (var func in funcs)
+				onlyIterateOverEnumableOnce = input.ToList();
+			}
+			catch (Exception e)
+			{
+				OnError(e, null);
+				yield break;
+			}
+
+			foreach (var func in funcs)
+			{
+				using (var wrapped = new StatefulEnumerableWrapper<dynamic>(onlyIterateOverEnumableOnce.GetEnumerator()))
 				{
 					IEnumerator<dynamic> en;
 					using (en = func(wrapped).GetEnumerator())
@@ -42,7 +54,7 @@ namespace Raven.Database.Indexing
 						{
 							var moveSuccessful = MoveNext(en, wrapped);
 							if (moveSuccessful == false)
-								yield break;
+								break;
 							if (moveSuccessful == true)
 							{
 								maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
