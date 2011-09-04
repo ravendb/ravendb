@@ -43,7 +43,8 @@ namespace Raven.Abstractions.Indexing
 					Maps.Add(value);
 				else if (Maps.Count == 1)
 					Maps[0] = value;
-				throw new InvalidOperationException("Index Defintion " + Name + " has more than a single Map, cannot use the Map property");
+				else
+					throw new InvalidOperationException("Index Defintion " + Name + " has more than a single Map, cannot use the Map property");
 			}
 		}
 
