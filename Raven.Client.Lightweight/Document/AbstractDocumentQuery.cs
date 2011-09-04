@@ -12,7 +12,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
-using NLog;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
@@ -38,7 +37,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
