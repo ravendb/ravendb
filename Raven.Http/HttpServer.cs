@@ -398,7 +398,10 @@ namespace Raven.Http
 				if (DefaultConfiguration.HttpCompression)
 					AddHttpCompressionIfClientCanAcceptIt(ctx);
 
-				AddAccessControlAllowOriginHeader(ctx);
+				// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
+				AddAccessControlHeaders(ctx);
+				if (ctx.Request.HttpMethod == "OPTIONS")
+					return false;
 
 				foreach (var requestResponderLazy in RequestResponders)
 				{
@@ -474,11 +477,23 @@ namespace Raven.Http
 		protected abstract bool TryGetOrCreateResourceStore(string name, out IResourceStore database);
 
 
-		private void AddAccessControlAllowOriginHeader(IHttpContext ctx)
+		private void AddAccessControlHeaders(IHttpContext ctx)
 		{
 			if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlAllowOrigin))
 				return;
 			ctx.Response.AddHeader("Access-Control-Allow-Origin", DefaultConfiguration.AccessControlAllowOrigin);
+			ctx.Response.AddHeader("Access-Control-Max-Age", DefaultConfiguration.AccessControlMaxAge);
+			ctx.Response.AddHeader("Access-Control-Allow-Methods", DefaultConfiguration.AccessControlAllowMethods);
+			if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlRequestHeaders))
+			{
+				// allow whatever headers are being requested
+				var hdr = ctx.Request.Headers["Access-Control-Request-Headers"]; // typically: "x-requested-with"
+				if (hdr != null) ctx.Response.AddHeader("Access-Control-Allow-Headers", hdr);
+			}
+			else
+			{
+				ctx.Response.AddHeader("Access-Control-Request-Headers", DefaultConfiguration.AccessControlRequestHeaders);
+			}
 		}
 
 		private static void AddHttpCompressionIfClientCanAcceptIt(IHttpContext ctx)
