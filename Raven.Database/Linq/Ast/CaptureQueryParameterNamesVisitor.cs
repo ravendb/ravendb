@@ -1,11 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.Visitors;
 
-namespace Raven.Database.Linq
+namespace Raven.Database.Linq.Ast
 {
 	public class CaptureQueryParameterNamesVisitor : AbstractAstVisitor
 	{

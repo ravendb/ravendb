@@ -19,6 +19,7 @@ using Microsoft.CSharp;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
+using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
 
@@ -26,13 +27,6 @@ namespace Raven.Database.Linq
 {
 	public static class QueryParsingUtils
 	{
-		public static string ToCSharp(this Expression expression)
-		{
-			var output = new CSharpOutputVisitor();
-			expression.AcceptVisitor(output, null);
-			return (output.Text);
-		}
-
 		public static string GenerateText(TypeDeclaration type, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
 			var unit = new CompilationUnit();

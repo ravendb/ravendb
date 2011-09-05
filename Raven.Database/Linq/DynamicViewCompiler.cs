@@ -15,6 +15,7 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using System.Linq;
+using Raven.Database.Linq.Ast;
 using Raven.Database.Plugins;
 
 namespace Raven.Database.Linq
@@ -180,6 +181,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 				}
 			}
 
+			mapDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(), null);
 			mapDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForMap, null);
 		}
 
@@ -249,6 +251,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			captureSelectNewFieldNamesVisitor.Clear();// reduce override the map fields
 			reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 			reduceDefiniton.Initializer.AcceptChildren(captureQueryParameterNamesVisitorForReduce, null);
+			reduceDefiniton.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(), null);
 
 			ValidateMapReduceFields(mapFields);
 
