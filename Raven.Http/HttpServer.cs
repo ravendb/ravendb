@@ -190,25 +190,13 @@ namespace Raven.Http
 				//setup waiting for the next request
 				listener.BeginGetContext(GetContext, null);
 			}
-			catch (AggregateException)
+			catch (Exception)
 			{
 				// can't get current request / end new one, probably
 				// listner shutdown
 				return;
 			}
-			catch (InvalidOperationException)
-			{
-				// can't get current request / end new one, probably
-				// listner shutdown
-				return;
-			}
-			catch (HttpListenerException)
-			{
-				// can't get current request / end new one, probably
-				// listner shutdown
-				return;
-			}
-
+			
 			if (concurretRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
 			{
 				HandleTooBusyError(ctx);
