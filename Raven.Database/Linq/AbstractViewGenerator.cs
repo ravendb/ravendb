@@ -60,7 +60,7 @@ namespace Raven.Database.Linq
 		
 		public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
-		public List<string> ForEntityNames { get; set; }
+		public HashSet<string> ForEntityNames { get; set; }
 
 		public string[] Fields
 		{
@@ -82,7 +82,7 @@ namespace Raven.Database.Linq
 		protected AbstractViewGenerator()
 		{
 			MapDefinitions = new List<IndexingFunc>();
-			ForEntityNames = new List<string>();
+			ForEntityNames = new HashSet<string>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<string, FieldIndexing>();
 		}

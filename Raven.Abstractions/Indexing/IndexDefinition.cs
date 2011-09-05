@@ -31,17 +31,18 @@ namespace Raven.Abstractions.Indexing
 			get { return Maps.FirstOrDefault(); }
 			set
 			{
-				if (Maps.Count == 0)
-					Maps.Add(value);
-				else 
-					Maps[0] = value;
+				if (Maps.Count != 0)
+				{
+					Maps.Remove(Maps.First());
+				}
+				Maps.Add(value);
 			}
 		}
 
 		/// <summary>
 		/// All the map functions for this index
 		/// </summary>
-		public List<string> Maps { get; set; }
+		public HashSet<string> Maps { get; set; }
 
 		/// <summary>
 		/// Gets or sets the reduce function
@@ -106,7 +107,7 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public IndexDefinition()
 		{
-			Maps = new List<string>();
+			Maps = new HashSet<string>();
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();

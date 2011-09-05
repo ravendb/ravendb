@@ -38,7 +38,10 @@ namespace Raven.Client.Indexes
 				TransformResults = TransformResults,
 				Stores = Stores
 			}.ToIndexDefinition(Conventions, validateMap: false);
-			indexDefinition.Maps.AddRange(maps.Select(generateMap=>generateMap()));
+			foreach (var map in maps.Select(generateMap => generateMap()))
+			{
+				indexDefinition.Maps.Add(map);
+			}
 			return indexDefinition;
 		}
 	}

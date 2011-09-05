@@ -16,8 +16,8 @@ namespace Raven.Tests.Bugs.MultiMap
 
 				var indexDefinition = store.DatabaseCommands.GetIndex("CatsAndDogs");
 				Assert.Equal(2, indexDefinition.Maps.Count);
-				Assert.Equal("docs.Cats\r\n\t.Select(cat => new {Name = cat.Name})", indexDefinition.Maps[0]);
-				Assert.Equal("docs.Dogs\r\n\t.Select(dog => new {Name = dog.Name})", indexDefinition.Maps[1]);   
+				Assert.Equal("docs.Cats\r\n\t.Select(cat => new {Name = cat.Name})", indexDefinition.Maps.First());
+				Assert.Equal("docs.Dogs\r\n\t.Select(dog => new {Name = dog.Name})", indexDefinition.Maps.Skip(1).First());   
 			}
 		}
 

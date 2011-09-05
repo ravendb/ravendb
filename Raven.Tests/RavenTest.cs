@@ -17,6 +17,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Http;
 using Raven.Json.Linq;
+using Raven.Munin;
 using Raven.Server;
 using Raven.Storage.Managed;
 using Raven.Tests.Document;
@@ -44,7 +45,6 @@ namespace Raven.Tests
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-
 
 			var documentStore = new EmbeddableDocumentStore()
 			{
