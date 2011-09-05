@@ -26,25 +26,15 @@ namespace Raven.Abstractions.Indexing
 		/// <remarks>
 		/// This property only exists for backward compatability purposes
 		/// </remarks>
-		[JsonIgnore]
 		public string Map
 		{
-			get
-			{
-				if (Maps.Count == 0)
-					return null;
-				if (Maps.Count == 1)
-					return Maps[0];
-				throw new InvalidOperationException("Index Defintion " + Name+" has more than a single Map, cannot use the Map property");
-			} 
+			get { return Maps.FirstOrDefault(); }
 			set
 			{
 				if (Maps.Count == 0)
 					Maps.Add(value);
-				else if (Maps.Count == 1)
+				else 
 					Maps[0] = value;
-				else
-					throw new InvalidOperationException("Index Defintion " + Name + " has more than a single Map, cannot use the Map property");
 			}
 		}
 
@@ -211,7 +201,8 @@ namespace Raven.Abstractions.Indexing
 		{
 			unchecked
 			{
-				int result = Maps.Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
+				int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc*397 ^ val.GetHashCode());
+				result = (result*397) ^ Maps.Count;
 				result = (result*397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
 				result = (result*397) ^ DictionaryHashCode(Stores);
 				result = (result*397) ^ DictionaryHashCode(Indexes);
