@@ -101,8 +101,12 @@ namespace Raven.Studio.Features.Database
 
 		public void BeginCreateSampleData()
 		{
-			var tasks = (IEnumerable<Task>)CreateSampleData().GetEnumerator();
-			tasks.ExecuteInSequence(null);
+			CreateSampleData()
+				.ExecuteInSequence(success =>
+				{
+					if(success)
+						WorkCompleted("created sample data");
+				});
 		}
 
 		IEnumerable<Task> CreateSampleData()
@@ -123,9 +127,10 @@ namespace Raven.Studio.Features.Database
 				foreach (var index in musicStoreData.Value<RavenJArray>("Indexes"))
 				{
 					var indexName = index.Value<string>("name");
+					var ravenJObject = index.Value<RavenJObject>("definition");
 					var putDoc = documentSession.Advanced.AsyncDatabaseCommands
 						.PutIndexAsync(indexName,
-										index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>(),
+										ravenJObject.JsonDeserialization<IndexDefinition>(),
 										true);
 					yield return putDoc;
 				}
