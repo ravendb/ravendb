@@ -1,13 +1,40 @@
+using System;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Bugs.QueryOptimizer
 {
 	public class QueryOptimizeTests : LocalClientTest
 	{
+		[Fact]
+		public void WillNotError()
+		{
+			using(var store = NewDocumentStore())
+			{
+				using(var session = store.OpenSession())
+				{
+
+					var blogPosts = from post in session.Query<BlogPost>()
+					                where post.Tags.Any(tag => tag == "RavenDB")
+					                select post;
+
+
+					Console.WriteLine(blogPosts);
+					session.Query<User>()
+						.Where(x => x.Email == "ayende@ayende.com")
+						.ToList();
+
+					session.Query<User>()
+						.OrderBy(x=>x.Name)
+						.ToList();
+				}
+			}
+		}
+
 		[Fact]
 		public void CanUseExistingDynamicIndex()
 		{
@@ -137,5 +164,10 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 				Assert.Equal("test2", queryResult.IndexName);
 			}
 		}
+	}
+
+	public class BlogPost
+	{
+		public string[] Tags { get; set; }
 	}
 }
