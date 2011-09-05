@@ -61,41 +61,40 @@ namespace Raven.Database.Queries
 						var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 						if (indexDefinition == null)
 							return false;
-						
+						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
+						if (abstractViewGenerator == null)
+							return false;
+
 						if (indexQuery.SortedFields != null)
 						{
 							var sortInfo = DynamicQueryMapping.GetSortInfo(s => { });
 
 							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
 							{
-								SortOptions value;
+								// if the field is not in the output, then we can't sort on it. 
+								if (abstractViewGenerator.ContainsField(sortedField.Field) == false)
+									return false;
 
 								var dynamicSortInfo = sortInfo.FirstOrDefault(x=>x.Field == sortedField.Field);
-								if((indexDefinition.SortOptions.TryGetValue(sortedField.Field, out value) == false || value == SortOptions.None) && 
-									dynamicSortInfo == null)
-									continue; // no special sorting specified, this is okay
 
-								if (dynamicSortInfo == null)
+								if (dynamicSortInfo == null)// no sort order specified, we don't care, probably
+									continue;
+
+								SortOptions value;
+								if (indexDefinition.SortOptions.TryGetValue(sortedField.Field, out value) == false)
 								{
-									if (value == SortOptions.None || value == SortOptions.String)
-										continue;// this is the default, so None == String for most cases
-									return false;
+									switch (dynamicSortInfo.FieldType)// if we can't find the value, we check if we asked for the default sorting
+									{
+										case SortOptions.String:
+										case SortOptions.None:
+											continue;
+										default:
+											return false;
+									}
 								}
 
-								switch (value)
-								{
-									case SortOptions.String:
-									case SortOptions.None:
-										switch (dynamicSortInfo.FieldType)
-										{
-											case SortOptions.None:
-											case SortOptions.String:
-												continue;
-										}
-										break;
-								}
-
-								return false; // different sort order, there is a problem here
+								if(value != dynamicSortInfo.FieldType)
+									return false; // different sort order, there is a problem here
 							}
 						}
 
