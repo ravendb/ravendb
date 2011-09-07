@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -62,10 +63,9 @@ namespace Raven.Database.Indexing
 				}
 				return doc;
 			});
-			foreach (var mappedResultFromDocument in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context)
-				.GroupBy(GetDocumentId))
+			foreach (var mappedResultFromDocument in GroupByDocumentId(RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context)))
 			{
-				foreach (var doc in mappedResultFromDocument)
+				foreach (var doc in RobustEnumerationReduce(mappedResultFromDocument, viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
 
@@ -104,6 +104,58 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
 		}
 
+		// we don't use the usual GroupBy, because that isn't streaming
+		// we rely on the fact that all values from the same docs are always outputed at 
+		// the same time, so we can take advantage of this fact
+		private static IEnumerable<IGrouping<object ,dynamic>> GroupByDocumentId(IEnumerable<object> docs)
+		{
+			var enumerator = docs.GetEnumerator();
+			if(enumerator.MoveNext()==false)
+				yield break;
+
+			while (true)
+			{
+				var groupByDocumentId = new Grouping(GetDocumentId(enumerator.Current), enumerator);
+				yield return groupByDocumentId;
+				if (groupByDocumentId.Done)
+					break;
+			}
+		}
+
+		private class Grouping : IGrouping<object, object>
+		{
+			private readonly IEnumerator enumerator;
+			private bool newKeyFound;
+			public bool Done { get; private set; }
+			public IEnumerator<object> GetEnumerator()
+			{
+				if(newKeyFound || Done)
+					yield break;
+				yield return enumerator.Current;
+
+				if (enumerator.MoveNext() == false)
+					Done = true;
+
+				var documentId = GetDocumentId(enumerator.Current);
+
+				if (Equals(documentId, Key) == false)
+					newKeyFound = true;
+			}
+
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return GetEnumerator();
+			}
+
+			public object Key { get; private set; }
+
+			public Grouping(object key, IEnumerator enumerator)
+			{
+				this.enumerator = enumerator;
+				Key = key;
+			}
+		}
+
 		private static RavenJObject GetMapedData(object doc)
 		{
 			if (doc is DynamicJsonObject)
@@ -111,8 +163,8 @@ namespace Raven.Database.Indexing
 			return RavenJObject.FromObject(doc, JsonExtensions.CreateDefaultJsonSerializer());
 		}
 
-		private readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache = new ConcurrentDictionary<Type, Func<object, object>>();
-		private object GetDocumentId(object doc)
+		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache = new ConcurrentDictionary<Type, Func<object, object>>();
+		private static object GetDocumentId(object doc)
 		{
 			return documentIdFetcherCache.GetOrAdd(doc.GetType(), type =>
 			{
