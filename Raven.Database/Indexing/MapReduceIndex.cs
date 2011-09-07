@@ -62,36 +62,34 @@ namespace Raven.Database.Indexing
 				}
 				return doc;
 			});
-			foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context))
+			foreach (var mappedResultFromDocument in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context)
+				.GroupBy(GetDocumentId))
 			{
-				count++;
-
-				var documentIdFetcher = GetOrCreateDocumentIdFetcher(doc);
-
-				var docIdValue = documentIdFetcher(doc);
-				if (docIdValue == null)
-					throw new InvalidOperationException("Could not find document id for this document");
-
-				var reduceValue = viewGenerator.GroupByExtraction(doc);
-				if (reduceValue == null)
+				foreach (var doc in mappedResultFromDocument)
 				{
-					logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, docIdValue);
-					continue;
+					count++;
+
+					var reduceValue = viewGenerator.GroupByExtraction(doc);
+					if (reduceValue == null)
+					{
+						logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, mappedResultFromDocument.Key);
+						continue;
+					}
+					var reduceKey = ReduceKeyToString(reduceValue);
+					var docId = mappedResultFromDocument.Key.ToString();
+
+					reduceKeysToDelete.Remove((string)reduceKey);
+
+					var data = GetMapedData(doc);
+
+					logIndexing.Debug("Mapped result for '{0}': '{1}'", name, data);
+
+					var hash = ComputeHash(name, reduceKey);
+
+					actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
+
+					actions.Indexing.IncrementSuccessIndexing();
 				}
-				var reduceKey = ReduceKeyToString(reduceValue);
-				var docId = docIdValue.ToString();
-
-				reduceKeysToDelete.Remove((string) reduceKey);
-
-				var data = GetMapedData(doc);
-
-				logIndexing.Debug("Mapped result for '{0}': '{1}'", name, data);
-
-				var hash = ComputeHash(name, reduceKey);
-
-				actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
-
-				actions.Indexing.IncrementSuccessIndexing();
 			}
 
 			if (reduceKeysToDelete.Count > 0)
@@ -114,18 +112,18 @@ namespace Raven.Database.Indexing
 		}
 
 		private readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache = new ConcurrentDictionary<Type, Func<object, object>>();
-		private Func<object, object> GetOrCreateDocumentIdFetcher(object doc)
+		private object GetDocumentId(object doc)
 		{
 			return documentIdFetcherCache.GetOrAdd(doc.GetType(), type =>
 			{
 				// document may be DynamicJsonObject if we are using compiled views
-				if (typeof(DynamicJsonObject) == type)
+				if (typeof (DynamicJsonObject) == type)
 				{
 					return i => ((dynamic) i).__document_id;
 				}
 				var docIdProp = TypeDescriptor.GetProperties(doc).Find(Abstractions.Data.Constants.DocumentIdFieldName, false);
 				return docIdProp.GetValue;
-			});
+			})(doc);
 		}
 
 		public static byte[] ComputeHash(string name, string reduceKey)
