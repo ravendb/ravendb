@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
@@ -171,9 +172,14 @@ namespace Raven.Database.Config
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
 		{
-			var totalPhysicalMemoryMegabytes =
-				(int) (new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory/1024/1024);
-			// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
+            int totalPhysicalMemoryMegabytes;
+            if (Type.GetType("Mono.Runtime") != null)
+                totalPhysicalMemoryMegabytes =
+                    (int)(new PerformanceCounter("Mono Memory", "Total Physical Memory").RawValue / 1024 / 1024);
+            else
+                totalPhysicalMemoryMegabytes =
+                (int)(new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory / 1024 / 1024);
+            // we need to leave ( a lot ) of room for other things as well, so we limit the cache size
 
 			var val = (totalPhysicalMemoryMegabytes / 2)  - 
 						// reduce the unmanaged cache size from the default limit
