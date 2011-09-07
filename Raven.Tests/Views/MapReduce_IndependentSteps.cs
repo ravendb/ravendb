@@ -32,7 +32,7 @@ from agg in results
 group agg by agg.blog_id into g
 select new { 
   blog_id = g.Key, 
-  comments_length = g.Sum(x=>(int)x.comments_length).ToString()
+  comments_length = g.Sum(x=>(int)x.comments_length)
   }";
 
 		private readonly DocumentDatabase db;
