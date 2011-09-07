@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
 <doc>
     <assembly>
-        <name>SpellChecker.Net</name>
+        <name>Lucene.Net.Contrib.SpellChecker</name>
     </assembly>
     <members>
+        <!-- Badly formed XML comment ignored for member "T:SpellChecker.Net.Search.Spell.PlainTextDictionary" -->
         <member name="T:SpellChecker.Net.Search.Spell.Dictionary">
             <summary> A simple interface representing a Dictionary</summary>
         </member>
@@ -11,6 +12,11 @@
             <summary> return all the words present in the dictionary</summary>
             <returns> Iterator
             </returns>
+        </member>
+        <member name="T:SpellChecker.Net.Search.Spell.LuceneDictionary">
+            <summary> Lucene Dictionary
+            
+            </summary>
         </member>
         <member name="T:SpellChecker.Net.Search.Spell.SuggestWord">
             <summary>  SuggestWord Class, used in suggestSimilar method in SpellChecker class.
@@ -43,6 +49,17 @@
             <param name="s2">The second string.</param>
             <returns>a float between 0 and 1 based on how similar the specified strings are to one another.</returns>
         </member>
+        <member name="T:SpellChecker.Net.Search.Spell.TRStringDistance">
+            <summary> Edit distance  class</summary>
+        </member>
+        <member name="M:SpellChecker.Net.Search.Spell.TRStringDistance.#ctor(System.String)">
+            <summary> Optimized to run a bit faster than the static getDistance().
+            In one benchmark times were 5.3sec using ctr vs 8.5sec w/ static method, thus 37% faster.
+            </summary>
+        </member>
+        <member name="M:SpellChecker.Net.Search.Spell.TRStringDistance.Form(System.Int32,System.Int32)">
+            <summary> </summary>
+        </member>
         <member name="M:SpellChecker.Net.Search.Spell.JaroWinklerDistance.SetThreshold(System.Single)">
              <summary>
             Sets the threshold used to deterMine when Winkler bonus should be used.
@@ -57,31 +74,16 @@
             </summary>
             <returns>the current value of the threshold</returns>
         </member>
-        <member name="T:SpellChecker.Net.Search.Spell.TRStringDistance">
-            <summary> Edit distance  class</summary>
-        </member>
-        <member name="M:SpellChecker.Net.Search.Spell.TRStringDistance.#ctor(System.String)">
-            <summary> Optimized to run a bit faster than the static getDistance().
-            In one benchmark times were 5.3sec using ctr vs 8.5sec w/ static method, thus 37% faster.
-            </summary>
-        </member>
-        <member name="M:SpellChecker.Net.Search.Spell.TRStringDistance.Form(System.Int32,System.Int32)">
-            <summary> </summary>
-        </member>
-        <member name="T:SpellChecker.Net.Search.Spell.LevenshteinDistance">
+        <member name="M:SpellChecker.Net.Search.Spell.NGramDistance.#ctor(System.Int32)">
             <summary>
-            Levenshtein edit distance
+            Creates an N-Gram distance measure using n-grams of the specified size.
             </summary>
+            <param name="size">The size of the n-gram to be used to compute the string distance.</param>
         </member>
-        <member name="M:SpellChecker.Net.Search.Spell.LevenshteinDistance.GetDistance(System.String,System.String)">
+        <member name="M:SpellChecker.Net.Search.Spell.NGramDistance.#ctor">
             <summary>
-            Returns a float between 0 and 1 based on how similar the specified strings are to one another.  
-            Returning a value of 1 means the specified strings are identical and 0 means the
-            string are maximally different.
+            Creates an N-Gram distance measure using n-grams of size 2.
             </summary>
-            <param name="target">The first string.</param>
-            <param name="other">The second string.</param>
-            <returns>a float between 0 and 1 based on how similar the specified strings are to one another.</returns>
         </member>
         <!-- Badly formed XML comment ignored for member "T:SpellChecker.Net.Search.Spell.SpellChecker" -->
         <member name="F:SpellChecker.Net.Search.Spell.SpellChecker.F_WORD">
@@ -233,22 +235,20 @@
                      closed, otherwise <code>false</code>.
             </returns>
         </member>
-        <!-- Badly formed XML comment ignored for member "T:SpellChecker.Net.Search.Spell.PlainTextDictionary" -->
-        <member name="M:SpellChecker.Net.Search.Spell.NGramDistance.#ctor(System.Int32)">
+        <member name="T:SpellChecker.Net.Search.Spell.LevenshteinDistance">
             <summary>
-            Creates an N-Gram distance measure using n-grams of the specified size.
-            </summary>
-            <param name="size">The size of the n-gram to be used to compute the string distance.</param>
-        </member>
-        <member name="M:SpellChecker.Net.Search.Spell.NGramDistance.#ctor">
-            <summary>
-            Creates an N-Gram distance measure using n-grams of size 2.
+            Levenshtein edit distance
             </summary>
         </member>
-        <member name="T:SpellChecker.Net.Search.Spell.LuceneDictionary">
-            <summary> Lucene Dictionary
-            
+        <member name="M:SpellChecker.Net.Search.Spell.LevenshteinDistance.GetDistance(System.String,System.String)">
+            <summary>
+            Returns a float between 0 and 1 based on how similar the specified strings are to one another.  
+            Returning a value of 1 means the specified strings are identical and 0 means the
+            string are maximally different.
             </summary>
+            <param name="target">The first string.</param>
+            <param name="other">The second string.</param>
+            <returns>a float between 0 and 1 based on how similar the specified strings are to one another.</returns>
         </member>
     </members>
 </doc>
