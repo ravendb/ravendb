@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Raven.Abstractions;
 
 namespace Raven.Http.Security.OAuth
 {
@@ -12,7 +13,7 @@ namespace Raven.Http.Security.OAuth
 		public bool IsExpired()
 		{
 			var issued = DateTime.MinValue.AddMilliseconds(Issued);
-			return !(issued < DateTime.UtcNow && DateTime.UtcNow.Subtract(issued) < TimeSpan.FromMinutes(30));
+			return !(issued < SystemTime.UtcNow && SystemTime.UtcNow.Subtract(issued) < TimeSpan.FromMinutes(30));
 		}
 
 		public bool IsAuthorized(string tenantId)
