@@ -279,7 +279,6 @@ namespace Raven.Database
 			{
 				value.Dispose();
 			}
-			TransactionalStorage.Dispose();
 			IndexStorage.Dispose();
 
 			if (tasksBackgroundTask != null)
@@ -292,6 +291,8 @@ namespace Raven.Database
 			var disposable = backgroundTaskScheduler as IDisposable;
 			if (disposable != null)
 				disposable.Dispose();
+
+			TransactionalStorage.Dispose();
 
 		    Configuration.Dispose();
 			disableAllTriggers.Dispose();
