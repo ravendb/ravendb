@@ -382,6 +382,30 @@ namespace Raven.Database.Indexing
 			}.RobustEnumeration(input, func);
 		}
 
+		// we don't care about tracking map/reduce stats here, since it is merely
+		// an optimization step
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerable<object> input, IndexingFunc func,
+															  IStorageActionsAccessor actions, WorkContext context)
+		{
+			// not strictly accurate, but if we get that many errors, probably an error anyway.
+			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			{
+				BeforeMoveNext = () => { }, // don't care
+				CancelMoveNext = () => { }, // don't care
+				OnError = (exception, o) =>
+				{
+					context.AddError(name,
+									 TryGetDocKey(o),
+									 exception.Message
+						);
+					logIndexing.WarnException(
+						String.Format("Failed to execute indexing function on {0} on {1}", name,
+										   TryGetDocKey(o)),
+						exception);
+				}
+			}.RobustEnumeration(input, func);
+		}
+
 		public static string TryGetDocKey(object current)
 		{
 			var dic = current as DynamicJsonObject;

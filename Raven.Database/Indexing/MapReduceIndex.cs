@@ -65,7 +65,7 @@ namespace Raven.Database.Indexing
 			});
 			foreach (var mappedResultFromDocument in GroupByDocumentId(RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context)))
 			{
-				foreach (var doc in RobustEnumerationReduce(mappedResultFromDocument, viewGenerator.ReduceDefinition, actions, context))
+				foreach (var doc in RobustEnumerationReduceDuringMapPhase(mappedResultFromDocument, viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
 
