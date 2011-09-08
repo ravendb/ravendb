@@ -279,7 +279,6 @@ namespace Raven.Database
 			{
 				value.Dispose();
 			}
-			IndexStorage.Dispose();
 
 			if (tasksBackgroundTask != null)
 				tasksBackgroundTask.Wait(); 
@@ -293,6 +292,7 @@ namespace Raven.Database
 				disposable.Dispose();
 
 			TransactionalStorage.Dispose();
+			IndexStorage.Dispose();
 
 		    Configuration.Dispose();
 			disableAllTriggers.Dispose();
