@@ -8,8 +8,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Raven.Abstractions.Indexing;
-using Raven.Json.Linq;
-using Raven.Database.Indexing;
 using Raven.Database.Linq;
 
 namespace Raven.Tests.Indexes
@@ -37,23 +35,22 @@ namespace Raven.Tests.Indexes
 			{
 				var cart = new ShoppingCart {Id = carts.Key};
 
-				cart.Merge(carts);
+				var enumerable = carts.Select(x => x.Aggregate).ToArray();
+				cart.Merge(enumerable);
 
 				yield return new
 				{
 					ShoppingCartId = cart.Id,
-					Aggregate = RavenJObject.FromObject(cart)
+					Aggregate = cart
 				};
 			}
 		}
 
 		private static IEnumerable<object> EventsToShoppingCart(IEnumerable<dynamic> source)
 		{
-			foreach (var events in source
-				.GroupBy(@event => @event.ShoppingCartId))
+			foreach (var @event in source)
 			{
-				var cart = new ShoppingCart { Id = events.Key };
-				foreach (var @event in events.OrderBy(x => x.Timestamp))
+				var cart = new ShoppingCart { Id = @event.ShoppingCartId };
 				{
 					switch ((string)@event.Type)
 					{
@@ -74,8 +71,9 @@ namespace Raven.Tests.Indexes
 				}
 				yield return new
 				{
+					@event.__document_id,
 					ShoppingCartId = cart.Id,
-					Aggregate = RavenJObject.FromObject(cart)
+					Aggregate = cart
 				};
 			}
 		}
@@ -86,6 +84,11 @@ namespace Raven.Tests.Indexes
 			public ShoppingCartCustomer Customer { get; set; }
 			public List<ShoppingCartItem> Items { get; set; }
 			public decimal Total { get { return Items.Where(x=>x.Quantity > 0).Sum(x => x.Product.Price * x.Quantity); } }
+
+			public int ItemsCount
+			{
+				get { return Items.Count(x => x.Quantity > 0);  }
+			}
 
 			public ShoppingCart()
 			{
@@ -128,7 +131,9 @@ namespace Raven.Tests.Indexes
 					{
 						foreach (var item in cart.Items)
 						{
-							AddToCart(item.Product.Id, item.Product.Name, item.Product.Price, item.Quantity);
+							decimal price = (decimal)item.Product.Price;
+							int quantity = item.Quantity;
+							AddToCart(item.Product.Id, item.Product.Name, price, quantity);
 						}
 					}
 				}
