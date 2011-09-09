@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (var store = NewDocumentStore())
 			{
-				IndexCreation.CreateIndexes(typeof(Movies_ByActor).Assembly, store);
+			    new Movies_ByActor().Execute(store);
 
 				using (var s = store.OpenSession())
 				{

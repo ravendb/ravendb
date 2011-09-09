@@ -11,7 +11,7 @@ namespace Raven.Tests.Bugs
 {
 	public class MapReduceWithDifferentFieldNames : LocalClientTest
 	{
-		[Fact(Skip = "Feature disabled")]
+		[Fact]
 		public void WhenTheAnonymousTypeResultIsNotTheSame_ShouldThrowAnException()
 		{
 			using (var store = NewDocumentStore())
@@ -36,7 +36,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		[Fact(Skip = "Feature disabled")]
+		[Fact]
 		public void WhenTheAnonymousTypeResultIsTheSame_ShouldNotThrowAnException()
 		{
 			using (var store = NewDocumentStore())

@@ -95,7 +95,7 @@ namespace Raven.Tests.MultiGet
 				using (var session = store.OpenSession())
 				{
 					User user = null;
-					session.Advanced.Lazily.Load<User>("users/1",x => user = x);
+					session.Advanced.Lazily.Load<User>("users/1", x => user = x);
 					session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
 					Assert.NotNull(user);
 				}
@@ -109,7 +109,7 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
 			{
-				IndexCreation.CreateIndexes(typeof(QuestionWithVoteTotalIndex).Assembly, store);
+				new Answers_ByAnswerEntity().Execute(store);
 
 				string answerId = ComplexValuesFromTransformResults.CreateEntities(store);
 				// Working
@@ -152,9 +152,9 @@ namespace Raven.Tests.MultiGet
 			{
 				using (var session = store.OpenSession())
 				{
-					session.Store(new User{Name = "oren"});
+					session.Store(new User { Name = "oren" });
 					session.Store(new User());
-					session.Store(new User{Name = "ayende"});
+					session.Store(new User { Name = "ayende" });
 					session.Store(new User());
 					session.SaveChanges();
 				}
@@ -162,7 +162,7 @@ namespace Raven.Tests.MultiGet
 				using (var session = store.OpenSession())
 				{
 					session.Query<User>()
-						.Customize(x=>x.WaitForNonStaleResults())
+						.Customize(x => x.WaitForNonStaleResults())
 						.Where(x => x.Name == "oren")
 						.ToList();
 				}
@@ -175,7 +175,7 @@ namespace Raven.Tests.MultiGet
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
 					Assert.NotEmpty(result1.Value);
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
-					
+
 				}
 
 			}
@@ -204,7 +204,7 @@ namespace Raven.Tests.MultiGet
 				using (var session = store.OpenSession())
 				{
 					var result1 = session.Query<User>().Where(x => x.Name == "oren")
-						.Select(x=> new { x.Name })
+						.Select(x => new { x.Name })
 						.Lazily();
 
 					Assert.Equal("oren", result1.Value.First().Name);
@@ -265,7 +265,7 @@ namespace Raven.Tests.MultiGet
 
 				using (var session = store.OpenSession())
 				{
-					var result1 = session.Query<User>().Customize(x=>x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Where(x => x.Name == "oren").Lazily();
+					var result1 = session.Query<User>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Where(x => x.Name == "oren").Lazily();
 					var result2 = session.Query<User>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Where(x => x.Name == "ayende").Lazily();
 					Assert.NotEmpty(result2.Value);
 
@@ -282,13 +282,13 @@ namespace Raven.Tests.MultiGet
 		public void CanGetStatisticsWithLazyQueryResults()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore {Url = "http://localhost:8080"}.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
-					session.Store(new User {Name = "oren"});
+					session.Store(new User { Name = "oren" });
 					session.Store(new User());
-					session.Store(new User {Name = "ayende"});
+					session.Store(new User { Name = "ayende" });
 					session.Store(new User());
 					session.SaveChanges();
 				}

@@ -112,13 +112,16 @@ namespace Raven.Tests.Bugs
 
 			public override IndexDefinition CreateIndexDefinition()
 			{
-				return new IndexDefinitionBuilder<Children, ChildrenMapResult>
+				return new IndexDefinitionBuilder<Children, ChildreReduceResult>
 				{
 					Map = children => from child in children
 									  select new
 									  {
 										  child.Parent,
-										  child.Temperament
+										  Sanguine = child.Temperament == Temperaments.Sanguine ? 1 : 0,
+										  Choleric = child.Temperament == Temperaments.Choleric ? 1 : 0,
+										  Melancholic = child.Temperament == Temperaments.Melancholic ? 1 : 0,
+										  Phlegmatic = child.Temperament == Temperaments.Phlegmatic ? 1 : 0
 									  },
 					Reduce = results => from result in results
 										group result by result.Parent
@@ -126,10 +129,10 @@ namespace Raven.Tests.Bugs
 											select new
 											{
 												Parent = g.Key,
-												Sanguine = g.Count(x => x.Temperament == Temperaments.Sanguine),
-												Choleric = g.Count(x => x.Temperament == Temperaments.Choleric),
-												Melancholic = g.Count(x => x.Temperament == Temperaments.Melancholic),
-												Phlegmatic = g.Count(x => x.Temperament == Temperaments.Phlegmatic)
+												Sanguine = g.Sum(x => x.Sanguine),
+												Choleric = g.Sum(x => x.Choleric),
+												Melancholic = g.Sum(x => x.Melancholic),
+												Phlegmatic = g.Sum(x => x.Phlegmatic)
 											}
 				}.ToIndexDefinition(Conventions);
 			}

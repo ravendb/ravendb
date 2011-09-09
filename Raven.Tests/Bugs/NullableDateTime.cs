@@ -74,7 +74,7 @@ namespace Raven.Tests.Bugs
 			{
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-					IndexCreation.CreateIndexes(typeof(Doc).Assembly, documentStore);
+					new UnsetDocs().Execute(documentStore);
 					session.Store(new Doc { Id = "test/doc1", Date = SystemTime.UtcNow });
 					session.Store(new Doc { Id = "test/doc2", Date = null });
 					session.SaveChanges();
@@ -115,7 +115,7 @@ namespace Raven.Tests.Bugs
 			{
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-					IndexCreation.CreateIndexes(typeof (Doc).Assembly, documentStore);
+					new UnsetDocs().Execute(documentStore);
 					session.Store(new Doc
 					              	{
 					              		Id = "test/doc1",
