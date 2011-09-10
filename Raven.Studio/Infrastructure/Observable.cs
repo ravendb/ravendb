@@ -1,9 +1,10 @@
-﻿using System.Windows.Markup;
+﻿using System.ComponentModel;
+using System.Windows.Markup;
 
 namespace Raven.Studio.Infrastructure
 {
 	[ContentProperty("Value")]
-	public class Observable<T> : NotifyPropertyChangedBase 
+	public class Observable<T> : NotifyPropertyChangedBase , IObservable 
 		where T : class
 	{
 		private T value;
@@ -17,5 +18,15 @@ namespace Raven.Studio.Infrastructure
 				OnPropertyChanged();
 			}
 		}
+
+		object IObservable.Value
+		{
+			get { return value; }
+		}
+	}
+
+	public interface IObservable : INotifyPropertyChanged
+	{
+		object Value { get; }
 	}
 }
