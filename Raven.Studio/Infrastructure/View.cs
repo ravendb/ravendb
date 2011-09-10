@@ -5,7 +5,10 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Threading;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -13,25 +16,27 @@ namespace Raven.Studio.Infrastructure
 	{
 		public static List<View> CurrentViews { get; set; }
 
-		private static Timer _timer = new Timer(TimerCallback, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+		private static readonly DispatcherTimer dispatcherTimer;
 
 		static View()
 		{
 			CurrentViews = new List<View>();
+			dispatcherTimer = new DispatcherTimer
+			{
+				Interval = TimeSpan.FromSeconds(1),
+			};
+			dispatcherTimer.Tick += DispatcherTimerOnTick;
+
 		}
 
-		private static void TimerCallback(object state)
+		private static void DispatcherTimerOnTick(object sender, EventArgs eventArgs)
 		{
-			View[] views;
-			lock (CurrentViews)
-			{
-				views = CurrentViews.ToArray();
-			}
-			foreach (var ctx in views.Select(view => view.SafeForThreadingDataContext))
+			foreach (var ctx in CurrentViews.Select(view => view.DataContext))
 			{
 				InvokeTimerTicked(ctx);
 			}
 		}
+
 
 		private static void InvokeTimerTicked(object ctx)
 		{
@@ -47,7 +52,7 @@ namespace Raven.Studio.Infrastructure
 					PropertyChangedEventHandler observableOnPropertyChanged = null;
 					observableOnPropertyChanged = (sender, args) =>
 					{
-						if (args.PropertyName != "Value") 
+						if (args.PropertyName != "Value")
 							return;
 						observable.PropertyChanged -= observableOnPropertyChanged;
 						InvokeTimerTicked(ctx);
@@ -60,21 +65,34 @@ namespace Raven.Studio.Infrastructure
 			model.TimerTicked();
 		}
 
-		private object SafeForThreadingDataContext { get; set; }
+
+
+		// Dependency property that is bound against the DataContext.
+		// When its value (i.e. the control's DataContext) changes,
+		// call DataContextWatcher_Changed.
+		public static DependencyProperty DataContextWatcherProperty = DependencyProperty.Register(
+		  "DataContextWatcher",
+		  typeof(object),
+		  typeof(View),
+			  new PropertyMetadata(DataContextWatcherChanged));
+
+		private static void DataContextWatcherChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			InvokeTimerTicked(e.NewValue);
+		}
+
 
 		protected View()
 		{
+			SetBinding(DataContextWatcherProperty, new Binding());
+
 			Loaded += (sender, args) =>
 			{
-				lock (CurrentViews)
 					CurrentViews.Add(this);
-				SafeForThreadingDataContext = DataContext;
-				InvokeTimerTicked(SafeForThreadingDataContext);
 			};
 
 			Unloaded += (sender, args) =>
 			{
-				lock (CurrentViews)
 					CurrentViews.Remove(this);
 			};
 		}

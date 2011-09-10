@@ -57,7 +57,6 @@ namespace Raven.Studio.Models
 				.Catch();
 		}
 
-
 		protected override Task TimerTickedAsync()
 		{
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync()
