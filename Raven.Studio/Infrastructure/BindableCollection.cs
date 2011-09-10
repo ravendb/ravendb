@@ -23,8 +23,8 @@ namespace Raven.Studio.Infrastructure
 		{
 			Execute(() =>
 			{
-				var toRemove = items.Except(this).ToArray();
-				var toAdd = this.Except(items).ToArray();
+				var toAdd = items.Except(this).ToArray();
+				var toRemove = this.Except(items).ToArray();
 
 				foreach (var remove in toRemove)
 				{
