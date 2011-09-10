@@ -21,7 +21,7 @@
 
 				<Databases:DatabaseSelectionView />
 				<Stats:ClientActionsLog />
-				
+				<Stats:DatabaseStatisticsView />
 			</StackPanel>
 
         </ScrollViewer>

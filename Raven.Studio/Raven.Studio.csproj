@@ -90,6 +90,9 @@
     <Compile Include="Features\Stats\ClientActionsLog.xaml.cs">
       <DependentUpon>ClientActionsLog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Stats\DatabaseStatisticsView.xaml.cs">
+      <DependentUpon>DatabaseStatisticsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Infrastructure\BindableCollection.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -153,6 +156,10 @@
     <Page Include="Features\Stats\ClientActionsLog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Stats\DatabaseStatisticsView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\ErrorWindow.xaml">
       <SubType>Designer</SubType>

@@ -1,19 +1,14 @@
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class DatabaseModel : NotifyPropertyChangedBase
+	public class DatabaseModel : Model
 	{
-		private string name;
-		public string Name
-		{
-			get { return name; }
-			set { name = value; OnPropertyChanged(); }
-		}
-
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+		private string name;
 
 		public DatabaseModel(string name, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
@@ -25,12 +20,28 @@ namespace Raven.Studio.Models
 			//RecentDocuments = new CollectionRenewal<JsonDocument>(new JsonDocument[0],
 			//                                                      () => this.asyncDatabaseCommands.GetDocumentsAsync(GetStart(), 15)
 			//                                                                    .ContinueWith(x => (IEnumerable<JsonDocument>) x.Result));
+		}
+
+		public string Name
+		{
+			get { return name; }
+			set
+			{
+				name = value;
+				OnPropertyChanged();
 			}
+		}
 
 		
 		public Observable<DatabaseStatistics> Statistics { get; set; }
 
 		public BindableCollection<JsonDocument> RecentDocuments { get; set; }
+
+		protected override Task TimerTickedAsync()
+		{
+			return asyncDatabaseCommands.GetStatisticsAsync()
+				.ContinueOnSuccess(stats => Statistics.Value = stats);
+		}
 
 		public bool Equals(DatabaseModel other)
 		{
