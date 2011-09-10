@@ -1,0 +1,8 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Converters1="clr-namespace:Raven.Studio.Infrastructure.Converters">
+
+	<Converters1:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
+
+</ResourceDictionary>
