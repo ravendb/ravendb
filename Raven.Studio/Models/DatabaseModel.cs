@@ -1,7 +1,9 @@
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Models
 {
@@ -16,10 +18,7 @@ namespace Raven.Studio.Models
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 
 			Statistics = new Observable<DatabaseStatistics>();
-
-			//RecentDocuments = new CollectionRenewal<JsonDocument>(new JsonDocument[0],
-			//                                                      () => this.asyncDatabaseCommands.GetDocumentsAsync(GetStart(), 15)
-			//                                                                    .ContinueWith(x => (IEnumerable<JsonDocument>) x.Result));
+			RecentDocuments = new BindableCollection<ViewableDocument>();
 		}
 
 		public string Name
@@ -35,12 +34,15 @@ namespace Raven.Studio.Models
 		
 		public Observable<DatabaseStatistics> Statistics { get; set; }
 
-		public BindableCollection<JsonDocument> RecentDocuments { get; set; }
+		public BindableCollection<ViewableDocument> RecentDocuments { get; set; }
 
 		protected override Task TimerTickedAsync()
 		{
 			return asyncDatabaseCommands.GetStatisticsAsync()
-				.ContinueOnSuccess(stats => Statistics.Value = stats);
+				.ContinueOnSuccess(stats => Statistics.Value = stats)
+				.ContinueWith(task => asyncDatabaseCommands.GetDocumentsAsync(0, 15)
+				                      	.ContinueOnSuccess(docs => RecentDocuments.Match(docs.Select(x=>new ViewableDocument(x)).ToArray())))
+				.Unwrap();
 		}
 
 		public bool Equals(DatabaseModel other)

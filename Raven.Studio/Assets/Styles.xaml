@@ -96,7 +96,7 @@
     </Setter>
   </Style>
 
-  <!-- Links Border Style -->
+	<!-- Links Border Style -->
   <Style x:Key="LinksBorderStyle" TargetType="Border">
     <Setter Property="Height" Value="42"/>
     <Setter Property="Margin" Value="25,0,25,0"/>

@@ -82,6 +82,11 @@
     <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Documents\DocumentsView.xaml.cs">
+      <DependentUpon>DocumentsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\TemplateColorProvider.cs" />
+    <Compile Include="Features\Documents\ViewableDocument.cs" />
     <Compile Include="Features\Input\AskUser.cs" />
     <Compile Include="Features\Input\InputModel.cs" />
     <Compile Include="Features\Input\InputWindow.xaml.cs">
@@ -99,6 +104,7 @@
     <Compile Include="Infrastructure\Converters\HiddenWhenEmptyConverter.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Infrastructure\DictionaryExtensions.cs" />
     <Compile Include="Infrastructure\EventsBus.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -141,6 +147,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Resource>
+    <Page Include="Assets\DocumentTemplate.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Assets\ValueConverters.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -148,6 +158,10 @@
     <Page Include="Features\Databases\DatabaseSelectionView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Documents\DocumentsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Input\InputWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

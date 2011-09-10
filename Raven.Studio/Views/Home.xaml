@@ -5,7 +5,8 @@
     xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
                  xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases"
           xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-                     xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats" mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
+                     xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats"
+                     xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
     Title="Home"
     Style="{StaticResource PageStyle}">
 
@@ -22,6 +23,7 @@
 				<Databases:DatabaseSelectionView />
 				<Stats:ClientActionsLog />
 				<Stats:DatabaseStatisticsView />
+				<Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" />
 			</StackPanel>
 
         </ScrollViewer>
