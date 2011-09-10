@@ -78,6 +78,11 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Input\AskUser.cs" />
+    <Compile Include="Features\Input\InputModel.cs" />
+    <Compile Include="Features\Input\InputWindow.xaml.cs">
+      <DependentUpon>InputWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Infrastructure\BindableCollection.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -126,6 +131,10 @@
       <SubType>Designer</SubType>
     </Resource>
     <Page Include="Assets\ValueConverters.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Input\InputWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
