@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Raven.Studio.Models;
 
 namespace Raven.Studio
 {
@@ -24,7 +25,9 @@ namespace Raven.Studio
 
 		private void Application_Startup(object sender, StartupEventArgs e)
 		{
-			this.RootVisual = new MainPage();
+			var rootVisual = new MainPage();
+			ApplicationModel.Current.SetupRootVisual(rootVisual);
+			this.RootVisual = rootVisual;
 		}
 
 		private void Application_UnhandledException(object sender, ApplicationUnhandledExceptionEventArgs e)

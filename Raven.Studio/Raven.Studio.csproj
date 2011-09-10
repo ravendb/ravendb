@@ -107,6 +107,9 @@
     <Compile Include="Infrastructure\View.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Models\ApplicationModel.cs" />
+    <Compile Include="Models\DatabaseModel.cs" />
+    <Compile Include="Models\ServerModel.cs" />
     <Compile Include="Views\ErrorWindow.xaml.cs">
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
