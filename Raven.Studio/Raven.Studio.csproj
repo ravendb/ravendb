@@ -87,6 +87,9 @@
     <Compile Include="Features\Input\InputWindow.xaml.cs">
       <DependentUpon>InputWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Stats\ClientActionsLog.xaml.cs">
+      <DependentUpon>ClientActionsLog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Infrastructure\BindableCollection.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -111,6 +114,7 @@
     <Compile Include="Infrastructure\View.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Messages\DatabaseCreated.cs" />
     <Compile Include="Models\ApplicationModel.cs" />
     <Compile Include="Models\DatabaseModel.cs" />
     <Compile Include="Models\ServerModel.cs" />
@@ -145,6 +149,10 @@
     <Page Include="Features\Input\InputWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Stats\ClientActionsLog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ErrorWindow.xaml">
       <SubType>Designer</SubType>

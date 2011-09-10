@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Windows.Input;
 using Raven.Client.Connection.Async;
+using Raven.Client.Extensions;
 using Raven.Studio.Features.Input;
+using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Databases
@@ -34,12 +37,12 @@ namespace Raven.Studio.Features.Databases
 					if (string.IsNullOrEmpty(databaseName))
 						return;
 
-					//var addAction = serverModel.AddAction("Creating database: " + databaseName);
+					var addAction = serverModel.Starting("Creating database: " + databaseName);
 
-					//databaseCommands.EnsureDatabaseExistsAsync(databaseName)
-					//    .ContinueOnSuccess(() => addAction.Dispose())
-					//    .ContinueOnSuccess(()=>Bus.Instance.Notify(Notifications.DatabasesChanged))
-					//    .Catch();
+					databaseCommands.EnsureDatabaseExistsAsync(databaseName)
+						.ContinueOnSuccess(() => addAction.Dispose())
+						.ContinueOnSuccess(() => EventsBus.Notify(new DatabaseCreated{}))
+						.Catch();
 				});
 
 		}

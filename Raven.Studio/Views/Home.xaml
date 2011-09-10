@@ -4,7 +4,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
                  xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases"
-          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
+          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                     xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats" mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
     Title="Home"
     Style="{StaticResource PageStyle}">
 
@@ -19,7 +20,8 @@
                                    Text="Home page content"/>
 
 				<Databases:DatabaseSelectionView />
-
+				<Stats:ClientActionsLog />
+				
 			</StackPanel>
 
         </ScrollViewer>

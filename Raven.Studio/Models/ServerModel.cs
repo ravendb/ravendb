@@ -3,9 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
 using System.Windows.Input;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Studio.Features.Databases;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
@@ -18,10 +20,13 @@ namespace Raven.Studio.Models
 			: this(DetermineUri())
 		{
 			RefreshRate = TimeSpan.FromMinutes(2);
+
+			EventsBus.Subscribe<DatabaseCreated>(created => ForceTimerTicked());
 		}
 
 		public ServerModel(string url)
 		{
+			Actions = new BindableCollection<string>();
 			Databases = new BindableCollection<DatabaseModel>();
 			SelectedDatabase = new Observable<DatabaseModel>();
 
@@ -66,6 +71,8 @@ namespace Raven.Studio.Models
 
 		public Observable<DatabaseModel> SelectedDatabase { get; set; } 
 		public BindableCollection<DatabaseModel> Databases { get; set; }
+		public BindableCollection<string> Actions { get; set; }
+
 		public ICommand CreateNewDatabase
 		{
 			get
@@ -95,6 +102,12 @@ namespace Raven.Studio.Models
 			{
 				Path = localPath
 			}.Uri.ToString();
+		}
+
+		public IDisposable Starting(string action)
+		{
+			Actions.Execute(() => Actions.Add(action));
+			return new DisposableAction(() => Actions.Execute(() => Actions.Remove(action)));
 		}
 	}
 }
