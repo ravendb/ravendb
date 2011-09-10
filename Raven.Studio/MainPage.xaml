@@ -37,14 +37,14 @@
             <Border x:Name="LinksBorder" Style="{StaticResource LinksBorderStyle}">
                 <StackPanel x:Name="LinksStackPanel" Style="{StaticResource LinksStackPanelStyle}">
 
-                    <HyperlinkButton x:Name="Link1" Style="{StaticResource LinkStyle}" 
+					<Rectangle 
+							   Style="{StaticResource DividerStyle}" />
+					
+					<HyperlinkButton Style="{StaticResource LinkStyle}" 
                                      NavigateUri="/Home" TargetName="ContentFrame" Content="home"/>
 									 
-                    <Rectangle x:Name="Divider1" Style="{StaticResource DividerStyle}"/>
-					
-                    <HyperlinkButton x:Name="Link2" Style="{StaticResource LinkStyle}" 
-                                     NavigateUri="/About" TargetName="ContentFrame" Content="about"/>
-
+                    <Rectangle Style="{StaticResource DividerStyle}"/>
+			
                 </StackPanel>
             </Border>
 

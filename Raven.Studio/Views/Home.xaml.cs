@@ -10,10 +10,11 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio
 {
-	public partial class Home : Page
+	public partial class Home : View
 	{
 		public Home()
 		{
