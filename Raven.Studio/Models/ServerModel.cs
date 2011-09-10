@@ -2,7 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
+using System.Windows.Input;
 using Raven.Client.Document;
+using Raven.Studio.Features.Databases;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -15,7 +17,7 @@ namespace Raven.Studio.Models
 		public ServerModel()
 			: this(DetermineUri())
 		{
-			
+			RefreshRate = TimeSpan.FromMinutes(2);
 		}
 
 		public ServerModel(string url)
@@ -42,14 +44,14 @@ namespace Raven.Studio.Models
 		{
 			defaultDatabase = new[] { new DatabaseModel("Default", documentStore.AsyncDatabaseCommands) };
 			return documentStore.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync()
-				.ContinueOnSuccess((Action)LoadValuesAfterEnsuringWeCanAccessServer);
+				.ContinueOnSuccess(() =>
+				{
+					Databases.Set(defaultDatabase);
+					SelectedDatabase.Value = defaultDatabase[0];
+				})
+				.Catch();
 		}
 
-		private void LoadValuesAfterEnsuringWeCanAccessServer()
-		{
-			Databases.Set(defaultDatabase);
-			SelectedDatabase.Value = defaultDatabase[0];
-		}
 
 		protected override Task TimerTickedAsync()
 		{
@@ -64,6 +66,13 @@ namespace Raven.Studio.Models
 
 		public Observable<DatabaseModel> SelectedDatabase { get; set; } 
 		public BindableCollection<DatabaseModel> Databases { get; set; }
+		public ICommand CreateNewDatabase
+		{
+			get
+			{
+				return new CreateDatabaseCommand(this, documentStore.AsyncDatabaseCommands);
+			}
+		}
 
 		public void Dispose()
 		{

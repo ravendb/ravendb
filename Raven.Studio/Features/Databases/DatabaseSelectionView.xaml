@@ -1,0 +1,20 @@
+﻿<Infrastructure:View x:Class="Raven.Studio.Features.Databases.DatabaseSelectionView"
+					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+					 mc:Ignorable="d"
+					 DataContext="{Binding Path=Server.Value}">
+
+	<StackPanel Orientation="Horizontal">
+		<StackPanel Orientation="Horizontal">
+			<TextBlock Text="Database: " />
+			<ComboBox ItemsSource="{Binding Path=Databases}"
+					  DisplayMemberPath="Name"
+					  SelectedItem="{Binding Path=SelectedDatabase.Value, Mode=TwoWay}" />
+		</StackPanel>
+		<HyperlinkButton Content="New Database"
+						 Command="{Binding Path=CreateNewDatabase}" />
+	</StackPanel>
+</Infrastructure:View>
