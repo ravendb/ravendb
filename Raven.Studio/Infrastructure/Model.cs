@@ -30,7 +30,6 @@ namespace Raven.Studio.Infrastructure
 				if (currentTask != null)
 					return;
 
-
 				if (DateTime.Now - lastRefresh < RefreshRate)
 					return;
 
