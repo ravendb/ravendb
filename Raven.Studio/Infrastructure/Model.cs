@@ -14,13 +14,13 @@ namespace Raven.Studio.Infrastructure
 			RefreshRate = TimeSpan.FromSeconds(5);
 		}
 
-		internal virtual void ForceTimerTicked()
+		internal void ForceTimerTicked()
 		{
 			lastRefresh = DateTime.MinValue;
 			TimerTicked();
 		}
 
-		internal virtual void TimerTicked()
+		internal void TimerTicked()
 		{
 			if (currentTask != null)
 				return;

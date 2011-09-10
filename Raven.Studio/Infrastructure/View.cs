@@ -26,6 +26,7 @@ namespace Raven.Studio.Infrastructure
 				Interval = TimeSpan.FromSeconds(1),
 			};
 			dispatcherTimer.Tick += DispatcherTimerOnTick;
+			dispatcherTimer.Start();
 
 		}
 
