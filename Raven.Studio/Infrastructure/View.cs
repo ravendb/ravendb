@@ -32,7 +32,7 @@ namespace Raven.Studio.Infrastructure
 
 		private static void DispatcherTimerOnTick(object sender, EventArgs eventArgs)
 		{
-			foreach (var ctx in CurrentViews.Select(view => view.DataContext))
+			foreach (var ctx in CurrentViews.Select(view => view.DataContext).Distinct())
 			{
 				InvokeTimerTicked(ctx);
 			}
