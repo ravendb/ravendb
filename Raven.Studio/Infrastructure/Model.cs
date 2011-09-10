@@ -14,26 +14,39 @@ namespace Raven.Studio.Infrastructure
 			RefreshRate = TimeSpan.FromSeconds(5);
 		}
 
+		internal virtual void ForceTimerTicked()
+		{
+			lastRefresh = DateTime.MinValue;
+			TimerTicked();
+		}
+
 		internal virtual void TimerTicked()
 		{
 			if (currentTask != null)
 				return;
 
-			if (DateTime.Now - lastRefresh < RefreshRate)
-				return;
-			
-			var task = TimerTickedAsync();
+			lock (this)
+			{
+				if (currentTask != null)
+					return;
 
-			if (task == null)
-				return;
 
-			task
-				.Catch()
-				.Finally(() =>
-				{
-					lastRefresh = DateTime.Now;
-					currentTask = null;
-				});
+				if (DateTime.Now - lastRefresh < RefreshRate)
+					return;
+
+				currentTask = TimerTickedAsync();
+
+				if (currentTask == null)
+					return;
+
+				currentTask
+					.Catch()
+					.Finally(() =>
+					{
+						lastRefresh = DateTime.Now;
+						currentTask = null;
+					});
+			}
 		}
 
 		protected virtual Task TimerTickedAsync()
