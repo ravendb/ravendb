@@ -1,4 +1,8 @@
-﻿using System.Windows;
+﻿using System;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Navigation;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -22,9 +26,30 @@ namespace Raven.Studio.Models
 
 		public Observable<ServerModel> Server { get; set; }
 
-		public void SetupRootVisual(FrameworkElement rootVisual)
+		public void Setup(FrameworkElement rootVisual)
 		{
 			rootVisual.DataContext = this;
+		}
+
+
+		public void Navigate(Uri source)
+		{
+			Application.Current.Host.NavigationState = source.ToString();
+		}
+
+
+		public string GetQueryParam(string name)
+		{
+			var indexOf = Application.Current.Host.NavigationState.IndexOf('?');
+			if (indexOf == -1)
+				return null;
+
+			var options = Application.Current.Host.NavigationState.Substring(indexOf+1).Split(new[] { '&', }, StringSplitOptions.RemoveEmptyEntries);
+
+			return (from option in options 
+					where option.StartsWith(name) && option.Length > name.Length && option[name.Length] == '=' 
+					select option.Substring(name.Length + 1)
+					).FirstOrDefault();
 		}
 	}
 }

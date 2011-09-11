@@ -17,7 +17,7 @@ namespace Raven.Studio
 		private void Application_Startup(object sender, StartupEventArgs e)
 		{
 			var rootVisual = new MainPage();
-			ApplicationModel.Current.SetupRootVisual(rootVisual);
+			ApplicationModel.Current.Setup(rootVisual);
 			this.RootVisual = rootVisual;
 		}
 
