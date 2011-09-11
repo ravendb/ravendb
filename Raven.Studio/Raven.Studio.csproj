@@ -228,9 +228,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Controls\Editors\Definitions\CSharp.langdef" />
-    <None Include="Controls\Editors\Definitions\JScript.langdef" />
-    <None Include="Controls\Editors\Definitions\Xaml.langdef" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\CSharp.langdef" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\JScript.langdef" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>
