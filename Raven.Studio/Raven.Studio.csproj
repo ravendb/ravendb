@@ -60,10 +60,23 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.1.111.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\ravendb\SharedLibs\Silverlight\ActiproSoftware\ActiproSoftware.Shared.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.1.111.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\ravendb\SharedLibs\Silverlight\ActiproSoftware\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.1.111.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\ravendb\SharedLibs\Silverlight\ActiproSoftware\ActiproSoftware.Text.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\..\ravendb\build\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
+    <Reference Include="Newtonsoft.Json.Silverlight, Version=4.0.2.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows" />
     <Reference Include="system" />
@@ -78,6 +91,10 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\Editors\JsonEditor.cs" />
+    <Compile Include="Controls\Editors\LinqEditor.cs" />
+    <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
+    <Compile Include="Controls\Editors\XamlEditor.cs" />
     <Compile Include="Features\Databases\CreateDatabaseCommand.cs" />
     <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
@@ -211,6 +228,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Controls\Editors\Definitions\CSharp.langdef" />
+    <None Include="Controls\Editors\Definitions\JScript.langdef" />
+    <None Include="Controls\Editors\Definitions\Xaml.langdef" />
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>
