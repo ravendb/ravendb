@@ -85,6 +85,13 @@
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Documents\EditableDocument.cs" />
+    <Compile Include="Features\Documents\EditDocumentCommand.cs" />
+    <Compile Include="Features\Documents\EditDocumentModel.cs" />
+    <Compile Include="Features\Documents\EditDocumentModelLocator.cs" />
+    <Compile Include="Features\Documents\EditDocumnetView.xaml.cs">
+      <DependentUpon>EditDocumnetView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\TemplateColorProvider.cs" />
     <Compile Include="Features\Documents\ViewableDocument.cs" />
     <Compile Include="Features\Input\AskUser.cs" />
@@ -127,6 +134,9 @@
     <Compile Include="Models\ApplicationModel.cs" />
     <Compile Include="Models\DatabaseModel.cs" />
     <Compile Include="Models\ServerModel.cs" />
+    <Compile Include="Views\Edit.xaml.cs">
+      <DependentUpon>Edit.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\ErrorWindow.xaml.cs">
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
@@ -159,7 +169,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Features\FeatureActions.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Documents\DocumentsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\EditDocumnetView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -174,6 +192,10 @@
     <Page Include="Features\Stats\DatabaseStatisticsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Edit.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ErrorWindow.xaml">
       <SubType>Designer</SubType>
