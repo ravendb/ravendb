@@ -21,6 +21,12 @@ namespace Raven.Studio.Models
 			RecentDocuments = new BindableCollection<ViewableDocument>();
 		}
 
+
+		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		{
+			get { return asyncDatabaseCommands; }
+		}
+
 		public string Name
 		{
 			get { return name; }
