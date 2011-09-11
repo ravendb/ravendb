@@ -93,7 +93,8 @@ namespace Raven.Server
 			OptionSet optionSet = null;
 			optionSet = new OptionSet
 			{
-				{"config=", "The config section to use", path => ravenConfiguration.LoadFrom(path)},
+				{"set=", "The configuration {0:option} to set to the specified {1:value}" , (key, value) => ravenConfiguration.Settings[key] = value},
+				{"config=", "The config {0:file} to use", path => ravenConfiguration.LoadFrom(path)},
 				{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart, key)},
 				{"uninstall", "Uninstalls the RavenDB service", key => actionToTake= () => AdminRequired(EnsureStoppedAndUninstall, key)},
 				{"start", "Starts the RavenDB servce", key => actionToTake= () => AdminRequired(StartService, key)},
