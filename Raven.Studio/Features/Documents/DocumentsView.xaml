@@ -11,7 +11,12 @@
 				   Style="{StaticResource HeaderTextStyle}"
 				   Text="Documents" />
 
-		<ListBox ItemsSource="{Binding}">
+		<ListBox ItemsSource="{Binding}" SelectionMode="Extended">
+			<ListBox.ItemsPanel>
+				<ItemsPanelTemplate>
+					<StackPanel Orientation="Horizontal"  />
+				</ItemsPanelTemplate>
+			</ListBox.ItemsPanel>
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid Width="120"
