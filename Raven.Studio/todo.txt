@@ -1,5 +1,28 @@
 ﻿Things to do here:
 
 * Make this pretty! Based on the new RavenDB.Net website design
-* Documents, should be horizontal, not vertical
+* Documents lists
+** Double click on the documents should open the edit
+
+
 * Allow editting of documents
+** allow delete
+** allow refresh
+** allow prettify
+** watch for changes
+
+* Allow editing of indexes
+** Set map(s)
+** Set reduce
+** Set transform results
+** Set fields properties
+
+* Allow querying
+
+* Administration
+** Backup
+** Import
+** Export
+
+
+* Collections
