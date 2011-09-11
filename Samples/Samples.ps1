@@ -35,8 +35,21 @@ function Recreate-RavenDB
   md $dest 
   
   $parent = [System.IO.Path]::GetDirectoryName($dest)
-  Set-Content -Path "$parent/.gitignore" "$originalDest/"
-  
+  $gitignore = "$parent/.gitignore"
+  $ignoreLine = "$originalDest/"
+  if((Test-Path $gitignore) -eq $false)
+  {
+    Set-Content -Path $gitignore  $ignoreLine
+  }
+  else 
+  {
+    $resultFound = Get-Content $gitignore   |  Select-String $ignoreLine  -quiet
+    
+    if($resultFound  -eq $null)
+    {
+      Add-Content -Path $gitignore  $ignoreLine 
+    }
+  }
   Copy-RavenDB $dest
   
   md $dest\Plugins -erroraction silentlycontinue
