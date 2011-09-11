@@ -35,7 +35,7 @@ function Recreate-RavenDB
   md $dest 
   
   $parent = [System.IO.Path]::GetDirectoryName($dest)
-  $gitignore = "$parent/.gitignore"
+  $gitignore = "$pwd/.gitignore"
   $ignoreLine = "$originalDest/"
   if((Test-Path $gitignore) -eq $false)
   {
