@@ -1,0 +1,5 @@
+﻿Things to do here:
+
+* Make this pretty! Based on the new RavenDB.Net website design
+* Documents, should be horizontal, not vertical
+* Allow editting of documents

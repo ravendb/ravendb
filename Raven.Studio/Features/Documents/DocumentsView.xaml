@@ -14,11 +14,14 @@
 		<ListBox ItemsSource="{Binding}">
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Grid  Width="120"
-						   Height="60">
+					<Grid Width="120"
+						  Height="60"
+						  Margin="2"
+						  >
 						<Rectangle Fill="#FFF4F4F5" />
 						<Rectangle HorizontalAlignment="Left"
 								   Width="10"
+								   x:Name="DocumentGrid"
 								   Fill="{Binding Path=Fill}" />
 
 						<Grid Margin="14,0,0,0">
@@ -31,6 +34,19 @@
 										   HorizontalAlignment="Left" />
 							</StackPanel>
 						</Grid>
+
+						<StackPanel x:Name="overlay"
+									Orientation="Horizontal"
+									HorizontalAlignment="Right"
+									VerticalAlignment="Bottom">
+							<Button Content="edit"
+									Height="20"
+									Width="30"
+									ToolTipService.ToolTip="click here to edit the document"
+									Margin="0,0,4,4">
+
+							</Button>
+						</StackPanel>
 					</Grid>
 				</DataTemplate>
 			</ListBox.ItemTemplate>
