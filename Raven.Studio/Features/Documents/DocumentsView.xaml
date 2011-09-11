@@ -11,18 +11,20 @@
 				   Style="{StaticResource HeaderTextStyle}"
 				   Text="Documents" />
 
-		<ListBox ItemsSource="{Binding}" SelectionMode="Extended" BorderThickness="0">
+		<ListBox ItemsSource="{Binding}"
+				 SelectionMode="Extended"
+				 BorderThickness="0">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
-					<StackPanel Orientation="Horizontal"  />
+					<StackPanel Orientation="Horizontal" />
 				</ItemsPanelTemplate>
 			</ListBox.ItemsPanel>
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid Width="120"
 						  Height="60"
-						  Margin="2"
-						  >
+						  Margin="2">
+
 						<Rectangle Fill="#FFF4F4F5" />
 						<Rectangle HorizontalAlignment="Left"
 								   Width="10"
@@ -47,6 +49,7 @@
 							<Button Content="edit"
 									Height="20"
 									Width="30"
+									Command="{Binding Path=Edit}"
 									ToolTipService.ToolTip="click here to edit the document"
 									Margin="0,0,4,4">
 

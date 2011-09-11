@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Windows.Input;
 using System.Windows.Media;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -34,6 +35,11 @@ namespace Raven.Studio.Features.Documents
 					fill = TemplateColorProvider.Instance.ColorFrom(CollectionType);
 				return fill;
 			}
+		}
+
+		public ICommand Edit
+		{
+			get { return new EditDocumentCommand(this); }
 		}
 
 		public string DisplayId
