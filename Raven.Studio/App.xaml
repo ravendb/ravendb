@@ -7,6 +7,7 @@
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceDictionary Source="Assets/Styles.xaml" />
 				<ResourceDictionary Source="Assets/ValueConverters.xaml" />
+				<ResourceDictionary Source="Features/FeatureActions.xaml" />
 			</ResourceDictionary.MergedDictionaries>
 		</ResourceDictionary>
 	</Application.Resources>
