@@ -56,7 +56,7 @@ namespace Raven.Tests.Linq
 		{
 			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query },  ".");
 			var generator = dynamicQueryCompiler.GenerateInstance();
-			var results = generator.MapDefinition(new[]
+			var results = generator.MapDefinitions[0](new[]
 			{
 				GetDocumentFromString(
 					@"
@@ -110,7 +110,7 @@ namespace Raven.Tests.Linq
 			},  ".").GenerateInstance();
 
 
-			var results = viewGenerator.MapDefinition(new[]
+			var results = viewGenerator.MapDefinitions[0](new[]
 			{
 				GetDocumentFromString(
 				@"
@@ -141,11 +141,11 @@ namespace Raven.Tests.Linq
 				Reduce =
 					@"results
 	.GroupBy(agg => agg.Location)
-	.Select(g => new {Loction = g.Key, Count = g.Sum(x => x.Count}))"
+	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count}))"
 			},  ".").GenerateInstance();
 
 
-			var results = viewGenerator.ReduceDefinition(viewGenerator.MapDefinition(new[]
+			var results = viewGenerator.ReduceDefinition(viewGenerator.MapDefinitions[0](new[]
 			{
 				GetDocumentFromString(
 				@"
@@ -163,7 +163,7 @@ namespace Raven.Tests.Linq
 
 			var expected = new[]
 			{
-				"{ Loction = Tel Aviv, Count = 2 }",
+				"{ Location = Tel Aviv, Count = 2 }",
 			};
 
 			for (var i = 0; i < results.Length; i++)

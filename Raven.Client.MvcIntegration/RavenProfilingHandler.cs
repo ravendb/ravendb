@@ -143,9 +143,16 @@ namespace Raven.Client.MvcIntegration
 		private void OnSessionCreated(InMemoryDocumentSessionOperations operations)
 		{
 			RavenProfiler.ContextualSessionList.Add(operations.Id);
-			if (HttpContext.Current != null) 
+			if (HttpContext.Current == null)
+				return;
+			
+			try
 			{
 				HttpContext.Current.Response.AddHeader("X-RavenDb-Profiling-Id", operations.Id.ToString());
+			}
+			catch (HttpException)
+			{
+				// headers were already written, nothing much that we can do here, ignoring
 			}
 		}
 	}

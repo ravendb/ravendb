@@ -1,6 +1,7 @@
 using System.IO;
 using ICSharpCode.NRefactory;
 using Raven.Database.Linq;
+using Raven.Database.Linq.Ast;
 using Xunit;
 using System.Linq;
 

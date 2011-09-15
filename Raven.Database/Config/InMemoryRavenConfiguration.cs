@@ -130,6 +130,9 @@ namespace Raven.Database.Config
 			HttpCompression = httpCompressionTemp;
 
 			AccessControlAllowOrigin = Settings["Raven/AccessControlAllowOrigin"];
+			AccessControlMaxAge = Settings["Raven/AccessControlMaxAge"] ?? "1728000"; // 20 days
+			AccessControlAllowMethods = Settings["Raven/AccessControlAllowMethods"] ?? "PUT,PATCH,GET,DELETE,POST";
+			AccessControlRequestHeaders = Settings["Raven/AccessControlRequestHeaders"];
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
@@ -171,8 +174,24 @@ namespace Raven.Database.Config
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
 		{
-			var totalPhysicalMemoryMegabytes =
-				(int) (new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory/1024/1024);
+			int totalPhysicalMemoryMegabytes;
+			if (Type.GetType("Mono.Runtime") != null)
+			{
+				var pc = new System.Diagnostics.PerformanceCounter ("Mono Memory", "Total Physical Memory");
+				totalPhysicalMemoryMegabytes = (int)(pc.RawValue/1024/1024);
+				if (totalPhysicalMemoryMegabytes == 0)
+					totalPhysicalMemoryMegabytes = 128; // 128MB, the Mono runtime default
+			}
+			else
+			{
+#if __MonoCS__
+				throw new PlatformNotSupportedException("This build can only run on Mono");
+#else
+				totalPhysicalMemoryMegabytes =
+					(int)(new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory/1024/1024);
+#endif
+			}
+
 			// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
 
 			var val = (totalPhysicalMemoryMegabytes / 2)  - 
@@ -298,9 +317,34 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// Determine the value of the Access-Control-Allow-Origin header sent by the server. 
-		/// Allowed values: null (don't send the header), *, http://example.org 
+		/// Indicates the URL of a site trusted to make cross-domain requests to this server.
+		/// Allowed values: null (don't send the header), *, http://example.org (space separated if multiple sites)
 		/// </summary>
 		public string AccessControlAllowOrigin { get; set; }
+
+		/// <summary>
+		/// Determine the value of the Access-Control-Max-Age header sent by the server.
+		/// Indicates how long (seconds) the browser should cache the Access Control settings.
+		/// Ignored if AccessControlAllowOrigin is not specified.
+		/// Default: 1728000 (20 days)
+		/// </summary>
+		public string AccessControlMaxAge { get; set; }
+
+		/// <summary>
+		/// Determine the value of the Access-Control-Allow-Methods header sent by the server.
+		/// Indicates which HTTP methods (verbs) are permitted for requests from allowed cross-domain origins.
+		/// Ignored if AccessControlAllowOrigin is not specified.
+		/// Default: PUT,PATCH,GET,DELETE,POST
+		/// </summary>
+		public string AccessControlAllowMethods { get; set; }
+
+		/// <summary>
+		/// Determine the value of the Access-Control-Request-Headers header sent by the server.
+		/// Indicates which HTTP headers are permitted for requests from allowed cross-domain origins.
+		/// Ignored if AccessControlAllowOrigin is not specified.
+		/// Allowed values: null (allow whatever headers are being requested), HTTP header field name
+		/// </summary>
+		public string AccessControlRequestHeaders { get; set; }
 
 		/// <summary>
 		/// The virtual directory to use when creating the http listener. 

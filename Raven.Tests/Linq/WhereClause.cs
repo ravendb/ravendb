@@ -29,6 +29,42 @@ namespace Raven.Tests.Linq
 			documentSession = documentStore.OpenSession();
 		}
 
+		[Fact]
+		public void StartsWith()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.StartsWith("foo"));
+
+			Assert.Equal("Name:foo*", q.ToString());
+		}
+
+		[Fact]
+		public void StartsWithEqTrue()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.StartsWith("foo") == true);
+
+			Assert.Equal("Name:foo*", q.ToString());
+		}
+
+		[Fact]
+		public void StartsWithEqFalse()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.StartsWith("foo") == false);
+
+			Assert.Equal("( *:* -Name:foo*)", q.ToString());
+		}
+
+		[Fact]
+		public void StartsWithNegated()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => !user.Name.StartsWith("foo"));
+
+			Assert.Equal("( *:* -Name:foo*)", q.ToString());
+		}
+
 
 		[Fact]
 		public void BracesOverrideOperatorPrecedence_second_method()

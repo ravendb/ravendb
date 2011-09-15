@@ -5,49 +5,15 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Database.Extensions;
-using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Document
 {
-	public class TagCloud : RemoteClientTest, IDisposable
+	public class TagCloud : RemoteClientTest
 	{
-		private string path;
-
-		#region IDisposable Members
-
-		public void Dispose()
-		{
-			IOExtensions.DeleteDirectory(path);
-		}
-
-		#endregion
-
-
-		private DocumentStore NewDocumentStore()
-		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			var documentStore = new EmbeddableDocumentStore
-			{
-				Configuration =
-					{
-						RunInUnreliableYetFastModeThatIsNotSuitableForProduction =true,
-						DataDirectory = path
-					}
-			};
-			documentStore.Initialize();
-			return documentStore;
-		}
-
 		[Fact]
 		public void CanQueryMapReduceIndex()
 		{

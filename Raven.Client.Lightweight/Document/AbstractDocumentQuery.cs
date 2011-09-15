@@ -12,7 +12,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
-using NLog;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
@@ -38,7 +37,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
@@ -192,6 +190,16 @@ namespace Raven.Client.Document
 
 		private Action<QueryResult> afterQueryExecuted;
 		private Guid? cutoffEtag;
+
+		private TimeSpan DefaultTimeout
+		{
+			get
+			{
+				if (Debugger.IsAttached) // increase timeout if we are debugging
+					return TimeSpan.FromMinutes(15);
+				return TimeSpan.FromSeconds(15);
+			}
+		}
 
 #if !SILVERLIGHT && !NET_3_5
 		/// <summary>
@@ -1113,7 +1121,7 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			theWaitForNonStaleResults = true;
 			cutoff = SystemTime.UtcNow;
-			timeout = TimeSpan.FromSeconds(15);
+			timeout = DefaultTimeout;
 		}
 
 		/// <summary>
@@ -1203,7 +1211,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		public void WaitForNonStaleResultsAsOf(DateTime cutOff)
 		{
-			WaitForNonStaleResultsAsOf(cutOff, TimeSpan.FromSeconds(15));
+			WaitForNonStaleResultsAsOf(cutOff, DefaultTimeout);
 		}
 
 		/// <summary>
@@ -1226,7 +1234,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WaitForNonStaleResultsAsOfLastWrite()
 		{
-			WaitForNonStaleResultsAsOfLastWrite(TimeSpan.FromSeconds(15));
+			WaitForNonStaleResultsAsOfLastWrite(DefaultTimeout);
 		}
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
@@ -1247,7 +1255,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WaitForNonStaleResults()
 		{
-			WaitForNonStaleResults(TimeSpan.FromSeconds(15));
+			WaitForNonStaleResults(DefaultTimeout);
 		}
 
 		/// <summary>

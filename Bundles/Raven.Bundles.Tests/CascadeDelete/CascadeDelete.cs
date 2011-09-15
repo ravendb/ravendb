@@ -30,7 +30,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 			ravenDbServer = new RavenDbServer(
 				new database::Raven.Database.Config.RavenConfiguration
 				{
-					Port = 58080,
+					Port = 8080,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					DataDirectory = path,
 					Catalog =
@@ -44,7 +44,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
 			documentStore = new DocumentStore
 			{
-				Url = "http://localhost:58080"
+				Url = "http://localhost:8080"
 			};
 			documentStore.Initialize();
 		}

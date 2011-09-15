@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace Raven.Abstractions.Indexing
 {
@@ -20,10 +21,28 @@ namespace Raven.Abstractions.Indexing
 		public string Name { get; set; }
 
 		/// <summary>
-		/// Gets or sets the map function
+		/// Gets or sets the map function, if there is only one
 		/// </summary>
-		/// <value>The map.</value>
-		public string Map { get; set; }
+		/// <remarks>
+		/// This property only exists for backward compatability purposes
+		/// </remarks>
+		public string Map
+		{
+			get { return Maps.FirstOrDefault(); }
+			set
+			{
+				if (Maps.Count != 0)
+				{
+					Maps.Remove(Maps.First());
+				}
+				Maps.Add(value);
+			}
+		}
+
+		/// <summary>
+		/// All the map functions for this index
+		/// </summary>
+		public HashSet<string> Maps { get; set; }
 
 		/// <summary>
 		/// Gets or sets the reduce function
@@ -88,6 +107,7 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public IndexDefinition()
 		{
+			Maps = new HashSet<string>();
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
@@ -104,7 +124,7 @@ namespace Raven.Abstractions.Indexing
 		{
 			if (ReferenceEquals(null, other)) return false;
 			if (ReferenceEquals(this, other)) return true;
-			return Equals(other.Map, Map) && 
+			return Maps.SequenceEqual(other.Maps) &&
 				Equals(other.Name, Name) &&
 				Equals(other.Reduce, Reduce) && 
 				Equals(other.TransformResults, TransformResults) && 
@@ -182,7 +202,8 @@ namespace Raven.Abstractions.Indexing
 		{
 			unchecked
 			{
-				int result = (Map != null ? Map.GetHashCode() : 0);
+				int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc*397 ^ val.GetHashCode());
+				result = (result*397) ^ Maps.Count;
 				result = (result*397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
 				result = (result*397) ^ DictionaryHashCode(Stores);
 				result = (result*397) ^ DictionaryHashCode(Indexes);

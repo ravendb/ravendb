@@ -62,10 +62,10 @@ namespace Raven.Database.Server.Responders
 		private void Put(IHttpContext context, string index)
 		{
 			var data = context.ReadJsonObject<IndexDefinition>();
-			if (data == null || data.Map == null)
+			if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
 			{
 				context.SetStatusToBadRequest();
-				context.Write("Expected json document with 'Map' property");
+				context.Write("Expected json document with 'Map' or 'Maps' property");
 				return;
 			}
 			context.SetStatusToCreated("/indexes/" + index);

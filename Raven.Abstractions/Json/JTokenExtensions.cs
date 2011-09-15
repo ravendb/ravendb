@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 
@@ -121,6 +122,12 @@ namespace Raven.Abstractions.Json
 			if(result == null)
 			{
 				yield break;
+			}
+			if(result.Type == JTokenType.Object)
+			{
+				var ravenJObject = ((RavenJObject)result);
+				if (ravenJObject.ContainsKey("$values"))
+					result = ravenJObject.Value<RavenJToken>("$values");
 			}
 			foreach (var item in result.Values<RavenJToken>())
 			{

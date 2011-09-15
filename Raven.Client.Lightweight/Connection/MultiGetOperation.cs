@@ -38,7 +38,7 @@ namespace Raven.Client.Connection
 			requestUri = url + "/multi_get";
 			if (convention.UseParallelMultiGet)
 			{
-				requestUri = requestUri += "?parallel=yes";
+				requestUri += "?parallel=yes";
 			}
 		}
 

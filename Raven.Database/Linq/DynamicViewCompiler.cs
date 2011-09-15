@@ -6,18 +6,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
-using System.Web;
 using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.PrettyPrinter;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
-using Raven.Database.Indexing;
 using System.Linq;
+using Raven.Database.Linq.Ast;
 using Raven.Database.Plugins;
 
 namespace Raven.Database.Linq
@@ -69,9 +67,7 @@ namespace Raven.Database.Linq
 
 		private void TransformQueryToClass()
 		{
-			string entityName;
-			var mapDefinition = TransformMapDefinition(out entityName);
-
+			
 			CSharpSafeName = "Index_"+ Regex.Replace(Name, @"[^\w\d]", "_");
 			var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
 			{
@@ -88,13 +84,7 @@ namespace Raven.Database.Linq
 			                                      new List<ParameterDeclarationExpression>(), null);
 			type.Children.Add(ctor);
 			ctor.Body = new BlockStatement();
-			//this.ForEntityName = entityName;
-			ctor.Body.AddChild(new ExpressionStatement(
-								new AssignmentExpression(
-									new MemberReferenceExpression(new ThisReferenceExpression(), "ForEntityName"),
-									AssignmentOperatorType.Assign,
-									new PrimitiveExpression(entityName, entityName))));
-
+		
 			// this.ViewText = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185"; // Will be replaced later
 			ctor.Body.AddChild(new ExpressionStatement(
 			                   	new AssignmentExpression(
@@ -102,24 +92,10 @@ namespace Raven.Database.Linq
 			                   		AssignmentOperatorType.Assign,
 			                   		new PrimitiveExpression(mapReduceTextToken, mapReduceTextToken))));
 
-			// this.MapDefinition = from doc in docs ...;
-			ctor.Body.AddChild(new ExpressionStatement(
-			                   	new AssignmentExpression(
-			                   		new MemberReferenceExpression(new ThisReferenceExpression(), "MapDefinition"),
-			                   		AssignmentOperatorType.Assign,
-			                   		new LambdaExpression
-			                   		{
-			                   			Parameters =
-			                   				{
-			                   					new ParameterDeclarationExpression(null, "docs")
-			                   				},
-			                   			ExpressionBody = mapDefinition.Initializer
-			                   		})));
-
-
-			mapDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
-
-			mapDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForMap, null);
+			foreach (var map in indexDefinition.Maps)
+			{
+				HandleMapFunction(ctor, map);
+			}
 
 			HandleTransformResults(ctor);
 
@@ -128,20 +104,85 @@ namespace Raven.Database.Linq
 		    AddAdditionalInformation(ctor);
 
 			CompiledQueryText = QueryParsingUtils.GenerateText(type, extensions);
-			var compiledQueryText = "@\"" + indexDefinition.Map.Replace("\"", "\"\"");
+			var sb = new StringBuilder("@\"");
+			foreach (var map in indexDefinition.Maps)
+			{
+				sb.AppendLine(map.Replace("\"", "\"\""));
+			}
 			if (indexDefinition.Reduce != null)
 			{
-				compiledQueryText += Environment.NewLine + indexDefinition.Reduce.Replace("\"", "\"\"");
+				sb.AppendLine(indexDefinition.Reduce.Replace("\"", "\"\"")).AppendLine();
 			}
 
 			if (indexDefinition.TransformResults != null)
 			{
-				compiledQueryText += Environment.NewLine + indexDefinition.TransformResults.Replace("\"", "\"\"");
+				sb.AppendLine(indexDefinition.TransformResults.Replace("\"", "\"\"")).AppendLine();
 			}
 
-			compiledQueryText += "\"";
+			sb.Append("\"");
 			CompiledQueryText = CompiledQueryText.Replace("\"" + mapReduceTextToken + "\"",
-			                                              compiledQueryText);
+			                                              sb.ToString());
+		}
+
+		private bool firstMap = true;
+		private void HandleMapFunction(ConstructorDeclaration ctor, string map)
+		{
+			string entityName;
+
+			VariableDeclaration mapDefinition = map.Trim().StartsWith("from") ? 
+				TransformMapDefinitionFromLinqQuerySyntax(map, out entityName) : 
+				TransformMapDefinitionFromLinqMethodSyntax(map, out entityName);
+	
+			
+			//this.ForEntityNames.Add(entityName);
+			ctor.Body.AddChild(new ExpressionStatement(
+			                   	new InvocationExpression(
+			                   		new MemberReferenceExpression(new MemberReferenceExpression(new ThisReferenceExpression(), "ForEntityNames"), "Add"),
+			                   		new List<Expression> { new PrimitiveExpression(entityName, entityName) })
+			                   	));
+			// this.AddMapDefinition(from doc in docs ...);
+			ctor.Body.AddChild(new ExpressionStatement(
+			                   	new InvocationExpression(new MemberReferenceExpression(new ThisReferenceExpression(), "AddMapDefinition"),
+			                   	                         new List<Expression>{new LambdaExpression
+			                   	                         {
+			                   	                         	Parameters =
+			                   	                         		{
+			                   	                         			new ParameterDeclarationExpression(null, "docs")
+			                   	                         		},
+			                   	                         	ExpressionBody = mapDefinition.Initializer
+			                   	                         }}
+			                   		)));
+
+
+			if(firstMap)
+			{
+				mapDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
+				firstMap = false;
+			}
+			else
+			{
+				var secondMapFieldNames = new CaptureSelectNewFieldNamesVisitor();
+				mapDefinition.Initializer.AcceptVisitor(secondMapFieldNames, null);
+				if(secondMapFieldNames.FieldNames.SetEquals(captureSelectNewFieldNamesVisitor.FieldNames) == false)
+				{
+					var message = string.Format(@"Map functions defined as part of a multi map index must return identical types.
+Baseline map		: {0}
+Non matching map	: {1}
+
+Common fields		: {2}
+Missing fields		: {3}
+Additional fields	: {4}", indexDefinition.Maps.First(),
+					                            map,
+					                            string.Join(", ", captureSelectNewFieldNamesVisitor.FieldNames.Intersect(secondMapFieldNames.FieldNames)),
+					                            string.Join(", ", captureSelectNewFieldNamesVisitor.FieldNames.Except(secondMapFieldNames.FieldNames)),
+					                            string.Join(", ", secondMapFieldNames.FieldNames.Except(captureSelectNewFieldNamesVisitor.FieldNames))
+						);
+					throw new InvalidOperationException(message);
+				}
+			}
+
+			mapDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(), null);
+			mapDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForMap, null);
 		}
 
 		private void HandleTransformResults(ConstructorDeclaration ctor)
@@ -207,11 +248,12 @@ namespace Raven.Database.Linq
 			}
 
 			var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToList();
-			captureSelectNewFieldNamesVisitor.FieldNames.Clear();// reduce override the map fields
+			captureSelectNewFieldNamesVisitor.Clear();// reduce override the map fields
 			reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 			reduceDefiniton.Initializer.AcceptChildren(captureQueryParameterNamesVisitorForReduce, null);
+			reduceDefiniton.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(), null);
 
-			//ValidateMapReduceFields(mapFields);
+			ValidateMapReduceFields(mapFields);
 
 			// this.ReduceDefinition = from result in results...;
 			ctor.Body.AddChild(new ExpressionStatement(
@@ -247,12 +289,18 @@ namespace Raven.Database.Linq
 		{
 			mapFields.Remove("__document_id");
 			var reduceFields = captureSelectNewFieldNamesVisitor.FieldNames;
-			if (reduceFields.IsProperSubsetOf(mapFields) == false)
+			if (reduceFields.SetEquals(mapFields) == false)
 			{
-				throw new InvalidOperationException(string.Format(@"The result type is not consistent across map and reduce:
-Map	Fields   : {0}
-Reduce Fields: {1}
-", string.Join(", ", mapFields), string.Join(", ", reduceFields)));
+			    throw new InvalidOperationException(
+			        string.Format(
+			            @"The result type is not consistent across map and reduce:
+Common fields: {0}
+Map	only fields   : {1}
+Reduce only fields: {2}
+",
+			            string.Join(", ", mapFields.Intersect(reduceFields).OrderBy(x => x)),
+			            string.Join(", ", mapFields.Except(reduceFields).OrderBy(x => x)),
+			            string.Join(", ", reduceFields.Except(mapFields).OrderBy(x => x))));
 			}
 		}
 
@@ -283,16 +331,9 @@ Reduce Fields: {1}
 
 		public bool RequiresSelectNewAnonymousType { get; set; }
 
-	    private VariableDeclaration TransformMapDefinition(out string entityName)
+		private VariableDeclaration TransformMapDefinitionFromLinqMethodSyntax(string query, out string entityName)
 		{
-			if (indexDefinition.Map.Trim().StartsWith("from"))
-				return TransformMapDefinitionFromLinqQuerySyntax(out entityName);
-			return TransformMapDefinitionFromLinqMethodSyntax(out entityName);
-		}
-
-		private VariableDeclaration TransformMapDefinitionFromLinqMethodSyntax(out string entityName)
-		{
-			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Map);
+			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(query);
 			AddEntityNameFilteringIfNeeded(variableDeclaration, out entityName);
 
 			variableDeclaration.AcceptVisitor(new AddDocumentIdToLambdas(), null);
@@ -368,10 +409,10 @@ Reduce Fields: {1}
 				});
 		}
 
-		private VariableDeclaration TransformMapDefinitionFromLinqQuerySyntax(out string entityName)
+		private VariableDeclaration TransformMapDefinitionFromLinqQuerySyntax(string query, out string entityName)
 		{
 			entityName = null;
-			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Map, RequiresSelectNewAnonymousType);
+			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(query, RequiresSelectNewAnonymousType);
 			var queryExpression = ((QueryExpression) variableDeclaration.Initializer);
 			var expression = queryExpression.FromClause.InExpression;
 			if(expression is MemberReferenceExpression) // collection

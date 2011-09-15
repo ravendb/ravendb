@@ -183,6 +183,23 @@ namespace Raven.Client.Linq
 
 		private void VisitEquals(BinaryExpression expression)
 		{
+			var constantExpression = expression.Right as ConstantExpression;
+			if (constantExpression != null && true.Equals(constantExpression.Value))
+			{
+				VisitExpression(expression.Left);
+				return;
+			}
+
+			if (constantExpression != null && false.Equals(constantExpression.Value))
+			{
+				luceneQuery.OpenSubclause();
+				luceneQuery.Where("*:*");
+				luceneQuery.NegateNext();
+				VisitExpression(expression.Left);
+				luceneQuery.CloseSubclause();
+				return;
+			}
+
 			var methodCallExpression = expression.Left as MethodCallExpression;
 			// checking for VB.NET string equality
 			if (methodCallExpression != null && methodCallExpression.Method.Name == "CompareString" &&
@@ -756,7 +773,6 @@ namespace Raven.Client.Linq
 
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
-			var member = ((MemberExpression) expression.Body).Member;
 			var propertyInfo = ((MemberExpression)expression.Body).Member as PropertyInfo;
 			var fieldInfo = ((MemberExpression)expression.Body).Member as FieldInfo;
 			var expressionMemberInfo = GetMember(expression.Body);

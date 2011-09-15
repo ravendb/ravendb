@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs
 			{
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
-					Map = "from u in docs select new { u.Name }",
+					Map = "from u in docs select new { u.User }",
 					Reduce = "from u in results group u by u.Name into g select new { User = g.Key }"
 				});
 

@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -47,7 +49,7 @@ namespace Raven.Database.Indexing
 		{
 			actions.Indexing.SetCurrentIndexStatsTo(name);
 			var count = 0;
-			Func<object, object> documentIdFetcher = null;
+			
 			// we mark the reduce keys to delete when we delete the mapped results, then we remove
 			// any reduce key that is actually being used to generate new mapped results
 			// this way, only reduces that removed data will force us to use the tasks approach
@@ -61,36 +63,33 @@ namespace Raven.Database.Indexing
 				}
 				return doc;
 			});
-			foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinition, actions, context))
+			foreach (var mappedResultFromDocument in GroupByDocumentId(RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context)))
 			{
-				count++;
-
-				documentIdFetcher = CreateDocumentIdFetcherIfNeeded(documentIdFetcher, doc);
-
-				var docIdValue = documentIdFetcher(doc);
-				if (docIdValue == null)
-					throw new InvalidOperationException("Could not find document id for this document");
-
-				var reduceValue = viewGenerator.GroupByExtraction(doc);
-				if (reduceValue == null)
+				foreach (var doc in RobustEnumerationReduceDuringMapPhase(mappedResultFromDocument, viewGenerator.ReduceDefinition, actions, context))
 				{
-					logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, docIdValue);
-					continue;
+					count++;
+
+					var reduceValue = viewGenerator.GroupByExtraction(doc);
+					if (reduceValue == null)
+					{
+						logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, mappedResultFromDocument.Key);
+						continue;
+					}
+					var reduceKey = ReduceKeyToString(reduceValue);
+					var docId = mappedResultFromDocument.Key.ToString();
+
+					reduceKeysToDelete.Remove((string)reduceKey);
+
+					var data = GetMapedData(doc);
+
+					logIndexing.Debug("Mapped result for '{0}': '{1}'", name, data);
+
+					var hash = ComputeHash(name, reduceKey);
+
+					actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
+
+					actions.Indexing.IncrementSuccessIndexing();
 				}
-				var reduceKey = ReduceKeyToString(reduceValue);
-				var docId = docIdValue.ToString();
-
-				reduceKeysToDelete.Remove((string) reduceKey);
-
-				var data = GetMapedData(doc);
-
-				logIndexing.Debug("Mapped result for '{0}': '{1}'", name, data);
-
-				var hash = ComputeHash(name, reduceKey);
-
-				actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
-
-				actions.Indexing.IncrementSuccessIndexing();
 			}
 
 			if (reduceKeysToDelete.Count > 0)
@@ -105,6 +104,58 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
 		}
 
+		// we don't use the usual GroupBy, because that isn't streaming
+		// we rely on the fact that all values from the same docs are always outputed at 
+		// the same time, so we can take advantage of this fact
+		private static IEnumerable<IGrouping<object ,dynamic>> GroupByDocumentId(IEnumerable<object> docs)
+		{
+			var enumerator = docs.GetEnumerator();
+			if(enumerator.MoveNext()==false)
+				yield break;
+
+			while (true)
+			{
+				var groupByDocumentId = new Grouping(GetDocumentId(enumerator.Current), enumerator);
+				yield return groupByDocumentId;
+				if (groupByDocumentId.Done)
+					break;
+			}
+		}
+
+		private class Grouping : IGrouping<object, object>
+		{
+			private readonly IEnumerator enumerator;
+			private bool newKeyFound;
+			public bool Done { get; private set; }
+			public IEnumerator<object> GetEnumerator()
+			{
+				if(newKeyFound || Done)
+					yield break;
+				yield return enumerator.Current;
+
+				if (enumerator.MoveNext() == false)
+					Done = true;
+
+				var documentId = GetDocumentId(enumerator.Current);
+
+				if (Equals(documentId, Key) == false)
+					newKeyFound = true;
+			}
+
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return GetEnumerator();
+			}
+
+			public object Key { get; private set; }
+
+			public Grouping(object key, IEnumerator enumerator)
+			{
+				this.enumerator = enumerator;
+				Key = key;
+			}
+		}
+
 		private static RavenJObject GetMapedData(object doc)
 		{
 			if (doc is DynamicJsonObject)
@@ -112,24 +163,26 @@ namespace Raven.Database.Indexing
 			return RavenJObject.FromObject(doc, JsonExtensions.CreateDefaultJsonSerializer());
 		}
 
-		private static Func<object, object> CreateDocumentIdFetcherIfNeeded(Func<object, object> documentIdFetcher, object doc)
+		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache = new ConcurrentDictionary<Type, Func<object, object>>();
+		private static object GetDocumentId(object doc)
 		{
-			if (documentIdFetcher != null)
+			var docIdFetcher = documentIdFetcherCache.GetOrAdd(doc.GetType(), type =>
 			{
-				return documentIdFetcher;
-			}
-			// document may be DynamicJsonObject if we are using
-			// compiled views
-			if (doc is DynamicJsonObject)
-			{
-				documentIdFetcher = i => ((dynamic)i).__document_id;
-			}
-			else
-			{
+				// document may be DynamicJsonObject if we are using compiled views
+				if (typeof (DynamicJsonObject) == type)
+				{
+					return i => ((dynamic) i).__document_id;
+				}
 				var docIdProp = TypeDescriptor.GetProperties(doc).Find(Abstractions.Data.Constants.DocumentIdFieldName, false);
-				documentIdFetcher = docIdProp.GetValue;
-			}
-			return documentIdFetcher;
+				return docIdProp.GetValue;
+			});
+			if (docIdFetcher == null)
+				throw new InvalidOperationException("Could not create document id fetcher for this document");
+			var documentId = docIdFetcher(doc);
+			if (documentId == null)
+				throw new InvalidOperationException("Could not getdocument id fetcher for this document");
+
+			return documentId;
 		}
 
 		public static byte[] ComputeHash(string name, string reduceKey)

@@ -90,24 +90,28 @@ namespace Raven.Studio.Framework.Extensions
 
 		static void NotifyUserOfError(Task child, MethodInfo errorSource)
 		{
-			Execute.OnUIThread(()=>
+			NotifyUserOfError(child.Exception.ExtractSingleInnerException(), errorSource);
+		}
+
+		static void NotifyUserOfError(Exception e, MethodInfo errorSource)
+		{
+			Execute.OnUIThread(() =>
 			{
 				if (ErrorViewModel.Current != null)
 					return;
-				
+
 				IoC.Get<IWindowManager>()
 						.ShowDialog(new ErrorViewModel
 						{
 							CurrentErrorSource = errorSource,
 							Message = "Unable to connect to server!",
-							Details = GetErrorDetails(child.Exception)
+							Details = GetErrorDetails(e)
 						});
 			});
 		}
 
-		static string GetErrorDetails(AggregateException x)
+		static string GetErrorDetails(Exception single)
 		{
-			var single = x.ExtractSingleInnerException();
 			while (single !=null && single.InnerException != null)
 			{
 				single = single.InnerException;
@@ -139,15 +143,25 @@ namespace Raven.Studio.Framework.Extensions
 
 		public static void ExecuteInSequence(this IEnumerable<Task> tasks, Action<bool> callback, Action<Exception> handleException = null)
 		{
-			ExecuteNextTask(tasks.GetEnumerator(), callback, handleException);
+			IEnumerator<Task> enumerator;
+			try
+			{
+				enumerator = tasks.GetEnumerator();
+			}
+			catch (Exception e)
+			{
+				HandleError(callback, handleException, e);
+				return;
+			}
+			ExecuteNextTask(enumerator, callback, handleException);
+
 		}
 
 		static void ExecuteNextTask(IEnumerator<Task> enumerator, Action<bool> callback, Action<Exception> handleException)
 		{
 			try
 			{
-				bool moveNextSucceeded = enumerator.MoveNext();
-
+				var moveNextSucceeded = enumerator.MoveNext();
 				if (!moveNextSucceeded)
 				{
 					enumerator.Dispose();
@@ -184,7 +198,10 @@ namespace Raven.Studio.Framework.Extensions
 				if (callback != null)
 					callback(false);
 			}
-			else new TargetInvocationException("Could not execute a set of tasks properly", e);
+			else
+			{
+				NotifyUserOfError(e ,callback.Method);
+			}
 		}
 	}
 }

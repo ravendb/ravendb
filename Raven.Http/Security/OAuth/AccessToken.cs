@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Newtonsoft.Json;
+using Raven.Abstractions;
 using Raven.Json.Linq;
 
 namespace Raven.Http.Security.OAuth
@@ -70,7 +71,7 @@ namespace Raven.Http.Security.OAuth
 
 		public static AccessToken Create(X509Certificate2 cert, string userId, string[] databases)
 		{
-			var issued = (DateTime.UtcNow - DateTime.MinValue).TotalMilliseconds;
+			var issued = (SystemTime.UtcNow - DateTime.MinValue).TotalMilliseconds;
 
 			var body = RavenJObject.FromObject(new AccessTokenBody { UserId = userId, AuthorizedDatabases = databases ?? new string[0], Issued = issued })
 					.ToString(Formatting.None);

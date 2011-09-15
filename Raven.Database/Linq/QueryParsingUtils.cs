@@ -19,6 +19,7 @@ using Microsoft.CSharp;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
+using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
 
@@ -26,13 +27,6 @@ namespace Raven.Database.Linq
 {
 	public static class QueryParsingUtils
 	{
-		public static string ToCSharp(this Expression expression)
-		{
-			var output = new CSharpOutputVisitor();
-			expression.AcceptVisitor(output, null);
-			return (output.Text);
-		}
-
 		public static string GenerateText(TypeDeclaration type, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
 			var unit = new CompilationUnit();
@@ -64,6 +58,14 @@ namespace Raven.Database.Linq
 			unit.AddChild(type);
 			var output = new CSharpOutputVisitor();
 			unit.AcceptVisitor(output, null);
+
+			return output.Text;
+		}
+
+		public static string ToText(AbstractNode node)
+		{
+			var output = new CSharpOutputVisitor();
+			node.AcceptVisitor(output, null);
 
 			return output.Text;
 		}
@@ -153,17 +155,17 @@ namespace Raven.Database.Linq
 		public static LambdaExpression AsLambdaExpression(this Expression expression)
 		{
 			var lambdaExpression = expression as LambdaExpression;
-			if(lambdaExpression != null)
+			if (lambdaExpression != null)
 				return lambdaExpression;
 
 			var castExpression = expression as CastExpression;
-			if(castExpression != null)
+			if (castExpression != null)
 			{
 				return AsLambdaExpression(castExpression.Expression);
 			}
 
 			var parenthesizedExpression = expression as ParenthesizedExpression;
-			if(parenthesizedExpression != null)
+			if (parenthesizedExpression != null)
 			{
 				return AsLambdaExpression(parenthesizedExpression.Expression);
 			}

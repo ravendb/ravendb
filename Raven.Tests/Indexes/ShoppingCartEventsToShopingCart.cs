@@ -3,12 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Raven.Abstractions.Indexing;
-using Raven.Json.Linq;
-using Raven.Database.Indexing;
 using Raven.Database.Linq;
 
 namespace Raven.Tests.Indexes
@@ -18,7 +17,7 @@ namespace Raven.Tests.Indexes
 	{
 		public ShoppingCartEventsToShopingCart()
 		{
-			MapDefinition = docs => docs.Where(document => document.For == "ShoppingCart");
+			AddMapDefinition(docs => EventsToShoppingCart(docs.Where(document => document.For == "ShoppingCart")));
 			GroupByExtraction = source => source.ShoppingCartId;
 			ReduceDefinition = Reduce;
 
@@ -31,11 +30,27 @@ namespace Raven.Tests.Indexes
 
 		private static IEnumerable<object> Reduce(IEnumerable<dynamic> source)
 		{
-			foreach (var events in source
-				.GroupBy(@event => @event.ShoppingCartId))
+			foreach (var carts in source
+				.GroupBy(cart => cart.ShoppingCartId))
 			{
-				var cart = new ShoppingCart { Id = events.Key };
-				foreach (var @event in events.OrderBy(x => x.Timestamp))
+				var cart = new ShoppingCart {Id = carts.Key};
+
+				var enumerable = carts.Select(x => x.Aggregate).ToArray();
+				cart.Merge(enumerable);
+
+				yield return new
+				{
+					ShoppingCartId = cart.Id,
+					Aggregate = cart
+				};
+			}
+		}
+
+		private static IEnumerable<object> EventsToShoppingCart(IEnumerable<dynamic> source)
+		{
+			foreach (var @event in source)
+			{
+				var cart = new ShoppingCart { Id = @event.ShoppingCartId };
 				{
 					switch ((string)@event.Type)
 					{
@@ -47,17 +62,18 @@ namespace Raven.Tests.Indexes
 							};
 							break;
 						case "Add":
-							cart.AddToCart(@event.ProductId, @event.ProductName, (decimal)@event.Price);
+							cart.AddToCart(@event.ProductId, @event.ProductName, (decimal)@event.Price, 1);
 							break;
 						case "Remove":
-							cart.RemoveFromCart(@event.ProductId);
+							cart.AddToCart(@event.ProductId, @event.ProductName, (decimal)@event.Price, -1);
 							break;
 					}
 				}
 				yield return new
 				{
+					@event.__document_id,
 					ShoppingCartId = cart.Id,
-					Aggregate = RavenJObject.FromObject(cart)
+					Aggregate = cart
 				};
 			}
 		}
@@ -67,19 +83,24 @@ namespace Raven.Tests.Indexes
 			public string Id { get; set; }
 			public ShoppingCartCustomer Customer { get; set; }
 			public List<ShoppingCartItem> Items { get; set; }
-			public decimal Total { get { return Items.Sum(x => x.Product.Price * x.Quantity); } }
+			public decimal Total { get { return Items.Where(x=>x.Quantity > 0).Sum(x => x.Product.Price * x.Quantity); } }
+
+			public int ItemsCount
+			{
+				get { return Items.Count(x => x.Quantity > 0);  }
+			}
 
 			public ShoppingCart()
 			{
 				Items = new List<ShoppingCartItem>();
 			}
 
-			public void AddToCart(string productId, string productName, decimal price)
+			public void AddToCart(string productId, string productName, decimal price, int quantity)
 			{
 				var item = Items.FirstOrDefault(x => x.Product.Id == productId);
 				if (item != null)
 				{
-					item.Quantity++;
+					item.Quantity+=quantity;
 					return;
 				}
 				Items.Add(new ShoppingCartItem
@@ -90,16 +111,32 @@ namespace Raven.Tests.Indexes
 						Name = productName,
 						Price = price
 					},
-					Quantity = 1
+					Quantity = quantity
 				});
 			}
 
-			public void RemoveFromCart(string productId)
+			public void Merge(IEnumerable<dynamic> carts)
 			{
-				var shoppingCartItem = Items.FirstOrDefault(x => x.Product.Id == productId);
-				if (shoppingCartItem == null)
-					return;
-				Items.Remove(shoppingCartItem);
+				foreach (var cart in carts)
+				{
+					if(cart.Customer != null)
+					{
+						Customer = new ShoppingCartCustomer
+						{
+							Id = cart.Customer.Id,
+							Name = cart.Customer.Name
+						};
+					}
+					if(cart.Items != null)
+					{
+						foreach (var item in cart.Items)
+						{
+							decimal price = (decimal)item.Product.Price;
+							int quantity = item.Quantity;
+							AddToCart(item.Product.Id, item.Product.Name, price, quantity);
+						}
+					}
+				}
 			}
 		}
 		public class ShoppingCartCustomer

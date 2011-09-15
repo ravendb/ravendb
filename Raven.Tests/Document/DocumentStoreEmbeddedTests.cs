@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
-using System.Reflection;
 using System.Threading;
 using System.Transactions;
 using Raven.Abstractions.Commands;
@@ -16,11 +14,7 @@ using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing;
-using Raven.Database.Json;
-using Raven.Http.Exceptions;
 using Raven.Tests.Indexes;
 using Xunit;
 using System.Linq;
@@ -39,24 +33,6 @@ namespace Raven.Tests.Document
 		}
 
 		#endregion
-
-		private EmbeddableDocumentStore NewDocumentStore()
-		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (DocumentStoreServerTests)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			var documentStore = new EmbeddableDocumentStore
-			{
-				Configuration =
-					{
-						DataDirectory = path,
-						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-					}
-			};
-			documentStore.Initialize();
-	
-			new RavenDocumentsByEntityName().Execute(documentStore);
-			return documentStore;
-		}
 
 		[Fact]
 		public void Can_use_transactions_to_isolate_saves()

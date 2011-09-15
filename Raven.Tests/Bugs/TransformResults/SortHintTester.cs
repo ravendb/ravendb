@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			using (var server = GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
 			{
-				IndexCreation.CreateIndexes(typeof(Answers_ByAnswerEntity).Assembly, store);
+				new Answers_ByAnswerEntity().Execute(store);
 
 				store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
 				CreateEntities(store);

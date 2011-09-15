@@ -317,7 +317,7 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IndexingFunc func,
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IEnumerable<IndexingFunc> funcs,
 		                                                     IStorageActionsAccessor actions, WorkContext context)
 		{
 			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
@@ -346,7 +346,7 @@ namespace Raven.Database.Indexing
 							e);
 					}
 				}
-			}.RobustEnumeration(input, func);
+			}.RobustEnumeration(input, funcs);
 		}
 
 		protected IEnumerable<object> RobustEnumerationReduce(IEnumerable<object> input, IndexingFunc func,
@@ -378,6 +378,30 @@ namespace Raven.Database.Indexing
 							String.Format("Could not increment indexing failure rate for {0}", name),
 							e);
 					}
+				}
+			}.RobustEnumeration(input, func);
+		}
+
+		// we don't care about tracking map/reduce stats here, since it is merely
+		// an optimization step
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerable<object> input, IndexingFunc func,
+															  IStorageActionsAccessor actions, WorkContext context)
+		{
+			// not strictly accurate, but if we get that many errors, probably an error anyway.
+			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			{
+				BeforeMoveNext = () => { }, // don't care
+				CancelMoveNext = () => { }, // don't care
+				OnError = (exception, o) =>
+				{
+					context.AddError(name,
+									 TryGetDocKey(o),
+									 exception.Message
+						);
+					logIndexing.WarnException(
+						String.Format("Failed to execute indexing function on {0} on {1}", name,
+										   TryGetDocKey(o)),
+						exception);
 				}
 			}.RobustEnumeration(input, func);
 		}
@@ -629,7 +653,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			private Query GetLuceneQuery()
+			public Query GetLuceneQuery()
 			{
 				string query = indexQuery.Query;
 				Query luceneQuery;

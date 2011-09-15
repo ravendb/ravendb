@@ -37,6 +37,25 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
+		public void ShouldNotSortStringAsLongAfterRestart()
+		{
+			using (var store = NewDocumentStore())
+			{
+				RavenQueryStatistics stats;
+				using (var session = store.OpenSession())
+				{
+					session.Query<GameServer>()
+						.Statistics(out stats)
+						.OrderBy(x => x.Name)
+						.ToList();
+				}
+
+				var indexDefinition = store.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition(stats.IndexName);
+				Assert.Equal(SortOptions.String, indexDefinition.SortOptions["Name"]);
+			}
+		}
+
+		[Fact]
 		public void ShouldSelectIndexWhenNoSortingSpecified()
 		{
 			using (var store = NewDocumentStore())
