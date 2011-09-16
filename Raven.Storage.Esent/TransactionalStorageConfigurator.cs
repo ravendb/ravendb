@@ -63,7 +63,7 @@ namespace Raven.Storage.Esent
 
 		private static int TranslateToSizeInDatabasePages(int sizeInMegabytes)
 		{
-			return (sizeInMegabytes * 1024 * 1024) / SystemParameters.DatabasePageSize;
+			return ((sizeInMegabytes * 1024) / SystemParameters.DatabasePageSize) * 1024;
 		}
 
 		private int GetValueFromConfiguration(string name, int defaultValue)
