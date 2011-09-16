@@ -92,9 +92,9 @@ namespace Raven.Tests.Faceted
 				s.SaveChanges();
 
 				store.DatabaseCommands.PutIndex("CameraCost",
-				                                new IndexDefinition
-				                                {
-				                                	Map = @"from camera in docs 
+												new IndexDefinition
+												{
+													Map = @"from camera in docs 
                                                         select new 
                                                         { 
                                                             camera.Manufacturer, 
@@ -103,7 +103,7 @@ namespace Raven.Tests.Faceted
                                                             camera.DateOfListing,
                                                             camera.Megapixels
                                                         }"
-				                                });
+												});
 
 				var counter = 0;
 				foreach (var camera in _data)
@@ -168,48 +168,48 @@ namespace Raven.Tests.Faceted
 					IDictionary<string, IEnumerable<FacetValue>> facetResults,
 					List<Camera> filteredData)
 		{
-            Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),
-                        facetResults["Manufacturer"].Count());
+			Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),
+						facetResults["Manufacturer"].Count());
 			foreach (var facet in facetResults["Manufacturer"])
 			{
 				var inMemoryCount = filteredData.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-				Assert.Equal(inMemoryCount, facet.Count);				
+				Assert.Equal(inMemoryCount, facet.Count);
 			}
 
-            //Go through the expected (in-memory) results and check that there is a corresponding facet result
-            //Not the prettiest of code, but it works!!!
-            var costFacets = facetResults["Cost_Range"];
-            CheckFacetCount(filteredData.Where(x => x.Cost <= 200.0m).Count(),
-                            costFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx200.0]"));
-            CheckFacetCount(filteredData.Where(x => x.Cost >= 200.0m && x.Cost <= 400).Count(),
-                            costFacets.FirstOrDefault(x => x.Range == "[Dx200.0 TO Dx400.0]"));
-            CheckFacetCount(filteredData.Where(x => x.Cost >= 400.0m && x.Cost <= 600.0m).Count(),
-                            costFacets.FirstOrDefault(x => x.Range == "[Dx400.0 TO Dx600.0]"));
-            CheckFacetCount(filteredData.Where(x => x.Cost >= 600.0m && x.Cost <= 800.0m).Count(),
-                            costFacets.FirstOrDefault(x => x.Range == "[Dx600.0 TO Dx800.0]"));
-            CheckFacetCount(filteredData.Where(x => x.Cost >= 800.0m).Count(),
-                            costFacets.FirstOrDefault(x => x.Range == "[Dx800.0 TO NULL]"));
+			//Go through the expected (in-memory) results and check that there is a corresponding facet result
+			//Not the prettiest of code, but it works!!!
+			var costFacets = facetResults["Cost_Range"];
+			CheckFacetCount(filteredData.Where(x => x.Cost <= 200.0m).Count(),
+							costFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx200.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Cost >= 200.0m && x.Cost <= 400).Count(),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx200.0 TO Dx400.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Cost >= 400.0m && x.Cost <= 600.0m).Count(),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx400.0 TO Dx600.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Cost >= 600.0m && x.Cost <= 800.0m).Count(),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx600.0 TO Dx800.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Cost >= 800.0m).Count(),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx800.0 TO NULL]"));
 
-            //Test the Megapixels_Range facets using the same method
-            var megapixelsFacets = facetResults["Megapixels_Range"];
-            CheckFacetCount(filteredData.Where(x => x.Megapixels <= 3.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx3.0]"));
-            CheckFacetCount(filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx3.0 TO Dx7.0]"));
-            CheckFacetCount(filteredData.Where(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx7.0 TO Dx10.0]"));
-            CheckFacetCount(filteredData.Where(x => x.Megapixels >= 10.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx10.0 TO NULL]"));
+			//Test the Megapixels_Range facets using the same method
+			var megapixelsFacets = facetResults["Megapixels_Range"];
+			CheckFacetCount(filteredData.Where(x => x.Megapixels <= 3.0m).Count(),
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx3.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count(),
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx3.0 TO Dx7.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m).Count(),
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx7.0 TO Dx10.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Megapixels >= 10.0m).Count(),
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx10.0 TO NULL]"));
 		}
 
-        private void CheckFacetCount(int expectedCount, FacetValue facets)
-        {
-            if (expectedCount > 0)
-            {
-                Assert.NotNull(facets);
-                Assert.Equal(expectedCount, facets.Count);
-            }
-        }
+		private void CheckFacetCount(int expectedCount, FacetValue facets)
+		{
+			if (expectedCount > 0)
+			{
+				Assert.NotNull(facets);
+				Assert.Equal(expectedCount, facets.Count);
+			}
+		}
 
 		private static void Log(string text, params object[] args)
 		{
