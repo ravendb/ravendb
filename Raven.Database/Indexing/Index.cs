@@ -186,6 +186,8 @@ namespace Raven.Database.Indexing
 			}
 			if (stringValue == Constants.NullValue)
 				stringValue = null;
+			if (stringValue == Constants.EmptyString)
+				stringValue = string.Empty; 
 			return new KeyValuePair<string, RavenJToken>(fld.Name(), stringValue);
 		}
 

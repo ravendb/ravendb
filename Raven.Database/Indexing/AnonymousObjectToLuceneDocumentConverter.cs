@@ -98,6 +98,12 @@ namespace Raven.Database.Indexing
 								 Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield break;
 			}
+			if(Equals(value, string.Empty))
+			{
+				yield return CreateFieldWithCaching(name, Constants.EmptyString, indexDefinition.GetStorage(name, defaultStorage),
+							 Field.Index.NOT_ANALYZED_NO_NORMS);
+				yield break;
+			}
 			if (value is DynamicNullObject)
 			{
 				if(((DynamicNullObject)value ).IsExplicitNull)

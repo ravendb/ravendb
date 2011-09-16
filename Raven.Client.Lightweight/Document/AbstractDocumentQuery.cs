@@ -1338,6 +1338,10 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				return Constants.NullValueNotAnalyzed;
 			}
+			if(Equals(whereParams.Value, string.Empty))
+			{
+				return Constants.EmptyStringNotAnalyzed;
+			}
 
 			if (whereParams.Value is bool)
 			{
@@ -1372,6 +1376,8 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			if (whereParams.Value == null)
 				return Constants.NullValueNotAnalyzed;
+			if (Equals(whereParams.Value, string.Empty))
+				return Constants.EmptyStringNotAnalyzed;
 
 			if (whereParams.Value is DateTime)
 				return DateTools.DateToString((DateTime)whereParams.Value, DateTools.Resolution.MILLISECOND);
