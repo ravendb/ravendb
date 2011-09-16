@@ -25,10 +25,10 @@ namespace Raven.Abstractions.Linq
 		{
 			foreach (var item in Inner)
 			{
-				if(item.Key[0] == '$')
+				if (item.Key[0] == '$')
 					continue;
 
-				yield return new KeyValuePair<string,object>(item.Key, TransformToValue(item.Value));
+				yield return new KeyValuePair<string, object>(item.Key, TransformToValue(item.Value));
 			}
 		}
 
@@ -127,7 +127,7 @@ namespace Raven.Abstractions.Linq
 			return true;
 		}
 
-	    public static object TransformToValue(RavenJToken jToken)
+		public static object TransformToValue(RavenJToken jToken)
 		{
 			switch (jToken.Type)
 			{
@@ -145,7 +145,7 @@ namespace Raven.Abstractions.Linq
 				case JTokenType.Date:
 					return jToken.Value<DateTime>();
 				case JTokenType.Null:
-					return new DynamicNullObject{IsExplicitNull = true};
+					return new DynamicNullObject { IsExplicitNull = true };
 				default:
 					var value = jToken.Value<object>();
 					if (value is long)
@@ -155,7 +155,7 @@ namespace Raven.Abstractions.Linq
 							return (int)l;
 					}
 					var s = value as string;
-					if(s != null)
+					if (s != null)
 					{
 						DateTimeOffset dateTimeOffset;
 						if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
@@ -184,18 +184,18 @@ namespace Raven.Abstractions.Linq
 			{
 				return TransformToValue(value);
 			}
-			if(name.StartsWith("_"))
+			if (name.StartsWith("_"))
 			{
 				if (inner.TryGetValue(name.Substring(1), out value))
 				{
 					return TransformToValue(value);
-				} 
+				}
 			}
-			if(name == "Id")
+			if (name == "Id")
 			{
 				return GetDocumentId();
 			}
-			if(name == "Inner")
+			if (name == "Inner")
 			{
 				return Inner;
 			}
@@ -259,6 +259,26 @@ namespace Raven.Abstractions.Linq
 						return true;
 				}
 				return base.TryInvokeMember(binder, args, out result);
+			}
+
+			public dynamic First(Func<dynamic, bool> predicate)
+			{
+				return inner.First(predicate);
+			}
+
+			public dynamic FirstOrDefault(Func<dynamic, bool> predicate)
+			{
+				return inner.FirstOrDefault(predicate);
+			}
+
+			public dynamic Single(Func<dynamic, bool> predicate)
+			{
+				return inner.Single(predicate);
+			}
+
+			public dynamic SingleOrDefault(Func<dynamic, bool> predicate)
+			{
+				return inner.SingleOrDefault(predicate);
 			}
 
 			/// <summary>
@@ -394,9 +414,14 @@ namespace Raven.Abstractions.Linq
 				get { return inner.Length; }
 			}
 
-			public IEnumerable<object> Select(Func<object,object > func)
+			public IEnumerable<object> Select(Func<object, object> func)
 			{
 				return new DynamicList(inner.Select(func).ToArray());
+			}
+
+			public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
+			{
+				return new DynamicList(inner.SelectMany(func).ToArray());
 			}
 		}
 	}
