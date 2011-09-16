@@ -114,7 +114,9 @@ namespace Raven.Client.Embedded
 			if (embeddedRavenConnectionStringOptions == null)
 				return;
 
-			DataDirectory = embeddedRavenConnectionStringOptions.DataDirectory;
+			if (string.IsNullOrEmpty(embeddedRavenConnectionStringOptions.DataDirectory) == false)
+				DataDirectory = embeddedRavenConnectionStringOptions.DataDirectory;
+
 			RunInMemory = embeddedRavenConnectionStringOptions.RunInMemory;
 
 		}
