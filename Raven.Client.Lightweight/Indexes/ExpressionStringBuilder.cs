@@ -1332,7 +1332,9 @@ namespace Raven.Client.Indexes
 			switch (node.NodeType)
 			{
 				case ExpressionType.NewArrayInit:
-					Out("new [] ");
+					Out("new ");
+					Out(node.Type.GetElementType().FullName);
+					Out(" []");
 					VisitExpressions('{', node.Expressions, '}');
 					return node;
 

@@ -31,17 +31,17 @@ namespace Raven.Tests.Bugs
 			{
 				AddMap<MyEntity1>(docs => from corpusDoc in docs
 				                          select
-				                          	new ReduceResult
+				                          	new 
 				                          		{
 				                          			DocumentId = corpusDoc.Id,
 				                          			CorpusId = corpusDoc.CorpusId,
-				                          			Topics = (string[]) new string[0]
+				                          			Topics = new string[0]
 				                          		}
 					);
 
 				AddMap<MyEntity2>(judgments => from j in judgments
 				                               select
-				                               	new ReduceResult
+				                               	new 
 				                               		{
 				                               			DocumentId = j.DocumentId,
 				                               			CorpusId = string.Empty,
@@ -51,7 +51,7 @@ namespace Raven.Tests.Bugs
 				Reduce = results => from result in results
 				                    group result by result.DocumentId
 				                    into g
-				                    select new ReduceResult
+				                    select new 
 				                           	{
 				                           		DocumentId = g.Key,
 				                           		CorpusId = g.Select(x => x.CorpusId).FirstOrDefault(),
@@ -147,7 +147,7 @@ namespace Raven.Tests.Bugs
 			{
 				AddMap<MyEntity1>(docs => from corpusDoc in docs
 										  select
-											new MyReduceResult
+											new 
 											{
 												DocumentId = corpusDoc.Id,
 												CorpusId = corpusDoc.CorpusId,
@@ -157,7 +157,7 @@ namespace Raven.Tests.Bugs
 
 				AddMap<MyEntity2>(judgments => from j in judgments
 											   select
-												new MyReduceResult
+												new 
 												{
 													DocumentId = j.DocumentId,
 													CorpusId = string.Empty,
@@ -167,7 +167,7 @@ namespace Raven.Tests.Bugs
 				Reduce = results => from result in results
 									group result by result.DocumentId
 										into g
-										select new MyReduceResult
+										select new 
 										{
 											DocumentId = g.Key,
 											CorpusId = g.Select(x => x.CorpusId).FirstOrDefault(),
