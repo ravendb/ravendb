@@ -1230,8 +1230,10 @@ namespace Raven.Client.Indexes
 				switch (node.Method.Name)
 				{
 					case "Select":
-					case "SelectMany":
 						Out("(Func<dynamic, dynamic>)(");
+						break;
+					case "SelectMany":
+						Out("(Func<dynamic, IEnumerable<dynamic>>)(");
 						break;
 					case "First":
 					case "FirstOrDefault":
