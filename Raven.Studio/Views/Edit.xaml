@@ -36,7 +36,8 @@
 
 			<Grid Grid.Row="1">
 				<StackPanel Orientation="Horizontal">
-					<Button Content="Save" />
+					<Button Content="Save"
+							Command="{Binding Save}" />
 
 					<Button Content="Prettify" />
 

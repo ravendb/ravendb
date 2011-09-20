@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Windows.Input;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Studio.Infrastructure;
@@ -89,5 +90,10 @@ namespace Raven.Studio.Features.Documents
 		}
 
 		public IDictionary<string,string> Metadata { get; private set; }
+
+		public ICommand Save
+		{
+			get { return new SaveDocumentCommand(); }
+		}
 	}
 }

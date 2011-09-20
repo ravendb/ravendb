@@ -101,6 +101,7 @@
     <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Documents\SaveDocumentCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
@@ -127,6 +128,7 @@
     <Compile Include="Infrastructure\BindableCollection.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Infrastructure\Command.cs" />
     <Compile Include="Infrastructure\Converters\HiddenWhenEmptyConverter.cs">
       <SubType>Code</SubType>
     </Compile>

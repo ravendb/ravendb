@@ -1,6 +1,4 @@
-﻿using System;
-using System.Windows.Input;
-using Raven.Client.Connection.Async;
+﻿using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -9,7 +7,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Databases
 {
-	public class CreateDatabaseCommand : ICommand
+	public class CreateDatabaseCommand : Command
 	{
 		private readonly ServerModel serverModel;
 		private readonly IAsyncDatabaseCommands databaseCommands;
@@ -20,12 +18,7 @@ namespace Raven.Studio.Features.Databases
 			this.databaseCommands = databaseCommands;
 		}
 
-		public bool CanExecute(object parameter)
-		{
-			return true;
-		}
-
-		public void Execute(object parameter)
+		public override void Execute(object parameter)
 		{
 			AskUser.QuestionAsync("Create New Database", "Database name?")
 				.ContinueWith(task =>
@@ -44,9 +37,6 @@ namespace Raven.Studio.Features.Databases
 						.ContinueOnSuccess(() => EventsBus.Notify(new DatabaseCreated{}))
 						.Catch();
 				});
-
 		}
-
-		public event EventHandler CanExecuteChanged = delegate { };
 	}
 }

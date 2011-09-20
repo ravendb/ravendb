@@ -1,11 +1,10 @@
 using System;
-using System.Windows;
-using System.Windows.Input;
+using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
 {
-	public class EditDocumentCommand : ICommand
+	public class EditDocumentCommand : Command
 	{
 		private readonly ViewableDocument viewableDocument;
 
@@ -14,16 +13,9 @@ namespace Raven.Studio.Features.Documents
 			this.viewableDocument = viewableDocument;
 		}
 
-		public bool CanExecute(object parameter)
-		{
-			return true;
-		}
-
-		public void Execute(object parameter)
+		public override void Execute(object parameter)
 		{
 			ApplicationModel.Current.Navigate(new Uri("/Edit?id="+viewableDocument.Id, UriKind.Relative));
 		}
-
-		public event EventHandler CanExecuteChanged = delegate { };
 	}
 }
