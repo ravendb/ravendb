@@ -73,7 +73,7 @@
       <HintPath>..\..\ravendb\SharedLibs\Silverlight\ActiproSoftware\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight">
-      <HintPath>..\..\ravendb\build\AsyncCtpLibrary_Silverlight.dll</HintPath>
+      <HintPath>..\..\ravendb\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="Newtonsoft.Json.Silverlight, Version=4.0.2.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL" />
