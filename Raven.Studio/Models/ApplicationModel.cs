@@ -16,7 +16,7 @@ namespace Raven.Studio.Models
 			Current = new ApplicationModel();
 		}
 
-		public ApplicationModel()
+		private ApplicationModel()
 		{
 			Server = new Observable<ServerModel>();
 			var serverModel = new ServerModel();

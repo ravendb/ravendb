@@ -51,7 +51,7 @@ namespace Raven.Studio.Models
 				.Unwrap();
 		}
 
-		public bool Equals(DatabaseModel other)
+		private bool Equals(DatabaseModel other)
 		{
 			if (ReferenceEquals(null, other)) return false;
 			if (ReferenceEquals(this, other)) return true;

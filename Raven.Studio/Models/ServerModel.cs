@@ -24,7 +24,7 @@ namespace Raven.Studio.Models
 			EventsBus.Subscribe<DatabaseCreated>(created => ForceTimerTicked());
 		}
 
-		public ServerModel(string url)
+		private ServerModel(string url)
 		{
 			Actions = new BindableCollection<string>();
 			Databases = new BindableCollection<DatabaseModel>();
