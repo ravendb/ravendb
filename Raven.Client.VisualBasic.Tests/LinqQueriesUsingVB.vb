@@ -96,8 +96,8 @@ Public Class LinqQueriesUsingVB
 
             Dim result = index.ToIndexDefinition(store.Conventions)
 
-            Assert.Equal("docs.WhereEntityIs(new [] {""Ayende"", ""Rahien""})" & vbCrLf & _
-            "	.SelectMany(page => (page.Zones[""Left""].Modules), (page, IdxMod) => new {ModuleId = IdxMod.ModuleId})", result.Map)
+			Assert.Equal("docs.WhereEntityIs(new System.String []{""Ayende"", ""Rahien""})" & vbCrLf & _
+			"	.SelectMany(page => (page.Zones[""Left""].Modules), (page, IdxMod) => new {ModuleId = IdxMod.ModuleId})", result.Map)
 
         End Using
 
