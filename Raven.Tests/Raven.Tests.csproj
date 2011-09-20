@@ -205,6 +205,7 @@
     <Compile Include="Bugs\QueryingOnEmptyString.cs" />
     <Compile Include="Bugs\QueryOptimizerOnStaticIndex.cs" />
     <Compile Include="Bugs\RacielrodTest.cs" />
+    <Compile Include="Bugs\RecursiveQueries.cs" />
     <Compile Include="Bugs\RoundCrisis.cs" />
     <Compile Include="Bugs\SelfReference.cs" />
     <Compile Include="Bugs\SerializingAndDeserializingWithRaven.cs" />

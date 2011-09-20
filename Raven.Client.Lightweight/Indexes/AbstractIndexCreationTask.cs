@@ -50,6 +50,14 @@ namespace Raven.Client.Indexes
 
 #if !NET_3_5
 		/// <summary>
+		/// Allows to use lambdas recursively
+		/// </summary>
+		protected IEnumerable<TResult> Recurse<TSource,TResult>(TSource source, Func<TSource, TResult> func)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
 		/// Allows to use lambdas over dynamic
 		/// </summary>
 		protected IEnumerable<dynamic> Project<T>(IEnumerable<T> self, Func<T, object> projection)
