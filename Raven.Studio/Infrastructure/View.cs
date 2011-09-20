@@ -87,15 +87,9 @@ namespace Raven.Studio.Infrastructure
 		{
 			SetBinding(DataContextWatcherProperty, new Binding());
 
-			Loaded += (sender, args) =>
-			{
-					CurrentViews.Add(this);
-			};
+			Loaded += (sender, args) => CurrentViews.Add(this);
 
-			Unloaded += (sender, args) =>
-			{
-					CurrentViews.Remove(this);
-			};
+			Unloaded += (sender, args) => CurrentViews.Remove(this);
 		}
 	}
 }
