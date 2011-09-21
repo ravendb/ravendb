@@ -115,12 +115,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Modules\Json\Raven.Json.Tests\CloningTests.cs">
-      <Link>Json\CloningTests.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Json\Raven.Json.Tests\RavenJObjects.cs">
-      <Link>Json\RavenJObjects.cs</Link>
-    </Compile>
     <Compile Include="..\Modules\Munin\Raven.Munin.Tests\Bugs\Compaction.cs">
       <Link>Munin\Bugs\Compaction.cs</Link>
     </Compile>
@@ -525,6 +519,8 @@
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="IndexQueryUrl.cs" />
+    <Compile Include="Json\CloningTests.cs" />
+    <Compile Include="Json\RavenJObjects.cs" />
     <Compile Include="Linq\Any.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
