@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
+using Raven.Database;
 using Raven.Http.Abstractions;
 
 namespace Raven.Http
@@ -19,7 +20,7 @@ namespace Raven.Http
 		private readonly string[] supportedVerbsCached;
 		protected readonly Regex urlMatcher;
 		private Func<IRavenHttpConfiguration> settings;
-		private Func<IResourceStore> database;
+		private Func<DocumentDatabase> database;
 		protected HttpServer server;
 		private Func<string> tenantId;
 
@@ -32,19 +33,19 @@ namespace Raven.Http
 		public abstract string UrlPattern { get; }
 		public abstract string[] SupportedVerbs { get; }
 
-		public IResourceStore DefaultResourceStore { get { return server.DefaultResourceStore; } }
-		public IResourceStore ResourceStore { get { return database(); } }
+		public DocumentDatabase DefaultResourceStore { get { return server.DefaultResourceStore; } }
+		public DocumentDatabase ResourceStore { get { return database(); } }
 		public IRavenHttpConfiguration Settings { get { return settings(); } }
 		public string TenantId { get { return tenantId(); } }
 
 		public virtual bool IsUserInterfaceRequest { get { return false; } }
 
-		public void Initialize(Func<IResourceStore> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
+		public void Initialize(Func<DocumentDatabase> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
 		{
-			this.server = theServer;
-			this.database = databaseGetter;
-			this.settings = settingsGetter;
-			this.tenantId = tenantIdGetter;
+			server = theServer;
+			database = databaseGetter;
+			settings = settingsGetter;
+			tenantId = tenantIdGetter;
 		}
 
 		public bool WillRespond(IHttpContext context)

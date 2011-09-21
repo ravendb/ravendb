@@ -137,7 +137,6 @@
     <Compile Include="Server\HttpServer.cs" />
     <Compile Include="Server\IConfigureHttpListener.cs" />
     <Compile Include="Server\IRavenHttpConfiguration.cs" />
-    <Compile Include="Server\IResourceStore.cs" />
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
@@ -391,7 +390,6 @@
     <Compile Include="Queries\SuggestionQueryIndexExtension.cs" />
     <Compile Include="Queries\TermsQueryRunner.cs" />
     <Compile Include="Queries\TermsQueryRunnerExtensions.cs" />
-    <Compile Include="Server\RavenDbHttpServer.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
     <Compile Include="Server\Responders\AdminStartIndexing.cs" />

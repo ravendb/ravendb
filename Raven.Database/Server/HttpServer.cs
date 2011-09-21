@@ -19,7 +19,12 @@ using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
+using Raven.Database;
+using Raven.Database.Config;
+using Raven.Database.Exceptions;
+using Raven.Database.Plugins.Builtins;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
 using Raven.Http.Extensions;
@@ -30,19 +35,19 @@ using Formatting = Newtonsoft.Json.Formatting;
 
 namespace Raven.Http
 {
-	public abstract class HttpServer : IDisposable
+	public class HttpServer : IDisposable
 	{
 		private const int MaxConcurrentRequests = 192;
-		public IResourceStore DefaultResourceStore { get; private set; }
+		public DocumentDatabase DefaultResourceStore { get; private set; }
 		public IRavenHttpConfiguration DefaultConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
 		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
-		private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
+		private readonly ThreadLocal<DocumentDatabase> currentDatabase = new ThreadLocal<DocumentDatabase>();
 		private readonly ThreadLocal<IRavenHttpConfiguration> currentConfiguration = new ThreadLocal<IRavenHttpConfiguration>();
 
-		protected readonly ConcurrentDictionary<string, IResourceStore> ResourcesStoresCache =
-			new ConcurrentDictionary<string, IResourceStore>(StringComparer.InvariantCultureIgnoreCase);
+		protected readonly ConcurrentDictionary<string, DocumentDatabase> ResourcesStoresCache =
+			new ConcurrentDictionary<string, DocumentDatabase>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -66,7 +71,8 @@ namespace Raven.Http
 			}
 		}
 
-		public abstract Regex TenantsQuery { get; }
+		private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
+
 
 		private HttpListener listener;
 
@@ -86,7 +92,7 @@ namespace Raven.Http
 			get { return concurretRequestSemaphore.CurrentCount != MaxConcurrentRequests; }
 		}
 
-		protected HttpServer(IRavenHttpConfiguration configuration, IResourceStore resourceStore)
+		public HttpServer(IRavenHttpConfiguration configuration, DocumentDatabase resourceStore)
 		{
 			DefaultResourceStore = resourceStore;
 			DefaultConfiguration = configuration;
@@ -112,6 +118,16 @@ namespace Raven.Http
 			}
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+			RemoveTenantDatabase.Occured.Subscribe(TenantDatabaseRemoved);
+		}
+
+
+		private void TenantDatabaseRemoved(object sender, RemoveTenantDatabase.Event @event)
+		{
+			if (@event.Database != DefaultResourceStore)
+				return; // we ignore anything that isn't from the root db
+
+			CleanupDatabase(@event.Name);
 		}
 
 		#region IDisposable Members
@@ -173,7 +189,7 @@ namespace Raven.Http
 				DateTime time;
 				databaseLastRecentlyUsed.TryRemove(db, out time);
 
-				IResourceStore database;
+				DocumentDatabase database;
 				if (ResourcesStoresCache.TryRemove(db, out database))
 					database.Dispose();
 
@@ -240,9 +256,11 @@ namespace Raven.Http
 			}
 		}
 
-		protected virtual bool ShouldLogException(Exception exception)
+		protected bool ShouldLogException(Exception exception)
 		{
-			return true;
+			return exception is IndexDisabledException == false &&
+			       exception is IndexDoesNotExistsException == false;
+
 		}
 
 		private void FinalizeRequestProcessing(IHttpContext ctx, Stopwatch sw, bool ravenUiRequest)
@@ -309,8 +327,46 @@ namespace Raven.Http
 			}
 		}
 
-		protected abstract bool TryHandleException(IHttpContext ctx, Exception exception);
+		protected bool TryHandleException(IHttpContext ctx, Exception exception)
+		{
+			var indexDisabledException = exception as IndexDisabledException;
+			if (indexDisabledException != null)
+			{
+				HandleIndexDisabledException(ctx, indexDisabledException);
+				return true;
+			}
+			var indexDoesNotExistsException = exception as IndexDoesNotExistsException;
+			if (indexDoesNotExistsException != null)
+			{
+				HandleIndexDoesNotExistsException(ctx, indexDoesNotExistsException);
+				return true;
+			}
 
+			return false;
+		}
+
+		private static void HandleIndexDoesNotExistsException(IHttpContext ctx, Exception e)
+		{
+			ctx.SetStatusToNotFound();
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				Error = e.Message
+			});
+		}
+
+
+		private static void HandleIndexDisabledException(IHttpContext ctx, IndexDisabledException e)
+		{
+			ctx.Response.StatusCode = 503;
+			ctx.Response.StatusDescription = "Service Unavailable";
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				Error = e.Information.GetErrorMessage(),
+				Index = e.Information.Name,
+			});
+		}
 
 		private static void HandleTooBusyError(IHttpContext ctx)
 		{
@@ -422,12 +478,15 @@ namespace Raven.Http
 			return false;
 		}
 
-		protected virtual void OnDispatchingRequest(IHttpContext ctx) { }
+		protected void OnDispatchingRequest(IHttpContext ctx)
+		{
+			ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
+		}
 
 		private void SetupRequestToProperDatabase(IHttpContext ctx)
 		{
 			var requestUrl = ctx.GetRequestUrlForTenantSelection();
-			var match = TenantsQuery.Match(requestUrl);
+			var match = databaseQuery.Match(requestUrl);
 
 			if (match.Success == false)
 			{
@@ -438,7 +497,7 @@ namespace Raven.Http
 			else
 			{
 				var tenantId = match.Groups[1].Value;
-				IResourceStore resourceStore;
+				DocumentDatabase resourceStore;
 				if (TryGetOrCreateResourceStore(tenantId, out resourceStore))
 				{
 					databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
@@ -462,7 +521,52 @@ namespace Raven.Http
 			}
 		}
 
-		protected abstract bool TryGetOrCreateResourceStore(string name, out IResourceStore database);
+		protected bool TryGetOrCreateResourceStore(string tenantId, out DocumentDatabase database)
+		{
+			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
+				return true;
+
+			JsonDocument jsonDocument;
+
+			using (DefaultResourceStore.DisableAllTriggersForCurrentThread())
+				jsonDocument = DefaultResourceStore.Get("Raven/Databases/" + tenantId, null);
+
+			if (jsonDocument == null)
+				return false;
+
+			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+
+			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
+			{
+				var config = new InMemoryRavenConfiguration
+				{
+					Settings = DefaultConfiguration.Settings,
+				};
+				foreach (var setting in document.Settings)
+				{
+					config.Settings[setting.Key] = setting.Value;
+				}
+				var dataDir = config.Settings["Raven/DataDir"];
+				if (dataDir == null)
+					throw new InvalidOperationException("Could not find Raven/DataDir");
+				if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
+				{
+					var baseDataPath = Path.GetDirectoryName(DefaultResourceStore.Configuration.DataDirectory);
+					if (baseDataPath == null)
+						throw new InvalidOperationException("Could not find root data path");
+					config.Settings["Raven/DataDir"] = Path.Combine(baseDataPath, dataDir.Substring(2));
+				}
+				config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+
+				config.DatabaseName = tenantId;
+
+				config.Initialize();
+				var documentDatabase = new DocumentDatabase(config);
+				documentDatabase.SpinBackgroundWorkers();
+				return documentDatabase;
+			});
+			return true;
+		}
 
 
 		private void AddAccessControlHeaders(IHttpContext ctx)

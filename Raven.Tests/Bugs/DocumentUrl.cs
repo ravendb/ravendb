@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using Raven.Client.Document;
 using Raven.Database.Server;
+using Raven.Http;
 using Raven.Tests.Indexes;
 using Xunit;
 
@@ -16,7 +17,7 @@ namespace Raven.Tests.Bugs
 		public void CanGetFullUrl()
 		{
 			using (var store = NewDocumentStore())
-			using (var server = new RavenDbHttpServer(store.Configuration, store.DocumentDatabase))
+			using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
 			{
 				server.Start();
 				var documentStore = new DocumentStore
@@ -39,7 +40,7 @@ namespace Raven.Tests.Bugs
 		public void CanGetFullUrlWithSlashOnTheEnd()
 		{
 			using (var store = NewDocumentStore())
-			using (var server = new RavenDbHttpServer(store.Configuration, store.DocumentDatabase))
+			using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
 			{
 				server.Start();
 				var documentStore = new DocumentStore

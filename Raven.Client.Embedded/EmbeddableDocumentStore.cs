@@ -9,6 +9,7 @@ using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Http;
 
 namespace Raven.Client.Embedded
 {
@@ -19,7 +20,7 @@ namespace Raven.Client.Embedded
 	public class EmbeddableDocumentStore : DocumentStore
 	{
 		private RavenConfiguration configuration;
-		private RavenDbHttpServer httpServer;
+		private HttpServer httpServer;
 		private bool wasDisposed;
 
 		/// <summary>
@@ -137,7 +138,7 @@ namespace Raven.Client.Embedded
 				DocumentDatabase.SpinBackgroundWorkers();
 				if (UseEmbeddedHttpServer)
 				{
-					httpServer = new RavenDbHttpServer(configuration, DocumentDatabase);
+					httpServer = new HttpServer(configuration, DocumentDatabase);
 					httpServer.Start();
 				}
 				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId);
@@ -165,7 +166,7 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Expose the internal http server, if used
 		/// </summary>
-		public RavenDbHttpServer HttpServer
+		public HttpServer HttpServer
 		{
 			get { return httpServer; }
 		}

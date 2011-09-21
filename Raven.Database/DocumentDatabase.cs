@@ -36,7 +36,6 @@ using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Http;
-using Raven.Http.Exceptions;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using Index = Raven.Database.Indexing.Index;
@@ -45,7 +44,7 @@ using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Database
 {
-	public class DocumentDatabase : IResourceStore, IUuidGenerator
+	public class DocumentDatabase : IUuidGenerator, IDisposable
 	{
 		[ImportMany]
 		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
@@ -246,11 +245,6 @@ namespace Raven.Database
 		{
 			get { return "Raven.Studio.xap"; }
 			
-		}
-
-		IRavenHttpConfiguration IResourceStore.Configuration
-		{
-			get { return Configuration; }
 		}
 
 		public ConcurrentDictionary<string, object> ExternalState { get; set; }
