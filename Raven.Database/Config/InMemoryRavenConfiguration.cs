@@ -36,7 +36,6 @@ namespace Raven.Database.Config
 			MaxNumberOfParallelIndexTasks = 8;
 
 			Catalog = new AggregateCatalog(
-				new AssemblyCatalog(typeof(HttpServer).Assembly),
 				new AssemblyCatalog(typeof(DocumentDatabase).Assembly)
 				);
 
