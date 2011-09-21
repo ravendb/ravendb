@@ -4,9 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Abstractions.Data;
-using Raven.Database;
 using Raven.Database.Plugins;
-using Raven.Http;
 
 namespace Raven.Bundles.Versioning.Triggers
 {

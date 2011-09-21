@@ -5,12 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Database;
-using Raven.Database.Json;
-using Raven.Http.Exceptions;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers

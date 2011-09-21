@@ -1,14 +1,12 @@
-using System;
 using Raven.Database;
-using Raven.Http;
-using Raven.Http.Security.OAuth;
+using Raven.Database.Server.Security.OAuth;
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Bundles.Authentication
 {
 	public class AuthenticateClient : IAuthenticateClient
 	{
-		public bool Authenticate(IResourceStore currentStore, string username, string password, out string[] allowedDatabases)
+		public bool Authenticate(DocumentDatabase currentStore, string username, string password, out string[] allowedDatabases)
 		{
 			allowedDatabases = new string[0];
 

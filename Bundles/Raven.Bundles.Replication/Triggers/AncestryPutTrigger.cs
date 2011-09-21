@@ -4,10 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
-using Raven.Http;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers

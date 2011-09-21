@@ -7,14 +7,10 @@ extern alias database;
 using System;
 using System.Collections;
 using System.ComponentModel.Composition.Hosting;
-using System.IO;
-using System.Reflection;
 using System.Web;
 using Raven.Bundles.Authentication;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Http;
-using Raven.Server;
 
 namespace Raven.Bundles.Tests.Authentication
 {
@@ -45,7 +41,7 @@ namespace Raven.Bundles.Tests.Authentication
 				UseEmbeddedHttpServer = true,
 				Configuration =
 					{
-						AnonymousUserAccessMode = AnonymousUserAccessMode.Get,
+						AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.Get,
 						Catalog = {Catalogs = {new AssemblyCatalog(typeof (AuthenticationUser).Assembly)}},
 						DataDirectory = "Data",
 						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,

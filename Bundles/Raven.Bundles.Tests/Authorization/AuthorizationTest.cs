@@ -11,7 +11,6 @@ using System.ComponentModel.Composition.Hosting;
 using System.Web;
 using Raven.Bundles.Authorization;
 using Raven.Client.Document;
-using Raven.Http;
 using Raven.Server;
 
 namespace Raven.Bundles.Tests.Authorization
@@ -38,7 +37,7 @@ namespace Raven.Bundles.Tests.Authorization
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
 			server = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
 			{
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All,
+				AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
 				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly) } },
 				DataDirectory = "Data",
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,

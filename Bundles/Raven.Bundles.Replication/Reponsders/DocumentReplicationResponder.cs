@@ -9,12 +9,10 @@ using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Data;
-using Raven.Database;
-using Raven.Database.Json;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
-using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Reponsders
