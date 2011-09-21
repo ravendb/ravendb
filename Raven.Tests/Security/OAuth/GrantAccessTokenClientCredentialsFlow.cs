@@ -1,7 +1,6 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;

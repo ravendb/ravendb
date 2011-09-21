@@ -98,7 +98,21 @@
     <Compile Include="Default.cs" />
     <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
     <Compile Include="Json\JsonFloatConverter.cs" />
+    <Compile Include="Json\Linq\DictionaryWithParentSnapshot.cs" />
+    <Compile Include="Json\Linq\Extensions.cs" />
+    <Compile Include="Json\Linq\RavenJArray.cs" />
+    <Compile Include="Json\Linq\RavenJObject.cs" />
+    <Compile Include="Json\Linq\RavenJPath.cs" />
+    <Compile Include="Json\Linq\RavenJToken.cs" />
+    <Compile Include="Json\Linq\RavenJTokenEqualityComparer.cs" />
+    <Compile Include="Json\Linq\RavenJTokenReader.cs" />
+    <Compile Include="Json\Linq\RavenJTokenWriter.cs" />
+    <Compile Include="Json\Linq\RavenJValue.cs" />
     <Compile Include="Json\RavenJsonConverter.cs" />
+    <Compile Include="Json\Utilities\MathUtils.cs" />
+    <Compile Include="Json\Utilities\MiscellaneousUtils.cs" />
+    <Compile Include="Json\Utilities\StringUtils.cs" />
+    <Compile Include="Json\Utilities\Tuple.cs" />
     <Compile Include="Linq\DynamicNullObject.cs" />
     <Compile Include="MEF\IPartMetadata.cs" />
     <Compile Include="MEF\OrderedPartCollection.cs" />
@@ -135,12 +149,6 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Modules\Json\Raven.Json\Raven.Json.csproj">
-      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
-      <Name>Raven.Json</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />

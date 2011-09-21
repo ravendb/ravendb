@@ -670,10 +670,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Modules\Json\Raven.Json\Raven.Json.csproj">
-      <Project>{B9DD0239-3476-48CB-A541-1B3EC6679BB6}</Project>
-      <Name>Raven.Json</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Modules\Munin\Raven.Munin\Raven.Munin.csproj">
       <Project>{486537C2-EDF7-404F-9CFB-EEE25996DF5F}</Project>
       <Name>Raven.Munin</Name>

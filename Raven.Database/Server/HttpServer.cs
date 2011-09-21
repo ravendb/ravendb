@@ -23,6 +23,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Exceptions;
+using Raven.Database.Extensions;
 using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
