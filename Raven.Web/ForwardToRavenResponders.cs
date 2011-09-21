@@ -3,11 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Web;
 using Raven.Database.Server;
-using Raven.Http;
-using Raven.Http.Abstractions;
+using Raven.Database.Server.Abstractions;
 
 namespace Raven.Web
 {
