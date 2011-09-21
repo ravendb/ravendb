@@ -323,7 +323,7 @@ namespace Raven.Storage.Esent
 		}
 
 		[CLSCompliant(false)]
-		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+		//[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
 			if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
@@ -363,6 +363,7 @@ namespace Raven.Storage.Esent
 				if(disposed == false)
 					current.Value = null;
 			}
+			onCommit();// call user code after we exit the lock
 		}
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
@@ -376,7 +377,6 @@ namespace Raven.Storage.Esent
 				current.Value = new StorageActionsAccessor(pht);
 				action(current.Value);
 				pht.Commit(txMode);
-				onCommit();
 			}
 		}
 
