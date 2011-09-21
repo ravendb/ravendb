@@ -426,7 +426,6 @@
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />
     <Compile Include="Storage\IQueueStorageActions.cs" />
-    <Compile Include="Storage\IRemoteStorage.cs" />
     <Compile Include="Storage\IStalenessStorageActions.cs" />
     <Compile Include="Storage\IStorageActionsAccessor.cs" />
     <Compile Include="Storage\ITasksStorageActions.cs" />
