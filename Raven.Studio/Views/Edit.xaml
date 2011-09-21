@@ -8,7 +8,7 @@
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 					 xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
 					 mc:Ignorable="d"
-					 DataContext="{Binding Source={StaticResource EditDocumentModel}, Path=Current.Document.Value}">
+					 DataContext="{Binding Source={StaticResource EditDocumentModelLocator}, Path=Current.Value}">
 
 	<Grid>
 		<Grid.ColumnDefinitions>
@@ -44,7 +44,7 @@
 					<Button Content="Delete" />
 
 					<Button Content="Refresh" />
-
+					<TextBlock Text="{Binding Path=Notice.Value}" />
 				</StackPanel>
 			</Grid>
 
