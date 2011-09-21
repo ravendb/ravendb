@@ -101,7 +101,7 @@
     <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Documents\SaveDocumentCommand.cs" />
+    <Compile Include="Features\Documents\DeleteDocumentCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>

@@ -8,7 +8,9 @@ using System.Windows.Input;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Json.Linq;
 using Raven.Studio.Features.Documents;
+using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -115,8 +117,74 @@ namespace Raven.Studio.Models
 
 		public ICommand Save
 		{
-			get { return new SaveDocumentCommand(this); }
+			get { return new SaveDocumentCommand(this, asyncDatabaseCommands); }
 		}
 
+		public ICommand Delete
+		{
+			get { return new DeleteDocumentCommand(this.Key, asyncDatabaseCommands); }
+		}
+
+		public ICommand Prettify
+		{
+			get { return new PrettifyDocumentCommand(this); }
+		}
+
+		private class SaveDocumentCommand : Command
+		{
+			private readonly EditableDocumentModel document;
+			private readonly IAsyncDatabaseCommands databaseCommands;
+
+			public SaveDocumentCommand(EditableDocumentModel document, IAsyncDatabaseCommands asyncDatabaseCommands)
+			{
+				this.document = document;
+				this.databaseCommands = asyncDatabaseCommands;
+			}
+
+			public override void Execute(object parameter)
+			{
+				if (document.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+				{
+					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
+						.ContinueWhenTrue(SaveDocument);
+					return;
+				}
+
+				SaveDocument();
+			}
+
+			private void SaveDocument()
+			{
+				var doc = RavenJObject.Parse(document.JsonData);
+				var metadata = RavenJObject.Parse(document.JsonMetadata);
+
+				document.Notice.Value = "saving document...";
+				databaseCommands.PutAsync(document.Key, document.Etag,
+										  doc,
+										  metadata)
+					.ContinueOnSuccess(result =>
+					{
+						document.Notice.Value = result.Key + " document saved";
+						document.Etag = result.ETag;
+					})
+					.Catch(exception => document.Notice.Value = null);
+			}
+		}
+
+		private class PrettifyDocumentCommand : Command
+		{
+			private readonly EditableDocumentModel editableDocumentModel;
+
+			public PrettifyDocumentCommand(EditableDocumentModel editableDocumentModel)
+			{
+				this.editableDocumentModel = editableDocumentModel;
+			}
+
+			public override void Execute(object parameter)
+			{
+				editableDocumentModel.JsonData = RavenJObject.Parse(editableDocumentModel.JsonData).ToString(Formatting.Indented);
+				editableDocumentModel.JsonMetadata = RavenJObject.Parse(editableDocumentModel.JsonMetadata).ToString(Formatting.Indented);
+			}
+		}
 	}
 }

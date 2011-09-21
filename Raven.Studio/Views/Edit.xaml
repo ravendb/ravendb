@@ -39,9 +39,11 @@
 					<Button Content="Save"
 							Command="{Binding Save}" />
 
-					<Button Content="Prettify" />
+					<Button Content="Prettify"
+							Command="{Binding Prettify}" />
 
-					<Button Content="Delete" />
+					<Button Content="Delete"
+							Command="{Binding Delete}" />
 
 					<Button Content="Refresh" />
 					<TextBlock Text="{Binding Path=Notice.Value}" />
