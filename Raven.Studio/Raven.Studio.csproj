@@ -105,9 +105,8 @@
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Documents\EditableDocument.cs" />
+    <Compile Include="Models\EditableDocumentModel.cs" />
     <Compile Include="Features\Documents\EditDocumentCommand.cs" />
-    <Compile Include="Features\Documents\EditDocumentModel.cs" />
     <Compile Include="Features\Documents\EditDocumentModelLocator.cs" />
     <Compile Include="Features\Documents\EditDocumnetView.xaml.cs">
       <DependentUpon>EditDocumnetView.xaml</DependentUpon>
@@ -115,6 +114,10 @@
     <Compile Include="Features\Documents\TemplateColorProvider.cs" />
     <Compile Include="Features\Documents\ViewableDocument.cs" />
     <Compile Include="Features\Input\AskUser.cs" />
+    <Compile Include="Features\Input\ConfirmModel.cs" />
+    <Compile Include="Features\Input\ConfirmWindow.xaml.cs">
+      <DependentUpon>ConfirmWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Input\InputModel.cs" />
     <Compile Include="Features\Input\InputWindow.xaml.cs">
       <DependentUpon>InputWindow.xaml</DependentUpon>
@@ -201,6 +204,10 @@
     <Page Include="Features\Documents\EditDocumnetView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Input\ConfirmWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Input\InputWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

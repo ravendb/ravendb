@@ -34,6 +34,17 @@ namespace Raven.Studio.Infrastructure
 			return parent.ContinueWith(task => action(task.Result));
 		}
 
+
+		public static Task ContinueWhenTrue(this Task<bool> parent, Action action)
+		{
+			return parent.ContinueWith(task =>
+									   {
+										   if (task.Result == false)
+											   return;
+										   action();
+									   });
+		}
+
 		public static Task<TResult> ContinueOnSuccess<T, TResult>(this Task<T> parent, Func<T, TResult> action)
 		{
 			return parent.ContinueWith(task => action(task.Result));
