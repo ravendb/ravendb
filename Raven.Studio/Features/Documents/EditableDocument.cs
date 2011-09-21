@@ -41,6 +41,8 @@ namespace Raven.Studio.Features.Documents
 		}
 
 		private string jsonMetadata;
+		private string notify;
+
 		public string JsonMetadata
 		{
 			get { return jsonMetadata; }
@@ -89,11 +91,23 @@ namespace Raven.Studio.Features.Documents
 			set { document.LastModified = value; OnPropertyChanged(); }
 		}
 
-		public IDictionary<string,string> Metadata { get; private set; }
+		public IDictionary<string, string> Metadata { get; private set; }
 
 		public ICommand Save
 		{
-			get { return new SaveDocumentCommand(); }
+			get { return new SaveDocumentCommand(this); }
+		}
+
+		public string Notify
+		{
+			get
+			{
+				return notify;
+			}
+			set
+			{
+				notify = value; OnPropertyChanged();
+			}
 		}
 	}
 }
