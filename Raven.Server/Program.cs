@@ -17,7 +17,7 @@ using NLog.Config;
 using Raven.Abstractions;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Http;
+using Raven.Database.Server;
 
 namespace Raven.Server
 {

@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Http;
-
 namespace Raven.Database.Server.Responders
 {
 	public abstract class RequestResponder : AbstractRequestResponder

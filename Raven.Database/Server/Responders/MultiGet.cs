@@ -8,10 +8,9 @@ using System.Threading.Tasks;
 using System.Web;
 using NLog;
 using Raven.Abstractions.Data;
-using Raven.Http;
-using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
 using System.Linq;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {

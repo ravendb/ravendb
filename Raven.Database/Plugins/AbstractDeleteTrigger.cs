@@ -6,7 +6,6 @@
 using System;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
-using Raven.Http;
 
 namespace Raven.Database.Plugins
 {

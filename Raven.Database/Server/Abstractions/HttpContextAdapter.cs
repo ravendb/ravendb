@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 using System.Web;
 using NLog;
 
-namespace Raven.Http.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
 	public class HttpContextAdapter : IHttpContext
 	{

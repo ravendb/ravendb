@@ -1,7 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Diagnostics;
 
-namespace Raven.Http
+namespace Raven.Database.Server
 {
 	public class LogHttpRequestStatsParams
 	{

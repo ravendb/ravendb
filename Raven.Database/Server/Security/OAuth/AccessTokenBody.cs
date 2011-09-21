@@ -2,7 +2,7 @@
 using System.Linq;
 using Raven.Abstractions;
 
-namespace Raven.Http.Security.OAuth
+namespace Raven.Database.Server.Security.OAuth
 {
 	public class AccessTokenBody
 	{

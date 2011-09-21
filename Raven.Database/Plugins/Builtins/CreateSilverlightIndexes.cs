@@ -1,8 +1,6 @@
 using System;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
-using Raven.Http;
-using Raven.Http.Plugins;
 
 namespace Raven.Database.Plugins.Builtins
 {

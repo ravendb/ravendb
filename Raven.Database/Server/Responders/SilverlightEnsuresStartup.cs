@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Http.Abstractions;
-using Raven.Http.Plugins;
-using Raven.Http.Extensions;
+using Raven.Database.Plugins;
+using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {

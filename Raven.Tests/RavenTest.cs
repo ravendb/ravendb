@@ -15,7 +15,6 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
-using Raven.Http;
 using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Server;

@@ -1,16 +1,15 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.MEF;
-using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
-using Raven.Http.Plugins;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Extensions;
+using Raven.Database.Plugins;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Http.Responders
+namespace Raven.Database.Server.Responders
 {
 	public class SilverlightUI : AbstractRequestResponder
 	{

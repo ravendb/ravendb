@@ -16,12 +16,11 @@ using Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Json;
-using Raven.Http.Abstractions;
-using Raven.Http.Exceptions;
+using Raven.Database.Exceptions;
+using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
 
-namespace Raven.Http.Extensions
+namespace Raven.Database.Extensions
 {
 	public static class HttpExtensions
 	{

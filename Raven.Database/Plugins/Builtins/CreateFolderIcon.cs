@@ -8,7 +8,6 @@ using System.IO;
 using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
-using Raven.Http.Extensions;
 
 namespace Raven.Database.Plugins.Builtins
 {

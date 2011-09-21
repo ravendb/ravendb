@@ -2,7 +2,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Linq;
-using Raven.Http;
+using Raven.Database.Server;
 using Xunit;
 using System.Linq;
 using Raven.Database.Queries;

@@ -3,7 +3,7 @@ using System.Net;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Http;
+using Raven.Database.Server;
 using Raven.Tests.Bugs;
 using Xunit;
 

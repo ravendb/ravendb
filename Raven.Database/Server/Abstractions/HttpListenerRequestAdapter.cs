@@ -8,7 +8,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 
-namespace Raven.Http.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
 	public class HttpListenerRequestAdapter : IHttpRequest
 	{

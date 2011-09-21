@@ -6,7 +6,7 @@
 using System.Collections.Specialized;
 using System.Threading;
 
-namespace Raven.Http
+namespace Raven.Database.Server
 {
 	public static class CurrentOperationContext
 	{

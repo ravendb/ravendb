@@ -9,10 +9,9 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
-using Raven.Database;
-using Raven.Http.Abstractions;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Http
+namespace Raven.Database.Server
 {
 	[InheritedExport]
 	public abstract class AbstractRequestResponder

@@ -7,7 +7,7 @@ using System;
 using System.Threading;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
-using Raven.Http;
+using Raven.Database.Server;
 using Xunit;
 using System.Collections.Generic;
 

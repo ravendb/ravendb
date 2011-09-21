@@ -13,9 +13,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Database.Util;
-using Raven.Http;
 
 namespace Raven.Database.Config
 {

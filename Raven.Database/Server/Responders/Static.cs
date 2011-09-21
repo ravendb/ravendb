@@ -6,8 +6,7 @@
 using Raven.Abstractions.Extensions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
+using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {

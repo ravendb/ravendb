@@ -6,7 +6,7 @@
 using System;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
-using Raven.Http;
+using Raven.Database.Server;
 using Xunit;
 
 namespace Raven.Tests.Document

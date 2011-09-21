@@ -9,7 +9,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Http.Abstractions;
+using Raven.Database.Server.Abstractions;
 using Rhino.Mocks;
 using Xunit;
 

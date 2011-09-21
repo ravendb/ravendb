@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.Composition;
-using Raven.Database;
 
-namespace Raven.Http.Security.OAuth
+namespace Raven.Database.Server.Security.OAuth
 {
 	[InheritedExport]
 	public interface IAuthenticateClient

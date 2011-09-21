@@ -5,11 +5,11 @@
 //-----------------------------------------------------------------------
 
 using System.IO;
-using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
 using System.Linq;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Http.Responders
+namespace Raven.Database.Server.Responders
 {
 	public class RavenUI : AbstractRequestResponder
 	{

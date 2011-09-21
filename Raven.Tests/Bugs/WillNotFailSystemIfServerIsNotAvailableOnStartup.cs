@@ -11,7 +11,7 @@ using System.Web.Management;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Http;
+using Raven.Database.Server;
 using Raven.Tests.Document;
 using Xunit;
 

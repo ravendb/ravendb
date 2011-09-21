@@ -12,7 +12,7 @@ using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Http;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;

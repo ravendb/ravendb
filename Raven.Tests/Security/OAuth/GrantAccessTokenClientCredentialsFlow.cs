@@ -5,8 +5,8 @@ using System.Security.Cryptography.X509Certificates;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Http;
-using Raven.Http.Security.OAuth;
+using Raven.Database.Server;
+using Raven.Database.Server.Security.OAuth;
 using Raven.Json.Linq;
 using Xunit;
 

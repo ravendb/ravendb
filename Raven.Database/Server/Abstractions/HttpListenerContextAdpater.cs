@@ -11,7 +11,7 @@ using System.Security.Principal;
 using System.Text.RegularExpressions;
 using NLog;
 
-namespace Raven.Http.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
 	public class HttpListenerContextAdpater : IHttpContext
 	{

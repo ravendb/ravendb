@@ -11,7 +11,7 @@ using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
 using Raven.Database.Extensions;
-using Raven.Http;
+using Raven.Database.Server;
 using Raven.Server;
 using Raven.Tests.Document;
 using Xunit;

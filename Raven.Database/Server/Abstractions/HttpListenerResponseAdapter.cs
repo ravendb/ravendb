@@ -3,12 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 
-namespace Raven.Http.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
 	public class HttpListenerResponseAdapter : IHttpResponse
 	{

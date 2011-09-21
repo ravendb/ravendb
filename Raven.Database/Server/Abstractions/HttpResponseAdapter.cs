@@ -6,7 +6,7 @@
 using System.IO;
 using System.Web;
 
-namespace Raven.Http.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
 	public class HttpResponseAdapter : IHttpResponse
 	{

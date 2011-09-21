@@ -14,8 +14,7 @@ using Raven.Database.Indexing;
 using System.Linq;
 using Raven.Database.Extensions;
 using Raven.Database.Queries;
-using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
+using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {

@@ -4,7 +4,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Http;
+using Raven.Database.Server;
 using Xunit;
 
 namespace Raven.Tests.Bugs

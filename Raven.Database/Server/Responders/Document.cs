@@ -9,10 +9,10 @@ using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Json;
 using System.Linq;
-using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders

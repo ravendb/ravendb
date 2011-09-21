@@ -21,19 +21,15 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
-using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Exceptions;
 using Raven.Database.Plugins.Builtins;
-using Raven.Http.Abstractions;
-using Raven.Http.Exceptions;
-using Raven.Http.Extensions;
-using Raven.Http.Security;
-using Raven.Http.Security.OAuth;
-using Raven.Http.Security.Windows;
-using Formatting = Newtonsoft.Json.Formatting;
+using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.Security.OAuth;
+using Raven.Database.Server.Security.Windows;
 
-namespace Raven.Http
+namespace Raven.Database.Server
 {
 	public class HttpServer : IDisposable
 	{

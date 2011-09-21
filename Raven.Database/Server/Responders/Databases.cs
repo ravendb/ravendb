@@ -1,8 +1,8 @@
-﻿namespace Raven.Database.Server.Responders
-{
-	using Http.Abstractions;
-	using Http.Extensions;
+﻿using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 
+namespace Raven.Database.Server.Responders
+{
 	public class Databases : RequestResponder
 	{
 		public override string UrlPattern

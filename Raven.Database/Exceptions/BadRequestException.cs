@@ -6,7 +6,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace Raven.Http.Exceptions
+namespace Raven.Database.Exceptions
 {
 	/// <summary>
 	/// This exception is raised when a bad request is made to the server

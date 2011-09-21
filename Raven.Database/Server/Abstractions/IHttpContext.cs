@@ -8,7 +8,7 @@ using System.IO;
 using System.Security.Principal;
 using NLog;
 
-namespace Raven.Http.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
 	public interface IHttpContext
 	{

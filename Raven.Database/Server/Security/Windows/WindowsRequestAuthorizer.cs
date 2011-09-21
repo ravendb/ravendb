@@ -1,7 +1,7 @@
-using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Http.Security.Windows
+namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsRequestAuthorizer : AbstractRequestAuthorizer
 	{

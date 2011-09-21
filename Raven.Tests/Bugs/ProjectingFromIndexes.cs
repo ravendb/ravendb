@@ -8,7 +8,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
 using Raven.Database.Server;
-using Raven.Http;
 using Xunit;
 
 namespace Raven.Tests.Bugs

@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Json.Linq;
 
-namespace Raven.Http.Security.OAuth
+namespace Raven.Database.Server.Security.OAuth
 {
 	public class AccessToken
 	{

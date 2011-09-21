@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using Raven.Client.Document;
 using Raven.Database.Server;
-using Raven.Http;
 using Raven.Tests.Indexes;
 using Xunit;
 

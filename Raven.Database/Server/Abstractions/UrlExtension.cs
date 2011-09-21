@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 
-namespace Raven.Http.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
 	public static class UrlExtension
 	{

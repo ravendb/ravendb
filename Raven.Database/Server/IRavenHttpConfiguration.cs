@@ -7,7 +7,7 @@ using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.Security.Cryptography.X509Certificates;
 
-namespace Raven.Http
+namespace Raven.Database.Server
 {
 	public interface IRavenHttpConfiguration
 	{

@@ -11,7 +11,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Database.Data;
 using Raven.Database.Json;
-using Raven.Http;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Impl

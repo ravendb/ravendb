@@ -22,7 +22,6 @@ using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
-using Raven.Http.Exceptions;
 using Raven.Json.Linq;
 using Raven.Storage.Esent.Backup;
 using Raven.Storage.Esent.SchemaUpdates;

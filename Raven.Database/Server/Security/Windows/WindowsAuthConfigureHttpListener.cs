@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 
-namespace Raven.Http.Security.Windows
+namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsAuthConfigureHttpListener : IConfigureHttpListener
 	{

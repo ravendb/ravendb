@@ -4,9 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Raven.Http.Abstractions;
+using Raven.Database.Extensions;
 using Raven.Database.Queries;
-using Raven.Http.Extensions;
+using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {

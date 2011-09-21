@@ -35,7 +35,6 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
-using Raven.Http;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using Index = Raven.Database.Indexing.Index;

@@ -3,10 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections.Specialized;
 using System.IO;
 
-namespace Raven.Http.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
 	public interface IHttpResponse
 	{

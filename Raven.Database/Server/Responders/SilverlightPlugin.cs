@@ -1,9 +1,9 @@
-﻿namespace Raven.Http.Responders
-{
-	using System.IO;
-	using Abstractions;
-	using Extensions;
+﻿using System.IO;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 
+namespace Raven.Database.Server.Responders
+{
 	public class SilverlightPlugin : AbstractRequestResponder
 	{
 		public override string UrlPattern { get { return @"^/silverlight/plugin/(.+)$"; } }

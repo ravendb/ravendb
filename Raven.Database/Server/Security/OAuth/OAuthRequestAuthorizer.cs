@@ -1,9 +1,9 @@
 using System;
 using System.Security.Principal;
-using Raven.Http.Abstractions;
 using System.Linq;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Http.Security.OAuth
+namespace Raven.Database.Server.Security.OAuth
 {
 	public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
 	{
