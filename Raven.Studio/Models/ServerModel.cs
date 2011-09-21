@@ -39,7 +39,7 @@ namespace Raven.Studio.Models
 
 			// We explicitly enable this for the Studio, we rely on SL to actually get us the credentials, and that 
 			// already gives the user a clear warning about the dangers of sending passwords in the clear. I think that 
-			// this is sufficent warning and we don't require an additional step, so we can disable this check safely.
+			// this is sufficient warning and we don't require an additional step, so we can disable this check safely.
 			documentStore.JsonRequestFactory.
 				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 				false;
