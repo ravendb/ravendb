@@ -10,13 +10,13 @@ properties {
   $uploader = "..\Uploader\S3Uploader.exe"
   
   $web_dlls = @( "Raven.Abstractions.???","Raven.Json.???", "Raven.Web.???", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", `
-    "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+    "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
   $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", `
                      "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", `
-                    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", `
+                    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Storage.Esent.???", `
                     "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $client_dlls_3_5 = @( "nlog.???","Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Json-3.5.???", "Raven.Client.Lightweight-3.5.???");
@@ -28,7 +28,7 @@ properties {
   
   $silverlight_dlls_libs = @( "NLog.???");   
  
-  $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Json.???", `
+  $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Json.???", `
       "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "nlog.???", "Newtonsoft.Json.???", `
       "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  );
       

@@ -12,7 +12,7 @@ function Copy-RavenDB
 
   $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", `
                      "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", `
-                    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", `
+                    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Storage.Esent.???", `
                     "Raven.Storage.Managed.???", "Raven.Munin.???" );
                     
    foreach($serverFile in $server_files) 
