@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs.TransformResults
         [Fact]
         public void will_timeout_query_after_some_time()
         {
-            using (var server = GetNewServer())
+            using (GetNewServer())
             using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
             {
                 new Answers_ByAnswerEntity().Execute(store);
@@ -23,10 +23,7 @@ namespace Raven.Tests.Bugs.TransformResults
                 store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
                 CreateEntities(store, 0);
 
-                //WaitForAllRequestsToComplete(server);
-                //server.Server.ResetNumberOfRequests();
-
-                const string Content = "This is doable";
+                const string content = "This is doable";
 
                 using (var session = store.OpenSession())
                 {
@@ -35,39 +32,37 @@ namespace Raven.Tests.Bugs.TransformResults
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
                         .OrderBy(x => x.Content)
-                        .Where(x => x.Content.Contains(Content))
+                        .Where(x => x.Content.Contains(content))
                         .Skip(0).Take(1)
                         .As<AnswerEntity>()
                         .FirstOrDefault();
 
                     Assert.NotNull(answerInfo);
                 }
-                using (var session = store.OpenSession())
+				using (var session = store.OpenSession())
                 {
-                    for (int i = 0; i < 10000; i++)
+                    for (int i = 0; i < 100; i++)
                     {
                         var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
-                            //.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite(TimeSpan.FromSeconds(15)))
-                            //.Statistics(out stats)
-                            //.Where(x => x.Content.StartsWith(Content))
-                            .OrderBy(x => x.Content)
+							.OrderBy(x => x.Content)
                             .Skip(0).Take(1)
                             .As<AnswerEntity>()
                             .FirstOrDefault();
 
                         Console.WriteLine(" i = {0}", i);
+						
                         Assert.NotNull(answerInfo);
 
                         if (i % 100 == 0)
                         {
                             if (answerInfo != null) // Update it
                             {
-                                answerInfo.Content += i.ToString();
-                                session.Store(answerInfo);
+                            	var answer = session.Load<Answer>(answerInfo.Id);
+
+                                answer.Content += i.ToString();
                                 session.SaveChanges();
                             }
                         }
-                        //CreateEntities(store, i);
                     }
                 }
 
@@ -76,11 +71,11 @@ namespace Raven.Tests.Bugs.TransformResults
 
         public static string CreateEntities(IDocumentStore documentStore, int index)
         {
-            string questionId = @"question\259" + index;
-            string answerId = @"answer\540" + index;
+            string questionId = @"question/259" + index;
+            string answerId = @"answer/540" + index;
             using (IDocumentSession session = documentStore.OpenSession())
             {
-                var user = new User { Id = @"user\222" + index, DisplayName = "John Doe" + index };
+                var user = new User { Id = @"user/222" + index, DisplayName = "John Doe" + index };
                 session.Store(user);
 
                 var question = new Question
@@ -88,7 +83,7 @@ namespace Raven.Tests.Bugs.TransformResults
                     Id = questionId,
                     Title = "How to do this in RavenDb?" + index,
                     Content = "I'm trying to find how to model documents for better DDD support." + index,
-                    UserId = @"user\222" + index
+                    UserId = @"user/222" + index
                 };
                 session.Store(question);
 
@@ -108,7 +103,7 @@ namespace Raven.Tests.Bugs.TransformResults
                     Content = answer.Content
                 });
 
-                var vote1 = new AnswerVoteEntity { Id = "votes\\1" + index, Answer = answer, QuestionId = questionId, Delta = 2 };
+                var vote1 = new AnswerVoteEntity { Id = "votes/1" + index, Answer = answer, QuestionId = questionId, Delta = 2 };
                 session.Store(new AnswerVote
                 {
                     QuestionId = vote1.QuestionId,
@@ -116,7 +111,7 @@ namespace Raven.Tests.Bugs.TransformResults
                     Delta = vote1.Delta
                 });
 
-                var vote2 = new AnswerVoteEntity { Id = "votes\\2" + index, Answer = answer, QuestionId = questionId, Delta = 3 };
+                var vote2 = new AnswerVoteEntity { Id = "votes/2" + index, Answer = answer, QuestionId = questionId, Delta = 3 };
                 session.Store(new AnswerVote
                 {
                     QuestionId = vote2.QuestionId,

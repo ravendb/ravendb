@@ -424,7 +424,6 @@
     <Compile Include="Bugs\Stacey\InServerDatabase.cs" />
     <Compile Include="Bugs\Stacey\Models.cs" />
     <Compile Include="Bugs\Stacey\Aspects.cs" />
-    <Compile Include="Bugs\TransformResults\TimeoutTester.cs" />
     <Compile Include="Bugs\TransformResults\SortHintTester.cs" />
     <Compile Include="Bugs\SortingById.cs" />
     <Compile Include="Bugs\SortingOnLong.cs" />
@@ -446,6 +445,7 @@
     <Compile Include="Bugs\TransformResults\Question.cs" />
     <Compile Include="Bugs\TransformResults\QuestionVote.cs" />
     <Compile Include="Bugs\TransformResults\QuestionWithVoteTotalIndex.cs" />
+    <Compile Include="Bugs\TransformResults\TimeoutTester.cs" />
     <Compile Include="Bugs\TransformResults\User.cs" />
     <Compile Include="Bugs\TransformResults\QuestionView.cs" />
     <Compile Include="Bugs\TransformResults\Thor.cs" />
