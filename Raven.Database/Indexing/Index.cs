@@ -536,17 +536,15 @@ namespace Raven.Database.Indexing
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
 			readonly HashSet<RavenJObject> alreadyReturned;
 			private readonly FieldsToFetch fieldsToFetch;
+			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
 
-			public IndexQueryOperation(
-				Index parent,
-				IndexQuery indexQuery,
-				Func<IndexQueryResult, bool> shouldIncludeInResults,
-				FieldsToFetch fieldsToFetch)
+			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
 			{
 				this.parent = parent;
 				this.indexQuery = indexQuery;
 				this.shouldIncludeInResults = shouldIncludeInResults;
 				this.fieldsToFetch = fieldsToFetch;
+				this.indexQueryTriggers = indexQueryTriggers;
 
 				if (fieldsToFetch.IsDistinctQuery)
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
@@ -562,6 +560,12 @@ namespace Raven.Database.Indexing
 					using(parent.GetSearcher(out indexSearcher))
 					{
 						var luceneQuery = GetLuceneQuery();
+
+						foreach (var indexQueryTrigger in indexQueryTriggers)
+						{
+							luceneQuery = indexQueryTrigger.Value.ProcessQuery(parent.name, luceneQuery, indexQuery);
+						}
+
 						int start = indexQuery.Start;
 						int pageSize = indexQuery.PageSize;
 						int returnedResults = 0;

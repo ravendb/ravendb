@@ -49,6 +49,9 @@ namespace Raven.Database
 		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
 		[ImportMany]
+		public OrderedPartCollection<AbstractIndexQueryTrigger> IndexQueryTriggers{ get; set; }
+		
+		[ImportMany]
 		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
 
 		[ImportMany]
@@ -179,6 +182,10 @@ namespace Raven.Database
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 			ReadTriggers
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			IndexQueryTriggers
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 
@@ -663,7 +670,7 @@ namespace Raven.Database
 					                                      viewGenerator.ReduceDefinition == null
 					                                      	? Constants.DocumentIdFieldName
 					                                      	: Constants.ReduceKeyFieldName);
-					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch)
+					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch, IndexQueryTriggers)
 									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
 										 where doc != null
@@ -730,7 +737,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Raven.Abstractions.Data.Constants.DocumentIdFieldName))
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Raven.Abstractions.Data.Constants.DocumentIdFieldName), IndexQueryTriggers)
 													select queryResult.Key);
 				});
 			stale = isStale;
