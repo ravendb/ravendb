@@ -436,13 +436,12 @@ namespace Raven.Database.Indexing
 				currentIndexSearcherHolder = new IndexSearcherHolder(new IndexSearcher(indexReader));
 		    }
 
-			if (oldSearcher != null)
+			if (oldSearcher == null) 
+				return;
+			IndexSearcher _;
+			using(oldSearcher.GetSearcher(out _))
 			{
-				IndexSearcher _;
-				using(oldSearcher.GetSearcher(out _))
-				{
-					oldSearcher.DisposeSafely();
-				}
+				oldSearcher.DisposeSafely();
 			}
 		}
 
