@@ -79,12 +79,7 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public abstract bool IsMapReduce { get; }
 
-		internal IDisposable GetSearcher(out IndexSearcher searcher)
-		{
-			return currentIndexSearcherHolder.GetSearcher(out searcher);
-		}
-
-	    #region IDisposable Members
+		#region IDisposable Members
 
 		public void Dispose()
 		{
@@ -421,6 +416,12 @@ namespace Raven.Database.Indexing
 
 		public abstract void Remove(string[] keys, WorkContext context);
 
+		internal IDisposable GetSearcher(out IndexSearcher searcher)
+		{
+			var indexSearcherHolder = currentIndexSearcherHolder;
+			Thread.Sleep(100);
+			return indexSearcherHolder.GetSearcher(out searcher);
+		}
 
 		private void RecreateSearcher()
 		{
