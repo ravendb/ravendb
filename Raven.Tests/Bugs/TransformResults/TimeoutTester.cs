@@ -62,8 +62,11 @@ namespace Raven.Tests.Bugs.TransformResults
                         {
                             if (answerInfo != null) // Update it
                             {
-                                answerInfo.Content += i.ToString();
-                                session.Store(answerInfo);
+                                var answer = session.Load<Answer>(answerInfo.Id);
+                                Assert.NotNull(answer);
+
+                                answer.Content += i.ToString();
+                                session.Store(answer);
                                 session.SaveChanges();
                             }
                         }
@@ -76,11 +79,11 @@ namespace Raven.Tests.Bugs.TransformResults
 
         public static string CreateEntities(IDocumentStore documentStore, int index)
         {
-            string questionId = @"question\259" + index;
-            string answerId = @"answer\540" + index;
+            string questionId = @"question/259" + index;
+            string answerId = @"answer/540" + index;
             using (IDocumentSession session = documentStore.OpenSession())
             {
-                var user = new User { Id = @"user\222" + index, DisplayName = "John Doe" + index };
+                var user = new User { Id = @"user/222" + index, DisplayName = "John Doe" + index };
                 session.Store(user);
 
                 var question = new Question
@@ -88,7 +91,7 @@ namespace Raven.Tests.Bugs.TransformResults
                     Id = questionId,
                     Title = "How to do this in RavenDb?" + index,
                     Content = "I'm trying to find how to model documents for better DDD support." + index,
-                    UserId = @"user\222" + index
+                    UserId = @"user/222" + index
                 };
                 session.Store(question);
 
@@ -108,7 +111,7 @@ namespace Raven.Tests.Bugs.TransformResults
                     Content = answer.Content
                 });
 
-                var vote1 = new AnswerVoteEntity { Id = "votes\\1" + index, Answer = answer, QuestionId = questionId, Delta = 2 };
+                var vote1 = new AnswerVoteEntity { Id = "votes/1" + index, Answer = answer, QuestionId = questionId, Delta = 2 };
                 session.Store(new AnswerVote
                 {
                     QuestionId = vote1.QuestionId,
@@ -116,7 +119,7 @@ namespace Raven.Tests.Bugs.TransformResults
                     Delta = vote1.Delta
                 });
 
-                var vote2 = new AnswerVoteEntity { Id = "votes\\2" + index, Answer = answer, QuestionId = questionId, Delta = 3 };
+                var vote2 = new AnswerVoteEntity { Id = "votes/2" + index, Answer = answer, QuestionId = questionId, Delta = 3 };
                 session.Store(new AnswerVote
                 {
                     QuestionId = vote2.QuestionId,
