@@ -20,11 +20,13 @@ using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Linq;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;
 using System.ComponentModel.Composition;
@@ -187,7 +189,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public Query GetLuceneQuery(string index, IndexQuery query)
+		public Query GetLuceneQuery(string index, IndexQuery query, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -196,7 +198,7 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Index " + index + " does not exists");
 			}
 			var fieldsToFetch = new FieldsToFetch(new string[0], AggregationOperation.None, null);
-			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch).GetLuceneQuery();
+			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetLuceneQuery();
 
 		}
 
@@ -204,7 +206,8 @@ namespace Raven.Database.Indexing
 			string index,
 			IndexQuery query,
 			Func<IndexQueryResult, bool> shouldIncludeInResults,
-			FieldsToFetch fieldsToFetch)
+			FieldsToFetch fieldsToFetch,
+			OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -212,7 +215,7 @@ namespace Raven.Database.Indexing
 				log.Debug("Query on non existing index {0}", index);
 				throw new InvalidOperationException("Index " + index + " does not exists");
 			}
-			return new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch).Query();
+			return new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers).Query();
 		}
 
 		protected internal static IDisposable EnsureInvariantCulture()

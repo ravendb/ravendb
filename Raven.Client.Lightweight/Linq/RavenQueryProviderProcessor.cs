@@ -906,7 +906,7 @@ namespace Raven.Client.Linq
 			object value;
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
-				if (type.IsEnum)
+				if (type.IsEnum && (value is IEnumerable == false)) // skip arrays, lists
 					return Enum.GetName(type, value);
 				return value;
 			}

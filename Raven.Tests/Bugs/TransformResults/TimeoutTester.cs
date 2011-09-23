@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs.TransformResults
         [Fact]
         public void will_timeout_query_after_some_time()
         {
-            using (var server = GetNewServer())
+            using (GetNewServer())
             using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
             {
                 new Answers_ByAnswerEntity().Execute(store);
@@ -23,10 +23,7 @@ namespace Raven.Tests.Bugs.TransformResults
                 store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
                 CreateEntities(store, 0);
 
-                //WaitForAllRequestsToComplete(server);
-                //server.Server.ResetNumberOfRequests();
-
-                const string Content = "This is doable";
+                const string content = "This is doable";
 
                 using (var session = store.OpenSession())
                 {
@@ -35,27 +32,25 @@ namespace Raven.Tests.Bugs.TransformResults
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
                         .OrderBy(x => x.Content)
-                        .Where(x => x.Content.Contains(Content))
+                        .Where(x => x.Content.Contains(content))
                         .Skip(0).Take(1)
                         .As<AnswerEntity>()
                         .FirstOrDefault();
 
                     Assert.NotNull(answerInfo);
                 }
-                using (var session = store.OpenSession())
+				using (var session = store.OpenSession())
                 {
-                    for (int i = 0; i < 10000; i++)
+                    for (int i = 0; i < 100; i++)
                     {
                         var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
-                            //.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite(TimeSpan.FromSeconds(15)))
-                            //.Statistics(out stats)
-                            //.Where(x => x.Content.StartsWith(Content))
-                            .OrderBy(x => x.Content)
+							.OrderBy(x => x.Content)
                             .Skip(0).Take(1)
                             .As<AnswerEntity>()
                             .FirstOrDefault();
 
                         Console.WriteLine(" i = {0}", i);
+						
                         Assert.NotNull(answerInfo);
 
                         if (i % 100 == 0)
@@ -70,7 +65,6 @@ namespace Raven.Tests.Bugs.TransformResults
                                 session.SaveChanges();
                             }
                         }
-                        //CreateEntities(store, i);
                     }
                 }
 

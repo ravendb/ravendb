@@ -10,7 +10,7 @@ namespace Raven.Client.Versioning
 			var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)session);
 			var jsonDocuments = session.DatabaseCommands.StartsWith(id + "/revisions/", start, pageSize);
 			return jsonDocuments
-				.Select(jsonDocument => inMemoryDocumentSessionOperations.TrackEntity<T>(jsonDocument.Key, jsonDocument.DataAsJson, jsonDocument.Metadata))
+				.Select(inMemoryDocumentSessionOperations.TrackEntity<T>)
 				.ToArray();
 		}
 	}

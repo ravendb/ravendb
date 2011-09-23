@@ -25,7 +25,6 @@ namespace Raven.Database.Indexing
 		private int workCounter;
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
-		private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 		public bool DoWork
@@ -129,17 +128,6 @@ namespace Raven.Database.Indexing
 			serverErrors.TryDequeue(out ignored);
 		}
 
-		public IDisposable ExecutingWork()
-		{
-			readerWriterLockSlim.EnterReadLock();
-			return new DisposableAction(readerWriterLockSlim.ExitReadLock);
-		}
-
-		public IDisposable HaltAllWork()
-		{
-			readerWriterLockSlim.EnterWriteLock();
-			return new DisposableAction(readerWriterLockSlim.ExitWriteLock);
-		}
 
 	    public void Dispose()
 	    {

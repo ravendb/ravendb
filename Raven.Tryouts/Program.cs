@@ -1,101 +1,134 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
-using Raven.Abstractions.Extensions;
+using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
-using Raven.Json.Linq;
-using Raven.Tests.Bugs;
-using Raven.Tests.Faceted;
+using NLog;
 
-
-public class ChessTest
+namespace etobi.EmbeddedTest
 {
-	private static EmbeddableDocumentStore documentStore;
-
-	public static bool Startup(string[] args)
+	namespace etobi.EmbeddedTest
 	{
-		IOExtensions.DeleteDirectory(@"C:\Work\test\data");
-		documentStore = new EmbeddableDocumentStore();
-		InitDatabase(documentStore);
-		return true;
-	}
-
-	public static bool Run()
-	{
-		var random = new Random();
-		var dataToQueryFor = new List<string>();
-
-		for (var i = 0; i < 10; i++)
+		class Program
 		{
-			using (var session = documentStore.OpenSession())
-			{
-				session.Query<Foo>("index" + random.Next(0, 5))
-					.Where(x => x.Data == "dont care")
-					.FirstOrDefault();
+			private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+			private static bool _stop;
+			private static readonly Random Random = new Random();
+			private static ConcurrentBag<Exception> _exceptions = new ConcurrentBag<Exception>();
 
-				var foo = new Foo { Id = Guid.NewGuid().ToString(), Data = Guid.NewGuid().ToString() };
-				dataToQueryFor.Add(foo.Data);
-				session.Store(foo);
-				session.SaveChanges();
+			static void Main()
+			{
+				try
+				{
+					IOExtensions.DeleteDirectory("Data");
+					using (var documentStore = new EmbeddableDocumentStore())
+					{
+						var threads = new List<Thread>();
+
+						InitDatabase(documentStore);
+						for (var i = 0; i < 10; i++)
+						{
+							var thread = new Thread(x => InsertAndQueryLoop(documentStore));
+							thread.Start();
+							threads.Add(thread);
+						}
+
+						while (!_stop)
+						{
+							Thread.Sleep(5000);
+							Console.WriteLine("NumberOfDocs={0}, StaleIndexes={1}",
+								documentStore.DocumentDatabase.Statistics.CountOfDocuments,
+								documentStore.DocumentDatabase.Statistics.StaleIndexes.Count());
+						}
+
+						foreach (var thread in threads)
+						{
+							thread.Join();
+						}
+
+						foreach (var exception in _exceptions)
+						{
+							Console.WriteLine(exception.Message);
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+					Log.ErrorException("Bad things have happened!", ex);
+					throw;
+				}
+				Console.WriteLine("Program stopped");
+			}
+
+			private static void InsertAndQueryLoop(IDocumentStore documentStore)
+			{
+				try
+				{
+					while (!_stop)
+					{
+						var dataToQueryFor = new List<string>();
+
+						for (var i = 0; i < 10; i++)
+						{
+							using (var session = documentStore.OpenSession())
+							{
+								session.Query<Foo>("index" + Random.Next(0, 5))
+									.Where(x => x.Data == "dont care")
+									.FirstOrDefault();
+
+								var foo = new Foo { Id = Guid.NewGuid().ToString(), Data = Guid.NewGuid().ToString() };
+								dataToQueryFor.Add(foo.Data);
+								session.Store(foo);
+								session.SaveChanges();
+							}
+						}
+
+						using (var session = documentStore.OpenSession())
+						{
+							session.Query<Foo>("index" + Random.Next(0, 5))
+								.Customize(x => x.WaitForNonStaleResults(TimeSpan.MaxValue))
+								.Where(x => x.Data == dataToQueryFor[Random.Next(0, 10)])
+								.FirstOrDefault();
+						}
+						Thread.Sleep(Random.Next(50, 200));
+					}
+				}
+				catch (Exception ex)
+				{
+					_exceptions.Add(ex);
+					Log.ErrorException("Houston, we have a problem", ex);
+					_stop = true;
+				}
+			}
+
+			private static void InitDatabase(EmbeddableDocumentStore documentStore)
+			{
+				documentStore.Configuration.DataDirectory = "Data";
+				documentStore.Configuration.DefaultStorageTypeName = "esent";
+				documentStore.Initialize();
+
+				new RavenDocumentsByEntityName().Execute(documentStore);
+
+				for (var i = 0; i < 5; i++)
+				{
+					documentStore.DatabaseCommands.PutIndex("index" + i,
+						new IndexDefinitionBuilder<Foo>
+						{
+							Map = docs => from doc in docs select new { doc.Data }
+						});
+				}
 			}
 		}
 
-		using (var session = documentStore.OpenSession())
+		public class Foo
 		{
-			session.Query<Foo>("index" + random.Next(0, 5))
-				.Customize(x => x.WaitForNonStaleResults())
-				.Where(x => x.Data == dataToQueryFor[random.Next(0, 10)])
-				.FirstOrDefault();
-		}
-		return true;
-	}
-
-	public static bool Shutdown()
-	{
-		documentStore.Dispose();
-		return true;
-	}
-
-	public class Foo
-	{
-		public string Id { get; set; }
-		public string Data { get; set; }
-	}
-	private static void InitDatabase(EmbeddableDocumentStore documentStore)
-	{
-		documentStore.Configuration.DataDirectory = @"C:\Work\test\data";
-		documentStore.Configuration.DefaultStorageTypeName = "esent";
-		documentStore.Initialize();
-
-		new RavenDocumentsByEntityName().Execute(documentStore);
-
-		for (var i = 0; i < 5; i++)
-		{
-			documentStore.DatabaseCommands.PutIndex("index" + i,
-				new IndexDefinitionBuilder<Foo>
-				{
-					Map = docs => from doc in docs select new { doc.Data }
-				});
+			public string Id { get; set; }
+			public string Data { get; set; }
 		}
 	}
-}
 
-namespace Raven.Tryouts
-{
-	class Program
-	{
-		static void Main()
-		{
-			ChessTest.Startup(null);
-			ChessTest.Run();
-		}
-		
-	}
 }
