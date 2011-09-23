@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using Lucene.Net.Search;
 using Raven.Abstractions.Extensions;
@@ -7,42 +8,71 @@ namespace Raven.Database.Indexing
 {
 	public class IndexSearcherHolder
 	{
-		private readonly IndexSearcher currentIndexSearcher;
+		private volatile IndexSearcherHoldingState current;
 
-		private volatile bool shouldDispose;
-		private int usage;
-
-		public IndexSearcherHolder(IndexSearcher currentIndexSearcher)
+		public void SetIndexSearcher(IndexSearcher searcher)
 		{
-			this.currentIndexSearcher = currentIndexSearcher;
+			var old = current;
+			current = new IndexSearcherHoldingState(searcher);
+
+			if (old == null)
+				return;
+
+			Interlocked.Increment(ref old.Usage);
+			using (old)
+			{
+				old.MarkForDisposal();
+			}
 		}
 
 		public IDisposable GetSearcher(out IndexSearcher searcher)
 		{
-			Interlocked.Increment(ref usage);
-			searcher = currentIndexSearcher;
-			return new DisposableAction(TryDispose);
+			while (true)
+			{
+				var state = current;
+				Interlocked.Increment(ref state.Usage);
+				if (state.ShouldDispose)
+				{
+					state.Dispose();
+					continue;
+				}
+
+				searcher = state.IndexSearcher;
+				return state;
+			}
 		}
 
-		public void DisposeSafely()
+		private class IndexSearcherHoldingState : IDisposable
 		{
-			shouldDispose = true;
-		}
+			public readonly IndexSearcher IndexSearcher;
 
-		private void TryDispose()
-		{
-			if (Interlocked.Decrement(ref usage) > 0)
-				return;
-			if (shouldDispose == false)
-				return;
+			public volatile bool ShouldDispose;
+			public int Usage;
 
-			DisposeRudely();
-		}
+			public IndexSearcherHoldingState(IndexSearcher indexSearcher)
+			{
+				IndexSearcher = indexSearcher;
+			}
 
-		public void DisposeRudely()
-		{
-			currentIndexSearcher.GetIndexReader().Close();
-			currentIndexSearcher.Close();
+			public void MarkForDisposal()
+			{
+				ShouldDispose = true;
+			}
+
+			public void Dispose()
+			{
+				if (Interlocked.Decrement(ref Usage) > 0)
+					return;
+				if (ShouldDispose == false)
+					return;
+				DisposeRudely();
+			}
+
+			private void DisposeRudely()
+			{
+				IndexSearcher.GetIndexReader().Close();
+				IndexSearcher.Close();
+			}
 		}
 	}
 }

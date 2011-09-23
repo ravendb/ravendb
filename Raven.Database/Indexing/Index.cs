@@ -52,7 +52,7 @@ namespace Raven.Database.Indexing
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
-		private volatile IndexSearcherHolder currentIndexSearcherHolder;
+		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
@@ -92,7 +92,7 @@ namespace Raven.Database.Indexing
 				}
 				if(currentIndexSearcherHolder != null)
 				{
-					currentIndexSearcherHolder.DisposeRudely();
+					currentIndexSearcherHolder.SetIndexSearcher(null);
 				}
 				if (indexWriter != null)
 				{
@@ -418,32 +418,20 @@ namespace Raven.Database.Indexing
 
 		internal IDisposable GetSearcher(out IndexSearcher searcher)
 		{
-			var indexSearcherHolder = currentIndexSearcherHolder;
-			Thread.Sleep(100);
-			return indexSearcherHolder.GetSearcher(out searcher);
+			return currentIndexSearcherHolder.GetSearcher(out searcher);
 		}
 
 		private void RecreateSearcher()
 		{
-			var oldSearcher = currentIndexSearcherHolder;
-			
 		    if (indexWriter == null)
 		    {
-		    	currentIndexSearcherHolder = new IndexSearcherHolder(new IndexSearcher(directory, true));
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
 		    }
 		    else
 		    {
 		        var indexReader = indexWriter.GetReader();
-				currentIndexSearcherHolder = new IndexSearcherHolder(new IndexSearcher(indexReader));
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader));
 		    }
-
-			if (oldSearcher == null) 
-				return;
-			IndexSearcher _;
-			using(oldSearcher.GetSearcher(out _))
-			{
-				oldSearcher.DisposeSafely();
-			}
 		}
 
 	    protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)

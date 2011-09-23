@@ -52,7 +52,7 @@ namespace etobi.EmbeddedTest
 
 						foreach (var exception in _exceptions)
 						{
-							Console.WriteLine(exception);
+							Console.WriteLine(exception.Message);
 						}
 					}
 				}
@@ -62,7 +62,6 @@ namespace etobi.EmbeddedTest
 					throw;
 				}
 				Console.WriteLine("Program stopped");
-				Console.ReadLine();
 			}
 
 			private static void InsertAndQueryLoop(IDocumentStore documentStore)
