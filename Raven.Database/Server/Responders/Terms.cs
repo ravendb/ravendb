@@ -27,11 +27,20 @@ namespace Raven.Database.Server.Responders
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var index = match.Groups[1].Value;
 
-			context.WriteJson(Database.ExecuteGetTermsQuery(index, 
-				context.Request.QueryString["field"],
-				context.Request.QueryString["fromValue"],
-				context.GetPageSize(Database.Configuration.MaxPageSize)
-				));
+			var indexEtag = Database.GetIndexEtag(index);
+			if (context.MatchEtag(indexEtag))
+			{
+				context.SetStatusToNotModified();
+				return;
+			}
+			
+			var executeGetTermsQuery = Database.ExecuteGetTermsQuery(index, 
+			                                                         context.Request.QueryString["field"],
+			                                                         context.Request.QueryString["fromValue"],
+			                                                         context.GetPageSize(Database.Configuration.MaxPageSize)
+				);
+			context.Response.AddHeader("ETag", Database.GetIndexEtag(index).ToString());
+			context.WriteJson(executeGetTermsQuery);
 		}
 	}
 }
