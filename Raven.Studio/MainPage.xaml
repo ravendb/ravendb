@@ -11,7 +11,7 @@
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
-
+		
 		<Border x:Name="ContentBorder"
 				Style="{StaticResource ContentBorderStyle}">
 
@@ -34,6 +34,11 @@
 		<Grid x:Name="NavigationGrid"
 			  Style="{StaticResource NavigationGridStyle}">
 
+			<Grid.RowDefinitions>
+				<RowDefinition Height="42" />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
+			
 			<Border x:Name="BrandingBorder"
 					Style="{StaticResource BrandingBorderStyle}">
 				<StackPanel x:Name="BrandingStackPanel"
@@ -64,6 +69,9 @@
 				</StackPanel>
 			</Border>
 
+			<StackPanel Grid.Row="1">
+				<TextBlock Text="{Binding Notification.Value}" Foreground="White" />
+			</StackPanel>
 		</Grid>
 
 	</Grid>

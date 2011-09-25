@@ -47,7 +47,6 @@
   <!-- Navigation Grid Style -->
   <Style x:Key="NavigationGridStyle" TargetType="Grid">
     <Setter Property="Background" Value="{StaticResource NavigationBackgroundColorBrush}"/>
-    <Setter Property="Height" Value="42"/>
     <Setter Property="Margin" Value="0"/>
     <Setter Property="VerticalAlignment" Value="Top"/>
   </Style>

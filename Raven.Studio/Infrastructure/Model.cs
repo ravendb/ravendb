@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -12,6 +14,7 @@ namespace Raven.Studio.Infrastructure
 		public Model()
 		{
 			RefreshRate = TimeSpan.FromSeconds(5);
+			Notification = new Observable<string>();
 		}
 
 		internal void ForceTimerTicked()
@@ -22,6 +25,8 @@ namespace Raven.Studio.Infrastructure
 
 		internal void TimerTicked()
 		{
+			HandleNotifications();
+
 			if (currentTask != null)
 				return;
 
@@ -49,6 +54,36 @@ namespace Raven.Studio.Infrastructure
 		}
 
 		protected virtual Task TimerTickedAsync()
+		{
+			return null;
+		}
+
+		private void HandleNotifications()
+		{
+			if (string.IsNullOrEmpty(Notification.Value) == false)
+			{
+				Notification.Value = null;
+				ApplicationModel.RemoveNotification(NotificationType);
+			}
+
+			var notificationTypes = SubscribeForNotifications();
+			if (notificationTypes == null)
+				return;
+			foreach (var subscribeForNotification in notificationTypes)
+			{
+				var notification = ApplicationModel.GetNotification(subscribeForNotification);
+				if (notification == null)
+					continue;
+				Notification.Value = notification;
+				NotificationType = subscribeForNotification;
+				break;
+			}
+		}
+
+		public Observable<string> Notification { get; set; }
+		public Type NotificationType { get; set; }
+
+		public virtual IEnumerable<Type> SubscribeForNotifications()
 		{
 			return null;
 		}

@@ -9,15 +9,13 @@ namespace Raven.Studio.Features.Documents
 	public class DeleteDocumentCommand : Command
 	{
 		private readonly string key;
+		private readonly IAsyncDatabaseCommands databaseCommands;
 
 		public DeleteDocumentCommand(string key, IAsyncDatabaseCommands databaseCommands)
 		{
 			this.key = key;
 			this.databaseCommands = databaseCommands;
 		}
-
-		private readonly IAsyncDatabaseCommands databaseCommands;
-
 
 		public override void Execute(object parameter)
 		{
@@ -30,7 +28,8 @@ namespace Raven.Studio.Features.Documents
 			databaseCommands.DeleteDocumentAsync(key)
 				.ContinueOnSuccess(() =>
 				                   {
-									   ApplicationModel.Current.Navigate(new Uri("/"));
+									   ApplicationModel.AddNotification(this.GetType(), key + " was successfully deleted.");
+									   // ApplicationModel.Current.Navigate(new Uri("/Home", UriKind.Relative));
 				                   })
 								   .Catch();
 		}

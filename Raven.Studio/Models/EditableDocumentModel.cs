@@ -186,5 +186,10 @@ namespace Raven.Studio.Models
 				editableDocumentModel.JsonMetadata = RavenJObject.Parse(editableDocumentModel.JsonMetadata).ToString(Formatting.Indented);
 			}
 		}
+
+		public override IEnumerable<Type> SubscribeForNotifications()
+		{
+			return new[] {typeof (DeleteDocumentCommand)};
+		}
 	}
 }
