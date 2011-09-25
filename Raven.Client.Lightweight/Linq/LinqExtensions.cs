@@ -39,6 +39,20 @@ namespace Raven.Client.Linq
 																  new IndexQuery { Query = query }, facetDoc);
 		}
 #endif
+#if !NET_3_5
+		/// <summary>
+		/// Query the facets results for this query using the specified facet document
+		/// </summary>
+		public static Task<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
+		{
+			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
+			var query = ravenQueryInspector.ToString();
+			var provider = queryable.Provider as IRavenQueryProvider;
+
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried,
+																  new IndexQuery { Query = query }, facetDoc);
+		}
+#endif
 
 		/// <summary>
 		/// Project using a different type
