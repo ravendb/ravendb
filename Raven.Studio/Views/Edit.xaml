@@ -158,6 +158,7 @@
 						   Margin="12,6,0,6" />
 
 				<ItemsControl x:Name="References"
+							  ItemsSource="{Binding References}"
 							  Grid.Row="1"
 							  Margin="12,0,0,12">
 					<ItemsControl.ItemTemplate>
@@ -171,6 +172,7 @@
 						   Margin="12,6,0,6" />
 
 				<ItemsControl x:Name="Related"
+							  ItemsSource="{Binding Related}"
 							  Grid.Row="1"
 							  Margin="12,0,0,12">
 					<ItemsControl.ItemTemplate>

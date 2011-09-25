@@ -32,13 +32,15 @@ namespace Raven.Studio.Models
 			this.document = newdoc;
 			IsProjection = string.IsNullOrEmpty(newdoc.Key);
 			References = new ObservableCollection<string>();
+			Related = new BindableCollection<string>();
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			Metadata = newdoc.Metadata.ToDictionary(x => x.Key, x => x.Value.ToString(Formatting.None));
 			OnEverythingChanged();
 		}
 
-		public ObservableCollection<string> References { get; set; }
+		public ObservableCollection<string> References { get; private set; }
+		public BindableCollection<string> Related { get; private set; }
 		public bool IsProjection { get; private set; }
 
 		public string DisplayId
@@ -68,6 +70,7 @@ namespace Raven.Studio.Models
 			{
 				jsonData = value;
 				UpdateReferences();
+				UpdateRelated();
 				OnPropertyChanged();
 			}
 		}
@@ -96,7 +99,18 @@ namespace Raven.Studio.Models
 			{
 				References.Add(source);
 			}
+		}
 
+		private void UpdateRelated()
+		{
+			asyncDatabaseCommands.GetDocumentsStartingWithAsync(Key + "/", 0, 15)
+				.ContinueOnSuccess(items =>
+				                   {
+				                   	if (items == null)
+				                   		return;
+
+				                   	new Action(() => Related.Set(items.Select(doc => doc.Key))).ViaCurrentDispatcher();
+				                   });
 		}
 
 		public string Key
