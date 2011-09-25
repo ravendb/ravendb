@@ -269,6 +269,31 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc
+		/// </summary>
+		public Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc)
+		{
+			var requestUri = url + string.Format("/facets/{0}?facetDoc={1}&query={2}",
+			Uri.EscapeUriString(index),
+			Uri.EscapeDataString(facetSetupDoc),
+			Uri.EscapeDataString(query.Query));
+
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = (RavenJObject)RavenJToken.Load(reader);
+						var jsonAsType = json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
+						return jsonAsType;
+					}
+				});
+		}
+
+		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
 		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes)
