@@ -4,5 +4,6 @@
     xmlns:Converters1="clr-namespace:Raven.Studio.Infrastructure.Converters">
 
 	<Converters1:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
+	<Converters1:LastItemInListConverter x:Name="LastItemInList" />
 
 </ResourceDictionary>
