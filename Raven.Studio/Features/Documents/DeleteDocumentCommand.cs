@@ -1,4 +1,5 @@
 using System;
+using System.Windows;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -31,13 +32,10 @@ namespace Raven.Studio.Features.Documents
 			databaseCommands.DeleteDocumentAsync(key)
 				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was deleted", key))))
 				.ContinueOnSuccess(() =>
-				                   {
-				                   	if(navigateToHome)
-				                   	{
-				                   		var source = new Uri("/Home", UriKind.Relative);
-				                   		ApplicationModel.Current.Navigate(source);
-				                   	}
-				                   })
+								   {
+									   if (navigateToHome)
+										   ApplicationModel.Current.Navigate(new Uri("/Home", UriKind.Relative));
+								   })
 								   .Catch();
 		}
 	}

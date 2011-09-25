@@ -70,7 +70,7 @@
 			</Border>
 
 			<StackPanel Grid.Row="1">
-				<TextBlock Text="{Binding Notification.Value, Converter={StaticResource LastItemInList}}" Foreground="White" />
+				<TextBlock Text="{Binding Path=LastNotification.Value}" Foreground="White" />
 			</StackPanel>
 		</Grid>
 

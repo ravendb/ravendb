@@ -21,6 +21,7 @@ namespace Raven.Studio.Models
 		private ApplicationModel()
 		{
 			Notifications = new BindableCollection<Notification>();
+			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel>();
 			var serverModel = new ServerModel();
 			serverModel.Initialize()
@@ -37,7 +38,10 @@ namespace Raven.Studio.Models
 
 		public void Navigate(Uri source)
 		{
-			Application.Current.Host.NavigationState = source.ToString();
+			if (Deployment.Current.Dispatcher.CheckAccess())
+				Application.Current.Host.NavigationState = source.ToString();
+			else
+				Deployment.Current.Dispatcher.InvokeAsync(() => Application.Current.Host.NavigationState = source.ToString());
 		}
 
 
@@ -64,8 +68,11 @@ namespace Raven.Studio.Models
 									  {
 										  Notifications.RemoveAt(0);
 									  }
+								  	LastNotification.Value = notification.Message;
 								  });
 		}
+
+		public Observable<string> LastNotification { get; set; }
 
 		public BindableCollection<Notification> Notifications { get; set; }
 	}
