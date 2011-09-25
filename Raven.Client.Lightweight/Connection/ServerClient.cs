@@ -1149,21 +1149,12 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
-			RavenJObject json;
-			try
+			using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
 			{
-				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-					json = (RavenJObject)RavenJToken.Load(reader);
+				var json = (RavenJObject) RavenJToken.Load(reader);
+				var jsonAsType = json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
+				return jsonAsType;
 			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
-					throw new InvalidOperationException("could not execute suggestions at this time");
-				throw;
-			}
-			var jsonAsType = json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
-			return jsonAsType;
 		}
 
 		/// <summary>
