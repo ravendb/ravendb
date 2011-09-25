@@ -54,29 +54,31 @@ namespace Raven.Database.Server.Responders
 			GetResponse[] results,
 			GetRequest[] requests)
 		{
+			// Need to create this here to preserve any current TLS data that we have to copy
+			var contexts = requests.Select(request => new MultiGetHttpContext(ravenHttpConfiguration, context, request, TenantId))
+				.ToArray();
 			if ("yes".Equals(context.Request.QueryString["parallel"], StringComparison.InvariantCultureIgnoreCase))
 			{
 				Parallel.For(0, requests.Length, position =>
-					HandleRequest(requests, results, position, context, ravenHttpConfiguration)
+					HandleRequest(requests, results, position, context, ravenHttpConfiguration, contexts)
 					);
 			}
 			else
 			{
 				for (var i = 0; i < requests.Length; i++)
 				{
-					HandleRequest(requests, results, i, context, ravenHttpConfiguration);
+					HandleRequest(requests, results, i, context, ravenHttpConfiguration, contexts);
 				}
 			}
 		}
 
-		private void HandleRequest(GetRequest[] requests, GetResponse[] results, int i, IHttpContext context, IRavenHttpConfiguration ravenHttpConfiguration)
+		private void HandleRequest(GetRequest[] requests, GetResponse[] results, int i, IHttpContext context, IRavenHttpConfiguration ravenHttpConfiguration, MultiGetHttpContext[] contexts)
 		{
 			var request = requests[i];
 			if (request == null)
 				return;
-			var ctx = new MultiGetHttpContext(ravenHttpConfiguration, context, request, TenantId);
-			server.HandleActualRequest(ctx);
-			results[i] = ctx.Complete();
+			server.HandleActualRequest(contexts[i]);
+			results[i] = contexts[i].Complete();
 		}
 
 		public class MultiGetHttpContext : IHttpContext
@@ -92,6 +94,8 @@ namespace Raven.Database.Server.Responders
 				this.realContext = realContext;
 				this.tenantId = tenantId;
 				getResponse = new GetResponse();
+				if (req == null)
+					return;
 				Request = new MultiGetHttpRequest(req, realContext.Request);
 				Response = new MultiGetHttpResponse(getResponse, realContext.Response);
 			}
