@@ -45,8 +45,8 @@
 					<Button Content="Delete"
 							Command="{Binding Delete}" />
 
-					<Button Content="Refresh" />
-					<TextBlock Text="{Binding Path=Notice.Value}" />
+					<Button Content="Refresh"
+							Command="{Binding Refresh}" />
 				</StackPanel>
 			</Grid>
 

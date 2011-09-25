@@ -157,6 +157,9 @@
     <Compile Include="Models\ApplicationModel.cs" />
     <Compile Include="Models\DatabaseModel.cs" />
     <Compile Include="Models\ServerModel.cs" />
+    <Compile Include="Views\DocumentNotFound.xaml.cs">
+      <DependentUpon>DocumentNotFound.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Edit.xaml.cs">
       <DependentUpon>Edit.xaml</DependentUpon>
     </Compile>
@@ -219,6 +222,10 @@
     <Page Include="Features\Stats\DatabaseStatisticsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\DocumentNotFound.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Edit.xaml">
       <SubType>Designer</SubType>

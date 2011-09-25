@@ -50,7 +50,16 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
-		public void OnPropertyChanged()
+		protected void OnEverythingChanged()
+		{
+			var handler = PropertyChangedInternal;
+			if (handler == null)
+				return;
+
+			handler(this, new PropertyChangedEventArgs(""));
+		}
+
+		protected void OnPropertyChanged()
 		{
 			var handler = PropertyChangedInternal;
 			if (handler == null)

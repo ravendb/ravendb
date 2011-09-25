@@ -18,18 +18,24 @@ namespace Raven.Studio.Models
 {
 	public class EditableDocumentModel : Model
 	{
-		private readonly JsonDocument document;
+		private JsonDocument document;
 		private string jsonData;
 
 		public EditableDocumentModel(JsonDocument document, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
-			this.document = document;
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
-			IsProjection = string.IsNullOrEmpty(document.Key);
+			UpdateFromDocument(document);
+		}
+
+		private void UpdateFromDocument(JsonDocument newdoc)
+		{
+			this.document = newdoc;
+			IsProjection = string.IsNullOrEmpty(newdoc.Key);
 			References = new ObservableCollection<string>();
-			JsonData = document.DataAsJson.ToString(Formatting.Indented);
-			JsonMetadata = document.Metadata.ToString(Formatting.Indented);
-			Metadata = document.Metadata.ToDictionary(x => x.Key, x => x.Value.ToString(Formatting.None));
+			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
+			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
+			Metadata = newdoc.Metadata.ToDictionary(x => x.Key, x => x.Value.ToString(Formatting.None));
+			OnEverythingChanged();
 		}
 
 		public ObservableCollection<string> References { get; set; }
@@ -126,6 +132,37 @@ namespace Raven.Studio.Models
 		public ICommand Prettify
 		{
 			get { return new PrettifyDocumentCommand(this); }
+		}
+
+		public ICommand Refresh
+		{
+			get { return new RefreshDocumentCommand(this); }
+		}
+
+		private class RefreshDocumentCommand : Command
+		{
+			private readonly EditableDocumentModel parent;
+
+			public RefreshDocumentCommand(EditableDocumentModel parent)
+			{
+				this.parent = parent;
+			}
+
+			public override void Execute(object parameter)
+			{
+				parent.asyncDatabaseCommands.GetAsync(parent.Key)
+					.ContinueOnSuccess(doc =>
+					                   {
+					                   	if (doc == null)
+					                   	{
+					                   		ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + parent.Key,
+					                   		                                          UriKind.Relative));
+					                   		return;
+					                   	}
+					                   	parent.UpdateFromDocument(doc);
+					                   })
+									   .Catch();
+			}
 		}
 
 		private class SaveDocumentCommand : Command
