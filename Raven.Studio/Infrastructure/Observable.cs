@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
+using System.Windows;
 using System.Windows.Markup;
 
 namespace Raven.Studio.Infrastructure
@@ -16,12 +18,30 @@ namespace Raven.Studio.Infrastructure
 			{
 				this.value = value;
 				OnPropertyChanged();
+				var onActions = actions;
+				actions = null;
+				if (onActions == null) 
+					return;
+
+				var dispatcher = Deployment.Current.Dispatcher;
+				if (dispatcher.CheckAccess())
+					onActions();
+				else
+					dispatcher.InvokeAsync(onActions);
 			}
 		}
 
 		object IObservable.Value
 		{
 			get { return value; }
+		}
+
+		private event Action actions;
+
+		public void RegisterOnce(Action act)
+		{
+
+			actions += act;
 		}
 	}
 
