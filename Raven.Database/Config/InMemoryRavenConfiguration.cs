@@ -4,8 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
@@ -598,5 +600,41 @@ namespace Raven.Database.Config
 			container.Dispose();
 	        container = null;
 	    }
+
+
+		public class ExtensionsLog
+		{
+			public string Name { get; set; }
+			public ExtensionsLogDetail[] Installed { get; set; }
+		}
+
+		public class ExtensionsLogDetail
+		{
+			public string Name { get; set; }
+			public string Assembly { get; set; }
+		}
+
+		private ExtensionsLog GetExtensionsFor(Type type)
+		{
+			var enumerable =
+				Container.GetExports(new ImportDefinition(x => true, type.FullName, ImportCardinality.ZeroOrMore, false, false)).
+					ToArray();
+			if (enumerable.Length == 0)
+				return null;
+			return new ExtensionsLog
+			{
+				Name = type.Name,
+				Installed = enumerable.Select(export => new	ExtensionsLogDetail
+				{
+					Assembly = export.Value.GetType().Assembly.GetName().Name,
+					Name = export.Value.GetType().Name
+				}).ToArray()
+			};
+		}
+
+		public IEnumerable<ExtensionsLog> ReportExtensions(params Type[] types)
+		{
+			return types.Select(GetExtensionsFor).Where(extensionsLog => extensionsLog!=null);
+		}
 	}
 }
