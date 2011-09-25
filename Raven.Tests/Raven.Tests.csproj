@@ -182,6 +182,7 @@
     <Compile Include="Bugs\LiveProjections\LiveProjectionOnTasks.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNames.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNamesFromTheStronglyTypedType.cs" />
+    <Compile Include="Bugs\MapRedue\Chris.cs" />
     <Compile Include="Bugs\MapRedue\Document.cs" />
     <Compile Include="Bugs\MapRedue\DocumentView.cs" />
     <Compile Include="Bugs\MapRedue\MapReduceIndex.cs" />
