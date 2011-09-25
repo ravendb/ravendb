@@ -153,6 +153,11 @@ namespace Raven.Studio.Models
 			get { return new RefreshDocumentCommand(this); }
 		}
 
+		public ICommand NavigateToDocument
+		{
+			get { return new NavigateToDocumentCommand(); }
+		}
+
 		private class RefreshDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel parent;

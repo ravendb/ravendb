@@ -163,7 +163,9 @@
 							  Margin="12,0,0,12">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
-							<HyperlinkButton Content="{Binding}" />
+							<HyperlinkButton Content="{Binding}"
+											 Command="{Binding NavigateToDocument}"
+											 CommandParameter="{Binding}" />
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>
@@ -177,7 +179,9 @@
 							  Margin="12,0,0,12">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
-							<HyperlinkButton Content="{Binding}" />
+							<HyperlinkButton Content="{Binding}"
+											 Command="{Binding NavigateToDocument}"
+											 CommandParameter="{Binding}" />
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>
