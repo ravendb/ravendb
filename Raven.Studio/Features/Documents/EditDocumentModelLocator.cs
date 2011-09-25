@@ -1,3 +1,4 @@
+using System;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -15,7 +16,14 @@ namespace Raven.Studio.Features.Documents
 
 				asyncDatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccess(document =>
-					                   observable.Value = new EditableDocumentModel(document, asyncDatabaseCommands)
+					                   {
+					                   	if (document == null)
+					                   	{
+					                   		ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + docId, UriKind.Relative));
+					                   		return;
+					                   	}
+					                   	observable.Value = new EditableDocumentModel(document, asyncDatabaseCommands);
+					                   }
 					)
 					.Catch();
 				return observable;
