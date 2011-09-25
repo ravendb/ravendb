@@ -503,12 +503,18 @@ namespace Raven.Tests.Linq
 			public List<OrderItem> Lines { get; set; }
 		}
 
+		private enum Origin
+		{
+			Africa, UnitedStates
+		}
+
 		private class OrderItem
 		{
 			public Guid Id { get; set; }
 			public Guid CustomerId { get; set; }
 			public decimal Cost { get; set; }
 			public decimal Quantity { get; set; }
+			public Origin Country { get; set; }
 		}
 
 		private class DateTimeInfo
@@ -565,6 +571,63 @@ namespace Raven.Tests.Linq
 				{
 					var items = (from item in s.Query<OrderItem>()
 								 where item.Quantity.In(new[] { 3m, 5m })
+								 select item
+									 ).ToArray();
+
+					Assert.Equal(items.Length, 3);
+				}
+			}
+		}
+
+		[Fact]
+		public void Can_Use_Enums_In_Array_In_Where_Clause()
+		{
+			using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+			{
+				store.Initialize();
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new OrderItem { Cost = 1.59m, Quantity = 5, Country=Origin.Africa });
+					s.Store(new OrderItem { Cost = 7.59m, Quantity = 3, Country = Origin.Africa });
+					s.Store(new OrderItem { Cost = 1.59m, Quantity = 4, Country = Origin.UnitedStates });
+					s.Store(new OrderItem { Cost = 1.39m, Quantity = 3, Country = Origin.Africa });
+					s.SaveChanges();
+				}
+
+				using (var s = store.OpenSession())
+				{
+					var items = (from item in s.Query<OrderItem>()
+								 where item.Country.In(new[] { Origin.UnitedStates })
+								 select item
+									 ).ToArray();
+
+					Assert.Equal(items.Length, 1);
+				}
+			}
+		}
+		[Fact]
+		public void Can_Use_Enums_In_IEnumerable_In_Where_Clause()
+		{
+			using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+			{
+				store.Initialize();
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new OrderItem { Cost = 1.59m, Quantity = 5, Country = Origin.Africa });
+					s.Store(new OrderItem { Cost = 7.59m, Quantity = 3, Country = Origin.Africa });
+					s.Store(new OrderItem { Cost = 1.59m, Quantity = 4, Country = Origin.UnitedStates });
+					s.Store(new OrderItem { Cost = 1.39m, Quantity = 3, Country = Origin.Africa });
+					s.SaveChanges();
+				}
+
+				var list = new List<Origin> { Origin.Africa };
+
+				using (var s = store.OpenSession())
+				{
+					var items = (from item in s.Query<OrderItem>()
+								 where item.Country.In(list)
 								 select item
 									 ).ToArray();
 
