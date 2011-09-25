@@ -192,8 +192,19 @@ namespace Raven.Studio.Models
 
 			private void SaveDocument()
 			{
-				var doc = RavenJObject.Parse(document.JsonData);
-				var metadata = RavenJObject.Parse(document.JsonMetadata);
+				RavenJObject doc;
+				RavenJObject metadata;
+
+				try
+				{
+					doc = RavenJObject.Parse(document.JsonData);
+					metadata = RavenJObject.Parse(document.JsonMetadata);
+				}
+				catch (JsonReaderException ex)
+				{
+					new ErrorWindow(ex.Message, string.Empty).Show();
+					return;
+				}
 
 				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
 				databaseCommands.PutAsync(document.Key, document.Etag,
@@ -219,8 +230,15 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				editableDocumentModel.JsonData = RavenJObject.Parse(editableDocumentModel.JsonData).ToString(Formatting.Indented);
-				editableDocumentModel.JsonMetadata = RavenJObject.Parse(editableDocumentModel.JsonMetadata).ToString(Formatting.Indented);
+				try
+				{
+					editableDocumentModel.JsonData = RavenJObject.Parse(editableDocumentModel.JsonData).ToString(Formatting.Indented);
+					editableDocumentModel.JsonMetadata = RavenJObject.Parse(editableDocumentModel.JsonMetadata).ToString(Formatting.Indented);
+				}
+				catch (JsonReaderException ex)
+				{
+					new ErrorWindow(ex.Message, string.Empty).Show();
+				}
 			}
 		}
 	}
