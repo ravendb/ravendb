@@ -105,6 +105,9 @@
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Converters\LastItemInListConverter.cs" />
+    <Compile Include="Models\NotificationLevel.cs" />
+    <Compile Include="Models\Notification.cs" />
     <Compile Include="Models\EditableDocumentModel.cs" />
     <Compile Include="Features\Documents\EditDocumentCommand.cs" />
     <Compile Include="Features\Documents\EditDocumentModelLocator.cs" />
@@ -136,9 +139,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Infrastructure\DictionaryExtensions.cs" />
-    <Compile Include="Infrastructure\EventsBus.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Infrastructure\InvocationExtensions.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -154,7 +154,6 @@
     <Compile Include="Infrastructure\View.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Messages\DatabaseCreated.cs" />
     <Compile Include="Models\ApplicationModel.cs" />
     <Compile Include="Models\DatabaseModel.cs" />
     <Compile Include="Models\ServerModel.cs" />

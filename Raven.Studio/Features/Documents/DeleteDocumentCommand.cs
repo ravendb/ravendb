@@ -2,6 +2,7 @@ using System;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
@@ -10,11 +11,13 @@ namespace Raven.Studio.Features.Documents
 	{
 		private readonly string key;
 		private readonly IAsyncDatabaseCommands databaseCommands;
+		private readonly bool navigateToHome;
 
-		public DeleteDocumentCommand(string key, IAsyncDatabaseCommands databaseCommands)
+		public DeleteDocumentCommand(string key, IAsyncDatabaseCommands databaseCommands, bool navigateToHome)
 		{
 			this.key = key;
 			this.databaseCommands = databaseCommands;
+			this.navigateToHome = navigateToHome;
 		}
 
 		public override void Execute(object parameter)
@@ -26,10 +29,14 @@ namespace Raven.Studio.Features.Documents
 		private void DeleteDocument()
 		{
 			databaseCommands.DeleteDocumentAsync(key)
+				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was deleted", key))))
 				.ContinueOnSuccess(() =>
 				                   {
-									   ApplicationModel.AddNotification(this.GetType(), key + " was successfully deleted.");
-									   // ApplicationModel.Current.Navigate(new Uri("/Home", UriKind.Relative));
+				                   	if(navigateToHome)
+				                   	{
+				                   		var source = new Uri("/Home", UriKind.Relative);
+				                   		ApplicationModel.Current.Navigate(source);
+				                   	}
 				                   })
 								   .Catch();
 		}

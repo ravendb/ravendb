@@ -5,10 +5,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class ApplicationModel : Model
+	public class ApplicationModel
 	{
 		public static ApplicationModel Current { get; private set; }
 
@@ -19,6 +20,7 @@ namespace Raven.Studio.Models
 
 		private ApplicationModel()
 		{
+			Notifications = new BindableCollection<Notification>();
 			Server = new Observable<ServerModel>();
 			var serverModel = new ServerModel();
 			serverModel.Initialize()
@@ -45,33 +47,26 @@ namespace Raven.Studio.Models
 			if (indexOf == -1)
 				return null;
 
-			var options = Application.Current.Host.NavigationState.Substring(indexOf+1).Split(new[] { '&', }, StringSplitOptions.RemoveEmptyEntries);
+			var options = Application.Current.Host.NavigationState.Substring(indexOf + 1).Split(new[] { '&', }, StringSplitOptions.RemoveEmptyEntries);
 
-			return (from option in options 
-					where option.StartsWith(name) && option.Length > name.Length && option[name.Length] == '=' 
+			return (from option in options
+					where option.StartsWith(name) && option.Length > name.Length && option[name.Length] == '='
 					select option.Substring(name.Length + 1)
 					).FirstOrDefault();
 		}
 
-		private static Dictionary<Type, string> notifications = new Dictionary<Type, string>();
-
-		public static void AddNotification(Type type, string message)
+		public void AddNotification(Notification notification)
 		{
-			RemoveNotification(type);
-			notifications.Add(type, message);
+			Notifications.Execute(() =>
+								  {
+									  Notifications.Add(notification);
+									  if (Notifications.Count > 5)
+									  {
+										  Notifications.RemoveAt(0);
+									  }
+								  });
 		}
 
-		public static string GetNotification(Type type)
-		{
-			if (notifications.ContainsKey(type) == false)
-				return null;
-			return notifications[type];
-		}
-
-		public static void RemoveNotification(Type type)
-		{
-			if (type != null && notifications.ContainsKey(type))
-				notifications.Remove(type);
-		}
+		public BindableCollection<Notification> Notifications { get; set; }
 	}
 }

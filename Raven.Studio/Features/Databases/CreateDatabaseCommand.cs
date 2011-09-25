@@ -34,7 +34,6 @@ namespace Raven.Studio.Features.Databases
 
 					databaseCommands.EnsureDatabaseExistsAsync(databaseName)
 						.ContinueOnSuccess(() => addAction.Dispose())
-						.ContinueOnSuccess(() => EventsBus.Notify(new DatabaseCreated{}))
 						.Catch();
 				});
 		}

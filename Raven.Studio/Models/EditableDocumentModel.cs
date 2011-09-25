@@ -12,13 +12,13 @@ using Raven.Json.Linq;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
 	public class EditableDocumentModel : Model
 	{
 		private readonly JsonDocument document;
-		public Observable<string> Notice { get; set; }
 		private string jsonData;
 
 		public EditableDocumentModel(JsonDocument document, IAsyncDatabaseCommands asyncDatabaseCommands)
@@ -27,7 +27,6 @@ namespace Raven.Studio.Models
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 			IsProjection = string.IsNullOrEmpty(document.Key);
 			References = new ObservableCollection<string>();
-			Notice = new Observable<string>();
 			JsonData = document.DataAsJson.ToString(Formatting.Indented);
 			JsonMetadata = document.Metadata.ToString(Formatting.Indented);
 			Metadata = document.Metadata.ToDictionary(x => x.Key, x => x.Value.ToString(Formatting.None));
@@ -48,7 +47,6 @@ namespace Raven.Studio.Models
 		}
 
 		private string jsonMetadata;
-		private string notify;
 		private IAsyncDatabaseCommands asyncDatabaseCommands;
 
 		public string JsonMetadata
@@ -75,11 +73,11 @@ namespace Raven.Studio.Models
 				{
 					if (docOnServer == null)
 					{
-						Notice.Value = "Document " + document.Key + " was deleted on the server";
+						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Key + " was deleted on the server"));
 					}
 					else if (docOnServer.Etag != Etag)
 					{
-						Notice.Value = "Document " + document.Key + " was changed on the server";
+						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Key + " was changed on the server"));
 					}
 				});
 		}
@@ -122,7 +120,7 @@ namespace Raven.Studio.Models
 
 		public ICommand Delete
 		{
-			get { return new DeleteDocumentCommand(this.Key, asyncDatabaseCommands); }
+			get { return new DeleteDocumentCommand(this.Key, asyncDatabaseCommands, navigateToHome: true); }
 		}
 
 		public ICommand Prettify
@@ -158,16 +156,16 @@ namespace Raven.Studio.Models
 				var doc = RavenJObject.Parse(document.JsonData);
 				var metadata = RavenJObject.Parse(document.JsonMetadata);
 
-				document.Notice.Value = "saving document...";
+				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
 				databaseCommands.PutAsync(document.Key, document.Etag,
 										  doc,
 										  metadata)
 					.ContinueOnSuccess(result =>
 					{
-						document.Notice.Value = result.Key + " document saved";
+						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
 						document.Etag = result.ETag;
 					})
-					.Catch(exception => document.Notice.Value = null);
+					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
 			}
 		}
 
@@ -185,11 +183,6 @@ namespace Raven.Studio.Models
 				editableDocumentModel.JsonData = RavenJObject.Parse(editableDocumentModel.JsonData).ToString(Formatting.Indented);
 				editableDocumentModel.JsonMetadata = RavenJObject.Parse(editableDocumentModel.JsonMetadata).ToString(Formatting.Indented);
 			}
-		}
-
-		public override IEnumerable<Type> SubscribeForNotifications()
-		{
-			return new[] {typeof (DeleteDocumentCommand)};
 		}
 	}
 }

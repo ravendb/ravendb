@@ -20,8 +20,6 @@ namespace Raven.Studio.Models
 			: this(DetermineUri())
 		{
 			RefreshRate = TimeSpan.FromMinutes(2);
-
-			EventsBus.Subscribe<DatabaseCreated>(created => ForceTimerTicked());
 		}
 
 		private ServerModel(string url)
