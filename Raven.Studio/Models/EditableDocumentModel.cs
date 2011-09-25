@@ -152,15 +152,17 @@ namespace Raven.Studio.Models
 			{
 				parent.asyncDatabaseCommands.GetAsync(parent.Key)
 					.ContinueOnSuccess(doc =>
-					                   {
-					                   	if (doc == null)
-					                   	{
-					                   		ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + parent.Key,
-					                   		                                          UriKind.Relative));
-					                   		return;
-					                   	}
-					                   	parent.UpdateFromDocument(doc);
-					                   })
+									   {
+										   if (doc == null)
+										   {
+											   ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + parent.Key,
+																						 UriKind.Relative));
+											   return;
+										   }
+
+										   parent.UpdateFromDocument(doc);
+										   ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was refreshed", doc.Key)));
+									   })
 									   .Catch();
 			}
 		}
