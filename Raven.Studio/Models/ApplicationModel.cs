@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Navigation;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -20,7 +21,7 @@ namespace Raven.Studio.Models
 
 		private ApplicationModel()
 		{
-			Notifications = new BindableCollection<Notification>();
+			Notifications = new BindableCollection<Notification>(new PrimaryKeyComparer<Notification>(x=>x.Message));
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel>();
 			var serverModel = new ServerModel();
@@ -42,6 +43,17 @@ namespace Raven.Studio.Models
 				Application.Current.Host.NavigationState = source.ToString();
 			else
 				Deployment.Current.Dispatcher.InvokeAsync(() => Application.Current.Host.NavigationState = source.ToString());
+		}
+
+		public void RegisterOnceForNavigation(Action action)
+		{
+			EventHandler<NavigationStateChangedEventArgs> hostOnNavigationStateChanged = null;
+			hostOnNavigationStateChanged = delegate
+			                               {
+											   Application.Current.Host.NavigationStateChanged-=hostOnNavigationStateChanged;
+			                               		action();
+			                               };
+			Application.Current.Host.NavigationStateChanged += hostOnNavigationStateChanged;
 		}
 
 
@@ -68,7 +80,7 @@ namespace Raven.Studio.Models
 									  {
 										  Notifications.RemoveAt(0);
 									  }
-								  	LastNotification.Value = notification.Message;
+									  LastNotification.Value = notification.Message;
 								  });
 		}
 

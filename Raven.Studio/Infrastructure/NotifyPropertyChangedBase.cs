@@ -61,12 +61,17 @@ namespace Raven.Studio.Infrastructure
 
 		protected void OnPropertyChanged()
 		{
+			var stackTrace = new StackTrace();
+			var name = stackTrace.GetFrame(1).GetMethod().Name.Substring(4);
+
+			OnPropertyChanged(name);
+		}
+
+		protected void OnPropertyChanged(string name)
+		{
 			var handler = PropertyChangedInternal;
 			if (handler == null)
 				return;
-
-			var stackTrace = new StackTrace();
-			var name = stackTrace.GetFrame(1).GetMethod().Name.Substring(4);
 
 			handler(this, new PropertyChangedEventArgs(name));
 		}

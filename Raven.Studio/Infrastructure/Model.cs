@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -11,7 +9,7 @@ namespace Raven.Studio.Infrastructure
 		private DateTime lastRefresh;
 		protected TimeSpan RefreshRate { get; set; }
 
-		public Model()
+		protected Model()
 		{
 			RefreshRate = TimeSpan.FromSeconds(5);
 		}

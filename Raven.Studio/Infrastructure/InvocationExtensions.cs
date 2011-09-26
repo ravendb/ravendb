@@ -61,6 +61,17 @@ namespace Raven.Studio.Infrastructure
 			}).Unwrap();
 		}
 
+		public static Task ContinueOnSuccessInTheUIThread(this Task parent, Action action)
+		{
+			return parent.ContinueOnSuccess(() =>
+			{
+				if (Deployment.Current.Dispatcher.CheckAccess())
+					action();
+				Deployment.Current.Dispatcher.InvokeAsync(action)
+					.Catch();
+			});
+		}
+
 		public static Task ContinueOnSuccessInTheUIThread<T>(this Task<T> parent, Action<T> action)
 		{
 			return parent.ContinueOnSuccess(result =>
