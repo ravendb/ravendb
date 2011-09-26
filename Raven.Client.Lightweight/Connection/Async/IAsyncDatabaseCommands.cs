@@ -203,6 +203,11 @@ namespace Raven.Client.Connection.Async
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>
 		Task<GetResponse[]> MultiGetAsync(GetRequest[] requests);
+
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc
+		/// </summary>
+		Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
 	}
 }
 #endif

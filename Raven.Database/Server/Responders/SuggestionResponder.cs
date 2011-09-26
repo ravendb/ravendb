@@ -32,7 +32,14 @@ namespace Raven.Database.Server.Responders
 		{
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var index = match.Groups[1].Value;
-			
+
+			var indexEtag = Database.GetIndexEtag(index);
+			if (context.MatchEtag(indexEtag))
+			{
+				context.SetStatusToNotModified();
+				return;
+			}
+
 			var term = context.Request.QueryString["term"];
 			var field = context.Request.QueryString["field"];
 
@@ -59,6 +66,7 @@ namespace Raven.Database.Server.Responders
 							};
 
 			var suggestionQueryResult = Database.ExecuteSuggestionQuery(index, query);
+			context.Response.AddHeader("ETag", Database.GetIndexEtag(index).ToString());
 			context.WriteJson(suggestionQueryResult);
 		}
 	}

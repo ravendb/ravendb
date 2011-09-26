@@ -8,6 +8,7 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1239,6 +1240,38 @@ namespace Raven.Database
 			var totalIndexSize = indexes.Sum(file => new FileInfo(file).Length);
 
 			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
+		}
+
+		public Guid GetIndexEtag(string indexName)
+		{
+			Guid lastDocEtag = Guid.Empty;
+			Guid? lastReducedEtag = null;
+			bool isStale = false;
+			int touchCount = 0;
+			TransactionalStorage.Batch(accessor =>
+			{
+				isStale = accessor.Staleness.IsIndexStale(indexName, null, null);
+				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
+				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
+			});
+			var indexDefinition = GetIndexDefinition(indexName);
+			if (indexDefinition == null)
+				return Guid.NewGuid(); // this ensures that we will get the normal reaction of IndexNotFound later on.
+			using (var md5 = MD5.Create())
+			{
+				var list = new List<byte>();
+				list.AddRange(indexDefinition.GetIndexHash());
+				list.AddRange(Encoding.Unicode.GetBytes(indexName));
+				list.AddRange(lastDocEtag.ToByteArray());
+				list.AddRange(BitConverter.GetBytes(touchCount));
+				list.AddRange(BitConverter.GetBytes(isStale));
+				if (lastReducedEtag != null)
+				{
+					list.AddRange(lastReducedEtag.Value.ToByteArray());
+				}
+				return new Guid(md5.ComputeHash(list.ToArray()));
+			}
 		}
 	}
 }

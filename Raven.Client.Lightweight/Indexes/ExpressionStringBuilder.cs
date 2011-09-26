@@ -1204,6 +1204,9 @@ namespace Raven.Client.Indexes
 					case "First":
 					case "FirstOrDefault":
 					case "Single":
+					case "Count":
+					case "Where":
+					case "Sum":
 					case "SingleOrDefault":
 						Out(")");
 						break;
@@ -1229,6 +1232,9 @@ namespace Raven.Client.Indexes
 					return;
 				switch (node.Method.Name)
 				{
+					case "Sum":
+						Out("(Func<dynamic, decimal>)(");
+						break;
 					case "Select":
 						Out("(Func<dynamic, dynamic>)(");
 						break;
@@ -1238,6 +1244,8 @@ namespace Raven.Client.Indexes
 					case "First":
 					case "FirstOrDefault":
 					case "Single":
+					case "Where":
+					case "Count":
 					case "SingleOrDefault":
 						Out("(Func<dynamic, bool>)(");
 						break;
