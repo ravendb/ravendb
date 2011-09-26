@@ -32,16 +32,17 @@ namespace Raven.Studio.Infrastructure.Converters
 			{
 				return new[] { new SolidColorBrush(Colors.Blue), new SolidColorBrush(Colors.Green) };
 			}
-			var count = System.Convert.ToInt32(item.Count);
-			var percent = (count == 0) ? 0 : (count * 1.0 / Maximum * 1.0);
+			Maximum = Math.Max(Maximum, item.Count);
+
+			var percent = (item.Count == 0) ? 0 : (item.Count * 1.0 / Maximum * 1.0);
 			percent = Math.Max(0, percent);
 			percent = Math.Min(1, percent);
 
 			var brush = TemplateColorProvider.Instance.ColorFrom(item.Name);
 
 			var top = (int)(percent * MaximumNumberOfItems);
-			top = Math.Min(top, count);
-			if (count != 0) top = Math.Max(top, 1);
+			top = Math.Min(top, item.Count);
+			if (item.Count != 0) top = Math.Max(top, 1);
 
 			return Enumerable.Range(1, top).Select(x => brush);
 		}
