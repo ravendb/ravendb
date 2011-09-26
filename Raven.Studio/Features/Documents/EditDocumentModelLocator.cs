@@ -24,9 +24,14 @@ namespace Raven.Studio.Features.Documents
 				ApplicationModel.Current.Server.RegisterOnce(() => LoadDocument(observable));
 				return;
 			}
+			
+			ApplicationModel.Current.RegisterOnceForNavigation(() => LoadDocument(observable));
 
 			var asyncDatabaseCommands = serverModel.SelectedDatabase.Value.AsyncDatabaseCommands;
 			var docId = ApplicationModel.Current.GetQueryParam("id");
+			
+			if (docId == null)
+				return;
 
 			asyncDatabaseCommands.GetAsync(docId)
 				.ContinueOnSuccess(document =>

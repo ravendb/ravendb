@@ -113,11 +113,12 @@ namespace Raven.Studio.Models
 				                   	if (items == null)
 				                   		return;
 
-				                   	Related.Set(items.Select(doc => new LinkModel
-				                   	                                {
-				                   	                                	Title = doc.Key,
-				                   	                                	HRef = "/Edit?id=" + doc.Key
-				                   	                                }));
+				                   	var linkModels = items.Select(doc => new LinkModel
+				                   	                                     {
+				                   	                                     	Title = doc.Key,
+				                   	                                     	HRef = "/Edit?id=" + doc.Key
+				                   	                                     }).ToArray();
+				                   	Related.Set(linkModels);
 				                   });
 		}
 
