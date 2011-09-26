@@ -14,8 +14,8 @@
 					 Style="{StaticResource PageStyle}">
 
 	<Grid x:Name="LayoutRoot">
-		<ScrollViewer x:Name="PageScrollViewer"
-					  Style="{StaticResource PageScrollViewerStyle}">
+		<!--<ScrollViewer x:Name="PageScrollViewer"
+					  Style="{StaticResource PageScrollViewerStyle}">-->
 
 			<StackPanel x:Name="ContentStackPanel">
 
@@ -31,7 +31,7 @@
 				<Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" />
 			</StackPanel>
 
-		</ScrollViewer>
+		<!--</ScrollViewer>-->
 	</Grid>
 
 </Infrastructure:View>

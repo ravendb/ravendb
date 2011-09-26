@@ -13,13 +13,7 @@
 				   Text="Documents" />
 
 		<ListBox ItemsSource="{Binding}"
-				 SelectionMode="Extended"
-				 BorderThickness="0">
-			<ListBox.ItemsPanel>
-				<ItemsPanelTemplate>
-					<StackPanel Orientation="Horizontal" />
-				</ItemsPanelTemplate>
-			</ListBox.ItemsPanel>
+				 Style="{StaticResource DocumentList}">
 			<Controls:ContextMenuService.ContextMenu>
 				<Controls:ContextMenu>
 					<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"

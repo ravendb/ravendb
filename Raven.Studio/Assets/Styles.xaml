@@ -1,7 +1,10 @@
 ﻿<ResourceDictionary
   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation">
+  xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
+  xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+  xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+  xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions">
 
   <!-- ******MAIN PAGE STYLES****** -->
   <!-- **************************** -->
@@ -316,11 +319,43 @@
     <Setter Property="HorizontalAlignment" Value="Left"/>
   </Style>
 
-  <!-- Page HyperlinkButton Style -->
+  <!-- Page HyperlinkButton Style -->	
   <Style x:Key="PageHyperlinkButtonStyle" TargetType="HyperlinkButton">
     <Setter Property="TargetName" Value="_new"/>
     <Setter Property="FontSize" Value="12"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
   </Style>
 
+
+	<!-- Documents panel -->
+	<ItemsPanelTemplate x:Key="FluidWrapPanel">
+		<toolkit:WrapPanel>
+			<i:Interaction.Behaviors>
+				<ei:FluidMoveBehavior AppliesTo="Children"
+									  Duration="0:0:0.5">
+					<ei:FluidMoveBehavior.EaseY>
+						<CircleEase EasingMode="EaseInOut" />
+					</ei:FluidMoveBehavior.EaseY>
+					<ei:FluidMoveBehavior.EaseX>
+						<CubicEase EasingMode="EaseInOut" />
+					</ei:FluidMoveBehavior.EaseX>
+				</ei:FluidMoveBehavior>
+			</i:Interaction.Behaviors>
+		</toolkit:WrapPanel>
+	</ItemsPanelTemplate>
+
+	<Style x:Name="DocumentList"
+		   TargetType="ListBox">
+		<Setter Property="ItemsPanel"
+				Value="{StaticResource FluidWrapPanel}" />
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Disabled" />
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Disabled" />
+		<Setter Property="SelectionMode"
+				Value="Extended" />
+		<Setter Property="BorderThickness"
+				Value="0" />
+	</Style>
+	
 </ResourceDictionary>
