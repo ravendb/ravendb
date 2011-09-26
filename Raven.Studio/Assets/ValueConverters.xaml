@@ -5,5 +5,4 @@
 
 	<Converters1:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
 	<Converters1:LastItemInListConverter x:Name="LastItemInList" />
-
 </ResourceDictionary>

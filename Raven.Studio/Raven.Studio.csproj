@@ -101,12 +101,13 @@
     <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Documents\NavigateToDocumentCommand.cs" />
+    <Compile Include="Features\Documents\NavigateToCommand.cs" />
     <Compile Include="Features\Documents\DeleteDocumentCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Infrastructure\Converters\LastItemInListConverter.cs" />
+    <Compile Include="Models\LinkModel.cs" />
     <Compile Include="Models\NotificationLevel.cs" />
     <Compile Include="Models\Notification.cs" />
     <Compile Include="Models\EditableDocumentModel.cs" />

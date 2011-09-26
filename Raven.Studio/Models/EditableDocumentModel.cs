@@ -31,16 +31,16 @@ namespace Raven.Studio.Models
 		{
 			this.document = newdoc;
 			IsProjection = string.IsNullOrEmpty(newdoc.Key);
-			References = new ObservableCollection<string>();
-			Related = new BindableCollection<string>();
+			References = new ObservableCollection<LinkModel>();
+			Related = new BindableCollection<LinkModel>();
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			Metadata = newdoc.Metadata.ToDictionary(x => x.Key, x => x.Value.ToString(Formatting.None));
 			OnEverythingChanged();
 		}
 
-		public ObservableCollection<string> References { get; private set; }
-		public BindableCollection<string> Related { get; private set; }
+		public ObservableCollection<LinkModel> References { get; private set; }
+		public BindableCollection<LinkModel> Related { get; private set; }
 		public bool IsProjection { get; private set; }
 
 		public string DisplayId
@@ -97,7 +97,11 @@ namespace Raven.Studio.Models
 			References.Clear();
 			foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
 			{
-				References.Add(source);
+				References.Add(new LinkModel
+				               {
+								   Title = source,
+								   HRef = "/Edit?id="+source
+				               });
 			}
 		}
 
@@ -109,7 +113,11 @@ namespace Raven.Studio.Models
 				                   	if (items == null)
 				                   		return;
 
-				                   	new Action(() => Related.Set(items.Select(doc => doc.Key))).ViaCurrentDispatcher();
+				                   	Related.Set(items.Select(doc => new LinkModel
+				                   	                                {
+				                   	                                	Title = doc.Key,
+				                   	                                	HRef = "/Edit?id=" + doc.Key
+				                   	                                }));
 				                   });
 		}
 
@@ -151,11 +159,6 @@ namespace Raven.Studio.Models
 		public ICommand Refresh
 		{
 			get { return new RefreshDocumentCommand(this); }
-		}
-
-		public ICommand NavigateToDocument
-		{
-			get { return new NavigateToDocumentCommand(); }
 		}
 
 		private class RefreshDocumentCommand : Command
