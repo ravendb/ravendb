@@ -18,7 +18,7 @@ namespace Raven.Studio.Models
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 
 			Statistics = new Observable<DatabaseStatistics>();
-			RecentDocuments = new BindableCollection<ViewableDocument>();
+			RecentDocuments = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(document => document.Id));
 		}
 
 

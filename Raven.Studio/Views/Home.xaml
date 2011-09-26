@@ -27,7 +27,6 @@
 						   Text="Home page content" />
 
 				<Databases:DatabaseSelectionView />
-				<Stats:ClientActionsLog />
 				<Stats:DatabaseStatisticsView />
 				<Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" />
 			</StackPanel>

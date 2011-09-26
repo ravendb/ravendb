@@ -1,9 +1,12 @@
-﻿using Raven.Client.Connection.Async;
+﻿using System;
+using System.IO;
+using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Studio.Models;
+using System.Linq;
 
 namespace Raven.Studio.Features.Databases
 {
@@ -30,10 +33,12 @@ namespace Raven.Studio.Features.Databases
 					if (string.IsNullOrEmpty(databaseName))
 						return;
 
-					var addAction = serverModel.Starting("Creating database: " + databaseName);
+					if(Path.GetInvalidPathChars().Any(databaseName.Contains))
+						throw new ArgumentException("Cannot create a database with invalid path characters: " + databaseName);
 
+					ApplicationModel.Current.AddNotification(new Notification("Creating database: " + databaseName));
 					databaseCommands.EnsureDatabaseExistsAsync(databaseName)
-						.ContinueOnSuccess(() => addAction.Dispose())
+						.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("Database " + databaseName + " created")))
 						.Catch();
 				});
 		}

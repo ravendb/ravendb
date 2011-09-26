@@ -75,6 +75,7 @@
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\..\ravendb\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.CSharp, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="mscorlib" />
     <Reference Include="Newtonsoft.Json.Silverlight, Version=4.0.2.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\ravendb\SharedLibs\Newtonsoft.Json.Silverlight.dll</HintPath>
@@ -93,6 +94,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Commands\DeleteDocumentsCommand.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
     <Compile Include="Controls\Editors\LinqEditor.cs" />
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
@@ -106,7 +108,13 @@
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\ContextMenu\ContextMenu.cs" />
+    <Compile Include="Infrastructure\ContextMenu\ContextMenuService.cs" />
+    <Compile Include="Infrastructure\ContextMenu\MenuBase.cs" />
+    <Compile Include="Infrastructure\ContextMenu\MenuItem.cs" />
+    <Compile Include="Infrastructure\ContextMenu\Separator.cs" />
     <Compile Include="Infrastructure\Converters\LastItemInListConverter.cs" />
+    <Compile Include="Infrastructure\PrimaryKeyComparer.cs" />
     <Compile Include="Models\LinkModel.cs" />
     <Compile Include="Models\NotificationLevel.cs" />
     <Compile Include="Models\Notification.cs" />
@@ -126,9 +134,6 @@
     <Compile Include="Features\Input\InputModel.cs" />
     <Compile Include="Features\Input\InputWindow.xaml.cs">
       <DependentUpon>InputWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Features\Stats\ClientActionsLog.xaml.cs">
-      <DependentUpon>ClientActionsLog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Stats\DatabaseStatisticsView.xaml.cs">
       <DependentUpon>DatabaseStatisticsView.xaml</DependentUpon>
@@ -217,14 +222,22 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Stats\ClientActionsLog.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Features\Stats\DatabaseStatisticsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Resource Include="Infrastructure\ContextMenu\ContextMenu.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Resource>
+    <Resource Include="Infrastructure\ContextMenu\MenuItem.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Resource>
+    <Resource Include="Infrastructure\ContextMenu\Separator.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Resource>
     <Page Include="Views\DocumentNotFound.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
