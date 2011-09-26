@@ -406,6 +406,38 @@ namespace Raven.Abstractions.Linq
 			}
 
 			/// <summary>
+			/// Redirector for sum operation
+			/// </summary>
+			public decimal Sum(Func<dynamic, decimal> aggregator)
+			{
+				return inner.Sum(aggregator);
+			}
+
+			/// <summary>
+			/// Redirector for sum operation
+			/// </summary>
+			public float Sum(Func<dynamic, float> aggregator)
+			{
+				return inner.Sum(aggregator);
+			}
+
+			/// <summary>
+			/// Redirector for sum operation
+			/// </summary>
+			public double Sum(Func<dynamic, double> aggregator)
+			{
+				return inner.Sum(aggregator);
+			}
+
+			/// <summary>
+			/// Redirector for sum operation
+			/// </summary>
+			public long Sum(Func<dynamic, long> aggregator)
+			{
+				return inner.Sum(aggregator);
+			}
+
+			/// <summary>
 			/// Gets the length.
 			/// </summary>
 			/// <value>The length.</value>

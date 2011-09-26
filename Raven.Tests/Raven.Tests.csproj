@@ -162,6 +162,7 @@
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\BackwardCompatability.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
+    <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\ConflictsWithIIS.cs" />
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
