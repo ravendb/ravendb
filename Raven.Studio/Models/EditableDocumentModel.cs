@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
@@ -32,11 +33,22 @@ namespace Raven.Studio.Models
 			this.document = newdoc;
 			IsProjection = string.IsNullOrEmpty(newdoc.Key);
 			References = new ObservableCollection<LinkModel>();
-			Related = new BindableCollection<LinkModel>();
+			Related = new BindableCollection<LinkModel>(new PrimaryKeyComparer<LinkModel>(model => model.HRef));
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
-			Metadata = newdoc.Metadata.ToDictionary(x => x.Key, x => x.Value.ToString(Formatting.None));
+			UpdateMetadata(newdoc.Metadata);
 			OnEverythingChanged();
+		}
+
+		private void UpdateMetadata(RavenJObject metadataAsJson)
+		{
+			metadata = metadataAsJson.ToDictionary(x => x.Key, x =>
+			                                                   {
+			                                                   	if (x.Value.Type == JTokenType.String)
+			                                                   		return x.Value.Value<string>();
+			                                                   	return x.Value.ToString(Formatting.None);
+			                                                   });
+			OnPropertyChanged("Metadata");
 		}
 
 		public ObservableCollection<LinkModel> References { get; private set; }
@@ -140,7 +152,11 @@ namespace Raven.Studio.Models
 			set { document.LastModified = value; OnPropertyChanged(); }
 		}
 
-		public IDictionary<string, string> Metadata { get; private set; }
+		private IDictionary<string, string> metadata;
+		public IEnumerable<KeyValuePair<string, string>> Metadata
+		{
+			get { return metadata.OrderBy(x=>x.Key); }
+		}
 
 		public ICommand Save
 		{
@@ -228,7 +244,8 @@ namespace Raven.Studio.Models
 					new ErrorWindow(ex.Message, string.Empty).Show();
 					return;
 				}
-
+				
+				document.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
 				databaseCommands.PutAsync(document.Key, document.Etag,
 										  doc,
@@ -253,15 +270,19 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
+				RavenJObject metadata;
 				try
 				{
+					metadata = RavenJObject.Parse(editableDocumentModel.JsonMetadata);
 					editableDocumentModel.JsonData = RavenJObject.Parse(editableDocumentModel.JsonData).ToString(Formatting.Indented);
-					editableDocumentModel.JsonMetadata = RavenJObject.Parse(editableDocumentModel.JsonMetadata).ToString(Formatting.Indented);
+					editableDocumentModel.JsonMetadata = metadata.ToString(Formatting.Indented);
 				}
 				catch (JsonReaderException ex)
 				{
 					new ErrorWindow(ex.Message, string.Empty).Show();
+					return;
 				}
+				editableDocumentModel.UpdateMetadata(metadata);
 			}
 		}
 	}

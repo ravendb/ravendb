@@ -24,8 +24,7 @@ namespace Raven.Studio.Models
 
 		private ServerModel(string url)
 		{
-			Actions = new BindableCollection<string>();
-			Databases = new BindableCollection<DatabaseModel>();
+			Databases = new BindableCollection<DatabaseModel>(new PrimaryKeyComparer<DatabaseModel>(model => model.Name));
 			SelectedDatabase = new Observable<DatabaseModel>();
 
 			documentStore = new DocumentStore
@@ -68,7 +67,6 @@ namespace Raven.Studio.Models
 
 		public Observable<DatabaseModel> SelectedDatabase { get; set; } 
 		public BindableCollection<DatabaseModel> Databases { get; set; }
-		public BindableCollection<string> Actions { get; set; }
 
 		public ICommand CreateNewDatabase
 		{
@@ -99,12 +97,6 @@ namespace Raven.Studio.Models
 			{
 				Path = localPath
 			}.Uri.ToString();
-		}
-
-		public IDisposable Starting(string action)
-		{
-			Actions.Execute(() => Actions.Add(action));
-			return new DisposableAction(() => Actions.Execute(() => Actions.Remove(action)));
 		}
 	}
 }

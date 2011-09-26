@@ -11,6 +11,13 @@ namespace Raven.Studio.Infrastructure
 	{
 		private readonly Dispatcher init = Deployment.Current.Dispatcher;
 
+		private IEqualityComparer<T> comparer;
+
+		public BindableCollection(IEqualityComparer<T> comparer)
+		{
+			this.comparer = comparer;
+		}
+
 		public void Execute(Action action)
 		{
 			if (init.CheckAccess())
@@ -23,8 +30,8 @@ namespace Raven.Studio.Infrastructure
 		{
 			Execute(() =>
 			{
-				var toAdd = items.Except(this).ToArray();
-				var toRemove = this.Except(items).ToArray();
+				var toAdd = items.Except(this, comparer).ToArray();
+				var toRemove = this.Except(items, comparer).ToArray();
 
 				foreach (var remove in toRemove)
 				{

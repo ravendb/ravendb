@@ -13,5 +13,11 @@ namespace Raven.Studio.Infrastructure
 		public abstract void Execute(object parameter);
 
 		public event EventHandler CanExecuteChanged = delegate { };
+
+		public void OnCanExecuteChanged(EventArgs e)
+		{
+			EventHandler handler = CanExecuteChanged;
+			if (handler != null) handler(this, e);
+		}
 	}
 }

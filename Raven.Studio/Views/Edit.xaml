@@ -86,30 +86,25 @@
 
 			<ItemsControl x:Name="Metadata"
 						  Grid.Row="1"
-						  DataContext="{Binding Metadata}"
+						  ItemsSource="{Binding Metadata}"
 						  Margin="12,0,0,12">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
 						<Grid>
 							<Grid.ColumnDefinitions>
-								<ColumnDefinition  />
-								<ColumnDefinition />
-								<ColumnDefinition />
+								<ColumnDefinition MinWidth="75"    />
+								<ColumnDefinition Width="*" />
 							</Grid.ColumnDefinitions>
 
 							<TextBlock Text="{Binding Key}"
 									    />
-							<TextBlock Grid.Column="2"
+							<TextBlock Grid.Column="1"
 									   Text="{Binding Value}"
 									    />
 						</Grid>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
-
-			<TextBlock  Grid.Row="2"
-					   Text="DETAILS"
-					   Margin="12,6,0,6" />
 
 			<Grid Margin="12,12,0,12"
 				  Grid.Row="3">
@@ -121,8 +116,7 @@
 				</Grid.RowDefinitions>
 
 				<Grid.ColumnDefinitions>
-					<ColumnDefinition />
-					<ColumnDefinition  />
+					<ColumnDefinition MinWidth="75" />
 					<ColumnDefinition />
 				</Grid.ColumnDefinitions>
 
@@ -130,13 +124,13 @@
 						   Grid.Row="1" />
 				<TextBlock Text="{Binding Etag}"
 						   Grid.Row="1"
-						   Grid.Column="2" />
+						   Grid.Column="1" />
 
 				<TextBlock Text="Last-Modified"
 						   Grid.Row="2" />
 				<TextBlock Text="{Binding LastModified}"
 						   Grid.Row="2"
-						   Grid.Column="2" />
+						   Grid.Column="1" />
 			</Grid>
 
 			<StackPanel Orientation="Vertical"
