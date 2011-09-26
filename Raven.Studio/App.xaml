@@ -7,7 +7,7 @@
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceDictionary Source="Assets/Brushes.xaml" />
 				<ResourceDictionary Source="Assets/Styles.xaml" />
-				<ResourceDictionary Source="Assets/ValueConverters.xaml" />
+				<ResourceDictionary Source="Assets/Types.xaml" />
 				<ResourceDictionary Source="Features/FeatureActions.xaml" />
 				<ResourceDictionary Source="Infrastructure/ContextMenu/ContextMenu.xaml" />
 				<ResourceDictionary Source="Infrastructure/ContextMenu/MenuItem.xaml" />
