@@ -5,6 +5,7 @@
 	<Application.Resources>
 		<ResourceDictionary>
 			<ResourceDictionary.MergedDictionaries>
+				<ResourceDictionary Source="Assets/Brushes.xaml" />
 				<ResourceDictionary Source="Assets/Styles.xaml" />
 				<ResourceDictionary Source="Assets/ValueConverters.xaml" />
 				<ResourceDictionary Source="Features/FeatureActions.xaml" />
