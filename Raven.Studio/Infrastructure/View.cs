@@ -38,8 +38,20 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
+		public static void UpdateAllFromServer()
+		{
+			foreach (var ctx in CurrentViews.Select(view => view.DataContext).Distinct())
+			{
+				InvokeOnModel(ctx, model => model.ForceTimerTicked());
+			}
+		}
 
 		private static void InvokeTimerTicked(object ctx)
+		{
+			InvokeOnModel(ctx, model => model.TimerTicked());
+		}
+
+		private static void InvokeOnModel(object ctx, Action<Model> action)
 		{
 			var model = ctx as Model;
 			if (model == null)
@@ -52,20 +64,17 @@ namespace Raven.Studio.Infrastructure
 				{
 					PropertyChangedEventHandler observableOnPropertyChanged = null;
 					observableOnPropertyChanged = (sender, args) =>
-					{
-						if (args.PropertyName != "Value")
-							return;
-						observable.PropertyChanged -= observableOnPropertyChanged;
-						InvokeTimerTicked(ctx);
-					};
+					                              {
+					                              	if (args.PropertyName != "Value")
+					                              		return;
+					                              	observable.PropertyChanged -= observableOnPropertyChanged;
+					                              	InvokeOnModel(ctx, action);
+					                              };
 					observable.PropertyChanged += observableOnPropertyChanged;
-					return;
 				}
 			}
-
-			model.TimerTicked();
+			action(model);
 		}
-
 
 
 		// Dependency property that is bound against the DataContext.

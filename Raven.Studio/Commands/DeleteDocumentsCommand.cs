@@ -52,9 +52,17 @@ namespace Raven.Studio.Commands
 			                                                  	Key = id
 			                                                  }).ToArray();
 			ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.BatchAsync(deleteCommandDatas)
-				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification(documentIds.Count > 1
-					? string.Format("{0} documents were deleted", documentIds.Count)
-					: string.Format("Document {0} was deleted", documentIds.First()))));
+				.ContinueOnSuccessInTheUIThread(() =>
+				                   {
+				                   	View.UpdateAllFromServer();
+				                   	ApplicationModel.Current.AddNotification(new Notification(documentIds.Count > 1
+				                   	                                                          	? string.Format(
+				                   	                                                          		"{0} documents were deleted",
+				                   	                                                          		documentIds.Count)
+				                   	                                                          	: string.Format(
+				                   	                                                          		"Document {0} was deleted",
+				                   	                                                          		documentIds.First())));
+				                   });
 		}
 
 		private static ListBox GetList(object parameter)
