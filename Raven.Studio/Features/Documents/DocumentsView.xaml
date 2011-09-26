@@ -4,7 +4,8 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:Controls="clr-namespace:System.Windows.Controls"
-			mc:Ignorable="d">
+             xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+             xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions" mc:Ignorable="d">
 
 	<StackPanel>
 
@@ -24,7 +25,13 @@
 									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 				</Controls:ContextMenu>
 			</Controls:ContextMenuService.ContextMenu>
-			
+			<i:Interaction.Triggers>
+				<ei:KeyTrigger Key="Delete">
+					<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+				</ei:KeyTrigger>
+			</i:Interaction.Triggers>
+
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid Width="120"

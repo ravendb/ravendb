@@ -3,13 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Controls;
+using System.Windows.Interactivity;
 using Raven.Abstractions.Commands;
-using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -63,6 +61,10 @@ namespace Raven.Studio.Commands
 		{
 			if (parameter == null)
 				return null;
+			var attachedObject = parameter as IAttachedObject;
+			if (attachedObject != null)
+				return (ListBox) attachedObject.AssociatedObject;
+
 			var menuItem = (MenuItem) parameter;
 			var contextMenu = (ContextMenu) menuItem.Parent;
 			if (contextMenu == null)
