@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Interop;
-using System.Windows.Navigation;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 
@@ -13,10 +10,16 @@ namespace Raven.Studio.Models
 	public class ApplicationModel
 	{
 		public static ApplicationModel Current { get; private set; }
+		private static string threasSafeNavigationState;
 
 		static ApplicationModel()
 		{
 			Current = new ApplicationModel();
+			threasSafeNavigationState = Application.Current.Host.NavigationState;
+			Application.Current.Host.NavigationStateChanged += (sender, args) =>
+			{
+				threasSafeNavigationState = args.NewNavigationState;
+			};
 		}
 
 		private ApplicationModel()
@@ -59,11 +62,11 @@ namespace Raven.Studio.Models
 
 		public string GetQueryParam(string name)
 		{
-			var indexOf = Application.Current.Host.NavigationState.IndexOf('?');
+			var indexOf = threasSafeNavigationState.IndexOf('?');
 			if (indexOf == -1)
 				return null;
 
-			var options = Application.Current.Host.NavigationState.Substring(indexOf + 1).Split(new[] { '&', }, StringSplitOptions.RemoveEmptyEntries);
+			var options = threasSafeNavigationState.Substring(indexOf + 1).Split(new[] { '&', }, StringSplitOptions.RemoveEmptyEntries);
 
 			return (from option in options
 					where option.StartsWith(name) && option.Length > name.Length && option[name.Length] == '='
