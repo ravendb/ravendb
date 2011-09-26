@@ -3,8 +3,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
     xmlns:Commands="clr-namespace:Raven.Studio.Commands">
-	
+
+	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
 	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />
+	
 	<Converters:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
 	<Converters:LastItemInListConverter x:Name="LastItemInList" />
 </ResourceDictionary>

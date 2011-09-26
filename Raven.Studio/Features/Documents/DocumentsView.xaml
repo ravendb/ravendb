@@ -22,9 +22,12 @@
 			</ListBox.ItemsPanel>
 			<Controls:ContextMenuService.ContextMenu>
 				<Controls:ContextMenu>
-					<Controls:MenuItem Header="Delete"
-									  Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
+					<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
+									  Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
 									  CommandParameter="{Binding RelativeSource={RelativeSource Self}}"/>
+					<Controls:MenuItem Header="Delete"
+									   Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
+									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 				</Controls:ContextMenu>
 			</Controls:ContextMenuService.ContextMenu>
 			
