@@ -1,4 +1,5 @@
-﻿<UserControl x:Class="Raven.Studio.Features.Indexes.EditIndexView"
+﻿<UserControl x:Name="this"
+			 x:Class="Raven.Studio.Features.Indexes.EditIndexView"
 			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
@@ -34,16 +35,41 @@
 						 Text="{Binding Name, Mode=TwoWay}"
 						 Margin="0 0 0 8" />
 
-				<TextBlock Text="map"
-						   Grid.Row="1" />
-				<Editors:LinqEditor Grid.Row="1"
-									Grid.Column="1"
-									Text="{Binding Map, Mode=TwoWay}" />
-
-				<sdk:GridSplitter Grid.Row="2"
-								  Grid.ColumnSpan="2"
-								  Background="Transparent"
-								  HorizontalAlignment="Stretch" />
+				<ItemsControl ItemsSource="{Binding Maps}"
+							  Grid.Row="1" Grid.ColumnSpan="2">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="60" />
+									<ColumnDefinition Width="*" />
+								</Grid.ColumnDefinitions>
+								
+								<TextBlock Text="map" />
+								<StackPanel Orientation="Horizontal"
+											VerticalAlignment="Top"
+											HorizontalAlignment="Right"
+											Margin="0,0,4,0">
+									<Button x:Name="AddMap"
+											Style="{StaticResource FormButton}"
+											ToolTipService.ToolTip="Add map."
+											Content="+"
+											Command="{Binding Path=DataContext.AddMap, ElementName=this}" />
+									<Button x:Name="RemoveMap"
+											Style="{StaticResource FormButton}"
+											ToolTipService.ToolTip="Remove map."
+											Content="-"
+											Command="{Binding Path=DataContext.RemoveMap, ElementName=this}"
+											CommandParameter="{Binding}" />
+								</StackPanel>
+								
+								<Editors:LinqEditor Grid.Column="1"
+													Text="{Binding Text, Mode=TwoWay}"
+													Height="100" />
+							</Grid>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
 
 				<!--<TextBlock Text="reduce"
 						   Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}"
