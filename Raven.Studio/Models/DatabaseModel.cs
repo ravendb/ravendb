@@ -18,7 +18,7 @@ namespace Raven.Studio.Models
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 
 			Statistics = new Observable<DatabaseStatistics>();
-			Collections = new BindableCollection<CollectionModel>();
+			Collections = new DatabaseCollectionsModel(asyncDatabaseCommands);
 			RecentDocuments = new BindableCollection<ViewableDocument>();
 		}
 
@@ -40,24 +40,18 @@ namespace Raven.Studio.Models
 
 		
 		public Observable<DatabaseStatistics> Statistics { get; set; }
-		public BindableCollection<CollectionModel> Collections { get; set; }
 		public BindableCollection<ViewableDocument> RecentDocuments { get; set; }
-
+		public DatabaseCollectionsModel Collections { get; set; }
 		protected override Task TimerTickedAsync()
 		{
 			return asyncDatabaseCommands.GetStatisticsAsync()
 				.ContinueOnSuccess(stats => Statistics.Value = stats)
-				.ContinueWith(task => asyncDatabaseCommands.GetDocumentsAsync(0, 15)
+				.ContinueWith(task => asyncDatabaseCommands.GetDocumentsAsync(GetSkipCount(), 15)
 				                      	.ContinueOnSuccess(
 				                      		docs => RecentDocuments.Match(docs.Select(x => new ViewableDocument(x)).ToArray())))
 				.Unwrap()
 				.ContinueWith(task => asyncDatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
-						.ContinueOnSuccess(collections => Collections.Match(collections.Select(col=>new	CollectionModel
-						{
-							Name = col.Name,
-							Count = col.Count
-						}).ToArray()))
-
+						.ContinueOnSuccess(collections => Collections.Update(collections))
 				).Unwrap();
 		}
 
