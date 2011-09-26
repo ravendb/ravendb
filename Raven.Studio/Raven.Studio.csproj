@@ -100,18 +100,22 @@
     <Compile Include="Features\Collections\CollectionsListView.xaml.cs">
       <DependentUpon>CollectionsListView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Collections\CollectionView.xaml.cs">
+      <DependentUpon>CollectionView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Databases\CreateDatabaseCommand.cs" />
     <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Documents\NavigateToDocumentCommand.cs" />
-    <Compile Include="Features\Documents\DeleteDocumentCommand.cs" />
+    <Compile Include="Commands\NavigateToDocumentCommand.cs" />
+    <Compile Include="Commands\DeleteDocumentCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Infrastructure\Converters\LastItemInListConverter.cs" />
     <Compile Include="Infrastructure\Converters\MagnitudeToListConverter.cs" />
     <Compile Include="Models\CollectionModel.cs" />
+    <Compile Include="Models\DatabaseCollectionsModel.cs" />
     <Compile Include="Models\NotificationLevel.cs" />
     <Compile Include="Models\Notification.cs" />
     <Compile Include="Models\EditableDocumentModel.cs" />
@@ -201,6 +205,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Collections\CollectionsListView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Collections\CollectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
