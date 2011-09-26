@@ -64,7 +64,7 @@
 								</StackPanel>
 								
 								<Editors:LinqEditor Grid.Column="1"
-													Text="{Binding Mode=TwoWay}"
+													Text="{Binding Text, Mode=TwoWay}"
 													Height="100" />
 							</Grid>
 						</DataTemplate>

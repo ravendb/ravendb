@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
@@ -15,7 +16,6 @@ namespace Raven.Studio.Models
 		private IndexDefinition index;
 		private string name;
 
-
 		public IndexDefinitionModel(IndexDefinition index, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
@@ -26,7 +26,7 @@ namespace Raven.Studio.Models
 		{
 			this.index = indexDefinition;
 			this.name = index.Name;
-			this.Maps = new ObservableCollection<string>(index.Maps);
+			this.Maps = new ObservableCollection<MapItem>(index.Maps.Select(x => new MapItem{Text = x}));
 						
 			OnEverythingChanged();
 		}
@@ -41,7 +41,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public ObservableCollection<string> Maps { get; private set; }
+		public ObservableCollection<MapItem> Maps { get; private set; }
 
 		public ICommand AddMap
 		{
@@ -64,7 +64,7 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				index.Maps.Add(string.Empty);
+				index.Maps.Add(new MapItem());
 			}
 		}
 
@@ -79,12 +79,17 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				var map = parameter as string;
+				var map = parameter as MapItem;
 				if (map == null || index.Maps.Contains(map) == false)
 					return;
 
 				index.Maps.Remove(map);
 			}
+		}
+
+		public class MapItem
+		{
+			public string Text { get; set; }
 		}
 	}
 }
