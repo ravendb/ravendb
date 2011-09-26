@@ -2,11 +2,12 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections" mc:Ignorable="d"
     DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
-    
-    <Grid x:Name="LayoutRoot" Background="White">
-      <Collections:CollectionsListView DataContext="{Binding Collections}"/>
-    </Grid>
+
+  <StackPanel  DataContext="{Binding Collections}">
+    <Collections:CollectionsListView />
+    <Collections:CollectionView/>
+  </StackPanel>
 </Infrastructure:View>

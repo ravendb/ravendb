@@ -17,7 +17,7 @@
 
 			<navigation:Frame x:Name="ContentFrame"
 							  Style="{StaticResource ContentFrameStyle}"
-							  Source="/Home"
+							  Source="/Collections"
 							  Navigated="ContentFrame_Navigated"
 							  NavigationFailed="ContentFrame_NavigationFailed">
 				<navigation:Frame.UriMapper>

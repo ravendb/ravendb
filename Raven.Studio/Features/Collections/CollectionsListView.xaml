@@ -6,7 +6,7 @@
 
   <ListBox Height="50"
       ItemsSource="{Binding Collections}"
-      SelectedItem="{Binding Selected}"
+      SelectedItem="{Binding Path=SelectedCollection.Value, Mode=TwoWay}"
       BorderThickness="0">
     <ListBox.ItemsPanel>
       <ItemsPanelTemplate>

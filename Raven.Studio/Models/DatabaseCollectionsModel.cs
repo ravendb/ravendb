@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 
@@ -9,25 +8,26 @@ namespace Raven.Studio.Models
 	{
 		private readonly IAsyncDatabaseCommands databaseCommands;
 		public BindableCollection<CollectionModel> Collections { get; set; }
-		public Observable<CollectionModel> Selected { get; set; }
+		public Observable<CollectionModel> SelectedCollection { get; set; }
 
 		public DatabaseCollectionsModel(IAsyncDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
 			Collections = new BindableCollection<CollectionModel>(new PrimaryKeyComparer<CollectionModel>(model=>model.Name));
-			Selected = new Observable<CollectionModel>();
+			SelectedCollection = new Observable<CollectionModel>();
 		}
 
 		public void Update(NameAndCount[] collections)
 		{
-			Collections.Match(collections.OrderByDescending(x => x.Count).Select(col => new CollectionModel(databaseCommands)
+			var collectionModels = collections.OrderByDescending(x => x.Count).Select(col => new CollectionModel(databaseCommands)
 			{
 				Name = col.Name,
 				Count = col.Count
-			}).ToArray());
+			}).ToArray();
+			Collections.Match(collectionModels);
 
-			if (Selected.Value == null)
-				Selected.Value = Collections.FirstOrDefault();
+			if (SelectedCollection.Value == null)
+				SelectedCollection.Value = collectionModels.FirstOrDefault();
 		}
 	}
 }
