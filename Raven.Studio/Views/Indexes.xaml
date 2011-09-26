@@ -6,6 +6,6 @@
 					 DataContext="{Binding Source={StaticResource IndexDefinitionModelLocator}}"
 					 Title="Indexes Page">
 	<Grid>
-		<Indexes:EditIndexView DataContext="{Binding Current}"/>
+		<Indexes:EditIndexView DataContext="{Binding Path=Current.Value}"/>
 	</Grid>
 </Infrastructure:View>
