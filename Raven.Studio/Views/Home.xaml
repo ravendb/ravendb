@@ -14,24 +14,19 @@
 					 Style="{StaticResource PageStyle}">
 
 	<Grid x:Name="LayoutRoot">
-		<!--<ScrollViewer x:Name="PageScrollViewer"
-					  Style="{StaticResource PageScrollViewerStyle}">-->
+		<StackPanel x:Name="ContentStackPanel">
 
-			<StackPanel x:Name="ContentStackPanel">
+			<TextBlock x:Name="HeaderText"
+						Style="{StaticResource HeaderTextStyle}"
+						Text="Home" />
+			<TextBlock x:Name="ContentText"
+						Style="{StaticResource ContentTextStyle}"
+						Text="Home page content" />
 
-				<TextBlock x:Name="HeaderText"
-						   Style="{StaticResource HeaderTextStyle}"
-						   Text="Home" />
-				<TextBlock x:Name="ContentText"
-						   Style="{StaticResource ContentTextStyle}"
-						   Text="Home page content" />
-
-				<Databases:DatabaseSelectionView />
-				<Stats:DatabaseStatisticsView />
-				<Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" />
-			</StackPanel>
-
-		<!--</ScrollViewer>-->
+			<Databases:DatabaseSelectionView />
+			<Stats:DatabaseStatisticsView />
+			<Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" />
+		</StackPanel>
 	</Grid>
 
 </Infrastructure:View>
