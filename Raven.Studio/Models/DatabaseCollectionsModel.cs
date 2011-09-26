@@ -14,7 +14,7 @@ namespace Raven.Studio.Models
 		public DatabaseCollectionsModel(IAsyncDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
-			Collections = new BindableCollection<CollectionModel>();
+			Collections = new BindableCollection<CollectionModel>(new PrimaryKeyComparer<CollectionModel>(model=>model.Name));
 			Selected = new Observable<CollectionModel>();
 		}
 

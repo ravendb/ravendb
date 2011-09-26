@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {

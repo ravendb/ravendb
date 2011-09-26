@@ -37,7 +37,7 @@ namespace Raven.Studio.Models
 		public CollectionModel(IAsyncDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
-			Documents = new BindableCollection<ViewableDocument>();
+			Documents = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(doc=>doc.Id));
 		}
 
 		protected override System.Threading.Tasks.Task TimerTickedAsync()

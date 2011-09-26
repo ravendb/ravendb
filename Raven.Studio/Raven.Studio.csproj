@@ -113,10 +113,8 @@
     <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Commands\NavigateToDocumentCommand.cs" />
     <Compile Include="Commands\DeleteDocumentCommand.cs" />
     <Compile Include="Features\Documents\NavigateToCommand.cs" />
-    <Compile Include="Features\Documents\DeleteDocumentCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
@@ -233,7 +231,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Assets\ValueConverters.xaml">
+    <Page Include="Assets\Types.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
