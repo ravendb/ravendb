@@ -16,6 +16,16 @@ namespace Raven.Studio.Infrastructure
 			RefreshRate = TimeSpan.FromSeconds(5);
 		}
 
+		public int GetSkipCount()
+		{
+			var queryParam = ApplicationModel.Current.GetQueryParam("skip");
+			if (string.IsNullOrEmpty(queryParam))
+				return 0;
+			int result;
+			int.TryParse(queryParam, out result);
+			return result;
+		}
+
 		internal void ForceTimerTicked()
 		{
 			lastRefresh = DateTime.MinValue;
