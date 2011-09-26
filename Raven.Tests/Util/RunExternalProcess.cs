@@ -126,11 +126,11 @@ namespace Raven.Tests.Util
 			return new PutCommandData()
 			{
 				Document = RavenJObject.FromObject(new Tuple<string, string>("hello", "world")),
-				Metadata = new RavenJObject(new KeyValuePair<string, RavenJToken>[]
+				Metadata = new RavenJObject
 				{
-					new KeyValuePair<string, RavenJToken>("Raven-Entity-Name", new RavenJValue("TuplesOfStringsOfStrings")), 
-					new KeyValuePair<string, RavenJToken>("Raven-Clr-Type", new RavenJValue("System.Tuple`2[[System.String, mscorlib][System.String, mscorlib]], mscorlib")), 
-				})
+					{"Raven-Entity-Name", new RavenJValue("TuplesOfStringsOfStrings")},
+					{"Raven-Clr-Type", new RavenJValue("System.Tuple`2[[System.String, mscorlib][System.String, mscorlib]], mscorlib")}
+				}
 			};
 		}
 

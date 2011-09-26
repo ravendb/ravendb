@@ -150,28 +150,33 @@ namespace Raven.Database.Indexing
 
 		private static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
 		{
-			return new RavenJObject(
-				fieldsToFetch
-					.SelectMany(name => document.GetFields(name) ?? new Field[0])
-					.Where(x => x != null)
-					.Where(
-						x =>
-						x.Name().EndsWith("_IsArray") == false && x.Name().EndsWith("_Range") == false &&
-						x.Name().EndsWith("_ConvertToJson") == false)
-					.Select(fld => CreateProperty(fld, document))
-					.GroupBy(x => x.Key)
-					.Select(g =>
+			var documentFromFields = new RavenJObject();
+			var q = fieldsToFetch
+				.SelectMany(name => document.GetFields(name) ?? new Field[0])
+				.Where(x => x != null)
+				.Where(
+					x =>
+					x.Name().EndsWith("_IsArray") == false && 
+					x.Name().EndsWith("_Range") == false &&
+					x.Name().EndsWith("_ConvertToJson") == false)
+				.Select(fld => CreateProperty(fld, document))
+				.GroupBy(x => x.Key)
+				.Select(g =>
+				{
+					if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
 					{
-						if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
-						{
-							return g.First();
-						}
-						return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray(g.Select(x => x.Value)));
-					})
-				);
+						return g.First();
+					}
+					return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray(g.Select(x => x.Value)));
+				});
+			foreach (var keyValuePair in q)
+			{
+				documentFromFields.Add(keyValuePair.Key, keyValuePair.Value);
+			}
+			return documentFromFields;
 		}
 
-	    private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
+		private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
 		{
 			var stringValue = fld.StringValue();
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)

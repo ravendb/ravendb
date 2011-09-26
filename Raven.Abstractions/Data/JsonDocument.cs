@@ -22,7 +22,7 @@ namespace Raven.Abstractions.Data
 		public JsonDocument()
 		{
 			DataAsJson = new RavenJObject();
-			Metadata = new RavenJObject();
+			Metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase);
 		}
 		/// <summary>
 		/// 	Gets or sets the document data as json.

@@ -187,6 +187,7 @@
     <Compile Include="Bugs\MapRedue\DocumentView.cs" />
     <Compile Include="Bugs\MapRedue\MapReduceIndex.cs" />
     <Compile Include="Bugs\Matthew.cs" />
+    <Compile Include="Bugs\MetadataBugs.cs" />
     <Compile Include="Bugs\MetadataIssues.cs" />
     <Compile Include="Bugs\Metadata\Querying.cs" />
     <Compile Include="Bugs\MultiMap\Errors.cs" />

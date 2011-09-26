@@ -9,6 +9,7 @@ namespace Raven.Json.Linq
 {
 	internal class DictionaryWithParentSnapshot : IDictionary<string, RavenJToken>
 	{
+		private readonly IEqualityComparer<string> comparer;
 		private static readonly RavenJToken DeletedMarker = new RavenJValue("*DeletedMarker*", JTokenType.Null);
 
 		private readonly DictionaryWithParentSnapshot parentSnapshot;
@@ -17,14 +18,15 @@ namespace Raven.Json.Linq
 
 		protected IDictionary<string, RavenJToken> LocalChanges { get; private set; }
 
-		public DictionaryWithParentSnapshot()
+		public DictionaryWithParentSnapshot(IEqualityComparer<string> comparer)
 		{
-			LocalChanges = new Dictionary<string, RavenJToken>();
+			this.comparer = comparer;
+			LocalChanges = new Dictionary<string, RavenJToken>(comparer);
 		}
 
 		private DictionaryWithParentSnapshot(DictionaryWithParentSnapshot previous)
 		{
-			LocalChanges = new Dictionary<string, RavenJToken>();
+			LocalChanges = new Dictionary<string, RavenJToken>(previous.comparer);
 			parentSnapshot = previous;
 		}
 
@@ -238,6 +240,8 @@ namespace Raven.Json.Linq
 		{
 			get { return false; }
 		}
+
+		public bool CaseInsensitivePropertyNames { get; set; }
 
 		public DictionaryWithParentSnapshot CreateSnapshot()
 		{
