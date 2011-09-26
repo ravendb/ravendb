@@ -28,13 +28,7 @@ namespace Raven.Studio.Features.Documents
 		Brush fill;
 		public Brush Fill
 		{
-			get
-			{
-
-				if(fill == null)
-					fill = TemplateColorProvider.Instance.ColorFrom(CollectionType);
-				return fill;
-			}
+			get { return fill ?? (fill = TemplateColorProvider.Instance.ColorFrom(CollectionType)); }
 		}
 
 		public ICommand Edit

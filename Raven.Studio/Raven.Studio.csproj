@@ -97,6 +97,9 @@
     <Compile Include="Controls\Editors\LinqEditor.cs" />
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
     <Compile Include="Controls\Editors\XamlEditor.cs" />
+    <Compile Include="Features\Collections\CollectionsListView.xaml.cs">
+      <DependentUpon>CollectionsListView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Databases\CreateDatabaseCommand.cs" />
     <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
@@ -107,6 +110,8 @@
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Infrastructure\Converters\LastItemInListConverter.cs" />
+    <Compile Include="Infrastructure\Converters\MagnitudeToListConverter.cs" />
+    <Compile Include="Models\CollectionModel.cs" />
     <Compile Include="Models\NotificationLevel.cs" />
     <Compile Include="Models\Notification.cs" />
     <Compile Include="Models\EditableDocumentModel.cs" />
@@ -158,6 +163,9 @@
     <Compile Include="Models\ApplicationModel.cs" />
     <Compile Include="Models\DatabaseModel.cs" />
     <Compile Include="Models\ServerModel.cs" />
+    <Compile Include="Views\Collections.xaml.cs">
+      <DependentUpon>Collections.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\DocumentNotFound.xaml.cs">
       <DependentUpon>DocumentNotFound.xaml</DependentUpon>
     </Compile>
@@ -192,6 +200,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Features\Collections\CollectionsListView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Databases\DatabaseSelectionView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -223,6 +235,10 @@
     <Page Include="Features\Stats\DatabaseStatisticsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Collections.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\DocumentNotFound.xaml">
       <SubType>Designer</SubType>
