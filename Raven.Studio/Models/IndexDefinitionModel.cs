@@ -3,21 +3,17 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
-using Newtonsoft.Json;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
 	public class IndexDefinitionModel : Model
 	{
-		private IAsyncDatabaseCommands asyncDatabaseCommands;
+		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private IndexDefinition index;
-		private string name;
-		private string reduce;
-		private string transformResults;
 
 		public IndexDefinitionModel(IndexDefinition index, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
@@ -28,10 +24,7 @@ namespace Raven.Studio.Models
 		private void UpdateFromDocument(IndexDefinition indexDefinition)
 		{
 			this.index = indexDefinition;
-			this.name = index.Name;
 			this.Maps = new ObservableCollection<MapItem>(index.Maps.Select(x => new MapItem{Text = x}));
-			this.reduce = index.Reduce;
-			this.transformResults = index.TransformResults;
 
 			this.Fields = new ObservableCollection<FieldProperties>(index.Fields.Select(x => new FieldProperties { Name = x }));
 			CreateOrEditField(index.Indexes, (f, i) => f.Indexing = i);
@@ -40,6 +33,29 @@ namespace Raven.Studio.Models
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
 
 			OnEverythingChanged();
+		}
+
+		public void UpdateIndex()
+		{
+			index.Map = Maps.Select(x => x.Text).FirstOrDefault();
+			index.Maps = new HashSet<string>(Maps.Select(x => x.Text));
+			UpdateFields();
+		}
+
+		private void UpdateFields()
+		{
+			index.Indexes.Clear();
+			index.Stores.Clear();
+			index.SortOptions.Clear();
+			index.Analyzers.Clear();
+			foreach (var item in Fields.Where(item => item.Name != null))
+			{
+				index.Indexes[item.Name] = item.Indexing;
+				index.Stores[item.Name] = item.Storage;
+				index.SortOptions[item.Name] = item.Sort;
+				index.Analyzers[item.Name] = item.Analyzer;
+			}
+			index.RemoveDefaultValues();
 		}
 
 		void CreateOrEditField<T>(IDictionary<string, T> dictionary, Action<FieldProperties, T> setter)
@@ -61,30 +77,30 @@ namespace Raven.Studio.Models
 
 		public string Name
 		{
-			get { return name; }
+			get { return index.Name; }
 			set
 			{
-				name = value;
+				index.Name = value;
 				OnPropertyChanged();
 			}
 		}
 
 		public string Reduce
 		{
-			get { return reduce; }
+			get { return index.Reduce; }
 			set
 			{
-				reduce = value;
+				index.Reduce = value;
 				OnPropertyChanged();
 			}
 		}
 
 		public string TransformResults
 		{
-			get { return transformResults; }
+			get { return index.TransformResults; }
 			set
 			{
-				transformResults = value;
+				index.TransformResults = value;
 				OnPropertyChanged();
 			}
 		}
@@ -132,6 +148,11 @@ namespace Raven.Studio.Models
 		public ICommand RemoveField
 		{
 			get { return new RemoveFieldCommand(this); }
+		}
+
+		public ICommand SaveIndex
+		{
+			get { return new SaveIndexCommand(this, asyncDatabaseCommands); }
 		}
 
 		public class AddMapCommand : Command
@@ -262,7 +283,28 @@ namespace Raven.Studio.Models
 			}
 		}
 
-#endregion Commands
+		public class SaveIndexCommand : Command
+		{
+			private readonly IndexDefinitionModel index;
+			private readonly IAsyncDatabaseCommands databaseCommands;
+
+			public SaveIndexCommand(IndexDefinitionModel index, IAsyncDatabaseCommands databaseCommands)
+			{
+				this.index = index;
+				this.databaseCommands = databaseCommands;
+			}
+
+			public override void Execute(object parameter)
+			{
+				index.UpdateIndex();
+				ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
+				databaseCommands.PutIndexAsync(index.Name, index.index, true)
+					.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("index " + index.Name + " saved")))
+					.Catch();
+			}
+		}
+
+		#endregion Commands
 
 		public class MapItem
 		{

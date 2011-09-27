@@ -26,6 +26,7 @@
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="*" />
+					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
 				<TextBlock Text="Name" />
@@ -242,7 +243,17 @@
 								  Visibility="{Binding Fields, Converter={StaticResource HiddenWhenEmpty}}"
 								  Background="Transparent"
 								  HorizontalAlignment="Stretch" />
-
+			
+				<StackPanel Grid.Row="10"
+							Grid.Column="2"
+							HorizontalAlignment="Right">
+					<HyperlinkButton x:Name="Save"
+									 HorizontalAlignment="Left"
+									 Margin="4 0 0 0"
+									 ToolTipService.ToolTip="Save Index"
+									 Content="Save"
+									 Command="{Binding SaveIndex}" />
+				</StackPanel>
 			</Grid>
 		</ScrollViewer>
 	</Grid>
