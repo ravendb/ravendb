@@ -16,6 +16,7 @@ using System.Threading;
 using System.Linq;
 using Newtonsoft.Json;
 using NLog;
+using NLog.Config;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -29,6 +30,7 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
+using Raven.Database.Util;
 
 namespace Raven.Database.Server
 {
@@ -91,6 +93,8 @@ namespace Raven.Database.Server
 
 		public HttpServer(IRavenHttpConfiguration configuration, DocumentDatabase resourceStore)
 		{
+			RegisterHttpEndpointTarget();
+
 			DefaultResourceStore = resourceStore;
 			DefaultConfiguration = configuration;
 
@@ -116,6 +120,13 @@ namespace Raven.Database.Server
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
 			RemoveTenantDatabase.Occured.Subscribe(TenantDatabaseRemoved);
+		}
+
+		public static void RegisterHttpEndpointTarget()
+		{
+			Type type;
+			if (ConfigurationItemFactory.Default.Targets.TryGetDefinition("HttpEndpoint", out type) == false)
+				ConfigurationItemFactory.Default.Targets.RegisterDefinition("HttpEndpoint", typeof(BoundedMemoryTarget));
 		}
 
 

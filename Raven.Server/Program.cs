@@ -25,6 +25,7 @@ namespace Raven.Server
 	{
 		private static void Main(string[] args)
 		{
+			HttpServer.RegisterHttpEndpointTarget();
 			if (RunningInInteractiveMode())
 			{
 				try
