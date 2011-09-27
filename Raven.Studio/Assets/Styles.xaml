@@ -46,7 +46,7 @@
   <Style x:Key="ContentFrameStyle" TargetType="navigation:Frame">
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="BorderBrush" Value="Transparent"/>
-    <Setter Property="Padding" Value="58,15,58,15"/>
+    <Setter Property="Padding" Value="0,15,0,15"/>
     <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
   </Style>
@@ -362,6 +362,17 @@
 				Value="0" />
 	</Style>
 
+	<Style x:Name="FluidList"
+		   TargetType="ItemsControl">
+		<Setter Property="ItemsPanel"
+				Value="{StaticResource FluidWrapPanel}" />
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Disabled" />
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Disabled" />
+		<Setter Property="BorderThickness"
+				Value="0" />
+	</Style>
 
 	<!-- Form Styles -->
 	<Style x:Key="FormButton"
@@ -478,6 +489,12 @@
 		   TargetType="Editors:LinqEditor">
 		<Setter Property="MinHeight"
 				Value="100" />
+	</Style>
+
+	<Style x:Key="PagePadding"
+		   TargetType="Grid">
+		<Setter Property="Margin"
+				Value="58,0,58,0" />
 	</Style>
 
 </ResourceDictionary>

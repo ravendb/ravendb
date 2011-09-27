@@ -10,7 +10,7 @@
 					  VerticalScrollBarVisibility="Auto"
 					  HorizontalScrollBarVisibility="Auto">
 
-			<Grid>
+			<Grid Style="{StaticResource PagePadding}">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="60" />
 					<ColumnDefinition Width="*" />
@@ -169,6 +169,7 @@
 						   Grid.Row="7" />
 				<ItemsControl ItemsSource="{Binding Fields}"
 							  Visibility="{Binding Path=Fields.Count, Converter={StaticResource HiddenWhenEmpty}}"
+							  Style="{StaticResource FluidList}"
 							  Grid.Row="7"
 							  Grid.Column="1">
 					<ItemsControl.ItemTemplate>
