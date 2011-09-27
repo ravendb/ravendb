@@ -10,15 +10,15 @@ namespace Raven.Studio.Models
 	public class ApplicationModel
 	{
 		public static ApplicationModel Current { get; private set; }
-		private static string threasSafeNavigationState;
+		private static string threadSafeNavigationState;
 
 		static ApplicationModel()
 		{
 			Current = new ApplicationModel();
-			threasSafeNavigationState = Application.Current.Host.NavigationState;
+			threadSafeNavigationState = Application.Current.Host.NavigationState;
 			Application.Current.Host.NavigationStateChanged += (sender, args) =>
 			{
-				threasSafeNavigationState = args.NewNavigationState;
+				threadSafeNavigationState = args.NewNavigationState;
 			};
 		}
 
@@ -63,11 +63,11 @@ namespace Raven.Studio.Models
 
 		public string GetQueryParam(string name)
 		{
-			var indexOf = threasSafeNavigationState.IndexOf('?');
+			var indexOf = threadSafeNavigationState.IndexOf('?');
 			if (indexOf == -1)
 				return null;
 
-			var options = threasSafeNavigationState.Substring(indexOf + 1).Split(new[] { '&', }, StringSplitOptions.RemoveEmptyEntries);
+			var options = threadSafeNavigationState.Substring(indexOf + 1).Split(new[] { '&', }, StringSplitOptions.RemoveEmptyEntries);
 
 			return (from option in options
 					where option.StartsWith(name) && option.Length > name.Length && option[name.Length] == '='
