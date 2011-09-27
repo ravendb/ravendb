@@ -137,7 +137,6 @@
     <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Server\HttpServer.cs" />
     <Compile Include="Server\IConfigureHttpListener.cs" />
-    <Compile Include="Server\IRavenHttpConfiguration.cs" />
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />

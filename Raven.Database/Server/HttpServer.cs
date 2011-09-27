@@ -38,12 +38,12 @@ namespace Raven.Database.Server
 	{
 		private const int MaxConcurrentRequests = 192;
 		public DocumentDatabase DefaultResourceStore { get; private set; }
-		public IRavenHttpConfiguration DefaultConfiguration { get; private set; }
+		public InMemoryRavenConfiguration DefaultConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
 		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
 		private readonly ThreadLocal<DocumentDatabase> currentDatabase = new ThreadLocal<DocumentDatabase>();
-		private readonly ThreadLocal<IRavenHttpConfiguration> currentConfiguration = new ThreadLocal<IRavenHttpConfiguration>();
+		private readonly ThreadLocal<InMemoryRavenConfiguration> currentConfiguration = new ThreadLocal<InMemoryRavenConfiguration>();
 
 		protected readonly ConcurrentDictionary<string, DocumentDatabase> ResourcesStoresCache =
 			new ConcurrentDictionary<string, DocumentDatabase>(StringComparer.InvariantCultureIgnoreCase);
@@ -62,7 +62,7 @@ namespace Raven.Database.Server
 		[ImportMany]
 		public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
 
-		public IRavenHttpConfiguration Configuration
+		public InMemoryRavenConfiguration Configuration
 		{
 			get
 			{
@@ -91,7 +91,7 @@ namespace Raven.Database.Server
 			get { return concurretRequestSemaphore.CurrentCount != MaxConcurrentRequests; }
 		}
 
-		public HttpServer(IRavenHttpConfiguration configuration, DocumentDatabase resourceStore)
+		public HttpServer(InMemoryRavenConfiguration configuration, DocumentDatabase resourceStore)
 		{
 			RegisterHttpEndpointTarget();
 

@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
+using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server
@@ -18,7 +19,7 @@ namespace Raven.Database.Server
 	{
 		private readonly string[] supportedVerbsCached;
 		protected readonly Regex urlMatcher;
-		private Func<IRavenHttpConfiguration> settings;
+		private Func<InMemoryRavenConfiguration> settings;
 		private Func<DocumentDatabase> database;
 		protected HttpServer server;
 		private Func<string> tenantId;
@@ -34,12 +35,12 @@ namespace Raven.Database.Server
 
 		public DocumentDatabase DefaultResourceStore { get { return server.DefaultResourceStore; } }
 		public DocumentDatabase ResourceStore { get { return database(); } }
-		public IRavenHttpConfiguration Settings { get { return settings(); } }
+		public InMemoryRavenConfiguration Settings { get { return settings(); } }
 		public string TenantId { get { return tenantId(); } }
 
 		public virtual bool IsUserInterfaceRequest { get { return false; } }
 
-		public void Initialize(Func<DocumentDatabase> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
+		public void Initialize(Func<DocumentDatabase> databaseGetter, Func<InMemoryRavenConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
 		{
 			server = theServer;
 			database = databaseGetter;
