@@ -30,7 +30,7 @@ namespace Raven.Studio.Models
 			var serverModel = new ServerModel();
 			serverModel.Initialize()
 				.ContinueOnSuccess(() => Server.Value = serverModel);
-			Navigate(new Uri("/Indexes?name=PostComments/CreationDate", UriKind.Relative));
+			Navigate(new Uri("/Indexes?name=Posts/Statistics", UriKind.Relative));
 		}
 
 		public Observable<ServerModel> Server { get; set; }
