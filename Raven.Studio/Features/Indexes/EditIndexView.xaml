@@ -92,6 +92,7 @@
 												  HorizontalAlignment="Stretch" />
 
 								<HyperlinkButton x:Name="RemoveMap"
+												 Visibility="{Binding Path=DataContext.Maps.Count, ElementName=this, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=1}"
 												 Grid.Row="2"
 												 HorizontalAlignment="Right"
 												 Margin="0,0,4,0"

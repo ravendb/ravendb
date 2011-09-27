@@ -123,6 +123,7 @@
     </Compile>
     <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenLessOrEqualToConverter.cs" />
     <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
