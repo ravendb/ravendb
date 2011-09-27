@@ -12,21 +12,34 @@ namespace Raven.Database.Util
 {
 	public class BoundedMemoryTarget : Target
 	{
-		private readonly ConcurrentQueue<LogEventInfo> items = new ConcurrentQueue<LogEventInfo>();
+		private readonly ConcurrentQueue<LogEventInfo> generalLog = new ConcurrentQueue<LogEventInfo>();
+		private readonly ConcurrentQueue<LogEventInfo> warnLog = new ConcurrentQueue<LogEventInfo>();
 
 		protected override void Write(LogEventInfo logEvent)
 		{
-			items.Enqueue(logEvent);
-			if (items.Count <= 500)
+			AddToQueue(logEvent, generalLog);
+			if(logEvent.Level>=LogLevel.Warn)
+				AddToQueue(logEvent, warnLog);
+		}
+
+		private void AddToQueue(LogEventInfo logEvent, ConcurrentQueue<LogEventInfo> logEventInfos)
+		{
+			logEventInfos.Enqueue(logEvent);
+			if (logEventInfos.Count <= 500)
 				return;
 
 			LogEventInfo _;
-			items.TryDequeue(out _);
+			logEventInfos.TryDequeue(out _);
 		}
 
-		public IEnumerable<LogEventInfo> GetSnapshot()
+		public IEnumerable<LogEventInfo> GeneralLog
 		{
-			return items;
+			get { return generalLog; }
+		}
+
+		public IEnumerable<LogEventInfo> WarnLog
+		{
+			get { return warnLog; }
 		}
 	}
 }

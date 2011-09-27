@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using NLog;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
 using Raven.Database.Util;
@@ -20,7 +22,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var boundedMemoryTarget = NLog.LogManager.Configuration.AllTargets.OfType<BoundedMemoryTarget>().FirstOrDefault();
+			var boundedMemoryTarget = LogManager.Configuration.AllTargets.OfType<BoundedMemoryTarget>().FirstOrDefault();
 			if(boundedMemoryTarget == null)
 			{
 				context.SetStatusToNotFound();
@@ -30,8 +32,17 @@ namespace Raven.Database.Server.Responders
 				});
 				return;
 			}
+			IEnumerable<LogEventInfo> log = boundedMemoryTarget.GeneralLog;
 
-			context.WriteJson(boundedMemoryTarget.GetSnapshot().Select(x => new
+			switch (context.Request.QueryString["type"])
+			{
+				case "error":
+				case "warn":
+					log = boundedMemoryTarget.WarnLog;
+					break;
+			}
+
+			context.WriteJson(log.Select(x => new
 			{
 				x.TimeStamp,
 				Message = x.FormattedMessage,
