@@ -37,6 +37,15 @@
 				<StackPanel Grid.Row="1"
 							Grid.Column="1"
 							Orientation="Horizontal">
+
+					<HyperlinkButton x:Name="AddMap"
+									 ToolTipService.ToolTip="Add map to the index"
+									 VerticalAlignment="Top"
+									 HorizontalAlignment="Left"
+									 Content="Add map"
+									 Margin="0 0 0 6"
+									 Command="{Binding Path=AddMap}" />
+					
 					<HyperlinkButton x:Name="AddReduce"
 									 Visibility="{Binding Reduce, Converter={StaticResource HiddenWhenNotNull}}"
 									 Command="{Binding AddReduce}"
@@ -59,18 +68,11 @@
 									 HorizontalAlignment="Left"
 									 Margin="0 0 0 6"
 									 Content="Add Field Results" />
-
+					
 				</StackPanel>
 
-				<StackPanel Grid.Row="2">
-					<TextBlock Text="Maps" />
-					<HyperlinkButton x:Name="AddMap"
-							ToolTipService.ToolTip="Add map to the index"
-							HorizontalAlignment="Left"
-							VerticalAlignment="Bottom"
-							Content="Add map"
-							Command="{Binding Path=DataContext.AddMap, ElementName=this}" />
-				</StackPanel>
+				
+				<TextBlock Text="Maps" Grid.Row="2" />
 				<ItemsControl ItemsSource="{Binding Maps}"
 							  Grid.Row="2"
 							  Grid.Column="1">
