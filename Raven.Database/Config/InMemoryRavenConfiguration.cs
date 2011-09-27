@@ -412,13 +412,23 @@ namespace Raven.Database.Config
 		/// </summary>
 		public string DefaultStorageTypeName { get; set; }
 
+		private bool runInMemory;
+
 		/// <summary>
 		/// Should RavenDB's storage be in-memory. If set to true, Munin would be used as the
 		/// storage engine, regardless of what was specified for StorageTypeName
 		/// Allowed values: true/false
 		/// Default: false
 		/// </summary>
-		public bool RunInMemory { get; set; }
+		public bool RunInMemory
+		{
+			get { return runInMemory; }
+			set
+			{
+				runInMemory = value;
+				Settings["Raven/RunInMemory"] = value.ToString();
+			}
+		}
 
 		/// <summary>
 		/// What sort of transaction mode to use. 
