@@ -22,46 +22,6 @@ namespace etobi.EmbeddedTest
 
 			static void Main()
 			{
-				try
-				{
-					IOExtensions.DeleteDirectory("Data");
-					using (var documentStore = new EmbeddableDocumentStore())
-					{
-						var threads = new List<Thread>();
-
-						InitDatabase(documentStore);
-						for (var i = 0; i < 10; i++)
-						{
-							var thread = new Thread(x => InsertAndQueryLoop(documentStore));
-							thread.Start();
-							threads.Add(thread);
-						}
-
-						while (!_stop)
-						{
-							Thread.Sleep(5000);
-							Console.WriteLine("NumberOfDocs={0}, StaleIndexes={1}",
-								documentStore.DocumentDatabase.Statistics.CountOfDocuments,
-								documentStore.DocumentDatabase.Statistics.StaleIndexes.Count());
-						}
-
-						foreach (var thread in threads)
-						{
-							thread.Join();
-						}
-
-						foreach (var exception in _exceptions)
-						{
-							Console.WriteLine(exception.Message);
-						}
-					}
-				}
-				catch (Exception ex)
-				{
-					Log.ErrorException("Bad things have happened!", ex);
-					throw;
-				}
-				Console.WriteLine("Program stopped");
 			}
 
 			private static void InsertAndQueryLoop(IDocumentStore documentStore)

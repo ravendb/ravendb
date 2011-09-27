@@ -15,6 +15,7 @@ using System.Linq;
 using Raven.Database.Extensions;
 using Raven.Database.Queries;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Responders
 {
@@ -74,14 +75,42 @@ namespace Raven.Database.Server.Responders
 		private void OnGet(IHttpContext context, string index)
 		{
 			var definition = context.Request.QueryString["definition"];
-			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
+			var debug = context.Request.QueryString["debug"];
+			bool result;
+			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase) || 
+				bool.TryParse(definition, out result) && result)
 			{
 				GetIndexDefinition(context, index);
 			}
-			else
+			else if("map".Equals(debug,StringComparison.InvariantCultureIgnoreCase))
+			{
+				GetIndexMappedResult(context, index);
+			}
+			else if("reduce".Equals(debug,StringComparison.InvariantCultureIgnoreCase))
+			{
+			}
+			else 
 			{
 				GetIndexQueryRessult(context, index);
 			}
+		}
+
+		private void GetIndexMappedResult(IHttpContext context, string index)
+		{
+			if(Database.IndexDefinitionStorage.GetIndexDefinition(index)==null)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
+
+			var etag = context.GetEtagFromQueryString() ?? Guid.Empty;
+			List<MappedResultInfo> mappedResult = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				mappedResult = accessor.MappedResults.GetMappedResultsReduceKeysAfter(index, etag,loadData: true)
+							.Take(context.GetPageSize(Settings.MaxPageSize)).ToList();
+			});
+			context.WriteJson(mappedResult);
 		}
 
 		private void GetIndexQueryRessult(IHttpContext context, string index)
