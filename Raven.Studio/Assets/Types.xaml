@@ -9,6 +9,8 @@
 	<Converters:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
 	<Converters:LastItemInListConverter x:Name="LastItemInList" />
 	<Converters:MagnitudeToListConverter x:Name="MagnitudeToList"/>
+	<Converters:EnumToIntConverter x:Key="enumeratedValue" />
+	<Converters:EnumToEnumerableConverter x:Key="enumerationFromValue" />
 	
 	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
 	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />

@@ -33,7 +33,7 @@ namespace Raven.Studio.Models
 			this.reduce = index.Reduce;
 			this.transformResults = index.TransformResults;
 
-			this.Fields = new ObservableCollection<FieldProperties>(index.Fields.Select(x => new FieldProperties { Name = x,  }));
+			this.Fields = new ObservableCollection<FieldProperties>(index.Fields.Select(x => new FieldProperties { Name = x }));
 			CreateOrEditField(index.Indexes, (f, i) => f.Indexing = i);
 			CreateOrEditField(index.Stores, (f, i) => f.Storage = i);
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
@@ -114,6 +114,26 @@ namespace Raven.Studio.Models
 			get { return new RemoveReduceCommand(this); }
 		}
 
+		public ICommand AddTransformResults
+		{
+			get { return new AddTransformResultsCommand(this); }
+		}
+
+		public ICommand RemoveTransformResults
+		{
+			get { return new RemoveTransformResultsCommand(this); }
+		}
+
+		public ICommand AddField
+		{
+			get { return new AddFieldCommand(this); }
+		}
+
+		public ICommand RemoveField
+		{
+			get { return new RemoveFieldCommand(this); }
+		}
+
 		public class AddMapCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
@@ -175,6 +195,70 @@ namespace Raven.Studio.Models
 			public override void Execute(object parameter)
 			{
 				index.Reduce = null;
+			}
+		}
+
+		public class AddTransformResultsCommand : Command
+		{
+			private readonly IndexDefinitionModel index;
+
+			public AddTransformResultsCommand(IndexDefinitionModel index)
+			{
+				this.index = index;
+			}
+
+			public override void Execute(object parameter)
+			{
+				index.TransformResults = string.Empty;
+			}
+		}
+
+		public class RemoveTransformResultsCommand : Command
+		{
+			private readonly IndexDefinitionModel index;
+
+			public RemoveTransformResultsCommand(IndexDefinitionModel index)
+			{
+				this.index = index;
+			}
+
+			public override void Execute(object parameter)
+			{
+				index.TransformResults = null;
+			}
+		}
+
+		public class AddFieldCommand : Command
+		{
+			private readonly IndexDefinitionModel index;
+
+			public AddFieldCommand(IndexDefinitionModel index)
+			{
+				this.index = index;
+			}
+
+			public override void Execute(object parameter)
+			{
+				index.Fields.Add(new FieldProperties());
+			}
+		}
+
+		public class RemoveFieldCommand : Command
+		{
+			private readonly IndexDefinitionModel index;
+
+			public RemoveFieldCommand(IndexDefinitionModel index)
+			{
+				this.index = index;
+			}
+
+			public override void Execute(object parameter)
+			{
+				var field = parameter as FieldProperties;
+				if (field == null || index.Fields.Contains(field) == false)
+					return;
+
+				index.Fields.Remove(field);
 			}
 		}
 

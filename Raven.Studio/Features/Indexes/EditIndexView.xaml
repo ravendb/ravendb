@@ -24,23 +24,41 @@
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
-					<RowDefinition Height="*" />
-					<RowDefinition Height="*" />
 					<RowDefinition Height="Auto" />
+					<RowDefinition Height="*" />
 				</Grid.RowDefinitions>
 
-				<TextBlock Text="name" />
+				<TextBlock Text="Name" />
 				<TextBox Grid.Column="1"
 						 Text="{Binding Name, Mode=TwoWay}"
 						 Margin="0 0 0 8" />
 
-				<StackPanel Grid.Row="1" Grid.Column="1">
+				<StackPanel Grid.Row="1"
+							Grid.Column="1"
+							Orientation="Horizontal">
 					<HyperlinkButton x:Name="AddReduce"
 									 Visibility="{Binding Reduce, Converter={StaticResource HiddenWhenNotNull}}"
 									 Command="{Binding AddReduce}"
 									 VerticalAlignment="Top"
 									 HorizontalAlignment="Left"
+									 Margin="0 0 0 6"
 									 Content="Add Reduce" />
+
+					<HyperlinkButton x:Name="AddTransformResults"
+									 Visibility="{Binding TransformResults, Converter={StaticResource HiddenWhenNotNull}}"
+									 Command="{Binding AddTransformResults}"
+									 VerticalAlignment="Top"
+									 HorizontalAlignment="Left"
+									 Margin="0 0 0 6"
+									 Content="Add Transform Results" />
+
+					<HyperlinkButton x:Name="AddField"
+									 Command="{Binding AddField}"
+									 VerticalAlignment="Top"
+									 HorizontalAlignment="Left"
+									 Margin="0 0 0 6"
+									 Content="Add Field Results" />
+
 				</StackPanel>
 
 				<StackPanel Grid.Row="2">
@@ -63,16 +81,14 @@
 									<RowDefinition />
 								</Grid.RowDefinitions>
 
-
-								<StackPanel Grid.Row="1"
-											HorizontalAlignment="Right"
-											Margin="0,0,4,0">
-									<HyperlinkButton x:Name="RemoveMap"
-													 ToolTipService.ToolTip="Remove this map from the index"
-													 Content="Remove"
-													 Command="{Binding Path=DataContext.RemoveMap, ElementName=this}"
-													 CommandParameter="{Binding}" />
-								</StackPanel>
+								<HyperlinkButton x:Name="RemoveMap"
+												 Grid.Row="1"
+												 HorizontalAlignment="Right"
+												 Margin="0,0,4,0"
+												 ToolTipService.ToolTip="Remove this map from the index"
+												 Content="Remove"
+												 Command="{Binding Path=DataContext.RemoveMap, ElementName=this}"
+												 CommandParameter="{Binding}" />
 
 								<Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}"
 													Style="{StaticResource LinqEditor}" />
@@ -84,48 +100,150 @@
 				<TextBlock Text="Reduce"
 						   Visibility="{Binding Reduce, Converter={StaticResource HiddenWhenNull}}"
 						   Grid.Row="3" />
-				<StackPanel Grid.Row="3"
+				<Grid Grid.Row="3"
 							Grid.Column="1"
 							Visibility="{Binding Reduce, Converter={StaticResource HiddenWhenNull}}">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="*" />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
 					<Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}"
 										Style="{StaticResource LinqEditor}" />
-					<HyperlinkButton x:Name="RemoveReduce"
+					<HyperlinkButton Grid.Row="1"
+									 x:Name="RemoveReduce"
 									 ToolTipService.ToolTip="Remove reduce statement from the index definition"
 									 Content="Remove"
 									 HorizontalAlignment="Right"
 									 Command="{Binding RemoveReduce}"
 									 CommandParameter="{Binding}" />
-				</StackPanel>
+				</Grid>
 
+				<sdk:GridSplitter Grid.Row="4"
+								  Grid.ColumnSpan="2"
+								  Visibility="{Binding Reduce, Converter={StaticResource HiddenWhenNull}}"
+								  Background="Transparent"
+								  HorizontalAlignment="Stretch" />
 
-				<!--<sdk:GridSplitter Grid.Row="4"
-								Grid.ColumnSpan="2"
-								Visibility="{Binding ShouldShowReduce, Converter={StaticResource visibleWhenTrue}}"
-								Background="Transparent"
-								HorizontalAlignment="Stretch" />
-
-				<TextBlock Text="transform"
-						   Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
+				
+				<TextBlock Text="Transform"
+						   Visibility="{Binding TransformResults, Converter={StaticResource HiddenWhenNull}}"
 						   Grid.Row="5" />
 				<Grid Grid.Row="5"
-					  Grid.Column="1">
-					<Button x:Name="AddTransformResults"
-							Style="{StaticResource FormButton}"
-							VerticalAlignment="Top"
-							HorizontalAlignment="Left"
-							Margin="0 0 0 6"
-							Content="transform results" />
-					<Editors:LinqEditor Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
-										Text="{Binding TransformResults, Mode=TwoWay}" />
+							Grid.Column="1"
+							Visibility="{Binding TransformResults, Converter={StaticResource HiddenWhenNull}}">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="*" />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
+
+					<Editors:LinqEditor Text="{Binding TransformResults, Mode=TwoWay}" />
+					<HyperlinkButton Grid.Row="1" 
+									 x:Name="RemoveTransformResults"
+									 ToolTipService.ToolTip="Remove transform results statement from the index definition"
+									 Content="Remove"
+									 HorizontalAlignment="Right"
+									 VerticalAlignment="Bottom"
+									 Command="{Binding RemoveTransformResults}"
+									 CommandParameter="{Binding}" />
 				</Grid>
 
 				<sdk:GridSplitter Grid.Row="6"
-								Grid.ColumnSpan="2"
-								Visibility="{Binding ShouldShowTransformResults, Converter={StaticResource visibleWhenTrue}}"
-								Background="Transparent"
-								HorizontalAlignment="Stretch" />
+								  Grid.ColumnSpan="2"
+								  Visibility="{Binding TransformResults, Converter={StaticResource HiddenWhenNull}}"
+								  Background="Transparent"
+								  HorizontalAlignment="Stretch" />
 
-				<Button x:Name="AddField"
+
+				<TextBlock Text="Fields"
+						   Visibility="{Binding Fields, Converter={StaticResource HiddenWhenEmpty}}"
+						   Grid.Row="7" />
+				<ItemsControl ItemsSource="{Binding Fields}"
+							  Visibility="{Binding Fields, Converter={StaticResource HiddenWhenEmpty}}"
+							  Grid.Row="7"
+							  Grid.Column="1">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Border BorderBrush="{StaticResource DividerBrush}"
+									BorderThickness="1,0,0,0"
+									CornerRadius="5"
+									Margin="0,0,0,6"
+									VerticalAlignment="Top"
+									HorizontalAlignment="Left">
+								<Grid Margin="4,4,0,4">
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="Auto" />
+										<ColumnDefinition Width="Auto" />
+										<ColumnDefinition Width="Auto" />
+										<ColumnDefinition Width="Auto" />
+										<ColumnDefinition Width="*" />
+									</Grid.ColumnDefinitions>
+									<Grid.RowDefinitions>
+										<RowDefinition Height="Auto" />
+										<RowDefinition Height="4" />
+										<RowDefinition Height="Auto" />
+										<RowDefinition Height="4" />
+										<RowDefinition Height="Auto" />
+									</Grid.RowDefinitions>
+
+									<TextBlock Text="Field" />
+									<TextBox Text="{Binding Name, Mode=TwoWay}"
+											 Grid.Column="1"
+											 Grid.ColumnSpan="3" />
+									<HyperlinkButton x:Name="RemoveField"
+													 Grid.Column="4"
+													 HorizontalAlignment="Left"
+													 Margin="4 0 0 0"
+													 ToolTipService.ToolTip="Remove this field from the index"
+													 Content="Remove"
+													 Command="{Binding Path=DataContext.RemoveField, ElementName=this}"
+													 CommandParameter="{Binding}" />
+
+
+									<TextBlock Text="Storage"
+											 Grid.Row="2" />
+									<ComboBox ItemsSource="{Binding Storage, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+											  SelectedItem="{Binding Storage, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+											  Grid.Row="2"
+											  Grid.Column="1"
+											  MinWidth="80" />
+
+									<TextBlock Text="Indexing"
+											 Grid.Row="2"
+											 Grid.Column="2"
+											 Margin="8,0,4,0" />
+									<ComboBox ItemsSource="{Binding Indexing, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+											  SelectedItem="{Binding Indexing, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+											  Grid.Row="2"
+											  Grid.Column="3" />
+
+									<TextBlock Text="Sort"
+											 Grid.Row="4" />
+									<ComboBox ItemsSource="{Binding Sort, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+											  SelectedItem="{Binding Sort, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+											  Grid.Row="4"
+											  Grid.Column="1" />
+
+									<TextBlock Text="Analyzer"
+											 Grid.Row="4"
+											 Grid.Column="2"
+											 Margin="8,0,4,0" />
+									<TextBox Text="{Binding Analyzer}"
+											 Grid.Row="4"
+											 Grid.Column="3"
+											 MinWidth="160" />
+								</Grid>
+							</Border>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+				
+				<sdk:GridSplitter Grid.Row="8"
+								  Grid.ColumnSpan="2"
+								  Visibility="{Binding Fields, Converter={StaticResource HiddenWhenEmpty}}"
+								  Background="Transparent"
+								  HorizontalAlignment="Stretch" />
+
+				<!--<Button x:Name="AddField"
 						Style="{StaticResource FormButton}"
 						Grid.Row="7"
 						ToolTipService.ToolTip="Customize this index."
