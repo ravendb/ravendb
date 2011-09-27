@@ -156,10 +156,10 @@
 
 
 				<TextBlock Text="Fields"
-						   Visibility="{Binding Fields, Converter={StaticResource HiddenWhenEmpty}}"
+						   Visibility="{Binding Path=Fields.Count, Converter={StaticResource HiddenWhenEmpty}}"
 						   Grid.Row="7" />
 				<ItemsControl ItemsSource="{Binding Fields}"
-							  Visibility="{Binding Fields, Converter={StaticResource HiddenWhenEmpty}}"
+							  Visibility="{Binding Path=Fields.Count, Converter={StaticResource HiddenWhenEmpty}}"
 							  Grid.Row="7"
 							  Grid.Column="1">
 					<ItemsControl.ItemTemplate>

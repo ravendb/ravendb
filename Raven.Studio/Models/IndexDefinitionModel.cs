@@ -23,15 +23,17 @@ namespace Raven.Studio.Models
 
 		private void UpdateFromDocument(IndexDefinition indexDefinition)
 		{
-			this.index = indexDefinition;
-			this.Maps = new ObservableCollection<MapItem>(index.Maps.Select(x => new MapItem{Text = x}));
+			index = indexDefinition;
+			Maps = new BindableCollection<MapItem>(new PrimaryKeyComparer<MapItem>(x => x.Text));
+			Maps.Set(index.Maps.Select(x => new MapItem {Text = x}));
 
-			this.Fields = new ObservableCollection<FieldProperties>(index.Fields.Select(x => new FieldProperties { Name = x }));
+			Fields = new BindableCollection<FieldProperties>(new PrimaryKeyComparer<FieldProperties>(field => field.Name));
+
 			CreateOrEditField(index.Indexes, (f, i) => f.Indexing = i);
 			CreateOrEditField(index.Stores, (f, i) => f.Storage = i);
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
-
+			
 			OnEverythingChanged();
 		}
 
@@ -58,7 +60,7 @@ namespace Raven.Studio.Models
 			index.RemoveDefaultValues();
 		}
 
-		void CreateOrEditField<T>(IDictionary<string, T> dictionary, Action<FieldProperties, T> setter)
+		void CreateOrEditField<T>(IEnumerable<KeyValuePair<string, T>> dictionary, Action<FieldProperties, T> setter)
 		{
 			if (dictionary == null) return;
 
@@ -105,8 +107,8 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public ObservableCollection<MapItem> Maps { get; private set; }
-		public ObservableCollection<FieldProperties> Fields { get; private set; }
+		public BindableCollection<MapItem> Maps { get; private set; }
+		public BindableCollection<FieldProperties> Fields { get; private set; }
 
 #region Commands
 
@@ -132,7 +134,10 @@ namespace Raven.Studio.Models
 
 		public ICommand AddTransformResults
 		{
-			get { return new AddTransformResultsCommand(this); }
+			get
+			{
+				return new AddTransformResultsCommand(this);
+			}
 		}
 
 		public ICommand RemoveTransformResults
@@ -142,7 +147,10 @@ namespace Raven.Studio.Models
 
 		public ICommand AddField
 		{
-			get { return new AddFieldCommand(this); }
+			get
+			{
+				return new AddFieldCommand(this);
+			}
 		}
 
 		public ICommand RemoveField
@@ -260,7 +268,7 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				index.Fields.Add(new FieldProperties());
+				index.Fields.Execute(() => index.Fields.Add(new FieldProperties()));
 			}
 		}
 
