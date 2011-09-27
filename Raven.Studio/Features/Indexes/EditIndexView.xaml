@@ -263,6 +263,13 @@
 									 ToolTipService.ToolTip="Save Index"
 									 Content="Save"
 									 Command="{Binding SaveIndex}" />
+
+					<HyperlinkButton x:Name="Reset"
+									 HorizontalAlignment="Left"
+									 Margin="4 0 0 0"
+									 ToolTipService.ToolTip="Reset Index"
+									 Content="Reset"
+									 Command="{Binding ResetIndex}" />
 				</StackPanel>
 			</Grid>
 		</ScrollViewer>

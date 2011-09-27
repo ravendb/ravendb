@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
+using Newtonsoft.Json;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
@@ -14,14 +14,16 @@ namespace Raven.Studio.Models
 	{
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private IndexDefinition index;
+		private string originalIndex;
 
 		public IndexDefinitionModel(IndexDefinition index, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
-			UpdateFromDocument(index);
+			originalIndex = JsonConvert.SerializeObject(index);
+			UpdateFromIndex(index);
 		}
 
-		private void UpdateFromDocument(IndexDefinition indexDefinition)
+		private void UpdateFromIndex(IndexDefinition indexDefinition)
 		{
 			index = indexDefinition;
 			Maps = new BindableCollection<MapItem>(new PrimaryKeyComparer<MapItem>(x => x.Text));
@@ -33,11 +35,17 @@ namespace Raven.Studio.Models
 			CreateOrEditField(index.Stores, (f, i) => f.Storage = i);
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
-			
+
 			OnEverythingChanged();
 		}
 
-		public void UpdateIndex()
+		private void ResetToOriginal()
+		{
+			index = JsonConvert.DeserializeObject<IndexDefinition>(originalIndex);
+			UpdateFromIndex(index);
+		}
+
+		private void UpdateIndex()
 		{
 			index.Map = Maps.Select(x => x.Text).FirstOrDefault();
 			index.Maps = new HashSet<string>(Maps.Select(x => x.Text));
@@ -161,6 +169,11 @@ namespace Raven.Studio.Models
 		public ICommand SaveIndex
 		{
 			get { return new SaveIndexCommand(this, asyncDatabaseCommands); }
+		}
+
+		public ICommand ResetIndex
+		{
+			get { return new ResetIndexCommand(this); }
 		}
 
 		public class AddMapCommand : Command
@@ -309,6 +322,21 @@ namespace Raven.Studio.Models
 				databaseCommands.PutIndexAsync(index.Name, index.index, true)
 					.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("index " + index.Name + " saved")))
 					.Catch();
+			}
+		}
+
+		public class ResetIndexCommand : Command
+		{
+			private readonly IndexDefinitionModel index;
+
+			public ResetIndexCommand(IndexDefinitionModel index)
+			{
+				this.index = index;
+			}
+
+			public override void Execute(object parameter)
+			{
+				index.ResetToOriginal();
 			}
 		}
 
