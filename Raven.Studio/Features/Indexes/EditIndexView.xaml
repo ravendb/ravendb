@@ -78,21 +78,27 @@
 						<DataTemplate>
 							<Grid>
 								<Grid.RowDefinitions>
-									<RowDefinition />
-									<RowDefinition />
+									<RowDefinition Height="Auto" MinHeight="100" />
+									<RowDefinition Height="Auto" />
+									<RowDefinition Height="Auto" />
+									<RowDefinition Height="*" />
 								</Grid.RowDefinitions>
 
+								<Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}"
+													Style="{StaticResource LinqEditor}" />
+
+								<sdk:GridSplitter Grid.Row="1"
+												  Background="Transparent"
+												  HorizontalAlignment="Stretch" />
+
 								<HyperlinkButton x:Name="RemoveMap"
-												 Grid.Row="1"
+												 Grid.Row="2"
 												 HorizontalAlignment="Right"
 												 Margin="0,0,4,0"
 												 ToolTipService.ToolTip="Remove this map from the index"
 												 Content="Remove"
 												 Command="{Binding Path=DataContext.RemoveMap, ElementName=this}"
 												 CommandParameter="{Binding}" />
-
-								<Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}"
-													Style="{StaticResource LinqEditor}" />
 							</Grid>
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>
