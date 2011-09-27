@@ -4,10 +4,12 @@
     xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
     xmlns:Commands="clr-namespace:Raven.Studio.Commands">
 
+	<Converters:NullToVisibilityConverter x:Key="HiddenWhenNull" />
+	<Converters:NotNullToVisibilityConverter x:Key="HiddenWhenNotNull" />
 	<Converters:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
 	<Converters:LastItemInListConverter x:Name="LastItemInList" />
-  <Converters:MagnitudeToListConverter x:Name="MagnitudeToList"/>
+	<Converters:MagnitudeToListConverter x:Name="MagnitudeToList"/>
+	
 	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
 	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />
-	
 </ResourceDictionary>

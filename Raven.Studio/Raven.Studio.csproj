@@ -121,6 +121,8 @@
     <Compile Include="Features\Indexes\EditIndexView.xaml.cs">
       <DependentUpon>EditIndexView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
     <Compile Include="Features\Indexes\IndexDefinitionModelLocator.cs" />
     <Compile Include="Infrastructure\ContextMenu\ContextMenu.cs" />

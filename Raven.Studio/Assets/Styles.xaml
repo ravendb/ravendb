@@ -3,7 +3,8 @@
 					xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
 					xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-					xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions">
+					xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+                    xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors">
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
@@ -471,6 +472,12 @@
 				Value="9.333" />
 		<Setter Property="Margin"
 				Value="0,2,2,2" />
+	</Style>
+
+	<Style x:Key="LinqEditor"
+		   TargetType="Editors:LinqEditor">
+		<Setter Property="MinHeight"
+				Value="100" />
 	</Style>
 
 </ResourceDictionary>
