@@ -268,7 +268,7 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				index.Fields.Execute(() => index.Fields.Add(new FieldProperties()));
+				index.Fields.Execute(() => index.Fields.Add(FieldProperties.Defualt));
 			}
 		}
 
@@ -326,6 +326,20 @@ namespace Raven.Studio.Models
 			public FieldIndexing Indexing { get; set; }
 			public SortOptions Sort { get; set; }
 			public string Analyzer { get; set; }
+
+			public static FieldProperties Defualt
+			{
+				get
+				{
+					return new FieldProperties
+					{
+						Storage = FieldStorage.No,
+						Indexing = FieldIndexing.Default,
+						Sort = SortOptions.None,
+						Analyzer = string.Empty
+					};
+				}
+			}
 		}
 	}
 }
