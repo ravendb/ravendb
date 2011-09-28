@@ -26,7 +26,12 @@ namespace Raven.Sample.Suggestions
 
 				using (var session = store.OpenSession())
 				{
-					foreach (var name in new[] { "Oren Eini", "Ayende Rahien" })
+					var names = new[]
+					{
+						"Oren Eini", "Ayende Rahien", "Yoal", "Ido", "Yaron", "Oded Haim", "Michael Rer",
+						"Gal Rotem", "Udi Dahan", "Roy Osherove", "Haim Aharon", "Arava Eini"
+					};
+					foreach (var name in names)
 					{
 						session.Store(new User
 						{
@@ -77,7 +82,7 @@ namespace Raven.Sample.Suggestions
 			}
 			else
 			{
-				Console.WriteLine("Found user: {0}", foundUser.Id);
+				Console.WriteLine("Found user: {0} - {1}", foundUser.Id, foundUser.Name);
 			}
 		}
 	}
