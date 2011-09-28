@@ -336,7 +336,9 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
+				ApplicationModel.Current.AddNotification(new Notification("resetting index " + index.Name));
 				index.ResetToOriginal();
+				ApplicationModel.Current.AddNotification(new Notification("index " + index.Name + " was reset"));
 			}
 		}
 
