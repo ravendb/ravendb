@@ -5,7 +5,7 @@
     xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"    
     Title="Error">
 
-    <Grid x:Name="LayoutRoot" Width="540">
+    <Grid x:Name="LayoutRoot" >
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -20,7 +20,7 @@
 
             <TextBlock x:Name="LabelText" TextWrapping="Wrap" Margin="0,0,0,2" 
                        Text="Error details"/>
-            <TextBox x:Name="ErrorTextBox" Height="90" TextWrapping="Wrap" IsReadOnly="True"
+            <TextBox x:Name="ErrorTextBox" TextWrapping="Wrap" IsReadOnly="True"
                      VerticalScrollBarVisibility="Auto"/>
 
         </StackPanel>
