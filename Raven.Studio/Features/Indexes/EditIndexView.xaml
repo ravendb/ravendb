@@ -114,7 +114,7 @@
 							Grid.Column="1"
 							Visibility="{Binding Reduce, Converter={StaticResource HiddenWhenNull}}">
 					<Grid.RowDefinitions>
-						<RowDefinition Height="*" />
+						<RowDefinition Height="*" MinHeight="100" />
 						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
 					<Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}"
@@ -142,7 +142,8 @@
 							Grid.Column="1"
 							Visibility="{Binding TransformResults, Converter={StaticResource HiddenWhenNull}}">
 					<Grid.RowDefinitions>
-						<RowDefinition Height="*" />
+						<RowDefinition Height="*"
+									   MinHeight="100" />
 						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
 
