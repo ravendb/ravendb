@@ -19,6 +19,7 @@ namespace Raven.Tests.Bugs.TransformResults
             using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
             {
                 new Answers_ByAnswerEntity().Execute(store);
+                var answerId = "";
 
                 store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
                 CreateEntities(store, 0);
@@ -38,34 +39,55 @@ namespace Raven.Tests.Bugs.TransformResults
                         .FirstOrDefault();
 
                     Assert.NotNull(answerInfo);
+                    answerId = answerInfo.Id;
                 }
-				using (var session = store.OpenSession())
+                object locker = new object();
+                for (int k = 0; k < 100; k++)
                 {
-                    for (int i = 0; i < 100; i++)
+                    new Thread(() =>
                     {
-                        var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
-							.OrderBy(x => x.Content)
-                            .Skip(0).Take(1)
-                            .As<AnswerEntity>()
-                            .FirstOrDefault();
-
-                        Console.WriteLine(" i = {0}", i);
-						
-                        Assert.NotNull(answerInfo);
-
-                        if (i % 100 == 0)
+                        lock (locker)
                         {
-                            if (answerInfo != null) // Update it
+                            using (var session = store.OpenSession())
                             {
-                                var answer = session.Load<Answer>(answerInfo.Id);
+                                for (int i = 0; i < 100; i++)
+                                {
+                                    var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
+                                        .OrderBy(x => x.Content)
+                                        .Skip(0).Take(1)
+                                        .As<AnswerEntity>()
+                                        .FirstOrDefault();
+
+                                    Console.WriteLine("k = {0}, i = {1}", k, i);
+
+                                    Assert.NotNull(answerInfo);
+
+                                    //if (i%100 == 0)
+                                    //{
+                                    //    if (answerInfo != null) // Update it
+                                    //    {
+                                    //        var answer = session.Load<Answer>(answerInfo.Id);
+                                    //        Assert.NotNull(answer);
+
+                                    //        answer.Content += k + i.ToString();
+                                    //        session.Store(answer);
+                                    //        session.SaveChanges();
+                                    //    }
+                                    //}
+                                }
+                            }
+                            //Thread.Sleep(1);
+                            using (var session = store.OpenSession())
+                            {
+                                var answer = session.Load<Answer>(answerId);
                                 Assert.NotNull(answer);
 
-                                answer.Content += i.ToString();
+                                answer.Content += k.ToString();
                                 session.Store(answer);
                                 session.SaveChanges();
                             }
                         }
-                    }
+                    }).Start();
                 }
 
             }
