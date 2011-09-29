@@ -42,7 +42,7 @@ namespace Raven.Studio.Converters
 
 			var colors = IoC.Get<TemplateColorProvider>();
 			var brush = new SolidColorBrush(colors.ColorFrom(item.Name));
-
+			
 			var top = (int) (percent*MaximumNumberOfItems);
 			top = Math.Min(top,count);
 			if (count != 0) top = Math.Max(top, 1);

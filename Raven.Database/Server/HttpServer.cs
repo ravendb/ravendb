@@ -16,6 +16,7 @@ using System.Threading;
 using System.Linq;
 using Newtonsoft.Json;
 using NLog;
+using NLog.Config;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -29,6 +30,7 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
+using Raven.Database.Util;
 
 namespace Raven.Database.Server
 {
@@ -36,12 +38,12 @@ namespace Raven.Database.Server
 	{
 		private const int MaxConcurrentRequests = 192;
 		public DocumentDatabase DefaultResourceStore { get; private set; }
-		public IRavenHttpConfiguration DefaultConfiguration { get; private set; }
+		public InMemoryRavenConfiguration DefaultConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
 		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
 		private readonly ThreadLocal<DocumentDatabase> currentDatabase = new ThreadLocal<DocumentDatabase>();
-		private readonly ThreadLocal<IRavenHttpConfiguration> currentConfiguration = new ThreadLocal<IRavenHttpConfiguration>();
+		private readonly ThreadLocal<InMemoryRavenConfiguration> currentConfiguration = new ThreadLocal<InMemoryRavenConfiguration>();
 
 		protected readonly ConcurrentDictionary<string, DocumentDatabase> ResourcesStoresCache =
 			new ConcurrentDictionary<string, DocumentDatabase>(StringComparer.InvariantCultureIgnoreCase);
@@ -60,7 +62,7 @@ namespace Raven.Database.Server
 		[ImportMany]
 		public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
 
-		public IRavenHttpConfiguration Configuration
+		public InMemoryRavenConfiguration Configuration
 		{
 			get
 			{
@@ -89,8 +91,10 @@ namespace Raven.Database.Server
 			get { return concurretRequestSemaphore.CurrentCount != MaxConcurrentRequests; }
 		}
 
-		public HttpServer(IRavenHttpConfiguration configuration, DocumentDatabase resourceStore)
+		public HttpServer(InMemoryRavenConfiguration configuration, DocumentDatabase resourceStore)
 		{
+			RegisterHttpEndpointTarget();
+
 			DefaultResourceStore = resourceStore;
 			DefaultConfiguration = configuration;
 
@@ -116,6 +120,13 @@ namespace Raven.Database.Server
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
 			RemoveTenantDatabase.Occured.Subscribe(TenantDatabaseRemoved);
+		}
+
+		public static void RegisterHttpEndpointTarget()
+		{
+			Type type;
+			if (ConfigurationItemFactory.Default.Targets.TryGetDefinition("HttpEndpoint", out type) == false)
+				ConfigurationItemFactory.Default.Targets.RegisterDefinition("HttpEndpoint", typeof(BoundedMemoryTarget));
 		}
 
 

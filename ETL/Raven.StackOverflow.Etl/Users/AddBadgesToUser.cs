@@ -43,11 +43,11 @@ namespace Raven.StackOverflow.Etl.Users
 						RavenJObject badge;
 						if (badgesByName.TryGetValue((string)row["Name"], out badge )==false)
 						{
-							badge = new RavenJObject(new []
+							badge = new RavenJObject
 							{
-								new KeyValuePair<string, RavenJToken>("Name", RavenJToken.FromObject(row["Name"])),     
-								new KeyValuePair<string, RavenJToken>("Dates", new RavenJArray()), 
-							});
+								{"Name", RavenJToken.FromObject(row["Name"])},
+								{"Dates", new RavenJArray()}
+							};
 							badgesByName.Add((string)row["Name"], badge);
 						}
 						((RavenJArray)badge["Dates"]).Add(new RavenJValue(row["Date"]));

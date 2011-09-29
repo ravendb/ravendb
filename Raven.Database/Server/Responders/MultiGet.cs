@@ -9,6 +9,7 @@ using System.Web;
 using NLog;
 using Raven.Abstractions.Data;
 using System.Linq;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 
@@ -49,8 +50,8 @@ namespace Raven.Database.Server.Responders
 		}
 
 		private void Executerequests(
-			IHttpContext context, 
-			IRavenHttpConfiguration ravenHttpConfiguration, 
+			IHttpContext context,
+			InMemoryRavenConfiguration ravenHttpConfiguration, 
 			GetResponse[] results,
 			GetRequest[] requests)
 		{
@@ -72,7 +73,7 @@ namespace Raven.Database.Server.Responders
 			}
 		}
 
-		private void HandleRequest(GetRequest[] requests, GetResponse[] results, int i, IHttpContext context, IRavenHttpConfiguration ravenHttpConfiguration, MultiGetHttpContext[] contexts)
+		private void HandleRequest(GetRequest[] requests, GetResponse[] results, int i, IHttpContext context, InMemoryRavenConfiguration ravenHttpConfiguration, MultiGetHttpContext[] contexts)
 		{
 			var request = requests[i];
 			if (request == null)
@@ -83,12 +84,12 @@ namespace Raven.Database.Server.Responders
 
 		public class MultiGetHttpContext : IHttpContext
 		{
-			private readonly IRavenHttpConfiguration configuration;
+			private readonly InMemoryRavenConfiguration configuration;
 			private readonly IHttpContext realContext;
 			private readonly string tenantId;
 			private readonly GetResponse getResponse;
 
-			public MultiGetHttpContext(IRavenHttpConfiguration configuration, IHttpContext realContext, GetRequest req, string tenantId)
+			public MultiGetHttpContext(InMemoryRavenConfiguration configuration, IHttpContext realContext, GetRequest req, string tenantId)
 			{
 				this.configuration = configuration;
 				this.realContext = realContext;
@@ -119,7 +120,7 @@ namespace Raven.Database.Server.Responders
 				get { return false; }
 			}
 
-			public IRavenHttpConfiguration Configuration
+			public InMemoryRavenConfiguration Configuration
 			{
 				get { return configuration; }
 			}

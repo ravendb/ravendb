@@ -52,9 +52,10 @@ namespace Raven.StackOverflow.Etl.Generic
 					commands.Add(new PutCommandData()
 					{
 						Document = obj,
-						Metadata = new RavenJObject(new[]
-					{
-						new KeyValuePair<string, RavenJToken>("Raven-Entity-Name", new RavenJValue(collection)), }),
+						Metadata = new RavenJObject
+						{
+							{"Raven-Entity-Name", new RavenJValue(collection)}
+						},
 						Key = generateKey(obj)
 					});
 				}

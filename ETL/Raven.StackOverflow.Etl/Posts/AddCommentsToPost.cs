@@ -38,13 +38,13 @@ namespace Raven.StackOverflow.Etl.Posts
 					var comments = new RavenJArray();
 					foreach (var row in commentsForPost)
 					{
-						comments.Add(new RavenJObject(new []
+						comments.Add(new RavenJObject
 						{
-							new KeyValuePair<string, RavenJToken>("Score", new RavenJValue(row["Score"])),
-							new KeyValuePair<string, RavenJToken>("CreationDate", new RavenJValue(row["CreationDate"])), 
-							new KeyValuePair<string, RavenJToken>("Text", new RavenJValue(row["Text"])), 
-							new KeyValuePair<string, RavenJToken>("UserId", new RavenJValue(row["UserId"])), 
-						}));
+							{"Score", new RavenJValue(row["Score"])},
+							{"CreationDate", new RavenJValue(row["CreationDate"])},
+							{"Text", new RavenJValue(row["Text"])},
+							{"UserId", new RavenJValue(row["UserId"])}
+						});
 							
 					}
 					cmds.Add(new PatchCommandData

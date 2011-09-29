@@ -35,7 +35,7 @@ namespace Raven.Abstractions.Extensions
 
 			//proxy
 			"Reverse-Via",
-
+			"Persistent-Auth",
 			"Allow",
 			"Content-Disposition",
 			"Content-Encoding",
@@ -162,7 +162,7 @@ namespace Raven.Abstractions.Extensions
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
 		public static RavenJObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
 		{
-			var metadata = new RavenJObject();
+			var metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase);
 			foreach (string header in self)
 			{
 				try

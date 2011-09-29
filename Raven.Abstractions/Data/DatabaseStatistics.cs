@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
+
 namespace Raven.Abstractions.Data
 {
 	public class DatabaseStatistics
@@ -20,6 +22,8 @@ namespace Raven.Abstractions.Data
 		public ServerError[] Errors { get; set; }
 
 		public TriggerInfo[] Triggers { get; set; }
+
+		public object Extensions { get; set; }
 
 		public class TriggerInfo
 		{

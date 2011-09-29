@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -225,15 +226,33 @@ namespace Raven.Database
 		{
 			get
 			{
+
 				var result = new DatabaseStatistics
 				{
 					CountOfIndexes = IndexStorage.Indexes.Length,
 					Errors = workContext.Errors,
-					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
-								.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
-								.Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Read" }))
-								.Concat(IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Index Update" }))
-								.ToArray()
+					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Put"})
+						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Delete"}))
+						.Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Read"}))
+						.Concat(
+							IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Index Update"}))
+						.ToArray(),
+					Extensions = Configuration.ReportExtensions(
+						typeof (IStartupTask),
+						typeof (AbstractReadTrigger),
+						typeof (AbstractDeleteTrigger),
+						typeof (AbstractPutTrigger),
+						typeof (AbstractDocumentCodec),
+						typeof (AbstractDynamicCompilationExtension),
+						typeof (AbstractIndexQueryTrigger),
+						typeof (AbstractIndexUpdateTrigger),
+						typeof (AbstractAnalyzerGenerator),
+						typeof (AbstractAttachmentDeleteTrigger),
+						typeof (AbstractAttachmentPutTrigger),
+						typeof (AbstractAttachmentReadTrigger),
+						typeof (AbstractBackgroundTask),
+						typeof (IAlterConfiguration)
+						)
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -247,6 +266,7 @@ namespace Raven.Database
 				return result;
 			}
 		}
+
 
 		public string SilverlightXapName
 		{

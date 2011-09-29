@@ -7,13 +7,14 @@ using System;
 using System.IO;
 using System.Security.Principal;
 using NLog;
+using Raven.Database.Config;
 
 namespace Raven.Database.Server.Abstractions
 {
 	public interface IHttpContext
 	{
 		bool RequiresAuthentication { get; }
-		IRavenHttpConfiguration Configuration { get; }
+		InMemoryRavenConfiguration Configuration { get; }
 		IHttpRequest Request { get; }
 		IHttpResponse Response { get; }
 		IPrincipal User { get; set; }

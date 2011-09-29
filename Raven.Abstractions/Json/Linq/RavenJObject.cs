@@ -12,6 +12,8 @@ namespace Raven.Json.Linq
 {
 	public class RavenJObject : RavenJToken, IEnumerable<KeyValuePair<string, RavenJToken>>
 	{
+		private readonly IEqualityComparer<string> comparer;
+
 		/// <summary>
 		/// Gets the node type for this <see cref="RavenJToken"/>.
 		/// </summary>
@@ -33,18 +35,33 @@ namespace Raven.Json.Linq
 			get { return Properties.Keys; }
 		}
 
+		public RavenJObject WithCaseInsensitivePropertyNames()
+		{
+			var props = new DictionaryWithParentSnapshot(StringComparer.InvariantCultureIgnoreCase);
+			foreach (var property in Properties)
+			{
+				props[property.Key] = property.Value;
+			}
+			return new RavenJObject(props);
+		}
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJObject"/> class.
 		/// </summary>
-		public RavenJObject()
+		public RavenJObject() :this(StringComparer.InvariantCulture)
 		{
-			Properties = new DictionaryWithParentSnapshot();
 		}
 
-		public RavenJObject(IEnumerable<KeyValuePair<string, RavenJToken>> props)
+		public RavenJObject(IEqualityComparer<string> comparer)
 		{
-			Properties = new DictionaryWithParentSnapshot();
-			foreach (var kv in props)
+			this.comparer = comparer;
+			Properties = new DictionaryWithParentSnapshot(comparer);
+		}
+
+		public RavenJObject(RavenJObject other)
+		{
+			Properties = new DictionaryWithParentSnapshot(other.comparer);
+			foreach (var kv in other.Properties)
 			{
 				Properties.Add(kv);
 			}
