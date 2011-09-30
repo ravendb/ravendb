@@ -299,9 +299,10 @@
   <Style x:Key="ContentPanelStyle" TargetType="StackPanel"/>
 
   <!-- Header Text Style -->
-  <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource BodyTextColorBrush}"/>
-    <Setter Property="FontSize" Value="15"/>
+  <Style x:Key="Style_Text_Header" TargetType="TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource Brush_ContrastColor}"/>
+    <Setter Property="FontFamily" Value="Arial"/>
+    <Setter Property="FontSize" Value="16"/>
     <Setter Property="FontWeight" Value="Bold"/>
     <Setter Property="TextWrapping" Value="Wrap"/>
     <Setter Property="Margin" Value="0,15,0,4"/>
@@ -310,11 +311,12 @@
 
   <!-- Content Text Style -->
   <Style x:Key="ContentTextStyle" TargetType="TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource BodyTextColorBrush}"/>
-    <Setter Property="FontSize" Value="12"/>
-    <Setter Property="TextWrapping" Value="Wrap"/>
-    <Setter Property="Margin" Value="0,2,0,2"/>
-    <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="Foreground" Value="{StaticResource BodyTextColorBrush}"/>
+            <Setter Property="FontFamily" Value="Arial"/>
+            <Setter Property="FontSize" Value="13"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Margin" Value="0,2,0,2"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
   </Style>
 
   <!-- Page HyperlinkButton Style -->	
@@ -701,7 +703,7 @@
 	
 	<Style x:Key="Style_ListBoxItem_MainPageTab" TargetType="ListBoxItem">
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Padding" Value="15,6,30,6"/>
+        <Setter Property="Padding" Value="15,6,60,6"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ListBoxItem">
@@ -760,4 +762,42 @@
 		<Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_MainPageTab}"/>
 	</Style>
 	
+	<Style x:Key="Style_Button" TargetType="Button">
+		<Setter Property="FontWeight" Value="Bold"/>
+		<Setter Property="FontSize" Value="13"/>
+		<Setter Property="FontFamily" Value="Tahoma"/>
+        <Setter Property="MinWidth" Value="40"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Button">
+					<Border CornerRadius="17" Height="34" BorderBrush="#FFDFDAD5" BorderThickness="1">
+						<Border.Background>
+							<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+								<GradientStop Color="#FFE7E2E8" Offset="0"/>
+								<GradientStop Color="#FFC7BFB7" Offset="1"/>
+							</LinearGradientBrush>
+						</Border.Background>
+						<Border CornerRadius="13" Height="26" BorderThickness="0" Margin="3,0" VerticalAlignment="Center" BorderBrush="Gainsboro">
+							<Border.Background>
+								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+									<GradientStop Color="#FFFAFAFA" Offset="0.89"/>
+									<GradientStop Color="LightGray" Offset="0.044"/>
+								</LinearGradientBrush>
+							</Border.Background>
+							<Border CornerRadius="12" BorderThickness="0" Margin="1" BorderBrush="Gainsboro">
+							<Border.Background>
+								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+									<GradientStop Color="#FFFAFAFA" Offset="0.044"/>
+									<GradientStop Color="LightGray" Offset="0.89"/>
+								</LinearGradientBrush>
+							</Border.Background>
+							<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Border>
+						</Border>
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+		<Setter Property="Foreground" Value="#FF666666"/>
+	</Style>
 </ResourceDictionary>

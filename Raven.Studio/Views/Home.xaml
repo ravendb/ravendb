@@ -20,7 +20,7 @@
 
         </Grid.ColumnDefinitions>
 
-        <ListBox Style="{StaticResource Style_ListBox_MainTabs}">
+        <ListBox Style="{StaticResource Style_ListBox_MainTabs}" VerticalAlignment="Top">
             <ListBoxItem Content="Summary"/>
             <ListBoxItem Content="Collections"/>
             <ListBoxItem Content="Indexes"/>
@@ -28,17 +28,10 @@
             <ListBoxItem Content="Query"/>
             <ListBoxItem Content="Tasks"/>
         </ListBox>
-        <StackPanel x:Name="ContentStackPanel" Grid.Column="1">
-
-            <TextBlock x:Name="HeaderText"
-						Style="{StaticResource HeaderTextStyle}"
-						Text="Home" />
-            <TextBlock x:Name="ContentText"
-						Style="{StaticResource ContentTextStyle}"
-						Text="Home page content" />
-
-            <Databases:DatabaseSelectionView />
+        <StackPanel x:Name="ContentStackPanel" Grid.Column="1" Margin="20,0">
+            
             <Stats:DatabaseStatisticsView />
+            
             <Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" />
         </StackPanel>
     </Grid>

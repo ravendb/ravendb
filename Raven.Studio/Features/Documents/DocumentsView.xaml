@@ -10,8 +10,8 @@
 	<StackPanel>
 
 		<TextBlock x:Name="HeaderText"
-				   Style="{StaticResource HeaderTextStyle}"
-				   Text="Documents" />
+				   Style="{StaticResource Style_Text_Header}"
+				   Text="Recent Documents" />
 
 		<ListBox ItemsSource="{Binding}"
 				 Style="{StaticResource DocumentList}">
@@ -35,7 +35,7 @@
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid Width="120"
-						  Height="60"
+						  Height="80"
 						  Margin="2">
 
 						<Rectangle Fill="#FFF4F4F5" />
@@ -60,11 +60,10 @@
 									HorizontalAlignment="Right"
 									VerticalAlignment="Bottom">
 							<Button Content="edit"
-									Height="20"
-									Width="30"
 									Command="{Binding Path=Edit}"
 									ToolTipService.ToolTip="click here to edit the document"
-									Margin="0,0,4,4">
+									Margin="0,0,4,4"
+                                    Style="{StaticResource Style_Button}">
 
 							</Button>
 						</StackPanel>

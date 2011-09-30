@@ -8,7 +8,7 @@
 					 DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
 
 	<StackPanel>
-		<TextBlock Style="{StaticResource HeaderTextStyle}"
+		<TextBlock Style="{StaticResource Style_Text_Header}"
 				   Text="Statistics" />
 		<Grid HorizontalAlignment="Left"
 			  DataContext="{Binding Path=Statistics.Value}">
