@@ -5,9 +5,10 @@
 			 xmlns:uriMapper="clr-namespace:System.Windows.Navigation;assembly=System.Windows.Controls.Navigation"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:Controls="clr-namespace:System.Windows.Controls" mc:Ignorable="d"
-			 d:DesignWidth="640"
-			 d:DesignHeight="480">
+             xmlns:Controls="clr-namespace:System.Windows.Controls"
+             xmlns:TiledBG="clr-namespace:TiledBG;assembly=TiledBG" mc:Ignorable="d"
+			 d:DesignWidth="781"
+			 d:DesignHeight="482">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -15,21 +16,36 @@
 		<Border x:Name="ContentBorder"
 				Style="{StaticResource ContentBorderStyle}">
 
-			<navigation:Frame x:Name="ContentFrame"
-							  Style="{StaticResource ContentFrameStyle}"
-							  Source="/Collections"
-							  Navigated="ContentFrame_Navigated"
-							  NavigationFailed="ContentFrame_NavigationFailed">
-				<navigation:Frame.UriMapper>
-					<uriMapper:UriMapper>
-						<uriMapper:UriMapping Uri=""
-											  MappedUri="/Views/Home.xaml" />
-						<uriMapper:UriMapping Uri="/{pageName}"
-											  MappedUri="/Views/{pageName}.xaml" />
-					</uriMapper:UriMapper>
-				</navigation:Frame.UriMapper>
-			</navigation:Frame>
-		</Border>
+            <Grid x:Name="BackgroundGrid">
+                <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}" BorderThickness="0"/>
+                
+                <Grid Margin="{StaticResource Margin_MainPageLeftRight}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    
+                    <Image Source="{StaticResource Image_RavenDBLogo}" Stretch="None" Grid.Row="0" 
+                           Margin="0,20"
+                           HorizontalAlignment="Left"/>
+                </Grid>
+			    <!--<navigation:Frame x:Name="ContentFrame"
+							      Style="{StaticResource ContentFrameStyle}"
+                                  Grid.RowSpan="3"
+							      Source="/Collections"
+							      Navigated="ContentFrame_Navigated"
+							      NavigationFailed="ContentFrame_NavigationFailed">
+				    <navigation:Frame.UriMapper>
+					    <uriMapper:UriMapper>
+						    <uriMapper:UriMapping Uri=""
+											      MappedUri="/Views/Home.xaml" />
+						    <uriMapper:UriMapping Uri="/{pageName}"
+											      MappedUri="/Views/{pageName}.xaml" />
+					    </uriMapper:UriMapper>
+				    </navigation:Frame.UriMapper>
+			    </navigation:Frame>-->
+            </Grid>
+        </Border>
 
 		<Grid x:Name="HeaderGrid">
 			<Grid.RowDefinitions>

@@ -504,6 +504,7 @@
 		<Setter Property="FontSize" Value="14"/>
 		<Setter Property="Foreground" Value="#FF666666"/>
 		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="Margin" Value="20,0"/>
 	</Style>
 	
 	<Style x:Key="Style_Separator_HeaderLink" TargetType="Controls:Separator">
@@ -528,11 +529,9 @@
 							</Path.Stroke>
 						</Path>
 					</StackPanel>
-					
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
-		<Setter Property="Margin" Value="20,0"/>
 	</Style>
     
 	<Thickness x:Key="Margin_MainPageLeftRight">140,0</Thickness>
