@@ -15,19 +15,9 @@
 
 	<Grid x:Name="LayoutRoot">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
-
         </Grid.ColumnDefinitions>
 
-        <ListBox Style="{StaticResource Style_ListBox_MainTabs}" VerticalAlignment="Top">
-            <ListBoxItem Content="Summary"/>
-            <ListBoxItem Content="Collections"/>
-            <ListBoxItem Content="Indexes"/>
-            <ListBoxItem Content="Documents"/>
-            <ListBoxItem Content="Query"/>
-            <ListBoxItem Content="Tasks"/>
-        </ListBox>
         <StackPanel x:Name="ContentStackPanel" Grid.Column="1" Margin="20,0">
             
             <Stats:DatabaseStatisticsView />

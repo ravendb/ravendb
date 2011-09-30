@@ -344,19 +344,7 @@
 		</toolkit:WrapPanel>
 	</ItemsPanelTemplate>
 
-	<Style x:Name="DocumentList"
-		   TargetType="ListBox">
-		<Setter Property="ItemsPanel"
-				Value="{StaticResource FluidWrapPanel}" />
-		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
-				Value="Disabled" />
-		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
-				Value="Disabled" />
-		<Setter Property="SelectionMode"
-				Value="Extended" />
-		<Setter Property="BorderThickness"
-				Value="0" />
-	</Style>
+	
 
 	<Style x:Name="FluidList"
 		   TargetType="ItemsControl">
@@ -529,7 +517,7 @@
 		</Setter>
 	</Style>
     	
-	<Thickness x:Key="Margin_MainPageLeftRight">140,0</Thickness>
+	<Thickness x:Key="Margin_MainPageLeftRight">170,0</Thickness>
 		
 	<Style x:Key="Style_ComboBox_MouseOverOnlyChrome" TargetType="ComboBox">
 		<Setter Property="Padding" Value="6,2,25,2"/>
@@ -703,7 +691,7 @@
 	
 	<Style x:Key="Style_ListBoxItem_MainPageTab" TargetType="ListBoxItem">
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Padding" Value="15,6,60,6"/>
+        <Setter Property="Padding" Value="15,6,0,6"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ListBoxItem">
@@ -735,6 +723,7 @@
 								<VisualState x:Name="SelectedUnfocused"/>
 							</VisualStateGroup>
 						</VisualStateManager.VisualStateGroups>
+						<Path Data="M0,3 L3,0 L3,3 L0,3 z" Fill="Black" HorizontalAlignment="Left" Margin="0,-4,0,0.125" Stretch="Fill" Stroke="Black" UseLayoutRounding="False" VerticalAlignment="Top" StrokeStartLineCap="Square" Width="5" Height="5"/>
 						<Border x:Name="border" BorderBrush="Black">
 							<Border.Background>
 								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
@@ -745,7 +734,6 @@
 							<ContentControl x:Name="ContentPresenter" Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
 								Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Foreground="{TemplateBinding Foreground}"/>
 						</Border>
-						<Path Data="M0,3 L3,0 L3,3 L0,3 z" Fill="Black" HorizontalAlignment="Left" Margin="0,-4,0,0.125" Stretch="Fill" Stroke="Black" UseLayoutRounding="False" VerticalAlignment="Top" StrokeStartLineCap="Square"/>
 					</Grid>
 				</ControlTemplate>
 			</Setter.Value>
@@ -757,7 +745,63 @@
 		
 	</Style>
 	
-	<Style x:Key="Style_ListBox_MainTabs" TargetType="ListBox">
+	<Style x:Key="Style_ListBoxItem_Document" TargetType="ListBoxItem">
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="15,6,60,6"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ListBoxItem">
+					<Grid Margin="8" d:DesignWidth="241" d:DesignHeight="112">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="SelectionStates">
+								<VisualState x:Name="Unselected"/>
+								<VisualState x:Name="Selected">
+								</VisualState>
+								<VisualState x:Name="SelectedUnfocused"/>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<Path Data="M0.3333298,26.999214 C0.3333298,26.999214 15.499666,27.000048 15.499666,27.000048 C3.666585,28.663843 -0.00033684066,29.163502 -0.00033684066,29.163502 z" Fill="#20000000" HorizontalAlignment="Left" Margin="1,0,0,-4.5" StrokeStartLineCap="Square" Stretch="Fill" UseLayoutRounding="False" VerticalAlignment="Bottom" StrokeThickness="0" Height="5" Width="60"/>
+					  <Path Data="M0.3333298,26.999214 C0.3333298,26.999214 15.499666,27.000048 15.499666,27.000048 C3.666585,28.663843 -0.00033684066,29.163502 -0.00033684066,29.163502 z" Fill="#20000000" HorizontalAlignment="Right" Margin="27.404,0,0,-4.5" StrokeStartLineCap="Square" Stretch="Fill" UseLayoutRounding="False" VerticalAlignment="Bottom" StrokeThickness="0" Height="5" Width="60" RenderTransformOrigin="0.5,0.5">
+							<Path.RenderTransform>
+								<CompositeTransform ScaleX="-1"/>
+							</Path.RenderTransform>
+						</Path>
+					  <Border Background="White">
+					    <Border x:Name="border" BorderBrush="Black" Margin="3" Padding="4,0,0,0">
+					      <Border.Background>
+					        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+					          <GradientStop Color="#FFF6F6F3" Offset="0"/>
+					          <GradientStop Color="#FFF6F6F3" Offset="1"/>
+					        </LinearGradientBrush>
+					      </Border.Background>
+					      <ContentPresenter VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+					    </Border>
+					  </Border>
+					  <Path Data="M0,0 L0,1" HorizontalAlignment="Right" Margin="0,1,-1,0" StrokeStartLineCap="Square" Stretch="Fill" UseLayoutRounding="False" Width="1" Stroke="#20000000"/>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>		
+	</Style>
+
+    <Style x:Name="DocumentList"
+		   TargetType="ListBox">
+        <Setter Property="ItemsPanel"
+				Value="{StaticResource FluidWrapPanel}" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Disabled" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Disabled" />
+        <Setter Property="SelectionMode"
+				Value="Extended" />
+        <Setter Property="BorderThickness"
+				Value="0" />
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="ItemContainerStyle"
+                Value="{StaticResource Style_ListBoxItem_Document}"/>
+    </Style>
+    
+    <Style x:Key="Style_ListBox_MainTabs" TargetType="ListBox">
 		<Setter Property="Template" Value="{StaticResource ControlTemplate_ListBox_MainPageTabs}"/>
 		<Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_MainPageTab}"/>
 	</Style>
@@ -767,6 +811,7 @@
 		<Setter Property="FontSize" Value="13"/>
 		<Setter Property="FontFamily" Value="Tahoma"/>
         <Setter Property="MinWidth" Value="40"/>
+        <Setter Property="Padding" Value="4,0"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="Button">
@@ -791,7 +836,7 @@
 									<GradientStop Color="LightGray" Offset="0.89"/>
 								</LinearGradientBrush>
 							</Border.Background>
-							<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
 						</Border>
 						</Border>
 					</Border>

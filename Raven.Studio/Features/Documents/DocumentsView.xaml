@@ -14,7 +14,7 @@
 				   Text="Recent Documents" />
 
 		<ListBox ItemsSource="{Binding}"
-				 Style="{StaticResource DocumentList}">
+				 Style="{StaticResource DocumentList}" >
 			<Controls:ContextMenuService.ContextMenu>
 				<Controls:ContextMenu>
 					<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
