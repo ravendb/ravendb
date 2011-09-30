@@ -5,7 +5,7 @@
 			 xmlns:uriMapper="clr-namespace:System.Windows.Navigation;assembly=System.Windows.Controls.Navigation"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 mc:Ignorable="d"
+             xmlns:Controls="clr-namespace:System.Windows.Controls" mc:Ignorable="d"
 			 d:DesignWidth="640"
 			 d:DesignHeight="480">
 
@@ -31,46 +31,44 @@
 			</navigation:Frame>
 		</Border>
 
-		<Grid x:Name="NavigationGrid"
-			  Style="{StaticResource NavigationGridStyle}">
-
+		<Grid x:Name="HeaderGrid">
 			<Grid.RowDefinitions>
-				<RowDefinition Height="42" />
-				<RowDefinition Height="Auto" />
+				<RowDefinition Height="40"/>
+				<RowDefinition Height="Auto"/>
 			</Grid.RowDefinitions>
+
+			<Border>
+				<Border.Background>
+					<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+						<GradientStop Color="White" Offset="0.174"/>
+						<GradientStop Color="#FFDEDEDE" Offset="0.993"/>
+						<GradientStop Color="#FF78223D" Offset="1"/>
+					</LinearGradientBrush>
+				</Border.Background>
+			</Border>
+			<Border Height="5" Grid.Row="1">
+				<Border.Background>
+					<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+						<GradientStop Color="#FF78223D" Offset="0.13"/>
+						<GradientStop Color="#FF8B2241" Offset="0.174"/>
+						<GradientStop Color="#FF8B2241" Offset="0.348"/>
+						<GradientStop Color="#FF9F2145" Offset="0.391"/>
+						<GradientStop Color="#FF9F2145" Offset="0.565"/>
+						<GradientStop Color="#FFB22148" Offset="0.609"/>
+					</LinearGradientBrush>
+				</Border.Background>
+			</Border>
 			
-			<Border x:Name="BrandingBorder"
-					Style="{StaticResource BrandingBorderStyle}">
-				<StackPanel x:Name="BrandingStackPanel"
-							Style="{StaticResource BrandingStackPanelStyle}">
-
-					<ContentControl Style="{StaticResource LogoIcon}" />
-					<TextBlock x:Name="ApplicationNameTextBlock"
-							   Style="{StaticResource ApplicationNameStyle}"
-							   Text="Application Name" />
-
-				</StackPanel>
-			</Border>
-
-			<Border x:Name="LinksBorder"
-					Style="{StaticResource LinksBorderStyle}">
-				<StackPanel x:Name="LinksStackPanel"
-							Style="{StaticResource LinksStackPanelStyle}">
-
-					<Rectangle Style="{StaticResource DividerStyle}" />
-
-					<HyperlinkButton Style="{StaticResource LinkStyle}"
-									 NavigateUri="/Home"
-									 TargetName="ContentFrame"
-									 Content="home" />
-
-					<Rectangle Style="{StaticResource DividerStyle}" />
-
-				</StackPanel>
-			</Border>
-
-			<StackPanel Grid.Row="1">
-				<TextBlock Text="{Binding Path=LastNotification.Value}" Foreground="White" />
+			<StackPanel Orientation="Horizontal" Margin="{StaticResource Margin_MainPageLeftRight}">
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+				<TextBlock Text="HOME" Style="{StaticResource Style_Text_HeaderLink}"/>
+                <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+				<TextBlock Text="LEARN" Style="{StaticResource Style_Text_HeaderLink}"/>
+                <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+				<TextBlock Text="COMMUNITY" Style="{StaticResource Style_Text_HeaderLink}"/>
+                <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+				<TextBlock Text="CONTACT US" Style="{StaticResource Style_Text_HeaderLink}"/>
+                <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
 			</StackPanel>
 		</Grid>
 

@@ -4,7 +4,8 @@
 					xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-                    xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors">
+                    xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+                    xmlns:Controls="clr-namespace:System.Windows.Controls">
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
@@ -497,4 +498,42 @@
 				Value="58,0,58,0" />
 	</Style>
 
+	<Style x:Key="Style_Text_HeaderLink" TargetType="TextBlock">
+		<Setter Property="FontFamily" Value="Arial"/>
+		<Setter Property="FontWeight" Value="Bold"/>
+		<Setter Property="FontSize" Value="14"/>
+		<Setter Property="Foreground" Value="#FF666666"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+	</Style>
+	
+	<Style x:Key="Style_Separator_HeaderLink" TargetType="Controls:Separator">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Controls:Separator">
+					<StackPanel Orientation="Horizontal">
+						<Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="False">
+							<Path.Stroke>
+								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+									<GradientStop Color="#FFDEDEDE" Offset="0"/>
+									<GradientStop Color="#FFDEDEDE" Offset="1"/>
+								</LinearGradientBrush>
+							</Path.Stroke>
+						</Path>
+						<Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="False">
+							<Path.Stroke>
+								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+									<GradientStop Color="White" Offset="0"/>
+									<GradientStop Color="White" Offset="1"/>
+								</LinearGradientBrush>
+							</Path.Stroke>
+						</Path>
+					</StackPanel>
+					
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+		<Setter Property="Margin" Value="20,0"/>
+	</Style>
+    
+	<Thickness x:Key="Margin_MainPageLeftRight">140,0</Thickness>
 </ResourceDictionary>
