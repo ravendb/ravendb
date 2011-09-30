@@ -336,6 +336,7 @@
   <ItemGroup>
     <Resource Include="Assets\Images\BackgroundTexture.png" />
     <Resource Include="Assets\Images\RavenDBLogo.png" />
+    <Resource Include="Assets\Images\FooterTexture.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
