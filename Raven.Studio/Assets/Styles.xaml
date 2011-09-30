@@ -40,7 +40,7 @@
   <Style x:Key="ContentFrameStyle" TargetType="navigation:Frame">
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="BorderBrush" Value="Transparent"/>
-    <Setter Property="Padding" Value="0,15,0,15"/>
+    <Setter Property="Padding" Value="0,0,0,15"/>
     <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
   </Style>
@@ -305,7 +305,7 @@
     <Setter Property="FontSize" Value="16"/>
     <Setter Property="FontWeight" Value="Bold"/>
     <Setter Property="TextWrapping" Value="Wrap"/>
-    <Setter Property="Margin" Value="0,15,0,4"/>
+    <Setter Property="Margin" Value="0,0,0,4"/>
     <Setter Property="HorizontalAlignment" Value="Left"/>
   </Style>
 
@@ -822,22 +822,53 @@
 								<GradientStop Color="#FFC7BFB7" Offset="1"/>
 							</LinearGradientBrush>
 						</Border.Background>
-						<Border CornerRadius="13" Height="26" BorderThickness="0" Margin="3,0" VerticalAlignment="Center" BorderBrush="Gainsboro">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualState x:Name="Normal"/>
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+									<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(Border.Background)" Storyboard.TargetName="border">
+												<DiscreteObjectKeyFrame KeyTime="0">
+													<DiscreteObjectKeyFrame.Value>
+                                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                                        <GradientStop Color="#FFFAFAFA" Offset="0.044"/>
+                                                        <GradientStop Color="LightGray" Offset="0.89"/>
+                                                    </LinearGradientBrush>
+                                                </DiscreteObjectKeyFrame.Value>
+												</DiscreteObjectKeyFrame>
+											</ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(Border.Background)" Storyboard.TargetName="innermost">
+                                            <DiscreteObjectKeyFrame KeyTime="0">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                                        <GradientStop Color="#FFFAFAFA" Offset="0.89"/>
+                                                        <GradientStop Color="LightGray" Offset="0.044"/>
+                                                    </LinearGradientBrush>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+								</VisualState>
+								<VisualState x:Name="Pressed"/>
+								<VisualState x:Name="Disabled"/>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<Border x:Name="border"  CornerRadius="13" Height="26" BorderThickness="0" Margin="3,0" VerticalAlignment="Center" BorderBrush="Gainsboro">
 							<Border.Background>
 								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
 									<GradientStop Color="#FFFAFAFA" Offset="0.89"/>
 									<GradientStop Color="LightGray" Offset="0.044"/>
 								</LinearGradientBrush>
 							</Border.Background>
-							<Border CornerRadius="12" BorderThickness="0" Margin="1" BorderBrush="Gainsboro">
-							<Border.Background>
-								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-									<GradientStop Color="#FFFAFAFA" Offset="0.044"/>
-									<GradientStop Color="LightGray" Offset="0.89"/>
-								</LinearGradientBrush>
-							</Border.Background>
-							<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
-						</Border>
+							<Border x:Name="innermost" CornerRadius="12" BorderThickness="0" Margin="1" BorderBrush="Gainsboro">
+								<Border.Background>
+									<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+										<GradientStop Color="#FFFAFAFA" Offset="0.044"/>
+										<GradientStop Color="LightGray" Offset="0.89"/>
+									</LinearGradientBrush>
+								</Border.Background>
+								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+							</Border>
 						</Border>
 					</Border>
 				</ControlTemplate>

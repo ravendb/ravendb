@@ -103,7 +103,7 @@
 							      Style="{StaticResource ContentFrameStyle}"
                                   Grid.Row="1"
                                   Grid.Column="1"
-							      Source="/Collections"
+							      Source=""
 							      Navigated="ContentFrame_Navigated"
 							      NavigationFailed="ContentFrame_NavigationFailed">
                     <navigation:Frame.UriMapper>

@@ -22,7 +22,7 @@
             
             <Stats:DatabaseStatisticsView />
             
-            <Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" />
+            <Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" Margin="0,15,0,0" />
         </StackPanel>
     </Grid>
 

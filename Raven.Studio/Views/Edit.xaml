@@ -32,21 +32,21 @@
 				<RowDefinition />
 			</Grid.RowDefinitions>
 
-			<TextBlock Text="{Binding DisplayId}" />
+			<TextBlock Text="{Binding DisplayId}" Style="{StaticResource Style_Text_Header}"/>
 
 			<Grid Grid.Row="1">
-				<StackPanel Orientation="Horizontal">
+				<StackPanel Orientation="Horizontal" Margin="0,5">
 					<Button Content="Save"
-							Command="{Binding Save}" />
+							Command="{Binding Save}" Style="{StaticResource Style_Button}" />
 
 					<Button Content="Prettify"
-							Command="{Binding Prettify}" />
+							Command="{Binding Prettify}" Style="{StaticResource Style_Button}" Margin="5,0"/>
 
 					<Button Content="Delete"
-							Command="{Binding Delete}" />
+							Command="{Binding Delete}" Style="{StaticResource Style_Button}" Margin="5,0"/>
 
 					<Button Content="Refresh"
-							Command="{Binding Refresh}" />
+							Command="{Binding Refresh}" Style="{StaticResource Style_Button}" />
 				</StackPanel>
 			</Grid>
 
@@ -77,8 +77,7 @@
 				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
 
-			<Border Background="WhiteSmoke"
-					CornerRadius="5,0,0,5"
+			<Border CornerRadius="5,0,0,5"
 					Grid.RowSpan="4" />
 
 			<TextBlock Text="METADATA"
