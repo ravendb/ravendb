@@ -12,7 +12,7 @@ using System.Windows.Threading;
 
 namespace Raven.Studio.Infrastructure
 {
-	public abstract class View : Page
+	public class View : Page
 	{
 		public static List<View> CurrentViews { get; set; }
 
@@ -92,7 +92,7 @@ namespace Raven.Studio.Infrastructure
 		}
 
 
-		protected View()
+		public View()
 		{
 			SetBinding(DataContextWatcherProperty, new Binding());
 

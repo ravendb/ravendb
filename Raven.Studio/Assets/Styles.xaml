@@ -5,7 +5,7 @@
 					xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                     xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
-                    xmlns:Controls="clr-namespace:System.Windows.Controls">
+                    xmlns:Controls="clr-namespace:System.Windows.Controls" xmlns:System="clr-namespace:System;assembly=mscorlib">
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
@@ -533,6 +533,166 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
-    
+    	
 	<Thickness x:Key="Margin_MainPageLeftRight">140,0</Thickness>
+		
+	<Style x:Key="Style_ComboBox_MouseOverOnlyChrome" TargetType="ComboBox">
+		<Setter Property="Padding" Value="6,2,25,2"/>
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="HorizontalContentAlignment" Value="Left"/>
+		<Setter Property="VerticalContentAlignment" Value="Center"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="TabNavigation" Value="Once"/>
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ComboBox">
+					<Grid>
+						<Grid.Resources>
+							<Style x:Name="comboToggleStyle" TargetType="ToggleButton">
+								<Setter Property="Foreground" Value="Black"/>
+								<Setter Property="Background" Value="Transparent"/>
+								<Setter Property="BorderThickness" Value="1"/>
+								<Setter Property="Padding" Value="3"/>
+								<Setter Property="Template">
+									<Setter.Value>
+										<ControlTemplate TargetType="ToggleButton">
+											<Grid>
+												<VisualStateManager.VisualStateGroups>
+													<VisualStateGroup x:Name="CommonStates">
+														<VisualState x:Name="Normal"/>
+														<VisualState x:Name="MouseOver">
+                                                            <Storyboard>
+                                                                <ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetProperty="Visibility" Storyboard.TargetName="contentPresenter">
+                                                                    <DiscreteObjectKeyFrame KeyTime="0">
+                                                                        <DiscreteObjectKeyFrame.Value>
+                                                                            <Visibility>Visible</Visibility>
+                                                                        </DiscreteObjectKeyFrame.Value>
+                                                                    </DiscreteObjectKeyFrame>
+                                                                </ObjectAnimationUsingKeyFrames>
+                                                            </Storyboard>
+                                                        </VisualState>
+														<VisualState x:Name="Pressed">
+                                                            <Storyboard>
+                                                                <ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetProperty="Visibility" Storyboard.TargetName="contentPresenter">
+                                                                    <DiscreteObjectKeyFrame KeyTime="0">
+                                                                        <DiscreteObjectKeyFrame.Value>
+                                                                            <Visibility>Visible</Visibility>
+                                                                        </DiscreteObjectKeyFrame.Value>
+                                                                    </DiscreteObjectKeyFrame>
+                                                                </ObjectAnimationUsingKeyFrames>
+                                                            </Storyboard>
+														</VisualState>
+														<VisualState x:Name="Disabled"/>
+													</VisualStateGroup>
+													<VisualStateGroup x:Name="CheckStates">
+														<VisualState x:Name="Checked">
+														</VisualState>
+														<VisualState x:Name="Unchecked"/>
+													</VisualStateGroup>
+													<VisualStateGroup x:Name="FocusStates">
+														<VisualState x:Name="Focused">
+															<Storyboard>
+																<ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetProperty="Visibility" Storyboard.TargetName="FocusVisualElement">
+																	<DiscreteObjectKeyFrame KeyTime="0">
+																		<DiscreteObjectKeyFrame.Value>
+																			<Visibility>Visible</Visibility>
+																		</DiscreteObjectKeyFrame.Value>
+																	</DiscreteObjectKeyFrame>
+																</ObjectAnimationUsingKeyFrames>
+															</Storyboard>
+														</VisualState>
+														<VisualState x:Name="Unfocused"/>
+													</VisualStateGroup>
+												</VisualStateManager.VisualStateGroups>
+												<Rectangle x:Name="Background" Fill="Transparent" RadiusY="3" RadiusX="3"/>
+												<ContentPresenter x:Name="contentPresenter" ContentTemplate="{TemplateBinding ContentTemplate}" Content="{TemplateBinding Content}" 
+                                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                                                  Margin="{TemplateBinding Padding}" 
+                                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                  Visibility="Collapsed"/>
+												<Rectangle x:Name="FocusVisualElement" IsHitTestVisible="false" Margin="1" RadiusY="3.5" RadiusX="3.5" Stroke="#FF6DBDD1" StrokeThickness="1" Visibility="Collapsed"/>
+											</Grid>
+										</ControlTemplate>
+									</Setter.Value>
+								</Setter>
+							</Style>
+						</Grid.Resources>
+                        
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualState x:Name="Normal">
+                                </VisualState>
+								<VisualState x:Name="MouseOver">
+                                </VisualState>
+							  <VisualState x:Name="Disabled">
+									<Storyboard>
+										<DoubleAnimation Duration="00:00:00" To=".55" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="DisabledVisualElement"/>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="FocusStates">
+								<VisualState x:Name="Focused">
+								</VisualState>
+								<VisualState x:Name="Unfocused"/>
+								<VisualState x:Name="FocusedDropDown">
+									<Storyboard>
+										<ObjectAnimationUsingKeyFrames Duration="00:00:00" Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="PopupBorder">
+											<DiscreteObjectKeyFrame KeyTime="00:00:00">
+												<DiscreteObjectKeyFrame.Value>
+													<Visibility>Visible</Visibility>
+												</DiscreteObjectKeyFrame.Value>
+											</DiscreteObjectKeyFrame>
+										</ObjectAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="ValidationStates">
+								<VisualState x:Name="Valid"/>
+								<VisualState x:Name="InvalidUnfocused">
+								</VisualState>
+								<VisualState x:Name="InvalidFocused">
+								</VisualState>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+                        
+						<Border x:Name="ContentPresenterBorder">
+							<Grid>
+								<ToggleButton x:Name="DropDownToggle" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Right" Margin="0" Style="{StaticResource comboToggleStyle}" 
+                                              VerticalAlignment="Stretch">
+									<Path x:Name="BtnArrow" Data="F1 M 301.14,-189.041L 311.57,-189.041L 306.355,-182.942L 301.14,-189.041 Z " HorizontalAlignment="Right" Height="4" Margin="0,0,6,0" Stretch="Uniform" Width="8">
+										<Path.Fill>
+											<SolidColorBrush x:Name="BtnArrowColor" Color="#FF333333"/>
+										</Path.Fill>
+									</Path>
+								</ToggleButton>
+								<ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+									<TextBlock Text=" "/>
+								</ContentPresenter>
+							</Grid>
+						</Border>
+                        
+						<Rectangle x:Name="DisabledVisualElement" Fill="White" IsHitTestVisible="false" Opacity="0" RadiusY="3" RadiusX="3"/>
+						
+						<Popup x:Name="Popup">
+							<Border x:Name="PopupBorder" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3" HorizontalAlignment="Stretch" Height="Auto">
+								<Border.Background>
+									<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+										<GradientStop Color="#FFFFFFFF" Offset="0"/>
+										<GradientStop Color="#FFFEFEFE" Offset="1"/>
+									</LinearGradientBrush>
+								</Border.Background>
+								<ScrollViewer x:Name="ScrollViewer" BorderThickness="0" Padding="1">
+									<ItemsPresenter/>
+								</ScrollViewer>
+							</Border>
+						</Popup>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+	
+	
 </ResourceDictionary>

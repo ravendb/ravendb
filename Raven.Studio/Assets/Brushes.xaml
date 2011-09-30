@@ -113,4 +113,6 @@
         </ImageBrush.Transform>
     </ImageBrush>
 
+	<SolidColorBrush x:Key="Brush_ContrastColor" Color="#FF9A002B"/>
+	
 </ResourceDictionary>

@@ -9,12 +9,12 @@
 
 	<StackPanel Orientation="Horizontal">
 		<StackPanel Orientation="Horizontal">
-			<TextBlock Text="Database: " />
+			<HyperlinkButton Content="Databases" FontSize="36" Foreground="{StaticResource Brush_ContrastColor}" VerticalAlignment="Center"/>
+            <TextBlock Text=">" FontSize="36"/>
 			<ComboBox ItemsSource="{Binding Path=Databases}"
 					  DisplayMemberPath="Name"
-					  SelectedItem="{Binding Path=SelectedDatabase.Value, Mode=TwoWay}" />
+					  SelectedItem="{Binding Path=SelectedDatabase.Value, Mode=TwoWay}"
+                      FontSize="36" Background="{x:Null}" Foreground="{StaticResource Brush_ContrastColor}" Style="{StaticResource Style_ComboBox_MouseOverOnlyChrome}" />
 		</StackPanel>
-		<HyperlinkButton Content="New Database"
-						 Command="{Binding Path=CreateNewDatabase}" />
 	</StackPanel>
 </Infrastructure:View>

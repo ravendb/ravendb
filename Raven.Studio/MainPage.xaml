@@ -6,7 +6,8 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:Controls="clr-namespace:System.Windows.Controls"
-             xmlns:TiledBG="clr-namespace:TiledBG;assembly=TiledBG" mc:Ignorable="d"
+             xmlns:TiledBG="clr-namespace:TiledBG;assembly=TiledBG"
+             xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases" mc:Ignorable="d"
 			 d:DesignWidth="781"
 			 d:DesignHeight="482">
 
@@ -18,20 +19,32 @@
 
             <Grid x:Name="BackgroundGrid">
                 <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}" BorderThickness="0"/>
+
                 
                 <Grid Margin="{StaticResource Margin_MainPageLeftRight}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    
-                    <Image Source="{StaticResource Image_RavenDBLogo}" Stretch="None" Grid.Row="0" 
-                           Margin="0,20"
+
+                    <Grid Margin="0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Image Source="{StaticResource Image_RavenDBLogo}" Stretch="None" Grid.Row="0" 
+                           Grid.Column="0"
                            HorizontalAlignment="Left"/>
-                </Grid>
-			    <!--<navigation:Frame x:Name="ContentFrame"
+
+                        <Databases:DatabaseSelectionView Grid.Column="1" VerticalAlignment="Bottom" Margin="20,0,0,0"/>
+                    </Grid>
+                    
+
+                    
+                    <navigation:Frame x:Name="ContentFrame"
 							      Style="{StaticResource ContentFrameStyle}"
-                                  Grid.RowSpan="3"
+                                  Grid.Row="1"
 							      Source="/Collections"
 							      Navigated="ContentFrame_Navigated"
 							      NavigationFailed="ContentFrame_NavigationFailed">
@@ -43,7 +56,9 @@
 											      MappedUri="/Views/{pageName}.xaml" />
 					    </uriMapper:UriMapper>
 				    </navigation:Frame.UriMapper>
-			    </navigation:Frame>-->
+			    </navigation:Frame>
+                </Grid>
+			    
             </Grid>
         </Border>
 
