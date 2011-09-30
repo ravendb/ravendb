@@ -14,19 +14,33 @@
 					 Style="{StaticResource PageStyle}">
 
 	<Grid x:Name="LayoutRoot">
-		<StackPanel x:Name="ContentStackPanel">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
 
-			<TextBlock x:Name="HeaderText"
+        </Grid.ColumnDefinitions>
+
+        <ListBox Style="{StaticResource Style_ListBox_MainTabs}">
+            <ListBoxItem Content="Summary"/>
+            <ListBoxItem Content="Collections"/>
+            <ListBoxItem Content="Indexes"/>
+            <ListBoxItem Content="Documents"/>
+            <ListBoxItem Content="Query"/>
+            <ListBoxItem Content="Tasks"/>
+        </ListBox>
+        <StackPanel x:Name="ContentStackPanel" Grid.Column="1">
+
+            <TextBlock x:Name="HeaderText"
 						Style="{StaticResource HeaderTextStyle}"
 						Text="Home" />
-			<TextBlock x:Name="ContentText"
+            <TextBlock x:Name="ContentText"
 						Style="{StaticResource ContentTextStyle}"
 						Text="Home page content" />
 
-			<Databases:DatabaseSelectionView />
-			<Stats:DatabaseStatisticsView />
-			<Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" />
-		</StackPanel>
-	</Grid>
+            <Databases:DatabaseSelectionView />
+            <Stats:DatabaseStatisticsView />
+            <Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" />
+        </StackPanel>
+    </Grid>
 
 </Infrastructure:View>
