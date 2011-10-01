@@ -159,13 +159,13 @@ namespace Raven.Client.Shard
 			return GetSingleShardSession(shardIds).Advanced.HasChanged(entity);
 		}
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="ShardedDocumentSession"/> class.
-		/// </summary>
-		/// <param name="shardStrategy">The shard strategy.</param>
-		/// <param name="shardSessions">The shard sessions.</param>
-		/// <param name="documentStore"></param>
-		public ShardedDocumentSession(IShardStrategy shardStrategy, IDocumentSession[] shardSessions, ShardedDocumentStore documentStore)
+	    /// <summary>
+	    /// Initializes a new instance of the <see cref="ShardedDocumentSession"/> class.
+	    /// </summary>
+	    /// <param name="shardStrategy">The shard strategy.</param>
+	    /// <param name="shardSessions">The shard sessions.</param>
+	    /// <param name="documentStore"></param>
+	    public ShardedDocumentSession(IShardStrategy shardStrategy, IDocumentSession[] shardSessions, ShardedDocumentStore documentStore)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardSessions = shardSessions;
@@ -176,7 +176,7 @@ namespace Raven.Client.Shard
 		private readonly IDocumentSession[] shardSessions;
 		private readonly ShardedDocumentStore documentStore;
 
-		/// <summary>
+	    /// <summary>
 		/// Gets the database commands.
 		/// </summary>
 		/// <value>The database commands.</value>
@@ -249,6 +249,14 @@ namespace Raven.Client.Shard
 		{
 			get { return documentStore; }
 		}
+
+        /// <summary>
+        /// The sharded document store associated with this session
+        /// </summary>
+        public ShardedDocumentStore ShardedDocumentStore
+        {
+            get { return documentStore; }
+        }
 
 		/// <summary>
 		/// Returns whatever a document with the specified id is loaded in the 
@@ -538,7 +546,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		/// <summary>
+	    /// <summary>
 		/// Executes a dynamic query against the RavenDB store
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
@@ -555,7 +563,20 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public IDocumentQuery<T> LuceneQuery<T>()
 		{
-			return new ShardedDocumentQuery<T>("dynamic",
+            string indexName = "dynamic";
+		    var shardId = shardStrategy
+                                    .ShardResolutionStrategy
+                                    .SelectShardIds(ShardResolutionStrategyData.BuildFrom(typeof (T), null))
+                                    .FirstOrDefault();
+
+		    var convention = ShardedDocumentStore.GetConvention(shardId);
+
+            if (typeof(T) != typeof(object))
+            {
+                indexName += "/" + convention.GetTypeTagName(typeof(T));
+            }
+
+            return new ShardedDocumentQuery<T>(indexName,
 											   GetAppropriateShardedSessions<T>(null));		
 		}
 	}

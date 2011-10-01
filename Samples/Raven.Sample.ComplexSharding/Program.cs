@@ -102,10 +102,13 @@ namespace Raven.Sample.ComplexSharding
 			// queries
 			using (var session = documentStore.OpenSession())
 			{
-                session.Advanced.LuceneQuery<User>().WaitForNonStaleResults().ToArray();
-                session.Advanced.LuceneQuery<Blog>().WaitForNonStaleResults().ToArray();
-                session.Advanced.LuceneQuery<Post>().WaitForNonStaleResults().ToArray();
-			}
+                var users = session.Advanced.LuceneQuery<User>().WaitForNonStaleResults().ToArray();
+                var blogs = session.Advanced.LuceneQuery<Blog>().WaitForNonStaleResults().ToArray();
+                var posts = session.Advanced.LuceneQuery<Post>().WaitForNonStaleResults().ToArray();
+                Console.WriteLine("Users:" + users.Length);
+                Console.WriteLine("Blogs:" + blogs.Length);
+                Console.WriteLine("Posts:" + posts.Length);
+            }
 
 			// loading
 			using (var session = documentStore.OpenSession())
@@ -122,6 +125,9 @@ namespace Raven.Sample.ComplexSharding
 			{
 				server.Dispose();
 			}
+
+            Console.WriteLine("press any key to exit...");
+		    Console.ReadLine();
 		}
 
 		private static IEnumerable<RavenDbServer> StartServers()

@@ -184,7 +184,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public IDocumentSession OpenSession(string database)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database)).ToArray(), this);
+            return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database)).ToArray(), this);
 		}
 
 		/// <summary>
@@ -192,7 +192,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database, credentialsForSession)).ToArray(), this);
+            return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database, credentialsForSession)).ToArray(), this);
 		}
 
 		/// <summary>
@@ -201,7 +201,7 @@ namespace Raven.Client.Shard
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(credentialsForSession)).ToArray(), this);
+            return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(credentialsForSession)).ToArray(), this);
 		}
 
 		/// <summary>
@@ -222,6 +222,16 @@ namespace Raven.Client.Shard
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a database conventions. you need to explicitly use the shard instances to get access to the database commands"); }
 		}
+
+	    /// <summary>
+	    /// 
+	    /// </summary>
+	    /// <param name="shardId"></param>
+	    /// <returns></returns>
+	    public DocumentConvention GetConvention(string shardId)
+        {
+            return shards.Where(x => x.Identifier == shardId).FirstOrDefault().Conventions;
+        }
 
 		/// <summary>
 		/// Gets or sets the URL.

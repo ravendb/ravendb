@@ -35,7 +35,7 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Abstract implementation for in memory session operations
 	/// </summary>
-	public abstract class InMemoryDocumentSessionOperations : IDisposable
+    public abstract class InMemoryDocumentSessionOperations : IDisposable, IAdvancedDocumentSessionOperations
 	{
 		/// <summary>
 		/// The session id 
