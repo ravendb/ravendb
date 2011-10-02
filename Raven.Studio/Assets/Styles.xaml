@@ -487,7 +487,7 @@
 		<Setter Property="FontSize" Value="14"/>
 		<Setter Property="Foreground" Value="#FF666666"/>
 		<Setter Property="VerticalAlignment" Value="Center"/>
-		<Setter Property="Margin" Value="20,0"/>
+		<Setter Property="Padding" Value="20,10"/>
 	</Style>
 	
 	<Style x:Key="Style_Separator_HeaderLink" TargetType="Controls:Separator">
