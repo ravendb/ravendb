@@ -526,6 +526,8 @@
 	</Style>
     	
 	<Thickness x:Key="Margin_MainPageLeftRight">170,0</Thickness>
+
+	<Thickness x:Key="Margin_ContentPage">0,15,0,0</Thickness>
 		
 	<Style x:Key="Style_ComboBox_MouseOverOnlyChrome" TargetType="ComboBox">
 		<Setter Property="Padding" Value="6,2,25,2"/>

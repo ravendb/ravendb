@@ -14,6 +14,6 @@
 									  toolkit:DockPanel.Dock="Bottom" />
 		
 		<Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}"
-								 Margin="0,15,0,0" />
+								 Margin="{StaticResource Margin_ContentPage}" />
 	</toolkit:DockPanel>
 </Infrastructure:View>
