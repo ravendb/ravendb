@@ -1,21 +1,25 @@
 ﻿<Infrastructure:View x:Class="Raven.Studio.Features.Databases.DatabaseSelectionView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 mc:Ignorable="d"
 					 DataContext="{Binding Path=Server.Value}">
 
-	<StackPanel Orientation="Horizontal">
+	<ContentControl FontSize="12"
+					FontFamily="Tahoma">
 		<StackPanel Orientation="Horizontal">
-			<HyperlinkButton Content="Databases" NavigateUri="/Home"
-							 FontSize="12" FontFamily="Tahoma" Foreground="{StaticResource Brush_ContrastColor}" VerticalAlignment="Center"/>
-            <TextBlock Text=">" FontSize="20" FontFamily="Tahoma"/>
+			<HyperlinkButton Content="Databases"
+							 NavigateUri="/Home"
+							 Foreground="{StaticResource Brush_ContrastColor}"
+							 VerticalAlignment="Center" />
+			<TextBlock Text=">"
+					   VerticalAlignment="Center" />
 			<ComboBox ItemsSource="{Binding Path=Databases}"
 					  DisplayMemberPath="Name"
 					  SelectedItem="{Binding Path=SelectedDatabase.Value, Mode=TwoWay}"
-					  FontSize="12" FontFamily="Tahoma" Background="{x:Null}" Foreground="{StaticResource Brush_ContrastColor}" Style="{StaticResource Style_ComboBox_MouseOverOnlyChrome}" />
+					  Background="{x:Null}"
+					  Foreground="{StaticResource Brush_ContrastColor}"
+					  Style="{StaticResource Style_ComboBox_MouseOverOnlyChrome}"
+					  VerticalAlignment="Center" />
 		</StackPanel>
-	</StackPanel>
+	</ContentControl>
 </Infrastructure:View>
