@@ -258,7 +258,8 @@
 				<Grid Grid.Row="10"
 					  Grid.Column="2">
 					<StackPanel>
-						<TextBlock Text="{Binding ErrorsCount}" />
+						<TextBlock Text="{Binding ErrorsCount, StringFormat='\{0\} errors'}"
+								   Visibility="{Binding ErrorsCount, Converter={StaticResource HiddenWhenEmpty}}"/>
 					</StackPanel>
 					<StackPanel Grid.Column="1"
 								HorizontalAlignment="Right">
