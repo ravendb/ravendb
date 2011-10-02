@@ -14,19 +14,16 @@
 					 Style="{StaticResource PageStyle}">
 
 	<Grid x:Name="LayoutRoot">
-		<StackPanel x:Name="ContentStackPanel">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-			<TextBlock x:Name="HeaderText"
-						Style="{StaticResource HeaderTextStyle}"
-						Text="Home" />
-			<TextBlock x:Name="ContentText"
-						Style="{StaticResource ContentTextStyle}"
-						Text="Home page content" />
-
-			<Databases:DatabaseSelectionView />
-			<Stats:DatabaseStatisticsView />
-			<Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" />
-		</StackPanel>
-	</Grid>
+        <StackPanel x:Name="ContentStackPanel" Grid.Column="1" Margin="20,0">
+            
+            <Stats:DatabaseStatisticsView />
+            
+            <Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}" Margin="0,15,0,0" />
+        </StackPanel>
+    </Grid>
 
 </Infrastructure:View>

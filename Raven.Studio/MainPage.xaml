@@ -5,75 +5,124 @@
 			 xmlns:uriMapper="clr-namespace:System.Windows.Navigation;assembly=System.Windows.Controls.Navigation"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 mc:Ignorable="d"
-			 d:DesignWidth="640"
-			 d:DesignHeight="480">
+             xmlns:Controls="clr-namespace:System.Windows.Controls"
+             xmlns:TiledBG="clr-namespace:TiledBG;assembly=TiledBG"
+             xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases" mc:Ignorable="d"
+			 d:DesignWidth="781"
+			 d:DesignHeight="482">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
-		
-		<Border x:Name="ContentBorder"
-				Style="{StaticResource ContentBorderStyle}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="40"/>
+        </Grid.RowDefinitions>
+        
+	  <Grid x:Name="HeaderGrid" Grid.Row="0" Grid.ColumnSpan="2">
+	    <Grid.RowDefinitions>
+	      <RowDefinition Height="40"/>
+	      <RowDefinition Height="Auto"/>
+	    </Grid.RowDefinitions>
 
-			<navigation:Frame x:Name="ContentFrame"
-							  Style="{StaticResource ContentFrameStyle}"
-							  Source="/Collections"
-							  Navigated="ContentFrame_Navigated"
-							  NavigationFailed="ContentFrame_NavigationFailed">
-				<navigation:Frame.UriMapper>
-					<uriMapper:UriMapper>
-						<uriMapper:UriMapping Uri=""
-											  MappedUri="/Views/Home.xaml" />
-						<uriMapper:UriMapping Uri="/{pageName}"
-											  MappedUri="/Views/{pageName}.xaml" />
-					</uriMapper:UriMapper>
-				</navigation:Frame.UriMapper>
-			</navigation:Frame>
-		</Border>
+	    <Border>
+	      <Border.Background>
+	        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+	          <GradientStop Color="White" Offset="0.174"/>
+	          <GradientStop Color="#FFDEDEDE" Offset="0.993"/>
+	          <GradientStop Color="#FF78223D" Offset="1"/>
+	        </LinearGradientBrush>
+	      </Border.Background>
+	    </Border>
+	    <Border Height="5" Grid.Row="1">
+	      <Border.Background>
+	        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+	          <GradientStop Color="#FF78223D" Offset="0.13"/>
+	          <GradientStop Color="#FF8B2241" Offset="0.174"/>
+	          <GradientStop Color="#FF8B2241" Offset="0.348"/>
+	          <GradientStop Color="#FF9F2145" Offset="0.391"/>
+	          <GradientStop Color="#FF9F2145" Offset="0.565"/>
+	          <GradientStop Color="#FFB22148" Offset="0.609"/>
+	        </LinearGradientBrush>
+	      </Border.Background>
+	    </Border>
 
-		<Grid x:Name="NavigationGrid"
-			  Style="{StaticResource NavigationGridStyle}">
+	    <StackPanel Orientation="Horizontal" Margin="{StaticResource Margin_MainPageLeftRight}">
+	      <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+	      <TextBlock Text="HOME" Style="{StaticResource Style_Text_HeaderLink}"/>
+	      <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+	      <TextBlock Text="LEARN" Style="{StaticResource Style_Text_HeaderLink}"/>
+	      <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+	      <TextBlock Text="COMMUNITY" Style="{StaticResource Style_Text_HeaderLink}"/>
+	      <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+	      <TextBlock Text="CONTACT US" Style="{StaticResource Style_Text_HeaderLink}"/>
+	      <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+	    </StackPanel>
+	  </Grid>
+        
+	  <Grid x:Name="ContentGrid" Grid.Row="1">
+            <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}" BorderThickness="0"/>
+          
+            <Grid >
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="170"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-			<Grid.RowDefinitions>
-				<RowDefinition Height="42" />
-				<RowDefinition Height="Auto" />
-			</Grid.RowDefinitions>
-			
-			<Border x:Name="BrandingBorder"
-					Style="{StaticResource BrandingBorderStyle}">
-				<StackPanel x:Name="BrandingStackPanel"
-							Style="{StaticResource BrandingStackPanelStyle}">
+                <Grid Margin="170,20" Grid.ColumnSpan="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-					<ContentControl Style="{StaticResource LogoIcon}" />
-					<TextBlock x:Name="ApplicationNameTextBlock"
-							   Style="{StaticResource ApplicationNameStyle}"
-							   Text="Application Name" />
+                    <Image Source="{StaticResource Image_RavenDBLogo}" 
+                           Stretch="Uniform" Grid.Row="0" 
+                           Grid.Column="0"
+                           HorizontalAlignment="Left"
+                           Height="60"/>
 
-				</StackPanel>
-			</Border>
+                    <Databases:DatabaseSelectionView Grid.Column="1" VerticalAlignment="Bottom" 
+                                                         Margin="40,0,0,-5"/>
+                </Grid>
 
-			<Border x:Name="LinksBorder"
-					Style="{StaticResource LinksBorderStyle}">
-				<StackPanel x:Name="LinksStackPanel"
-							Style="{StaticResource LinksStackPanelStyle}">
+                <ListBox Style="{StaticResource Style_ListBox_MainTabs}" VerticalAlignment="Top" Grid.Column="0" Grid.Row="1"
+                         Width="150" HorizontalAlignment="Center">
+                    <ListBoxItem Content="Summary"/>
+                    <ListBoxItem Content="Collections"/>
+                    <ListBoxItem Content="Indexes"/>
+                    <ListBoxItem Content="Documents"/>
+                    <ListBoxItem Content="Query"/>
+                    <ListBoxItem Content="Tasks"/>
+                </ListBox>
 
-					<Rectangle Style="{StaticResource DividerStyle}" />
+                <navigation:Frame x:Name="ContentFrame"
+							      Style="{StaticResource ContentFrameStyle}"
+                                  Grid.Row="1"
+                                  Grid.Column="1"
+							      Source=""
+							      Navigated="ContentFrame_Navigated"
+							      NavigationFailed="ContentFrame_NavigationFailed">
+                    <navigation:Frame.UriMapper>
+                        <uriMapper:UriMapper>
+                            <uriMapper:UriMapping Uri=""
+											      MappedUri="/Views/Home.xaml" />
+                            <uriMapper:UriMapping Uri="/{pageName}"
+											      MappedUri="/Views/{pageName}.xaml" />
+                        </uriMapper:UriMapper>
+                    </navigation:Frame.UriMapper>
+                </navigation:Frame>
+            </Grid>
 
-					<HyperlinkButton Style="{StaticResource LinkStyle}"
-									 NavigateUri="/Home"
-									 TargetName="ContentFrame"
-									 Content="home" />
+        </Grid>
 
-					<Rectangle Style="{StaticResource DividerStyle}" />
-
-				</StackPanel>
-			</Border>
-
-			<StackPanel Grid.Row="1">
-				<TextBlock Text="{Binding Path=LastNotification.Value}" Foreground="White" />
-			</StackPanel>
-		</Grid>
-
+        <Grid x:Name="FooterGrid" Grid.Row="2">
+          <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_FooterTexture}" BorderThickness="0"/>
+          <Rectangle VerticalAlignment="Top" Height="5" Fill="Black" Opacity="0.4"/>
+        </Grid>
 	</Grid>
 
 </UserControl>

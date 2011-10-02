@@ -1,6 +1,8 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Images/Images.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
 
 	<!-- notification level colors (names linked to NotificationLevel enum -->
 	<Color x:Key="InfoColor">#FF29CC29</Color>	
@@ -96,5 +98,21 @@
 		<GradientStop Color="#BF123C65"
 					  Offset="0.75" />
 	</LinearGradientBrush>
+    
+    <ImageBrush x:Key="Brush_BackgroundTexture" ImageSource="{StaticResource Image_BackgroundTexture}" 
+                AlignmentX="Left" 
+                AlignmentY="Top" 
+                Stretch="None"/>
 
+    <ImageBrush x:Key="Brush_BackgroundReversed" ImageSource="{StaticResource Image_BackgroundTexture}" 
+                AlignmentX="Left" 
+                AlignmentY="Top" 
+                Stretch="None">
+        <ImageBrush.Transform>
+            <ScaleTransform ScaleY="-1"/>
+        </ImageBrush.Transform>
+    </ImageBrush>
+
+	<SolidColorBrush x:Key="Brush_ContrastColor" Color="#FF9A002B"/>
+	
 </ResourceDictionary>
