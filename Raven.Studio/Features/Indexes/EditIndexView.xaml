@@ -254,24 +254,30 @@
 								  Visibility="{Binding Fields, Converter={StaticResource HiddenWhenEmpty}}"
 								  Background="Transparent"
 								  HorizontalAlignment="Stretch" />
-			
-				<StackPanel Grid.Row="10"
-							Grid.Column="2"
-							HorizontalAlignment="Right">
-					<HyperlinkButton x:Name="Save"
-									 HorizontalAlignment="Left"
-									 Margin="4 0 0 0"
-									 ToolTipService.ToolTip="Save Index"
-									 Content="Save"
-									 Command="{Binding SaveIndex}" />
 
-					<HyperlinkButton x:Name="Reset"
-									 HorizontalAlignment="Left"
-									 Margin="4 0 0 0"
-									 ToolTipService.ToolTip="Reset Index"
-									 Content="Reset"
-									 Command="{Binding ResetIndex}" />
-				</StackPanel>
+				<Grid Grid.Row="10"
+					  Grid.Column="2">
+					<StackPanel>
+						<TextBlock Text="{Binding ErrorsCount}" />
+					</StackPanel>
+					<StackPanel Grid.Column="1"
+								HorizontalAlignment="Right">
+						<HyperlinkButton x:Name="Save"
+										 HorizontalAlignment="Left"
+										 Margin="4 0 0 0"
+										 ToolTipService.ToolTip="Save Index"
+										 Content="Save"
+										 Command="{Binding SaveIndex}" />
+
+						<HyperlinkButton x:Name="Reset"
+										 HorizontalAlignment="Left"
+										 Margin="4 0 0 0"
+										 ToolTipService.ToolTip="Reset Index"
+										 Content="Reset"
+										 Command="{Binding ResetIndex}" />
+					</StackPanel>
+				</Grid>
+
 			</Grid>
 		</ScrollViewer>
 	</Grid>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
 using Newtonsoft.Json;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
@@ -13,14 +14,17 @@ namespace Raven.Studio.Models
 	public class IndexDefinitionModel : Model
 	{
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
-		private string originalIndex;
+		private readonly string originalIndex;
 
-		public IndexDefinitionModel(IndexDefinition index, IAsyncDatabaseCommands asyncDatabaseCommands)
+		public IndexDefinitionModel(IndexDefinition index, IAsyncDatabaseCommands asyncDatabaseCommands, Observable<DatabaseStatistics> statistics)
 		{
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 			originalIndex = JsonConvert.SerializeObject(index);
 			UpdateFromIndex(index);
+
+			this.statistics = statistics;
 		}
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
@@ -30,7 +34,6 @@ namespace Raven.Studio.Models
 			Maps.Set(index.Maps.Select(x => new MapItem {Text = x}));
 
 			Fields = new BindableCollection<FieldProperties>(new PrimaryKeyComparer<FieldProperties>(field => field.Name));
-
 			CreateOrEditField(index.Indexes, (f, i) => f.Indexing = i);
 			CreateOrEditField(index.Stores, (f, i) => f.Storage = i);
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
@@ -117,6 +120,8 @@ namespace Raven.Studio.Models
 
 		public BindableCollection<MapItem> Maps { get; private set; }
 		public BindableCollection<FieldProperties> Fields { get; private set; }
+
+		public int ErrorsCount { get { return statistics.Value.Errors.Count(); } }
 
 #region Commands
 

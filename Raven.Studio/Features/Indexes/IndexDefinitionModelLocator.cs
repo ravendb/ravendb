@@ -40,7 +40,7 @@ namespace Raven.Studio.Features.Indexes
 				                   		ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + name, UriKind.Relative));
 				                   		return;
 				                   	}
-				                   	observable.Value = new IndexDefinitionModel(index, asyncDatabaseCommands);
+				                   	observable.Value = new IndexDefinitionModel(index, asyncDatabaseCommands, serverModel.SelectedDatabase.Value.Statistics);
 				                   }
 				)
 				.Catch();
