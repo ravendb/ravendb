@@ -7,15 +7,45 @@
 	<Grid HorizontalAlignment="Left"
 		  DataContext="{Binding Path=Statistics.Value}">
 		<Grid.Resources>
-			<Style x:Name="Statistics_CountText"
-				   TargetType="TextBlock">
+			<Style x:Name="Statistics_Count"
+				   TargetType="HyperlinkButton">
 				<Setter Property="Margin"
 						Value="0,0,8,0" />
 				<Setter Property="Foreground"
 						Value="Black" />
+				<Setter Property="Template">
+					<Setter.Value>
+						<ControlTemplate TargetType="HyperlinkButton">
+							<Grid Cursor="{TemplateBinding Cursor}"
+								  Background="{TemplateBinding Background}">
+								<VisualStateManager.VisualStateGroups>
+									<VisualStateGroup x:Name="CommonStates">
+										<VisualStateGroup.Transitions>
+											<VisualTransition GeneratedDuration="0:0:0.2" />
+										</VisualStateGroup.Transitions>
+										<VisualState x:Name="Normal" />
+										<VisualState x:Name="MouseOver">
+											<Storyboard>
+												<ColorAnimation To="White"
+																Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
+																Storyboard.TargetName="Content"
+																Duration="0" />
+											</Storyboard>
+										</VisualState>
+									</VisualStateGroup>
+								</VisualStateManager.VisualStateGroups>
+								
+								<TextBlock x:Name="Content"
+										   Text="{TemplateBinding Content}"
+										   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+										   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+										   Margin="{TemplateBinding Padding}" />
+							</Grid>
+						</ControlTemplate>
+					</Setter.Value>
+				</Setter>
 			</Style>
 		</Grid.Resources>
-		
 		
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="Auto" />
@@ -23,15 +53,16 @@
 		</Grid.ColumnDefinitions>
 
 		<TextBlock Text="Statistics"
-				   Style="Black" />
+				   Foreground="Black"
+				   VerticalAlignment="Center" FontSize="14" Margin="0,0,6,0" />
 		
 		<StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-			<TextBlock Text="{Binding CountOfDocuments, StringFormat='\{0\} documents'}" Style="{StaticResource Statistics_CountText}" />
-			<TextBlock Text="{Binding CountOfIndexes, StringFormat='\{0\} indexes'}" Style="{StaticResource Statistics_CountText}" />
-			<TextBlock Text="{Binding Path=StaleIndexes.Length, StringFormat='\{0\} stale'}" Style="{StaticResource Statistics_CountText}" />
-			<TextBlock Text="{Binding Path=Errors.Length, StringFormat='\{0\} errors'}" Style="{StaticResource Statistics_CountText}" />
-			<TextBlock Text="{Binding Path=Triggers.Length, StringFormat='\{0\} triggers'}" Style="{StaticResource Statistics_CountText}" />
-			<TextBlock Text="{Binding ApproximateTaskCount, StringFormat='\{0\} tasks'}" Style="{StaticResource Statistics_CountText}" />
+			<HyperlinkButton Content="{Binding CountOfDocuments, StringFormat='\{0\} documents'}" Style="{StaticResource Statistics_Count}" />
+			<HyperlinkButton Content="{Binding CountOfIndexes, StringFormat='\{0\} indexes'}" Style="{StaticResource Statistics_Count}" />
+			<HyperlinkButton Content="{Binding Path=StaleIndexes.Length, StringFormat='\{0\} stale'}" Style="{StaticResource Statistics_Count}" />
+			<HyperlinkButton Content="{Binding Path=Errors.Length, StringFormat='\{0\} errors'}" Style="{StaticResource Statistics_Count}" />
+			<HyperlinkButton Content="{Binding Path=Triggers.Length, StringFormat='\{0\} triggers'}" Style="{StaticResource Statistics_Count}" />
+			<HyperlinkButton Content="{Binding ApproximateTaskCount, StringFormat='\{0\} tasks'}" Style="{StaticResource Statistics_Count}" />
 		</StackPanel>
 	</Grid>
 </Infrastructure:View>
