@@ -481,7 +481,7 @@
 				Value="58,0,58,0" />
 	</Style>
 
-	<Style x:Key="Style_Text_HeaderLink" TargetType="TextBlock">
+	<Style x:Key="Style_Text_HeaderLink" TargetType="HyperlinkButton">
 		<Setter Property="FontFamily" Value="Arial"/>
 		<Setter Property="FontWeight" Value="Bold"/>
 		<Setter Property="FontSize" Value="14"/>

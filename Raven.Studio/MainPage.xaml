@@ -47,18 +47,36 @@
 	      </Border.Background>
 	    </Border>
 
-	    <StackPanel Orientation="Horizontal" Margin="{StaticResource Margin_MainPageLeftRight}">
-	      <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
-	      <TextBlock Text="HOME" Style="{StaticResource Style_Text_HeaderLink}"/>
-	      <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
-	      <TextBlock Text="LEARN" Style="{StaticResource Style_Text_HeaderLink}"/>
-	      <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
-	      <TextBlock Text="COMMUNITY" Style="{StaticResource Style_Text_HeaderLink}"/>
-	      <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
-	      <TextBlock Text="CONTACT US" Style="{StaticResource Style_Text_HeaderLink}"/>
-	      <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
-	    </StackPanel>
-	  </Grid>
+			<StackPanel Orientation="Horizontal"
+						Margin="{StaticResource Margin_MainPageLeftRight}">
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton Content="Summary"
+								 NavigateUri="/"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton Content="Collections"
+								 NavigateUri="/collections"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton Content="Indexes"
+								 NavigateUri="/indexes"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+
+				<HyperlinkButton Content="Documents"
+								 NavigateUri="/documents"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton Content="Query"
+								 NavigateUri="/query"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton Content="Tasks"
+								 NavigateUri="/tasks"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+			</StackPanel>
+		</Grid>
         
 	  <Grid x:Name="ContentGrid" Grid.Row="1">
             <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}" BorderThickness="0"/>
@@ -88,16 +106,6 @@
                     <Databases:DatabaseSelectionView Grid.Column="1" VerticalAlignment="Bottom" 
                                                          Margin="40,0,0,-5"/>
                 </Grid>
-
-                <ListBox Style="{StaticResource Style_ListBox_MainTabs}" VerticalAlignment="Top" Grid.Column="0" Grid.Row="1"
-                         Width="150" HorizontalAlignment="Center">
-                    <ListBoxItem Content="Summary"/>
-                    <ListBoxItem Content="Collections"/>
-                    <ListBoxItem Content="Indexes"/>
-                    <ListBoxItem Content="Documents"/>
-                    <ListBoxItem Content="Query"/>
-                    <ListBoxItem Content="Tasks"/>
-                </ListBox>
 
                 <navigation:Frame x:Name="ContentFrame"
 							      Style="{StaticResource ContentFrameStyle}"
