@@ -43,11 +43,17 @@ namespace Raven.Abstractions.Linq
 			return GetEnumerator();
 		}
 
-		// null is false by default
-		public static implicit operator bool (DynamicNullObject o)
-		{
-			return false;
-		}
+		// null is false or 0 by default
+		public static implicit operator bool(DynamicNullObject o) { return false; }
+		public static implicit operator bool?(DynamicNullObject o) { return null; }
+		public static implicit operator decimal(DynamicNullObject o) { return 0; }
+		public static implicit operator decimal?(DynamicNullObject o) { return null; }
+		public static implicit operator double(DynamicNullObject o) { return 0; }
+		public static implicit operator double?(DynamicNullObject o) { return null; }
+		public static implicit operator float(DynamicNullObject o) { return 0; }
+		public static implicit operator float?(DynamicNullObject o) { return null; }
+		public static implicit operator long(DynamicNullObject o) { return 0; }
+		public static implicit operator long?(DynamicNullObject o) { return null; }
 
 		public override bool Equals(object obj)
 		{
@@ -66,7 +72,7 @@ namespace Raven.Abstractions.Linq
 
 		public static bool operator !=(DynamicNullObject left, object right)
 		{
-			return right != null && (right is DynamicNullObject) == false ;
+			return right != null && (right is DynamicNullObject) == false;
 		}
 
 		public static bool operator >(DynamicNullObject left, object right)
