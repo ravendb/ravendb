@@ -509,8 +509,31 @@
 		<Setter Property="Foreground" Value="#FF666666"/>
 		<Setter Property="VerticalAlignment" Value="Center"/>
 		<Setter Property="Padding" Value="16,6"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="HyperlinkButton">
+					<Grid Cursor="{TemplateBinding Cursor}"
+						  Background="{TemplateBinding Background}">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.2" />
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Normal" />
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+
+						<TextBlock x:Name="Content"
+								   Text="{TemplateBinding Content}"
+								   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+								   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+								   Margin="{TemplateBinding Padding}" />
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
 	</Style>
-	
+
 	<Style x:Key="Style_Separator_HeaderLink" TargetType="Controls:Separator">
 		<Setter Property="Template">
 			<Setter.Value>
