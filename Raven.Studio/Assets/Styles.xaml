@@ -356,7 +356,6 @@
 	</ItemsPanelTemplate>
 
 	
-
 	<Style x:Name="FluidList"
 		   TargetType="ItemsControl">
 		<Setter Property="ItemsPanel"
@@ -371,8 +370,6 @@
 
 	<Style x:Name="Collections_FluidList" BasedOn="{StaticResource FluidList}"
 		   TargetType="ItemsControl">
-		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
-				Value="Auto" />
 		<Setter Property="MaxHeight"
 				Value="400" />
 		<Setter Property="Background"
@@ -835,7 +832,7 @@
         <Setter Property="ItemsPanel"
 				Value="{StaticResource FluidWrapPanel}" />
         <Setter Property="ScrollViewer.VerticalScrollBarVisibility"
-				Value="Disabled" />
+				Value="Auto" />
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
 				Value="Disabled" />
         <Setter Property="SelectionMode"
