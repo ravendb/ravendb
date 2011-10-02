@@ -44,9 +44,9 @@ namespace Raven.Tests.Bugs
 			{
 				using (var s = ds.OpenSession())
 				{
-					var entity = new User { Name = "Ayende" };
+					var entity = new User { Name = "Ayende", Age = 1 };
 					s.Store(entity);
-					s.Store(new User { Name = "Oren", PartnerId = entity.Id });
+					s.Store(new User { Name = "Oren", PartnerId = entity.Id, Age = 1 });
 					s.SaveChanges();
 				}
 
