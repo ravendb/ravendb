@@ -32,7 +32,7 @@ namespace Raven.Tests.Bugs
 				TransformResults =
 					(database, users) => from user in users
 										 let partner = database.Load<User>(user.PartnerId)
-										 let x = partner.Age/2  // force an error
+										 let x = 2 / partner.Age  // force an error
 										 select new {User = user.Name, Partner = partner.Name};
 			}
 		}
@@ -94,7 +94,7 @@ namespace Raven.Tests.Bugs
 																								 .First());
 
 					dynamic dynamicNullObject = new DynamicNullObject();
-					var expectedError = Assert.Throws<RuntimeBinderException>(() => dynamicNullObject / 1);
+					var expectedError = Assert.Throws<DivideByZeroException>(() => 1 / dynamicNullObject);
 
 					Assert.Equal("The transform results function failed.\r\nDoc 'users/1', Error: " + expectedError.Message, exception.Message);
 				}
