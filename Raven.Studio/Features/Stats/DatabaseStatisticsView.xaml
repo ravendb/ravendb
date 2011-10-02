@@ -13,6 +13,8 @@
 						Value="0,0,8,0" />
 				<Setter Property="Foreground"
 						Value="{StaticResource Brush_ContrastColor}" />
+				<Setter Property="Opacity"
+						Value="0.6" />
 			</Style>
 		</Grid.Resources>
 		
@@ -23,7 +25,7 @@
 		</Grid.ColumnDefinitions>
 
 		<TextBlock Text="Statistics"
-				   Style="{StaticResource Style_Text_VerticalHeader}" />
+				   Style="{StaticResource Style_Text_VerticalHeader}" Opacity="0.6" />
 		
 		<StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
 			<TextBlock Text="{Binding CountOfDocuments, StringFormat='\{0\} documents'}" Style="{StaticResource Statistics_CountText}" />
