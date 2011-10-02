@@ -4,7 +4,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 			 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
-	<Grid>
+	<Grid Margin="{StaticResource Margin_ContentPage}">
 
 		<ScrollViewer BorderThickness="0"
 					  VerticalScrollBarVisibility="Auto"
