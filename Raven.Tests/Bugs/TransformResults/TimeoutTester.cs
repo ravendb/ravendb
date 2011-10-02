@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
@@ -10,144 +11,135 @@ using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs.TransformResults
 {
-    public class TimeoutTester : RemoteClientTest
-    {
-        [Fact]
-        public void will_timeout_query_after_some_time()
-        {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
-            {
-                new Answers_ByAnswerEntity().Execute(store);
-                var answerId = "";
+	public class TimeoutTester : RemoteClientTest
+	{
+		[Fact]
+		public void will_timeout_query_after_some_time()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				new Answers_ByAnswerEntity().Execute(store);
+				var answerId = "";
 
-                store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
-                CreateEntities(store, 0);
+				store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
+				CreateEntities(store, 0);
 
-                const string content = "This is doable";
+				const string content = "This is doable";
 
-                using (var session = store.OpenSession())
-                {
-                    RavenQueryStatistics stats;
-                    AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
-                        .Statistics(out stats)
-                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
-                        .OrderBy(x => x.Content)
-                        .Where(x => x.Content.Contains(content))
-                        .Skip(0).Take(1)
-                        .As<AnswerEntity>()
-                        .FirstOrDefault();
+				using (var session = store.OpenSession())
+				{
+					RavenQueryStatistics stats;
+					AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
+						.Statistics(out stats)
+						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+						.OrderBy(x => x.Content)
+						.Where(x => x.Content.Contains(content))
+						.Skip(0).Take(1)
+						.As<AnswerEntity>()
+						.FirstOrDefault();
 
-                    Assert.NotNull(answerInfo);
-                    answerId = answerInfo.Id;
-                }
-                object locker = new object();
-                for (int k = 0; k < 100; k++)
-                {
-                    new Thread(() =>
-                    {
-                        lock (locker)
-                        {
-                            using (var session = store.OpenSession())
-                            {
-                                for (int i = 0; i < 100; i++)
-                                {
-                                    var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
-                                        .OrderBy(x => x.Content)
-                                        .Skip(0).Take(1)
-                                        .As<AnswerEntity>()
-                                        .FirstOrDefault();
+					Assert.NotNull(answerInfo);
+					answerId = answerInfo.Id;
+				}
+				List<Thread> threads = new List<Thread>();
+				object locker = new object();
+				for (int k = 0; k < 100; k++)
+				{
+					var thread = new Thread(() =>
+					{
+						lock (locker)
+						{
+							using (var session = store.OpenSession())
+							{
+								for (int i = 0; i < 100; i++)
+								{
+									var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
+										.OrderBy(x => x.Content)
+										.Skip(0).Take(1)
+										.As<AnswerEntity>()
+										.FirstOrDefault();
 
-                                    Console.WriteLine("k = {0}, i = {1}", k, i);
+									Assert.NotNull(answerInfo);
+								}
+							}
+							using (var session = store.OpenSession())
+							{
+								var answer = session.Load<Answer>(answerId);
+								Assert.NotNull(answer);
 
-                                    Assert.NotNull(answerInfo);
+								answer.Content += k.ToString();
+								session.Store(answer);
+								session.SaveChanges();
+							}
+						}
+					});
+					threads.Add(thread);
+					thread.Start();
+				}
 
-                                    //if (i%100 == 0)
-                                    //{
-                                    //    if (answerInfo != null) // Update it
-                                    //    {
-                                    //        var answer = session.Load<Answer>(answerInfo.Id);
-                                    //        Assert.NotNull(answer);
+				foreach (var thread in threads)
+				{
+					thread.Join();
+				}
+			}
+		}
 
-                                    //        answer.Content += k + i.ToString();
-                                    //        session.Store(answer);
-                                    //        session.SaveChanges();
-                                    //    }
-                                    //}
-                                }
-                            }
-                            //Thread.Sleep(1);
-                            using (var session = store.OpenSession())
-                            {
-                                var answer = session.Load<Answer>(answerId);
-                                Assert.NotNull(answer);
+		public static string CreateEntities(IDocumentStore documentStore, int index)
+		{
+			string questionId = @"question/259" + index;
+			string answerId = @"answer/540" + index;
+			using (IDocumentSession session = documentStore.OpenSession())
+			{
+				var user = new User { Id = @"user/222" + index, DisplayName = "John Doe" + index };
+				session.Store(user);
 
-                                answer.Content += k.ToString();
-                                session.Store(answer);
-                                session.SaveChanges();
-                            }
-                        }
-                    }).Start();
-                }
+				var question = new Question
+				{
+					Id = questionId,
+					Title = "How to do this in RavenDb?" + index,
+					Content = "I'm trying to find how to model documents for better DDD support." + index,
+					UserId = @"user/222" + index
+				};
+				session.Store(question);
 
-            }
-        }
+				var answer = new AnswerEntity
+				{
+					Id = answerId,
+					Question = question,
+					Content = "This is doable",
+					UserId = user.Id
+				};
 
-        public static string CreateEntities(IDocumentStore documentStore, int index)
-        {
-            string questionId = @"question/259" + index;
-            string answerId = @"answer/540" + index;
-            using (IDocumentSession session = documentStore.OpenSession())
-            {
-                var user = new User { Id = @"user/222" + index, DisplayName = "John Doe" + index };
-                session.Store(user);
+				session.Store(new Answer
+				{
+					Id = answer.Id,
+					UserId = answer.UserId,
+					QuestionId = answer.Question.Id,
+					Content = answer.Content
+				});
 
-                var question = new Question
-                {
-                    Id = questionId,
-                    Title = "How to do this in RavenDb?" + index,
-                    Content = "I'm trying to find how to model documents for better DDD support." + index,
-                    UserId = @"user/222" + index
-                };
-                session.Store(question);
+				var vote1 = new AnswerVoteEntity { Id = "votes/1" + index, Answer = answer, QuestionId = questionId, Delta = 2 };
+				session.Store(new AnswerVote
+				{
+					QuestionId = vote1.QuestionId,
+					AnswerId = vote1.Answer.Id,
+					Delta = vote1.Delta
+				});
 
-                var answer = new AnswerEntity
-                {
-                    Id = answerId,
-                    Question = question,
-                    Content = "This is doable",
-                    UserId = user.Id
-                };
+				var vote2 = new AnswerVoteEntity { Id = "votes/2" + index, Answer = answer, QuestionId = questionId, Delta = 3 };
+				session.Store(new AnswerVote
+				{
+					QuestionId = vote2.QuestionId,
+					AnswerId = vote2.Answer.Id,
+					Delta = vote2.Delta
+				});
 
-                session.Store(new Answer
-                {
-                    Id = answer.Id,
-                    UserId = answer.UserId,
-                    QuestionId = answer.Question.Id,
-                    Content = answer.Content
-                });
-
-                var vote1 = new AnswerVoteEntity { Id = "votes/1" + index, Answer = answer, QuestionId = questionId, Delta = 2 };
-                session.Store(new AnswerVote
-                {
-                    QuestionId = vote1.QuestionId,
-                    AnswerId = vote1.Answer.Id,
-                    Delta = vote1.Delta
-                });
-
-                var vote2 = new AnswerVoteEntity { Id = "votes/2" + index, Answer = answer, QuestionId = questionId, Delta = 3 };
-                session.Store(new AnswerVote
-                {
-                    QuestionId = vote2.QuestionId,
-                    AnswerId = vote2.Answer.Id,
-                    Delta = vote2.Delta
-                });
-
-                session.SaveChanges();
-            }
-            return answerId;
-        }
+				session.SaveChanges();
+			}
+			return answerId;
+		}
 
 
-    }
+	}
 }
