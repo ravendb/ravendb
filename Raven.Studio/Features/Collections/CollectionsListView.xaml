@@ -15,8 +15,8 @@
 					<Grid>
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition Width="Auto" />
-							<ColumnDefinition Width="128" />
-							<ColumnDefinition />
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="Auto" />
 						</Grid.ColumnDefinitions>
 
 						<Rectangle Fill="{Binding Fill}"
@@ -28,7 +28,7 @@
 								   Margin="0,4" />
 
 						<StackPanel Grid.Column="1"
-									Margin="4,0,0,0">
+									Margin="4,0,10,0">
 							<TextBlock Text="{Binding Name}"
 									   FontSize="14.667" />
 							<TextBlock Text="{Binding Count}"
