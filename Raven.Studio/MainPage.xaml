@@ -51,7 +51,7 @@
 						Margin="{StaticResource Margin_MainPageLeftRight}">
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Summary"
-								 NavigateUri="/"
+								 NavigateUri="/home"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Collections"
