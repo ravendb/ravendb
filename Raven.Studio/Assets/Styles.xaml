@@ -358,6 +358,14 @@
 				Value="0" />
 	</Style>
 
+	<Style x:Name="Collections_FluidList" BasedOn="{StaticResource FluidList}"
+		   TargetType="ItemsControl">
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Auto" />
+		<Setter Property="MaxHeight"
+				Value="400" />
+	</Style>
+
 	<!-- Form Styles -->
 	<Style x:Key="FormButton"
 		   TargetType="Button">

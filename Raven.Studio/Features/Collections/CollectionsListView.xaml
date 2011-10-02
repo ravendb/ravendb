@@ -3,15 +3,9 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
 
-	<ListBox Height="50"
+	<ListBox Style="{StaticResource Collections_FluidList}"
 			 ItemsSource="{Binding Collections}"
-			 SelectedItem="{Binding Path=SelectedCollection.Value, Mode=TwoWay}"
-			 BorderThickness="0">
-		<ListBox.ItemsPanel>
-			<ItemsPanelTemplate>
-				<StackPanel Orientation="Horizontal" />
-			</ItemsPanelTemplate>
-		</ListBox.ItemsPanel>
+			 SelectedItem="{Binding Path=SelectedCollection.Value, Mode=TwoWay}">
 		<ItemsControl.ItemTemplate>
 			<DataTemplate>
 				<Grid>
