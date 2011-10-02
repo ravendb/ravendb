@@ -251,7 +251,7 @@
 				
 				<sdk:GridSplitter Grid.Row="8"
 								  Grid.Column="1"
-								  Visibility="{Binding Fields, Converter={StaticResource HiddenWhenEmpty}}"
+								  Visibility="{Binding Path=Fields.Count, Converter={StaticResource HiddenWhenEmpty}}"
 								  Background="Transparent"
 								  HorizontalAlignment="Stretch" />
 
