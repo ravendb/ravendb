@@ -7,13 +7,19 @@
 			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 			 Tag="Documents">
 
-	<StackPanel>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+		
 		<TextBlock x:Name="HeaderText"
 				   Style="{StaticResource Style_Text_Header}"
 				   Text="{Binding Tag, ElementName=this}" />
 
 		<ListBox ItemsSource="{Binding}"
-				 Style="{StaticResource DocumentList}" >
+				 Style="{StaticResource DocumentList}"
+				 Grid.Row="1">
 			<Controls:ContextMenuService.ContextMenu>
 				<Controls:ContextMenu>
 					<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
@@ -70,5 +76,5 @@
 				</DataTemplate>
 			</ListBox.ItemTemplate>
 		</ListBox>
-	</StackPanel>
+	</Grid>
 </UserControl>
