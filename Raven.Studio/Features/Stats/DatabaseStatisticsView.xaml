@@ -12,19 +12,28 @@
 				   Text="Statistics" />
 		<Grid HorizontalAlignment="Left"
 			  DataContext="{Binding Path=Statistics.Value}">
+			<Grid.Resources>
+				<Style x:Name="Statistics_CountText" TargetType="TextBlock">
+					<Setter Property="HorizontalAlignment" Value="Right" />
+					<Setter Property="Margin" Value="0,0,3,0" />
+				</Style>
+			</Grid.Resources>
 			<Grid.RowDefinitions>
 				<RowDefinition />
 				<RowDefinition />
 				<RowDefinition />
 			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
-				<ColumnDefinition MinWidth="10" />
+				<ColumnDefinition Width="Auto"
+								  MinWidth="10" />
 				<ColumnDefinition Width="100" />
-				<ColumnDefinition  MinWidth="10" />
+				<ColumnDefinition Width="Auto"
+								  MinWidth="10" />
 				<ColumnDefinition Width="100" />
 			</Grid.ColumnDefinitions>
 
 			<TextBlock Text="{Binding CountOfDocuments}"
+					   Style="{StaticResource Statistics_CountText}"
 					   Grid.Column="0"
 					   Grid.Row="0" />
 			<ContentControl Content="documents"
@@ -32,6 +41,7 @@
 							Grid.Row="0" />
 
 			<TextBlock Text="{Binding CountOfIndexes}"
+					   Style="{StaticResource Statistics_CountText}"
 					   Grid.Column="2"
 					   Grid.Row="0" />
 			<ContentControl Content="indexes"
@@ -39,6 +49,7 @@
 							Grid.Row="0" />
 
 			<TextBlock Text="{Binding Path=StaleIndexes.Length}"
+					   Style="{StaticResource Statistics_CountText}"
 					   Grid.Column="0"
 					   Grid.Row="1" />
 			<ContentControl Content="stale"
@@ -46,6 +57,7 @@
 							Grid.Row="1" />
 
 			<TextBlock Text="{Binding Path=Errors.Length}"
+					   Style="{StaticResource Statistics_CountText}"
 					   Grid.Column="2"
 					   Grid.Row="1" />
 			<ContentControl Content="errors"
@@ -53,6 +65,7 @@
 							Grid.Row="1" />
 
 			<TextBlock Text="{Binding Path=Triggers.Length}"
+					   Style="{StaticResource Statistics_CountText}"
 					   Grid.Column="0"
 					   Grid.Row="2" />
 			<ContentControl Content="triggers"
@@ -60,6 +73,7 @@
 							Grid.Row="2" />
 
 			<TextBlock Text="{Binding ApproximateTaskCount}"
+					   Style="{StaticResource Statistics_CountText}"
 					   Grid.Column="2"
 					   Grid.Row="2" />
 			<ContentControl Content="tasks"
