@@ -9,12 +9,13 @@
 
 	<StackPanel Orientation="Horizontal">
 		<StackPanel Orientation="Horizontal">
-			<HyperlinkButton Content="Databases" NavigateUri="/Home" FontSize="20" FontFamily="Tahoma" Foreground="{StaticResource Brush_ContrastColor}" VerticalAlignment="Center"/>
+			<HyperlinkButton Content="Databases" NavigateUri="/Home"
+							 FontSize="12" FontFamily="Tahoma" Foreground="{StaticResource Brush_ContrastColor}" VerticalAlignment="Center"/>
             <TextBlock Text=">" FontSize="20" FontFamily="Tahoma"/>
 			<ComboBox ItemsSource="{Binding Path=Databases}"
 					  DisplayMemberPath="Name"
 					  SelectedItem="{Binding Path=SelectedDatabase.Value, Mode=TwoWay}"
-                      FontSize="20" FontFamily="Tahoma" Background="{x:Null}" Foreground="{StaticResource Brush_ContrastColor}" Style="{StaticResource Style_ComboBox_MouseOverOnlyChrome}" />
+					  FontSize="12" FontFamily="Tahoma" Background="{x:Null}" Foreground="{StaticResource Brush_ContrastColor}" Style="{StaticResource Style_ComboBox_MouseOverOnlyChrome}" />
 		</StackPanel>
 	</StackPanel>
 </Infrastructure:View>

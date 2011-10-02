@@ -53,25 +53,25 @@
 			  </Border.Background>
 			</Border>
 
-			<Grid Margin="0,20"
-				  Grid.Column="1">
+			<Grid Grid.Column="1" x:Name="Logo">
 				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto" />
 					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
 				</Grid.ColumnDefinitions>
 
-				<Image Source="{StaticResource Image_RavenDBLogo}"
+				<Image Source="{StaticResource Image_RavenDBLogo}" 
+					   Grid.Column="1"
 					   Stretch="Uniform"
 					   HorizontalAlignment="Left"
-					   Height="60" />
+					   Height="25"
+					   Margin="0,5,5,1"/>
 
-				<Databases:DatabaseSelectionView Grid.Column="1"
-												 VerticalAlignment="Bottom"
-												 Margin="40,0,0,-5" />
+				<Databases:DatabaseSelectionView VerticalAlignment="Bottom"
+												 HorizontalAlignment="Right" />
 			</Grid>
 		  
 			<StackPanel Orientation="Horizontal"
-						Height="40"
+						Height="28"
 						VerticalAlignment="Bottom"
 						Margin="{StaticResource Margin_MainPageLeftRight}">
 				
@@ -107,7 +107,7 @@
 	  <Grid x:Name="ContentGrid" Grid.Row="1">
             <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}" BorderThickness="0"/>
 
-			<Grid Margin="170,0">
+			<Grid Margin="15,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
