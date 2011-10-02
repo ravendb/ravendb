@@ -80,37 +80,35 @@
         
 	  <Grid x:Name="ContentGrid" Grid.Row="1">
             <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}" BorderThickness="0"/>
-          
-            <Grid >
+
+			<Grid Margin="170,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="170"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Grid Margin="170,20" Grid.ColumnSpan="2">
+                <Grid Margin="0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Image Source="{StaticResource Image_RavenDBLogo}" 
-                           Stretch="Uniform" Grid.Row="0" 
-                           Grid.Column="0"
+                    <Image Source="{StaticResource Image_RavenDBLogo}"
+                           Stretch="Uniform"
                            HorizontalAlignment="Left"
                            Height="60"/>
 
-                    <Databases:DatabaseSelectionView Grid.Column="1" VerticalAlignment="Bottom" 
-                                                         Margin="40,0,0,-5"/>
-                </Grid>
+					<Databases:DatabaseSelectionView Grid.Column="1"
+													 VerticalAlignment="Bottom"
+													 Margin="40,0,0,-5" />
+				</Grid>
 
                 <navigation:Frame x:Name="ContentFrame"
 							      Style="{StaticResource ContentFrameStyle}"
                                   Grid.Row="1"
-                                  Grid.Column="1"
 							      Source=""
 							      Navigated="ContentFrame_Navigated"
 							      NavigationFailed="ContentFrame_NavigationFailed">
