@@ -55,6 +55,7 @@ namespace Raven.Bundles.Authorization
 
 			permissions = permissions.Concat( // permissions on user matching the document's tags
 				from permission in user.Permissions
+				where OperationMatches(permission.Operation, operation)
 				where TagsMatch(permission.Tags, documentAuthorization.Tags)
 				select permission
 				);
