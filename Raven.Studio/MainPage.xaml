@@ -3,13 +3,10 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
 			 xmlns:uriMapper="clr-namespace:System.Windows.Navigation;assembly=System.Windows.Controls.Navigation"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:Controls="clr-namespace:System.Windows.Controls"
              xmlns:TiledBG="clr-namespace:TiledBG;assembly=TiledBG"
-             xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases" mc:Ignorable="d"
-			 d:DesignWidth="781"
-			 d:DesignHeight="482">
+             xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases"
+             xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -138,9 +135,10 @@
         </Grid>
 
         <Grid x:Name="FooterGrid" Grid.Row="2">
-          <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_FooterTexture}" BorderThickness="0"/>
-          <Rectangle VerticalAlignment="Top" Height="5" Fill="Black" Opacity="0.4"/>
-        </Grid>
+			<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_FooterTexture}" BorderThickness="0"/>
+			<Rectangle VerticalAlignment="Top" Height="5" Fill="Black" Opacity="0.4"/>
+			<Stats:DatabaseStatisticsView Margin="15,15,0,0" HorizontalAlignment="Left" />
+		</Grid>
 	</Grid>
 
 </UserControl>

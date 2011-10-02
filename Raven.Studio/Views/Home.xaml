@@ -2,19 +2,13 @@
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats"
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
-					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit" 
 					 Title="Home"
 					 Style="{StaticResource PageStyle}">
 
-	<toolkit:DockPanel LastChildFill="True">
-		<Stats:DatabaseStatisticsView Grid.Row="1"
-									  HorizontalAlignment="Right"
-									  toolkit:DockPanel.Dock="Bottom" />
-		
+	<Grid>
 		<Documents:DocumentsView DataContext="{Binding Path=Server.Value.SelectedDatabase.Value.RecentDocuments}"
 								 Margin="{StaticResource Margin_ContentPage}" 
 								 Tag="Recent Documents" />
-	</toolkit:DockPanel>
+	</Grid>
 </Infrastructure:View>
