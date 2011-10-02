@@ -113,9 +113,10 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                
+				<TextBlock Text="{Binding Path=LastNotification.Value}"
+						   HorizontalAlignment="Right" />
 
-                <navigation:Frame x:Name="ContentFrame"
+				<navigation:Frame x:Name="ContentFrame"
 							      Style="{StaticResource ContentFrameStyle}"
                                   Grid.Row="1"
 							      Source=""
