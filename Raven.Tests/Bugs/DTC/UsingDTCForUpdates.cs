@@ -80,9 +80,11 @@ namespace Raven.Tests.Bugs.DTC
                 // 3. Confirm that the update is working !
                 using (var session = documentStore.OpenSession())
                 {
+                	session.Advanced.AllowNonAuthoritiveInformation = false;
+
                     var stored = session.Load<Foo>(id1.ToString());
 
-                    Assert.True(stored.Name == "Some other value");
+                    Assert.Equal(stored.Name , "Some other value");
                 }
             }
         }
