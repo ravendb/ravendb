@@ -20,35 +20,61 @@
         </Grid.RowDefinitions>
         
 	  <Grid x:Name="HeaderGrid" Grid.Row="0" Grid.ColumnSpan="2">
-	    <Grid.RowDefinitions>
-	      <RowDefinition Height="40"/>
-	      <RowDefinition Height="Auto"/>
-	    </Grid.RowDefinitions>
+			<Grid.RowDefinitions>
+			  <RowDefinition Height="Auto"/>
+			  <RowDefinition Height="Auto"/>
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="Auto" />
+			</Grid.ColumnDefinitions>
+		  
+			<Border Grid.ColumnSpan="2">
+			  <Border.Background>
+				<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+				  <GradientStop Color="White" Offset="0.174"/>
+				  <GradientStop Color="#FFDEDEDE" Offset="0.993"/>
+				  <GradientStop Color="#FF78223D" Offset="1"/>
+				</LinearGradientBrush>
+			  </Border.Background>
+			</Border>
+			<Border Height="5"
+					Grid.Row="1"
+					Grid.ColumnSpan="2">
+			  <Border.Background>
+				<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+				  <GradientStop Color="#FF78223D" Offset="0.13"/>
+				  <GradientStop Color="#FF8B2241" Offset="0.174"/>
+				  <GradientStop Color="#FF8B2241" Offset="0.348"/>
+				  <GradientStop Color="#FF9F2145" Offset="0.391"/>
+				  <GradientStop Color="#FF9F2145" Offset="0.565"/>
+				  <GradientStop Color="#FFB22148" Offset="0.609"/>
+				</LinearGradientBrush>
+			  </Border.Background>
+			</Border>
 
-	    <Border>
-	      <Border.Background>
-	        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-	          <GradientStop Color="White" Offset="0.174"/>
-	          <GradientStop Color="#FFDEDEDE" Offset="0.993"/>
-	          <GradientStop Color="#FF78223D" Offset="1"/>
-	        </LinearGradientBrush>
-	      </Border.Background>
-	    </Border>
-	    <Border Height="5" Grid.Row="1">
-	      <Border.Background>
-	        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-	          <GradientStop Color="#FF78223D" Offset="0.13"/>
-	          <GradientStop Color="#FF8B2241" Offset="0.174"/>
-	          <GradientStop Color="#FF8B2241" Offset="0.348"/>
-	          <GradientStop Color="#FF9F2145" Offset="0.391"/>
-	          <GradientStop Color="#FF9F2145" Offset="0.565"/>
-	          <GradientStop Color="#FFB22148" Offset="0.609"/>
-	        </LinearGradientBrush>
-	      </Border.Background>
-	    </Border>
+			<Grid Margin="0,20"
+				  Grid.Column="1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
 
+				<Image Source="{StaticResource Image_RavenDBLogo}"
+					   Stretch="Uniform"
+					   HorizontalAlignment="Left"
+					   Height="60" />
+
+				<Databases:DatabaseSelectionView Grid.Column="1"
+												 VerticalAlignment="Bottom"
+												 Margin="40,0,0,-5" />
+			</Grid>
+		  
 			<StackPanel Orientation="Horizontal"
+						Height="40"
+						VerticalAlignment="Bottom"
 						Margin="{StaticResource Margin_MainPageLeftRight}">
+				
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Summary"
 								 NavigateUri="/home"
@@ -90,21 +116,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Grid Margin="0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Image Source="{StaticResource Image_RavenDBLogo}"
-                           Stretch="Uniform"
-                           HorizontalAlignment="Left"
-                           Height="60"/>
-
-					<Databases:DatabaseSelectionView Grid.Column="1"
-													 VerticalAlignment="Bottom"
-													 Margin="40,0,0,-5" />
-				</Grid>
+                
 
                 <navigation:Frame x:Name="ContentFrame"
 							      Style="{StaticResource ContentFrameStyle}"
