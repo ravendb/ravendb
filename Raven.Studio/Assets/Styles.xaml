@@ -364,6 +364,8 @@
 				Value="Auto" />
 		<Setter Property="MaxHeight"
 				Value="400" />
+		<Setter Property="Background"
+				Value="Transparent" />
 	</Style>
 
 	<!-- Form Styles -->
