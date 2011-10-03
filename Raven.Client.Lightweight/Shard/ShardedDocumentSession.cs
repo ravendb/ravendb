@@ -203,17 +203,42 @@ namespace Raven.Client.Shard
 
 		public void Refresh<T>(T entity)
 		{
-			throw new NotImplementedException();
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new InvalidOperationException("Cannot refresh a trasient instance");
+			IncrementRequestCount();
+
+			var dbCommands = GetAppropriateShards<T>(null);
+			foreach (var dbCmd in dbCommands)
+			{
+				var jsonDocument = dbCmd.Get(value.Key);
+				if (jsonDocument == null)
+					continue;
+
+				value.Metadata = jsonDocument.Metadata;
+				value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
+				value.ETag = jsonDocument.Etag;
+				value.OriginalValue = jsonDocument.DataAsJson;
+				var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
+				foreach (var property in entity.GetType().GetProperties())
+				{
+					if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
+						continue;
+					property.SetValue(entity, property.GetValue(newEntity, null), null);
+				}
+			}
+
+			throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
 		}
 
 		public IDatabaseCommands DatabaseCommands
 		{
-			get { throw new NotImplementedException(); }
+			get { throw new NotSupportedException("Not supported by sharded session"); }
 		}
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
-			get { throw new NotImplementedException(); }
+			get { throw new NotSupportedException("Not supported by sharded session"); }
 		}
 
 		public ILazySessionOperations Lazily
