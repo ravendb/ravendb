@@ -11,11 +11,13 @@ using Raven.Abstractions.Data;
 #endif
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using System;
+using Raven.Client.Util;
 
 namespace Raven.Client.Shard
 {
@@ -92,7 +94,35 @@ namespace Raven.Client.Shard
 
 		public T Load<T>(string id)
 		{
-			throw new NotImplementedException();
+			object existingEntity;
+			if (entitiesByKey.TryGetValue(id, out existingEntity))
+			{
+				return (T)existingEntity;
+			}
+
+			IncrementRequestCount();
+
+			var dbCommands = GetAppropriateShards<T>(id);
+
+			foreach (var dbCmd in dbCommands)
+			{
+				var loadOperation = new LoadOperation(this, dbCmd.DisableAllCaching, id);
+				bool retry;
+				do
+				{
+					loadOperation.LogOperation();
+					using (loadOperation.EnterLoadContext())
+					{
+						retry = loadOperation.SetResult(dbCmd.Get(id));
+					}
+				} while (retry);
+				var result = loadOperation.Complete<T>();
+				
+				if (!Equals(result, default(T)))
+					return result;
+			}
+
+			return default(T);
 		}
 
 		public T[] Load<T>(params string[] ids)
