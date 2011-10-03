@@ -499,12 +499,12 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Dynamically queries RavenDB using LINQ
+		/// Query RavenDB dynamically using LINQ
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		public IRavenQueryable<T> Query<T>()
 		{
-			string indexName = "dynamic";
+			var indexName = "dynamic";
 			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));

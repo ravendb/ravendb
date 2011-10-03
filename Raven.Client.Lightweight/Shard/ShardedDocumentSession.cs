@@ -10,7 +10,9 @@ using Raven.Abstractions.Data;
 #if !NET_3_5
 #endif
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -25,7 +27,7 @@ namespace Raven.Client.Shard
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
-	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentSession
+	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, IDocumentQueryGenerator, ISyncAdvancedSessionOperation
 	{
 		private readonly IShardStrategy shardStrategy;
 		private readonly IDictionary<string, IDatabaseCommands> shardDbCommands;
@@ -89,7 +91,7 @@ namespace Raven.Client.Shard
 
 		public ISyncAdvancedSessionOperation Advanced
 		{
-			get { throw new NotImplementedException(); }
+			get { return this; }
 		}
 
 		public T Load<T>(string id)
@@ -147,7 +149,26 @@ namespace Raven.Client.Shard
 
 		public IRavenQueryable<T> Query<T>()
 		{
-			throw new NotImplementedException();
+			var indexName = "dynamic";
+			if (typeof(T).IsEntityType())
+			{
+				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+			}
+			var ravenQueryStatistics = new RavenQueryStatistics();
+			return new RavenQueryInspector<T>(
+				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
+#if !NET_3_5
+, Advanced.AsyncDatabaseCommands
+#endif
+),
+				ravenQueryStatistics,
+				indexName,
+				null,
+				Advanced.DatabaseCommands
+#if !NET_3_5
+, Advanced.AsyncDatabaseCommands
+#endif
+);
 		}
 
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
@@ -166,6 +187,61 @@ namespace Raven.Client.Shard
 		}
 
 		public void SaveChanges()
+		{
+			throw new NotImplementedException();
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
+		{
+			throw new NotImplementedException();
+		}
+
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Refresh<T>(T entity)
+		{
+			throw new NotImplementedException();
+		}
+
+		public IDatabaseCommands DatabaseCommands
+		{
+			get { throw new NotImplementedException(); }
+		}
+
+		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		{
+			get { throw new NotImplementedException(); }
+		}
+
+		public ILazySessionOperations Lazily
+		{
+			get { throw new NotImplementedException(); }
+		}
+
+		public IEagerSessionOperations Eagerly
+		{
+			get { throw new NotImplementedException(); }
+		}
+
+		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			throw new NotImplementedException();
+		}
+
+		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
+		{
+			throw new NotImplementedException();
+		}
+
+		public IDocumentQuery<T> LuceneQuery<T>()
+		{
+			throw new NotImplementedException();
+		}
+
+		public string GetDocumentUrl(object entity)
 		{
 			throw new NotImplementedException();
 		}
