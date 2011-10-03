@@ -1,24 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Abstractions.Data;
+﻿using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
-using Raven.Json.Linq;
-using Raven.Studio.Features.Documents;
-using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
 	public class IndexesModel : Model
 	{
-		
+		private readonly IAsyncDatabaseCommands databaseCommands;
+		public BindableCollection<string> Indexes { get; private set; }
+
+		public IndexesModel(IAsyncDatabaseCommands databaseCommands)
+		{
+			this.databaseCommands = databaseCommands;
+			Indexes = new BindableCollection<string>(new PrimaryKeyComparer<string>(name => name));
+			ForceTimerTicked();
+		}
+
+		protected override Task TimerTickedAsync()
+		{
+			return databaseCommands
+				.GetIndexNamesAsync(0, 256)
+				.ContinueOnSuccess(Indexes.Match);
+		}
 	}
 }

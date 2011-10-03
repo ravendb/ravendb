@@ -1,0 +1,25 @@
+﻿<UserControl x:Name="this"
+			 x:Class="Raven.Studio.Features.Indexes.IndexesListView"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<StackPanel Margin="{StaticResource Margin_ContentPage}">
+		<TextBlock Text="Indexes"
+				   Style="{StaticResource Style_Text_Header}" />
+
+		<ListBox Style="{StaticResource Collections_FluidList}"
+				 ItemsSource="{Binding Indexes}">
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
+
+						<TextBlock Text="{Binding}" />
+					</Grid>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ListBox>
+	</StackPanel>
+</UserControl>
