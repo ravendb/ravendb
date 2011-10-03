@@ -130,6 +130,11 @@
     <Compile Include="Features\Indexes\EditIndexView.xaml.cs">
       <DependentUpon>EditIndexView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Logs\LogsView.xaml.cs">
+      <DependentUpon>LogsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Logs\LogsModelLocator.cs" />
+    <Compile Include="Features\Logs\LogsModel.cs" />
     <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\HiddenWhenLessOrEqualToConverter.cs" />
@@ -200,6 +205,9 @@
     <Compile Include="Views\Collections.xaml.cs">
       <DependentUpon>Collections.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Logs.xaml.cs">
+      <DependentUpon>Logs.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Indexes.xaml.cs">
       <DependentUpon>Indexes.xaml</DependentUpon>
     </Compile>
@@ -246,6 +254,14 @@
     <Page Include="Features\Indexes\EditIndexView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Logs\LogsView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Logs.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Indexes.xaml">
       <Generator>MSBuild:Compile</Generator>
