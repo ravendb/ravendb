@@ -19,6 +19,8 @@ namespace Raven.Studio.Features.Logs
 		public LogsModel(IAsyncDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
+			Logs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.Timestamp));
+			ErrorsLogs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.Timestamp));
 		}
 
 		protected override Task TimerTickedAsync()
