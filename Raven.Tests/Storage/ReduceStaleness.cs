@@ -121,9 +121,9 @@ namespace Raven.Tests.Storage
 
 			transactionalStorage.Batch(actionsAccessor =>
 			{
-				Assert.Equal(2, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("a", Guid.Empty).Count());
-				Assert.Equal(2, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("b", Guid.Empty).Count());
-				Assert.Equal(2, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("c", Guid.Empty).Count());
+				Assert.Equal(2, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("a", Guid.Empty, false).Count());
+				Assert.Equal(2, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("b", Guid.Empty, false).Count());
+				Assert.Equal(2, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("c", Guid.Empty, false).Count());
 			});
 		}
 
@@ -180,9 +180,9 @@ namespace Raven.Tests.Storage
 
 			transactionalStorage.Batch(actionsAccessor =>
 			{
-				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("a", a).Count());
-				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("b", b).Count());
-				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("c", c).Count());
+				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("a", a, false).Count());
+				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("b", b, false).Count());
+				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("c", c, false).Count());
 			});
 		}
 

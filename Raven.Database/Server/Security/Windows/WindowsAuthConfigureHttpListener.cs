@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Net;
+using Raven.Database.Config;
 
 namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsAuthConfigureHttpListener : IConfigureHttpListener
 	{
-		public void Configure(HttpListener listener, IRavenHttpConfiguration config)
+		public void Configure(HttpListener listener, InMemoryRavenConfiguration config)
 		{
 			if (string.Equals(config.AuthenticationMode, "Windows",StringComparison.InvariantCultureIgnoreCase) == false) 
 				return;

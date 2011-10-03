@@ -24,8 +24,9 @@ namespace Raven.Web
 			{
 				if (database != null)
 					return;
-				
 
+
+				HttpServer.RegisterHttpEndpointTarget();
 				database = new DocumentDatabase(ravenConfiguration);
 				database.SpinBackgroundWorkers();
 				server = new HttpServer(ravenConfiguration, database);
