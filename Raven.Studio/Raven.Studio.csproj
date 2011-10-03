@@ -196,6 +196,9 @@
     <Compile Include="Views\Collections.xaml.cs">
       <DependentUpon>Collections.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\NotFound.xaml.cs">
+      <DependentUpon>NotFound.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\DocumentNotFound.xaml.cs">
       <DependentUpon>DocumentNotFound.xaml</DependentUpon>
     </Compile>
@@ -232,6 +235,10 @@
     <Page Include="Features\Indexes\EditIndexView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\NotFound.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Index.xaml">
       <SubType>Designer</SubType>

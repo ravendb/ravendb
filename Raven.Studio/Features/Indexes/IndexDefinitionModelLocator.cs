@@ -37,7 +37,7 @@ namespace Raven.Studio.Features.Indexes
 				                   {
 				                   	if (index == null)
 				                   	{
-				                   		ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + name, UriKind.Relative));
+				                   		ApplicationModel.Current.Navigate(new Uri("/NotFound?id=" + name, UriKind.Relative));
 				                   		return;
 				                   	}
 				                   	observable.Value = new IndexDefinitionModel(index, asyncDatabaseCommands, serverModel.SelectedDatabase.Value.Statistics);
