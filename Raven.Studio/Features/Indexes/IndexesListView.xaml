@@ -23,7 +23,8 @@
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
 
-							<TextBlock Text="{Binding}" />
+							<HyperlinkButton Content="{Binding}"
+											 NavigateUri="{Binding StringFormat='/indexes/\{0\}'}" />
 						</Grid>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
@@ -44,7 +45,8 @@
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
 
-							<TextBlock Text="{Binding}" />
+							<HyperlinkButton Content="{Binding}"
+											 NavigateUri="{Binding StringFormat='/indexes/\{0\}'}" />
 						</Grid>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
@@ -65,7 +67,8 @@
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
 
-							<TextBlock Text="{Binding}" />
+							<HyperlinkButton Content="{Binding}"
+											 NavigateUri="{Binding StringFormat='/indexes/\{0\}'}" />
 						</Grid>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
