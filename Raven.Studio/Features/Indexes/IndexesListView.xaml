@@ -3,6 +3,19 @@
 			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+	<UserControl.Resources>
+		<DataTemplate x:Key="IndexItemTemplate">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+
+				<HyperlinkButton Content="{Binding}"
+								 NavigateUri="{Binding StringFormat='/indexes/\{0\}'}" />
+			</Grid>
+		</DataTemplate>
+	</UserControl.Resources>
+	
 	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -15,20 +28,8 @@
 					   Style="{StaticResource Style_Text_Header}" />
 
 			<ListBox Style="{StaticResource Indexes_FluidList}"
-					 ItemsSource="{Binding TempIndexes}">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto" />
-							</Grid.ColumnDefinitions>
-
-							<HyperlinkButton Content="{Binding}"
-											 NavigateUri="{Binding StringFormat='/indexes/\{0\}'}" />
-						</Grid>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ListBox>
+					 ItemsSource="{Binding TempIndexes}"
+					 ItemTemplate="{StaticResource IndexItemTemplate}" />
 		</StackPanel>
 
 		<StackPanel Grid.Row="1"
@@ -37,20 +38,8 @@
 					   Style="{StaticResource Style_Text_Header}" />
 
 			<ListBox Style="{StaticResource Indexes_FluidList}"
-					 ItemsSource="{Binding AutoIndexes}">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto" />
-							</Grid.ColumnDefinitions>
-
-							<HyperlinkButton Content="{Binding}"
-											 NavigateUri="{Binding StringFormat='/indexes/\{0\}'}" />
-						</Grid>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ListBox>
+					 ItemsSource="{Binding AutoIndexes}"
+					 ItemTemplate="{StaticResource IndexItemTemplate}" />
 		</StackPanel>
 
 		<StackPanel Grid.Row="2"
@@ -59,20 +48,8 @@
 					   Style="{StaticResource Style_Text_Header}" />
 
 			<ListBox Style="{StaticResource Indexes_FluidList}"
-					 ItemsSource="{Binding OtherIndexes}">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto" />
-							</Grid.ColumnDefinitions>
-
-							<HyperlinkButton Content="{Binding}"
-											 NavigateUri="{Binding StringFormat='/indexes/\{0\}'}" />
-						</Grid>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ListBox>
+					 ItemsSource="{Binding OtherIndexes}"
+					 ItemTemplate="{StaticResource IndexItemTemplate}" />
 		</StackPanel>
 	</Grid>
 </UserControl>
