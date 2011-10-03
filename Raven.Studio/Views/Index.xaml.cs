@@ -2,9 +2,9 @@
 
 namespace Raven.Studio.Views
 {
-	public partial class Indexes : View
+	public partial class Index : View
 	{
-		public Indexes()
+		public Index()
 		{
 			InitializeComponent();
 		}

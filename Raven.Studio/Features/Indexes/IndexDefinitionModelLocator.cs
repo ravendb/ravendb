@@ -28,7 +28,7 @@ namespace Raven.Studio.Features.Indexes
 			ApplicationModel.Current.RegisterOnceForNavigation(() => LoadIndex(observable));
 
 			var asyncDatabaseCommands = serverModel.SelectedDatabase.Value.AsyncDatabaseCommands;
-			var name = ApplicationModel.Current.GetQueryParam("name");
+			var name = GetParamAfter("/indexes/");
 			if (name == null)
 				return;
 
@@ -44,6 +44,15 @@ namespace Raven.Studio.Features.Indexes
 				                   }
 				)
 				.Catch();
+		}
+
+		private string GetParamAfter(string urlPrefix)
+		{
+			var url = ApplicationModel.Current.NavigationState;
+			if (url.StartsWith(urlPrefix) == false)
+				return null;
+
+			return url.Substring(urlPrefix.Length);
 		}
 	}
 }

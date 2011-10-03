@@ -126,7 +126,9 @@
                         <uriMapper:UriMapper>
                             <uriMapper:UriMapping Uri=""
 											      MappedUri="/Views/Home.xaml" />
-                            <uriMapper:UriMapping Uri="/{pageName}"
+							<uriMapper:UriMapping Uri="/indexes/{indexName}"
+												  MappedUri="/Views/Index.xaml" />
+							<uriMapper:UriMapping Uri="/{pageName}"
 											      MappedUri="/Views/{pageName}.xaml" />
                         </uriMapper:UriMapper>
                     </navigation:Frame.UriMapper>

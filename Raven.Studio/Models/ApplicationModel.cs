@@ -22,6 +22,8 @@ namespace Raven.Studio.Models
 			};
 		}
 
+		public string NavigationState { get { return threadSafeNavigationState; } }
+
 		private ApplicationModel()
 		{
 			Notifications = new BindableCollection<Notification>(new PrimaryKeyComparer<Notification>(x=>x.Message));
