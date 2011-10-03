@@ -4,7 +4,7 @@ properties {
   $build_dir = "$base_dir\build"
   $buildartifacts_dir = "$build_dir\"
   $sln_file = "$base_dir\zzz_RavenDB_Release.sln"
-  $version = "1.0.0"
+  $version = "1.0"
   $tools_dir = "$base_dir\Tools"
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
@@ -80,12 +80,12 @@ task Init -depends Verify40, Clean {
 		
 		Generate-Assembly-Info `
 			-file $asmInfo `
-			-title "$projectName $version.0" `
+			-title "$projectName $version.0.0" `
 			-description "A linq enabled document database for .NET" `
 			-company "Hibernating Rhinos" `
-			-product "RavenDB $version.0" `
+			-product "RavenDB $version.0.0" `
 			-version "$version.0" `
-			-fileversion "1.0.0.$env:buildlabel" `
+			-fileversion "1.0.$env:buildlabel.0" `
 			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
 			-clsCompliant $clsComliant
 	}
