@@ -376,6 +376,13 @@
 				Value="Transparent" />
 	</Style>
 
+	<Style x:Name="Indexes_FluidList"
+		   BasedOn="{StaticResource FluidList}"
+		   TargetType="ItemsControl">
+		<Setter Property="Background"
+				Value="Transparent" />
+	</Style>
+
 	<!-- Form Styles -->
 	<Style x:Key="FormButton"
 		   TargetType="Button">

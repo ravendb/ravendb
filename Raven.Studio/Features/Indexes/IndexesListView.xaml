@@ -3,23 +3,73 @@
 			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-	<StackPanel Margin="{StaticResource Margin_ContentPage}">
-		<TextBlock Text="Indexes"
-				   Style="{StaticResource Style_Text_Header}" />
+	<Grid Margin="{StaticResource Margin_ContentPage}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
 
-		<ListBox Style="{StaticResource Collections_FluidList}"
-				 ItemsSource="{Binding Indexes}">
-			<ItemsControl.ItemTemplate>
-				<DataTemplate>
-					<Grid>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="Auto" />
-						</Grid.ColumnDefinitions>
+		<StackPanel Visibility="{Binding Path=TempIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}">
+			<TextBlock Text="Temp Indexes"
+					   Style="{StaticResource Style_Text_Header}" />
 
-						<TextBlock Text="{Binding}" />
-					</Grid>
-				</DataTemplate>
-			</ItemsControl.ItemTemplate>
-		</ListBox>
-	</StackPanel>
+			<ListBox Style="{StaticResource Indexes_FluidList}"
+					 ItemsSource="{Binding TempIndexes}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto" />
+							</Grid.ColumnDefinitions>
+
+							<TextBlock Text="{Binding}" />
+						</Grid>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ListBox>
+		</StackPanel>
+
+		<StackPanel Grid.Row="1"
+					Visibility="{Binding Path=AutoIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}">
+			<TextBlock Text="Auto Indexes"
+					   Style="{StaticResource Style_Text_Header}" />
+
+			<ListBox Style="{StaticResource Indexes_FluidList}"
+					 ItemsSource="{Binding AutoIndexes}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto" />
+							</Grid.ColumnDefinitions>
+
+							<TextBlock Text="{Binding}" />
+						</Grid>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ListBox>
+		</StackPanel>
+
+		<StackPanel Grid.Row="2"
+					Visibility="{Binding Path=OtherIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}">
+			<TextBlock Text="Indexes"
+					   Style="{StaticResource Style_Text_Header}" />
+
+			<ListBox Style="{StaticResource Indexes_FluidList}"
+					 ItemsSource="{Binding OtherIndexes}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto" />
+							</Grid.ColumnDefinitions>
+
+							<TextBlock Text="{Binding}" />
+						</Grid>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ListBox>
+		</StackPanel>
+	</Grid>
 </UserControl>
