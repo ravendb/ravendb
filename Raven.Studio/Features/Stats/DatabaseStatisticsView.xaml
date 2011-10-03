@@ -60,7 +60,7 @@
 			<HyperlinkButton Content="{Binding CountOfDocuments, StringFormat='\{0:#,#;;0\} documents'}" Style="{StaticResource Statistics_Count}" />
 			<HyperlinkButton Content="{Binding CountOfIndexes, StringFormat='\{0:#,#;;0\} indexes'}" Style="{StaticResource Statistics_Count}" />
 			<HyperlinkButton Content="{Binding Path=StaleIndexes.Length, StringFormat='\{0:#,#;;0\} stale'}" Style="{StaticResource Statistics_Count}" />
-			<HyperlinkButton Content="{Binding Path=Errors.Length, StringFormat='\{0:#,#;;0\} errors'}" Style="{StaticResource Statistics_Count}" />
+			<HyperlinkButton Content="{Binding Path=Errors.Length, StringFormat='\{0:#,#;;0\} errors'}" Style="{StaticResource Statistics_Count}" NavigateUri="/logs/errors" />
 			<HyperlinkButton Content="{Binding Path=Triggers.Length, StringFormat='\{0:#,#;;0\} triggers'}" Style="{StaticResource Statistics_Count}" />
 			<HyperlinkButton Content="{Binding ApproximateTaskCount, StringFormat='\{0:#,#;;0\} tasks'}" Style="{StaticResource Statistics_Count}" />
 		</StackPanel>

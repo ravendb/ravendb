@@ -98,6 +98,10 @@
 								 NavigateUri="/tasks"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton Content="Logs"
+								 NavigateUri="/logs"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 			</StackPanel>
 		</Grid>
         
