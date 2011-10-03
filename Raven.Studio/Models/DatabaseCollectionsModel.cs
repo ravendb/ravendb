@@ -4,7 +4,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class DatabaseCollectionsModel : NotifyPropertyChangedBase
+	public class DatabaseCollectionsModel : Model
 	{
 		private readonly IAsyncDatabaseCommands databaseCommands;
 		public BindableCollection<CollectionModel> Collections { get; set; }
@@ -15,9 +15,16 @@ namespace Raven.Studio.Models
 			this.databaseCommands = databaseCommands;
 			Collections = new BindableCollection<CollectionModel>(new PrimaryKeyComparer<CollectionModel>(model=>model.Name));
 			SelectedCollection = new Observable<CollectionModel>();
+			ForceTimerTicked();
 		}
 
-		public void Update(NameAndCount[] collections)
+		protected override System.Threading.Tasks.Task TimerTickedAsync()
+		{
+			return databaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
+				.ContinueOnSuccess(Update);
+		}
+
+		private void Update(NameAndCount[] collections)
 		{
 			var collectionModels = collections.OrderByDescending(x => x.Count).Select(col => new CollectionModel(databaseCommands)
 			{

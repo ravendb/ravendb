@@ -3,9 +3,9 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections"
-					 DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
+					 DataContext="{Binding Path=Current.Value, Source={StaticResource CollectionModelLocator}}">
 
-	<Grid DataContext="{Binding Collections}">
+	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" MaxHeight="400" />
 			<RowDefinition Height="*" MinHeight="50" />

@@ -110,6 +110,7 @@
     <Compile Include="Features\Collections\CollectionsListView.xaml.cs">
       <DependentUpon>CollectionsListView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Collections\CollectionsModelLocator.cs" />
     <Compile Include="Features\Collections\CollectionView.xaml.cs">
       <DependentUpon>CollectionView.xaml</DependentUpon>
     </Compile>

@@ -2,8 +2,11 @@
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
-	xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes">
+	xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes"
+	xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections">
 
 	<Documents:EditDocumentModelLocator x:Key="EditDocumentModelLocator" />
 	<Indexes:IndexDefinitionModelLocator x:Key="IndexDefinitionModelLocator" />
+
+	<Collections:CollectionsModelLocator x:Key="CollectionModelLocator" />
 </ResourceDictionary>

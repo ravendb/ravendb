@@ -18,10 +18,10 @@ namespace Raven.Studio.Models
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 
 			Statistics = new Observable<DatabaseStatistics>();
-			Collections = new DatabaseCollectionsModel(asyncDatabaseCommands);
 			RecentDocuments = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(document => document.Id));
-			RecentDocuments = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(document=>document.Id));
 		}
+
+		public BindableCollection<string> Indexes { get; private set; }
 
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
@@ -42,18 +42,16 @@ namespace Raven.Studio.Models
 		
 		public Observable<DatabaseStatistics> Statistics { get; set; }
 		public BindableCollection<ViewableDocument> RecentDocuments { get; set; }
-		public DatabaseCollectionsModel Collections { get; set; }
+
 		protected override Task TimerTickedAsync()
 		{
 			return asyncDatabaseCommands.GetStatisticsAsync()
 				.ContinueOnSuccess(stats => Statistics.Value = stats)
-				.ContinueWith(task => asyncDatabaseCommands.GetDocumentsAsync(GetSkipCount(), 15)
-				                      	.ContinueOnSuccess(
-				                      		docs => RecentDocuments.Match(docs.Select(x => new ViewableDocument(x)).ToArray())))
-				.Unwrap()
-				.ContinueWith(task => asyncDatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
-						.ContinueOnSuccess(collections => Collections.Update(collections))
-				).Unwrap();
+				.ContinueOnSuccess(task => asyncDatabaseCommands.GetDocumentsAsync(GetSkipCount(), 15)
+				                           	.ContinueOnSuccess(
+				                           		docs => RecentDocuments.Match(docs.Select(x => new ViewableDocument(x)).ToArray())))
+				.Unwrap();
+
 		}
 
 		private bool Equals(DatabaseModel other)
