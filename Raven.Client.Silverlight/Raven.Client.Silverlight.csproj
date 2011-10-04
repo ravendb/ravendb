@@ -199,6 +199,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\RequestStatus.cs">
       <Link>Imports\Connection\Profiling\RequestStatus.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\DocumentStoreBase.cs">
+      <Link>Imports\DocumentStoreBase.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\AbstractDocumentQuery.cs">
       <Link>Imports\Document\AbstractDocumentQuery.cs</Link>
     </Compile>

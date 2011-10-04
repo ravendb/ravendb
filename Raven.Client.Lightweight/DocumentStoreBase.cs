@@ -1,13 +1,21 @@
 ﻿using System;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#endif
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection;
+#endif
+#if !NET_3_5
+using Raven.Client.Connection.Async;
 using Raven.Client.Listeners;
+#endif
 
 namespace Raven.Client
 {
@@ -47,17 +55,19 @@ namespace Raven.Client
 		public abstract IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
 		public abstract IAsyncDocumentSession OpenAsyncSession();
 		public abstract IAsyncDocumentSession OpenAsyncSession(string database);
+#if !SILVERLIGHT
 		public abstract IDocumentSession OpenSession();
 		public abstract IDocumentSession OpenSession(string database);
 		public abstract IDocumentSession OpenSession(string database, ICredentials credentialsForSession);
 		public abstract IDocumentSession OpenSession(ICredentials credentialsForSession);
 		public abstract IDatabaseCommands DatabaseCommands { get; }
+#endif
 
 		/// <summary>
 		/// Gets the conventions.
 		/// </summary>
 		/// <value>The conventions.</value>
-		public DocumentConvention Conventions { get; protected set; }
+		public DocumentConvention Conventions { get; set; }
 
 		/// <summary>
 		/// Gets or sets the URL.
