@@ -14,7 +14,7 @@ namespace Raven.Studio.Features.Logs
 		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<LogsModel> observable)
 		{
 			var logsParameters = GetParamAfter("/logs/");
-			var showErrorOnly = logsParameters == null || logsParameters == "errors";
+			var showErrorOnly = (logsParameters == null || logsParameters != "errors") == false;
 			observable.Value = new LogsModel(asyncDatabaseCommands, showErrorOnly);
 		}
 	}
