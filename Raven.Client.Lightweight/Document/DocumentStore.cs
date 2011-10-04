@@ -341,28 +341,6 @@ namespace Raven.Client.Document
 		}
 
 #endif
-		/// <summary>
-		/// Registers the store listener.
-		/// </summary>
-		/// <param name="documentStoreListener">The document store listener.</param>
-		/// <returns></returns>
-		public DocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
-		{
-			listeners.StoreListeners = listeners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
-			return this;
-		}
-
-		/// <summary>
-		///  Get the profiling information for the given id
-		/// </summary>
-		public ProfilingInformation GetProfilingInformationFor(Guid id)
-		{
-#if !NET_3_5
-			return profilingContext.TryGet(id);
-#else
-			return null;
-#endif
-		}
 
 		/// <summary>
 		/// Initializes this instance.
