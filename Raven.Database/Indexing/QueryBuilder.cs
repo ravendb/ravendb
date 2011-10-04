@@ -19,35 +19,30 @@ namespace Raven.Database.Indexing
 
 		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
 		{
-			Analyzer keywordAnalyzer = null;
+			Analyzer keywordAnalyzer = new KeywordAnalyzer();
 			try
 			{
-				query = PreProcessUntokenizedTerms(analyzer, query, ref keywordAnalyzer);
+				query = PreProcessUntokenizedTerms(analyzer, query, keywordAnalyzer);
 				var queryParser = new RangeQueryParser(Version.LUCENE_29, string.Empty, analyzer);
 				queryParser.SetAllowLeadingWildcard(true); // not the recommended approach, should rather use ReverseFilter
 				return queryParser.Parse(query);
 			}
 			finally
 			{
-				if (keywordAnalyzer != null)
-					keywordAnalyzer.Close();
+				keywordAnalyzer.Close();
 			}
 		}
 
 		/// <summary>
 		/// Detects untokenized fields and sets as NotAnalyzed in analyzer
 		/// </summary>
-		private static string PreProcessUntokenizedTerms(PerFieldAnalyzerWrapper analyzer, string query, ref Analyzer keywordAnalyzer)
+		private static string PreProcessUntokenizedTerms(PerFieldAnalyzerWrapper analyzer, string query, Analyzer keywordAnalyzer)
 		{
 			var untokenizedMatches = untokenizedQuery.Matches(query);
 			if (untokenizedMatches.Count < 1)
 				return query;
 
 			var sb = new StringBuilder(query);
-
-			// Initialize a KeywordAnalyzer
-			// KeywordAnalyzer will not tokenize the values
-			keywordAnalyzer = new KeywordAnalyzer();
 
 			// process in reverse order to leverage match string indexes
 			for (var i = untokenizedMatches.Count; i > 0; i--)
