@@ -129,6 +129,14 @@ namespace Raven.Client.Linq
 		}
 #endif
 
+		/// <summary>
+		/// Perform a search for documents which fields that match the searchTerms.
+		/// If there is more than a single term, each of them will be checked independently.
+		/// </summary>
+		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Func<T, object> fieldSelector, string searchTerms)
+		{
+			return self;
+		}
 
 		/// <summary>
 		/// Marker method for allowing complex (multi entity) queries on the server.
@@ -299,6 +307,8 @@ namespace Raven.Client.Linq
 		{
 			return values.Any(value => field.Equals(value));
 		}
+
+
 		/// <summary>
 		///  implementation of In operator
 		/// </summary>
