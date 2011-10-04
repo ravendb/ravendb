@@ -19,9 +19,38 @@
 		<sdk:GridSplitter Grid.Row="1"
 						  Background="Transparent"
 						  HorizontalAlignment="Stretch" />
-		
-		<Grid Grid.Row="2">
-			<TextBlock Text="{Binding ElementName=LogsList, Path=SelectedItem}" />
+
+		<Grid Grid.Row="2"
+			  DataContext="{Binding ElementName=LogsList, Path=SelectedItem}"
+			  Visibility="{Binding ElementName=LogsList, Path=SelectedItem, Converter={StaticResource HiddenWhenNull}}">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="10" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
+			
+			<TextBlock Grid.ColumnSpan="3" Text="{Binding Message}" />
+			<TextBlock Grid.ColumnSpan="3"
+					   Grid.Row="2"
+					   Text="{Binding Exception}" />
+
+			<TextBlock Grid.Row="2" Text="Logged" />
+			<TextBlock Grid.Column="2"
+					   Grid.Row="2"
+					   Text="{Binding TimeStamp}" />
+
+			<TextBlock Grid.Row="3" Text="Level" />
+			<TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Name}" />
+
+			<TextBlock Grid.Row="4" Text="Log Name" />
+			<TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding LoggerName}" />
 		</Grid>
 	</Grid>
 </Infrastructure:View>
