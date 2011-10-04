@@ -21,8 +21,8 @@ namespace Raven.Studio.Features.Logs
 		{
 			this.databaseCommands = databaseCommands;
 			this.showErrorsOnly = showErrorsOnly;
-			Logs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.Timestamp));
-			ErrorsLogs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.Timestamp));
+			Logs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.TimeStamp));
+			ErrorsLogs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.TimeStamp));
 		}
 
 		protected override Task TimerTickedAsync()
