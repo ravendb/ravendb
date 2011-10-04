@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using Raven.Abstractions.Data;
 #if !NET_3_5
 #endif
@@ -20,6 +21,7 @@ using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using System;
 using Raven.Client.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Shard
 {
@@ -27,7 +29,7 @@ namespace Raven.Client.Shard
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
-	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, IDocumentQueryGenerator, ISyncAdvancedSessionOperation
+	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, IDocumentQueryGenerator, ISyncAdvancedSessionOperation
 	{
 		private readonly IShardStrategy shardStrategy;
 		private readonly IDictionary<string, IDatabaseCommands> shardDbCommands;
@@ -50,14 +52,14 @@ namespace Raven.Client.Shard
 			this.documentStore = documentStore;
 		}
 
-		private IEnumerable<IDatabaseCommands> GetAppropriateShards<T>(string key)
+		private IList<IDatabaseCommands> GetAppropriateShards<T>(string key)
 		{
 			var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIds(ShardResolutionStrategyData.BuildFrom(typeof(T), key));
 			
 			if (shardIds != null)
-				return shardDbCommands.Where(cmd => shardIds.Contains(cmd.Key)).Select(x => x.Value);
+				return shardDbCommands.Where(cmd => shardIds.Contains(cmd.Key)).Select(x => x.Value).ToList();
 			
-			return shardDbCommands.Values;
+			return shardDbCommands.Values.ToList();
 		}
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
@@ -129,7 +131,7 @@ namespace Raven.Client.Shard
 
 		public T[] Load<T>(params string[] ids)
 		{
-			throw new NotImplementedException();
+			return LoadInternal<T>(ids, null);
 		}
 
 		public T[] Load<T>(IEnumerable<string> ids)
@@ -149,26 +151,7 @@ namespace Raven.Client.Shard
 
 		public IRavenQueryable<T> Query<T>()
 		{
-			var indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
-			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(
-				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
-#if !NET_3_5
-, Advanced.AsyncDatabaseCommands
-#endif
-),
-				ravenQueryStatistics,
-				indexName,
-				null,
-				Advanced.DatabaseCommands
-#if !NET_3_5
-, Advanced.AsyncDatabaseCommands
-#endif
-);
+			throw new NotImplementedException();
 		}
 
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
@@ -178,7 +161,7 @@ namespace Raven.Client.Shard
 
 		public ILoaderWithInclude<object> Include(string path)
 		{
-			throw new NotImplementedException();
+			return new MultiLoaderWithInclude<object>(this).Include(path);
 		}
 
 		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
@@ -233,12 +216,12 @@ namespace Raven.Client.Shard
 
 		public IDatabaseCommands DatabaseCommands
 		{
-			get { throw new NotSupportedException("Not supported by sharded session"); }
+			get { throw new NotSupportedException("Not supported in a sharded session"); }
 		}
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
-			get { throw new NotSupportedException("Not supported by sharded session"); }
+			get { throw new NotSupportedException("Not supported in a sharded session"); }
 		}
 
 		public ILazySessionOperations Lazily
@@ -269,6 +252,56 @@ namespace Raven.Client.Shard
 		public string GetDocumentUrl(object entity)
 		{
 			throw new NotImplementedException();
+		}
+
+		public T[] LoadInternal<T>(string[] ids, string[] includes)
+		{
+			if (ids.Length == 0)
+				return new T[0];
+
+			var idsAndShards = ids.Select(id => new { id, urls = GetAppropriateShards<T>(id) })
+				.GroupBy(x => x.urls, new DbCmdsListComparer());
+
+			IncrementRequestCount();
+
+			var multiLoadOperation = new MultiLoadOperation(this);
+			foreach (var endpoint in idsAndShards)
+			{
+				var idsForShard = endpoint.Select(x => x.id).ToArray();
+				multiLoadOperation.ids = idsForShard;
+
+				foreach (var dbCmd in endpoint.Key)
+				{
+					multiLoadOperation.disableAllCaching = dbCmd.DisableAllCaching;
+					MultiLoadResult multiLoadResult;
+					do
+					{
+						multiLoadOperation.LogOperation();
+						using (multiLoadOperation.EnterMultiLoadContext())
+						{
+							multiLoadResult = dbCmd.Get(idsForShard, includes);
+						}
+					} while (multiLoadOperation.SetResult(multiLoadResult));
+				}
+			}
+			return multiLoadOperation.Complete<T>();
+		}
+
+		internal class DbCmdsListComparer : IEqualityComparer<IList<IDatabaseCommands>>
+		{
+			public bool Equals(IList<IDatabaseCommands> x, IList<IDatabaseCommands> y)
+			{
+				if (x.Count != y.Count)
+					return false;
+
+				return !x.Where((t, i) => t != y[i]).Any();
+			}
+
+			public int GetHashCode(IList<IDatabaseCommands> obj)
+			{
+				return obj.Aggregate(obj.Count, (current, item) => (current * 397) ^ item.GetHashCode());
+			}
+
 		}
 	}
 #endif

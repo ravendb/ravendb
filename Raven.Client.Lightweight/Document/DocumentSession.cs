@@ -21,7 +21,6 @@ using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.Listeners;
 using Raven.Json.Linq;
 using Raven.Client.Util;
 
@@ -31,7 +30,8 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Implements Unit of Work for accessing the RavenDB server
 	/// </summary>
-	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator
+	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
+		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 #if !NET_3_5
 		, ILazySessionOperations, IEagerSessionOperations
 #endif
@@ -238,7 +238,7 @@ namespace Raven.Client.Document
 		/// <param name="ids">The ids.</param>
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
-			return LoadInternal<T>(ids.ToArray(), null);
+			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray(), null);
 		}
 
 		/// <summary>
@@ -259,7 +259,7 @@ namespace Raven.Client.Document
 			return Load<T>(documentKey);
 		}
 
-		internal T[] LoadInternal<T>(string[] ids, string[] includes)
+		public T[] LoadInternal<T>(string[] ids, string[] includes)
 		{
 			if (ids.Length == 0)
 				return new T[0];
