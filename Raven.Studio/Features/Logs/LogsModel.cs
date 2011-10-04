@@ -16,7 +16,7 @@ namespace Raven.Studio.Features.Logs
 		public BindableCollection<LogItem> Logs { get; private set; }
 		public BindableCollection<LogItem> ErrorsLogs { get; private set; }
 
-		public LogsModel(IAsyncDatabaseCommands databaseCommands)
+		public LogsModel(IAsyncDatabaseCommands databaseCommands, bool showErrorOnly)
 		{
 			this.databaseCommands = databaseCommands;
 			Logs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.Timestamp));

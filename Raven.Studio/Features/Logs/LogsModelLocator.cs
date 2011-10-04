@@ -3,36 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Logs
 {
-	public class LogsModelLocator
+	public class LogsModelLocator : ModelLocatorBase<LogsModel>
 	{
-		public Observable<LogsModel> Current
+		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<LogsModel> observable)
 		{
-			get
-			{
-				var observable = new Observable<LogsModel>();
-				LoadModel(observable);
-				return observable;
-			}
+			var showErrorOnly = false;
+			observable.Value = new LogsModel(asyncDatabaseCommands, showErrorOnly);
 		}
-
-		private void LoadModel(Observable<LogsModel> observable)
-		{
-			var serverModel = ApplicationModel.Current.Server.Value;
-			if (serverModel == null)
-			{
-				ApplicationModel.Current.Server.RegisterOnce(() => LoadModel(observable));
-				return;
-			}
-
-			ApplicationModel.Current.RegisterOnceForNavigation(() => LoadModel(observable));
-
-			var asyncDatabaseCommands = serverModel.SelectedDatabase.Value.AsyncDatabaseCommands;
-			observable.Value = new LogsModel(asyncDatabaseCommands);
-		} 
 	}
 }

@@ -1,48 +1,29 @@
 using System;
+using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
-{
-	public class EditDocumentModelLocator
+{	
+	public class EditDocumentModelLocator : ModelLocatorBase<EditableDocumentModel>
 	{
-		public Observable<EditableDocumentModel> Current
+		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<EditableDocumentModel> observable)
 		{
-			get
-			{
-				var observable = new Observable<EditableDocumentModel>();
-				LoadDocument(observable);
-				return observable;
-			}
-		}
-
-		private void LoadDocument(Observable<EditableDocumentModel> observable)
-		{
-			var serverModel = ApplicationModel.Current.Server.Value;
-			if (serverModel == null)
-			{
-				ApplicationModel.Current.Server.RegisterOnce(() => LoadDocument(observable));
-				return;
-			}
-			
-			ApplicationModel.Current.RegisterOnceForNavigation(() => LoadDocument(observable));
-
-			var asyncDatabaseCommands = serverModel.SelectedDatabase.Value.AsyncDatabaseCommands;
 			var docId = ApplicationModel.Current.GetQueryParam("id");
-			
+
 			if (docId == null)
 				return;
 
 			asyncDatabaseCommands.GetAsync(docId)
 				.ContinueOnSuccess(document =>
-				                   {
-				                   	if (document == null)
-				                   	{
-				                   		ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + docId, UriKind.Relative));
-				                   		return;
-				                   	}
-				                   	observable.Value = new EditableDocumentModel(document, asyncDatabaseCommands);
-				                   }
+				{
+					if (document == null)
+					{
+						ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + docId, UriKind.Relative));
+						return;
+					}
+					observable.Value = new EditableDocumentModel(document, asyncDatabaseCommands);
+				}
 				)
 				.Catch();
 		}
