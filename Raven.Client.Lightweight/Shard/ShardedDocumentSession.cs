@@ -36,7 +36,7 @@ namespace Raven.Client.Shard
 #endif
 	{
 #if !NET_3_5
-		private readonly IDictionary<string, IAsyncDatabaseCommands> asyncShardDbCommands;
+		//private readonly IDictionary<string, IAsyncDatabaseCommands> asyncShardDbCommands;
 		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 #endif
@@ -52,21 +52,20 @@ namespace Raven.Client.Shard
 		/// <param name="id"></param>
 		/// <param name="documentStore"></param>
 		/// <param name="listeners"></param>
-		/// <param name="asyncDatabaseCommands"></param>
 		public ShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 			IShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands
-#if !NET_3_5
-, IDictionary<string, IAsyncDatabaseCommands> asyncDatabaseCommands
-#endif
+//#if !NET_3_5
+//, IDictionary<string, IAsyncDatabaseCommands> asyncDatabaseCommands
+//#endif
 			)
 			: base(documentStore, listeners, id)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardDbCommands = shardDbCommands;
 			this.documentStore = documentStore;
-#if !NET_3_5
-			this.asyncShardDbCommands = asyncDatabaseCommands;
-#endif
+//#if !NET_3_5
+//            this.asyncShardDbCommands = asyncDatabaseCommands;
+//#endif
 		}
 
 		private IList<IDatabaseCommands> GetAppropriateShards<T>(string key)
@@ -238,7 +237,7 @@ namespace Raven.Client.Shard
 
 		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException("Shared document store doesn't support async operations");
 		}
 
 		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)

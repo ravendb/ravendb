@@ -212,10 +212,9 @@ namespace Raven.Client.Shard
 			try
 			{
 				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy, shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands)
-#if !NET_3_5
+//#if !NET_3_5
 //, AsyncDatabaseCommands
-, null
-#endif
+//#endif
 );
 				AfterSessionCreated(session);
 				return session;
@@ -239,10 +238,9 @@ namespace Raven.Client.Shard
 			{
 				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy,
 					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database))
-#if !NET_3_5
-					//, AsyncDatabaseCommands.ForDatabase(database)
-, null
-#endif
+//#if !NET_3_5
+//                    , AsyncDatabaseCommands.ForDatabase(database)
+//#endif
 );
 				AfterSessionCreated(session);
 				return session;
@@ -266,10 +264,9 @@ namespace Raven.Client.Shard
 			{
 				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy,
 					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database).With(credentialsForSession))
-#if !NET_3_5
-					//, AsyncDatabaseCommands.ForDatabase(database).With(credentialsForSession)
-, null
-#endif
+//#if !NET_3_5
+//                    , AsyncDatabaseCommands.ForDatabase(database).With(credentialsForSession)
+//#endif
 );
 				AfterSessionCreated(session);
 				return session;
@@ -294,10 +291,9 @@ namespace Raven.Client.Shard
 			{
 				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy,
 					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.With(credentialsForSession))
-#if !NET_3_5
-					//, AsyncDatabaseCommands.With(credentialsForSession)
-, null
-#endif
+//#if !NET_3_5
+//                    , AsyncDatabaseCommands.With(credentialsForSession)
+//#endif
 );
 				AfterSessionCreated(session);
 				return session;
