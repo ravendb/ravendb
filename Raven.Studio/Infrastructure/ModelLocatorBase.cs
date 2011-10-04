@@ -5,6 +5,8 @@ namespace Raven.Studio.Infrastructure
 {
 	public abstract class ModelLocatorBase<T> where T : Model
 	{
+		protected ServerModel ServerModel { get; private set; }
+
 		public Observable<T> Current
 		{
 			get
@@ -17,8 +19,8 @@ namespace Raven.Studio.Infrastructure
 
 		private void LoadModel(Observable<T>  observable)
 		{
-			var serverModel = ApplicationModel.Current.Server.Value;
-			if (serverModel == null)
+			ServerModel = ApplicationModel.Current.Server.Value;
+			if (ServerModel == null)
 			{
 				ApplicationModel.Current.Server.RegisterOnce(() => LoadModel(observable));
 				return;
@@ -26,7 +28,7 @@ namespace Raven.Studio.Infrastructure
 
 			ApplicationModel.Current.RegisterOnceForNavigation(() => LoadModel(observable));
 
-			var asyncDatabaseCommands = serverModel.SelectedDatabase.Value.AsyncDatabaseCommands;
+			var asyncDatabaseCommands = ServerModel.SelectedDatabase.Value.AsyncDatabaseCommands;
 			Load(asyncDatabaseCommands, observable);
 		}
 

@@ -1,47 +1,28 @@
 using System;
+using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Indexes
 {
-	public class IndexDefinitionModelLocator
+	public class IndexDefinitionModelLocator : ModelLocatorBase<IndexDefinitionModel>
 	{
-		public Observable<IndexDefinitionModel> Current
+		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<IndexDefinitionModel> observable)
 		{
-			get
-			{
-				var observable = new Observable<IndexDefinitionModel>();
-				LoadIndex(observable);
-				return observable;
-			}
-		}
-
-		private void LoadIndex(Observable<IndexDefinitionModel> observable)
-		{
-			var serverModel = ApplicationModel.Current.Server.Value;
-			if (serverModel == null)
-			{
-				ApplicationModel.Current.Server.RegisterOnce(() => LoadIndex(observable));
-				return;
-			}
-			
-			ApplicationModel.Current.RegisterOnceForNavigation(() => LoadIndex(observable));
-
-			var asyncDatabaseCommands = serverModel.SelectedDatabase.Value.AsyncDatabaseCommands;
 			var name = GetParamAfter("/indexes/");
 			if (name == null)
 				return;
 
 			asyncDatabaseCommands.GetIndexAsync(name)
 				.ContinueOnSuccess(index =>
-				                   {
-				                   	if (index == null)
-				                   	{
-				                   		ApplicationModel.Current.Navigate(new Uri("/NotFound?id=" + name, UriKind.Relative));
-				                   		return;
-				                   	}
-				                   	observable.Value = new IndexDefinitionModel(index, asyncDatabaseCommands, serverModel.SelectedDatabase.Value.Statistics);
-				                   }
+				{
+					if (index == null)
+					{
+						ApplicationModel.Current.Navigate(new Uri("/NotFound?id=" + name, UriKind.Relative));
+						return;
+					}
+					observable.Value = new IndexDefinitionModel(index, asyncDatabaseCommands, ServerModel.SelectedDatabase.Value.Statistics);
+				}
 				)
 				.Catch();
 		}
