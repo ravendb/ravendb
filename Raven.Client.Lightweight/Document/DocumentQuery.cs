@@ -145,6 +145,16 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Perform a search for documents which fields that match the searchTerms.
+		/// If there is more than a single term, each of them will be checked independently.
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Search(string fieldName, string searchTerms)
+		{
+			Search(fieldName, searchTerms);
+			return this;
+		}
+
 		///<summary>
 		/// Instruct the index to group by the specified fields using the specified aggregation operation
 		///</summary>
