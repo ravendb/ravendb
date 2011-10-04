@@ -89,6 +89,9 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
     <Reference Include="System.Windows.Controls.Input" />
+    <Reference Include="System.Windows.Controls.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v3.0\Libraries\Client\System.Windows.Controls.Data.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows.Controls.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Interactivity, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Xml" />
@@ -126,6 +129,10 @@
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
+      <DependentUpon>IndexesListView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Indexes\IndexesModelLocator.cs" />
     <Compile Include="Features\Indexes\EditIndexView.xaml.cs">
       <DependentUpon>EditIndexView.xaml</DependentUpon>
     </Compile>
@@ -163,11 +170,17 @@
     <Compile Include="Impl\DotNetZip\ZlibException.cs" />
     <Compile Include="Impl\DotNetZip\ZlibStream.cs" />
     <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
+    <Compile Include="Features\Logs\LogsView.xaml.cs">
+      <DependentUpon>LogsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Logs\LogsModelLocator.cs" />
+    <Compile Include="Features\Logs\LogsModel.cs" />
     <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\HiddenWhenLessOrEqualToConverter.cs" />
     <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\ModelLocatorBase.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
     <Compile Include="Features\Indexes\IndexDefinitionModelLocator.cs" />
     <Compile Include="Infrastructure\ContextMenu\ContextMenu.cs" />
@@ -234,6 +247,12 @@
     <Compile Include="Views\Collections.xaml.cs">
       <DependentUpon>Collections.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Logs.xaml.cs">
+      <DependentUpon>Logs.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Indexes.xaml.cs">
+      <DependentUpon>Indexes.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Tasks.xaml.cs">
       <DependentUpon>Tasks.xaml</DependentUpon>
     </Compile>
@@ -265,13 +284,17 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Page Include="Assets\Brushes.xaml">
+    <Resource Include="Assets\Brushes.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
+    </Resource>
     <Page Include="Assets\Images\Images.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Indexes\IndexesListView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Indexes\EditIndexView.xaml">
       <SubType>Designer</SubType>
@@ -282,6 +305,18 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Tasks.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Logs\LogsView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Logs.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Indexes.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -301,10 +336,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Assets\Types.xaml">
+    <Resource Include="Assets\Types.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
+    </Resource>
     <Page Include="Features\Collections\CollectionsListView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

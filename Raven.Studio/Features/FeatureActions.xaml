@@ -3,10 +3,13 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 	xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes"
-	xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections">
+	xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections"
+	xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs">
 
 	<Documents:EditDocumentModelLocator x:Key="EditDocumentModelLocator" />
 	<Indexes:IndexDefinitionModelLocator x:Key="IndexDefinitionModelLocator" />
+	<Indexes:IndexesModelLocator x:Key="IndexesModelLocator" />
 
 	<Collections:CollectionsModelLocator x:Key="CollectionModelLocator" />
+	<Logs:LogsModelLocator x:Key="LogsModelLocator" />
 </ResourceDictionary>
