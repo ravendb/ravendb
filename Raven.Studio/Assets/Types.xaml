@@ -12,6 +12,7 @@
 	<Converters:MagnitudeToListConverter x:Name="MagnitudeToList"/>
 	<Converters:EnumToIntConverter x:Key="enumeratedValue" />
 	<Converters:EnumToEnumerableConverter x:Key="enumerationFromValue" />
+	<Converters:FirstLineOnlyConverter x:Key="FirstLineOnly" />
 	
 	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
 	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />

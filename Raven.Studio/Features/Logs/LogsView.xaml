@@ -12,11 +12,20 @@
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 
-		<data:DataGrid x:Name="LogsList" AutoGenerateColumns="True"
+		<data:DataGrid x:Name="LogsList"
+					   AutoGenerateColumns="False"
 					   IsReadOnly="True"
-					   ItemsSource="{Binding Logs}" />
+					   ItemsSource="{Binding Logs}">
+			<data:DataGrid.Columns>
+				<data:DataGridTextColumn Header="Level" Binding="{Binding Name}" />
+				<data:DataGridTextColumn Header="Logged" Binding="{Binding TimeStamp}" />
+				<data:DataGridTextColumn Header="Message" Binding="{Binding Message, Converter={StaticResource FirstLineOnly}}" />
+				<data:DataGridTextColumn Header="Exception" Binding="{Binding Exception, Converter={StaticResource FirstLineOnly}}" />
+				<data:DataGridTextColumn Header="Log Name" Binding="{Binding LoggerName}" />
+			</data:DataGrid.Columns>
+		</data:DataGrid>
 
-		<sdk:GridSplitter Grid.Row="1"
+			<sdk:GridSplitter Grid.Row="1"
 						  Background="Transparent"
 						  HorizontalAlignment="Stretch" />
 
@@ -38,7 +47,7 @@
 			
 			<TextBlock Grid.ColumnSpan="3" Text="{Binding Message}" />
 			<TextBlock Grid.ColumnSpan="3"
-					   Grid.Row="2"
+					   Grid.Row="1"
 					   Text="{Binding Exception}" />
 
 			<TextBlock Grid.Row="2" Text="Logged" />
