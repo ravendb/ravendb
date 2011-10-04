@@ -7,9 +7,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Reflection;
 using System.Linq;
 #if !NET_3_5
-using System.Reflection;
 using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
