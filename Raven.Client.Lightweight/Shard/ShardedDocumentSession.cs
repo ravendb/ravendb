@@ -332,6 +332,15 @@ namespace Raven.Client.Shard
 
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
+#if !NET_3_5
+			return new ShardedDocumentQuery<T>(this, SelectShardsByQuery, indexName, null, listeners.QueryListeners);
+#else
+			return new ShardedDocumentQuery<T>(this, SelectShardsByQuery, null, indexName, null, listeners.QueryListeners);
+#endif
+		}
+
+		protected IDatabaseCommands[] SelectShardsByQuery(string query)
+		{
 			throw new NotImplementedException();
 		}
 

@@ -331,7 +331,7 @@ namespace Raven.Client.Document
 			value.ETag = jsonDocument.Etag;
 			value.OriginalValue = jsonDocument.DataAsJson;
 			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-			foreach (PropertyInfo property in entity.GetType().GetProperties())
+			foreach (var property in entity.GetType().GetProperties())
 			{
 				if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
 					continue;
