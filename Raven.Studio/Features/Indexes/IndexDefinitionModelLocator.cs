@@ -26,14 +26,5 @@ namespace Raven.Studio.Features.Indexes
 				)
 				.Catch();
 		}
-
-		private string GetParamAfter(string urlPrefix)
-		{
-			var url = ApplicationModel.Current.NavigationState;
-			if (url.StartsWith(urlPrefix) == false)
-				return null;
-
-			return url.Substring(urlPrefix.Length);
-		}
 	}
 }

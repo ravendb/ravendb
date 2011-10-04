@@ -33,5 +33,14 @@ namespace Raven.Studio.Infrastructure
 		}
 
 		protected abstract void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<T> observable);
+
+		public static string GetParamAfter(string urlPrefix)
+		{
+			var url = ApplicationModel.Current.NavigationState;
+			if (url.StartsWith(urlPrefix) == false)
+				return null;
+
+			return url.Substring(urlPrefix.Length);
+		}
 	}
 }
