@@ -133,7 +133,8 @@ namespace Raven.Client.Shard
 
 		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
 		{
-			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
+			throw new NotImplementedException();
+			//return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
 		}
 
 		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id)
@@ -143,8 +144,9 @@ namespace Raven.Client.Shard
 
 		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
 		{
-			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
-			return AddLazyOperation(lazyLoadOperation, onEval);
+			//var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
+			//return AddLazyOperation(lazyLoadOperation, onEval);
+			throw new NotImplementedException();
 		}
 
 		Lazy<TResult> ILazySessionOperations.Load<TResult>(ValueType id)
