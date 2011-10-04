@@ -9,21 +9,23 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock x:Name="IntroductoryText" Grid.Row="0" Margin="0" 
                Text="An unknown error was encountered. Please contact your administrator for more information."/>
 
-        <StackPanel x:Name="ContentStackPanel" Grid.Row="2" Margin="0,6,0,0">
+		<TextBlock x:Name="LabelText"
+					TextWrapping="Wrap"
+					Grid.Row="1"
+					Margin="0,6,0,2" 
+                    Text="Error details"/>
+        <TextBox x:Name="ErrorTextBox" TextWrapping="Wrap" IsReadOnly="True"
+					Grid.Row="2"
+					VerticalAlignment="Stretch"
+                    VerticalScrollBarVisibility="Auto"/>
 
-            <TextBlock x:Name="LabelText" TextWrapping="Wrap" Margin="0,0,0,2" 
-                       Text="Error details"/>
-            <TextBox x:Name="ErrorTextBox" TextWrapping="Wrap" IsReadOnly="True"
-                     VerticalScrollBarVisibility="Auto"/>
-
-        </StackPanel>
 
         <Button x:Name="OKButton" Grid.Row="3" Click="OKButton_Click" 
             Width="75" Height="23" HorizontalAlignment="Right" Margin="0,10,0,0" 
