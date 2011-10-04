@@ -54,12 +54,12 @@ namespace Raven.Client.Linq
 		public RavenQueryProviderProcessor(
 			IDocumentQueryGenerator queryGenerator,
 			Action<IDocumentQueryCustomization> customizeQuery,
-			Action<QueryResult> afterQueryExecuted, 
+			Action<QueryResult> afterQueryExecuted,
 			string indexName,
 			HashSet<string> fieldsToFetch)
 		{
 			FieldsToFetch = fieldsToFetch;
-			newExpressionType = typeof (T);
+			newExpressionType = typeof(T);
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
 			this.afterQueryExecuted = afterQueryExecuted;
@@ -94,7 +94,7 @@ namespace Raven.Client.Linq
 						switch (unaryExpressionOp.NodeType)
 						{
 							case ExpressionType.MemberAccess:
-								VisitMemberAccess((MemberExpression) unaryExpressionOp, false);
+								VisitMemberAccess((MemberExpression)unaryExpressionOp, false);
 								break;
 							case ExpressionType.Call:
 								// probably a call to !In()
@@ -120,11 +120,11 @@ namespace Raven.Client.Linq
 						break;
 				}
 			}
-	   
+
 		}
 
 		private void VisitBinaryExpression(BinaryExpression expression)
-		{        
+		{
 			switch (expression.NodeType)
 			{
 				case ExpressionType.OrElse:
@@ -152,7 +152,7 @@ namespace Raven.Client.Linq
 					VisitLessThanOrEqual(expression);
 					break;
 			}
-	
+
 		}
 
 		private void VisitAndAlso(BinaryExpression andAlso)
@@ -174,7 +174,7 @@ namespace Raven.Client.Linq
 			subClauseDepth++;
 
 			VisitExpression(orElse.Left);
-			luceneQuery.OrElse();              
+			luceneQuery.OrElse();
 			VisitExpression(orElse.Right);
 
 			subClauseDepth--;
@@ -233,7 +233,7 @@ namespace Raven.Client.Linq
 				Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
 				IsAnalyzed = true,
 				AllowWildcards = false,
-				IsNestedPath = memberInfo.IsNestedPath 
+				IsNestedPath = memberInfo.IsNestedPath
 			});
 		}
 
@@ -255,9 +255,9 @@ namespace Raven.Client.Linq
 		{
 			var methodCallExpression = expression.Left as MethodCallExpression;
 			// checking for VB.NET string equality
-			if(methodCallExpression != null && methodCallExpression.Method.Name == "CompareString" && 
-				expression.Right.NodeType==ExpressionType.Constant &&
-					Equals(((ConstantExpression) expression.Right).Value, 0))
+			if (methodCallExpression != null && methodCallExpression.Method.Name == "CompareString" &&
+				expression.Right.NodeType == ExpressionType.Constant &&
+					Equals(((ConstantExpression)expression.Right).Value, 0))
 			{
 				var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
 				luceneQuery.NegateNext();
@@ -320,7 +320,7 @@ namespace Raven.Client.Linq
 		protected virtual ExpressionInfo GetMember(Expression expression)
 		{
 			var parameterExpression = expression as ParameterExpression;
-			if(parameterExpression != null)
+			if (parameterExpression != null)
 			{
 				return new ExpressionInfo(CurrentPath, parameterExpression.Type, false);
 			}
@@ -335,7 +335,7 @@ namespace Raven.Client.Linq
 			var path = fullPath.Substring(fullPath.IndexOf('.') + 1);
 
 			return new ExpressionInfo(
-				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, path, prop), 
+				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, path, prop),
 				memberType, isNestedPath);
 		}
 
@@ -359,7 +359,7 @@ namespace Raven.Client.Linq
 				memberType = callExpression.Method.ReturnType;
 				isNestedPath = false;
 				path = parentPath + "." +
-				       GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType);
+					   GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType);
 
 			}
 			else
@@ -377,10 +377,13 @@ namespace Raven.Client.Linq
 		protected MemberExpression GetMemberExpression(Expression expression)
 		{
 			var unaryExpression = expression as UnaryExpression;
-			if(unaryExpression != null)
+			if (unaryExpression != null)
 				expression = unaryExpression.Operand;
 
-			
+			var lambdaExpression = expression as LambdaExpression;
+			if (lambdaExpression != null)
+				return GetMemberExpression(lambdaExpression.Body);
+
 
 			return (MemberExpression)expression;
 		}
@@ -390,8 +393,8 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Object);
 			bool isAnalyzed;
 
-			if(expression.Arguments.Count == 2 && 
-				expression.Arguments[1].NodeType==ExpressionType.Constant && 
+			if (expression.Arguments.Count == 2 &&
+				expression.Arguments[1].NodeType == ExpressionType.Constant &&
 				expression.Arguments[1].Type == typeof(StringComparison))
 			{
 				switch ((StringComparison)((ConstantExpression)expression.Arguments[1]).Value)
@@ -522,7 +525,7 @@ namespace Raven.Client.Linq
 
 		private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
 		{
-			if (memberExpression.Type == typeof (bool))
+			if (memberExpression.Type == typeof(bool))
 			{
 				luceneQuery.WhereEquals(new WhereParams
 				{
@@ -545,13 +548,18 @@ namespace Raven.Client.Linq
 				VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Arguments[0], expression.Arguments[1]));
 				return;
 			}
-			if (expression.Method.DeclaringType == typeof (Queryable))
+			if (expression.Method.DeclaringType == typeof(LinqExtensions))
+			{
+				VisitLinqExtensionsMethodCall(expression);
+				return;
+			}
+			if (expression.Method.DeclaringType == typeof(Queryable))
 			{
 				VisitQueryableMethodCall(expression);
 				return;
 			}
 
-			if (expression.Method.DeclaringType == typeof (String))
+			if (expression.Method.DeclaringType == typeof(String))
 			{
 				VisitStringMethodCall(expression);
 				return;
@@ -577,8 +585,16 @@ namespace Raven.Client.Linq
 		{
 			switch (expression.Method.Name)
 			{
-			case "In":
-				{
+				case "Search":
+					var expressionInfo = GetMember(expression.Arguments[1]);
+					object value;
+					if(GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
+					{
+						throw new InvalidOperationException("Could not extract value from " + expression);
+					}
+					luceneQuery.Search(expressionInfo.Path, (string) value);
+					break;
+				case "In":
 					var memberInfo = GetMember(expression.Arguments[0]);
 					var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
 
@@ -591,11 +607,10 @@ namespace Raven.Client.Linq
 					}
 
 					break;
-				}
-			default:
-				{
-					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-				}
+				default:
+					{
+						throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+					}
 			}
 		}
 
@@ -604,14 +619,14 @@ namespace Raven.Client.Linq
 			switch (expression.Method.Name)
 			{
 				case "Any":
-				{
-					VisitAny(expression);
-					break;
-				}                   
+					{
+						VisitAny(expression);
+						break;
+					}
 				default:
-				{
-					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-				}
+					{
+						throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+					}
 			}
 		}
 
@@ -620,29 +635,29 @@ namespace Raven.Client.Linq
 			switch (expression.Method.Name)
 			{
 				case "Contains":
-				{
-					VisitContains(expression);
-					break;
-				}
+					{
+						VisitContains(expression);
+						break;
+					}
 				case "Equals":
-				{
-					VisitEquals(expression);
-					break;
-				}
+					{
+						VisitEquals(expression);
+						break;
+					}
 				case "StartsWith":
-				{
-					VisitStartsWith(expression);
-					break;
-				}
+					{
+						VisitStartsWith(expression);
+						break;
+					}
 				case "EndsWith":
-				{
-					VisitEndsWith(expression);
-					break;
-				}
+					{
+						VisitEndsWith(expression);
+						break;
+					}
 				default:
-				{
-					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-				}
+					{
+						throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+					}
 			}
 		}
 
@@ -664,7 +679,7 @@ namespace Raven.Client.Linq
 						}
 						if (chainedWhere == false && insideWhere > 1)
 							luceneQuery.OpenSubclause();
-						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+						VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
 						if (chainedWhere == false && insideWhere > 1)
 							luceneQuery.CloseSubclause();
 						if (chainedWhere)
@@ -676,19 +691,19 @@ namespace Raven.Client.Linq
 				case "Select":
 					{
 						VisitExpression(expression.Arguments[0]);
-						VisitSelect(((UnaryExpression) expression.Arguments[1]).Operand);
+						VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
 						break;
 					}
 				case "Skip":
 					{
 						VisitExpression(expression.Arguments[0]);
-						VisitSkip(((ConstantExpression) expression.Arguments[1]));
+						VisitSkip(((ConstantExpression)expression.Arguments[1]));
 						break;
 					}
 				case "Take":
 					{
 						VisitExpression(expression.Arguments[0]);
-						VisitTake(((ConstantExpression) expression.Arguments[1]));
+						VisitTake(((ConstantExpression)expression.Arguments[1]));
 						break;
 					}
 				case "First":
@@ -697,7 +712,7 @@ namespace Raven.Client.Linq
 						VisitExpression(expression.Arguments[0]);
 						if (expression.Arguments.Count == 2)
 						{
-							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+							VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
 						}
 
 						if (expression.Method.Name == "First")
@@ -716,7 +731,7 @@ namespace Raven.Client.Linq
 						VisitExpression(expression.Arguments[0]);
 						if (expression.Arguments.Count == 2)
 						{
-							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+							VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
 						}
 
 						if (expression.Method.Name == "Single")
@@ -732,7 +747,7 @@ namespace Raven.Client.Linq
 				case "All":
 					{
 						VisitExpression(expression.Arguments[0]);
-						VisitAll((Expression<Func<T, bool>>) ((UnaryExpression) expression.Arguments[1]).Operand);
+						VisitAll((Expression<Func<T, bool>>)((UnaryExpression)expression.Arguments[1]).Operand);
 						break;
 					}
 				case "Any":
@@ -740,7 +755,7 @@ namespace Raven.Client.Linq
 						VisitExpression(expression.Arguments[0]);
 						if (expression.Arguments.Count == 2)
 						{
-							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+							VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
 						}
 
 						VisitAny();
@@ -751,7 +766,7 @@ namespace Raven.Client.Linq
 						VisitExpression(expression.Arguments[0]);
 						if (expression.Arguments.Count == 2)
 						{
-							VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+							VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
 						}
 
 						VisitCount();
@@ -766,8 +781,8 @@ namespace Raven.Client.Linq
 				case "ThenByDescending":
 				case "OrderByDescending":
 					VisitExpression(expression.Arguments[0]);
-					VisitOrderBy((LambdaExpression) ((UnaryExpression) expression.Arguments[1]).Operand,
-					             expression.Method.Name.EndsWith("Descending"));
+					VisitOrderBy((LambdaExpression)((UnaryExpression)expression.Arguments[1]).Operand,
+								 expression.Method.Name.EndsWith("Descending"));
 					break;
 				default:
 					{
@@ -782,14 +797,14 @@ namespace Raven.Client.Linq
 			var fieldInfo = ((MemberExpression)expression.Body).Member as FieldInfo;
 			var expressionMemberInfo = GetMember(expression.Body);
 			var type = propertyInfo != null
-			           	? propertyInfo.PropertyType
-			           	: (fieldInfo != null ? fieldInfo.FieldType : typeof(object));
+						? propertyInfo.PropertyType
+						: (fieldInfo != null ? fieldInfo.FieldType : typeof(object));
 			luceneQuery.AddOrder(expressionMemberInfo.Path, descending, type);
 		}
 
 		private void VisitSelect(Expression operand)
 		{
-			var body = ((LambdaExpression) operand).Body;
+			var body = ((LambdaExpression)operand).Body;
 			switch (body.NodeType)
 			{
 				case ExpressionType.MemberAccess:
@@ -797,14 +812,14 @@ namespace Raven.Client.Linq
 					break;
 				//Anonomyous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
 				//See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
-				case ExpressionType.New:                
-					var newExpression = ((NewExpression) body);
-			        newExpressionType = newExpression.Type;
+				case ExpressionType.New:
+					var newExpression = ((NewExpression)body);
+					newExpressionType = newExpression.Type;
 					foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
 					{
 						AddToFieldsToFetch(field);
 					}
-			        break;
+					break;
 				//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
 				case ExpressionType.MemberInit:
 					var memberInitExpression = ((MemberInitExpression)body);
@@ -816,7 +831,7 @@ namespace Raven.Client.Linq
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
 					break;
-				
+
 				default:
 					throw new NotSupportedException("Node not supported: " + body.NodeType);
 			}
@@ -838,13 +853,13 @@ namespace Raven.Client.Linq
 		private void VisitSkip(ConstantExpression constantExpression)
 		{
 			//Don't have to worry about the cast failing, the Skip() extension method only takes an int
-			luceneQuery.Skip((int) constantExpression.Value);
+			luceneQuery.Skip((int)constantExpression.Value);
 		}
 
 		private void VisitTake(ConstantExpression constantExpression)
 		{
 			//Don't have to worry about the cast failing, the Take() extension method only takes an int
-			luceneQuery.Take((int) constantExpression.Value);
+			luceneQuery.Take((int)constantExpression.Value);
 		}
 
 		private void VisitAll(Expression<Func<T, bool>> predicateExpression)
@@ -888,8 +903,8 @@ namespace Raven.Client.Linq
 			luceneQuery.Take(1);
 			queryType = SpecialQueryType.FirstOrDefault;
 		}
-		
-		private  string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
+
+		private string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
 		{
 			var identityProperty = luceneQuery.DocumentConvention.GetIdentityProperty(typeof(T));
 			if (identityProperty != null && identityProperty.Name == expression.Path)
@@ -923,13 +938,13 @@ namespace Raven.Client.Linq
 			switch (expression.NodeType)
 			{
 				case ExpressionType.Constant:
-					value = ((ConstantExpression) expression).Value;
+					value = ((ConstantExpression)expression).Value;
 					return true;
 				case ExpressionType.MemberAccess:
-					value = GetMemberValue(((MemberExpression) expression));
+					value = GetMemberValue(((MemberExpression)expression));
 					return true;
 				case ExpressionType.New:
-					var newExpression = ((NewExpression) expression);
+					var newExpression = ((NewExpression)expression);
 					value = Activator.CreateInstance(newExpression.Type, newExpression.Arguments.Select(e =>
 					{
 						object o;
@@ -939,7 +954,7 @@ namespace Raven.Client.Linq
 					}).ToArray());
 					return true;
 				case ExpressionType.Lambda:
-					value = ((LambdaExpression) expression).Compile().DynamicInvoke();
+					value = ((LambdaExpression)expression).Compile().DynamicInvoke();
 					return true;
 				case ExpressionType.Call:
 					value = Expression.Lambda(expression).Compile().DynamicInvoke();
@@ -948,7 +963,7 @@ namespace Raven.Client.Linq
 					value = Expression.Lambda(expression).Compile().DynamicInvoke();
 					return true;
 				case ExpressionType.NewArrayInit:
-					var expressions = ((NewArrayExpression) expression).Expressions;
+					var expressions = ((NewArrayExpression)expression).Expressions;
 					var values = new object[expressions.Count];
 					value = null;
 					if (expressions.Where((t, i) => !GetValueFromExpressionWithoutConversion(t, out values[i])).Any())
@@ -984,10 +999,10 @@ namespace Raven.Client.Linq
 			var memberInfo = memberExpression.Member;
 			if (memberInfo is PropertyInfo)
 			{
-				var property = (PropertyInfo) memberInfo;
+				var property = (PropertyInfo)memberInfo;
 				return property.GetValue(obj, null);
 			}
-			if (memberInfo is FieldInfo )
+			if (memberInfo is FieldInfo)
 			{
 				var value = Expression.Lambda(memberExpression).Compile().DynamicInvoke();
 				return value;
@@ -1003,7 +1018,7 @@ namespace Raven.Client.Linq
 		{
 			var q = queryGenerator.Query<T>(indexName);
 
-			luceneQuery = (IAbstractDocumentQuery<T>) q;
+			luceneQuery = (IAbstractDocumentQuery<T>)q;
 
 			VisitExpression(expression);
 
@@ -1021,7 +1036,7 @@ namespace Raven.Client.Linq
 		public IAsyncDocumentQuery<T> GetAsyncLuceneQueryFor(Expression expression)
 		{
 			var asyncLuceneQuery = queryGenerator.AsyncQuery<T>(indexName);
-			luceneQuery = (IAbstractDocumentQuery<T>) asyncLuceneQuery;
+			luceneQuery = (IAbstractDocumentQuery<T>)asyncLuceneQuery;
 			VisitExpression(expression);
 
 			if (customizeQuery != null)
@@ -1043,10 +1058,10 @@ namespace Raven.Client.Linq
 			chainedWhere = false;
 
 			luceneQuery = (IAbstractDocumentQuery<T>)GetLuceneQueryFor(expression);
-			if(newExpressionType == typeof(T))
+			if (newExpressionType == typeof(T))
 				return ExecuteQuery<T>();
 
-			var genericExecuteQuery = typeof(RavenQueryProviderProcessor<T>).GetMethod("ExecuteQuery", BindingFlags.Instance|BindingFlags.NonPublic);
+			var genericExecuteQuery = typeof(RavenQueryProviderProcessor<T>).GetMethod("ExecuteQuery", BindingFlags.Instance | BindingFlags.NonPublic);
 			var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
 			return executeQueryWithProjectionType.Invoke(this, new object[0]);
 		}
@@ -1078,30 +1093,30 @@ namespace Raven.Client.Linq
 			switch (queryType)
 			{
 				case SpecialQueryType.First:
-				{
-					return finalQuery.First();
-				}
+					{
+						return finalQuery.First();
+					}
 				case SpecialQueryType.FirstOrDefault:
-				{
-					return finalQuery.FirstOrDefault();
-				}
+					{
+						return finalQuery.FirstOrDefault();
+					}
 				case SpecialQueryType.Single:
-				{
-					return finalQuery.Single();
-				}
+					{
+						return finalQuery.Single();
+					}
 				case SpecialQueryType.SingleOrDefault:
-				{
-					return finalQuery.SingleOrDefault();
-				}
+					{
+						return finalQuery.SingleOrDefault();
+					}
 				case SpecialQueryType.All:
-				{
-					var pred = predicate.Compile();
-					return finalQuery.AsQueryable().All(projection => pred((T)(object)projection));
-				}
+					{
+						var pred = predicate.Compile();
+						return finalQuery.AsQueryable().All(projection => pred((T)(object)projection));
+					}
 				case SpecialQueryType.Any:
-				{
-					return finalQuery.Any();
-				}
+					{
+						return finalQuery.Any();
+					}
 #if !SILVERLIGHT
 				case SpecialQueryType.Count:
 				{
@@ -1109,15 +1124,15 @@ namespace Raven.Client.Linq
 					return queryResultAsync.TotalResults;
 				}
 #else
-					case SpecialQueryType.Count:
-			    {
-			        throw new NotImplementedException("not done yet");
-			    }
+				case SpecialQueryType.Count:
+					{
+						throw new NotImplementedException("not done yet");
+					}
 #endif
 				default:
-				{
-					return finalQuery;
-				}
+					{
+						return finalQuery;
+					}
 			}
 		}
 

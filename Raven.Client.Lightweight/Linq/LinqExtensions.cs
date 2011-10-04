@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 #if !NET_3_5
+using System.Reflection;
 using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
@@ -129,13 +130,17 @@ namespace Raven.Client.Linq
 		}
 #endif
 
+
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Func<T, object> fieldSelector, string searchTerms)
+		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms)
 		{
-			return self;
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), self.Expression,
+			                                                          fieldSelector, Expression.Constant(searchTerms)));
+			return (IRavenQueryable<T>)queryable;
 		}
 
 		/// <summary>
