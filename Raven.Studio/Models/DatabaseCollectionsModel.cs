@@ -15,8 +15,7 @@ namespace Raven.Studio.Models
 			this.databaseCommands = databaseCommands;
 			Collections = new BindableCollection<CollectionModel>(new PrimaryKeyComparer<CollectionModel>(model=>model.Name));
 			SelectedCollection = new Observable<CollectionModel>();
-			ForceTimerTicked();
-		}
+	    }
 
 		protected override System.Threading.Tasks.Task TimerTickedAsync()
 		{

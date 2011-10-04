@@ -31,6 +31,8 @@
     <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
     <LinkedServerProject>
     </LinkedServerProject>
+    <Utf8Output>true</Utf8Output>
+    <ExpressionBlendVersion>4.0.20525.0</ExpressionBlendVersion>
   </PropertyGroup>
   <!-- This property group is only here to support building this project using the 
        MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
@@ -86,6 +88,7 @@
     <Reference Include="system" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Controls.Input" />
     <Reference Include="System.Windows.Controls.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v3.0\Libraries\Client\System.Windows.Controls.Data.dll</HintPath>
     </Reference>
@@ -133,6 +136,40 @@
     <Compile Include="Features\Indexes\EditIndexView.xaml.cs">
       <DependentUpon>EditIndexView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Tasks\ExportTask.cs" />
+    <Compile Include="Features\Tasks\ImportTask.cs" />
+    <Compile Include="Features\Tasks\TasksView.xaml.cs">
+      <DependentUpon>TasksView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Impl\DotNetZip\Adler.cs" />
+    <Compile Include="Impl\DotNetZip\BlockState.cs" />
+    <Compile Include="Impl\DotNetZip\CompressionLevel.cs" />
+    <Compile Include="Impl\DotNetZip\CompressionMode.cs" />
+    <Compile Include="Impl\DotNetZip\CompressionStrategy.cs" />
+    <Compile Include="Impl\DotNetZip\Crc32.cs" />
+    <Compile Include="Impl\DotNetZip\CrcCalculatorStream.cs" />
+    <Compile Include="Impl\DotNetZip\DeflateFlavor.cs" />
+    <Compile Include="Impl\DotNetZip\DeflateManager.cs" />
+    <Compile Include="Impl\DotNetZip\DeflateStream.cs" />
+    <Compile Include="Impl\DotNetZip\FlushType.cs" />
+    <Compile Include="Impl\DotNetZip\GZipStream.cs" />
+    <Compile Include="Impl\DotNetZip\InflateBlocks.cs" />
+    <Compile Include="Impl\DotNetZip\InflateCodes.cs" />
+    <Compile Include="Impl\DotNetZip\InflateManager.cs" />
+    <Compile Include="Impl\DotNetZip\InfTree.cs" />
+    <Compile Include="Impl\DotNetZip\InternalConstants.cs" />
+    <Compile Include="Impl\DotNetZip\InternalInflateConstants.cs" />
+    <Compile Include="Impl\DotNetZip\ParallelDeflateOutputStream.cs" />
+    <Compile Include="Impl\DotNetZip\SharedUtils.cs" />
+    <Compile Include="Impl\DotNetZip\StaticTree.cs" />
+    <Compile Include="Impl\DotNetZip\Tree.cs" />
+    <Compile Include="Impl\DotNetZip\WorkItem.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibBaseStream.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibCodec.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibConstants.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibException.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibStream.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
     <Compile Include="Features\Logs\LogsView.xaml.cs">
       <DependentUpon>LogsView.xaml</DependentUpon>
     </Compile>
@@ -207,6 +244,7 @@
     <Compile Include="Models\ApplicationModel.cs" />
     <Compile Include="Models\DatabaseModel.cs" />
     <Compile Include="Models\ServerModel.cs" />
+    <Compile Include="Models\TaskModel.cs" />
     <Compile Include="Views\Collections.xaml.cs">
       <DependentUpon>Collections.xaml</DependentUpon>
     </Compile>
@@ -215,6 +253,9 @@
     </Compile>
     <Compile Include="Views\Indexes.xaml.cs">
       <DependentUpon>Indexes.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Tasks.xaml.cs">
+      <DependentUpon>Tasks.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\NotFound.xaml.cs">
       <DependentUpon>NotFound.xaml</DependentUpon>
@@ -259,6 +300,14 @@
     <Page Include="Features\Indexes\EditIndexView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Tasks\TasksView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Tasks.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Logs\LogsView.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -383,6 +432,7 @@
     <Resource Include="Assets\Images\FooterTexture.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
