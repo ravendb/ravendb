@@ -13,6 +13,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Silverlight.Connection;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
@@ -135,6 +136,11 @@ namespace Raven.Client.Connection.Async
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata);
+
+        /// <summary>
+        /// Create a http request to the specified relative url on the current database
+        /// </summary>
+	    HttpJsonRequest CreateRequest(string relativeUrl, string method);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts

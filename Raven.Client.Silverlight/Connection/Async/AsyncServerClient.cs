@@ -73,6 +73,11 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 		}
 
+        public HttpJsonRequest CreateRequest(string relativeUrl, string method)
+        {
+            return jsonRequestFactory.CreateHttpJsonRequest(this, url + relativeUrl, method, credentials, convention);
+        }
+
 		/// <summary>
 		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
 		/// with the specified database
