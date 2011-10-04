@@ -94,12 +94,22 @@ namespace Raven.Client.Shard
 
 		public override void Commit(Guid txId)
 		{
-			throw new NotImplementedException();
+			IncrementRequestCount();
+			foreach (var databaseCommands in shardDbCommands.Values)
+			{
+				databaseCommands.Commit(txId);
+			}
+			ClearEnlistment();
 		}
 
 		public override void Rollback(Guid txId)
 		{
-			throw new NotImplementedException();
+			IncrementRequestCount();
+			foreach (var databaseCommands in shardDbCommands.Values)
+			{
+				databaseCommands.Rollback(txId);
+			}
+			ClearEnlistment();
 		}
 
 		public override byte[] PromoteTransaction(Guid fromTxId)
@@ -109,7 +119,11 @@ namespace Raven.Client.Shard
 
 		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
 		{
-			throw new NotImplementedException();
+			IncrementRequestCount();
+			foreach (var databaseCommands in shardDbCommands.Values)
+			{
+				databaseCommands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
+			}
 		}
 
 		public ISyncAdvancedSessionOperation Advanced
@@ -119,7 +133,7 @@ namespace Raven.Client.Shard
 
 		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
 		{
-			throw new NotImplementedException();
+			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
 		}
 
 		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id)
@@ -129,7 +143,8 @@ namespace Raven.Client.Shard
 
 		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
 		{
-			throw new NotImplementedException();
+			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
+			return AddLazyOperation(lazyLoadOperation, onEval);
 		}
 
 		Lazy<TResult> ILazySessionOperations.Load<TResult>(ValueType id)
@@ -192,12 +207,13 @@ namespace Raven.Client.Shard
 
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
-			throw new NotImplementedException();
+			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray(), null);
 		}
 
 		public T Load<T>(ValueType id)
 		{
-			throw new NotImplementedException();
+			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+			return Load<T>(documentKey);
 		}
 
 		public IRavenQueryable<T> Query<T>(string indexName)
@@ -227,7 +243,7 @@ namespace Raven.Client.Shard
 
 		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
 		{
-			throw new NotImplementedException();
+			return new MultiLoaderWithInclude<T>(this).Include(path);
 		}
 
 		public void SaveChanges()
