@@ -14,6 +14,6 @@ namespace Raven.Abstractions.Data
 		public string Message { get; set; }
 		public string LoggerName { get; set; }
 		public string Exception { get; set; }
-		public DateTime Timestamp { get; set; } 
+		public DateTime TimeStamp { get; set; } 
 	}
 }
