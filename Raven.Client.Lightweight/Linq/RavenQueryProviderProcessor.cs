@@ -540,6 +540,11 @@ namespace Raven.Client.Linq
 
 		private void VisitMethodCall(MethodCallExpression expression)
 		{
+			if (expression.Method.DeclaringType == typeof(object) && expression.Method.Name == "Equals")
+			{
+				VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Arguments[0], expression.Arguments[1]));
+				return;
+			}
 			if (expression.Method.DeclaringType == typeof (Queryable))
 			{
 				VisitQueryableMethodCall(expression);
