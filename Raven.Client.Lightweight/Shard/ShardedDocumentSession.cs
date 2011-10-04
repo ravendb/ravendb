@@ -29,8 +29,17 @@ namespace Raven.Client.Shard
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
-	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, IDocumentQueryGenerator, ISyncAdvancedSessionOperation
+	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
+		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
+#if !NET_3_5
+		, ILazySessionOperations, IEagerSessionOperations
+#endif
 	{
+#if !NET_3_5
+		private readonly IDictionary<string, IAsyncDatabaseCommands> asyncShardDbCommands;
+		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
+		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
+#endif
 		private readonly IShardStrategy shardStrategy;
 		private readonly IDictionary<string, IDatabaseCommands> shardDbCommands;
 		private readonly ShardedDocumentStore documentStore;
@@ -43,13 +52,21 @@ namespace Raven.Client.Shard
 		/// <param name="id"></param>
 		/// <param name="documentStore"></param>
 		/// <param name="listeners"></param>
+		/// <param name="asyncDatabaseCommands"></param>
 		public ShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
-			IShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands)
+			IShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands
+#if !NET_3_5
+, IDictionary<string, IAsyncDatabaseCommands> asyncDatabaseCommands
+#endif
+			)
 			: base(documentStore, listeners, id)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardDbCommands = shardDbCommands;
 			this.documentStore = documentStore;
+#if !NET_3_5
+			this.asyncShardDbCommands = asyncDatabaseCommands;
+#endif
 		}
 
 		private IList<IDatabaseCommands> GetAppropriateShards<T>(string key)
@@ -91,9 +108,39 @@ namespace Raven.Client.Shard
 			throw new NotImplementedException();
 		}
 
+		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
+		{
+			throw new NotImplementedException();
+		}
+
 		public ISyncAdvancedSessionOperation Advanced
 		{
 			get { return this; }
+		}
+
+		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
+		{
+			throw new NotImplementedException();
+		}
+
+		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id)
+		{
+			throw new NotImplementedException();
+		}
+
+		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
+		{
+			throw new NotImplementedException();
+		}
+
+		Lazy<TResult> ILazySessionOperations.Load<TResult>(ValueType id)
+		{
+			throw new NotImplementedException();
+		}
+
+		public Lazy<TResult> Load<TResult>(ValueType id, Action<TResult> onEval)
+		{
+			throw new NotImplementedException();
 		}
 
 		public T Load<T>(string id)
@@ -129,6 +176,16 @@ namespace Raven.Client.Shard
 			return default(T);
 		}
 
+		ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, object>> path)
+		{
+			throw new NotImplementedException();
+		}
+
+		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(params string[] ids)
+		{
+			throw new NotImplementedException();
+		}
+
 		public T[] Load<T>(params string[] ids)
 		{
 			return LoadInternal<T>(ids, null);
@@ -162,6 +219,11 @@ namespace Raven.Client.Shard
 		public ILoaderWithInclude<object> Include(string path)
 		{
 			return new MultiLoaderWithInclude<object>(this).Include(path);
+		}
+
+		ILazyLoaderWithInclude<object> ILazySessionOperations.Include(string path)
+		{
+			throw new NotImplementedException();
 		}
 
 		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
@@ -219,20 +281,32 @@ namespace Raven.Client.Shard
 			get { throw new NotSupportedException("Not supported in a sharded session"); }
 		}
 
+#if !NET_3_5
+		/// <summary>
+		/// Gets the async database commands.
+		/// </summary>
+		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get { throw new NotSupportedException("Not supported in a sharded session"); }
 		}
 
+		/// <summary>
+		/// Access the lazy operations
+		/// </summary>
 		public ILazySessionOperations Lazily
 		{
-			get { throw new NotImplementedException(); }
+			get { return this; }
 		}
 
+		/// <summary>
+		/// Access the eager operations
+		/// </summary>
 		public IEagerSessionOperations Eagerly
 		{
-			get { throw new NotImplementedException(); }
+			get { return this; }
 		}
+#endif
 
 		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
@@ -302,6 +376,11 @@ namespace Raven.Client.Shard
 				return obj.Aggregate(obj.Count, (current, item) => (current * 397) ^ item.GetHashCode());
 			}
 
+		}
+
+		public void ExecuteAllPendingLazyOperations()
+		{
+			throw new NotImplementedException();
 		}
 	}
 #endif

@@ -180,6 +180,23 @@ namespace Raven.Client.Shard
 		[ThreadStatic]
 		protected static Guid? currentSessionId;
 
+//#if !NET_3_5
+//        private Func<IAsyncDatabaseCommands> asyncShardedDbCommandsGenerator;
+//        /// <summary>
+//        /// Gets the async database commands.
+//        /// </summary>
+//        /// <value>The async database commands.</value>
+//        public override IAsyncDatabaseCommands AsyncDatabaseCommands
+//        {
+//            get
+//            {
+//                if (asyncShardedDbCommandsGenerator == null)
+//                    return null;
+//                return asyncShardedDbCommandsGenerator();
+//            }
+//        }
+//#endif
+
 #if !SILVERLIGHT
 		
 		/// <summary>
@@ -194,12 +211,12 @@ namespace Raven.Client.Shard
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy, shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands));
-
-//#if !NET_3_5
+				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy, shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands)
+#if !NET_3_5
 //, AsyncDatabaseCommands
-//#endif
-//);
+, null
+#endif
+);
 				AfterSessionCreated(session);
 				return session;
 			}
@@ -214,7 +231,26 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public override IDocumentSession OpenSession(string database)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database)).ToArray(), this);
+			EnsureNotClosed();
+
+			var sessionId = Guid.NewGuid();
+			currentSessionId = sessionId;
+			try
+			{
+				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy,
+					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database))
+#if !NET_3_5
+					//, AsyncDatabaseCommands.ForDatabase(database)
+, null
+#endif
+);
+				AfterSessionCreated(session);
+				return session;
+			}
+			finally
+			{
+				currentSessionId = null;
+			}
 		}
 
 		/// <summary>
@@ -222,7 +258,26 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public override IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database, credentialsForSession)).ToArray(), this);
+			EnsureNotClosed();
+
+			var sessionId = Guid.NewGuid();
+			currentSessionId = sessionId;
+			try
+			{
+				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy,
+					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database).With(credentialsForSession))
+#if !NET_3_5
+					//, AsyncDatabaseCommands.ForDatabase(database).With(credentialsForSession)
+, null
+#endif
+);
+				AfterSessionCreated(session);
+				return session;
+			}
+			finally
+			{
+				currentSessionId = null;
+			}
 		}
 
 		/// <summary>
@@ -231,7 +286,26 @@ namespace Raven.Client.Shard
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public override IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
-			return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(credentialsForSession)).ToArray(), this);
+			EnsureNotClosed();
+
+			var sessionId = Guid.NewGuid();
+			currentSessionId = sessionId;
+			try
+			{
+				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy,
+					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.With(credentialsForSession))
+#if !NET_3_5
+					//, AsyncDatabaseCommands.With(credentialsForSession)
+, null
+#endif
+);
+				AfterSessionCreated(session);
+				return session;
+			}
+			finally
+			{
+				currentSessionId = null;
+			}
 		}
 
 		/// <summary>
