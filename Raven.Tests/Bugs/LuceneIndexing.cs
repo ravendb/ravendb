@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs
 			Console.WriteLine(query);
 			var result = searcher.Search(query, 10);
 
-			Assert.NotEqual(0,result.totalHits);
+			Assert.NotEqual(0,result.TotalHits);
 		}
 	}
 }

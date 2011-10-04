@@ -10,6 +10,7 @@ using System.Security.Principal;
 using System.Text.RegularExpressions;
 using System.Web;
 using NLog;
+using Raven.Database.Config;
 
 namespace Raven.Database.Server.Abstractions
 {
@@ -18,12 +19,12 @@ namespace Raven.Database.Server.Abstractions
 		private readonly HttpContext context;
 		private readonly HttpRequestAdapter request;
 		private readonly HttpResponseAdapter response;
-		private readonly IRavenHttpConfiguration configuration;
+		private readonly InMemoryRavenConfiguration configuration;
 
 		private static readonly Regex maxAgeFinder = new Regex(@"max-age \s* = \s* (\d+)",
 		                                                       RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase |
 		                                                       RegexOptions.Compiled);
-		public HttpContextAdapter(HttpContext context, IRavenHttpConfiguration configuration)
+		public HttpContextAdapter(HttpContext context, InMemoryRavenConfiguration configuration)
 		{
 			this.context = context;
 			this.configuration = configuration;
@@ -55,7 +56,7 @@ namespace Raven.Database.Server.Abstractions
 			get { return true; }
 		}
 
-		public IRavenHttpConfiguration Configuration
+		public InMemoryRavenConfiguration Configuration
 		{
 			get { return configuration; }
 		}

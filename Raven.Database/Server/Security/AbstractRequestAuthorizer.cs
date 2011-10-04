@@ -1,20 +1,21 @@
 using System;
+using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Security
 {
 	public abstract class AbstractRequestAuthorizer
 	{
-		private Func<IRavenHttpConfiguration> settings;
+		private Func<InMemoryRavenConfiguration> settings;
 		private Func<DocumentDatabase> database;
 		protected HttpServer server;
 		private Func<string> tenantId;
 
 		public DocumentDatabase ResourceStore { get { return database(); } }
-		public IRavenHttpConfiguration Settings { get { return settings(); } }
+		public InMemoryRavenConfiguration Settings { get { return settings(); } }
 		public string TenantId { get { return tenantId(); } }
 
-		public void Initialize(Func<DocumentDatabase> databaseGetter, Func<IRavenHttpConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
+		public void Initialize(Func<DocumentDatabase> databaseGetter, Func<InMemoryRavenConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
 		{
 			this.server = theServer;
 			this.database = databaseGetter;

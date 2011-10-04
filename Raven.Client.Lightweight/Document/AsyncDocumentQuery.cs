@@ -511,6 +511,16 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Perform a search for documents which fields that match the searchTerms.
+		/// If there is more than a single term, each of them will be checked independently.
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Search(string fieldName, string searchTerms)
+		{
+			Search(fieldName, searchTerms);
+			return this;
+		}
+
+		/// <summary>
 		/// Simplified method for closing a clause within the query
 		/// </summary>
 		/// <returns></returns>

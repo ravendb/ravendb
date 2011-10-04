@@ -574,14 +574,14 @@ namespace Raven.Database.Indexing
 								skippedResultsInCurrentLoop = 0;
 							}
 							TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
-							indexQuery.TotalSize.Value = search.totalHits;
+							indexQuery.TotalSize.Value = search.TotalHits;
 
 							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start);
 
-							for (int i = start; i < search.totalHits && (i - start) < pageSize; i++)
+							for (int i = start; i < search.TotalHits && (i - start) < pageSize; i++)
 							{
-								Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
-								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.scoreDocs[i].score);
+								Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
 									indexQuery.SkippedResults.Value++;
@@ -614,11 +614,11 @@ namespace Raven.Database.Indexing
 					return;
 
 				// add results that were already there in previous pages
-				var min = Math.Min(start, search.totalHits);
+				var min = Math.Min(start, search.TotalHits);
 				for (int i = 0; i < min; i++)
 				{
-					Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.scoreDocs[i].score);
+					Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
 					alreadyReturned.Add(indexQueryResult.Projection);
 				}
 			}

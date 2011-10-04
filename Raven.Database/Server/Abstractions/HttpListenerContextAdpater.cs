@@ -10,18 +10,19 @@ using System.Net;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
 using NLog;
+using Raven.Database.Config;
 
 namespace Raven.Database.Server.Abstractions
 {
 	public class HttpListenerContextAdpater : IHttpContext
 	{
 		private readonly HttpListenerContext ctx;
-		private readonly IRavenHttpConfiguration configuration;
+		private readonly InMemoryRavenConfiguration configuration;
 		private static readonly Regex maxAgeFinder = new Regex(@"max-age \s* = \s* (\d+)",
 														   RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase |
 														   RegexOptions.Compiled);
-	  
-		public HttpListenerContextAdpater(HttpListenerContext ctx, IRavenHttpConfiguration configuration)
+
+		public HttpListenerContextAdpater(HttpListenerContext ctx, InMemoryRavenConfiguration configuration)
 		{
 			this.ctx = ctx;
 			this.configuration = configuration;
@@ -53,7 +54,7 @@ namespace Raven.Database.Server.Abstractions
 			get { return true; }
 		}
 
-		public IRavenHttpConfiguration Configuration
+		public InMemoryRavenConfiguration Configuration
 		{
 			get { return configuration; }
 		}

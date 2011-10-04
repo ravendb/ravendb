@@ -214,6 +214,8 @@ namespace Raven.Client.Connection.Async
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
 		Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
+
+		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
 	}
 }
 #endif

@@ -72,6 +72,12 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net.Contrib.Spatial">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.dll</HintPath>
+    </Reference>
+    <Reference Include="Lucene.Net.Contrib.SpellChecker">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.SpellChecker.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Newtonsoft.Json, Version=4.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -83,12 +89,6 @@
     </Reference>
     <Reference Include="Rhino.Licensing">
       <HintPath>..\SharedLibs\Rhino.Licensing.dll</HintPath>
-    </Reference>
-    <Reference Include="Spatial.Net">
-      <HintPath>..\SharedLibs\Spatial.Net.dll</HintPath>
-    </Reference>
-    <Reference Include="SpellChecker.Net">
-      <HintPath>..\SharedLibs\SpellChecker.Net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -137,11 +137,11 @@
     <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Server\HttpServer.cs" />
     <Compile Include="Server\IConfigureHttpListener.cs" />
-    <Compile Include="Server\IRavenHttpConfiguration.cs" />
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
+    <Compile Include="Server\Responders\Logs.cs" />
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
     <Compile Include="Server\Responders\SilverlightPlugin.cs" />
@@ -437,6 +437,7 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="Util\BoundedMemoryTarget.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\WeakEvent.cs" />
   </ItemGroup>

@@ -106,6 +106,9 @@
     <Compile Include="..\Raven.Abstractions\Data\JsonDocumentMetadata.cs">
       <Link>Imports\Data\JsonDocumentMetadata.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\LogItem.cs">
+      <Link>Imports\Data\LogItem.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Default.cs">
       <Link>Imports\Default.cs</Link>
     </Compile>
