@@ -129,9 +129,6 @@
     <Compile Include="Features\Indexes\EditIndexView.xaml.cs">
       <DependentUpon>EditIndexView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Tasks\CostumeListBoxItem.xaml.cs">
-      <DependentUpon>CostumeListBoxItem.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Features\Tasks\ExportTask.cs" />
     <Compile Include="Features\Tasks\ImportTask.cs" />
     <Compile Include="Features\Tasks\TasksView.xaml.cs">
@@ -279,10 +276,6 @@
     <Page Include="Features\Indexes\EditIndexView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Tasks\CostumeListBoxItem.xaml">
-      <Generator>MSBuild:MarkupCompilePass1</Generator>
-      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Tasks\TasksView.xaml">
       <SubType>Designer</SubType>
