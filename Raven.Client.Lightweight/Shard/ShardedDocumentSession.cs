@@ -68,9 +68,9 @@ namespace Raven.Client.Shard
 //#endif
 		}
 
-		private IList<IDatabaseCommands> GetAppropriateShards<T>(string key)
+		private IList<IDatabaseCommands> GetAppropriateShards(Type type,string key)
 		{
-			var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIds(ShardResolutionStrategyData.BuildFrom(typeof(T), key));
+			var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIds(ShardResolutionStrategyData.BuildFrom(type, key));
 			
 			if (shardIds != null)
 				return shardDbCommands.Where(cmd => shardIds.Contains(cmd.Key)).Select(x => x.Value).ToList();
@@ -80,7 +80,7 @@ namespace Raven.Client.Shard
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			var dbCommands = GetAppropriateShards<object>(documentKey);
+			var dbCommands = GetAppropriateShards(typeof(object),documentKey);
 
 			foreach (var dbCmd in dbCommands)
 			{
@@ -169,7 +169,7 @@ namespace Raven.Client.Shard
 
 			IncrementRequestCount();
 
-			var dbCommands = GetAppropriateShards<T>(id);
+			var dbCommands = GetAppropriateShards(typeof(T),id);
 
 			foreach (var dbCmd in dbCommands)
 			{
@@ -250,7 +250,27 @@ namespace Raven.Client.Shard
 
 		public void SaveChanges()
 		{
-			throw new NotImplementedException();
+			using (EntitiesToJsonCachingScope())
+			{
+				var data = PrepareForSaveChanges();
+				if (data.Commands.Count == 0)
+					return; // nothing to do here
+				IncrementRequestCount();
+				LogBatch(data);
+				
+				// split by shards
+
+				
+
+				// execute on all shards
+				// merge results
+
+
+				throw new NotImplementedException();
+				//BatchResult[] batchResults = DatabaseCommands.Batch(data.Commands);
+				
+				//UpdateBatchResults(batchResults, data.Entities);
+			}
 		}
 
 		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
@@ -270,7 +290,7 @@ namespace Raven.Client.Shard
 				throw new InvalidOperationException("Cannot refresh a trasient instance");
 			IncrementRequestCount();
 
-			var dbCommands = GetAppropriateShards<T>(null);
+			var dbCommands = GetAppropriateShards(typeof(T),null);
 			foreach (var dbCmd in dbCommands)
 			{
 				var jsonDocument = dbCmd.Get(value.Key);
@@ -293,7 +313,7 @@ namespace Raven.Client.Shard
 			throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
 		}
 
-		public IDatabaseCommands DatabaseCommands
+		IDatabaseCommands ISyncAdvancedSessionOperation.DatabaseCommands
 		{
 			get { throw new NotSupportedException("Not supported in a sharded session"); }
 		}
@@ -359,32 +379,34 @@ namespace Raven.Client.Shard
 			if (ids.Length == 0)
 				return new T[0];
 
-			var idsAndShards = ids.Select(id => new { id, urls = GetAppropriateShards<T>(id) })
+			var idsAndShards = ids.Select(id => new { id, urls = GetAppropriateShards(typeof(T),id) })
 				.GroupBy(x => x.urls, new DbCmdsListComparer());
 
 			IncrementRequestCount();
-
-			var multiLoadOperation = new MultiLoadOperation(this);
+			var allResults = new List<T>();
 			foreach (var endpoint in idsAndShards)
 			{
-				var idsForShard = endpoint.Select(x => x.id).ToArray();
-				multiLoadOperation.ids = idsForShard;
-
-				foreach (var dbCmd in endpoint.Key)
+				var currentShardIds = endpoint.Select(x => x.id).ToArray();
+				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(endpoint.Key, dbCmd =>
 				{
-					multiLoadOperation.disableAllCaching = dbCmd.DisableAllCaching;
+					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
 					MultiLoadResult multiLoadResult;
 					do
 					{
 						multiLoadOperation.LogOperation();
 						using (multiLoadOperation.EnterMultiLoadContext())
 						{
-							multiLoadResult = dbCmd.Get(idsForShard, includes);
+							multiLoadResult = dbCmd.Get(currentShardIds, includes);
 						}
 					} while (multiLoadOperation.SetResult(multiLoadResult));
+					return multiLoadOperation;
+				});
+				foreach (var multiLoadOperation in multiLoadOperations)
+				{
+					allResults.AddRange(multiLoadOperation.Complete<T>());
 				}
 			}
-			return multiLoadOperation.Complete<T>();
+			return allResults.OrderBy(item => Array.IndexOf(ids, GetDocumentId(item))).ToArray();
 		}
 
 		internal class DbCmdsListComparer : IEqualityComparer<IList<IDatabaseCommands>>

@@ -13,17 +13,12 @@ namespace Raven.Client.Document.SessionOperations
 
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		internal Func<IDisposable> disableAllCaching { get; set; }
-		internal string[] ids { get; set; }
+		private readonly string[] ids;
 		bool firstRequest = true;
 		JsonDocument[] results;
 		JsonDocument[] includeResults;
 				
 		private Stopwatch sp;
-
-		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations)
-		{
-			this.sessionOperations = sessionOperations;
-		}
 
 		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, 
 			Func<IDisposable> disableAllCaching,

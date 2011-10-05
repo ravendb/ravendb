@@ -1123,5 +1123,22 @@ more responsive application.
 			/// <value>The entities.</value>
 			public IList<object> Entities { get; set; }
 		}
+
+		protected void LogBatch(SaveChangesData data)
+		{
+			log.Debug(()=>
+			{
+				var sb = new StringBuilder()
+					.AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
+					.AppendLine();
+				foreach (var commandData in data.Commands)
+				{
+					sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
+				}
+				return sb.ToString();
+			});
+		}
+
+
 	}
 }

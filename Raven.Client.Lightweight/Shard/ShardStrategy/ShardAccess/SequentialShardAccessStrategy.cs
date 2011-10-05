@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 
 namespace Raven.Client.Shard.ShardStrategy.ShardAccess
@@ -19,19 +21,12 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 		/// Applies the specified action for all shard sessions.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
-		/// <param name="shardSessions">The shard sessions.</param>
+		/// <param name="commands">The shard sessions.</param>
 		/// <param name="operation">The operation.</param>
 		/// <returns></returns>
-		public IList<T> Apply<T>(IList<IDocumentSession> shardSessions, Func<IDocumentSession, IList<T>> operation)
+		public IList<T> Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands, T> operation) where T : class
 		{
-			var returnList = new List<T>();
-
-			foreach (var shardSession in shardSessions)
-			{
-				returnList.AddRange(operation(shardSession));
-			}
-
-			return returnList;
+			return commands.Select(operation).ToList();
 		}
 	}
 }

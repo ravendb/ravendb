@@ -12,6 +12,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 
 namespace Raven.Client.Shard.ShardStrategy.ShardAccess
@@ -24,18 +25,14 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 		/// <summary>
 		/// Applies the specified action to all shard sessions in parallel
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="shardSessions">The shard sessions.</param>
-		/// <param name="operation">The operation.</param>
-		/// <returns></returns>
-		public IList<T> Apply<T>(IList<IDocumentSession> shardSessions, Func<IDocumentSession, IList<T>> operation)
+		public IList<T> Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands, T> operation) where T : class
 		{
-			var returnedLists = new IList<T>[shardSessions.Count];
+			var returnedLists = new T[commands.Count];
 
-			shardSessions
-				.Select((shardSession,i) =>
+			commands
+				.Select((cmd,i) =>
 					Task.Factory
-						.StartNew(() => operation(shardSession))
+						.StartNew(() => operation(cmd))
 						.ContinueWith(task =>
 						{
 							returnedLists[i] = task.Result;
@@ -45,7 +42,6 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 
 			return returnedLists
 				.Where(x => x != null)
-				.SelectMany(x => x)
 				.ToArray();
 		}
 	}
