@@ -14,11 +14,12 @@
 		</Grid.RowDefinitions>
 
 		<StackPanel Orientation="Horizontal">
-			<HyperlinkButton NavigateUri="/logs" />
-			<HyperlinkButton NavigateUri="/logs/error" />
+			<HyperlinkButton Content="All Logs" NavigateUri="/logs" />
+			<HyperlinkButton Content="Errors Only" NavigateUri="/logs/error" />
 		</StackPanel>
 	  
 		<data:DataGrid x:Name="LogsList"
+					   Grid.Row="1"
 					   AutoGenerateColumns="False"
 					   IsReadOnly="True"
 					   ItemsSource="{Binding Logs}">
@@ -31,11 +32,11 @@
 			</data:DataGrid.Columns>
 		</data:DataGrid>
 
-			<sdk:GridSplitter Grid.Row="1"
-						  Background="Transparent"
-						  HorizontalAlignment="Stretch" />
+		<sdk:GridSplitter Grid.Row="2"
+						Background="Transparent"
+						HorizontalAlignment="Stretch" />
 
-		<Grid Grid.Row="2"
+		<Grid Grid.Row="3"
 			  DataContext="{Binding ElementName=LogsList, Path=SelectedItem}"
 			  Visibility="{Binding ElementName=LogsList, Path=SelectedItem, Converter={StaticResource HiddenWhenNull}}">
 			<Grid.ColumnDefinitions>
