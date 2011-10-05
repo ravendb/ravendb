@@ -27,13 +27,16 @@ namespace Raven.Studio.Models
 		    };
 		    SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
 		    Statistics = new Observable<DatabaseStatistics>();
-			RecentDocuments = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(document => document.Id));
 		}
 
 	    public BindableCollection<TaskModel> Tasks { get; private set; }
 
 	    public BindableCollection<string> Indexes { get; private set; }
 
+	    public int CurrentPage
+	    {
+	        get { return GetSkipCount()/25; }
+	    }
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
@@ -50,20 +53,14 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		
 		public Observable<DatabaseStatistics> Statistics { get; set; }
-		public BindableCollection<ViewableDocument> RecentDocuments { get; set; }
 
 		protected override Task TimerTickedAsync()
 		{
 			return asyncDatabaseCommands.GetStatisticsAsync()
-				.ContinueOnSuccess(stats => Statistics.Value = stats)
-				.ContinueOnSuccess(task => asyncDatabaseCommands.GetDocumentsAsync(GetSkipCount(), 15)
-				                           	.ContinueOnSuccess(
-				                           		docs => RecentDocuments.Match(docs.Select(x => new ViewableDocument(x)).ToArray())))
-				.Unwrap();
-
+				.ContinueOnSuccess(stats => Statistics.Value = stats);
 		}
+
 
 		private bool Equals(DatabaseModel other)
 		{
