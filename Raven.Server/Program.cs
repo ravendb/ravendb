@@ -94,7 +94,7 @@ namespace Raven.Server
 			OptionSet optionSet = null;
 			optionSet = new OptionSet
 			{
-				{"set=", "The configuration {0:option} to set to the specified {1:value}" , (key, value) =>
+				{"set={==}", "The configuration {0:option} to set to the specified {1:value}" , (key, value) =>
 				{
 					ravenConfiguration.Settings[key] = value;
 					ravenConfiguration.Initialize();
