@@ -31,6 +31,8 @@ namespace Raven.Storage.Esent.Backup
 		{
 			instance = ((TransactionalStorage)database.TransactionalStorage).Instance;
 			this.database = database;
+			this.src = src;
+			this.to = to;
 		}
 
 		public void Execute(object ignored)
