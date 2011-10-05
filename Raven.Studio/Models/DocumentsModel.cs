@@ -29,7 +29,6 @@ namespace Raven.Studio.Models
             return fetchDocuments(Documents, CurrentPage - 1);
         }
 
-        private int currentPage;
         public int CurrentPage
         {
             get { return UrlUtil.GetSkipCount() / itemsPerPages + 1; }
