@@ -27,7 +27,10 @@ namespace Raven.Studio.Models
 		}
 
 		private int count;
-		public int Count
+
+	    private const int ItemsPerPage = 25;
+
+	    public int Count
 		{
 			get { return count; }
 			set { count = value; OnPropertyChanged();}
@@ -38,18 +41,18 @@ namespace Raven.Studio.Models
 		public CollectionModel(IAsyncDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
-		    Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(databaseCommands, GetFetchDocumentsMethod())};
+		    Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(GetFetchDocumentsMethod(),"/Collections", ItemsPerPage)};
 		}
 
 	    private Func<BindableCollection<ViewableDocument>, int, Task> GetFetchDocumentsMethod()
 	    {
-	        const int pageSize = 25;
 	        return (docs, currentPage) => databaseCommands
-                .QueryAsync("Raven/DocumentsByEntityName", new IndexQuery { Start = currentPage * pageSize, PageSize = pageSize, Query = "Tag:" + Name }, new string[] { })
+                .QueryAsync("Raven/DocumentsByEntityName", new IndexQuery { Start = currentPage * ItemsPerPage, PageSize = ItemsPerPage, Query = "Tag:" + Name }, new string[] { })
                 .ContinueOnSuccess(queryResult =>
                 {
                     var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
                     docs.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
+                    Documents.Value.TotalPages.Value = queryResult.TotalResults/ItemsPerPage + 1;
                 });
 	    }
 	}

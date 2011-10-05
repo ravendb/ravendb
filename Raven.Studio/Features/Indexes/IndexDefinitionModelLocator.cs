@@ -7,7 +7,7 @@ namespace Raven.Studio.Features.Indexes
 {
 	public class IndexDefinitionModelLocator : ModelLocatorBase<IndexDefinitionModel>
 	{
-		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<IndexDefinitionModel> observable)
+		protected override void Load(DatabaseModel database, IAsyncDatabaseCommands asyncDatabaseCommands, Observable<IndexDefinitionModel> observable)
 		{
 			var name = GetParamAfter("/indexes/");
 			if (name == null)

@@ -108,6 +108,8 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Commands\IncreasePageCommand.cs" />
+    <Compile Include="Commands\DecreasePageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
@@ -189,6 +191,7 @@
     <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\ModelLocatorBase.cs" />
+    <Compile Include="Infrastructure\UrlUtil.cs" />
     <Compile Include="Models\DocumentsModel.cs" />
     <Compile Include="Models\HomeModel.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />

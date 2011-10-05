@@ -33,10 +33,6 @@ namespace Raven.Studio.Models
 
 	    public BindableCollection<string> Indexes { get; private set; }
 
-	    public int CurrentPage
-	    {
-	        get { return GetSkipCount()/25; }
-	    }
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{

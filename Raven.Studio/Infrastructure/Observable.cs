@@ -7,11 +7,31 @@ namespace Raven.Studio.Infrastructure
 {
 	[ContentProperty("Value")]
 	public class Observable<T> : NotifyPropertyChangedBase , IObservable 
-		where T : class
 	{
-		private T value;
+	    private readonly IObservable parent;
+        private readonly Func<object, T> valueExtractor;
+	    private T value;
 
-		public T Value
+	    public Observable(IObservable parent, Func<object, T> valueExtractor)
+	    {
+	        this.parent = parent;
+	        this.valueExtractor = valueExtractor;
+	        parent.PropertyChanged += (sender, args) => GetValueFromParent();
+            GetValueFromParent();
+	    }
+
+	    public Observable()
+	    {
+	        
+	    }
+
+	    private void GetValueFromParent()
+	    {
+	        var parentValue = parent.Value;
+	        Value = parentValue != null ? valueExtractor(parentValue) : default(T);
+	    }
+
+	    public T Value
 		{
 			get { return value; }
 			set

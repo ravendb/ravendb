@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Interop;
@@ -49,18 +50,6 @@ namespace Raven.Studio.Models
 			else
 				Deployment.Current.Dispatcher.InvokeAsync(() => Application.Current.Host.NavigationState = source.ToString());
 		}
-
-		public void RegisterOnceForNavigation(Action action)
-		{
-			EventHandler<NavigationStateChangedEventArgs> hostOnNavigationStateChanged = null;
-			hostOnNavigationStateChanged = delegate
-			                               {
-											   Application.Current.Host.NavigationStateChanged-=hostOnNavigationStateChanged;
-			                               		action();
-			                               };
-			Application.Current.Host.NavigationStateChanged += hostOnNavigationStateChanged;
-		}
-
 
 		public string GetQueryParam(string name)
 		{
