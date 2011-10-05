@@ -125,5 +125,11 @@ namespace Raven.Client
 		void Store(object entity);
 #endif
 	}
+
+	internal interface IDocumentSessionImpl : IDocumentSession
+	{
+		DocumentConvention Conventions { get; }
+		T[] LoadInternal<T>(string[] ids, string[] includes);
+	}
 #endif
 }

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 #if SILVERLIGHT
@@ -32,7 +33,7 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Manages access to RavenDB and open sessions to work with RavenDB.
 	/// </summary>
-	public class DocumentStore : IDocumentStore
+	public class DocumentStore : DocumentStoreBase
 	{
 		/// <summary>
 		/// The current session id - only used during contsruction
@@ -49,21 +50,10 @@ namespace Raven.Client.Document
 
 		private HttpJsonRequestFactory jsonRequestFactory;
 
-		/// <summary>
-		/// Gets the shared operations headers.
-		/// </summary>
-		/// <value>The shared operations headers.</value>
-#if !SILVERLIGHT
-
-		public System.Collections.Specialized.NameValueCollection SharedOperationsHeaders { get; private set; }
-#else
-		public System.Collections.Generic.IDictionary<string,string> SharedOperationsHeaders { get; private set; }
-#endif
-
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
 		///</summary>
-		public HttpJsonRequestFactory JsonRequestFactory
+		public override HttpJsonRequestFactory JsonRequestFactory
 		{
 			get { return jsonRequestFactory; }
 		}
@@ -73,7 +63,7 @@ namespace Raven.Client.Document
 		/// Gets the database commands.
 		/// </summary>
 		/// <value>The database commands.</value>
-		public IDatabaseCommands DatabaseCommands
+		public override IDatabaseCommands DatabaseCommands
 		{
 			get
 			{
@@ -92,6 +82,7 @@ namespace Raven.Client.Document
 				return commands;
 			}
 		}
+
 #endif
 
 #if !NET_3_5
@@ -100,7 +91,7 @@ namespace Raven.Client.Document
 		/// Gets the async database commands.
 		/// </summary>
 		/// <value>The async database commands.</value>
-		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		public override IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get
 			{
@@ -129,7 +120,6 @@ namespace Raven.Client.Document
 		}
 
 		private string identifier;
-		readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 #if !SILVERLIGHT
 		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
@@ -151,7 +141,7 @@ namespace Raven.Client.Document
 		/// Gets or sets the identifier for this store.
 		/// </summary>
 		/// <value>The identifier.</value>
-		public virtual string Identifier
+		public override string Identifier
 		{
 			get
 			{
@@ -219,18 +209,7 @@ namespace Raven.Client.Document
 			connectionStringOptions.Parse();
 			return connectionStringOptions.ConnectionStringOptions;
 		}
-
-		///<summary>
-		/// Whatever or not we will automatically enlist in distributed transactions
-		///</summary>
-		public bool EnlistInDistributedTransactions { get; set; }
 #endif
-
-
-		/// <summary>
-		/// Gets or sets the URL.
-		/// </summary>
-		public string Url { get; set; }
 
 		/// <summary>
 		/// Gets or sets the default database name.
@@ -238,18 +217,12 @@ namespace Raven.Client.Document
 		/// <value>The default database name.</value>
 		public string DefaultDatabase { get; set; }
 
-		/// <summary>
-		/// Gets the conventions.
-		/// </summary>
-		/// <value>The conventions.</value>
-		public DocumentConvention Conventions { get; set; }
-
 		#region IDisposable Members
 
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
-		public virtual void Dispose()
+		public override void Dispose()
 		{
 			if (jsonRequestFactory != null) jsonRequestFactory.Dispose();
 			WasDisposed = true;
@@ -265,7 +238,7 @@ namespace Raven.Client.Document
 		/// Opens the session with the specified credentials.
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
-		public IDocumentSession OpenSession(ICredentials credentialsForSession)
+		public override IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
 			EnsureNotClosed();
 
@@ -291,7 +264,7 @@ namespace Raven.Client.Document
 		/// Opens the session.
 		/// </summary>
 		/// <returns></returns>
-		public IDocumentSession OpenSession()
+		public override IDocumentSession OpenSession()
 		{
 			EnsureNotClosed();
 
@@ -316,7 +289,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Opens the session for a particular database
 		/// </summary>
-		public IDocumentSession OpenSession(string database)
+		public override IDocumentSession OpenSession(string database)
 		{
 			EnsureNotClosed();
 
@@ -341,7 +314,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Opens the session for a particular database with the specified credentials
 		/// </summary>
-		public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
+		public override IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
 			EnsureNotClosed();
 
@@ -368,58 +341,12 @@ namespace Raven.Client.Document
 		}
 
 #endif
-		/// <summary>
-		/// Registers the store listener.
-		/// </summary>
-		/// <param name="documentStoreListener">The document store listener.</param>
-		/// <returns></returns>
-		public DocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
-		{
-			listeners.StoreListeners = listeners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
-			return this;
-		}
-
-		private void AfterSessionCreated(InMemoryDocumentSessionOperations session)
-		{
-			var onSessionCreatedInternal = SessionCreatedInternal;
-			if (onSessionCreatedInternal != null)
-				onSessionCreatedInternal(session);
-		}
-
-		///<summary>
-		/// Internal notification for integaration tools, mainly
-		///</summary>
-		public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
-
-		/// <summary>
-		/// The resource manager id for the document store.
-		/// IMPORTANT: Using Guid.NewGuid() to set this value is almost certainly a mistake, you should set
-		/// it to a value that remains consistent between restart of the system.
-		/// </summary>
-		public Guid ResourceManagerId { get; set; }
-
-#if !NET_3_5
-
-		private readonly ProfilingContext profilingContext = new ProfilingContext();
-#endif
-
-		/// <summary>
-		///  Get the profiling information for the given id
-		/// </summary>
-		public ProfilingInformation GetProfilingInformationFor(Guid id)
-		{
-#if !NET_3_5
-			return profilingContext.TryGet(id);
-#else
-			return null;
-#endif
-		}
 
 		/// <summary>
 		/// Initializes this instance.
 		/// </summary>
 		/// <returns></returns>
-		public IDocumentStore Initialize()
+		public override IDocumentStore Initialize()
 		{
 			if (initialized) return this;
 
@@ -590,35 +517,6 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Registers the delete listener.
-		/// </summary>
-		/// <param name="deleteListener">The delete listener.</param>
-		/// <returns></returns>
-		public DocumentStore RegisterListener(IDocumentDeleteListener deleteListener)
-		{
-			listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] { deleteListener }).ToArray();
-			return this;
-		}
-
-		/// <summary>
-		/// Registers the query listener.
-		/// </summary>
-		public DocumentStore RegisterListener(IDocumentQueryListener queryListener)
-		{
-			listeners.QueryListeners = listeners.QueryListeners.Concat(new[] { queryListener }).ToArray();
-			return this;
-		}
-		/// <summary>
-		/// Registers the convertion listener.
-		/// </summary>
-		public DocumentStore RegisterListener(IDocumentConversionListener conversionListener)
-		{
-			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
-			return this;
-		}
-
-
-		/// <summary>
 		/// Setup the context for no aggressive caching
 		/// </summary>
 		/// <remarks>
@@ -626,7 +524,7 @@ namespace Raven.Client.Document
 		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
 		/// aggressive caching.
 		/// </remarks>
-		public IDisposable DisableAggressiveCaching()
+		public override IDisposable DisableAggressiveCaching()
 		{
 			AssertInitialized();
 #if !SILVERLIGHT
@@ -648,7 +546,7 @@ namespace Raven.Client.Document
 		/// we provide is current or not, but will serve the information directly from the local cache
 		/// without touching the server.
 		/// </remarks>
-		public IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
+		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
 			AssertInitialized();
 #if !SILVERLIGHT
@@ -669,7 +567,7 @@ namespace Raven.Client.Document
 		/// Opens the async session.
 		/// </summary>
 		/// <returns></returns>
-		public IAsyncDocumentSession OpenAsyncSession()
+		public override IAsyncDocumentSession OpenAsyncSession()
 		{
 			EnsureNotClosed();
 			var sessionId = Guid.NewGuid();
@@ -693,7 +591,7 @@ namespace Raven.Client.Document
 		/// Opens the async session.
 		/// </summary>
 		/// <returns></returns>
-		public IAsyncDocumentSession OpenAsyncSession(string databaseName)
+		public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
 		{
 			EnsureNotClosed();
 
@@ -715,94 +613,10 @@ namespace Raven.Client.Document
 		}
 #endif
 
-		private volatile EtagHolder lastEtag;
-		private readonly object lastEtagLocker = new object();
-		private bool initialized;
-
-		internal void UpdateLastWrittenEtag(Guid? etag)
-		{
-			if (etag == null)
-				return;
-
-			var newEtag = etag.Value.ToByteArray();
-
-			if (lastEtag == null)
-			{
-				lock (lastEtagLocker)
-				{
-					if (lastEtag == null)
-					{
-						lastEtag = new EtagHolder
-						{
-							Bytes = newEtag,
-							Etag = etag.Value
-						};
-						return;
-					}
-				}
-			}
-
-			// not the most recent etag
-			if (Buffers.Compare(lastEtag.Bytes, newEtag) >= 0)
-			{
-				return;
-			}
-
-			lock (lastEtagLocker)
-			{
-				// not the most recent etag
-				if (Buffers.Compare(lastEtag.Bytes, newEtag) >= 0)
-				{
-					return;
-				}
-
-				lastEtag = new EtagHolder
-				{
-					Etag = etag.Value,
-					Bytes = newEtag
-				};
-			}
-		}
-
-		///<summary>
-		/// Gets the etag of the last document written by any session belonging to this 
-		/// document store
-		///</summary>
-		public Guid? GetLastWrittenEtag()
-		{
-			var etagHolder = lastEtag;
-			if (etagHolder == null)
-				return null;
-			return etagHolder.Etag;
-		}
-
-		private void EnsureNotClosed()
-		{
-			if (WasDisposed)
-				throw new ObjectDisposedException("DocumentStore", "The document store has already been disposed and cannot be used");
-		}
-
-		private void AssertInitialized()
-		{
-			if (!initialized)
-				throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
-		}
-
-		private class EtagHolder
-		{
-			public Guid Etag;
-			public byte[] Bytes;
-		}
-
 		/// <summary>
 		/// Called after dispose is completed
 		/// </summary>
-		public event EventHandler AfterDispose;
-
-		/// <summary>
-		/// Whatever the instance has been disposed
-		/// </summary>
-		public bool WasDisposed { get; private set; }
+		public override event EventHandler AfterDispose;
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -818,6 +632,5 @@ You can setup the OAuth endpoint in the RavenDB server settings ('Raven/OAuthTok
 If you are on an internal network or requires this for testing, you can disable this warning by calling:
 	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = false;
 ";
-
 	}
 }

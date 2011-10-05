@@ -96,7 +96,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected int? pageSize;
 
-		private QueryOperation queryOperation;
+		protected virtual QueryOperation queryOperation { get; set; }
 
 		/// <summary>
 		/// The query to use
@@ -407,7 +407,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private void InitSync()
+		protected virtual void InitSync()
 		{
 			if (queryOperation != null) 
 				return;
@@ -420,15 +420,14 @@ namespace Raven.Client.Document
 			ExecuteActualQuery();
 		}
 
-
-		private void ExecuteActualQuery()
+		protected virtual void ExecuteActualQuery()
 		{
 			while (true)
 			{
 				using (queryOperation.EnterQueryContext())
 				{
 					queryOperation.LogQuery();
-					var result = theDatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
+					var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
 					if (queryOperation.IsAcceptable(result) == false)
 					{
 						Thread.Sleep(100);
@@ -545,7 +544,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   Gets the enumerator.
 		/// </summary>
-		public IEnumerator<T> GetEnumerator()
+		public virtual IEnumerator<T> GetEnumerator()
 		{
 			InitSync();
 			while (true)
@@ -1287,7 +1286,7 @@ If you really want to do in memory filtering on the data returned from the query
 		#endregion
 
 #if !NET_3_5
-		private Task<QueryOperation> ExecuteActualQueryAsync()
+		protected virtual Task<QueryOperation> ExecuteActualQueryAsync()
 		{
 			using(queryOperation.EnterQueryContext())
 			{

@@ -72,7 +72,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 		
-		private readonly DocumentStore documentStore;
+		private readonly DocumentStoreBase documentStore;
 
 		/// <summary>
 		/// all the listeners for this session
@@ -100,8 +100,8 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
 		protected InMemoryDocumentSessionOperations(
-			DocumentStore documentStore, 
-			DocumentSessionListeners listeners, 
+			DocumentStoreBase documentStore, 
+			DocumentSessionListeners listeners,
 			Guid id)
 		{
 			Id = id;

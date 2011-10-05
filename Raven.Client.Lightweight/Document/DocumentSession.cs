@@ -21,7 +21,6 @@ using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.Listeners;
 using Raven.Json.Linq;
 using Raven.Client.Util;
 
@@ -31,7 +30,8 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Implements Unit of Work for accessing the RavenDB server
 	/// </summary>
-	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator
+	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
+		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 #if !NET_3_5
 		, ILazySessionOperations, IEagerSessionOperations
 #endif
@@ -238,7 +238,7 @@ namespace Raven.Client.Document
 		/// <param name="ids">The ids.</param>
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
-			return LoadInternal<T>(ids.ToArray(), null);
+			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray(), null);
 		}
 
 		/// <summary>
@@ -259,7 +259,7 @@ namespace Raven.Client.Document
 			return Load<T>(documentKey);
 		}
 
-		internal T[] LoadInternal<T>(string[] ids, string[] includes)
+		public T[] LoadInternal<T>(string[] ids, string[] includes)
 		{
 			if (ids.Length == 0)
 				return new T[0];
@@ -331,7 +331,7 @@ namespace Raven.Client.Document
 			value.ETag = jsonDocument.Etag;
 			value.OriginalValue = jsonDocument.DataAsJson;
 			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-			foreach (PropertyInfo property in entity.GetType().GetProperties())
+			foreach (var property in entity.GetType().GetProperties())
 			{
 				if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
 					continue;
@@ -499,12 +499,12 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Dynamically queries RavenDB using LINQ
+		/// Query RavenDB dynamically using LINQ
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		public IRavenQueryable<T> Query<T>()
 		{
-			string indexName = "dynamic";
+			var indexName = "dynamic";
 			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));

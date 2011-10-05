@@ -12,13 +12,18 @@ namespace Raven.Client.Document.SessionOperations
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
-		private readonly Func<IDisposable> disableAllCaching;
-		private readonly string[] ids;
+		internal Func<IDisposable> disableAllCaching { get; set; }
+		internal string[] ids { get; set; }
 		bool firstRequest = true;
 		JsonDocument[] results;
 		JsonDocument[] includeResults;
 				
 		private Stopwatch sp;
+
+		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations)
+		{
+			this.sessionOperations = sessionOperations;
+		}
 
 		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, 
 			Func<IDisposable> disableAllCaching,
@@ -27,8 +32,6 @@ namespace Raven.Client.Document.SessionOperations
 			this.sessionOperations = sessionOperations;
 			this.disableAllCaching = disableAllCaching;
 			this.ids = ids;
-
-
 		}
 
 		public void LogOperation()
