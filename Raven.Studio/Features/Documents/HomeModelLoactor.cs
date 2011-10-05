@@ -6,9 +6,9 @@ namespace Raven.Studio.Features.Documents
 {
     public class HomeModelLoactor : ModelLocatorBase<HomeModel>
     {
-        protected override void Load(DatabaseModel database, IAsyncDatabaseCommands asyncDatabaseCommands, Observable<HomeModel> observable)
+        protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<HomeModel> observable)
         {
-            observable.Value = new HomeModel(database,asyncDatabaseCommands);
+            observable.Value = new HomeModel(DatabaseModel, asyncDatabaseCommands);
         }
     }
 }

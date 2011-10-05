@@ -6,7 +6,7 @@ namespace Raven.Studio.Features.Indexes
 {
 	public class IndexesModelLocator : ModelLocatorBase<IndexesModel>
 	{
-		protected override void Load(DatabaseModel database, IAsyncDatabaseCommands asyncDatabaseCommands, Observable<IndexesModel> observable)
+		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<IndexesModel> observable)
 		{
 			observable.Value = new IndexesModel(asyncDatabaseCommands);
 		}

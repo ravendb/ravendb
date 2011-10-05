@@ -7,7 +7,7 @@ namespace Raven.Studio.Features.Documents
 {	
 	public class EditDocumentModelLocator : ModelLocatorBase<EditableDocumentModel>
 	{
-		protected override void Load(DatabaseModel database, IAsyncDatabaseCommands asyncDatabaseCommands, Observable<EditableDocumentModel> observable)
+		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<EditableDocumentModel> observable)
 		{
 			var docId = ApplicationModel.Current.GetQueryParam("id");
 

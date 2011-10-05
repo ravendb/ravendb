@@ -11,7 +11,7 @@ namespace Raven.Studio.Features.Collections
 {
 	public class CollectionsModelLocator : ModelLocatorBase<DatabaseCollectionsModel>
 	{
-		protected override void Load(DatabaseModel database, IAsyncDatabaseCommands asyncDatabaseCommands, Observable<DatabaseCollectionsModel> observable)
+		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<DatabaseCollectionsModel> observable)
 		{
 			observable.Value = new DatabaseCollectionsModel(asyncDatabaseCommands);
 		}

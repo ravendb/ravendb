@@ -6,6 +6,7 @@ namespace Raven.Studio.Infrastructure
 	public abstract class ModelLocatorBase<T> where T : Model
 	{
 		protected ServerModel ServerModel { get; private set; }
+		protected DatabaseModel DatabaseModel { get; private set; }
 
 		public Observable<T> Current
 		{
@@ -26,12 +27,13 @@ namespace Raven.Studio.Infrastructure
 				return;
 			}
 
-		    var databaseModel = ServerModel.SelectedDatabase.Value;
-		    var asyncDatabaseCommands = databaseModel.AsyncDatabaseCommands;
-			Load(databaseModel, asyncDatabaseCommands, observable);
+		    DatabaseModel = ServerModel.SelectedDatabase.Value;
+			var asyncDatabaseCommands = DatabaseModel.AsyncDatabaseCommands;
+			Load(asyncDatabaseCommands, observable);
 		}
 
-		protected abstract void Load(DatabaseModel database, IAsyncDatabaseCommands asyncDatabaseCommands, Observable<T> observable);
+
+		protected abstract void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<T> observable);
 
 		public static string GetParamAfter(string urlPrefix)
 		{
