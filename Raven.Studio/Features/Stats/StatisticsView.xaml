@@ -44,8 +44,8 @@
 					   ItemsSource="{Binding Triggers}" />
 
 		<TextBlock Grid.Row="7" Text="Extensions" />
-		<data:DataGrid Grid.Row="7"
+		<!--<data:DataGrid Grid.Row="7"
 					   Grid.Column="2"
-					   ItemsSource="{Binding Extensions}" />
+					   ItemsSource="{Binding Extensions}" />-->
 	</Grid>
 </Infrastructure:View>
