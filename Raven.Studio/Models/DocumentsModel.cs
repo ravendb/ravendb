@@ -24,13 +24,13 @@ namespace Raven.Studio.Models
 
         protected override Task TimerTickedAsync()
         {
-            return fetchDocuments(Documents, CurrentPage);
+            return fetchDocuments(Documents, CurrentPage - 1);
         }
 
         private int currentPage;
         public int CurrentPage
         {
-            get { return currentPage; }
+            get { return currentPage + 1; }
             set
             {
                 currentPage = value;

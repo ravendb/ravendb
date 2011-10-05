@@ -79,9 +79,9 @@
     </ListBox>
     <StackPanel  Grid.Row="1" Orientation="Horizontal">
       <Button Content="&lt;" Padding="5"/>
-      <TextBlock Text="Page"/>
+      <TextBlock Text="Page "/>
       <TextBlock Text="{Binding CurrentPage}" />
-      <TextBlock Text="of 20"/>
+      <TextBlock Text=" of 20"/>
       <Button Content="&gt;" Padding="5"/>
     </StackPanel>
   </Grid>
