@@ -259,6 +259,7 @@ task CopySmuggler {
 
 task CopyBackup {
 	cp $build_dir\Raven.Backup.??? $build_dir\Output\Backup
+	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Backup
 }
 
 task CopyClient {
