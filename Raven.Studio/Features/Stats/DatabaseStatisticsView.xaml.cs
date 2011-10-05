@@ -1,6 +1,4 @@
-﻿using System.Windows.Controls;
-using System.Windows.Input;
-using Raven.Studio.Infrastructure;
+﻿using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Stats
 {
@@ -10,7 +8,5 @@ namespace Raven.Studio.Features.Stats
 		{
 			InitializeComponent();
 		}
-
-		
 	}
 }
