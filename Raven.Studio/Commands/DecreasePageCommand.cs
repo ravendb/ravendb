@@ -12,30 +12,27 @@ namespace Raven.Studio.Commands
     public class DecreasePageCommand : Command
 	{
         private readonly string location;
-        private readonly int itemsPerPages;
+        private readonly int itemsPerPage;
 
-        public DecreasePageCommand(string location)
+        public DecreasePageCommand(string location, int itemsPerPage)
         {
             this.location = location;
-            if(location == "/Home")
-            {
-                itemsPerPages = 15;
-            }
-            else
-            {
-                itemsPerPages = 25;
-            }
+            this.itemsPerPage = itemsPerPage;
         }
 
         public override void Execute(object parameter)
         {
-            int currentSkip = GetSkipCount() - itemsPerPages;
+            int currentSkip = GetSkipCount() - itemsPerPage;
 
             ApplicationModel.Current.Navigate((new Uri(location+ "?skip=" + currentSkip, UriKind.Relative)));
         }
 
         public override bool CanExecute(object parameter)
         {
+            if(GetSkipCount() == 0)
+            {
+                return false;
+            }
             return base.CanExecute(parameter);
         }
 

@@ -37,12 +37,12 @@ namespace Raven.Studio.Models
 
         public ICommand NextPage
         {
-            get{ return new IncreasePageCommand(location);}
+            get{ return new IncreasePageCommand(location, itemsPerPages, TotalPages.Value);}
         }
 
         public ICommand PreviousPage
         {
-            get { return new DecreasePageCommand(location); }
+            get { return new DecreasePageCommand(location, itemsPerPages); }
         }
 
         private readonly string location;

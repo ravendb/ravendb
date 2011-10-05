@@ -20,7 +20,7 @@ namespace Raven.Studio.Models
             {
                 Value = new DocumentsModel(GetFetchDocumentsMethod, "/Home", 15)
                 {
-                    TotalPages = new Observable<long>(database.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / 15)
+                    TotalPages = new Observable<long>(database.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / 15 + 1)
                 }
             };
         }

@@ -23,7 +23,7 @@ namespace Raven.Studio.Features.Documents
             this.asyncDatabaseCommands = asyncDatabaseCommands;
             observable.Value = new DocumentsModel(GetFetchDocumentsMethod(), "/Documents", 25)
             {
-                TotalPages = new Observable<long>(database.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / 25) 
+                TotalPages = new Observable<long>(database.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / 25 + 1) 
             };
         }
 

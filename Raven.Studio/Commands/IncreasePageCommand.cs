@@ -12,31 +12,28 @@ namespace Raven.Studio.Commands
     public class IncreasePageCommand : Command
 	{
         private readonly string location;
-        private readonly int itemsPerPages;
+        private readonly int itemsPerPage;
+        private readonly long numberOfPages;
 
-        public IncreasePageCommand(string location)
+        public IncreasePageCommand(string location, int itemsPerPage, long numberOfPages)
         {
             this.location = location;
-            if(location == "/Home")
-            {
-                itemsPerPages = 15;
-            }
-            else
-            {
-                itemsPerPages = 25;
-            }
+            this.itemsPerPage = itemsPerPage;
+            this.numberOfPages = numberOfPages;
         }
 
         public override void Execute(object parameter)
         {
-            int currentSkip = GetSkipCount() + itemsPerPages;
+            int currentSkip = GetSkipCount() + itemsPerPage;
 
             ApplicationModel.Current.Navigate((new Uri(location+ "?skip=" + currentSkip, UriKind.Relative)));
         }
 
         public override bool CanExecute(object parameter)
         {
-            return base.CanExecute(parameter);
+            if ((GetSkipCount() / itemsPerPage) + 1 >= numberOfPages && GetSkipCount()!=0)
+                return (false);
+            return true;
         }
 
 

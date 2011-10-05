@@ -52,7 +52,7 @@ namespace Raven.Studio.Models
                 {
                     var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
                     docs.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
-                    Documents.Value.TotalPages.Value = queryResult.TotalResults/ItemsPerPage;
+                    Documents.Value.TotalPages.Value = queryResult.TotalResults/ItemsPerPage + 1;
                 });
 	    }
 	}
