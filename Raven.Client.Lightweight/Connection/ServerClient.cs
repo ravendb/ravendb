@@ -192,7 +192,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private static bool IsServerDown(WebException e)
 		{
-			return e.InnerException is SocketException;
+			return e.InnerException is SocketException || 
+				e.InnerException is IOException;
 		}
 
 		/// <summary>
