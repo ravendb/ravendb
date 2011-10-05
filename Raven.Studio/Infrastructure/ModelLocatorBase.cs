@@ -26,8 +26,6 @@ namespace Raven.Studio.Infrastructure
 				return;
 			}
 
-			ApplicationModel.Current.RegisterOnceForNavigation(() => LoadModel(observable));
-
 		    var databaseModel = ServerModel.SelectedDatabase.Value;
 		    var asyncDatabaseCommands = databaseModel.AsyncDatabaseCommands;
 			Load(databaseModel, asyncDatabaseCommands, observable);
