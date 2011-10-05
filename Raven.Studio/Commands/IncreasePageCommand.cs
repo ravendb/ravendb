@@ -10,16 +10,17 @@ using Raven.Studio.Models;
 namespace Raven.Studio.Commands
 {
     public class IncreasePageCommand : Command
-	{
+    {
         private readonly string location;
         private readonly int itemsPerPage;
-        private readonly long numberOfPages;
+        private readonly Observable<long> numberOfPages;
 
-        public IncreasePageCommand(string location, int itemsPerPage, long numberOfPages)
+        public IncreasePageCommand(string location, int itemsPerPage, Observable<long> numberOfPages)
         {
             this.location = location;
             this.itemsPerPage = itemsPerPage;
             this.numberOfPages = numberOfPages;
+            this.numberOfPages.PropertyChanged += (sender, args) => OnCanExecuteChanged(EventArgs.Empty);
         }
 
         public override void Execute(object parameter)
@@ -31,8 +32,8 @@ namespace Raven.Studio.Commands
 
         public override bool CanExecute(object parameter)
         {
-            if ((UrlUtil.GetSkipCount() / itemsPerPage) + 1 >= numberOfPages && UrlUtil.GetSkipCount() != 0)
-                return (false);
+            if ((UrlUtil.GetSkipCount() / itemsPerPage) + 1 >= numberOfPages.Value)
+                return false;
             return true;
         }
 	}
