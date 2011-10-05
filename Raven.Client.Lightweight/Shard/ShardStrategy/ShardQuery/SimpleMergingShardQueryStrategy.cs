@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using Raven.Abstractions.Data;
 using System.Linq;
 #if SILVERLIGHT
