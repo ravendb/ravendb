@@ -2,6 +2,7 @@
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+					 xmlns:data="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
 					 DataContext="{Binding Path=SelectedDatabase.Value.Statistics.Value}">
 
 	<Grid HorizontalAlignment="Left">
@@ -22,28 +23,29 @@
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
-		<TextBlock Text="{Binding CountOfIndexes}" />
-		<TextBlock Grid.Column="2" Text="indexes" />
+		<TextBlock Text="Count Of Indexes" />
+		<TextBlock Grid.Column="2" Text="{Binding CountOfIndexes}" />
 
-		<TextBlock Grid.Row="1" Text="{Binding ApproximateTaskCount}" />
-		<TextBlock Grid.Row="1" Grid.Column="2" Text="tasks" />
+		<TextBlock Grid.Row="1" Text="Tasks Count" />
+		<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding ApproximateTaskCount}" />
 
-		<TextBlock Grid.Row="2" Text="{Binding CountOfDocuments}" />
-		<TextBlock Grid.Row="2" Grid.Column="2" Text="documents" />
+		<TextBlock Grid.Row="2" Text="Count Of Documents" />
+		<TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CountOfDocuments}" />
 
-		<TextBlock Grid.Row="3" Text="{Binding StaleIndexes}" />
-		<TextBlock Grid.Row="3" Grid.Column="2" Text="stale" />
+		<TextBlock Grid.Row="3" Text="Stale Indexes" />
+		<data:DataGrid Grid.Row="3"
+					   Grid.Column="2"
+					   HeadersVisibility="None"
+					   ItemsSource="{Binding StaleIndexes}"/>
+			
+		<TextBlock Grid.Row="6" Text="Triggers" />
+		<data:DataGrid Grid.Row="6"
+					   Grid.Column="2"
+					   ItemsSource="{Binding Triggers}" />
 
-		<TextBlock Grid.Row="4" Text="{Binding Indexes}" />
-		<TextBlock Grid.Row="4" Grid.Column="2" Text="Indexes" />
-
-		<TextBlock Grid.Row="5" Text="{Binding Errors}" />
-		<TextBlock Grid.Row="5" Grid.Column="2" Text="errors" />
-
-		<TextBlock Grid.Row="6" Text="{Binding Triggers}" />
-		<TextBlock Grid.Row="6" Grid.Column="2" Text="triggers" />
-
-		<TextBlock Grid.Row="7" Text="{Binding Extensions}" />
-		<TextBlock Grid.Row="7" Grid.Column="2" Text="extensions" />
+		<TextBlock Grid.Row="7" Text="Extensions" />
+		<data:DataGrid Grid.Row="7"
+					   Grid.Column="2"
+					   ItemsSource="{Binding Extensions}" />
 	</Grid>
 </Infrastructure:View>
