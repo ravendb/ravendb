@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using NDesk.Options;
 
 namespace Raven.Backup
 {
@@ -11,65 +12,70 @@ namespace Raven.Backup
 	{
 		static void Main(string[] args)
 		{
-			string url = null, dest = null;
-			if (args.Length == 4)
-			{
-				url = (args[0] == "-url") ? args[1] : ((args[2] == "-url") ? args[3] : null);
-				dest = (args[0] == "-dest") ? args[1] : ((args[2] == "-dest") ? args[3] : null);
-			}
-			else
-			{
-				Console.WriteLine("Syntax: Raven.Backup -url http://raven-server-url-here/ -dest full-file-Path");
-			}
-			
-			if (string.IsNullOrWhiteSpace(url))
-			{
-				Console.WriteLine("Enter RavenDB server URL:");
-				url = Console.ReadLine();
-			}
+			var op = new BackupOperation { NoWait = false };
 
-			if (string.IsNullOrWhiteSpace(dest))
-			{
-				Console.WriteLine("Enter backup location:");
-				dest = Console.ReadLine();
-			}
-
-			if (string.IsNullOrWhiteSpace(dest) || string.IsNullOrWhiteSpace(url))
-				return;
-
-			var json = @"{ ""BackupLocation"": """ + dest.Replace("\\", "\\\\") + @""" }";
-
-			var req = WebRequest.Create(url + "/admin/backup");
-			req.Method = "POST";
-			req.UseDefaultCredentials = true;
-			req.PreAuthenticate = true;
-			req.Credentials = CredentialCache.DefaultCredentials;
-
-			using (var streamWriter = new System.IO.StreamWriter(req.GetRequestStream()))
-			{
-				streamWriter.WriteLine(json);
-				streamWriter.Flush();
-			}
+			var optionSet = new OptionSet
+			            	{
+			            		{"url=", "RavenDB server {0:url}", url=>op.ServerUrl = url},
+								{"dest=", "Full {0:path} to backup folder", path => op.BackupPath = path},
+								{"nowait", "Return immedialtey without waiting for a response from the server", key => op.NoWait = true},
+			            	};
 
 			try
 			{
-				Console.WriteLine(string.Format("Sending json {0} to {1}", json, url));
+				if (args.Length == 0)
+					PrintUsage(optionSet);
 
-				using (var resp = req.GetResponse())
-				using (var reader = new StreamReader(resp.GetResponseStream()))
-				{
-					var response = reader.ReadToEnd();
-					Console.WriteLine(response);
-				}
-
-				Console.WriteLine("Backup completed successfully");
+				optionSet.Parse(args);
 			}
-			catch (Exception exc)
+			catch (Exception e)
 			{
-				Console.WriteLine(exc.Message);
+				Console.WriteLine(e.Message);
+				PrintUsage(optionSet);
+				return;
+			}
+
+			if (string.IsNullOrWhiteSpace(op.ServerUrl))
+			{
+				Console.WriteLine("Enter RavenDB server URL:");
+				op.ServerUrl = Console.ReadLine();
+			}
+
+			if (string.IsNullOrWhiteSpace(op.BackupPath))
+			{
+				Console.WriteLine("Enter backup destination:");
+				op.BackupPath = Console.ReadLine();
+			}
+
+			if (string.IsNullOrWhiteSpace(op.BackupPath) || string.IsNullOrWhiteSpace(op.ServerUrl))
+				return;
+
+			try
+			{
+				if (op.InitBackup())
+					op.WaitForBackup();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine(ex.Message);
 			}
 
 			Console.ReadKey();
+		}
+
+		private static void PrintUsage(OptionSet optionSet)
+		{
+			Console.WriteLine(
+				@"
+Backup utility for RavenDB
+----------------------------------------
+Copyright (C) 2008 - {0} - Hibernating Rhinos
+----------------------------------------
+Command line ptions:", DateTime.UtcNow.Year);
+
+			optionSet.WriteOptionDescriptions(Console.Out);
+
+			Console.WriteLine();
 		}
 	}
 }
