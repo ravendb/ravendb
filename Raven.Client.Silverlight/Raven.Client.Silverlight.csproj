@@ -295,6 +295,12 @@
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentStoreListener.cs">
       <Link>Imports\Listeners\IDocumentStoreListener.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardQuery\IShardQuery.cs">
+      <Link>Imports\Shard\ShardStrategy\ShardQuery\IShardQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardQuery\SimpleMergingShardQueryStrategy.cs">
+      <Link>Imports\Shard\ShardStrategy\ShardQuery\SimpleMergingShardQueryStrategy.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>
     </Compile>
@@ -307,6 +313,7 @@
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
     <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Data\ServerRequestError.cs" />
+    <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

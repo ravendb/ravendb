@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
+using Raven.Client.Shard.ShardStrategy.ShardQuery;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
 
@@ -31,6 +32,11 @@ namespace Raven.Client.Shard.ShardStrategy
 		/// </summary>
 		/// <value>The shard access strategy.</value>
 		IShardAccessStrategy ShardAccessStrategy { get; }
+
+		/// <summary>
+		/// Get the shard query startegy
+		/// </summary>
+		IShardQueryStrategy ShardQueryStrategy { get;  }
 	}
 }
 #endif

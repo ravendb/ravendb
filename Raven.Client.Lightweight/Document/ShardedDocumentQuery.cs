@@ -5,9 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 #if !NET_3_5
+using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +18,10 @@ using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
 using Raven.Client.Connection;
+using Raven.Client.Shard.ShardStrategy;
+using Raven.Client.Shard.ShardStrategy.ShardResolution;
 
+#if !SILVERLIGHT
 namespace Raven.Client.Document
 {
 	/// <summary>
@@ -25,18 +30,15 @@ namespace Raven.Client.Document
 	/// <typeparam name="T"></typeparam>
 	public class ShardedDocumentQuery<T> : DocumentQuery<T>
 	{
-		public delegate IDatabaseCommands[] SelectShardsDelegate(string queryAsString);
+		public delegate IList<IDatabaseCommands> SelectShardsDelegate(Type type, IndexQuery query);
 		private readonly SelectShardsDelegate selectShards;
+		private readonly IShardStrategy shardStrategy;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentQuery&lt;T&gt;"/> class.
 		/// </summary>
-		/// <param name="session"></param>
-		/// <param name="selectShards"></param>
-		/// <param name="indexName"></param>
-		/// <param name="projectionFields"></param>
-		/// <param name="queryListeners"></param>
 		public ShardedDocumentQuery(InMemoryDocumentSessionOperations session, SelectShardsDelegate selectShards,
+			IShardStrategy shardStrategy, 
 			string indexName, string[] projectionFields, IDocumentQueryListener[] queryListeners)
 			: base(session
 #if !SILVERLIGHT
@@ -51,97 +53,75 @@ namespace Raven.Client.Document
 				throw new ArgumentNullException("selectShards");
 
 			this.selectShards = selectShards;
+			this.shardStrategy = shardStrategy;
 		}
 
-#if !SILVERLIGHT
-		/// <summary>
-		///   Gets the enumerator.
-		/// </summary>
-		public override IEnumerator<T> GetEnumerator()
-		{
-			InitSync();
-			while (true)
-			{
-				try
-				{
-					return queryOperations.Complete<T>().GetEnumerator();
-				}
-				catch (Exception e)
-				{
-					if (queryOperations.ShouldQueryAgain(e) == false)
-						throw;
-					ExecuteActualQuery(); // retry the query, not that we explicity not incrementing the session request cuont here
-				}
-			}
-		}
-#endif
-
-		protected override QueryOperation queryOperation
-		{
-			get { throw new NotSupportedException(); }
-			set { throw new NotSupportedException(); }
-		}
-		protected IDatabaseCommands[] shards;
-		protected readonly List<QueryOperation> queryOperations = new List<QueryOperation>();
+		List<QueryOperation> shardQueryOperations;
+		IList<IDatabaseCommands> databaseCommands;
+		IndexQuery indexQuery;
 
 		protected override void InitSync()
 		{
-			if (queryOperations.Count > 0)
+			if (queryOperation != null)
 				return;
+
+			shardQueryOperations = new List<QueryOperation>();
 			theSession.IncrementRequestCount();
 
-			var queryText = QueryText.ToString();
-			shards = selectShards(queryText);
-			foreach (var shardDbCommands in shards)
+			ExecuteBeforeQueryListeners();
+
+			indexQuery = GenerateIndexQuery(theQueryText.ToString());
+
+			databaseCommands = selectShards(typeof (T), indexQuery);
+
+			foreach (var dbCmd in databaseCommands)
 			{
-				foreach (var key in shardDbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
-				{
-					shardDbCommands.OperationsHeaders.Remove(key);
-				}
-				AddQueryOperation(shardDbCommands.OperationsHeaders.Set, queryText);
+				ClearSortHints(dbCmd);
+				shardQueryOperations.Add(InitializeQueryOperation(dbCmd.OperationsHeaders.Add));
 			}
 
-			// TODO note the difference in where we call listeners here, compared to DocumentSession
-			foreach (var documentQueryListener in queryListeners)
-			{
-				documentQueryListener.BeforeQueryExecuted(this);
-			}
-			
 			ExecuteActualQuery();
 		}
 
-		private void AddQueryOperation(Action<string, string> setOperationHeaders, string queryText)
-		{
-			var indexQuery = GenerateIndexQuery(queryText);
-			queryOperations.Add(new QueryOperation(theSession,
-												indexName,
-												indexQuery,
-												projectionFields,
-												sortByHints,
-												theWaitForNonStaleResults,
-												setOperationHeaders,
-												timeout));
-		}
 
 		protected override void ExecuteActualQuery()
 		{
+			IList<bool> results = new List<bool>(databaseCommands.Count);
 			while (true)
 			{
-				using (queryOperations.EnterQueryContext())
+				IList<bool> currentCopy = results;
+				results = shardStrategy.ShardAccessStrategy.Apply(databaseCommands, (dbCmd, index) =>
 				{
-					queryOperations.LogQuery();
-					var result = DatabaseCommands.Query(indexName, queryOperations.IndexQuery, includes.ToArray());
-					if (queryOperations.IsAcceptable(result) == false)
-					{
-						Thread.Sleep(100);
-						continue;
-					}
-					break;
-				}
-			}
-			InvokeAfterQueryExecuted(queryOperations.CurrentQueryResults);
-		}
+					if (currentCopy[index])
+						return true;
 
+					var queryOp = shardQueryOperations[index];
+
+					using (queryOp.EnterQueryContext())
+					{
+						queryOp.LogQuery();
+						var result = dbCmd.Query(indexName, queryOp.IndexQuery, includes.ToArray());
+						return queryOp.IsAcceptable(result);
+					}
+				});
+				if (results.All(acceptable => acceptable))
+					break;
+				Thread.Sleep(100);
+			}
+
+			var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIds(new ShardResolutionStrategyData
+			{
+				EntityType = typeof(T),
+				Query = indexQuery
+			});
+			var mergedQueryResult = shardStrategy.ShardQueryStrategy.MergeQueryResults(indexQuery,
+																						shardQueryOperations.Select(x => x.CurrentQueryResults).ToList(), 
+			                                                                            shardIds);
+
+			shardQueryOperations[0].ForceResult(mergedQueryResult);
+			queryOperation = shardQueryOperations[0];
+		}
+		
 #if !NET_3_5
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()
 		{
@@ -150,3 +130,4 @@ namespace Raven.Client.Document
 #endif
 	}
 }
+#endif

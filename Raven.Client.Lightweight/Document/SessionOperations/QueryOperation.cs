@@ -216,6 +216,12 @@ namespace Raven.Client.Document.SessionOperations
 			result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
 		}
 
+		public void ForceResult(QueryResult result)
+		{
+			currentQueryResults = result;
+			currentQueryResults.EnsureSnapshot();
+		}
+
 		public bool IsAcceptable(QueryResult result)
 		{
 			if (waitForNonStaleResults && result.IsStale)

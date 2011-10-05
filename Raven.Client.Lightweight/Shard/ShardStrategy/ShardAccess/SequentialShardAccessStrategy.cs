@@ -24,7 +24,7 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 		/// <param name="commands">The shard sessions.</param>
 		/// <param name="operation">The operation.</param>
 		/// <returns></returns>
-		public IList<T> Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands, T> operation) where T : class
+		public IList<T> Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands, int, T> operation) 
 		{
 			return commands.Select(operation).ToList();
 		}

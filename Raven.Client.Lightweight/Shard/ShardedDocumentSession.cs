@@ -68,9 +68,9 @@ namespace Raven.Client.Shard
 //#endif
 		}
 
-		private IList<IDatabaseCommands> GetAppropriateShards(Type type,string key)
+		private IList<IDatabaseCommands> GetAppropriateShards(ShardResolutionStrategyData resultionData)
 		{
-			var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIds(ShardResolutionStrategyData.BuildFrom(type, key));
+			var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIds(resultionData);
 			
 			if (shardIds != null)
 				return shardDbCommands.Where(cmd => shardIds.Contains(cmd.Key)).Select(x => x.Value).ToList();
@@ -80,7 +80,11 @@ namespace Raven.Client.Shard
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			var dbCommands = GetAppropriateShards(typeof(object),documentKey);
+			var dbCommands = GetAppropriateShards(new ShardResolutionStrategyData
+			{
+				EntityType = typeof(object),
+				Key = documentKey
+			});
 
 			foreach (var dbCmd in dbCommands)
 			{
@@ -169,7 +173,11 @@ namespace Raven.Client.Shard
 
 			IncrementRequestCount();
 
-			var dbCommands = GetAppropriateShards(typeof(T),id);
+			var dbCommands = GetAppropriateShards(new ShardResolutionStrategyData
+			{
+				EntityType = typeof(T),
+				Key = id
+			});
 
 			foreach (var dbCmd in dbCommands)
 			{
@@ -290,7 +298,12 @@ namespace Raven.Client.Shard
 				throw new InvalidOperationException("Cannot refresh a trasient instance");
 			IncrementRequestCount();
 
-			var dbCommands = GetAppropriateShards(typeof(T),null);
+
+			var dbCommands = GetAppropriateShards(new ShardResolutionStrategyData
+			{
+				EntityType = typeof(T),
+				Key = value.Key
+			});
 			foreach (var dbCmd in dbCommands)
 			{
 				var jsonDocument = dbCmd.Get(value.Key);
@@ -353,15 +366,19 @@ namespace Raven.Client.Shard
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
 #if !NET_3_5
-			return new ShardedDocumentQuery<T>(this, SelectShardsByQuery, indexName, null, listeners.QueryListeners);
+			return new ShardedDocumentQuery<T>(this, SelectShardsByQuery, shardStrategy, indexName, null, listeners.QueryListeners);
 #else
 			return new ShardedDocumentQuery<T>(this, SelectShardsByQuery, null, indexName, null, listeners.QueryListeners);
 #endif
 		}
 
-		protected IDatabaseCommands[] SelectShardsByQuery(string query)
+		protected IList<IDatabaseCommands> SelectShardsByQuery(Type type, IndexQuery query)
 		{
-			throw new NotImplementedException();
+			return GetAppropriateShards(new ShardResolutionStrategyData
+			{
+				EntityType = type,
+				Query = query
+			});
 		}
 
 		public IDocumentQuery<T> LuceneQuery<T>()
@@ -379,7 +396,11 @@ namespace Raven.Client.Shard
 			if (ids.Length == 0)
 				return new T[0];
 
-			var idsAndShards = ids.Select(id => new { id, urls = GetAppropriateShards(typeof(T),id) })
+			var idsAndShards = ids.Select(id => new { id, urls = GetAppropriateShards(new ShardResolutionStrategyData
+			{
+				EntityType = typeof(T),
+				Key = id
+			})})
 				.GroupBy(x => x.urls, new DbCmdsListComparer());
 
 			IncrementRequestCount();
@@ -387,7 +408,7 @@ namespace Raven.Client.Shard
 			foreach (var endpoint in idsAndShards)
 			{
 				var currentShardIds = endpoint.Select(x => x.id).ToArray();
-				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(endpoint.Key, dbCmd =>
+				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(endpoint.Key, (dbCmd,i) =>
 				{
 					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
 					MultiLoadResult multiLoadResult;

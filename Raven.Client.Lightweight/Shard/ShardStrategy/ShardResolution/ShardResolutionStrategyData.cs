@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client.Shard.ShardStrategy.ShardResolution
 {
@@ -12,35 +13,6 @@ namespace Raven.Client.Shard.ShardStrategy.ShardResolution
 	/// </summary>
 	public class ShardResolutionStrategyData
 	{
-		/// <summary>
-		/// Builds an instance of <see cref="ShardResolutionStrategyData"/> from the given type
-		/// </summary>
-		public static ShardResolutionStrategyData BuildFrom(Type type) 
-		{
-			return BuildFrom(type, null);
-		}
-
-		/// <summary>
-		/// Builds an instance of <see cref="ShardResolutionStrategyData"/> from the given type
-		/// and key
-		/// </summary>
-		public static ShardResolutionStrategyData BuildFrom(Type type, string key)
-		{
-			if (type == null)
-				throw new ArgumentNullException("type");
-
-			return new ShardResolutionStrategyData
-			{
-				EntityType = type,
-				Key = key
-			};
-		}
-
-		private ShardResolutionStrategyData()
-		{
-			
-		}
-
 		/// <summary>
 		/// Gets or sets the key.
 		/// </summary>
@@ -52,5 +24,10 @@ namespace Raven.Client.Shard.ShardStrategy.ShardResolution
 		/// </summary>
 		/// <value>The type of the entity.</value>
 		public Type EntityType { get; set; }
+
+		/// <summary>
+		/// Gets or sets the query being executed
+		/// </summary>
+		public IndexQuery Query { get; set; }
 	}
 }

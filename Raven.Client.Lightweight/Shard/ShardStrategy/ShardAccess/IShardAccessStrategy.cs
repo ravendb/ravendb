@@ -21,8 +21,8 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 		/// </summary>
 		IList<T> Apply<T>(
 			IList<IDatabaseCommands> commands,
-			Func<IDatabaseCommands, T> operation
-			) where T : class;
+			Func<IDatabaseCommands, int, T> operation
+			) ;
 	}
 }
 #endif

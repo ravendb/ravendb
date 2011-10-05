@@ -96,7 +96,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected int? pageSize;
 
-		protected virtual QueryOperation queryOperation { get; set; }
+		protected QueryOperation queryOperation;
 
 		/// <summary>
 		/// The query to use
@@ -372,16 +372,11 @@ namespace Raven.Client.Document
 			timeout = waitTimeout;
 		}
 
-		private void InitializeQueryOperation(Action<string, string> setOperationHeaders)
+		protected QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
 		{
-			foreach (var documentQueryListener in queryListeners)
-			{
-				documentQueryListener.BeforeQueryExecuted(this);
-			}
-
 			var query = theQueryText.ToString();
 			var indexQuery = GenerateIndexQuery(query);
-			queryOperation = new QueryOperation(theSession,
+			return new QueryOperation(theSession,
 												indexName,
 												indexQuery,
 												projectionFields,
@@ -412,13 +407,20 @@ namespace Raven.Client.Document
 			if (queryOperation != null) 
 				return;
 			theSession.IncrementRequestCount();
-			foreach (var key in DatabaseCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
-			{
-				DatabaseCommands.OperationsHeaders.Remove(key);
-			}
-			InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
+			ClearSortHints(DatabaseCommands);
+			ExecuteBeforeQueryListeners();
+			queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			ExecuteActualQuery();
 		}
+
+		protected void ClearSortHints(IDatabaseCommands shardDbCommands)
+		{
+			foreach (var key in shardDbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
+			{
+				shardDbCommands.OperationsHeaders.Remove(key);
+			}
+		}
+
 
 		protected virtual void ExecuteActualQuery()
 		{
@@ -463,7 +465,8 @@ namespace Raven.Client.Document
 				{
 					DatabaseCommands.OperationsHeaders.Remove(key);
 				}
-				InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
+				ExecuteBeforeQueryListeners();
+				queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecuted);
@@ -498,9 +501,19 @@ namespace Raven.Client.Document
 			{
 				AsyncDatabaseCommands.OperationsHeaders.Remove(key);
 			}
-			InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
+			ExecuteBeforeQueryListeners();
+
+			queryOperation = InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
 			theSession.IncrementRequestCount();
 			return ExecuteActualQueryAsync();
+		}
+
+		protected void ExecuteBeforeQueryListeners()
+		{
+			foreach (var documentQueryListener in queryListeners)
+			{
+				documentQueryListener.BeforeQueryExecuted(this);
+			}
 		}
 #endif
 

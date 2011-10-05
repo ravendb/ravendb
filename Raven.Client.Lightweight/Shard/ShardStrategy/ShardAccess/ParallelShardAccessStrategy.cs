@@ -25,14 +25,14 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 		/// <summary>
 		/// Applies the specified action to all shard sessions in parallel
 		/// </summary>
-		public IList<T> Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands, T> operation) where T : class
+		public IList<T> Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands,int, T> operation)
 		{
 			var returnedLists = new T[commands.Count];
 
 			commands
 				.Select((cmd,i) =>
 					Task.Factory
-						.StartNew(() => operation(cmd))
+						.StartNew(() => operation(cmd, i))
 						.ContinueWith(task =>
 						{
 							returnedLists[i] = task.Result;
@@ -40,9 +40,7 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 				)
 				.WaitAll();
 
-			return returnedLists
-				.Where(x => x != null)
-				.ToArray();
+			return returnedLists.ToArray();
 		}
 	}
 }
