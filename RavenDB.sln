@@ -41,6 +41,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{FD111D71
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{B8554B4A-2B5E-4A45-8F11-E80B6FBAF1F3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Backup", "Raven.Backup\Raven.Backup.csproj", "{DBB6561C-6264-430D-8F3C-E11C6268981E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -211,6 +213,16 @@ Global
 		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Release|x86.ActiveCfg = Release|Any CPU
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|x86.ActiveCfg = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|x86.Build.0 = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Release|Any CPU.ActiveCfg = Release|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Release|Mixed Platforms.Build.0 = Release|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Release|x86.ActiveCfg = Release|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -232,5 +244,6 @@ Global
 		{3E6401AC-3E33-4B61-A460-49953654A207} = {B8554B4A-2B5E-4A45-8F11-E80B6FBAF1F3}
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C} = {B8554B4A-2B5E-4A45-8F11-E80B6FBAF1F3}
 		{27153214-4630-4E2D-9807-0D5352687DD5} = {B8554B4A-2B5E-4A45-8F11-E80B6FBAF1F3}
+		{DBB6561C-6264-430D-8F3C-E11C6268981E} = {B8554B4A-2B5E-4A45-8F11-E80B6FBAF1F3}
 	EndGlobalSection
 EndGlobal
