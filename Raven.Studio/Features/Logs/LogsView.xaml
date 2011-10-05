@@ -5,18 +5,33 @@
 					 xmlns:data="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
 					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
 
-	<Grid>
+  <Grid>
 		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="2*" />
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 
-		<data:DataGrid x:Name="LogsList" AutoGenerateColumns="True"
+		<StackPanel Orientation="Horizontal">
+			<HyperlinkButton NavigateUri="/logs" />
+			<HyperlinkButton NavigateUri="/logs/error" />
+		</StackPanel>
+	  
+		<data:DataGrid x:Name="LogsList"
+					   AutoGenerateColumns="False"
 					   IsReadOnly="True"
-					   ItemsSource="{Binding Logs}" />
+					   ItemsSource="{Binding Logs}">
+			<data:DataGrid.Columns>
+				<data:DataGridTextColumn Header="Level" Binding="{Binding Name}" />
+				<data:DataGridTextColumn Header="Logged" Binding="{Binding TimeStamp}" />
+				<data:DataGridTextColumn Header="Message" Binding="{Binding Message, Converter={StaticResource FirstLineOnly}}" />
+				<data:DataGridTextColumn Header="Exception" Binding="{Binding Exception, Converter={StaticResource FirstLineOnly}}" />
+				<data:DataGridTextColumn Header="Log Name" Binding="{Binding LoggerName}" />
+			</data:DataGrid.Columns>
+		</data:DataGrid>
 
-		<sdk:GridSplitter Grid.Row="1"
+			<sdk:GridSplitter Grid.Row="1"
 						  Background="Transparent"
 						  HorizontalAlignment="Stretch" />
 
@@ -36,21 +51,38 @@
 				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
 			
-			<TextBlock Grid.ColumnSpan="3" Text="{Binding Message}" />
-			<TextBlock Grid.ColumnSpan="3"
-					   Grid.Row="2"
-					   Text="{Binding Exception}" />
+			<TextBox Grid.ColumnSpan="3"
+					 Text="{Binding Message}"
+					 IsReadOnly="True"
+					 Style="{StaticResource LogsDetails_ReadOnly_TextBox}" />
+			
+			<TextBox TextWrapping="Wrap"
+					 IsReadOnly="True"
+					 Text="{Binding Exception}"
+					 Visibility="{Binding Exception, Converter={StaticResource HiddenWhenNull}}"
+					 Grid.ColumnSpan="3"
+					 Grid.Row="1"
+					 VerticalScrollBarVisibility="Auto" />
 
 			<TextBlock Grid.Row="2" Text="Logged" />
-			<TextBlock Grid.Column="2"
-					   Grid.Row="2"
-					   Text="{Binding TimeStamp}" />
+			<TextBox Grid.Column="2"
+					 Grid.Row="2"
+					 Text="{Binding TimeStamp}"
+					 IsReadOnly="True"
+					 Style="{StaticResource LogsDetails_ReadOnly_TextBox}" />
 
 			<TextBlock Grid.Row="3" Text="Level" />
-			<TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Name}" />
+			<TextBox Grid.Row="3"
+					 Grid.Column="2"
+					 Text="{Binding Name}"
+					 IsReadOnly="True"
+					 Style="{StaticResource LogsDetails_ReadOnly_TextBox}" />
 
 			<TextBlock Grid.Row="4" Text="Log Name" />
-			<TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding LoggerName}" />
+			<TextBox Grid.Row="4"
+					 Grid.Column="2"
+					 Text="{Binding LoggerName}"
+					 IsReadOnly="True" Style="{StaticResource LogsDetails_ReadOnly_TextBox}" />
 		</Grid>
 	</Grid>
 </Infrastructure:View>

@@ -926,4 +926,11 @@
 		</Setter>
 		<Setter Property="Foreground" Value="#FF666666"/>
 	</Style>
+
+	<Style x:Key="LogsDetails_ReadOnly_TextBox"
+		   TargetType="TextBox">
+		<Setter Property="BorderThickness"
+				Value="0" />
+	</Style>
+	
 </ResourceDictionary>
