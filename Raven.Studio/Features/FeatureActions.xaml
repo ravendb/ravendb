@@ -9,7 +9,9 @@
 	<Documents:EditDocumentModelLocator x:Key="EditDocumentModelLocator" />
 	<Indexes:IndexDefinitionModelLocator x:Key="IndexDefinitionModelLocator" />
 	<Indexes:IndexesModelLocator x:Key="IndexesModelLocator" />
+  <Documents:DocumentsModelLocator x:Key="DocumentsModelLocator" />
+  <Documents:HomeModelLoactor x:Key="HomeModelLoactor" />
 
-	<Collections:CollectionsModelLocator x:Key="CollectionModelLocator" />
+  <Collections:CollectionsModelLocator x:Key="CollectionModelLocator" />
 	<Logs:LogsModelLocator x:Key="LogsModelLocator" />
 </ResourceDictionary>

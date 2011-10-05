@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows.Media;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -32,25 +33,24 @@ namespace Raven.Studio.Models
 			set { count = value; OnPropertyChanged();}
 		}
 
-		public BindableCollection<ViewableDocument> Documents { get; set; }
+		public Observable<DocumentsModel> Documents { get; set; }
 
 		public CollectionModel(IAsyncDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
-			Documents = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(doc=>doc.Id));
+		    Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(databaseCommands, GetFetchDocumentsMethod())};
 		}
 
-		protected override System.Threading.Tasks.Task TimerTickedAsync()
-		{
-			var query = new IndexQuery { Start = GetSkipCount(), PageSize = 25, Query = "Tag:" + Name };
-			return databaseCommands
-				.QueryAsync("Raven/DocumentsByEntityName", query, new string[] {})
-				.ContinueOnSuccess(queryResult =>
-				{
-					var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
-					Documents.Match(documents.Select(x=>new ViewableDocument(x)).ToArray());
-				});
-
-		}
+	    private Func<BindableCollection<ViewableDocument>, int, Task> GetFetchDocumentsMethod()
+	    {
+	        const int pageSize = 25;
+	        return (docs, currentPage) => databaseCommands
+                .QueryAsync("Raven/DocumentsByEntityName", new IndexQuery { Start = currentPage * pageSize, PageSize = pageSize, Query = "Tag:" + Name }, new string[] { })
+                .ContinueOnSuccess(queryResult =>
+                {
+                    var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
+                    docs.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
+                });
+	    }
 	}
 }

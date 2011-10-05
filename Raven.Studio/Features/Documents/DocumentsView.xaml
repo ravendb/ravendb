@@ -1,80 +1,88 @@
-﻿<UserControl x:Name="this" 
+﻿<Infrastructure:View x:Name="this"
 			 x:Class="Raven.Studio.Features.Documents.DocumentsView"
 			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:Controls="clr-namespace:System.Windows.Controls"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+       xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 			 Tag="Documents">
 
-	<Grid>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-		</Grid.RowDefinitions>
-		
-		<TextBlock x:Name="HeaderText"
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <TextBlock x:Name="HeaderText"
 				   Style="{StaticResource Style_Text_Header}"
 				   Text="{Binding Tag, ElementName=this}" />
 
-		<ListBox ItemsSource="{Binding}"
+    <ListBox ItemsSource="{Binding Documents}"
 				 Style="{StaticResource DocumentList}"
-				 Grid.Row="1">
-			<Controls:ContextMenuService.ContextMenu>
-				<Controls:ContextMenu>
-					<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
+				 Grid.Row="2">
+      <Controls:ContextMenuService.ContextMenu>
+        <Controls:ContextMenu>
+          <Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
 									  Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
 									  CommandParameter="{Binding RelativeSource={RelativeSource Self}}"/>
-					<Controls:MenuItem Header="Delete"
+          <Controls:MenuItem Header="Delete"
 									   Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
 									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-				</Controls:ContextMenu>
-			</Controls:ContextMenuService.ContextMenu>
-			<i:Interaction.Triggers>
-				<ei:KeyTrigger Key="Delete">
-					<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+        </Controls:ContextMenu>
+      </Controls:ContextMenuService.ContextMenu>
+      <i:Interaction.Triggers>
+        <ei:KeyTrigger Key="Delete">
+          <i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
 										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-				</ei:KeyTrigger>
-			</i:Interaction.Triggers>
+        </ei:KeyTrigger>
+      </i:Interaction.Triggers>
 
-			<ListBox.ItemTemplate>
-				<DataTemplate>
-					<Grid Width="120"
+      <ListBox.ItemTemplate>
+        <DataTemplate>
+          <Grid Width="120"
 						  Height="80"
 						  Margin="2">
 
-						<Rectangle Fill="#FFF4F4F5" />
-						<Rectangle HorizontalAlignment="Left"
+            <Rectangle Fill="#FFF4F4F5" />
+            <Rectangle HorizontalAlignment="Left"
 								   Width="10"
 								   x:Name="DocumentGrid"
 								   Fill="{Binding Path=Fill}" />
 
-						<Grid Margin="14,0,0,0">
-							<StackPanel Orientation="Vertical">
-								<TextBlock Text="{Binding CollectionType}"
+            <Grid Margin="14,0,0,0">
+              <StackPanel Orientation="Vertical">
+                <TextBlock Text="{Binding CollectionType}"
 										   TextTrimming="WordEllipsis"
 										   HorizontalAlignment="Left" />
-								<TextBlock Text="{Binding DisplayId}"
+                <TextBlock Text="{Binding DisplayId}"
 										   TextTrimming="WordEllipsis"
 										   HorizontalAlignment="Left" />
-							</StackPanel>
-						</Grid>
+              </StackPanel>
+            </Grid>
 
-						<StackPanel x:Name="overlay"
+            <StackPanel x:Name="overlay"
 									Orientation="Horizontal"
 									HorizontalAlignment="Right"
 									VerticalAlignment="Bottom">
-							<Button Content="edit"
+              <Button Content="edit"
 									Command="{Binding Path=Edit}"
 									ToolTipService.ToolTip="click here to edit the document"
 									Margin="0,0,4,4"
 									Style="{StaticResource Style_Button}">
-
-							</Button>
-						</StackPanel>
-					</Grid>
-				</DataTemplate>
-			</ListBox.ItemTemplate>
-		</ListBox>
-	</Grid>
-</UserControl>
+              </Button>
+            </StackPanel>
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <StackPanel  Grid.Row="1" Orientation="Horizontal">
+      <Button Content="&lt;" Padding="5"/>
+      <TextBlock Text="Page"/>
+      <TextBlock Text="{Binding CurrentPage}" />
+      <TextBlock Text="of 20"/>
+      <Button Content="&gt;" Padding="5"/>
+    </StackPanel>
+  </Grid>
+</Infrastructure:View>

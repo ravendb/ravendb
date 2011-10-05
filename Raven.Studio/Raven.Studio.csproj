@@ -88,6 +88,8 @@
     <Reference Include="system" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Controls.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.Data.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Controls.Input" />
     <Reference Include="System.Windows.Controls.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v3.0\Libraries\Client\System.Windows.Controls.Data.dll</HintPath>
@@ -106,7 +108,6 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Commands\NavigateBackCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
@@ -125,6 +126,8 @@
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Commands\DeleteDocumentCommand.cs" />
+    <Compile Include="Features\Documents\DocumentsModelLocator.cs" />
+    <Compile Include="Features\Documents\HomeModelLoactor.cs" />
     <Compile Include="Features\Documents\NavigateToCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
@@ -181,6 +184,8 @@
     <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\ModelLocatorBase.cs" />
+    <Compile Include="Models\DocumentsModel.cs" />
+    <Compile Include="Models\HomeModel.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
     <Compile Include="Features\Indexes\IndexDefinitionModelLocator.cs" />
     <Compile Include="Infrastructure\ContextMenu\ContextMenu.cs" />
@@ -253,6 +258,9 @@
     <Compile Include="Views\Indexes.xaml.cs">
       <DependentUpon>Indexes.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Documents.xaml.cs">
+      <DependentUpon>Documents.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Tasks.xaml.cs">
       <DependentUpon>Tasks.xaml</DependentUpon>
     </Compile>
@@ -303,6 +311,10 @@
     <Page Include="Features\Tasks\TasksView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Documents.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Tasks.xaml">
       <Generator>MSBuild:Compile</Generator>
