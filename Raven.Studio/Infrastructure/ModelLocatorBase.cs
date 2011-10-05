@@ -28,11 +28,12 @@ namespace Raven.Studio.Infrastructure
 
 			ApplicationModel.Current.RegisterOnceForNavigation(() => LoadModel(observable));
 
-			var asyncDatabaseCommands = ServerModel.SelectedDatabase.Value.AsyncDatabaseCommands;
-			Load(asyncDatabaseCommands, observable);
+		    var databaseModel = ServerModel.SelectedDatabase.Value;
+		    var asyncDatabaseCommands = databaseModel.AsyncDatabaseCommands;
+			Load(databaseModel, asyncDatabaseCommands, observable);
 		}
 
-		protected abstract void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<T> observable);
+		protected abstract void Load(DatabaseModel database, IAsyncDatabaseCommands asyncDatabaseCommands, Observable<T> observable);
 
 		public static string GetParamAfter(string urlPrefix)
 		{

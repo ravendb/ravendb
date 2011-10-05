@@ -78,11 +78,17 @@
       </ListBox.ItemTemplate>
     </ListBox>
     <StackPanel  Grid.Row="1" Orientation="Horizontal">
-      <Button Content="&lt;" Padding="5"/>
+      <Button Content="&lt;"
+              Padding="5"
+              Command="{Binding PreviousPage}"/> 
+  
       <TextBlock Text="Page "/>
       <TextBlock Text="{Binding CurrentPage}" />
-      <TextBlock Text=" of 20"/>
-      <Button Content="&gt;" Padding="5"/>
+      <TextBlock Text=" of "/>
+      <TextBlock Text="{Binding TotalPages.Value}" />
+      <Button Content="&gt;"
+              Padding="5"
+              Command="{Binding NextPage}"/>
     </StackPanel>
   </Grid>
 </Infrastructure:View>
