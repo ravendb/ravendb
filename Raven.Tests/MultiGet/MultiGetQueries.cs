@@ -54,6 +54,47 @@ namespace Raven.Tests.MultiGet
 			}
 		}
 
+
+		[Fact]
+		public void CanGetQueryStats()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User { Name = "oren" });
+					session.Store(new User());
+					session.Store(new User { Name = "ayende" });
+					session.Store(new User{Age = 3});
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					RavenQueryStatistics stats1;
+					var result1 = session.Query<User>()
+						.Customize(x=>x.WaitForNonStaleResults())
+						.Statistics(out stats1)
+						.Where(x => x.Age == 0).Skip(1).Take(2)
+						.Lazily();
+
+					RavenQueryStatistics stats2;
+					var result2 = session.Query<User>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Statistics(out stats2)
+						.Where(x => x.Age == 3).Skip(1).Take(2)
+						.Lazily();
+					Assert.Equal(2, result1.Value.ToArray().Length);
+					Assert.Equal(3, stats1.TotalResults);
+
+					Assert.Equal(0, result2.Value.ToArray().Length);
+					Assert.Equal(1, stats2.TotalResults);
+				}
+
+			}
+		}
+
 		[Fact]
 		public void WithQueuedActions()
 		{
