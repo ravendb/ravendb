@@ -27,7 +27,7 @@ namespace Raven.Studio.Models
 
         private Task GetFetchDocumentsMethod(BindableCollection<ViewableDocument> documents, int currentPage)
         {
-            return asyncDatabaseCommands.GetDocumentsAsync(GetSkipCount(), 15)
+            return asyncDatabaseCommands.GetDocumentsAsync(UrlUtil.GetSkipCount(), 15)
                 .ContinueOnSuccess(docs => documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
         }
 

@@ -24,27 +24,16 @@ namespace Raven.Studio.Commands
 
         public override void Execute(object parameter)
         {
-            int currentSkip = GetSkipCount() + itemsPerPage;
+            int currentSkip = UrlUtil.GetSkipCount() + itemsPerPage;
 
             ApplicationModel.Current.Navigate((new Uri(location+ "?skip=" + currentSkip, UriKind.Relative)));
         }
 
         public override bool CanExecute(object parameter)
         {
-            if ((GetSkipCount() / itemsPerPage) + 1 >= numberOfPages && GetSkipCount()!=0)
+            if ((UrlUtil.GetSkipCount() / itemsPerPage) + 1 >= numberOfPages && UrlUtil.GetSkipCount() != 0)
                 return (false);
             return true;
-        }
-
-
-        public int GetSkipCount()
-        {
-            var queryParam = ApplicationModel.Current.GetQueryParam("skip");
-            if (string.IsNullOrEmpty(queryParam))
-                return 0;
-            int result;
-            int.TryParse(queryParam, out result);
-            return result;
         }
 	}
 }

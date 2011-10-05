@@ -32,7 +32,7 @@ namespace Raven.Studio.Models
         private int currentPage;
         public int CurrentPage
         {
-            get { return GetSkipCount() / itemsPerPages + 1; }
+            get { return UrlUtil.GetSkipCount() / itemsPerPages + 1; }
         }
 
         public ICommand NextPage
