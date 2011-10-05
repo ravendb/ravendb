@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 
@@ -529,7 +530,7 @@ namespace Raven.Client.Linq
 			{
 				luceneQuery.WhereEquals(new WhereParams
 				{
-					FieldName = memberExpression.Member.Name,
+					FieldName = GetFullMemberPath(memberExpression),
 					Value = boolValue,
 					IsAnalyzed = true,
 					AllowWildcards = false
@@ -539,6 +540,16 @@ namespace Raven.Client.Linq
 			{
 				throw new NotSupportedException("Expression type not supported: " + memberExpression);
 			}
+		}
+
+		private static string GetFullMemberPath(MemberExpression memberExpression)
+		{
+			var parentExpression = memberExpression.Expression as MemberExpression;
+			if(parentExpression != null)
+			{
+				return GetFullMemberPath(parentExpression) + "." + memberExpression.Member.Name;
+			}
+			return memberExpression.Member.Name;
 		}
 
 		private void VisitMethodCall(MethodCallExpression expression)
