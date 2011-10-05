@@ -224,6 +224,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	mkdir $build_dir\Output\Bundles
 	mkdir $build_dir\Output\Samples
 	mkdir $build_dir\Output\Smuggler
+	mkdir $build_dir\Output\Backup
 }
 
 task CleanOutputDirectory { 
@@ -254,6 +255,10 @@ task CopySmuggler {
 	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
 	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Smuggler
 	cp $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
+}
+
+task CopyBackup {
+	cp $build_dir\Raven.Backup.??? $build_dir\Output\Backup
 }
 
 task CopyClient {
@@ -307,7 +312,6 @@ task CreateDocs {
 task CopyRootFiles -depends CreateDocs {
 	cp $base_dir\license.txt $build_dir\Output\license.txt
 	cp $base_dir\Scripts\Start.cmd $build_dir\Output\Start.cmd
-	cp $base_dir\Scripts\Raven-StartBackup.ps1 $build_dir\Output\Raven-StartBackup.ps1
 	cp $base_dir\Scripts\Raven-UpdateBundles.ps1 $build_dir\Output\Raven-UpdateBundles.ps1
 	cp $base_dir\Scripts\Raven-GetBundles.ps1 $build_dir\Output\Raven-GetBundles.ps1
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
@@ -335,6 +339,7 @@ task ZipOutput {
 			Client\*.* `
 			Samples\*.* `
 			Smuggler\*.* `
+			Backup\*.* `
 			Client-3.5\*.* `
 			Web\*.* `
 			Bundles\*.* `
@@ -357,6 +362,7 @@ task DoRelease -depends Compile, `
 	CreateOutpuDirectories, `
 	CopyEmbeddedClient, `
 	CopySmuggler, `
+	CopyBackup, `
 	CopyClient, `
 	CopySilverlight, `
 	CopyClient35, `
@@ -486,7 +492,9 @@ task CreateNugetPackage {
   
   cp $build_dir\Raven.Smuggler.??? $build_dir\NuPack\Tools
   cp $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Embedded\Tools
-  
+
+  cp $build_dir\Raven.Backup.??? $build_dir\NuPack\Tools
+  cp $build_dir\Raven.Backup.??? $build_dir\NuPack-Embedded\Tools  
 
 ########### First pass - RavenDB.nupkg
 
