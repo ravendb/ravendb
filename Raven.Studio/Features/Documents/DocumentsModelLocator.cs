@@ -21,7 +21,7 @@ namespace Raven.Studio.Features.Documents
         protected override void Load(DatabaseModel database, IAsyncDatabaseCommands asyncDatabaseCommands, Observable<DocumentsModel> observable)
         {
             this.asyncDatabaseCommands = asyncDatabaseCommands;
-            observable.Value = new DocumentsModel(GetFetchDocumentsMethod(), "/Documents", 25)
+            observable.Value = new DocumentsModel(GetFetchDocumentsMethod(), "/documents", 25)
             {
                 TotalPages = new Observable<long>(database.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / 25 + 1) 
             };

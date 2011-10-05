@@ -11,6 +11,7 @@ namespace Raven.Studio.Models
     public class HomeModel : Model
     {
         private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+        private const int RecentDocumentsCountPerPage = 15;
         public Observable<DocumentsModel> RecentDocuments { get; private set; }
 
         public HomeModel(DatabaseModel database, IAsyncDatabaseCommands asyncDatabaseCommands)
@@ -18,16 +19,16 @@ namespace Raven.Studio.Models
             this.asyncDatabaseCommands = asyncDatabaseCommands;
             RecentDocuments = new Observable<DocumentsModel>
             {
-                Value = new DocumentsModel(GetFetchDocumentsMethod, "/Home", 15)
+                Value = new DocumentsModel(GetFetchDocumentsMethod, "/home", RecentDocumentsCountPerPage)
                 {
-                    TotalPages = new Observable<long>(database.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / 15 + 1)
+                    TotalPages = new Observable<long>(database.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / RecentDocumentsCountPerPage + 1)
                 }
             };
         }
 
         private Task GetFetchDocumentsMethod(BindableCollection<ViewableDocument> documents, int currentPage)
         {
-            return asyncDatabaseCommands.GetDocumentsAsync(UrlUtil.GetSkipCount(), 15)
+            return asyncDatabaseCommands.GetDocumentsAsync(currentPage * RecentDocumentsCountPerPage, RecentDocumentsCountPerPage)
                 .ContinueOnSuccess(docs => documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
         }
 
