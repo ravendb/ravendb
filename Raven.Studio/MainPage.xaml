@@ -107,7 +107,38 @@
 		</Grid>
         
 	  <Grid x:Name="ContentGrid" Grid.Row="1">
-            <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}" BorderThickness="0"/>
+            <Grid>
+                <Grid.CacheMode>
+                    <BitmapCache/>
+                </Grid.CacheMode>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}" 
+                                        BorderThickness="0"
+                                        Height="400" VerticalAlignment="Top"
+                                        Grid.Row="0">
+                	<TiledBG:TiledBGControl.OpacityMask>
+                		<LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                			<GradientStop Color="Transparent" Offset="1"/>
+                			<GradientStop Color="#FF040404"/>
+                		</LinearGradientBrush>
+                	</TiledBG:TiledBGControl.OpacityMask>
+                </TiledBG:TiledBGControl>
+              <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTextureBottom}" 
+                                        BorderThickness="0"
+                                        Height="400" VerticalAlignment="Bottom"
+                                        Grid.Row="1">
+              	<TiledBG:TiledBGControl.OpacityMask>
+              		<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+              			<GradientStop Color="Black" Offset="1"/>
+              			<GradientStop Color="Transparent"/>
+              		</LinearGradientBrush>
+              	</TiledBG:TiledBGControl.OpacityMask>
+              </TiledBG:TiledBGControl>
+            </Grid>
+
 
 			<Grid Margin="15,0">
                 <Grid.RowDefinitions>

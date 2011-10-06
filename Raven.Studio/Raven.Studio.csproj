@@ -473,6 +473,7 @@
     <Resource Include="Assets\Images\BackgroundTexture.png" />
     <Resource Include="Assets\Images\RavenDBLogo.png" />
     <Resource Include="Assets\Images\FooterTexture.png" />
+    <Resource Include="Assets\Images\BackgroundTextureBottom.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />

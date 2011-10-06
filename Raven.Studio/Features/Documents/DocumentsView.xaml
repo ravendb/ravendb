@@ -47,8 +47,8 @@
 
       <ListBox.ItemTemplate>
         <DataTemplate>
-          <Grid Width="120"
-						  Height="60"
+          <Grid Width="100"
+						  Height="50"
 						  Margin="2">
 
             <Rectangle Fill="#FFF4F4F5" />
