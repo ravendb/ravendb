@@ -48,7 +48,7 @@
       <ListBox.ItemTemplate>
         <DataTemplate>
           <Grid Width="120"
-						  Height="80"
+						  Height="60"
 						  Margin="2">
 
             <Rectangle Fill="#FFF4F4F5" />
@@ -72,12 +72,12 @@
 									Orientation="Horizontal"
 									HorizontalAlignment="Right"
 									VerticalAlignment="Bottom">
-              <Button Content="edit"
+              <HyperlinkButton Content="edit"
 									Command="{Binding Path=Edit}"
 									ToolTipService.ToolTip="click here to edit the document"
-									Margin="0,0,4,4"
-									Style="{StaticResource Style_Button}">
-              </Button>
+									Margin="0,0,0,0"
+									Style="{StaticResource Style_Link_Command}">
+                            </HyperlinkButton>
             </StackPanel>
           </Grid>
         </DataTemplate>
