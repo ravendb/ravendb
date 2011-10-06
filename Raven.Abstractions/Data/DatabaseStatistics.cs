@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
@@ -23,12 +23,24 @@ namespace Raven.Abstractions.Data
 
 		public TriggerInfo[] Triggers { get; set; }
 
-		public object Extensions { get; set; }
+		public IEnumerable<ExtensionsLog> Extensions { get; set; }
 
 		public class TriggerInfo
 		{
 			public string Type { get; set; }
 			public string Name { get; set; }
 		}
+	}
+
+	public class ExtensionsLog
+	{
+		public string Name { get; set; }
+		public ExtensionsLogDetail[] Installed { get; set; }
+	}
+
+	public class ExtensionsLogDetail
+	{
+		public string Name { get; set; }
+		public string Assembly { get; set; }
 	}
 }

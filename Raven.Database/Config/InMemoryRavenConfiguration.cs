@@ -611,19 +611,6 @@ namespace Raven.Database.Config
 	        container = null;
 	    }
 
-
-		public class ExtensionsLog
-		{
-			public string Name { get; set; }
-			public ExtensionsLogDetail[] Installed { get; set; }
-		}
-
-		public class ExtensionsLogDetail
-		{
-			public string Name { get; set; }
-			public string Assembly { get; set; }
-		}
-
 		private ExtensionsLog GetExtensionsFor(Type type)
 		{
 			var enumerable =
