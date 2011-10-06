@@ -25,7 +25,7 @@ namespace Raven.Studio.Models
 			UpdateFromIndex(index);
 
 			this.statistics = statistics;
-			this.statistics.PropertyChanged += (sender, args) => OnEverythingChanged();
+			this.statistics.PropertyChanged += (sender, args) => OnPropertyChanged("ErrorsCount");
 		}
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
