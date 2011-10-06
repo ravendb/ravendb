@@ -5,4 +5,8 @@
     <BitmapImage x:Key="Image_BackgroundTextureBottom" UriSource="BackgroundTextureBottom.png"/>
     <BitmapImage x:Key="Image_RavenDBLogo" UriSource="RavenDBLogo.png"/>
     <BitmapImage x:Key="Image_FooterTexture" UriSource="FooterTexture.png"/>
+
+    <BitmapImage x:Key="Image_DocumentIndex_Tiny" UriSource="document-index-icon.png"/>
+    
+    
 </ResourceDictionary>

@@ -474,6 +474,8 @@
     <Resource Include="Assets\Images\RavenDBLogo.png" />
     <Resource Include="Assets\Images\FooterTexture.png" />
     <Resource Include="Assets\Images\BackgroundTextureBottom.png" />
+    <Resource Include="Assets\Images\document-index-icon.png" />
+    <None Include="Assets\Images\ImageCredits.txt" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />

@@ -7,13 +7,31 @@
 
 	<UserControl.Resources>
 		<DataTemplate x:Key="IndexItemTemplate">
-			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto" />
-				</Grid.ColumnDefinitions>
-
-				<HyperlinkButton Content="{Binding}"
-								 NavigateUri="{Binding StringFormat=/indexes/\{0\}}" />
+			<Grid d:DesignWidth="167" d:DesignHeight="38" d:LayoutOverrides="Width, Height" >
+				<Border BorderThickness="1" Margin="0" CornerRadius="4">
+					<Border.Effect>
+						<DropShadowEffect Opacity="0.28" BlurRadius="7" ShadowDepth="1" Direction="0"/>
+					</Border.Effect>
+					<Border.Background>
+						<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+							<GradientStop Color="#FFFEFEFE" Offset="0.025"/>
+							<GradientStop Color="#FFF1F1F1" Offset="0.825"/>
+						</LinearGradientBrush>
+					</Border.Background>
+				</Border>
+    
+				<Grid Margin="4">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="Auto" />
+					</Grid.ColumnDefinitions>
+    
+					<Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None"
+						VerticalAlignment="Center" Margin="2"/>
+					<HyperlinkButton Grid.Column="1"  Content="{Binding}"
+						NavigateUri="{Binding StringFormat=/indexes/\{0\}}"
+						VerticalAlignment="Center"/>
+				</Grid>
 			</Grid>
 		</DataTemplate>
 	</UserControl.Resources>
@@ -30,7 +48,7 @@
             <toolkit:HeaderedContentControl.Header>
                 <TextBlock
                        Text="Temp Indexes"
-					   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="4" />
+					   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6" />
             </toolkit:HeaderedContentControl.Header>
             <ListBox Style="{StaticResource Indexes_FluidList}"
 				ItemsSource="{Binding TempIndexes}"
@@ -43,7 +61,7 @@
                     Style="{StaticResource Style_HeaderedContentControl}">
             <toolkit:HeaderedContentControl.Header>
 			    <TextBlock Text="Auto Indexes"
-					   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="4" />
+					   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6" />
             </toolkit:HeaderedContentControl.Header>
 			<ListBox Style="{StaticResource Indexes_FluidList}"
 					 ItemsSource="{Binding AutoIndexes}"
@@ -55,7 +73,7 @@
                     Style="{StaticResource Style_HeaderedContentControl}">
             <toolkit:HeaderedContentControl.Header>
                 <TextBlock Text="Indexes"
-					   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="4" />
+					   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6" />
             </toolkit:HeaderedContentControl.Header>
             <ListBox Style="{StaticResource Indexes_FluidList}"
 					 ItemsSource="{Binding OtherIndexes}"
