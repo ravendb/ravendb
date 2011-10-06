@@ -1109,5 +1109,31 @@
 		<Setter Property="BorderThickness"
 				Value="0" />
 	</Style>
+    
+    <Style x:Key="Style_HeaderedContentControl" TargetType="toolkit:HeaderedContentControl">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:HeaderedContentControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto" MinHeight="40"/>
+                        </Grid.RowDefinitions>
+                        <Border BorderThickness="1" CornerRadius="4" Grid.RowSpan="2" BorderBrush="#FFEAE7E4"/>
+                        <Border BorderThickness="0" Margin="1" CornerRadius="4,4,0,0">
+                            <Border.Background>
+                                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                    <GradientStop Color="#C5F7F7F7" Offset="0.049"/>
+                                    <GradientStop Color="#C1E8E8E8" Offset="0.74"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <ContentPresenter Grid.Row="0" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"/>
+                        <ContentPresenter Grid.Row="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 	
 </ResourceDictionary>
