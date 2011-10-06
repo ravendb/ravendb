@@ -1,0 +1,24 @@
+﻿<Infrastructure:View x:Class="Raven.Studio.Features.Stats.ErrorsView"
+					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+					 DataContext="{Binding Path=SelectedDatabase.Value.Statistics.Value}">
+
+	<ScrollViewer BorderThickness="0"
+				  VerticalScrollBarVisibility="Auto"
+				  HorizontalScrollBarVisibility="Disabled"
+				  Margin="{StaticResource Margin_ContentPage}">
+		<ItemsControl ItemsSource="{Binding Errors}">
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<StackPanel>
+						<TextBlock Text="{Binding Index}" />
+						<TextBlock Text="{Binding Error}" />
+						<TextBlock Text="{Binding Timestamp}" />
+						<TextBlock Text="{Binding Document}" />
+					</StackPanel>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
+	</ScrollViewer>
+</Infrastructure:View>

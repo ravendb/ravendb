@@ -12,6 +12,7 @@
 	<Documents:DocumentsModelLocator x:Key="DocumentsModelLocator" />
 	<Documents:HomeModelLoactor x:Key="HomeModelLoactor" />
 	<Stats:StatisticsModelLocator x:Key="StatisticsModelLocator" />
+	<Stats:ErrorsModelLocator x:Key="ErrorsModelLocator" />
 
 	<Collections:CollectionsModelLocator x:Key="CollectionModelLocator" />
 	<Logs:LogsModelLocator x:Key="LogsModelLocator" />
