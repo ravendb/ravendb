@@ -4,7 +4,8 @@
 					xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes"
 					xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections"
 					xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
-					xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats">
+					xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats"
+					xmlns:Query="clr-namespace:Raven.Studio.Features.Query">
 
 	<Documents:EditDocumentModelLocator x:Key="EditDocumentModelLocator" />
 	<Indexes:IndexDefinitionModelLocator x:Key="IndexDefinitionModelLocator" />
@@ -13,6 +14,7 @@
 	<Documents:HomeModelLoactor x:Key="HomeModelLoactor" />
 	<Stats:StatisticsModelLocator x:Key="StatisticsModelLocator" />
 	<Indexes:IndexesErrorsModelLocator x:Key="ErrorsModelLocator" />
+	<Query:QueryModelLocator x:Key="QueryModelLocator" />
 
 	<Collections:CollectionsModelLocator x:Key="CollectionModelLocator" />
 	<Logs:LogsModelLocator x:Key="LogsModelLocator" />

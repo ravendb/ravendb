@@ -142,6 +142,11 @@
       <DependentUpon>IndexesErrorsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Indexes\IndexesErrorsModelLocator.cs" />
+    <Compile Include="Features\Query\ExecuteQueryCommand.cs" />
+    <Compile Include="Features\Query\QueryView.xaml.cs">
+      <DependentUpon>QueryView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Query\QueryModelLocator.cs" />
     <Compile Include="Features\Stats\StatisticsModelLocator.cs" />
     <Compile Include="Features\Stats\StatisticsView.xaml.cs">
       <DependentUpon>StatisticsView.xaml</DependentUpon>
@@ -257,10 +262,14 @@
     </Compile>
     <Compile Include="Models\ApplicationModel.cs" />
     <Compile Include="Models\DatabaseModel.cs" />
+    <Compile Include="Models\QueryModel.cs" />
     <Compile Include="Models\ServerModel.cs" />
     <Compile Include="Models\TaskModel.cs" />
     <Compile Include="Views\Collections.xaml.cs">
       <DependentUpon>Collections.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Query.xaml.cs">
+      <DependentUpon>Query.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\IndexesErrors.xaml.cs">
       <DependentUpon>IndexesErrors.xaml</DependentUpon>
@@ -328,6 +337,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Features\Query\QueryView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Features\Stats\StatisticsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -335,6 +348,10 @@
     <Page Include="Features\Tasks\TasksView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Query.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\IndexesErrors.xaml">
       <Generator>MSBuild:Compile</Generator>

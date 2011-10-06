@@ -41,7 +41,7 @@ namespace Raven.Studio.Models
 		public CollectionModel(IAsyncDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
-		    Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(GetFetchDocumentsMethod(),"/Collections", ItemsPerPage)};
+		    Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(GetFetchDocumentsMethod(), "/Collections", ItemsPerPage)};
 		}
 
 	    private Func<BindableCollection<ViewableDocument>, int, Task> GetFetchDocumentsMethod()
