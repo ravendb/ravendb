@@ -7,17 +7,29 @@
 				  VerticalScrollBarVisibility="Auto"
 				  HorizontalScrollBarVisibility="Disabled"
 				  Margin="{StaticResource Margin_ContentPage}">
-		<ItemsControl ItemsSource="{Binding Errors}">
-			<ItemsControl.ItemTemplate>
-				<DataTemplate>
-					<StackPanel>
-						<TextBlock Text="{Binding Index}" />
-						<TextBlock Text="{Binding Error}" />
-						<TextBlock Text="{Binding Timestamp}" />
-						<TextBlock Text="{Binding Document}" />
-					</StackPanel>
-				</DataTemplate>
-			</ItemsControl.ItemTemplate>
-		</ItemsControl>
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="10" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
+			
+			<StackPanel>
+				<TextBlock Text="{Binding Path=Errors.Length, StringFormat='Errors Count: \{0\}'}" />
+			</StackPanel>
+			
+			<ItemsControl Grid.Row="3" ItemsSource="{Binding Errors}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<StackPanel>
+							<TextBlock Text="{Binding Index}" />
+							<TextBlock Text="{Binding Error}" />
+							<TextBlock Text="{Binding Timestamp}" />
+							<TextBlock Text="{Binding Document}" />
+						</StackPanel>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+		</Grid>
 	</ScrollViewer>
 </Infrastructure:View>
