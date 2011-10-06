@@ -1,8 +1,7 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Features.Stats.ErrorsView"
+﻿<Infrastructure:View x:Class="Raven.Studio.Features.Indexes.IndexesErrorsView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 DataContext="{Binding Path=SelectedDatabase.Value.Statistics.Value}">
+					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
 
 	<ScrollViewer BorderThickness="0"
 				  VerticalScrollBarVisibility="Auto"

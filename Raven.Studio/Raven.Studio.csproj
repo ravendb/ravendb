@@ -141,10 +141,10 @@
     <Compile Include="Features\Indexes\EditIndexView.xaml.cs">
       <DependentUpon>EditIndexView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Stats\ErrorsView.xaml.cs">
-      <DependentUpon>ErrorsView.xaml</DependentUpon>
+    <Compile Include="Features\Indexes\IndexesErrorsView.xaml.cs">
+      <DependentUpon>IndexesErrorsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Stats\ErrorsModelLocator.cs" />
+    <Compile Include="Features\Indexes\IndexesErrorsModelLocator.cs" />
     <Compile Include="Features\Stats\StatisticsModelLocator.cs" />
     <Compile Include="Features\Stats\StatisticsView.xaml.cs">
       <DependentUpon>StatisticsView.xaml</DependentUpon>
@@ -210,6 +210,7 @@
     <Compile Include="Models\CollectionModel.cs" />
     <Compile Include="Models\DatabaseCollectionsModel.cs" />
     <Compile Include="Infrastructure\PrimaryKeyComparer.cs" />
+    <Compile Include="Models\IndexesErrorsModel.cs" />
     <Compile Include="Models\IndexesModel.cs" />
     <Compile Include="Models\LinkModel.cs" />
     <Compile Include="Models\NotificationLevel.cs" />
@@ -264,8 +265,8 @@
     <Compile Include="Views\Collections.xaml.cs">
       <DependentUpon>Collections.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\Errors.xaml.cs">
-      <DependentUpon>Errors.xaml</DependentUpon>
+    <Compile Include="Views\IndexesErrors.xaml.cs">
+      <DependentUpon>IndexesErrors.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Statistics.xaml.cs">
       <DependentUpon>Statistics.xaml</DependentUpon>
@@ -326,7 +327,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Stats\ErrorsView.xaml">
+    <Page Include="Features\Indexes\IndexesErrorsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -338,7 +339,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\Errors.xaml">
+    <Page Include="Views\IndexesErrors.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

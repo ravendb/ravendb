@@ -130,6 +130,10 @@
                         <uriMapper:UriMapper>
                             <uriMapper:UriMapping Uri=""
 											      MappedUri="/Views/Home.xaml" />
+							<uriMapper:UriMapping Uri="/indexes-errors/{indexName}"
+												  MappedUri="/Views/IndexesErrors.xaml" />
+							<uriMapper:UriMapping Uri="/indexes-errors"
+												  MappedUri="/Views/IndexesErrors.xaml" />
 							<uriMapper:UriMapping Uri="/indexes/{indexName}"
 												  MappedUri="/Views/Index.xaml" />
 							<uriMapper:UriMapping Uri="/logs/{errors}"

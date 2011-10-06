@@ -2,9 +2,9 @@
 
 namespace Raven.Studio.Views
 {
-	public partial class Errors : View
+	public partial class IndexesErrors : View
 	{
-		public Errors()
+		public IndexesErrors()
 		{
 			InitializeComponent();
 		}
