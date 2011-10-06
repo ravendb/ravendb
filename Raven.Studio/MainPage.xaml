@@ -67,13 +67,14 @@
 												 HorizontalAlignment="Right" />
 			</Grid>
 		  
-			<StackPanel Orientation="Horizontal"
-						Height="28"
-						VerticalAlignment="Bottom"
+			<StackPanel x:Name="MainLinks"
+                        Orientation="Horizontal"
+						VerticalAlignment="Stretch"
 						Margin="{StaticResource Margin_MainPageLeftRight}">
 				
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-				<HyperlinkButton Content="Summary"
+				<HyperlinkButton x:Name="SummaryLink"
+                                 Content="Summary"
 								 NavigateUri="/home"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />

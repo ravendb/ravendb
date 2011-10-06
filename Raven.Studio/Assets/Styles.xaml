@@ -511,7 +511,7 @@
 		<Setter Property="FontWeight" Value="Bold"/>
 		<Setter Property="FontSize" Value="12"/>
 		<Setter Property="Foreground" Value="#FF666666"/>
-		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="Padding" Value="16,6"/>
 		<Setter Property="Template">
 			<Setter.Value>
@@ -519,19 +519,68 @@
 					<Grid Cursor="{TemplateBinding Cursor}"
 						  Background="{TemplateBinding Background}">
 						<VisualStateManager.VisualStateGroups>
-							<VisualStateGroup x:Name="CommonStates">
-								<VisualStateGroup.Transitions>
-									<VisualTransition GeneratedDuration="0:0:0.2" />
-								</VisualStateGroup.Transitions>
-								<VisualState x:Name="Normal" />
-							</VisualStateGroup>
-						</VisualStateManager.VisualStateGroups>
-
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="LinkStates">
+                                <VisualState x:Name="ActiveLink">
+                                    <Storyboard>
+                                		<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="ActiveBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                			<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                                			<EasingDoubleKeyFrame KeyTime="0:0:0.1" Value="1"/>
+                                		</DoubleAnimationUsingKeyFrames>
+                                		<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="ActiveBorder">
+                                			<DiscreteObjectKeyFrame KeyTime="0">
+                                				<DiscreteObjectKeyFrame.Value>
+                                					<Visibility>Visible</Visibility>
+                                				</DiscreteObjectKeyFrame.Value>
+                                			</DiscreteObjectKeyFrame>
+                                		</ObjectAnimationUsingKeyFrames>
+                                		<ColorAnimation Duration="0" To="White" Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" Storyboard.TargetName="Content" d:IsOptimized="True"/>
+                                	</Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="InactiveLink"/>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                    <Storyboard>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused"/>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+						
+						<Border x:Name="ActiveBorder" Visibility="Collapsed">
+							<Border.Background>
+								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+									<GradientStop Color="#FFC64266" Offset="0"/>
+									<GradientStop Color="#FFBE214B" Offset="0.014"/>
+									<GradientStop Color="#FF75213C" Offset="0.479"/>
+									<GradientStop Color="#FF57001C" Offset="0.535"/>
+									<GradientStop Color="#FF300116" Offset="0.986"/>
+									<GradientStop Color="#FF5F404E" Offset="1"/>
+								</LinearGradientBrush>
+							</Border.Background>
+							
+						</Border>
 						<TextBlock x:Name="Content"
 								   Text="{TemplateBinding Content}"
 								   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
 								   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
 								   Margin="{TemplateBinding Padding}" />
+							
 					</Grid>
 				</ControlTemplate>
 			</Setter.Value>
