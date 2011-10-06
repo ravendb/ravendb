@@ -2,50 +2,90 @@
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 xmlns:data="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
 					 DataContext="{Binding Path=SelectedDatabase.Value.Statistics.Value}">
 
-	<Grid HorizontalAlignment="Left">
-		
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="Auto" />
-			<ColumnDefinition Width="8" />
-			<ColumnDefinition Width="*" />
-		</Grid.ColumnDefinitions>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-		</Grid.RowDefinitions>
+	<ScrollViewer BorderThickness="0"
+				  VerticalScrollBarVisibility="Auto"
+				  HorizontalScrollBarVisibility="Disabled"
+				  Margin="{StaticResource Margin_ContentPage}">
+		<Grid HorizontalAlignment="Left">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="8" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
 
-		<TextBlock Text="Count Of Indexes" />
-		<TextBlock Grid.Column="2" Text="{Binding CountOfIndexes}" />
+			<TextBlock Text="Count Of Indexes" />
+			<TextBlock Grid.Column="2" Text="{Binding CountOfIndexes}" />
 
-		<TextBlock Grid.Row="1" Text="Tasks Count" />
-		<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding ApproximateTaskCount}" />
+			<TextBlock Grid.Row="1" Text="Tasks Count" />
+			<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding ApproximateTaskCount}" />
 
-		<TextBlock Grid.Row="2" Text="Count Of Documents" />
-		<TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CountOfDocuments}" />
+			<TextBlock Grid.Row="2" Text="Count Of Documents" />
+			<TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CountOfDocuments}" />
 
-		<TextBlock Grid.Row="3" Text="Stale Indexes" />
-		<data:DataGrid Grid.Row="3"
-					   Grid.Column="2"
-					   HeadersVisibility="None"
-					   ItemsSource="{Binding StaleIndexes}"/>
+			<TextBlock Grid.Row="3" Text="Stale Indexes" />
+			<ItemsControl Grid.Row="3"
+						  Grid.Column="2"
+						  ItemsSource="{Binding StaleIndexes}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<StackPanel>
+							<TextBlock Text="{Binding}" />
+						</StackPanel>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
 			
-		<TextBlock Grid.Row="6" Text="Triggers" />
-		<data:DataGrid Grid.Row="6"
-					   Grid.Column="2"
-					   ItemsSource="{Binding Triggers}" />
+			<TextBlock Grid.Row="6" Text="Triggers" />
+			<ItemsControl Grid.Row="6"
+						  Grid.Column="2"
+						  ItemsSource="{Binding Triggers}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<StackPanel>
+							<TextBlock Text="{Binding Type}"
+									   FontWeight="Bold" />
+							<TextBlock Text="{Binding Name}"
+									   Margin="20,0,0,10" />
+						</StackPanel>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
 
-		<TextBlock Grid.Row="7" Text="Extensions" />
-		<!--<data:DataGrid Grid.Row="7"
-					   Grid.Column="2"
-					   ItemsSource="{Binding Extensions}" />-->
-	</Grid>
+			<TextBlock Grid.Row="7" Text="Extensions" />
+			<ItemsControl Grid.Row="7"
+						  Grid.Column="2"
+						  ItemsSource="{Binding Extensions}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<StackPanel>
+							<TextBlock Text="{Binding Name}" FontWeight="Bold" />
+							<ItemsControl ItemsSource="{Binding Installed}" Margin="20,0,0,10">
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<StackPanel Orientation="Horizontal">
+											<TextBlock Text="{Binding Name}" />
+											<TextBlock Text=", " />
+											<TextBlock Text="{Binding Assembly}" />
+										</StackPanel>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</StackPanel>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+		</Grid>
+	</ScrollViewer>
 </Infrastructure:View>
