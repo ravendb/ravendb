@@ -9,7 +9,94 @@
              xmlns:Models="clr-namespace:Raven.Studio.Models"
              xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit" mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Models:IndexDefinitionModel, IsDesignTimeCreatable=False}">
-	<toolkit:DockPanel Margin="{StaticResource Margin_ContentPage}">
+    <UserControl.Resources>
+        <DataTemplate x:Key="IndexFieldTemplate">
+            <Border BorderBrush="#FFE9E9E9"
+									BorderThickness="1,1,1,1"
+									CornerRadius="4"
+									Margin="10"
+									VerticalAlignment="Center"
+									HorizontalAlignment="Center">
+                <Grid Margin="4,4,4,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="4" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="4" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Field" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding Name, Mode=TwoWay}"
+											 Grid.Column="1"
+											 Grid.ColumnSpan="3" 
+                             VerticalAlignment="Center"/>
+
+                    <Button Grid.Column="4"
+                            Style="{StaticResource Style_Button_PageHeaderBar}"
+                            Padding="2"
+                            Margin="4 -2 -2 0"
+									 x:Name="RemoveField"
+									 ToolTipService.ToolTip="Remove this field from the index" HorizontalAlignment="Right"
+                                     VerticalAlignment="Top"
+									 Command="{Binding DataContext.RemoveField, ElementName=this}"
+									 CommandParameter="{Binding}">
+                        <Button.Content>
+                            <Image Source="{StaticResource Image_Remove_Tiny}" Width="12" Height="12"/>
+                        </Button.Content>
+                    </Button>
+
+
+                    <TextBlock Text="Storage" Grid.Row="2" VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <ComboBox ItemsSource="{Binding Storage, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+											  SelectedItem="{Binding Storage, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+											  Grid.Row="2"
+											  Grid.Column="1"
+											  MinWidth="80" 
+                                              VerticalAlignment="Center"/>
+
+                    <TextBlock Text="Indexing"
+											 Grid.Row="2"
+											 Grid.Column="2"
+											 Margin="8,0,4,0"
+                                            VerticalAlignment="Center"/>
+                    <ComboBox ItemsSource="{Binding Indexing, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+											  SelectedItem="{Binding Indexing, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+											  Grid.Row="2"
+											  Grid.Column="3"
+                                              VerticalAlignment="Center"/>
+
+                    <TextBlock Text="Sort"
+											 Grid.Row="4" 
+                               VerticalAlignment="Center"/>
+                    <ComboBox ItemsSource="{Binding Sort, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+											  SelectedItem="{Binding Sort, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+											  Grid.Row="4"
+											  Grid.Column="1" 
+                              VerticalAlignment="Center"/>
+
+                    <TextBlock Text="Analyzer"
+								Grid.Row="4"
+								Grid.Column="2"
+								Margin="8,0,4,0" 
+                               VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding Analyzer}"
+											 Grid.Row="4"
+											 Grid.Column="3"
+											 MinWidth="160" 
+                             VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+    <toolkit:DockPanel Margin="{StaticResource Margin_ContentPage}">
         <Border Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0"
                 toolkit:DockPanel.Dock="Top">
             <toolkit:DockPanel Margin="4" LastChildFill="False">
@@ -51,36 +138,36 @@
                         </Button.Content>
                     </Button>
 
-                  <Button x:Name="AddTransformResults"
+                    <Button x:Name="AddTransformResults"
                           Style="{StaticResource Style_Button_PageHeaderBar}"
 									 Visibility="{Binding TransformResults, Converter={StaticResource HiddenWhenNotNull}}"
 									 Command="{Binding AddTransformResults}"
 									 VerticalAlignment="Center"
 									 HorizontalAlignment="Left"
 									 Margin="0">
-                    <Button.Content>
+                        <Button.Content>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Image Source="{StaticResource Image_Add_Tiny}" Stretch="None" VerticalAlignment="Center"/>
                                 <TextBlock Text="Add Transform" VerticalAlignment="Center" Margin="2,0,0,0"/>
                             </StackPanel>
                         </Button.Content>
-                  </Button>
+                    </Button>
 
-                  <Button x:Name="AddField"
+                    <Button x:Name="AddField"
                            Style="{StaticResource Style_Button_PageHeaderBar}"
 									 Command="{Binding AddField}"
 									 VerticalAlignment="Center"
 									 HorizontalAlignment="Left"
 									 Margin="0">
-                    <Button.Content>
+                        <Button.Content>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Image Source="{StaticResource Image_Add_Tiny}" Stretch="None" VerticalAlignment="Center"/>
                                 <TextBlock Text="Add Field" VerticalAlignment="Center" Margin="2,0,0,0"/>
                             </StackPanel>
                         </Button.Content>
-                  </Button>
+                    </Button>
 
-                  <Button x:Name="Save" Style="{StaticResource Style_Button_PageHeaderBar}"
+                    <Button x:Name="Save" Style="{StaticResource Style_Button_PageHeaderBar}"
 										 HorizontalAlignment="Left"
 										 Margin="4 0 0 0"
 										 ToolTipService.ToolTip="Save Index"
@@ -95,73 +182,74 @@
 										 Command="{Binding ResetIndex}">
                         <Image Source="{StaticResource Image_Undo_Small}" Stretch="None"/>
                     </Button>
-					
-					
+
+
                 </StackPanel>
             </toolkit:DockPanel>
         </Border>
-		<ScrollViewer BorderThickness="0"
+        <ScrollViewer BorderThickness="0"
 					  VerticalScrollBarVisibility="Auto"
-					  HorizontalScrollBarVisibility="Disabled">
+					  HorizontalScrollBarVisibility="Disabled"
+                      Padding="0">
 
-			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="80" />
-					<ColumnDefinition />
-				</Grid.ColumnDefinitions>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="*" />
-					<RowDefinition Height="Auto" />
-				</Grid.RowDefinitions>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-				<Border Background="{StaticResource Brush_SubtleBackground2}" Grid.ColumnSpan="2" Grid.RowSpan="2"/>
+                <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.ColumnSpan="2" Grid.RowSpan="2"/>
 
-				<TextBlock Text="Name" Margin="5,10" VerticalAlignment="Top" Style="{StaticResource Style_TextBlock_PagePartHeader}" />
-				<TextBox Grid.Column="1"
+                <TextBlock Text="Name" Margin="5,10" VerticalAlignment="Top" Style="{StaticResource Style_TextBlock_PagePartHeader}" />
+                <TextBox Grid.Column="1"
 						 Text="{Binding Name, Mode=TwoWay}"
-						 Margin="0,10" VerticalAlignment="Center" />
+						 Margin="0,10,24,10" VerticalAlignment="Center" />
 
-				<StackPanel Grid.Row="1"
+                <StackPanel Grid.Row="1"
 							Grid.Column="1"
 							Orientation="Horizontal">
 
-					
-					
-				</StackPanel>
-				<Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="2" Grid.ColumnSpan="2"/>
 
-				
-				<TextBlock Text="Maps" Grid.Row="2" Margin="5,10,5,0" Style="{StaticResource Style_TextBlock_PagePartHeader}" VerticalAlignment="Top" />
-				<ItemsControl ItemsSource="{Binding Maps}"
+
+                </StackPanel>
+                <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="2" Grid.ColumnSpan="2"/>
+
+
+                <TextBlock Text="Maps" Grid.Row="2" Margin="5,10,5,0" Style="{StaticResource Style_TextBlock_PagePartHeader}" VerticalAlignment="Top" />
+                <ItemsControl ItemsSource="{Binding Maps}"
 							  Grid.Row="2"
-							  Grid.Column="1" Margin="0,10,0,0">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<Grid>
-								<Grid.RowDefinitions>
-									<RowDefinition Height="Auto" MinHeight="100" />
-									<RowDefinition Height="Auto" />
-									<RowDefinition Height="Auto" />
-									<RowDefinition Height="*" />
-								</Grid.RowDefinitions>
+							  Grid.Column="1" Margin="0,10">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" MinHeight="100" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="24"/>
                                 </Grid.ColumnDefinitions>
 
-								<Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}"
+                                <Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}"
 													Style="{StaticResource LinqEditor}" />
 
-								<sdk:GridSplitter Grid.Row="1"
+                                <sdk:GridSplitter Grid.Row="1"
                                                   Grid.ColumnSpan="2"
 												  Background="Transparent"
 												  HorizontalAlignment="Stretch" />
@@ -181,24 +269,24 @@
                                     </Button.Content>
                                 </Button>
                             </Grid>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
-				<Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="3" Grid.ColumnSpan="2"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="3" Grid.ColumnSpan="2" Grid.RowSpan="2"/>
 
-				<TextBlock Text="Reduce"
+                <TextBlock Text="Reduce"
 						   Visibility="{Binding Reduce, Converter={StaticResource HiddenWhenNull}}"
 						   Grid.Row="3" Margin="5,10,5,0" Style="{StaticResource Style_TextBlock_PagePartHeader}" VerticalAlignment="Top" />
-				<Grid Grid.Row="3"
+                <Grid Grid.Row="3"
 							Grid.Column="1"
-							Visibility="{Binding Reduce, Converter={StaticResource HiddenWhenNull}}" Margin="0,10,0,0">
+							Visibility="{Binding Reduce, Converter={StaticResource HiddenWhenNull}}" Margin="0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                        <Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}"
+                    <Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}"
 										Style="{StaticResource LinqEditor}" />
-					<Button Grid.Column="1"
+                    <Button Grid.Column="1"
                             Style="{StaticResource Style_Button_PageHeaderBar}"
                             Padding="4"
                             Margin="2,0"
@@ -207,27 +295,27 @@
                                      VerticalAlignment="Top"
 									 Command="{Binding RemoveReduce}"
 									 CommandParameter="{Binding}">
-					  <Button.Content>
+                        <Button.Content>
                             <Image Source="{StaticResource Image_Remove_Tiny}" Width="12" Height="12"/>
                         </Button.Content>
-					</Button>
-				</Grid>
+                    </Button>
+                </Grid>
 
-				<sdk:GridSplitter Grid.Row="4"
+                <sdk:GridSplitter Grid.Row="4"
 								  Grid.Column="1"
 								  Visibility="{Binding Reduce, Converter={StaticResource HiddenWhenNull}}"
 								  Background="Transparent"
 								  HorizontalAlignment="Stretch" />
-				<Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="5" Grid.ColumnSpan="2"/>
+                <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="5" Grid.ColumnSpan="2" Grid.RowSpan="2"/>
 
-				
-				<TextBlock Text="Transform"
+
+                <TextBlock Text="Transform"
 						   Visibility="{Binding TransformResults, Converter={StaticResource HiddenWhenNull}}"
 						   Grid.Row="5" Margin="5,10,5,0" Style="{StaticResource Style_TextBlock_PagePartHeader}" VerticalAlignment="Top" />
-				<Grid Grid.Row="5"
+                <Grid Grid.Row="5"
 							Grid.Column="1"
-							Visibility="{Binding TransformResults, Converter={StaticResource HiddenWhenNull}}" Margin="0,10,0,0">
-					<Grid.ColumnDefinitions>
+							Visibility="{Binding TransformResults, Converter={StaticResource HiddenWhenNull}}" Margin="0,10">
+                    <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
@@ -247,109 +335,35 @@
                     </Button>
                 </Grid>
 
-				<sdk:GridSplitter Grid.Row="6"
+                <sdk:GridSplitter Grid.Row="6"
 								  Grid.Column="1"
 								  Visibility="{Binding TransformResults, Converter={StaticResource HiddenWhenNull}}"
 								  Background="Transparent"
 								  HorizontalAlignment="Stretch" />
-				<Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="7" Grid.ColumnSpan="2"/>
+                <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="7" Grid.ColumnSpan="2"/>
 
 
-				<TextBlock Text="Fields"
+                <TextBlock Text="Fields"
 						   Visibility="{Binding Fields.Count, Converter={StaticResource HiddenWhenEmpty}}"
 						   Grid.Row="7" Margin="5,10,5,0" Style="{StaticResource Style_TextBlock_PagePartHeader}" VerticalAlignment="Top" />
-				<ItemsControl ItemsSource="{Binding Fields}"
+                <ItemsControl ItemsSource="{Binding Fields}"
 							  Visibility="{Binding Fields.Count, Converter={StaticResource HiddenWhenEmpty}}"
-							  Style="{StaticResource Style_ItemsControl_Fluid}"
+							  Style="{StaticResource Style_ItemsControl_IndexFields}"
 							  Grid.Row="7"
-							  Grid.Column="1" Margin="0,10,0,0">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<Border BorderBrush="{StaticResource DividerBrush}"
-									BorderThickness="1,0,0,0"
-									CornerRadius="5"
-									Margin="0,0,15,8"
-									VerticalAlignment="Top"
-									HorizontalAlignment="Left">
-								<Grid Margin="4,4,0,4">
-									<Grid.ColumnDefinitions>
-										<ColumnDefinition Width="Auto" />
-										<ColumnDefinition Width="Auto" />
-										<ColumnDefinition Width="Auto" />
-										<ColumnDefinition Width="Auto" />
-										<ColumnDefinition Width="*" />
-									</Grid.ColumnDefinitions>
-									<Grid.RowDefinitions>
-										<RowDefinition Height="Auto" />
-										<RowDefinition Height="4" />
-										<RowDefinition Height="Auto" />
-										<RowDefinition Height="4" />
-										<RowDefinition Height="Auto" />
-									</Grid.RowDefinitions>
+							  Grid.Column="1" Margin="0,10,24,10" ItemTemplate="{StaticResource IndexFieldTemplate}">
+                </ItemsControl>
 
-									<TextBlock Text="Field" />
-									<TextBox Text="{Binding Name, Mode=TwoWay}"
-											 Grid.Column="1"
-											 Grid.ColumnSpan="3" />
-									<HyperlinkButton x:Name="RemoveField"
-													 Grid.Column="4"
-													 HorizontalAlignment="Left"
-													 Margin="4 0 0 0"
-													 ToolTipService.ToolTip="Remove this field from the index"
-													 Content="Remove"
-													 Command="{Binding DataContext.RemoveField, ElementName=this}"
-													 CommandParameter="{Binding}" />
-
-
-									<TextBlock Text="Storage"
-											 Grid.Row="2" />
-									<ComboBox ItemsSource="{Binding Storage, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
-											  SelectedItem="{Binding Storage, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
-											  Grid.Row="2"
-											  Grid.Column="1"
-											  MinWidth="80" />
-
-									<TextBlock Text="Indexing"
-											 Grid.Row="2"
-											 Grid.Column="2"
-											 Margin="8,0,4,0" />
-									<ComboBox ItemsSource="{Binding Indexing, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
-											  SelectedItem="{Binding Indexing, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
-											  Grid.Row="2"
-											  Grid.Column="3" />
-
-									<TextBlock Text="Sort"
-											 Grid.Row="4" />
-									<ComboBox ItemsSource="{Binding Sort, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
-											  SelectedItem="{Binding Sort, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
-											  Grid.Row="4"
-											  Grid.Column="1" />
-
-									<TextBlock Text="Analyzer"
-											 Grid.Row="4"
-											 Grid.Column="2"
-											 Margin="8,0,4,0" />
-									<TextBox Text="{Binding Analyzer}"
-											 Grid.Row="4"
-											 Grid.Column="3"
-											 MinWidth="160" />
-								</Grid>
-							</Border>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
-
-				<Grid Grid.Row="10"
+                <Grid Grid.Row="10"
 					  Grid.Column="2">
-					<StackPanel>
-						<HyperlinkButton Content="{Binding ErrorsCount, StringFormat=\{0\} errors}"
+                    <StackPanel>
+                        <HyperlinkButton Content="{Binding ErrorsCount, StringFormat=\{0\} errors}"
 										 Visibility="{Binding ErrorsCount, Converter={StaticResource HiddenWhenEmpty}}"
 										 NavigateUri="{Binding Name, StringFormat=/indexes-errors/\{0\}}" />
-					</StackPanel>
-					
-				</Grid>
+                    </StackPanel>
 
-			</Grid>
-		</ScrollViewer>
+                </Grid>
+
+            </Grid>
+        </ScrollViewer>
     </toolkit:DockPanel>
 </UserControl>

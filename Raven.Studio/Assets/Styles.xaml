@@ -366,7 +366,31 @@
         <Setter Property="BorderThickness"
 				Value="0" />
     </Style>
-    
+
+    <Style x:Name="Style_ItemsControl_IndexFields"
+		   TargetType="ItemsControl">
+        <Setter Property="ItemsPanel"
+				Value="{StaticResource FluidWrapPanel}" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Disabled" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Disabled" />
+        <Setter Property="BorderThickness"
+				Value="1" />
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ItemsControl">
+                    <Border BorderBrush="{TemplateBinding BorderBrush}" Background="{TemplateBinding Background}" CornerRadius="4"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ItemsPresenter/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush" Value="#FFE9E9E9"/>
+    </Style>
+
     <Style x:Name="Style_ListBox_Fluid"
 		   TargetType="ListBox">
 		<Setter Property="ItemsPanel"
