@@ -7,7 +7,6 @@ using System;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
-using Raven.Http;
 
 namespace Raven.Server
 {
@@ -33,7 +32,7 @@ namespace Raven.Server
 			try
 			{
 				database.SpinBackgroundWorkers();
-				server = new RavenDbHttpServer(settings, database);
+				server = new HttpServer(settings, database);
 				server.Start();
 			}
 			catch (Exception)

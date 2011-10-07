@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
-using Raven.Http;
+using Raven.Database.Server;
 
 namespace Raven.Database.Data
 {

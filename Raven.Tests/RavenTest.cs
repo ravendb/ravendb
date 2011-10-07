@@ -15,7 +15,6 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
-using Raven.Http;
 using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Server;
@@ -90,7 +89,7 @@ namespace Raven.Tests
 			                                   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
 			                                   new RavenJObject());
 
-			using (var server = new RavenDbHttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
+			using (var server = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
 			{
 				server.Start();
 				Process.Start(documentStore.Configuration.ServerUrl); // start the server

@@ -3,14 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.IO;
-using System.Web;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Database;
 using Raven.Database.Plugins;
-using Raven.Http;
+using Raven.Database.Server;
 
 namespace Raven.Bundles.Authorization.Triggers
 {

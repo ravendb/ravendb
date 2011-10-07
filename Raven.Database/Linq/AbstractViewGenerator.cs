@@ -113,6 +113,27 @@ namespace Raven.Database.Linq
 			}
 		}
 
+		protected IEnumerable<dynamic> Recurse(object item, Func<dynamic ,dynamic> func)
+		{
+			if (item == null)
+				return Enumerable.Empty<dynamic>();
+
+			var resultsOrdered = new List<dynamic>();
+
+			var results = new HashSet<object>();
+			item = func(item);
+			while (item != null)
+			{
+				if (results.Add(item) == false)
+					break;
+
+				resultsOrdered.Add(item);
+				item = func(item);
+			}
+
+			return new DynamicJsonObject.DynamicList(resultsOrdered.ToArray());
+		}
+
 		public void AddQueryParameterForMap(string field)
 		{
 			mapFields.Add(field);

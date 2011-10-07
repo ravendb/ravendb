@@ -41,11 +41,11 @@ namespace Raven.StackOverflow.Etl.Posts
 					var votes = new List<RavenJToken>();
 					foreach (var row in votesForPost)
 					{
-						var vote = new RavenJObject(new[]
+						var vote = new RavenJObject
 						{
-							new KeyValuePair<string, RavenJToken>("VoteTypeId", new RavenJValue(row["VoteTypeId"])),
-							new KeyValuePair<string, RavenJToken>("CreationDate", new RavenJValue(row["CreationDate"]))
-						});
+							{"VoteTypeId", new RavenJValue(row["VoteTypeId"])},
+							{"CreationDate", new RavenJValue(row["CreationDate"])}
+						};
 
 						switch ((long) row["VoteTypeId"])
 						{

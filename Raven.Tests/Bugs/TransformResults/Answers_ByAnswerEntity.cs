@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 
@@ -58,13 +59,15 @@ namespace Raven.Tests.Bugs.TransformResults
 					UserId = result.UserId,
 					Votes = from vote in result.Votes
 							let anwser = database.Load<Answer2>(vote.AnswerId.ToString())
+							let firstVote = anwser.Votes.FirstOrDefault(x => x.QuestionId == result.QuestionId)
 							select new // AnswerVote2
 									   {
-										 vote.Id,
-										 vote.Delta,
-										 vote.QuestionId,
-										 Answer = anwser
-										}
+										   vote.Id,
+										   vote.Delta,
+										   vote.QuestionId,
+										   Answer = anwser,
+										   FirstVote = firstVote
+									   }
 				};
 		}
 	}

@@ -17,8 +17,6 @@ using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using Raven.Http;
-using Raven.Http.Exceptions;
 using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 using System.Linq;

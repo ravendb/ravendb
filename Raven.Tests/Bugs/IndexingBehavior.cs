@@ -58,7 +58,7 @@ namespace Raven.Tests.Bugs
 		{
 			db.PutIndex("test", new IndexDefinition
 			{
-				Map = "from doc in docs select new { User = doc.Name/1 }"
+				Map = "from doc in docs select new { User = 1/doc.Name }"
 			});
 
 			for (int i = 0; i < 15; i++)
@@ -90,7 +90,7 @@ namespace Raven.Tests.Bugs
 		{
 			db.PutIndex("test", new IndexDefinition
 			{
-				Map = "from doc in docs select new { User = doc.User/1 }"
+				Map = "from doc in docs select new { User = 1/doc.User }"
 			});
 
 			for (int i = 0; i < 150; i++)
@@ -112,7 +112,10 @@ namespace Raven.Tests.Bugs
 				Thread.Sleep(100);
 			}
 
-			Assert.Throws<IndexDisabledException>(() => db.Query("test", new IndexQuery { Query = "User:Ayende" }));
+			Assert.Throws<IndexDisabledException>(() =>
+			{
+				var queryResult = db.Query("test", new IndexQuery { Query = "User:Ayende" });
+			});
 		}
 
 		[Fact]

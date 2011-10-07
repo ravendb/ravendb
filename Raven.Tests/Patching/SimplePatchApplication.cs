@@ -9,7 +9,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
-using Raven.Http.Exceptions;
 using Xunit;
 
 namespace Raven.Tests.Patching

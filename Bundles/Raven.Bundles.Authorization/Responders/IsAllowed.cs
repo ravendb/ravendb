@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Authorization.Model;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
-using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 

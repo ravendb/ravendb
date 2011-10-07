@@ -1,8 +1,10 @@
+extern alias database;
+
+
 using System;
 using System.Linq;
 using System.Net;
 using Raven.Bundles.Authentication;
-using Raven.Http.Security.OAuth;
 using Xunit;
 using Raven.Client.Extensions;
 
@@ -63,7 +65,7 @@ namespace Raven.Bundles.Tests.Authentication
 				}
 			}
 
-			var oAuthClientCredentialsTokenResponder = embeddedStore.HttpServer.RequestResponders.OfType<OAuthClientCredentialsTokenResponder>().First();
+			var oAuthClientCredentialsTokenResponder = embeddedStore.HttpServer.RequestResponders.OfType<database::Raven.Database.Server.Security.OAuth.OAuthClientCredentialsTokenResponder>().First();
 			Assert.Equal(1, oAuthClientCredentialsTokenResponder.NumberOfTokensIssued);
 		}
 

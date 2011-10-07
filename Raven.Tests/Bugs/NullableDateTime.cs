@@ -4,6 +4,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Xunit;
 using System.Linq;
@@ -108,7 +109,7 @@ namespace Raven.Tests.Bugs
 			                                                   		DataDirectory = path,
 			                                                   		Port = 8088,
 			                                                   		AccessControlAllowOrigin = "*",
-			                                                   		AnonymousUserAccessMode = Http.AnonymousUserAccessMode.All
+			                                                   		AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			                                                   	}))
 			using (IDocumentStore documentStore = new
 				Raven.Client.Document.DocumentStore {Url = "http://localhost:8088/"}.Initialize())

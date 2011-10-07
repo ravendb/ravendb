@@ -17,7 +17,6 @@ using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using Raven.Http;
 using Raven.Abstractions.Json;
 using System.Linq;
 using Raven.Json.Linq;

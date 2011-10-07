@@ -12,7 +12,6 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
 using Raven.Database.Server;
-using Raven.Http;
 using Raven.Json.Linq;
 using Xunit;
 

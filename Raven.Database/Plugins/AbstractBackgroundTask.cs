@@ -4,13 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.ComponentModel.Composition;
 using System.Threading.Tasks;
 using NLog;
 
 namespace Raven.Database.Plugins
 {
-	[InheritedExport]
 	public abstract class AbstractBackgroundTask : IStartupTask
 	{
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();

@@ -21,8 +21,8 @@ using Raven.Database;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Queries;
+using Raven.Database.Server;
 using Raven.Database.Storage;
-using Raven.Http;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded

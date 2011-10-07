@@ -112,7 +112,6 @@ namespace Raven.Storage.Managed
 					action(current.Value);
 					tableStroage.Commit();
 					storageActionsAccessor.InvokeOnCommit();
-					onCommit();
 				}
 			}
 			finally
@@ -121,6 +120,7 @@ namespace Raven.Storage.Managed
 				if(disposed ==false)
 					current.Value = null;
 			}
+			onCommit(); // call user code after we exit the lock
 		}
 
 		public void ExecuteImmediatelyOrRegisterForSyncronization(Action action)

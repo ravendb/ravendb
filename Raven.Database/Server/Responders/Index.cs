@@ -14,8 +14,8 @@ using Raven.Database.Indexing;
 using System.Linq;
 using Raven.Database.Extensions;
 using Raven.Database.Queries;
-using Raven.Http.Abstractions;
-using Raven.Http.Extensions;
+using Raven.Database.Server.Abstractions;
+using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Responders
 {
@@ -75,14 +75,42 @@ namespace Raven.Database.Server.Responders
 		private void OnGet(IHttpContext context, string index)
 		{
 			var definition = context.Request.QueryString["definition"];
-			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
+			var debug = context.Request.QueryString["debug"];
+			bool result;
+			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase) || 
+				bool.TryParse(definition, out result) && result)
 			{
 				GetIndexDefinition(context, index);
 			}
-			else
+			else if("map".Equals(debug,StringComparison.InvariantCultureIgnoreCase))
+			{
+				GetIndexMappedResult(context, index);
+			}
+			else if("reduce".Equals(debug,StringComparison.InvariantCultureIgnoreCase))
+			{
+			}
+			else 
 			{
 				GetIndexQueryRessult(context, index);
 			}
+		}
+
+		private void GetIndexMappedResult(IHttpContext context, string index)
+		{
+			if(Database.IndexDefinitionStorage.GetIndexDefinition(index)==null)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
+
+			var etag = context.GetEtagFromQueryString() ?? Guid.Empty;
+			List<MappedResultInfo> mappedResult = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				mappedResult = accessor.MappedResults.GetMappedResultsReduceKeysAfter(index, etag,loadData: true)
+							.Take(context.GetPageSize(Settings.MaxPageSize)).ToList();
+			});
+			context.WriteJson(mappedResult);
 		}
 
 		private void GetIndexQueryRessult(IHttpContext context, string index)
@@ -140,7 +168,7 @@ namespace Raven.Database.Server.Responders
 
 		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
-			indexEtag = GetIndexEtag(index);
+			indexEtag = Database.GetIndexEtag(index);
 			if (context.MatchEtag(indexEtag))
 			{
 				context.SetStatusToNotModified();
@@ -162,7 +190,7 @@ namespace Raven.Database.Server.Responders
 			if (dynamicIndexName != null && 
 				Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
-				indexEtag = GetIndexEtag(dynamicIndexName);
+				indexEtag = Database.GetIndexEtag(dynamicIndexName);
 				if (context.MatchEtag(indexEtag))
 				{
 					context.SetStatusToNotModified();
@@ -181,41 +209,11 @@ namespace Raven.Database.Server.Responders
 			// if that is the case. This can also happen when the optmizer
 			// decided to switch indexes for a query.
 			if (queryResult.IndexName != dynamicIndexName)
-				indexEtag = GetIndexEtag(queryResult.IndexName);
+				indexEtag = Database.GetIndexEtag(queryResult.IndexName);
 
 			return queryResult;
 		}
 
-		private Guid GetIndexEtag(string indexName)
-		{
-			Guid lastDocEtag = Guid.Empty;
-			Guid? lastReducedEtag = null;
-			bool isStale = false;
-			int touchCount = 0;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				isStale = accessor.Staleness.IsIndexStale(indexName, null, null);
-				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
-				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
-			});
-			var indexDefinition = Database.GetIndexDefinition(indexName);
-			if (indexDefinition == null)
-				return Guid.NewGuid(); // this ensures that we will get the normal reaction of IndexNotFound later on.
-			using(var md5 = MD5.Create())
-			{
-				var list = new List<byte>();
-				list.AddRange(indexDefinition.GetIndexHash());
-				list.AddRange(Encoding.Unicode.GetBytes(indexName));
-				list.AddRange(lastDocEtag.ToByteArray());
-				list.AddRange(BitConverter.GetBytes(touchCount));
-				list.AddRange(BitConverter.GetBytes(isStale));
-				if(lastReducedEtag != null)
-				{
-					list.AddRange(lastReducedEtag.Value.ToByteArray());
-				}
-				return new Guid(md5.ComputeHash(list.ToArray()));
-			}
-		}
+		
 	}
 }

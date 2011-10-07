@@ -52,7 +52,7 @@ namespace Raven.Database.Indexing
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
-		private volatile IndexSearcherHolder currentIndexSearcherHolder;
+		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
@@ -79,12 +79,7 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public abstract bool IsMapReduce { get; }
 
-		internal IDisposable GetSearcher(out IndexSearcher searcher)
-		{
-			return currentIndexSearcherHolder.GetSearcher(out searcher);
-		}
-
-	    #region IDisposable Members
+		#region IDisposable Members
 
 		public void Dispose()
 		{
@@ -97,7 +92,7 @@ namespace Raven.Database.Indexing
 				}
 				if(currentIndexSearcherHolder != null)
 				{
-					currentIndexSearcherHolder.DisposeRudely();
+					currentIndexSearcherHolder.SetIndexSearcher(null);
 				}
 				if (indexWriter != null)
 				{
@@ -155,28 +150,33 @@ namespace Raven.Database.Indexing
 
 		private static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
 		{
-			return new RavenJObject(
-				fieldsToFetch
-					.SelectMany(name => document.GetFields(name) ?? new Field[0])
-					.Where(x => x != null)
-					.Where(
-						x =>
-						x.Name().EndsWith("_IsArray") == false && x.Name().EndsWith("_Range") == false &&
-						x.Name().EndsWith("_ConvertToJson") == false)
-					.Select(fld => CreateProperty(fld, document))
-					.GroupBy(x => x.Key)
-					.Select(g =>
+			var documentFromFields = new RavenJObject();
+			var q = fieldsToFetch
+				.SelectMany(name => document.GetFields(name) ?? new Field[0])
+				.Where(x => x != null)
+				.Where(
+					x =>
+					x.Name().EndsWith("_IsArray") == false && 
+					x.Name().EndsWith("_Range") == false &&
+					x.Name().EndsWith("_ConvertToJson") == false)
+				.Select(fld => CreateProperty(fld, document))
+				.GroupBy(x => x.Key)
+				.Select(g =>
+				{
+					if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
 					{
-						if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
-						{
-							return g.First();
-						}
-						return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray(g.Select(x => x.Value)));
-					})
-				);
+						return g.First();
+					}
+					return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray(g.Select(x => x.Value)));
+				});
+			foreach (var keyValuePair in q)
+			{
+				documentFromFields.Add(keyValuePair.Key, keyValuePair.Value);
+			}
+			return documentFromFields;
 		}
 
-	    private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
+		private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
 		{
 			var stringValue = fld.StringValue();
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
@@ -186,6 +186,8 @@ namespace Raven.Database.Indexing
 			}
 			if (stringValue == Constants.NullValue)
 				stringValue = null;
+			if (stringValue == Constants.EmptyString)
+				stringValue = string.Empty; 
 			return new KeyValuePair<string, RavenJToken>(fld.Name(), stringValue);
 		}
 
@@ -382,6 +384,30 @@ namespace Raven.Database.Indexing
 			}.RobustEnumeration(input, func);
 		}
 
+		// we don't care about tracking map/reduce stats here, since it is merely
+		// an optimization step
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerable<object> input, IndexingFunc func,
+															  IStorageActionsAccessor actions, WorkContext context)
+		{
+			// not strictly accurate, but if we get that many errors, probably an error anyway.
+			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			{
+				BeforeMoveNext = () => { }, // don't care
+				CancelMoveNext = () => { }, // don't care
+				OnError = (exception, o) =>
+				{
+					context.AddError(name,
+									 TryGetDocKey(o),
+									 exception.Message
+						);
+					logIndexing.WarnException(
+						String.Format("Failed to execute indexing function on {0} on {1}", name,
+										   TryGetDocKey(o)),
+						exception);
+				}
+			}.RobustEnumeration(input, func);
+		}
+
 		public static string TryGetDocKey(object current)
 		{
 			var dic = current as DynamicJsonObject;
@@ -395,29 +421,22 @@ namespace Raven.Database.Indexing
 
 		public abstract void Remove(string[] keys, WorkContext context);
 
+		internal IDisposable GetSearcher(out IndexSearcher searcher)
+		{
+			return currentIndexSearcherHolder.GetSearcher(out searcher);
+		}
 
 		private void RecreateSearcher()
 		{
-			var oldSearcher = currentIndexSearcherHolder;
-			
 		    if (indexWriter == null)
 		    {
-		    	currentIndexSearcherHolder = new IndexSearcherHolder(new IndexSearcher(directory, true));
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
 		    }
 		    else
 		    {
 		        var indexReader = indexWriter.GetReader();
-				currentIndexSearcherHolder = new IndexSearcherHolder(new IndexSearcher(indexReader));
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader));
 		    }
-
-			if (oldSearcher != null)
-			{
-				IndexSearcher _;
-				using(oldSearcher.GetSearcher(out _))
-				{
-					oldSearcher.DisposeSafely();
-				}
-			}
 		}
 
 	    protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
@@ -510,17 +529,15 @@ namespace Raven.Database.Indexing
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
 			readonly HashSet<RavenJObject> alreadyReturned;
 			private readonly FieldsToFetch fieldsToFetch;
+			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
 
-			public IndexQueryOperation(
-				Index parent,
-				IndexQuery indexQuery,
-				Func<IndexQueryResult, bool> shouldIncludeInResults,
-				FieldsToFetch fieldsToFetch)
+			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
 			{
 				this.parent = parent;
 				this.indexQuery = indexQuery;
 				this.shouldIncludeInResults = shouldIncludeInResults;
 				this.fieldsToFetch = fieldsToFetch;
+				this.indexQueryTriggers = indexQueryTriggers;
 
 				if (fieldsToFetch.IsDistinctQuery)
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
@@ -536,6 +553,12 @@ namespace Raven.Database.Indexing
 					using(parent.GetSearcher(out indexSearcher))
 					{
 						var luceneQuery = GetLuceneQuery();
+
+						foreach (var indexQueryTrigger in indexQueryTriggers)
+						{
+							luceneQuery = indexQueryTrigger.Value.ProcessQuery(parent.name, luceneQuery, indexQuery);
+						}
+
 						int start = indexQuery.Start;
 						int pageSize = indexQuery.PageSize;
 						int returnedResults = 0;
@@ -551,14 +574,14 @@ namespace Raven.Database.Indexing
 								skippedResultsInCurrentLoop = 0;
 							}
 							TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
-							indexQuery.TotalSize.Value = search.totalHits;
+							indexQuery.TotalSize.Value = search.TotalHits;
 
 							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start);
 
-							for (int i = start; i < search.totalHits && (i - start) < pageSize; i++)
+							for (int i = start; i < search.TotalHits && (i - start) < pageSize; i++)
 							{
-								Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
-								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.scoreDocs[i].score);
+								Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
 									indexQuery.SkippedResults.Value++;
@@ -591,11 +614,11 @@ namespace Raven.Database.Indexing
 					return;
 
 				// add results that were already there in previous pages
-				var min = Math.Min(start, search.totalHits);
+				var min = Math.Min(start, search.TotalHits);
 				for (int i = 0; i < min; i++)
 				{
-					Document document = indexSearcher.Doc(search.scoreDocs[i].doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.scoreDocs[i].score);
+					Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
 					alreadyReturned.Add(indexQueryResult.Projection);
 				}
 			}

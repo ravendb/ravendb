@@ -1,11 +1,11 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
+using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Http;
-using Raven.Http.Security.OAuth;
+using Raven.Database.Server;
+using Raven.Database.Server.Security.OAuth;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -41,7 +41,7 @@ namespace Raven.Tests.Security.OAuth
 
 		public class FakeAuthenticateClient : IAuthenticateClient
 		{
-			public bool Authenticate(IResourceStore currentStore, string username, string password, out string[] allowedDatabases)
+			public bool Authenticate(DocumentDatabase documentDatabase, string username, string password, out string[] allowedDatabases)
 			{
 				allowedDatabases = new[] { "*" };
 				return string.IsNullOrEmpty(password) == false;

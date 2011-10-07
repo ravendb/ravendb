@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Transactions;
 #endif
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -297,7 +298,7 @@ more responsive application.
 		/// <typeparam name="T"></typeparam>
 		/// <param name="documentFound">The document found.</param>
 		/// <returns></returns>
-		protected internal T TrackEntity<T>(JsonDocument documentFound)
+		public T TrackEntity<T>(JsonDocument documentFound)
 		{
 			if (documentFound.NonAuthoritiveInformation.HasValue
 				&& documentFound.NonAuthoritiveInformation.Value
@@ -922,11 +923,76 @@ more responsive application.
 
 			if (cachedJsonDocs != null && cachedJsonDocs.TryGetValue(entity, out jObject))
 				return jObject;
-			
-			jObject = RavenJObject.FromObject(entity, Conventions.CreateSerializer());
+
+			var jsonSerializer = Conventions.CreateSerializer();
+			jObject = RavenJObject.FromObject(entity, jsonSerializer);
+
+			if (jsonSerializer.TypeNameHandling == TypeNameHandling.Auto)// remove the default types
+				TrySimplfyingJson(jObject);
+
 			if (cachedJsonDocs != null)
 				cachedJsonDocs[entity] = jObject;
 		    return jObject;
+		}
+
+		private static void TrySimplfyingJson(RavenJObject jObject)
+		{
+			var deferredActions = new List<Action>();
+			foreach (var kvp in jObject)
+			{
+				var prop = kvp;
+				if(prop.Value == null)
+					continue;
+				var obj = prop.Value as RavenJObject;
+				if(obj == null)
+					continue;
+				if (ShouldSimplfyJsonBasedOnType(obj.Value<string>("$type")) == false)
+					continue;
+				
+				if (obj.ContainsKey("$values") == false)
+				{
+					deferredActions.Add(() => obj.Remove("$type"));
+				}
+				else
+				{
+					deferredActions.Add(() => jObject[prop.Key] = obj["$values"]);
+				}
+			}
+			foreach (var deferredAction in deferredActions)
+			{
+				deferredAction();
+			}
+
+			foreach (var prop in jObject.Where(prop => prop.Value != null))
+			{
+				switch (prop.Value.Type)
+				{
+					case JTokenType.Array:
+						foreach (var item in ((RavenJArray)prop.Value))
+						{
+							var ravenJObject = item as RavenJObject;
+							if (ravenJObject != null)
+								TrySimplfyingJson(ravenJObject);
+						}
+						break;
+					case JTokenType.Object:
+						TrySimplfyingJson((RavenJObject)prop.Value);
+						break;
+				}
+			}
+		}
+
+		private static bool ShouldSimplfyJsonBasedOnType(string typeValue)
+		{
+			if (typeValue == null)
+				return false;
+			if (typeValue.StartsWith("System.Collections.Generic.List`1[["))
+				return true;
+			if (typeValue.StartsWith("System.Collections.Generic.Dictionary`2[["))
+				return true;
+			if (typeValue.EndsWith("[], mscorlib")) // array
+				return true;
+			return false;
 		}
 
 

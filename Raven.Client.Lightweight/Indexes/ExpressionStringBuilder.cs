@@ -34,7 +34,7 @@ namespace Raven.Client.Indexes
 
 		// Methods
 		private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
-		                                string queryRootName)
+										string queryRootName)
 		{
 			this.convention = convention;
 			this.translateIdentityProperty = translateIdentityProperty;
@@ -46,7 +46,7 @@ namespace Raven.Client.Indexes
 		{
 			if (_ids == null)
 			{
-				_ids = new Dictionary<object, int> {{label, 0}};
+				_ids = new Dictionary<object, int> { { label, 0 } };
 			}
 			else if (!_ids.ContainsKey(label))
 			{
@@ -97,7 +97,7 @@ namespace Raven.Client.Indexes
 		///   Convert the expression to a string
 		/// </summary>
 		public static string ExpressionToString(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
-		                                        string queryRootName, Expression node)
+												string queryRootName, Expression node)
 		{
 			var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
 			builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
@@ -220,12 +220,12 @@ namespace Raven.Client.Indexes
 			OutputTypeIfNeeded(member);
 			var name = member.Name;
 			if (translateIdentityProperty &&
-			    convention.GetIdentityProperty(member.DeclaringType) == member &&
-			    instance.NodeType == ExpressionType.Parameter &&
-			    // only translate from the root type
-			    (queryRoot == null || (member.DeclaringType == queryRoot)) &&
-			    // only translate from the root alias
-			    (queryRootName == null || ((ParameterExpression) instance).Name == queryRootName)
+				convention.GetIdentityProperty(member.DeclaringType) == member &&
+				instance.NodeType == ExpressionType.Parameter &&
+				// only translate from the root type
+				(queryRoot == null || (member.DeclaringType == queryRoot)) &&
+				// only translate from the root alias
+				(queryRootName == null || ((ParameterExpression)instance).Name == queryRootName)
 				)
 				name = Constants.DocumentIdFieldName;
 			if (instance != null)
@@ -252,14 +252,14 @@ namespace Raven.Client.Indexes
 		private void CloseOutputTypeIfNeeded(MemberInfo member)
 		{
 			var memberType = GetMemberType(member);
-			if (memberType == typeof (decimal) ||
-			    memberType == typeof (double) ||
-			    memberType == typeof (long) ||
-			    memberType == typeof (float) ||
-			    memberType == typeof (decimal?) ||
-			    memberType == typeof (double?) ||
-			    memberType == typeof (long?) ||
-			    memberType == typeof (float?))
+			if (memberType == typeof(decimal) ||
+				memberType == typeof(double) ||
+				memberType == typeof(long) ||
+				memberType == typeof(float) ||
+				memberType == typeof(decimal?) ||
+				memberType == typeof(double?) ||
+				memberType == typeof(long?) ||
+				memberType == typeof(float?))
 			{
 				Out(")");
 			}
@@ -268,35 +268,35 @@ namespace Raven.Client.Indexes
 		private void OutputTypeIfNeeded(MemberInfo member)
 		{
 			var memberType = GetMemberType(member);
-			if (memberType == typeof (decimal))
+			if (memberType == typeof(decimal))
 			{
 				Out("((decimal)");
 			}
-			if (memberType == typeof (double))
+			if (memberType == typeof(double))
 			{
 				Out("((double)");
 			}
-			if (memberType == typeof (long))
+			if (memberType == typeof(long))
 			{
 				Out("((long)");
 			}
-			if (memberType == typeof (float))
+			if (memberType == typeof(float))
 			{
 				Out("((float)");
 			}
-			if (memberType == typeof (decimal?))
+			if (memberType == typeof(decimal?))
 			{
 				Out("((decimal?)");
 			}
-			if (memberType == typeof (double?))
+			if (memberType == typeof(double?))
 			{
 				Out("((double?)");
 			}
-			if (memberType == typeof (long?))
+			if (memberType == typeof(long?))
 			{
 				Out("((long?)");
 			}
-			if (memberType == typeof (float?))
+			if (memberType == typeof(float?))
 			{
 				Out("((float?)");
 			}
@@ -307,7 +307,7 @@ namespace Raven.Client.Indexes
 			var prop = member as PropertyInfo;
 			if (prop != null)
 				return prop.PropertyType;
-			return ((FieldInfo) member).FieldType;
+			return ((FieldInfo)member).FieldType;
 		}
 
 		internal string SwitchCaseToString(SwitchCase node)
@@ -329,7 +329,7 @@ namespace Raven.Client.Indexes
 		}
 
 		private void SometimesParenthesis(ExpressionOperatorPrecedence outer, ExpressionOperatorPrecedence inner,
-		                                  Action visitor)
+										  Action visitor)
 		{
 			var needParenthesis = outer.NeedsParenthesisFor(inner);
 
@@ -385,7 +385,7 @@ namespace Raven.Client.Indexes
 					break;
 
 				case ExpressionType.And:
-					if ((node.Type != typeof (bool)) && (node.Type != typeof (bool?)))
+					if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
 					{
 						str = "&";
 						innerPrecedence = ExpressionOperatorPrecedence.LogicalAND;
@@ -468,7 +468,7 @@ namespace Raven.Client.Indexes
 					break;
 
 				case ExpressionType.Or:
-					if ((node.Type != typeof (bool)) && (node.Type != typeof (bool?)))
+					if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
 					{
 						str = "|";
 						innerPrecedence = ExpressionOperatorPrecedence.LogicalOR;
@@ -516,7 +516,7 @@ namespace Raven.Client.Indexes
 					break;
 
 				case ExpressionType.AndAssign:
-					if ((node.Type != typeof (bool)) && (node.Type != typeof (bool?)))
+					if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
 					{
 						str = "&=";
 						innerPrecedence = ExpressionOperatorPrecedence.Assignment;
@@ -554,7 +554,7 @@ namespace Raven.Client.Indexes
 					break;
 
 				case ExpressionType.OrAssign:
-					if ((node.Type != typeof (bool)) && (node.Type != typeof (bool?)))
+					if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
 					{
 						str = "|=";
 						innerPrecedence = ExpressionOperatorPrecedence.Assignment;
@@ -632,7 +632,7 @@ namespace Raven.Client.Indexes
 			{
 				case ExpressionType.ConvertChecked:
 				case ExpressionType.Convert:
-					var expression = ((UnaryExpression) left).Operand;
+					var expression = ((UnaryExpression)left).Operand;
 					if (expression.Type.IsEnum == false)
 						return;
 					var constantExpression = right as ConstantExpression;
@@ -765,8 +765,7 @@ namespace Raven.Client.Indexes
 		protected override Expression VisitDebugInfo(DebugInfoExpression node)
 		{
 			var s = string.Format(CultureInfo.CurrentCulture, "<DebugInfo({0}: {1}, {2}, {3}, {4})>",
-			                      new object[]
-			                      {node.Document.FileName, node.StartLine, node.StartColumn, node.EndLine, node.EndColumn});
+								  new object[] { node.Document.FileName, node.StartLine, node.StartColumn, node.EndLine, node.EndColumn });
 			Out(s);
 			return node;
 		}
@@ -845,7 +844,7 @@ namespace Raven.Client.Indexes
 		{
 			const BindingFlags bindingAttr = BindingFlags.ExactBinding | BindingFlags.Public | BindingFlags.Instance;
 			if (node.GetType().GetMethod("ToString", bindingAttr, null, Type.EmptyTypes, null).DeclaringType !=
-			    typeof (Expression))
+				typeof(Expression))
 			{
 				Out(node.ToString());
 				return node;
@@ -1119,7 +1118,7 @@ namespace Raven.Client.Indexes
 		{
 			var num = 0;
 			var expression = node.Object;
-			if (Attribute.GetCustomAttribute(node.Method, typeof (ExtensionAttribute)) != null)
+			if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) != null)
 			{
 				num = 1;
 				expression = node.Arguments[0];
@@ -1131,12 +1130,12 @@ namespace Raven.Client.Indexes
 					VisitHierarchy(node, expression);
 					return node;
 				}
-				if (expression.Type == typeof (IClientSideDatabase))
+				if (expression.Type == typeof(IClientSideDatabase))
 				{
 					Out("Database");
 				}
 #if !SILVERLIGHT
-				else if (typeof (AbstractIndexCreationTask).IsAssignableFrom(expression.Type))
+				else if (typeof(AbstractIndexCreationTask).IsAssignableFrom(expression.Type))
 				{
 					// this is a method that
 					// exists on both the server side and the client side
@@ -1153,7 +1152,7 @@ namespace Raven.Client.Indexes
 				}
 			}
 			if (node.Method.IsStatic &&
-			    Attribute.GetCustomAttribute(node.Method, typeof (ExtensionAttribute)) == null)
+				Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
 			{
 				Out(node.Method.DeclaringType.Name);
 				Out(".");
@@ -1186,20 +1185,29 @@ namespace Raven.Client.Indexes
 
 		private void MaybeCloseCastingForLambdaExpression(MethodCallExpression node, int argPos)
 		{
-			var lambdaExpression = node.Arguments[argPos] as LambdaExpression;
 #if !SILVERLIGHT
-			if (lambdaExpression != null && typeof (AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
+			var lambdaExpression = node.Arguments[argPos] as LambdaExpression;
+			if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
 			{
 				Out(")");
 			}
-			if (lambdaExpression != null && node.Method.DeclaringType == typeof (Enumerable))
+			else if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
 			{
 				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
 				if (ShouldAvoidCastingToLambda(expression))
 					return;
+
 				switch (node.Method.Name)
 				{
 					case "Select":
+					case "SelectMany":
+					case "First":
+					case "FirstOrDefault":
+					case "Single":
+					case "Count":
+					case "Where":
+					case "Sum":
+					case "SingleOrDefault":
 						Out(")");
 						break;
 				}
@@ -1211,11 +1219,11 @@ namespace Raven.Client.Indexes
 		{
 #if !SILVERLIGHT
 			var lambdaExpression = node.Arguments[argPos] as LambdaExpression;
-			if (lambdaExpression != null && typeof (AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
+			if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
 			{
 				Out("(Func<dynamic, dynamic>)(");
 			}
-			if (lambdaExpression != null && node.Method.DeclaringType == typeof (Enumerable))
+			else if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
 			{
 				if (argPos == 0)
 					return;
@@ -1224,8 +1232,22 @@ namespace Raven.Client.Indexes
 					return;
 				switch (node.Method.Name)
 				{
+					case "Sum":
+						Out("(Func<dynamic, decimal>)(");
+						break;
 					case "Select":
 						Out("(Func<dynamic, dynamic>)(");
+						break;
+					case "SelectMany":
+						Out("(Func<dynamic, IEnumerable<dynamic>>)(");
+						break;
+					case "First":
+					case "FirstOrDefault":
+					case "Single":
+					case "Where":
+					case "Count":
+					case "SingleOrDefault":
+						Out("(Func<dynamic, bool>)(");
 						break;
 				}
 			}
@@ -1242,7 +1264,7 @@ namespace Raven.Client.Indexes
 
 			if (expression.NodeType == ExpressionType.Call)
 			{
-				var name = ((MethodCallExpression) expression).Method.Name;
+				var name = ((MethodCallExpression)expression).Method.Name;
 				return name != "Select" && name != "SelectMany";
 			}
 
@@ -1257,9 +1279,9 @@ namespace Raven.Client.Indexes
 			var path = node.Arguments.Last();
 			if (path.NodeType == ExpressionType.Lambda)
 			{
-				var body = ((LambdaExpression) path).Body;
+				var body = ((LambdaExpression)path).Body;
 				Out("\"");
-				Out(((MemberExpression) body).Member.Name);
+				Out(((MemberExpression)body).Member.Name);
 				Out("\"");
 			}
 			else
@@ -1318,7 +1340,9 @@ namespace Raven.Client.Indexes
 			switch (node.NodeType)
 			{
 				case ExpressionType.NewArrayInit:
-					Out("new [] ");
+					Out("new ");
+					Out(node.Type.GetElementType().FullName);
+					Out(" []");
 					VisitExpressions('{', node.Expressions, '}');
 					return node;
 
@@ -1510,8 +1534,8 @@ namespace Raven.Client.Indexes
 					// because the VB compiler like to put converts all over the place, and include
 					// types that we can't really support (only exists on the client)
 					if ((node.Type.IsEnum ||
-					     node.Type.Assembly == typeof (string).Assembly) &&
-					    node.Type.IsGenericType == false)
+						 node.Type.Assembly == typeof(string).Assembly) &&
+						node.Type.IsGenericType == false)
 					{
 						Out("(");
 						Out(node.Type.FullName);

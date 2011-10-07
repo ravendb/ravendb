@@ -14,8 +14,6 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using Raven.Http;
-using Raven.Http.Exceptions;
 using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;

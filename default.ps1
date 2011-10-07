@@ -4,32 +4,32 @@ properties {
   $build_dir = "$base_dir\build"
   $buildartifacts_dir = "$build_dir\"
   $sln_file = "$base_dir\zzz_RavenDB_Release.sln"
-  $version = "1.0.0"
+  $version = "1.0"
   $tools_dir = "$base_dir\Tools"
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Json.???", "Raven.Web.???", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", `
-    "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", `
+    "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
-  $server_files = @( "Raven.Server.exe", "Raven.Json.???", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", `
-                     "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", `
-                    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", `
+  $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", `
+                     "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", `
+                    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Storage.Esent.???", `
                     "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
-  $client_dlls_3_5 = @( "nlog.???","Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Json-3.5.???", "Raven.Client.Lightweight-3.5.???");
+  $client_dlls_3_5 = @( "nlog.???","Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???");
      
-  $client_dlls = @( "nlog.???","Raven.Client.MvcIntegration.???", "Newtonsoft.Json.???","Raven.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", `
+  $client_dlls = @( "nlog.???","Raven.Client.MvcIntegration.???", "Newtonsoft.Json.???","Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", `
 			"AsyncCtpLibrary.???" );
   
   $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json.Silverlight.???");   
   
   $silverlight_dlls_libs = @( "NLog.???");   
  
-  $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Json.???", `
-      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "nlog.???", "Newtonsoft.Json.???", `
+  $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", `
+      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "nlog.???", "Newtonsoft.Json.???", `
       "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  );
       
   $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  );
@@ -80,12 +80,12 @@ task Init -depends Verify40, Clean {
 		
 		Generate-Assembly-Info `
 			-file $asmInfo `
-			-title "$projectName $version.0" `
+			-title "$projectName $version.0.0" `
 			-description "A linq enabled document database for .NET" `
 			-company "Hibernating Rhinos" `
-			-product "RavenDB $version.0" `
+			-product "RavenDB $version.0.0" `
 			-version "$version.0" `
-			-fileversion "1.0.0.$env:buildlabel" `
+			-fileversion "1.0.$env:buildlabel.0" `
 			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
 			-clsCompliant $clsComliant
 	}
@@ -194,7 +194,7 @@ task CopySamples {
                "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", `
                "Raven.Samples.IndexReplication", "Raven.Samples.Includes", "Raven.Sample.SimpleClient", `
                "Raven.Sample.ComplexSharding", "Raven.Sample.MultiTenancy", "Raven.Sample.Suggestions", `
-               "Raven.Sample.LiveProjections")
+               "Raven.Sample.LiveProjections", "Raven.Sample.FullTextSearch")
 	$exclude = @("bin", "obj", "Data", "Plugins")
 	
 	foreach ($sample in $samples) {
@@ -224,6 +224,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	mkdir $build_dir\Output\Bundles
 	mkdir $build_dir\Output\Samples
 	mkdir $build_dir\Output\Smuggler
+	mkdir $build_dir\Output\Backup
 }
 
 task CleanOutputDirectory { 
@@ -251,9 +252,14 @@ task CopySilverlight{
 }
 
 task CopySmuggler {
-	cp $build_dir\Raven.Json.??? $build_dir\Output\Smuggler
+	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
 	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Smuggler
 	cp $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
+}
+
+task CopyBackup {
+	cp $build_dir\Raven.Backup.??? $build_dir\Output\Backup
+	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Backup
 }
 
 task CopyClient {
@@ -307,7 +313,6 @@ task CreateDocs {
 task CopyRootFiles -depends CreateDocs {
 	cp $base_dir\license.txt $build_dir\Output\license.txt
 	cp $base_dir\Scripts\Start.cmd $build_dir\Output\Start.cmd
-	cp $base_dir\Scripts\Raven-StartBackup.ps1 $build_dir\Output\Raven-StartBackup.ps1
 	cp $base_dir\Scripts\Raven-UpdateBundles.ps1 $build_dir\Output\Raven-UpdateBundles.ps1
 	cp $base_dir\Scripts\Raven-GetBundles.ps1 $build_dir\Output\Raven-GetBundles.ps1
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
@@ -335,6 +340,7 @@ task ZipOutput {
 			Client\*.* `
 			Samples\*.* `
 			Smuggler\*.* `
+			Backup\*.* `
 			Client-3.5\*.* `
 			Web\*.* `
 			Bundles\*.* `
@@ -357,6 +363,7 @@ task DoRelease -depends Compile, `
 	CreateOutpuDirectories, `
 	CopyEmbeddedClient, `
 	CopySmuggler, `
+	CopyBackup, `
 	CopyClient, `
 	CopySilverlight, `
 	CopyClient35, `
@@ -486,7 +493,9 @@ task CreateNugetPackage {
   
   cp $build_dir\Raven.Smuggler.??? $build_dir\NuPack\Tools
   cp $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Embedded\Tools
-  
+
+  cp $build_dir\Raven.Backup.??? $build_dir\NuPack\Tools
+  cp $build_dir\Raven.Backup.??? $build_dir\NuPack-Embedded\Tools  
 
 ########### First pass - RavenDB.nupkg
 

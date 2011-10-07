@@ -198,7 +198,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			}
 			else
 			{
-				translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.TransformResults);
+				translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.TransformResults,requiresSelectNewAnonymousType: false);
 			}
 
 
@@ -234,7 +234,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			}
 			else
 			{
-				reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Reduce);
+				reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Reduce, RequiresSelectNewAnonymousType);
 				var invocation = ((InvocationExpression) reduceDefiniton.Initializer);
 				var target = (MemberReferenceExpression) invocation.TargetObject;
 				while(target.MemberName!="GroupBy")
@@ -333,7 +333,7 @@ Reduce only fields: {2}
 
 		private VariableDeclaration TransformMapDefinitionFromLinqMethodSyntax(string query, out string entityName)
 		{
-			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(query);
+			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(query, RequiresSelectNewAnonymousType);
 			AddEntityNameFilteringIfNeeded(variableDeclaration, out entityName);
 
 			variableDeclaration.AcceptVisitor(new AddDocumentIdToLambdas(), null);

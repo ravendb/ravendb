@@ -9,7 +9,6 @@ using System.Diagnostics;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
-using Raven.Http;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders

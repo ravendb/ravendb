@@ -58,7 +58,7 @@ namespace Raven.Tests.Document
 			Region = g.Key.Region,
 			CharacterName = g.Key.CharacterName,
 			Zone = g.Key.Zone,
-			Count = g.Sum(x => (int)x.Count).ToString()      
+			Count = g.Sum(x => (int)x.Count)
 		};"
 									});
 

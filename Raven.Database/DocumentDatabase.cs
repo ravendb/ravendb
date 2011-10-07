@@ -5,9 +5,11 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,8 +37,6 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
-using Raven.Http;
-using Raven.Http.Exceptions;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using Index = Raven.Database.Indexing.Index;
@@ -45,11 +45,14 @@ using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Database
 {
-	public class DocumentDatabase : IResourceStore, IUuidGenerator
+	public class DocumentDatabase : IUuidGenerator, IDisposable
 	{
 		[ImportMany]
 		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
+		[ImportMany]
+		public OrderedPartCollection<AbstractIndexQueryTrigger> IndexQueryTriggers{ get; set; }
+		
 		[ImportMany]
 		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
 
@@ -184,6 +187,10 @@ namespace Raven.Database
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 
+			IndexQueryTriggers
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
 			AttachmentPutTriggers
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
@@ -219,15 +226,33 @@ namespace Raven.Database
 		{
 			get
 			{
+
 				var result = new DatabaseStatistics
 				{
 					CountOfIndexes = IndexStorage.Indexes.Length,
 					Errors = workContext.Errors,
-					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
-								.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
-								.Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Read" }))
-								.Concat(IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Index Update" }))
-								.ToArray()
+					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Put"})
+						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Delete"}))
+						.Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Read"}))
+						.Concat(
+							IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Index Update"}))
+						.ToArray(),
+					Extensions = Configuration.ReportExtensions(
+						typeof (IStartupTask),
+						typeof (AbstractReadTrigger),
+						typeof (AbstractDeleteTrigger),
+						typeof (AbstractPutTrigger),
+						typeof (AbstractDocumentCodec),
+						typeof (AbstractDynamicCompilationExtension),
+						typeof (AbstractIndexQueryTrigger),
+						typeof (AbstractIndexUpdateTrigger),
+						typeof (AbstractAnalyzerGenerator),
+						typeof (AbstractAttachmentDeleteTrigger),
+						typeof (AbstractAttachmentPutTrigger),
+						typeof (AbstractAttachmentReadTrigger),
+						typeof (AbstractBackgroundTask),
+						typeof (IAlterConfiguration)
+						)
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -242,15 +267,11 @@ namespace Raven.Database
 			}
 		}
 
+
 		public string SilverlightXapName
 		{
 			get { return "Raven.Studio.xap"; }
 			
-		}
-
-		IRavenHttpConfiguration IResourceStore.Configuration
-		{
-			get { return Configuration; }
 		}
 
 		public ConcurrentDictionary<string, object> ExternalState { get; set; }
@@ -279,8 +300,6 @@ namespace Raven.Database
 			{
 				value.Dispose();
 			}
-			TransactionalStorage.Dispose();
-			IndexStorage.Dispose();
 
 			if (tasksBackgroundTask != null)
 				tasksBackgroundTask.Wait(); 
@@ -292,6 +311,9 @@ namespace Raven.Database
 			var disposable = backgroundTaskScheduler as IDisposable;
 			if (disposable != null)
 				disposable.Dispose();
+
+			TransactionalStorage.Dispose();
+			IndexStorage.Dispose();
 
 		    Configuration.Dispose();
 			disableAllTriggers.Dispose();
@@ -669,7 +691,7 @@ namespace Raven.Database
 					                                      viewGenerator.ReduceDefinition == null
 					                                      	? Constants.DocumentIdFieldName
 					                                      	: Constants.ReduceKeyFieldName);
-					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch)
+					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch, IndexQueryTriggers)
 									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
 										 where doc != null
@@ -736,7 +758,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Raven.Abstractions.Data.Constants.DocumentIdFieldName))
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Raven.Abstractions.Data.Constants.DocumentIdFieldName), IndexQueryTriggers)
 													select queryResult.Key);
 				});
 			stale = isStale;
@@ -1238,6 +1260,38 @@ namespace Raven.Database
 			var totalIndexSize = indexes.Sum(file => new FileInfo(file).Length);
 
 			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
+		}
+
+		public Guid GetIndexEtag(string indexName)
+		{
+			Guid lastDocEtag = Guid.Empty;
+			Guid? lastReducedEtag = null;
+			bool isStale = false;
+			int touchCount = 0;
+			TransactionalStorage.Batch(accessor =>
+			{
+				isStale = accessor.Staleness.IsIndexStale(indexName, null, null);
+				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
+				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
+			});
+			var indexDefinition = GetIndexDefinition(indexName);
+			if (indexDefinition == null)
+				return Guid.NewGuid(); // this ensures that we will get the normal reaction of IndexNotFound later on.
+			using (var md5 = MD5.Create())
+			{
+				var list = new List<byte>();
+				list.AddRange(indexDefinition.GetIndexHash());
+				list.AddRange(Encoding.Unicode.GetBytes(indexName));
+				list.AddRange(lastDocEtag.ToByteArray());
+				list.AddRange(BitConverter.GetBytes(touchCount));
+				list.AddRange(BitConverter.GetBytes(isStale));
+				if (lastReducedEtag != null)
+				{
+					list.AddRange(lastReducedEtag.Value.ToByteArray());
+				}
+				return new Guid(md5.ComputeHash(list.ToArray()));
+			}
 		}
 	}
 }

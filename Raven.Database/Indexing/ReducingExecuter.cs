@@ -25,8 +25,11 @@ namespace Raven.Database.Indexing
 					reduceKeyAndEtags = actions.MappedResults.GetMappedResultsReduceKeysAfter
 						(
 							indexToWorkOn.IndexName,
-							indexToWorkOn.LastIndexedEtag
-						).ToList();
+							indexToWorkOn.LastIndexedEtag,
+							loadData: false
+						)
+						.Take(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+						.ToList();
 
 					if(log.IsDebugEnabled)
 					{

@@ -12,13 +12,13 @@ namespace Raven.Tests.Bugs.Zhang
 		private const string map = @"
 from doc in docs
 from tag in doc.Tags
-select new { Name = tag.Name, CreatedTime = doc.CreatedTime }
+select new { Name = tag.Name, CreatedTime = doc.CreatedTime.Ticks }
 ";
 
 		private const string reduce = @"
 from agg in results
 group agg by agg.Name into g
-let createdTime = g.Max(x => (long)x.CreatedTime.Ticks)
+let createdTime = g.Max(x => (long)x.CreatedTime)
 select new {Name = g.Key, CreatedTime = createdTime}
 ";
 

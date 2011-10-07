@@ -1329,14 +1329,24 @@ If you really want to do in memory filtering on the data returned from the query
 			};
 		}
 
-	   
-	   
+		/// <summary>
+		/// Perform a search for documents which fields that match the searchTerms.
+		/// If there is more than a single term, each of them will be checked independently.
+		/// </summary>
+		public void Search(string fieldName, string searchTerms)
+		{
+			theQueryText.Append(' ').Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">> ");
+		}
 
 		private string TransformToEqualValue(WhereParams whereParams)
 		{
 			if (whereParams.Value == null)
 			{
 				return Constants.NullValueNotAnalyzed;
+			}
+			if(Equals(whereParams.Value, string.Empty))
+			{
+				return Constants.EmptyStringNotAnalyzed;
 			}
 
 			if (whereParams.Value is bool)
@@ -1372,6 +1382,8 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			if (whereParams.Value == null)
 				return Constants.NullValueNotAnalyzed;
+			if (Equals(whereParams.Value, string.Empty))
+				return Constants.EmptyStringNotAnalyzed;
 
 			if (whereParams.Value is DateTime)
 				return DateTools.DateToString((DateTime)whereParams.Value, DateTools.Resolution.MILLISECOND);

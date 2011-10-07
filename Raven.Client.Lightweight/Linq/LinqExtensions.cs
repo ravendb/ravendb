@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Reflection;
 using System.Linq;
 #if !NET_3_5
 using System.Threading.Tasks;
@@ -36,6 +37,20 @@ namespace Raven.Client.Linq
 			var provider = queryable.Provider as IRavenQueryProvider;
 
 			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried,
+																  new IndexQuery { Query = query }, facetDoc);
+		}
+#endif
+#if !NET_3_5
+		/// <summary>
+		/// Query the facets results for this query using the specified facet document
+		/// </summary>
+		public static Task<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
+		{
+			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
+			var query = ravenQueryInspector.ToString();
+			var provider = queryable.Provider as IRavenQueryProvider;
+
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried,
 																  new IndexQuery { Query = query }, facetDoc);
 		}
 #endif
@@ -115,6 +130,18 @@ namespace Raven.Client.Linq
 		}
 #endif
 
+
+		/// <summary>
+		/// Perform a search for documents which fields that match the searchTerms.
+		/// If there is more than a single term, each of them will be checked independently.
+		/// </summary>
+		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms)
+		{
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), self.Expression,
+			                                                          fieldSelector, Expression.Constant(searchTerms)));
+			return (IRavenQueryable<T>)queryable;
+		}
 
 		/// <summary>
 		/// Marker method for allowing complex (multi entity) queries on the server.
@@ -285,6 +312,8 @@ namespace Raven.Client.Linq
 		{
 			return values.Any(value => field.Equals(value));
 		}
+
+
 		/// <summary>
 		///  implementation of In operator
 		/// </summary>

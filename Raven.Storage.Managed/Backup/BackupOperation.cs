@@ -22,8 +22,8 @@ namespace Raven.Storage.Managed.Backup
 	{
 		private readonly DocumentDatabase database;
 		private readonly IPersistentSource persistentSource;
-		private readonly string to;
-		private readonly string src;
+		private string to;
+		private string src;
 
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
@@ -31,14 +31,16 @@ namespace Raven.Storage.Managed.Backup
 		{
 			this.database = database;
 			this.persistentSource = persistentSource;
-			this.to = to.ToFullPath();
-			this.src = src.ToFullPath();
+			this.src = src;
+			this.to = to;
 		}
 
 		public void Execute(object ignored)
 		{
 			try
 			{
+				to = to.ToFullPath();
+				src = src.ToFullPath();
 				logger.Info("Starting backup of '{0}' to '{1}'", src, to);
 				var directoryBackups = new List<DirectoryBackup>
 				{

@@ -113,7 +113,9 @@ namespace Raven.Tests.Indexes
 					Type = "Remove",
 					Timestamp = SystemTime.Now,
 					ShoppingCartId = "shoppingcarts/12",
-					ProductId = "products/8123"
+					ProductId = "products/8123",
+					ProductName = "Fish & Chips",
+					Price = 8.5m
 				},
 				new
 				{
@@ -141,12 +143,14 @@ namespace Raven.Tests.Indexes
 					break;
 			}
 
+			Assert.Empty(db.Statistics.Errors);
+
 			Assert.Equal(1, queryResult.Results.Count);
 
 			Assert.Equal("shoppingcarts/12", queryResult.Results[0].Value<string>("ShoppingCartId"));
 			var ravenJObject = queryResult.Results[0].Value<RavenJObject>("Aggregate");
 			var cart = ravenJObject.JsonDeserialization<ShoppingCartEventsToShopingCart.ShoppingCart>();
-			Assert.Equal(2, cart.Items.Count);
+			Assert.Equal(2, cart.ItemsCount);
 		}
 	}
 }

@@ -8,8 +8,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Storage;
-using Raven.Http;
-using Raven.Http.Exceptions;
 using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;

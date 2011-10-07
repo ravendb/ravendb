@@ -10,7 +10,7 @@ using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Http;
+using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
 using Raven.Client.Extensions;

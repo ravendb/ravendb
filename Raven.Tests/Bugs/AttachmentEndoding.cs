@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Net;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
-using Raven.Http;
 using Xunit;
 
 namespace Raven.Tests.Bugs

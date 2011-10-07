@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Raven.Bundles.Authorization.Model
 {
@@ -19,6 +20,7 @@ namespace Raven.Bundles.Authorization.Model
 			Tags = new List<string>();
 		}
 
+		[JsonIgnore]
 		public string Explain
 		{
 			get

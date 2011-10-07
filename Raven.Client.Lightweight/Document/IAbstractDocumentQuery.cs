@@ -284,6 +284,12 @@ namespace Raven.Client.Document
 		void WaitForNonStaleResults();
 
 		/// <summary>
+		/// Perform a search for documents which fields that match the searchTerms.
+		/// If there is more than a single term, each of them will be checked independently.
+		/// </summary>
+		void Search(string fieldName, string searchTerms);
+
+		/// <summary>
 		///   Returns a <see cref = "System.String" /> that represents this instance.
 		/// </summary>
 		/// <returns>

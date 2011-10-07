@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
-using Raven.Http;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 
 namespace Raven.Tests.Triggers.Bugs

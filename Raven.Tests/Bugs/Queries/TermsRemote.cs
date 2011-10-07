@@ -8,7 +8,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Indexing;
-using Raven.Http;
 using Raven.Server;
 using Xunit;
 

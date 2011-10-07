@@ -35,7 +35,7 @@ namespace Raven.Tests.Faceted
 			          		//In Lucene [ is inclusive, { is exclusive
 			          		new Facet
 			          			{
-			          				Name = "Cost",
+			          				Name = "Cost_Range",
 			          				Mode = FacetMode.Ranges,
 			          				Ranges =
 			          					{
@@ -48,7 +48,7 @@ namespace Raven.Tests.Faceted
 			          			},
 			          		new Facet
 			          			{
-			          				Name = "Megapixels",
+			          				Name = "Megapixels_Range",
 			          				Mode = FacetMode.Ranges,
 			          				Ranges =
 			          					{
@@ -92,9 +92,9 @@ namespace Raven.Tests.Faceted
 				s.SaveChanges();
 
 				store.DatabaseCommands.PutIndex("CameraCost",
-				                                new IndexDefinition
-				                                {
-				                                	Map = @"from camera in docs 
+												new IndexDefinition
+												{
+													Map = @"from camera in docs 
                                                         select new 
                                                         { 
                                                             camera.Manufacturer, 
@@ -103,7 +103,7 @@ namespace Raven.Tests.Faceted
                                                             camera.DateOfListing,
                                                             camera.Megapixels
                                                         }"
-				                                });
+												});
 
 				var counter = 0;
 				foreach (var camera in _data)
@@ -111,7 +111,7 @@ namespace Raven.Tests.Faceted
 					s.Store(camera);
 					counter++;
 
-					if (counter % 1024 == 0)
+					if (counter % (NumCameras / 25) == 0)
 						s.SaveChanges();
 				}
 				s.SaveChanges();
@@ -168,63 +168,46 @@ namespace Raven.Tests.Faceted
 					IDictionary<string, IEnumerable<FacetValue>> facetResults,
 					List<Camera> filteredData)
 		{
+			Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),
+						facetResults["Manufacturer"].Count());
 			foreach (var facet in facetResults["Manufacturer"])
 			{
 				var inMemoryCount = filteredData.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
 				Assert.Equal(inMemoryCount, facet.Count);
-				//Console.WriteLine("{0} - Expected {1}, Got {2} {3}",
-				//    facet.Range, inMemoryCount, facet.Count, inMemoryCount != facet.Count ? "*****" : "");
 			}
 
-			//In Lucene [ is inclusive, { is exclusive
-			foreach (var facet in facetResults["Cost"])
-			{
-				var inMemoryCount = 0;
-				switch (facet.Range)
-				{
-					case "[NULL TO 200.0]":
-						inMemoryCount = filteredData.Where(x => x.Cost <= 200.0m).Count();
-						break;
-					case "[200.0 TO 400.0]":
-						inMemoryCount = filteredData.Where(x => x.Cost >= 200.0m && x.Cost <= 400).Count();
-						break;
-					case "[400.0 TO 600.0]":
-						inMemoryCount = filteredData.Where(x => x.Cost >= 400.0m && x.Cost <= 600.0m).Count();
-						break;
-					case "[600.0 TO 800.0]":
-						inMemoryCount = filteredData.Where(x => x.Cost >= 600.0m && x.Cost <= 800.0m).Count();
-						break;
-					case "[800.0 TO NULL]":
-						inMemoryCount = filteredData.Where(x => x.Cost >= 800.0m).Count();
-						break;
-				}
-				Assert.Equal(inMemoryCount, facet.Count);
-				//Console.WriteLine("{0} - Expected {1}, Got {2} {3}",
-				//    facet.Range, inMemoryCount, facet.Count, inMemoryCount != facet.Count ? "*****" : "");
-			}
+			//Go through the expected (in-memory) results and check that there is a corresponding facet result
+			//Not the prettiest of code, but it works!!!
+			var costFacets = facetResults["Cost_Range"];
+			CheckFacetCount(filteredData.Where(x => x.Cost <= 200.0m).Count(),
+							costFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx200.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Cost >= 200.0m && x.Cost <= 400).Count(),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx200.0 TO Dx400.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Cost >= 400.0m && x.Cost <= 600.0m).Count(),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx400.0 TO Dx600.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Cost >= 600.0m && x.Cost <= 800.0m).Count(),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx600.0 TO Dx800.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Cost >= 800.0m).Count(),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx800.0 TO NULL]"));
 
-			//In Lucene [ is inclusive, { is exclusive
-			foreach (var facet in facetResults["Megapixels"])
+			//Test the Megapixels_Range facets using the same method
+			var megapixelsFacets = facetResults["Megapixels_Range"];
+			CheckFacetCount(filteredData.Where(x => x.Megapixels <= 3.0m).Count(),
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx3.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count(),
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx3.0 TO Dx7.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m).Count(),
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx7.0 TO Dx10.0]"));
+			CheckFacetCount(filteredData.Where(x => x.Megapixels >= 10.0m).Count(),
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx10.0 TO NULL]"));
+		}
+
+		private void CheckFacetCount(int expectedCount, FacetValue facets)
+		{
+			if (expectedCount > 0)
 			{
-				var inMemoryCount = 0;
-				switch (facet.Range)
-				{
-					case "[NULL TO 3.0]":
-						inMemoryCount = filteredData.Where(x => x.Megapixels <= 3.0m).Count();
-						break;
-					case "[3.0 TO 7.0]":
-						inMemoryCount = filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count();
-						break;
-					case "[7.0 TO 10.0]":
-						inMemoryCount = filteredData.Where(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m).Count();
-						break;
-					case "[10.0 TO NULL]":
-						inMemoryCount = filteredData.Where(x => x.Megapixels >= 10.0m).Count();
-						break;
-				}
-				Assert.Equal(inMemoryCount, facet.Count);
-				//Console.WriteLine("{0} - Expected {1}, Got {2} {3}", 
-				//    facet.Range, inMemoryCount, facet.Count, inMemoryCount != facet.Count ? "*****" : "");
+				Assert.NotNull(facets);
+				Assert.Equal(expectedCount, facets.Count);
 			}
 		}
 

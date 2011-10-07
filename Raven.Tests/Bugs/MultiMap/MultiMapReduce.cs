@@ -182,7 +182,7 @@ namespace Raven.Tests.Bugs.MultiMap
 				                    select new
 				                    {
 				                    	UserId = g.Key,
-				                    	UserName = g.Select(x => x.UserName).Where(x => x != null).First(),
+				                    	UserName = g.Select(x => x.UserName).Where(x => x != null).FirstOrDefault(),
 				                    	PostCount = g.Sum(x => x.PostCount)
 				                    };
 

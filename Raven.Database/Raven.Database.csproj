@@ -72,6 +72,12 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net.Contrib.Spatial">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.dll</HintPath>
+    </Reference>
+    <Reference Include="Lucene.Net.Contrib.SpellChecker">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.SpellChecker.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Newtonsoft.Json, Version=4.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -83,12 +89,6 @@
     </Reference>
     <Reference Include="Rhino.Licensing">
       <HintPath>..\SharedLibs\Rhino.Licensing.dll</HintPath>
-    </Reference>
-    <Reference Include="Spatial.Net">
-      <HintPath>..\SharedLibs\Spatial.Net.dll</HintPath>
-    </Reference>
-    <Reference Include="SpellChecker.Net">
-      <HintPath>..\SharedLibs\SpellChecker.Net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -119,6 +119,43 @@
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
     <Compile Include="Config\CertGenerator.cs" />
+    <Compile Include="Plugins\AbstractIndexQueryTrigger.cs" />
+    <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
+    <Compile Include="Server\Abstractions\HttpListenerRequestAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpListenerResponseAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpRequestAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpResponseAdapter.cs" />
+    <Compile Include="Server\Abstractions\IHttpContext.cs" />
+    <Compile Include="Server\Abstractions\IHttpRequest.cs" />
+    <Compile Include="Server\Abstractions\IHttpResponse.cs" />
+    <Compile Include="Server\Abstractions\UrlExtension.cs" />
+    <Compile Include="Server\AbstractRequestResponder.cs" />
+    <Compile Include="Server\AnonymousUserAccessMode.cs" />
+    <Compile Include="Server\CurrentOperationContext.cs" />
+    <Compile Include="Exceptions\BadRequestException.cs" />
+    <Compile Include="Extensions\HttpExtensions.cs" />
+    <Compile Include="Server\HttpServer.cs" />
+    <Compile Include="Server\IConfigureHttpListener.cs" />
+    <Compile Include="Server\LogHttpRequestStatsParams.cs" />
+    <Compile Include="Server\NonAdminHttp.cs" />
+    <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
+    <Compile Include="Server\Responders\Favicon.cs" />
+    <Compile Include="Server\Responders\Logs.cs" />
+    <Compile Include="Server\Responders\RavenRoot.cs" />
+    <Compile Include="Server\Responders\RavenUI.cs" />
+    <Compile Include="Server\Responders\SilverlightPlugin.cs" />
+    <Compile Include="Server\Responders\SilverlightPlugins.cs" />
+    <Compile Include="Server\Responders\SilverlightUI.cs" />
+    <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\OAuth\AccessToken.cs" />
+    <Compile Include="Server\Security\OAuth\AccessTokenBody.cs" />
+    <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
+    <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
+    <Compile Include="Server\Security\OAuth\OAuthConfigureHttpListener.cs" />
+    <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\Windows\WindowsAuthConfigureHttpListener.cs" />
+    <Compile Include="Server\Security\Windows\WindowsRequestAuthorizer.cs" />
     <Compile Include="Impl\CachedDocument.cs" />
     <Compile Include="Impl\DatabaseBulkOperations.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
@@ -354,7 +391,6 @@
     <Compile Include="Queries\SuggestionQueryIndexExtension.cs" />
     <Compile Include="Queries\TermsQueryRunner.cs" />
     <Compile Include="Queries\TermsQueryRunnerExtensions.cs" />
-    <Compile Include="Server\RavenDbHttpServer.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
     <Compile Include="Server\Responders\AdminStartIndexing.cs" />
@@ -391,7 +427,6 @@
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />
     <Compile Include="Storage\IQueueStorageActions.cs" />
-    <Compile Include="Storage\IRemoteStorage.cs" />
     <Compile Include="Storage\IStalenessStorageActions.cs" />
     <Compile Include="Storage\IStorageActionsAccessor.cs" />
     <Compile Include="Storage\ITasksStorageActions.cs" />
@@ -402,6 +437,7 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="Util\BoundedMemoryTarget.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\WeakEvent.cs" />
   </ItemGroup>
@@ -516,17 +552,9 @@
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Modules\Json\Raven.Json\Raven.Json.csproj">
-      <Project>{31740175-3254-489D-AD59-73EF096BA64D}</Project>
-      <Name>Raven.Json</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Http\Raven.Http.csproj">
-      <Project>{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}</Project>
-      <Name>Raven.Http</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

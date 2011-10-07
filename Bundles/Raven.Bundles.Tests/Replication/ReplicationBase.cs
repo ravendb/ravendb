@@ -9,13 +9,10 @@ extern alias database;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
-using System.IO;
 using System.Threading;
 using Raven.Abstractions.Replication;
-using Raven.Bundles.Tests.Versioning;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Http;
 using Raven.Server;
 using Xunit;
 using IOExtensions = database::Raven.Database.Extensions.IOExtensions;
@@ -46,10 +43,10 @@ namespace Raven.Bundles.Tests.Replication
 
 		private IDocumentStore CreateStoreAtPort(int port)
 		{
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
+			database::Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var ravenDbServer = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
 			{
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All,
+				AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
 				Catalog = {Catalogs = {new AssemblyCatalog(typeof (replication::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly)}},
 				DataDirectory = "Data #" + servers.Count,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,

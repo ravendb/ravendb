@@ -19,7 +19,7 @@ namespace Raven.Client.Embedded
 	public class EmbeddableDocumentStore : DocumentStore
 	{
 		private RavenConfiguration configuration;
-		private RavenDbHttpServer httpServer;
+		private HttpServer httpServer;
 		private bool wasDisposed;
 
 		/// <summary>
@@ -114,7 +114,9 @@ namespace Raven.Client.Embedded
 			if (embeddedRavenConnectionStringOptions == null)
 				return;
 
-			DataDirectory = embeddedRavenConnectionStringOptions.DataDirectory;
+			if (string.IsNullOrEmpty(embeddedRavenConnectionStringOptions.DataDirectory) == false)
+				DataDirectory = embeddedRavenConnectionStringOptions.DataDirectory;
+
 			RunInMemory = embeddedRavenConnectionStringOptions.RunInMemory;
 
 		}
@@ -135,7 +137,7 @@ namespace Raven.Client.Embedded
 				DocumentDatabase.SpinBackgroundWorkers();
 				if (UseEmbeddedHttpServer)
 				{
-					httpServer = new RavenDbHttpServer(configuration, DocumentDatabase);
+					httpServer = new HttpServer(configuration, DocumentDatabase);
 					httpServer.Start();
 				}
 				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId);
@@ -163,7 +165,7 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Expose the internal http server, if used
 		/// </summary>
-		public RavenDbHttpServer HttpServer
+		public HttpServer HttpServer
 		{
 			get { return httpServer; }
 		}

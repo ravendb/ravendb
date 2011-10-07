@@ -15,6 +15,9 @@
       <dependency id="NLog" version="[2.0.0.2000]" />
       <dependency id="Newtonsoft.Json" version="[4.0.2]" />
    </dependencies>
-   <iconUrl>http://ravendb.net/raven.png</iconUrl>
+   <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
+   </frameworkAssemblies>
+   <iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
  </metadata>
 </package>

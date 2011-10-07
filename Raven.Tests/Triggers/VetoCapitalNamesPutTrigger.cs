@@ -6,7 +6,6 @@
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 using System.Linq;
-using Raven.Http;
 using Raven.Json.Linq;
 
 namespace Raven.Tests.Triggers

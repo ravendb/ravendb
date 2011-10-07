@@ -9,7 +9,6 @@ using System.Text;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database;
-using Raven.Database.Json;
 using System.Linq;
 using Raven.Json.Linq;
 
@@ -56,6 +55,7 @@ namespace Raven.Bundles.Authorization
 
 			permissions = permissions.Concat( // permissions on user matching the document's tags
 				from permission in user.Permissions
+				where OperationMatches(permission.Operation, operation)
 				where TagsMatch(permission.Tags, documentAuthorization.Tags)
 				select permission
 				);
@@ -113,7 +113,7 @@ namespace Raven.Bundles.Authorization
 			}
 			sb.AppendLine();
 
-			if(documentAuthorization.Permissions.Count(x=>x.Operation==operation) == 0)
+			if(documentAuthorization.Permissions.Count(x=>x.Operation.Equals(operation, StringComparison.InvariantCultureIgnoreCase)) == 0)
 			{
 				sb.Append("No one may perform operation ")
 					.Append(operation)
@@ -146,7 +146,7 @@ namespace Raven.Bundles.Authorization
 			if (permission.Role == null)
 				return false;
 
-			return GetHierarchicalNames(user.Roles).Any(role => permission.Role == role);
+			return GetHierarchicalNames(user.Roles).Any(role => permission.Role.Equals(role, StringComparison.InvariantCultureIgnoreCase));
 		}
 
 		private static string GetParentName(string operationName)
@@ -174,12 +174,12 @@ namespace Raven.Bundles.Authorization
 
 		private static bool OperationMatches(string op1, string op2)
 		{
-			return op2.StartsWith(op1);
+			return op2.StartsWith(op1, StringComparison.InvariantCultureIgnoreCase);
 		}
 
 		private static bool TagsMatch(IEnumerable<string> permissionTags, IEnumerable<string> documentTags)
 		{
-			return permissionTags.All(p => documentTags.Any(d => d.StartsWith(p)));
+			return permissionTags.All(p => documentTags.Any(d => d.StartsWith(p, StringComparison.InvariantCultureIgnoreCase)));
 		}
 
 		private T GetDocumentAsEntity<T>(string documentId) where T : class
