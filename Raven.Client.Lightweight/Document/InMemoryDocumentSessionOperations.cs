@@ -460,7 +460,7 @@ more responsive application.
 
 			if (identityProperty.CanWrite)
 			{
-				SetPropertyOrField(identityProperty.PropertyType, val => identityProperty.SetValue(entity, val, null), id);
+				SetPropertyOrField(identityProperty.PropertyType, entity, val => identityProperty.SetValue(entity, val, null), id);
 			}
 			else 
 			{
@@ -471,11 +471,11 @@ more responsive application.
 				if (fieldInfo == null)
 					return;
 
-				SetPropertyOrField(identityProperty.PropertyType, val => fieldInfo.SetValue(entity, val), id);
+				SetPropertyOrField(identityProperty.PropertyType, entity, val => fieldInfo.SetValue(entity, val), id);
 			}
 		}
 
-		private void SetPropertyOrField(Type propertyOrFieldType, Action<object> setIdenitifer, string id)
+		private void SetPropertyOrField(Type propertyOrFieldType, object entity, Action<object> setIdenitifer, string id)
 		{
 			if (propertyOrFieldType == typeof (string))
 			{
@@ -489,8 +489,7 @@ more responsive application.
 					throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
 					                            " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-				var value = id.Split(new[] { Conventions.IdentityPartsSeparator },StringSplitOptions.RemoveEmptyEntries).Last();
-				setIdenitifer(converter.ConvertTo(value));
+				setIdenitifer(converter.ConvertTo(Conventions.FindIdValuePartForValueTypeConvertion(entity,id)));
 			}
 		}
 

@@ -70,6 +70,7 @@ namespace Raven.Client.Document
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
+			FindIdValuePartForValueTypeConvertion = (entity, id) => id.Split(new[] {IdentityPartsSeparator}, StringSplitOptions.RemoveEmptyEntries) .Last();
 		}
 
 		///<summary>
@@ -364,7 +365,14 @@ namespace Raven.Client.Document
 		/// in async manner
 		/// </summary>
 		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
-#endif 
+#endif
+
+		/// <summary>
+		/// When RavenDB needs to convert between a string id to a value type like int or guid, it calls
+		/// this to perform the actual work
+		/// </summary>
+		public Func<object, string, string> FindIdValuePartForValueTypeConvertion { get; set; }
+		
 	}
 
 
