@@ -357,7 +357,7 @@
 
 	
 	<Style x:Name="FluidList"
-		   TargetType="ItemsControl">
+		   TargetType="ListBox">
 		<Setter Property="ItemsPanel"
 				Value="{StaticResource FluidWrapPanel}" />
 		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
@@ -369,18 +369,40 @@
 	</Style>
 
 	<Style x:Name="Collections_FluidList" BasedOn="{StaticResource FluidList}"
-		   TargetType="ItemsControl">
+		   TargetType="ListBox">
 		<Setter Property="MaxHeight"
 				Value="400" />
 		<Setter Property="Background"
 				Value="Transparent" />
 	</Style>
 
-	<Style x:Name="Indexes_FluidList"
+    <Style x:Key="Style_ListBoxItem_Index" TargetType="ListBoxItem">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Grid Margin="8" d:DesignWidth="241" d:DesignHeight="112">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="SelectionStates">
+                                <VisualState x:Name="Unselected"/>
+                                <VisualState x:Name="Selected">
+                                </VisualState>
+                                <VisualState x:Name="SelectedUnfocused"/>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <ContentPresenter VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Name="Style_ListBox_Indexes"
 		   BasedOn="{StaticResource FluidList}"
-		   TargetType="ItemsControl">
+		   TargetType="ListBox">
 		<Setter Property="Background"
 				Value="Transparent" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_Index}"/>
 	</Style>
 
 	<!-- Form Styles -->
@@ -886,6 +908,8 @@
 		</Setter>		
 	</Style>
 
+
+
     <Style x:Name="DocumentList"
 		   TargetType="ListBox">
         <Setter Property="ItemsPanel"
@@ -1104,6 +1128,10 @@
         <Setter Property="FontWeight" Value="Normal"/>
     </Style>
 
+    <Style x:Key="Style_Link_DrillDown" TargetType="HyperlinkButton" BasedOn="{StaticResource Style_Link_Command}">
+        <Setter Property="Foreground" Value="Black"/>
+    </Style>
+    
     <Style x:Key="LogsDetails_ReadOnly_TextBox"
 		   TargetType="TextBox">
 		<Setter Property="BorderThickness"
