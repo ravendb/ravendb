@@ -478,6 +478,7 @@
     <None Include="Assets\Images\ImageCredits.txt" />
     <Resource Include="Assets\Images\Save.png" />
     <Resource Include="Assets\Images\Undo.png" />
+    <Resource Include="Assets\Images\add.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />
