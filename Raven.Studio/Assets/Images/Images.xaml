@@ -8,6 +8,7 @@
 
     <BitmapImage x:Key="Image_DocumentIndex_Tiny" UriSource="document-index-icon.png"/>
     <BitmapImage x:Key="Image_Add_Tiny" UriSource="add.png"/>
+    <BitmapImage x:Key="Image_Remove_Tiny" UriSource="Remove.png"/>
     <BitmapImage x:Key="Image_Save_Small" UriSource="Save.png"/>
     <BitmapImage x:Key="Image_Undo_Small" UriSource="Undo.png"/>
     

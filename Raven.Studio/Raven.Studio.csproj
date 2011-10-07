@@ -479,6 +479,7 @@
     <Resource Include="Assets\Images\Save.png" />
     <Resource Include="Assets\Images\Undo.png" />
     <Resource Include="Assets\Images\add.png" />
+    <Resource Include="Assets\Images\Remove.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />
