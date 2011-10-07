@@ -928,7 +928,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Get the actual value from the expression
 		/// </summary>
-		protected static object GetValueFromExpression(Expression expression, Type type)
+		protected object GetValueFromExpression(Expression expression, Type type)
 		{
 			if (expression == null)
 				throw new ArgumentNullException("expression");
@@ -937,8 +937,11 @@ namespace Raven.Client.Linq
 			object value;
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
-				if (type.IsEnum && (value is IEnumerable == false)) // skip arrays, lists
+				if (type.IsEnum && (value is IEnumerable == false) && 
+					queryGenerator.Conventions.QueryEnumsAsIntegers == false) // skip arrays, lists
+				{
 					return Enum.GetName(type, value);
+				}
 				return value;
 			}
 			throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);

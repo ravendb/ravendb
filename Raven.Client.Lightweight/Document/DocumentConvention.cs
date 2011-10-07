@@ -372,7 +372,13 @@ namespace Raven.Client.Document
 		/// this to perform the actual work
 		/// </summary>
 		public Func<object, string, string> FindIdValuePartForValueTypeConvertion { get; set; }
-		
+
+		/// <summary>
+		/// Instruct the Linq provider to query enums as integer values.
+		/// This is usually only useful if you customized the json serializer to serialize
+		/// enums as integers.
+		/// </summary>
+		public bool QueryEnumsAsIntegers { get; set; }
 	}
 
 
