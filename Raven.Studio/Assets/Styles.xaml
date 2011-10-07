@@ -3,8 +3,298 @@
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
 	</ResourceDictionary.MergedDictionaries>
-	
-	<!-- ******MAIN PAGE STYLES****** -->
+
+    <Style TargetType="ScrollBar">
+        <Setter Property="MinWidth" Value="17"/>
+        <Setter Property="MinHeight" Value="17"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid x:Name="Root" d:DesignWidth="188" d:DesignHeight="220">
+                        <Grid.Resources>
+
+                            <!-- RepeatButton Templates -->
+                            <ControlTemplate x:Key="RepeatButtonTemplate" TargetType="RepeatButton">
+                                <Grid x:Name="Root" Background="Transparent">
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualState x:Name="Normal" />
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                </Grid>
+                            </ControlTemplate>
+
+                            <!-- Horizontal Inc/Dec Templates -->
+                            <ControlTemplate x:Key="HorizontalIncrementTemplate" TargetType="RepeatButton">
+                                <Grid x:Name="Root">
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualState x:Name="Normal" />
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Disabled">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0:0:0" Storyboard.TargetName="DisabledElement" Storyboard.TargetProperty="Opacity" To=".7" />
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                    <Rectangle x:Name="Background" Opacity="0" RadiusX="2" RadiusY="2" Fill="Transparent" StrokeThickness="0" />
+                                    <Rectangle x:Name="Highlight" Opacity="0" RadiusX="1" RadiusY="1" IsHitTestVisible="false" Stroke="#FF6DBDD1" StrokeThickness="1" Margin="1" />
+                                    <Path Stretch="Uniform" Height="8" Width="4" Data="F1 M 511.047,352.682L 511.047,342.252L 517.145,347.467L 511.047,352.682 Z ">
+                                        <Path.Fill>
+                                            <SolidColorBrush x:Name="ButtonColor" Color="#FF333333" />
+                                        </Path.Fill>
+                                    </Path>
+                                    <Rectangle x:Name="DisabledElement" Opacity="0" RadiusX="2" RadiusY="2" Fill="#FFFFFFFF"/>
+                                </Grid>
+                            </ControlTemplate>
+                            <ControlTemplate x:Key="HorizontalDecrementTemplate" TargetType="RepeatButton">
+                                <Grid x:Name="Root">
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualState x:Name="Normal" />
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Disabled">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0:0:0" Storyboard.TargetName="DisabledElement" Storyboard.TargetProperty="Opacity" To=".7" />
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                    <Path Stretch="Uniform" Height="8" Width="4" Data="F1 M 110.692,342.252L 110.692,352.682L 104.594,347.467L 110.692,342.252 Z ">
+                                        <Path.Fill>
+                                            <SolidColorBrush x:Name="ButtonColor" Color="#FF333333" />
+                                        </Path.Fill>
+                                    </Path>
+                                    <Rectangle x:Name="DisabledElement" Opacity="0" RadiusX="2" RadiusY="2" Fill="#FFFFFFFF"/>
+                                </Grid>
+                            </ControlTemplate>
+
+                            <!-- Vertical Inc/Dec Templates -->
+                            <ControlTemplate x:Key="VerticalIncrementTemplate" TargetType="RepeatButton">
+                                <Grid x:Name="Root">
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualState x:Name="Normal" />
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Disabled">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0:0:0" Storyboard.TargetName="DisabledElement" Storyboard.TargetProperty="Opacity" To=".7" />
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                    <Rectangle x:Name="Background" RadiusX="2" RadiusY="2" Fill="Transparent" StrokeThickness="1" />
+                                    <Path Stretch="Uniform" Height="4" Width="8" Data="F1 M 531.107,321.943L 541.537,321.943L 536.322,328.042L 531.107,321.943 Z ">
+                                        <Path.Fill>
+                                            <SolidColorBrush x:Name="ButtonColor" Color="#FF333333" />
+                                        </Path.Fill>
+                                    </Path>
+                                    <Rectangle x:Name="DisabledElement" Opacity="0" RadiusX="2" RadiusY="2" Fill="#FFFFFFFF"/>
+                                </Grid>
+                            </ControlTemplate>
+                            <ControlTemplate x:Key="VerticalDecrementTemplate" TargetType="RepeatButton">
+                                <Grid x:Name="Root">
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualState x:Name="Normal" />
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Disabled">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0:0:0" Storyboard.TargetName="DisabledElement" Storyboard.TargetProperty="Opacity" To=".7" />
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                    <Rectangle x:Name="Background" RadiusX="2" RadiusY="2" Fill="Transparent" StrokeThickness="1" />
+                                    <Path Stretch="Uniform" Height="4" Width="8" Data="F1 M 541.537,173.589L 531.107,173.589L 536.322,167.49L 541.537,173.589 Z ">
+                                        <Path.Fill>
+                                            <SolidColorBrush x:Name="ButtonColor" Color="#FF333333" />
+                                        </Path.Fill>
+                                    </Path>
+                                    <Rectangle x:Name="DisabledElement" Opacity="0" RadiusX="2" RadiusY="2" Fill="#FFFFFFFF"/>
+                                </Grid>
+                            </ControlTemplate>
+
+                            <!-- Thumb Templates -->
+                            <ControlTemplate x:Key="VerticalThumbTemplate" TargetType="Thumb">
+                                <Grid>
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualState x:Name="Normal" />
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Disabled">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0:0:0" Storyboard.TargetName="ThumbVisual" Storyboard.TargetProperty="Opacity" To="0" />
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                    <Grid x:Name="ThumbVisual" Margin="1,0,1,0">
+                                        <Rectangle x:Name="Background" RadiusX="4" RadiusY="4" StrokeThickness="1" Margin="1,0" >
+                                        	<Rectangle.Fill>
+                                        		<LinearGradientBrush EndPoint="1,0.5" StartPoint="0,0.5">
+                                        			<GradientStop Color="#FFE4E4E4" Offset="0.032"/>
+                                        			<GradientStop Color="#FFD1D1D1" Offset="0.973"/>
+                                        			<GradientStop Color="#FFF7F3F3" Offset="1"/>
+                                        			<GradientStop Color="White"/>
+                                        		</LinearGradientBrush>
+                                        	</Rectangle.Fill>
+                                        </Rectangle>
+                                    </Grid>
+                                </Grid>
+                            </ControlTemplate>
+                            <ControlTemplate x:Key="HorizontalThumbTemplate" TargetType="Thumb">
+                                <Grid>
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualState x:Name="Normal" />
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Disabled">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0:0:0" Storyboard.TargetName="ThumbVisual" Storyboard.TargetProperty="Opacity" To="0" />
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                    <Grid x:Name="ThumbVisual" Margin="0,1,0,1">
+                                        <Rectangle x:Name="Background" RadiusX="4" RadiusY="2" StrokeThickness="1" Margin="0,1" >
+                                        	<Rectangle.Fill>
+                                        		<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                        			<GradientStop Color="#FFE4E4E4" Offset="0.032"/>
+                                        			<GradientStop Color="#FFD1D1D1" Offset="0.973"/>
+                                        			<GradientStop Color="#FFF7F3F3" Offset="1"/>
+                                        			<GradientStop Color="White"/>
+                                        		</LinearGradientBrush>
+                                        	</Rectangle.Fill>
+                                        </Rectangle>
+                                    </Grid>
+                                </Grid>
+                            </ControlTemplate>
+                        </Grid.Resources>
+
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="MouseOver" />
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+
+                        <!-- Horizontal Template -->
+                        <Grid x:Name="HorizontalRoot">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Track Layer -->
+                            <Rectangle Grid.RowSpan="5" RadiusX="1" RadiusY="1" StrokeThickness="1" Stroke="#00000000" Fill="Transparent"/>
+                            <Rectangle Grid.RowSpan="5" RadiusX="1" RadiusY="1" StrokeThickness="1" Opacity=".375" Stroke="#FFE9E9E9"/>
+                            <Rectangle Grid.RowSpan="5" RadiusX="1" RadiusY="1" Margin="1">
+                                <Rectangle.Stroke>
+                                    <LinearGradientBrush EndPoint="0.125,0.5" StartPoint="0.875,0.5">
+                                        <GradientStop Color="#33FFFFFF"/>
+                                        <GradientStop Color="#99FFFFFF" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Rectangle.Stroke>
+                            </Rectangle>
+
+                            <!-- Repeat Buttons + Thumb -->
+                            <RepeatButton x:Name="HorizontalSmallDecrease" Grid.Column="0" Width="16" IsTabStop="False" Interval="50" Template="{StaticResource HorizontalDecrementTemplate}" Margin="1" Background="Transparent" />
+                            <RepeatButton x:Name="HorizontalLargeDecrease" Grid.Column="1" Width="0" Template="{StaticResource RepeatButtonTemplate}" Interval="50" IsTabStop="False" Background="Transparent" />
+                            <Thumb x:Name="HorizontalThumb" Background="{TemplateBinding Background}"  MinWidth="18" Width="18" Grid.Column="2" Template="{StaticResource HorizontalThumbTemplate}" />
+                            <RepeatButton x:Name="HorizontalLargeIncrease" Grid.Column="3" Template="{StaticResource RepeatButtonTemplate}" Interval="50" IsTabStop="False" Background="Transparent" />
+                            <RepeatButton x:Name="HorizontalSmallIncrease" Grid.Column="4" Width="16" IsTabStop="False" Interval="50" Template="{StaticResource HorizontalIncrementTemplate}" Margin="1" Background="Transparent" />
+                        </Grid>
+
+                        <!-- Vertical Template -->
+                        <Grid x:Name="VerticalRoot" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Track Layer -->
+                            <Rectangle Grid.RowSpan="5" RadiusX="1" RadiusY="1" StrokeThickness="1" Stroke="#00000000" Fill="Transparent"/>
+                            <Rectangle Grid.RowSpan="5" RadiusX="1" RadiusY="1" StrokeThickness="1" Opacity=".375" Stroke="#FFE9E9E9"/>
+                            <Rectangle Grid.RowSpan="5" RadiusX="1" RadiusY="1" Margin="1">
+                                <Rectangle.Stroke>
+                                    <LinearGradientBrush EndPoint="0.125,0.5" StartPoint="0.875,0.5">
+                                        <GradientStop Color="#33FFFFFF"/>
+                                        <GradientStop Color="#99FFFFFF" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Rectangle.Stroke>
+                            </Rectangle>
+
+                            <!-- Repeat Buttons + Thumb -->
+                            <RepeatButton x:Name="VerticalSmallDecrease" Grid.Row="0" Height="16" IsTabStop="False" Interval="50" Template="{StaticResource VerticalDecrementTemplate}" Margin="1" />
+                            <RepeatButton x:Name="VerticalLargeDecrease" Grid.Row="1" Height="0" Template="{StaticResource RepeatButtonTemplate}" Interval="50" IsTabStop="False" />
+                            <Thumb x:Name="VerticalThumb" MinHeight="18" Height="18" Grid.Row="2" Template="{StaticResource VerticalThumbTemplate}" />
+                            <RepeatButton x:Name="VerticalLargeIncrease" Grid.Row="3" Template="{StaticResource RepeatButtonTemplate}" Interval="50" IsTabStop="False" />
+                            <RepeatButton x:Name="VerticalSmallIncrease" Grid.Row="4" Height="16" IsTabStop="False" Interval="50" Template="{StaticResource VerticalIncrementTemplate}" Margin="1" />
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+
+    <!-- ******MAIN PAGE STYLES****** -->
 	<!-- **************************** -->
 	<!-- Primary Color Brushes -->
   <SolidColorBrush x:Key="NavigationBackgroundColorBrush" Color="#FF484848"/>
