@@ -21,7 +21,7 @@
                     <TextBlock Text="{Binding Name}" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" toolkit:DockPanel.Dock="Right">
-                        <Button x:Name="Save"
+                        <Button x:Name="Save" Style="{StaticResource Style_Button_PageHeaderBar}"
 										 HorizontalAlignment="Left"
 										 Margin="4 0 0 0"
 										 ToolTipService.ToolTip="Save Index"
@@ -29,7 +29,7 @@
                         <Image Source="{StaticResource Image_Save_Small}" Stretch="None"/>
                     </Button>
 
-                  <Button x:Name="Reset"
+                    <Button x:Name="Reset" Style="{StaticResource Style_Button_PageHeaderBar}"
 										 HorizontalAlignment="Left"
 										 Margin="4 0 0 0"
 										 ToolTipService.ToolTip="Undo all changes"
