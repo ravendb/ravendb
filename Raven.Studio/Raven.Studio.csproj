@@ -476,6 +476,8 @@
     <Resource Include="Assets\Images\BackgroundTextureBottom.png" />
     <Resource Include="Assets\Images\document-index-icon.png" />
     <None Include="Assets\Images\ImageCredits.txt" />
+    <Resource Include="Assets\Images\Save.png" />
+    <Resource Include="Assets\Images\Undo.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />
