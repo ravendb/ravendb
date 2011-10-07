@@ -206,6 +206,7 @@
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
     <Compile Include="Bugs\QueryingOnEmptyArray.cs" />
     <Compile Include="Bugs\QueryingOnEmptyString.cs" />
+    <Compile Include="Bugs\QueryingOverTags.cs" />
     <Compile Include="Bugs\QueryOptimizerOnStaticIndex.cs" />
     <Compile Include="Bugs\RacielrodTest.cs" />
     <Compile Include="Bugs\RecursiveQueries.cs" />
