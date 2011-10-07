@@ -32,7 +32,7 @@ namespace Raven.Studio
 	        {
 	            if (link != null && link.NavigateUri != null)
 	            {
-	                if (currentUri.ToString().StartsWith(link.NavigateUri.ToString()))
+	                if (currentUri.ToString().StartsWith(link.NavigateUri.ToString(), StringComparison.InvariantCultureIgnoreCase))
 	                {
 	                    VisualStateManager.GoToState(link, "ActiveLink", true);
 	                }
