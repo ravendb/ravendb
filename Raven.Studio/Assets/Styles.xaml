@@ -355,8 +355,19 @@
 		</toolkit:WrapPanel>
 	</ItemsPanelTemplate>
 
-	
-	<Style x:Name="FluidList"
+    <Style x:Name="Style_ItemsControl_Fluid"
+		   TargetType="ItemsControl">
+        <Setter Property="ItemsPanel"
+				Value="{StaticResource FluidWrapPanel}" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Disabled" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Disabled" />
+        <Setter Property="BorderThickness"
+				Value="0" />
+    </Style>
+    
+    <Style x:Name="Style_ListBox_Fluid"
 		   TargetType="ListBox">
 		<Setter Property="ItemsPanel"
 				Value="{StaticResource FluidWrapPanel}" />
@@ -368,7 +379,7 @@
 				Value="0" />
 	</Style>
 
-	<Style x:Name="Collections_FluidList" BasedOn="{StaticResource FluidList}"
+	<Style x:Name="Collections_FluidList" BasedOn="{StaticResource Style_ListBox_Fluid}"
 		   TargetType="ListBox">
 		<Setter Property="MaxHeight"
 				Value="400" />
@@ -398,7 +409,7 @@
     </Style>
 
     <Style x:Name="Style_ListBox_Indexes"
-		   BasedOn="{StaticResource FluidList}"
+		   BasedOn="{StaticResource Style_ListBox_Fluid}"
 		   TargetType="ListBox">
 		<Setter Property="Background"
 				Value="Transparent" />

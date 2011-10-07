@@ -170,7 +170,7 @@
 						   Grid.Row="7" />
 				<ItemsControl ItemsSource="{Binding Fields}"
 							  Visibility="{Binding Path=Fields.Count, Converter={StaticResource HiddenWhenEmpty}}"
-							  Style="{StaticResource FluidList}"
+							  Style="{StaticResource Style_ItemsControl_Fluid}"
 							  Grid.Row="7"
 							  Grid.Column="1">
 					<ItemsControl.ItemTemplate>
