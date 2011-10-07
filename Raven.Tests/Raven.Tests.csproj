@@ -164,6 +164,7 @@
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
+    <Compile Include="Bugs\CompiledIndexesNhsevidence.cs" />
     <Compile Include="Bugs\ConflictsWithIIS.cs" />
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
     <Compile Include="Bugs\CreatingIndexes.cs" />
