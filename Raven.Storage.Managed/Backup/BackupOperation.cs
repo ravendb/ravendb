@@ -31,6 +31,8 @@ namespace Raven.Storage.Managed.Backup
 		{
 			this.database = database;
 			this.persistentSource = persistentSource;
+			this.src = src;
+			this.to = to;
 		}
 
 		public void Execute(object ignored)

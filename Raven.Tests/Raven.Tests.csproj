@@ -169,6 +169,7 @@
     <Compile Include="Bugs\CreatingIndexes.cs" />
     <Compile Include="Bugs\DeserializationAcrossTypes.cs" />
     <Compile Include="Bugs\DynamicQuerySorting.cs" />
+    <Compile Include="Bugs\EmbeddableDocumentStoreUsingUrlWithConnectionString.cs" />
     <Compile Include="Bugs\Everett.cs" />
     <Compile Include="Bugs\FullTextSearchOnTags.cs" />
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
@@ -205,6 +206,7 @@
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
     <Compile Include="Bugs\QueryingOnEmptyArray.cs" />
     <Compile Include="Bugs\QueryingOnEmptyString.cs" />
+    <Compile Include="Bugs\QueryingOverTags.cs" />
     <Compile Include="Bugs\QueryOptimizerOnStaticIndex.cs" />
     <Compile Include="Bugs\RacielrodTest.cs" />
     <Compile Include="Bugs\RecursiveQueries.cs" />

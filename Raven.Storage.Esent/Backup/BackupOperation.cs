@@ -33,6 +33,8 @@ namespace Raven.Storage.Esent.Backup
 			this.src = src;
 			this.to = to;
 			this.database = database;
+			this.src = src;
+			this.to = to;
 		}
 
 		public void Execute(object ignored)

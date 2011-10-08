@@ -40,7 +40,10 @@ namespace Raven.Client.Linq
 			var parameterExpression = expression as ParameterExpression;
 			if (parameterExpression != null)
 			{
-				return new ExpressionInfo(CurrentPath, parameterExpression.Type, false);
+				var currentPath = CurrentPath;
+				if (currentPath.EndsWith(","))
+					currentPath = currentPath.Substring(0, currentPath.Length - 1);
+				return new ExpressionInfo(currentPath, parameterExpression.Type, false);
 			}
 
 			string path;
