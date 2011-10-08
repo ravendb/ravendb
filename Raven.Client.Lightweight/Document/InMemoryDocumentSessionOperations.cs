@@ -489,7 +489,7 @@ more responsive application.
 					throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
 					                            " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-				setIdenitifer(converter.ConvertTo(Conventions.FindIdValuePartForValueTypeConvertion(entity,id)));
+				setIdenitifer(converter.ConvertTo(Conventions.FindIdValuePartForValueTypeConversion(entity,id)));
 			}
 		}
 

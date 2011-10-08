@@ -70,7 +70,7 @@ namespace Raven.Client.Document
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
-			FindIdValuePartForValueTypeConvertion = (entity, id) => id.Split(new[] {IdentityPartsSeparator}, StringSplitOptions.RemoveEmptyEntries) .Last();
+			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] {IdentityPartsSeparator}, StringSplitOptions.RemoveEmptyEntries) .Last();
 		}
 
 		///<summary>
@@ -371,7 +371,7 @@ namespace Raven.Client.Document
 		/// When RavenDB needs to convert between a string id to a value type like int or guid, it calls
 		/// this to perform the actual work
 		/// </summary>
-		public Func<object, string, string> FindIdValuePartForValueTypeConvertion { get; set; }
+		public Func<object, string, string> FindIdValuePartForValueTypeConversion { get; set; }
 
 		/// <summary>
 		/// Instruct the Linq provider to query enums as integer values.
