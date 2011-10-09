@@ -30,6 +30,8 @@ namespace Raven.Storage.Esent.Backup
 		public BackupOperation(DocumentDatabase database, string src, string to)
 		{
 			instance = ((TransactionalStorage)database.TransactionalStorage).Instance;
+			this.src = src;
+			this.to = to;
 			this.database = database;
 			this.src = src;
 			this.to = to;
