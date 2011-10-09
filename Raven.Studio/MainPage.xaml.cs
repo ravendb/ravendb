@@ -23,24 +23,33 @@ namespace Raven.Studio
 		// After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
 		private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
 		{
-            //foreach (UIElement child in LinksStackPanel.Children)
-            //{
-            //    HyperlinkButton hb = child as HyperlinkButton;
-            //    if (hb != null && hb.NavigateUri != null)
-            //    {
-            //        if (hb.NavigateUri.ToString().Equals(e.Uri.ToString()))
-            //        {
-            //            VisualStateManager.GoToState(hb, "ActiveLink", true);
-            //        }
-            //        else
-            //        {
-            //            VisualStateManager.GoToState(hb, "InactiveLink", true);
-            //        }
-            //    }
-            //}
+		    HighlightCurrentPage(e.Uri);
 		}
 
-		// If an error occurs during navigation, show an error window
+	    private void HighlightCurrentPage(Uri currentUri)
+	    {
+	        foreach (var link in MainLinks.Children.OfType<HyperlinkButton>())
+	        {
+	            if (link != null && link.NavigateUri != null)
+	            {
+	                if (currentUri.ToString().StartsWith(link.NavigateUri.ToString(), StringComparison.InvariantCultureIgnoreCase))
+	                {
+	                    VisualStateManager.GoToState(link, "ActiveLink", true);
+	                }
+	                else
+	                {
+	                    VisualStateManager.GoToState(link, "InactiveLink", true);
+	                }
+	            }
+	        }
+
+            if (currentUri.ToString() == string.Empty)
+            {
+                VisualStateManager.GoToState(SummaryLink, "ActiveLink", true);
+            }
+	    }
+
+	    // If an error occurs during navigation, show an error window
 		private void ContentFrame_NavigationFailed(object sender, NavigationFailedEventArgs e)
 		{
 			e.Handled = true;
