@@ -128,7 +128,7 @@
     <Compile Include="Commands\DeleteDocumentCommand.cs" />
     <Compile Include="Features\Documents\DocumentsModelLocator.cs" />
     <Compile Include="Features\Documents\HomeModelLoactor.cs" />
-    <Compile Include="Features\Documents\NavigateToCommand.cs" />
+    <Compile Include="Commands\NavigateToCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
@@ -498,6 +498,7 @@
     <Resource Include="Assets\Images\Undo.png" />
     <Resource Include="Assets\Images\add.png" />
     <Resource Include="Assets\Images\Remove.png" />
+    <Resource Include="Assets\Images\Query.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />

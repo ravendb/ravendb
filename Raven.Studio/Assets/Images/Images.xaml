@@ -1,7 +1,6 @@
-﻿<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <BitmapImage x:Key="Image_BackgroundTexture" UriSource="BackgroundTexture.png"/>
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<BitmapImage x:Key="Image_BackgroundTexture" UriSource="BackgroundTexture.png"/>
     <BitmapImage x:Key="Image_BackgroundTextureBottom" UriSource="BackgroundTextureBottom.png"/>
     <BitmapImage x:Key="Image_RavenDBLogo" UriSource="RavenDBLogo.png"/>
     <BitmapImage x:Key="Image_FooterTexture" UriSource="FooterTexture.png"/>
@@ -11,6 +10,5 @@
     <BitmapImage x:Key="Image_Remove_Tiny" UriSource="Remove.png"/>
     <BitmapImage x:Key="Image_Save_Small" UriSource="Save.png"/>
     <BitmapImage x:Key="Image_Undo_Small" UriSource="Undo.png"/>
-    
-    
+    <BitmapImage x:Key="Image_Query_Small" UriSource="Query.png"/>
 </ResourceDictionary>

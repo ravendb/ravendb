@@ -8,3 +8,4 @@ The following icons from Marco Martin (http://www.notmart.org/) via iconfinder.c
 Save.png
 Undo.png
 Remove.png
+Query.png (find)

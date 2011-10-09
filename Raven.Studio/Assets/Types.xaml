@@ -16,4 +16,5 @@
 	
 	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
 	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />
+	<Commands:NavigateToCommand x:Name="NavigateToCommand" />
 </ResourceDictionary>

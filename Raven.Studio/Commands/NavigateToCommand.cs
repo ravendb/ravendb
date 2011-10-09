@@ -2,19 +2,15 @@ using System;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
-namespace Raven.Studio.Features.Documents
+namespace Raven.Studio.Commands
 {
 	public class NavigateToCommand : Command
 	{
-		private readonly string href;
-
-		public NavigateToCommand(string href)
-		{
-			this.href = href;
-		}
-
 		public override void Execute(object parameter)
 		{
+			var href = parameter as string;
+			if (href == null)
+				return;
 			ApplicationModel.Current.Navigate(new Uri(href, UriKind.Relative));
 		}
 	}

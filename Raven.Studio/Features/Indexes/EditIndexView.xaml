@@ -183,6 +183,14 @@
                         <Image Source="{StaticResource Image_Undo_Small}" Stretch="None"/>
                     </Button>
 
+                    <Button x:Name="Query" Style="{StaticResource Style_Button_PageHeaderBar}"
+										 HorizontalAlignment="Left"
+										 Margin="4 0 0 0"
+										 ToolTipService.ToolTip="Query this index"
+										 Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="{Binding Name, StringFormat='/query/\{0\}'}">
+                        <Image Source="{StaticResource Image_Query_Small}" Stretch="Uniform" Width="22" Height="22" />
+                    </Button>
 
                 </StackPanel>
             </toolkit:DockPanel>
