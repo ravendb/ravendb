@@ -455,7 +455,7 @@ namespace Raven.Client.Shard
 			GetSingleShardSession(shardId).Store(entity);
 		}
 
-		public void Store(dynamic entity, string id)
+		public void Store(object entity, string id)
 		{
 			// We don't care about this feature now, being we're rewriting this anyhow
 			throw new NotImplementedException();
