@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Raven.Studio.Commands;
@@ -10,24 +9,23 @@ namespace Raven.Studio.Models
 {
     public class DocumentsModel : Model
     {
-        private readonly Func<BindableCollection<ViewableDocument>, int, Task> fetchDocuments;
+		private readonly Func<DocumentsModel, int, Task> fetchDocuments;
         private readonly int itemsPerPages;
         public BindableCollection<ViewableDocument> Documents { get; private set; }
 
-        public DocumentsModel(Func<BindableCollection<ViewableDocument>, int, Task> fetchDocuments, string location, int itemsPerPages)
+        public DocumentsModel(Func<DocumentsModel,int, Task> fetchDocuments, string location, int itemsPerPages)
         {
-            this.fetchDocuments = fetchDocuments;
-            this.location = location;
+        	this.fetchDocuments = fetchDocuments;
+        	this.location = location;
             this.itemsPerPages = itemsPerPages;
             TotalPages = new Observable<long>();
             Documents = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(document => document.Id));
-
         }
-
-        protected override Task TimerTickedAsync()
-        {
-            return fetchDocuments(Documents, CurrentPage - 1);
-        }
+    
+    	protected override Task TimerTickedAsync()
+    	{
+    		return fetchDocuments(this, CurrentPage - 1);
+    	}
 
         public int CurrentPage
         {

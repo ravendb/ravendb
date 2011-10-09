@@ -41,17 +41,17 @@ namespace Raven.Studio.Models
 		public CollectionModel(IAsyncDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
-		    Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(GetFetchDocumentsMethod(), "/Collections", ItemsPerPage)};
+		    Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(GetFetchDocumentsMethod, "/Collections", ItemsPerPage)};
 		}
 
-	    private Func<BindableCollection<ViewableDocument>, int, Task> GetFetchDocumentsMethod()
+	    private Task GetFetchDocumentsMethod(DocumentsModel documentsModel, int currentPage)
 	    {
-	        return (docs, currentPage) => databaseCommands
+	        return databaseCommands
                 .QueryAsync("Raven/DocumentsByEntityName", new IndexQuery { Start = currentPage * ItemsPerPage, PageSize = ItemsPerPage, Query = "Tag:" + Name }, new string[] { })
                 .ContinueOnSuccess(queryResult =>
                 {
                     var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
-                    docs.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
+                    documentsModel.Documents.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
                     Documents.Value.TotalPages.Value = queryResult.TotalResults/ItemsPerPage + 1;
                 });
 	    }

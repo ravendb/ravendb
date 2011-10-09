@@ -21,17 +21,17 @@ namespace Raven.Studio.Features.Documents
         protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<DocumentsModel> observable)
         {
             this.asyncDatabaseCommands = asyncDatabaseCommands;
-            observable.Value = new DocumentsModel(GetFetchDocumentsMethod(), "/documents", 25)
+            observable.Value = new DocumentsModel(GetFetchDocumentsMethod, "/documents", 25)
             {
                 TotalPages = new Observable<long>(DatabaseModel.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / 25 + 1) 
             };
         }
 
-        private Func<BindableCollection<ViewableDocument>, int, Task> GetFetchDocumentsMethod()
+        private Task GetFetchDocumentsMethod(DocumentsModel documentsModel, int currentPage)
         {
             const int pageSize = 25;
-            return (documents, currentPage) => asyncDatabaseCommands.GetDocumentsAsync(currentPage * pageSize, pageSize)
-                .ContinueOnSuccess(docs => documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
+            return asyncDatabaseCommands.GetDocumentsAsync(currentPage * pageSize, pageSize)
+                .ContinueOnSuccess(docs => documentsModel.Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
         }
     }
 }

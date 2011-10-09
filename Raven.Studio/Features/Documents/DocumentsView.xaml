@@ -1,98 +1,101 @@
 ﻿<Infrastructure:View x:Name="this"
-			 x:Class="Raven.Studio.Features.Documents.DocumentsView"
-			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:Controls="clr-namespace:System.Windows.Controls"
-			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-       xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-			 Tag="Documents">
+					 x:Class="Raven.Studio.Features.Documents.DocumentsView"
+					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					 xmlns:Controls="clr-namespace:System.Windows.Controls"
+					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+					 Tag="Documents">
 
-  <Grid>
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="*"/>
-    </Grid.RowDefinitions>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
 
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="Auto" />
-      <ColumnDefinition Width="*"/>
-      <ColumnDefinition Width="Auto" />
-    </Grid.ColumnDefinitions>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto" />
+			<ColumnDefinition Width="*" />
+			<ColumnDefinition Width="Auto" />
+		</Grid.ColumnDefinitions>
 
-    <TextBlock x:Name="HeaderText"
+		<TextBlock x:Name="HeaderText"
 				   Style="{StaticResource Style_Text_Header}"
 				   Text="{Binding Tag, ElementName=this}" />
 
-    <ListBox ItemsSource="{Binding Documents}"
+		<ListBox ItemsSource="{Binding Documents}"
+				 
 				 Style="{StaticResource DocumentList}"
 				 Grid.Row="1"
-             Grid.ColumnSpan="3">
-      <Controls:ContextMenuService.ContextMenu>
-        <Controls:ContextMenu>
-          <Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
-									  Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
-									  CommandParameter="{Binding RelativeSource={RelativeSource Self}}"/>
-          <Controls:MenuItem Header="Delete"
+				 Grid.ColumnSpan="3">
+			<Controls:ContextMenuService.ContextMenu>
+				<Controls:ContextMenu>
+					<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
+									   Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
+									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+					<Controls:MenuItem Header="Delete"
 									   Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
 									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-        </Controls:ContextMenu>
-      </Controls:ContextMenuService.ContextMenu>
-      <i:Interaction.Triggers>
-        <ei:KeyTrigger Key="Delete">
-          <i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+				</Controls:ContextMenu>
+			</Controls:ContextMenuService.ContextMenu>
+			<i:Interaction.Triggers>
+				<ei:KeyTrigger Key="Delete">
+					<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
 										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-        </ei:KeyTrigger>
-      </i:Interaction.Triggers>
+				</ei:KeyTrigger>
+			</i:Interaction.Triggers>
 
-      <ListBox.ItemTemplate>
-        <DataTemplate>
-          <Grid Width="100"
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<Grid Width="100"
 						  Height="50"
 						  Margin="2">
 
-            <Rectangle Fill="#FFF4F4F5" />
-            <Rectangle HorizontalAlignment="Left"
+						<Rectangle Fill="#FFF4F4F5" />
+						<Rectangle HorizontalAlignment="Left"
 								   Width="10"
 								   x:Name="DocumentGrid"
 								   Fill="{Binding Path=Fill}" />
 
-            <Grid Margin="14,0,0,0">
-              <StackPanel Orientation="Vertical">
-                <TextBlock Text="{Binding CollectionType}"
+						<Grid Margin="14,0,0,0">
+							<StackPanel Orientation="Vertical">
+								<TextBlock Text="{Binding CollectionType}"
 										   TextTrimming="WordEllipsis"
 										   HorizontalAlignment="Left" />
-                <TextBlock Text="{Binding DisplayId}"
+								<TextBlock Text="{Binding DisplayId}"
 										   TextTrimming="WordEllipsis"
 										   HorizontalAlignment="Left" />
-              </StackPanel>
-            </Grid>
+							</StackPanel>
+						</Grid>
 
-            <StackPanel x:Name="overlay"
+						<StackPanel x:Name="overlay"
 									Orientation="Horizontal"
 									HorizontalAlignment="Right"
 									VerticalAlignment="Bottom">
-              <HyperlinkButton Content="edit"
-									Command="{Binding Path=Edit}"
-									ToolTipService.ToolTip="click here to edit the document"
-									Margin="0,0,0,0"
-									Style="{StaticResource Style_Link_Command}">
-                            </HyperlinkButton>
-            </StackPanel>
-          </Grid>
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-    </ListBox>
+							<HyperlinkButton Content="edit"
+											 Command="{Binding Path=Edit}"
+											 ToolTipService.ToolTip="click here to edit the document"
+											 Margin="0,0,0,0"
+											 Style="{StaticResource Style_Link_Command}">
+							</HyperlinkButton>
+						</StackPanel>
+					</Grid>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+		</ListBox>
 
-    <StackPanel  Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
-      <HyperlinkButton Content="&lt;"
-                       Command="{Binding PreviousPage}"/>
-      <TextBlock Text="Page "/>
-      <TextBlock Text="{Binding CurrentPage}" />
-      <TextBlock Text=" of "/>
-      <TextBlock Text="{Binding TotalPages.Value}" />
-      <HyperlinkButton Content="&gt;"
-                       Command="{Binding NextPage}"/>
-    </StackPanel>
-  </Grid>
+		<StackPanel  Grid.Row="0"
+					 Grid.Column="2"
+					 Orientation="Horizontal">
+			<HyperlinkButton Content="&lt;"
+							 Command="{Binding PreviousPage}" />
+			<TextBlock Text="Page " />
+			<TextBlock Text="{Binding CurrentPage}" />
+			<TextBlock Text=" of " />
+			<TextBlock Text="{Binding TotalPages.Value}" />
+			<HyperlinkButton Content="&gt;"
+							 Command="{Binding NextPage}" />
+		</StackPanel>
+	</Grid>
 </Infrastructure:View>

@@ -26,10 +26,10 @@ namespace Raven.Studio.Models
             };
         }
 
-        private Task GetFetchDocumentsMethod(BindableCollection<ViewableDocument> documents, int currentPage)
+        private Task GetFetchDocumentsMethod(DocumentsModel documents, int currentPage)
         {
             return asyncDatabaseCommands.GetDocumentsAsync(currentPage * RecentDocumentsCountPerPage, RecentDocumentsCountPerPage)
-                .ContinueOnSuccess(docs => documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
+                .ContinueOnSuccess(docs => documents.Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
         }
 
     }

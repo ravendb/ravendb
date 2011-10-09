@@ -55,11 +55,15 @@ namespace Raven.Studio.Features.Query
 				.Catch();
 		}
 
-		private Task GetFetchDocumentsMethod(BindableCollection<ViewableDocument> documents, int currentPage)
+		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel,int currentPage)
 		{
 			var q = new IndexQuery { Start = model.CurrentPage * QueryModel.PageSize, PageSize = QueryModel.PageSize, Query = model.Query.Value };
 			return asyncDatabaseCommands.QueryAsync(model.IndexName, q, null)
-				.ContinueOnSuccess(result => documents.Match(result.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray()));
+				.ContinueOnSuccess(qr =>
+				                   {
+									   documentsModel.Documents.Match(qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray());
+									   documentsModel.TotalPages.Value = qr.TotalResults / QueryModel.PageSize;
+				                   });
 		}
 	}
 }
