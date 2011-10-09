@@ -20,7 +20,7 @@ namespace Raven.Studio.Commands
             this.location = location;
             this.itemsPerPage = itemsPerPage;
             this.numberOfPages = numberOfPages;
-            this.numberOfPages.PropertyChanged += (sender, args) => OnCanExecuteChanged(EventArgs.Empty);
+            this.numberOfPages.PropertyChanged += (sender, args) => OnCanExecuteChanged();
         }
 
         public override void Execute(object parameter)

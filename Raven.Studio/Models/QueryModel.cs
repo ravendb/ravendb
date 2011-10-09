@@ -17,16 +17,12 @@ namespace Raven.Studio.Models
 			this.indexName = indexName;
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 			DocumentsResult = new Observable<DocumentsModel>();
+			Query = new Observable<string>();
 		}
 
 		public ICommand Execute { get { return new ExecuteQueryCommand(this, asyncDatabaseCommands); } }
 
-		private string query;
-		public string Query
-		{
-			get { return query; }
-			set { query = value; OnPropertyChanged(); }
-		}
+		public Observable<string> Query { get; set; }
 
 		public string IndexName
 		{

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -21,25 +22,24 @@ namespace Raven.Studio.Features.Query
 	{
 		private readonly QueryModel model;
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
-		private string query;
 
 		public ExecuteQueryCommand(QueryModel model, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			this.model = model;
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
+			model.Query.PropertyChanged += (sender, args) => OnCanExecuteChanged();
 		}
 
 		public override bool CanExecute(object parameter)
 		{
-			query = parameter as string;
-			return string.IsNullOrEmpty(query) == false;
+			return string.IsNullOrEmpty(model.Query.Value) == false;
 		}
 
 		public override void Execute(object parameter)
 		{
 			ApplicationModel.Current.AddNotification(new Notification("Executing query..."));
 
-			var q = new IndexQuery {Start = 0, PageSize = QueryModel.PageSize, Query = query};
+			var q = new IndexQuery {Start = 0, PageSize = QueryModel.PageSize, Query = model.Query.Value};
 			asyncDatabaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueWith(result =>
 				              {
@@ -56,7 +56,7 @@ namespace Raven.Studio.Features.Query
 
 		private Task GetFetchDocumentsMethod(BindableCollection<ViewableDocument> documents, int currentPage)
 		{
-			var q = new IndexQuery { Start = model.CurrentPage * QueryModel.PageSize, PageSize = QueryModel.PageSize, Query = query };
+			var q = new IndexQuery { Start = model.CurrentPage * QueryModel.PageSize, PageSize = QueryModel.PageSize, Query = model.Query.Value };
 			return asyncDatabaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueOnSuccess(result => documents.Match(result.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray()));
 		}
