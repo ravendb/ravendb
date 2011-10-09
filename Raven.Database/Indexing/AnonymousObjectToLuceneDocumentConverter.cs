@@ -193,9 +193,9 @@ namespace Raven.Database.Indexing
 				yield return CreateFieldWithCaching(name, convert.ToString(CultureInfo.InvariantCulture), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
-			else if (value is DynamicJsonObject)
+			else if (value is IDynamicJsonObject)
 			{
-				var inner = ((DynamicJsonObject)value).Inner;
+				var inner = ((IDynamicJsonObject)value).Inner;
 				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield return CreateFieldWithCaching(name, inner.ToString(), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));

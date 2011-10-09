@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -32,11 +33,15 @@ namespace Raven.Bundles.Expiration
 "});
 		}
 
+		protected override TimeSpan TimeoutForNextWork()
+		{
+			return TimeSpan.FromMinutes(1);
+		}
+
 		protected override bool HandleWork()
 		{
 			var currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
 			var nowAsStr = DateTools.DateToString(currentTime, DateTools.Resolution.SECOND);
-			int retries = 0;
 			QueryResult queryResult;
 			do
 			{
@@ -47,12 +52,6 @@ namespace Raven.Bundles.Expiration
 					FieldsToFetch = new []{"__document_id"}
 				});
 
-				if(queryResult.IsStale)
-				{
-					if (++retries > 25)
-						return false;
-					Thread.Sleep(100);
-				}
 			} while (queryResult.IsStale );
 
 			foreach (var result in queryResult.Results)
@@ -61,7 +60,7 @@ namespace Raven.Bundles.Expiration
 				Database.Delete(docId, null, null);
 			}
 
-			return queryResult.Results.Count > 0;
+			return false; // will scan again in a minute
 		}
 	}
 }

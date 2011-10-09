@@ -10,7 +10,7 @@ namespace Raven.Bundles.Tests.Versioning.Bugs
 		[Fact]
 		public void Loading_versioned_entity_with_guid_id_will_fail()
 		{
-			documentStore.Conventions.FindIdValuePartForValueTypeConvertion = (entity, id) =>
+			documentStore.Conventions.FindIdValuePartForValueTypeConversion = (entity, id) =>
 			{
 				var parts = id.Split('/');
 				var guid = parts[1];

@@ -436,6 +436,12 @@ namespace Raven.Client.Shard
 			GetSingleShardSession(shardId).Store(entity, etag);
 		}
 
+		public void Store(object entity, Guid etag, string id)
+		{
+			// We don't care about this feature now, being we're rewriting this anyhow
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Stores the specified entity in the session. The entity will be saved when <see cref="IDocumentSession.SaveChanges"/> is called.
 		/// </summary>
@@ -447,6 +453,12 @@ namespace Raven.Client.Shard
 				throw new InvalidOperationException("Can't find a shard to use for entity: " + entity);
 
 			GetSingleShardSession(shardId).Store(entity);
+		}
+
+		public void Store(object entity, string id)
+		{
+			// We don't care about this feature now, being we're rewriting this anyhow
+			throw new NotImplementedException();
 		}
 
 #if !NET_3_5

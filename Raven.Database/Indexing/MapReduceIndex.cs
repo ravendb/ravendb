@@ -158,8 +158,8 @@ namespace Raven.Database.Indexing
 
 		private static RavenJObject GetMapedData(object doc)
 		{
-			if (doc is DynamicJsonObject)
-				return ((DynamicJsonObject)doc).Inner;
+			if (doc is IDynamicJsonObject)
+				return ((IDynamicJsonObject)doc).Inner;
 			return RavenJObject.FromObject(doc, JsonExtensions.CreateDefaultJsonSerializer());
 		}
 
@@ -195,7 +195,7 @@ namespace Raven.Database.Indexing
 		{
 			if (reduceValue is string || reduceValue is ValueType)
 				return reduceValue.ToString();
-			var dynamicJsonObject = reduceValue as DynamicJsonObject;
+			var dynamicJsonObject = reduceValue as IDynamicJsonObject;
 			if (dynamicJsonObject != null)
 				return dynamicJsonObject.Inner.ToString(Formatting.None);
 			return RavenJToken.FromObject(reduceValue).ToString(Formatting.None);
@@ -345,9 +345,9 @@ namespace Raven.Database.Indexing
 		private IEnumerable<AbstractField> GetFields(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc, ref PropertyDescriptorCollection properties)
 		{
 			IEnumerable<AbstractField> fields;
-			if (doc is DynamicJsonObject)
+			if (doc is IDynamicJsonObject)
 			{
-				fields = anonymousObjectToLuceneDocumentConverter.Index(((DynamicJsonObject)doc).Inner,
+				fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner,
 																		indexDefinition, Field.Store.YES);
 			}
 			else

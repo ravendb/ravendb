@@ -31,7 +31,7 @@ namespace Raven.Tests.Bugs.CompiledIndexes
 					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 
 					var expected = new DateTime(2011,5,29).ToUniversalTime();
-					Assert.Equal(expected, list[0].NetworkTimeStamp.UtcDateTime);
+					Assert.Equal(expected, list[0].NetworkTimeStamp);
 				}
 			}
 		}

@@ -489,7 +489,7 @@ more responsive application.
 					throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
 					                            " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-				setIdenitifer(converter.ConvertTo(Conventions.FindIdValuePartForValueTypeConvertion(entity,id)));
+				setIdenitifer(converter.ConvertTo(Conventions.FindIdValuePartForValueTypeConversion(entity,id)));
 			}
 		}
 
@@ -512,7 +512,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity)
 		{
-			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?)null);
+			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?) null, null);
 		}
 
 		/// <summary>
@@ -520,10 +520,26 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity, Guid etag)
 		{
-			StoreInternal(entity, etag);
+			StoreInternal(entity, etag, null);
 		}
 
-		private void StoreInternal(object entity, Guid? etag)
+		/// <summary>
+		/// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
+		/// </summary>
+		public void Store(object entity, string id)
+		{
+			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?)null, id);
+		}
+
+		/// <summary>
+		/// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
+		/// </summary>
+		public void Store(object entity, Guid etag, string id)
+		{
+			StoreInternal(entity, etag, id);
+		}
+
+		private void StoreInternal(object entity, Guid? etag, string id)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
@@ -531,26 +547,33 @@ more responsive application.
 			if (entitiesAndMetadata.ContainsKey(entity))
 				return;
 
-			string id;
-#if !NET_3_5
-			if (entity is IDynamicMetaObjectProvider)
+			if (id == null)
 			{
-				if(TryGetIdFromDynamic(entity,out id) == false)
+#if !NET_3_5
+				if (entity is IDynamicMetaObjectProvider)
 				{
-					id = Conventions.DocumentKeyGenerator(entity);
-
-					if (id != null)
+					if (TryGetIdFromDynamic(entity, out id) == false)
 					{
-						// Store it back into the Id field so the client has access to to it                    
-						TrySetIdOnynamic(entity, id);
+						id = Conventions.DocumentKeyGenerator(entity);
+
+						if (id != null)
+						{
+							// Store it back into the Id field so the client has access to to it                    
+							TrySetIdOnynamic(entity, id);
+						}
 					}
+				}
+				else
+#endif
+				{
+					id = GetOrGenerateDocumentKey(entity);
+
+					TrySetIdentity(entity, id);
 				}
 			}
 			else
-#endif
 			{
-				id = GetOrGenerateDocumentKey(entity);
-
+				// Store it back into the Id field so the client has access to to it                    
 				TrySetIdentity(entity, id);
 			}
 
