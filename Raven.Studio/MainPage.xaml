@@ -168,6 +168,8 @@
 												  MappedUri="/Views/IndexesErrors.xaml" />
 							<uriMapper:UriMapping Uri="/indexes/{indexName}"
 												  MappedUri="/Views/Index.xaml" />
+							<uriMapper:UriMapping Uri="/query/{indexName}"
+												  MappedUri="/Views/Query.xaml" />
 							<uriMapper:UriMapping Uri="/logs/{errors}"
 												  MappedUri="/Views/Logs.xaml" />
 							<uriMapper:UriMapping Uri="/{pageName}"
