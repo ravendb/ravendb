@@ -571,6 +571,11 @@ more responsive application.
 					TrySetIdentity(entity, id);
 				}
 			}
+			else
+			{
+				// Store it back into the Id field so the client has access to to it                    
+				TrySetIdentity(entity, id);
+			}
 
 			// we make the check here even if we just generated the key
 			// users can override the key generation behavior, and we need
