@@ -16,14 +16,23 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Linq
 {
+	public interface IDynamicJsonObject
+	{
+		/// <summary>
+		/// Gets the inner json object
+		/// </summary>
+		/// <value>The inner.</value>
+		RavenJObject Inner { get; }
+
+	}
 	/// <summary>
 	/// A dynamic implementation on top of <see cref="RavenJObject"/>
 	/// </summary>
-	public class DynamicJsonObject : DynamicObject, IEnumerable<object>
+	public class DynamicJsonObject : DynamicObject, IEnumerable<object>, IDynamicJsonObject
 	{
 		public IEnumerator<object> GetEnumerator()
 		{
-			foreach (var item in Inner)
+			foreach (var item in inner)
 			{
 				if (item.Key[0] == '$')
 					continue;
@@ -77,15 +86,6 @@ namespace Raven.Abstractions.Linq
 		}
 
 		private readonly RavenJObject inner;
-
-		/// <summary>
-		/// Gets the inner json object
-		/// </summary>
-		/// <value>The inner.</value>
-		public RavenJObject Inner
-		{
-			get { return inner; }
-		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DynamicJsonObject"/> class.
@@ -197,7 +197,7 @@ namespace Raven.Abstractions.Linq
 			}
 			if (name == "Inner")
 			{
-				return Inner;
+				return inner;
 			}
 			return new DynamicNullObject();
 		}
@@ -455,6 +455,15 @@ namespace Raven.Abstractions.Linq
 			{
 				return new DynamicList(inner.SelectMany(func).ToArray());
 			}
+		}
+
+		/// <summary>
+		/// Gets the inner json object
+		/// </summary>
+		/// <value>The inner.</value>
+		RavenJObject IDynamicJsonObject.Inner
+		{
+			get { return inner; }
 		}
 	}
 }

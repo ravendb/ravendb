@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Json
 			else if(value is DynamicNullObject)
 				writer.WriteNull();
 			else
-				((DynamicJsonObject)value).Inner.WriteTo(writer);
+				((IDynamicJsonObject)value).Inner.WriteTo(writer);
 #else
 			throw new NotImplementedException();
 #endif
