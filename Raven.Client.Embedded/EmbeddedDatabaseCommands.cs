@@ -279,7 +279,7 @@ namespace Raven.Client.Embedded
 			query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
-			if (index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase))
+			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
 			{
 				string entityName = null;
 				if (index.StartsWith("dynamic/"))
