@@ -105,6 +105,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\IncreasePageCommand.cs" />
     <Compile Include="Commands\DecreasePageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
