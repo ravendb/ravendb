@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs
 					{
 						AddRecord(store, 1);
 					}
-					ReadRecords(store, 600);
+					ReadRecords(store, 60);
 				}
 			}
 		}
@@ -42,15 +42,7 @@ namespace Raven.Tests.Bugs
 				for (int i = 0; i < 6; i++)
 				{
 					int count = session.Advanced.LuceneQuery<object>("view" + (i+1)).WaitForNonStaleResults().QueryResult.TotalResults;
-					if(count != shouldBe)
-					{
-						var boundedMemoryTarget = LogManager.Configuration.AllTargets.OfType<BoundedMemoryTarget>().FirstOrDefault();
-						var logEventInfos = boundedMemoryTarget.GeneralLog.ToArray();
-						foreach (var logEventInfo in logEventInfos)
-						{
-							Console.WriteLine(logEventInfo);
-						}
-					}
+					
 					Assert.Equal(count, shouldBe);
 				}
 			}
@@ -63,7 +55,7 @@ namespace Raven.Tests.Bugs
 				for (int i = 0; i < records; i++)
 				{
 					var item = new TestClass {Items = new List<Item>()};
-					for (int j = 0; j < 50; j++)
+					for (int j = 0; j < 5; j++)
 					{
 						item.Items.Add(new Item()
 						{
