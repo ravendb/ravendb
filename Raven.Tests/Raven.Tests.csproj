@@ -470,6 +470,7 @@
     <Compile Include="Bugs\TranslatingLinqQueriesToIndexes.cs" />
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
+    <Compile Include="Bugs\TypeNameHandlingTest.cs" />
     <Compile Include="Bugs\User.cs" />
     <Compile Include="Bugs\UserGuid.cs" />
     <Compile Include="Bugs\UserInt32.cs" />
