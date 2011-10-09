@@ -32,7 +32,8 @@ namespace Raven.Studio.Features.Query
 
 		public override bool CanExecute(object parameter)
 		{
-			return string.IsNullOrEmpty(model.Query.Value) == false;
+			return string.IsNullOrEmpty(model.Query.Value) == false && 
+				string.IsNullOrEmpty(model.IndexName) == false;
 		}
 
 		public override void Execute(object parameter)
@@ -50,8 +51,8 @@ namespace Raven.Studio.Features.Query
 				              	}
 				              	model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod, "/query", QueryModel.PageSize);
 				              })
-				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("Query executed.")));
-
+				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("Query executed.")))
+				.Catch();
 		}
 
 		private Task GetFetchDocumentsMethod(BindableCollection<ViewableDocument> documents, int currentPage)

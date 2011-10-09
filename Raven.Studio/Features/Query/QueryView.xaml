@@ -16,25 +16,7 @@
 		</Style>
 	</Infrastructure:View.Resources>
 
-	<toolkit:DockPanel Margin="{StaticResource Margin_ContentPage}">
-		<Border Background="{StaticResource Brush_HeaderBackground}"
-				MinHeight="40"
-				Margin="0,0,0,20"
-				CornerRadius="4,4,0,0"
-				toolkit:DockPanel.Dock="Top">
-			<StackPanel Orientation="Horizontal">
-				<HyperlinkButton Content="Indexes"
-								 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-								 NavigateUri="/Indexes" />
-				<TextBlock Text=">"
-						   VerticalAlignment="Center"
-						   Margin="4,0" />
-				<TextBlock Text="{Binding IndexName}"
-						   Style="{StaticResource Style_TextBlock_Breadcrumb}"
-						   VerticalAlignment="Center" />
-			</StackPanel>
-		</Border>
-
+	<toolkit:DockPanel>
 		<StackPanel toolkit:DockPanel.Dock="Top">
 			<TextBlock Style="{StaticResource PanelTitle}"
 					   Text="Query" />
