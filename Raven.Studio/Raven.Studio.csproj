@@ -499,6 +499,7 @@
     <Resource Include="Assets\Images\add.png" />
     <Resource Include="Assets\Images\Remove.png" />
     <Resource Include="Assets\Images\Query.png" />
+    <Resource Include="Assets\Images\Edit.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />

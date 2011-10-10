@@ -11,4 +11,5 @@
     <BitmapImage x:Key="Image_Save_Small" UriSource="Save.png"/>
     <BitmapImage x:Key="Image_Undo_Small" UriSource="Undo.png"/>
     <BitmapImage x:Key="Image_Query_Small" UriSource="Query.png"/>
+    <BitmapImage x:Key="Image_Edit_Small" UriSource="Edit.png"/>
 </ResourceDictionary>
