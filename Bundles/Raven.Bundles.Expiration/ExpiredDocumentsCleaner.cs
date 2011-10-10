@@ -22,8 +22,27 @@ namespace Raven.Bundles.Expiration
 		public void Execute(DocumentDatabase database)
 		{
 			Database = database;
-			Initialize(database);
-			timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+
+			
+			var indexDefinition = database.GetIndexDefinition(RavenDocumentsByExpirationDate);
+			if (indexDefinition == null)
+			{
+				database.PutIndex(RavenDocumentsByExpirationDate,
+				                  new IndexDefinition
+				                  {
+				                  	Map =
+				                  		@"
+	from doc in docs
+	let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
+	where expiry != null
+	select new { Expiry = expiry }
+"
+				                  });
+			}
+
+			var deleteFrequencyInSeconds = database.Configuration.GetConfigurationValue<int>("Raven/Expiration/DeleteFrequencySeconds") ?? 300;
+			timer = new Timer(TimerCallback, null, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
+
 		}
 
 		private void TimerCallback(object state)
@@ -43,24 +62,6 @@ namespace Raven.Bundles.Expiration
 				var docId = result.Value<string>("__document_id");
 				Database.Delete(docId, null, null);
 			}
-		}
-
-		public void Initialize(DocumentDatabase database)
-		{
-			var indexDefinition = database.GetIndexDefinition(RavenDocumentsByExpirationDate);
-			if (indexDefinition != null)
-				return;
-
-			database.PutIndex(RavenDocumentsByExpirationDate,
-							  new IndexDefinition
-							  {
-								  Map = @"
-	from doc in docs
-	let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
-	where expiry != null
-	select new { Expiry = expiry }
-"
-							  });
 		}
 
 		/// <summary>
