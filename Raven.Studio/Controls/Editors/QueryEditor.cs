@@ -1,5 +1,6 @@
-﻿using System;
+﻿using System.Linq;
 using System.Windows;
+using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 
 namespace Raven.Studio.Controls.Editors
@@ -20,6 +21,13 @@ namespace Raven.Studio.Controls.Editors
 		{
 			Document.Language = DefaultLanguage;
 			IsTextDataBindingEnabled = true;
+			AreLineModificationMarksVisible = false;
+			IsLineNumberMarginVisible = false;
+
+			foreach (var key in InputBindings.Where(x => x.Key == Key.Enter && x.Modifiers == ModifierKeys.Control).ToList())
+			{
+				InputBindings.Remove(key);
+			}
 		}
 
 

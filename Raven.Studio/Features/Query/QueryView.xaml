@@ -6,7 +6,8 @@
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
-					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors">
+					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions">
 
 	<Infrastructure:View.Resources>
 		<Style x:Key="PanelTitle"
@@ -44,7 +45,13 @@
 			<Editors:QueryEditor x:Name="QueryEditor"
 								 Text="{Binding Path=Query.Value, Mode=TwoWay}"
 								 CompletionProvider="{Binding Path=CompletionProvider.Value}"
-								 MinHeight="100" />
+								 MinHeight="100">
+				<i:Interaction.Triggers>
+					<ei:KeyTrigger Key="Enter" Modifiers="Control">
+						<i:InvokeCommandAction Command="{Binding Execute}" />
+					</ei:KeyTrigger>
+				</i:Interaction.Triggers>
+			</Editors:QueryEditor>
 			<HyperlinkButton Content="Execute"
 							 Command="{Binding Execute}"
 							 HorizontalAlignment="Right" />
