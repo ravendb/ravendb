@@ -37,7 +37,7 @@ namespace Raven.Studio.Features.Query
 			              {
 			              	CanCommitWithoutPopup = canCommitWithoutPopup,
 			              	CanFilterUnmatchedItems = true,
-			              	MatchOptions = CompletionMatchOptions.UseShorthand
+			              	MatchOptions = CompletionMatchOptions.UseAcronyms,
 			              };
 
 			if (currentInterestingToken != null && currentInterestingToken.EndsWith(":"))
@@ -48,14 +48,24 @@ namespace Raven.Studio.Features.Query
 				var terms = termsDictionary[field];
 				foreach (var term in terms)
 				{
-					session.Items.Add(new CompletionItem(term, new CommonImageSourceProvider(CommonImage.PropertyPublic)));
+					session.Items.Add(new CompletionItem
+					                  {
+					                  	Text = term,
+					                  	ImageSourceProvider = new CommonImageSourceProvider(CommonImage.PropertyPublic),
+					                  	AutoCompletePreText = term + " ",
+					                  });
 				}
 			}
 			else
 			{
 				foreach (var field in fields)
 				{
-					session.Items.Add(new CompletionItem(field, new CommonImageSourceProvider(CommonImage.PropertyPublic)));
+					session.Items.Add(new CompletionItem
+					                  {
+					                  	Text = field,
+					                  	ImageSourceProvider = new CommonImageSourceProvider(CommonImage.PropertyPublic),
+					                  	AutoCompletePreText = field + ": ",
+					                  });
 				}
 			}
 
