@@ -105,7 +105,7 @@ namespace Raven.Tests
 		{
 		}
 
-		public void WaitForIndexing(EmbeddableDocumentStore store)
+		public static void WaitForIndexing(EmbeddableDocumentStore store)
 		{
 			while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
 			{
