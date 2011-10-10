@@ -47,7 +47,8 @@
 								 CompletionProvider="{Binding Path=CompletionProvider.Value}"
 								 MinHeight="100">
 				<i:Interaction.Triggers>
-					<ei:KeyTrigger Key="Enter" Modifiers="Control">
+					<ei:KeyTrigger Key="Enter"
+								   Modifiers="Control">
 						<i:InvokeCommandAction Command="{Binding Execute}" />
 					</ei:KeyTrigger>
 				</i:Interaction.Triggers>
@@ -57,11 +58,13 @@
 							 HorizontalAlignment="Right" />
 		</StackPanel>
 
-		<Grid>
-			<TextBlock Text="{Binding Error}" Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
-			<Documents:DocumentsView DataContext="{Binding Path=DocumentsResult.Value}"
-									 Visibility="{Binding DocumentsResult.Value, Converter={StaticResource HiddenWhenEmpty}}" />
-		</Grid>
-		
+		<StackPanel>
+			<TextBlock Text="{Binding Error}"
+					   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
+			<Canvas Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
+				<Documents:DocumentsView DataContext="{Binding Path=DocumentsResult.Value}" />
+			</Canvas>
+		</StackPanel>
+
 	</toolkit:DockPanel>
 </Infrastructure:View>
