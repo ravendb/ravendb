@@ -9,6 +9,8 @@ namespace Raven.Studio.Features.Query
 		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<QueryModel> observable)
 		{
 			var indexName = GetParamAfter("/query/");
+			if (indexName == null)
+				return;
 			observable.Value = new QueryModel(indexName, asyncDatabaseCommands);
 		}
 	}
