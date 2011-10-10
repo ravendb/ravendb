@@ -25,13 +25,7 @@ namespace Raven.Studio.Features.Query
 
 		public bool RequestSession(IEditorView view, bool canCommitWithoutPopup)
 		{
-			string currentInterestingToken = null;
-			var textSnapshotReader = view.GetReader();
-			var lastToken = textSnapshotReader.ReadTokenReverse();
-			if (lastToken != null)
-			{
-				currentInterestingToken = textSnapshotReader.ReadText(lastToken.Length);
-			}
+			var currentInterestingToken = GetCurrentInterestingToken(view);
 
 			var session = new CompletionSession
 			              {
@@ -73,6 +67,22 @@ namespace Raven.Studio.Features.Query
 
 			session.Open(view);
 			return true;
+		}
+
+		private static string GetCurrentInterestingToken(IEditorView view)
+		{
+			var textSnapshotReader = view.GetReader();
+			while (true)
+			{
+				var lastToken = textSnapshotReader.ReadTokenReverse();
+				if (lastToken == null) 
+					return null;
+
+				var currentInterestingToken = textSnapshotReader.ReadText(lastToken.Length);
+				textSnapshotReader.ReadTokenReverse(); // reset the reading of the text
+				if(string.IsNullOrWhiteSpace(currentInterestingToken) == false)
+					return currentInterestingToken;
+			}
 		}
 
 		public string Key
