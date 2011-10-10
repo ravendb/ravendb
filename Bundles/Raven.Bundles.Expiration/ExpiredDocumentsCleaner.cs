@@ -8,21 +8,50 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Database;
 using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Expiration
 {
-	public class ExpiredDocumentsCleaner : AbstractBackgroundTask
+	public class ExpiredDocumentsCleaner : IStartupTask, IDisposable
 	{
 		private const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
 
-		protected override void Initialize()
+		private Timer timer;
+		public DocumentDatabase Database { get; set; }
+		public void Execute(DocumentDatabase database)
 		{
-			var indexDefinition = Database.GetIndexDefinition(RavenDocumentsByExpirationDate);
+			Database = database;
+			Initialize(database);
+			timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+		}
+
+		private void TimerCallback(object state)
+		{
+			var currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
+			var nowAsStr = DateTools.DateToString(currentTime, DateTools.Resolution.SECOND);
+			
+			var queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
+			{
+				Cutoff = currentTime,
+				Query = "Expiry:[* TO " + nowAsStr + "]",
+				FieldsToFetch = new[] { "__document_id" }
+			});
+
+			foreach (var result in queryResult.Results)
+			{
+				var docId = result.Value<string>("__document_id");
+				Database.Delete(docId, null, null);
+			}
+		}
+
+		public void Initialize(DocumentDatabase database)
+		{
+			var indexDefinition = database.GetIndexDefinition(RavenDocumentsByExpirationDate);
 			if (indexDefinition != null)
 				return;
 
-			Database.PutIndex(RavenDocumentsByExpirationDate,
+			database.PutIndex(RavenDocumentsByExpirationDate,
 							  new IndexDefinition
 							  {
 								  Map = @"
@@ -30,37 +59,18 @@ namespace Raven.Bundles.Expiration
 	let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
 	where expiry != null
 	select new { Expiry = expiry }
-"});
+"
+							  });
 		}
 
-		protected override TimeSpan TimeoutForNextWork()
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
+		public void Dispose()
 		{
-			return TimeSpan.FromMinutes(1);
-		}
-
-		protected override bool HandleWork()
-		{
-			var currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
-			var nowAsStr = DateTools.DateToString(currentTime, DateTools.Resolution.SECOND);
-			QueryResult queryResult;
-			do
-			{
-				queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
-				{
-					Cutoff = currentTime,
-					Query = "Expiry:[* TO "+nowAsStr+"]",
-					FieldsToFetch = new []{"__document_id"}
-				});
-
-			} while (queryResult.IsStale );
-
-			foreach (var result in queryResult.Results)
-			{
-				var docId = result.Value<string>("__document_id");
-				Database.Delete(docId, null, null);
-			}
-
-			return false; // will scan again in a minute
+			if (timer != null)
+				timer.Dispose();
 		}
 	}
 }

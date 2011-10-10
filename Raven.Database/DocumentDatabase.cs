@@ -5,7 +5,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -73,6 +72,8 @@ namespace Raven.Database
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
+
+		private List<IDisposable> toDispose = new List<IDisposable>();
 
 		/// <summary>
 		/// The name of the database.
@@ -218,6 +219,9 @@ namespace Raven.Database
 		{
 			foreach (var task in Configuration.Container.GetExportedValues<IStartupTask>())
 			{
+				var disposable = task as IDisposable;
+				if(disposable != null)
+					toDispose.Add(disposable);
 				task.Execute(this);
 			}
 		}
@@ -299,6 +303,10 @@ namespace Raven.Database
 			foreach (var value in ExtensionsState.Values.OfType<IDisposable>())
 			{
 				value.Dispose();
+			}
+			foreach (var shouldDispose in toDispose)
+			{
+				shouldDispose.Dispose();
 			}
 
 			if (tasksBackgroundTask != null)
