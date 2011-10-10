@@ -1,4 +1,12 @@
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
+using ActiproSoftware.Text.Utility;
+using ActiproSoftware.Windows.Controls.SyntaxEditor;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
@@ -12,13 +20,117 @@ namespace Raven.Studio.Models
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		public const int PageSize = 25;
 
+		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+		private readonly List<string> fields = new List<string>();
+		private readonly Dictionary<string, List<string>> fieldsTermsDictionary = new Dictionary<string, List<string>>(); 
+
 		public QueryModel(string indexName, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			this.indexName = indexName;
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
+			Query.PropertyChanged += GetTermsForUsedFields;
+			CompletionProvider = new Observable<ICompletionProvider>();
+
+			GetFields();
+			CompletionProvider.Value = new RavenQueryCompletionProvider(fields, fieldsTermsDictionary);
 		}
+
+		private void GetTermsForUsedFields(object sender, PropertyChangedEventArgs e)
+		{
+			var text = ((Observable<string>)sender).Value;
+			if (string.IsNullOrEmpty(text))
+				return;
+
+			var matches = FieldsFinderRegex.Matches(text);
+			foreach (Match match in matches)
+			{
+				var field = match.Groups[2].Value;
+				if (fieldsTermsDictionary.ContainsKey(field))
+					continue;
+				var terms = fieldsTermsDictionary[field] = new List<string>();
+				GetTermsForField(field, terms);
+			}
+		}
+
+		private void GetFields()
+		{
+			asyncDatabaseCommands.GetIndexAsync(indexName)
+				.ContinueOnSuccess(definition => fields.AddRange(definition.Fields));
+		}
+
+		private void GetTermsForField(string field, List<string> terms)
+		{
+			asyncDatabaseCommands.GetTermsAsync(IndexName, field, string.Empty, 1024)
+				.ContinueOnSuccess(terms.AddRange);
+		}
+
+		public class RavenQueryCompletionProvider : ICompletionProvider
+		{
+			private readonly IList<string> fields;
+			private readonly Dictionary<string, List<string>> termsDictionary;
+
+			public RavenQueryCompletionProvider(IList<string> fields, Dictionary<string, List<string>> termsDictionary)
+			{
+				this.fields = fields;
+				this.termsDictionary = termsDictionary;
+			}
+
+			public bool RequestSession(IEditorView view, bool canCommitWithoutPopup)
+			{
+				string currentInterestingToken = null;
+				var textSnapshotReader = view.GetReader();
+				var lastToken = textSnapshotReader.ReadTokenReverse();
+				if (lastToken != null)
+				{
+					currentInterestingToken = textSnapshotReader.ReadText(lastToken.Length);
+				}
+
+				var session = new CompletionSession
+				              {
+				              	CanCommitWithoutPopup = canCommitWithoutPopup,
+				              	CanFilterUnmatchedItems = true,
+				              	MatchOptions = CompletionMatchOptions.UseShorthand
+				              };
+
+				if (currentInterestingToken != null && currentInterestingToken.EndsWith(":"))
+				{
+					var field = currentInterestingToken.Substring(0, currentInterestingToken.Length - 1);
+					if (termsDictionary.ContainsKey(field) == false)
+						return false;
+					var terms = termsDictionary[field];
+					foreach (var term in terms)
+					{
+						session.Items.Add(new CompletionItem(term, new CommonImageSourceProvider(CommonImage.PropertyPublic)));
+					}
+				}
+				else
+				{
+					foreach (var field in fields)
+					{
+						session.Items.Add(new CompletionItem(field, new CommonImageSourceProvider(CommonImage.PropertyPublic)));
+					}
+				}
+
+				if (session.Items.Count == 0) return false;
+				
+				session.Open(view);
+				return true;
+			}
+
+			public string Key
+			{
+				get { throw new System.NotImplementedException(); }
+			}
+
+			public IEnumerable<Ordering> Orderings
+			{
+				get { throw new System.NotImplementedException(); }
+			}
+		}
+
+		public Observable<ICompletionProvider> CompletionProvider { get; private set; }
 
 		public ICommand Execute { get { return new ExecuteQueryCommand(this, asyncDatabaseCommands); } }
 

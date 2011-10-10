@@ -3,9 +3,10 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-                     xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-                     xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents">
+					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors">
 
 	<Infrastructure:View.Resources>
 		<Style x:Key="PanelTitle"
@@ -39,13 +40,11 @@
 		<StackPanel toolkit:DockPanel.Dock="Top">
 			<TextBlock Style="{StaticResource PanelTitle}"
 					   Text="Query" />
-			<TextBox Height="60"
-					 AcceptsReturn="True"
-					 Text="{Binding Path=Query.Value, Mode=TwoWay}">
-				<i:Interaction.Behaviors>
-					<Behaviors:TextBoxUpdateBehavior />
-				</i:Interaction.Behaviors>
-			</TextBox>
+
+			<Editors:QueryEditor x:Name="QueryEditor"
+								 Text="{Binding Path=Query.Value, Mode=TwoWay}"
+								 CompletionProvider="{Binding Path=CompletionProvider.Value}"
+								 MinHeight="100" />
 			<HyperlinkButton Content="Execute"
 							 Command="{Binding Execute}"
 							 HorizontalAlignment="Right" />
@@ -53,7 +52,8 @@
 
 		<Grid>
 			<TextBlock Text="{Binding Error}" Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
-			<Documents:DocumentsView DataContext="{Binding Path=DocumentsResult.Value}" />
+			<Documents:DocumentsView DataContext="{Binding Path=DocumentsResult.Value}"
+									 Visibility="{Binding DocumentsResult.Value, Converter={StaticResource HiddenWhenEmpty}}" />
 		</Grid>
 		
 	</toolkit:DockPanel>
