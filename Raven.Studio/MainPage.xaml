@@ -91,10 +91,6 @@
 								 NavigateUri="/documents"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-				<HyperlinkButton Content="Query"
-								 NavigateUri="/query"
-								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Tasks"
 								 NavigateUri="/tasks"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
