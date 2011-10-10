@@ -7,7 +7,8 @@
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
-					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions">
+					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+                     xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
 
 	<Infrastructure:View.Resources>
 		<Style x:Key="PanelTitle"
@@ -38,33 +39,49 @@
 			</StackPanel>
 		</Border>
 
-		<StackPanel toolkit:DockPanel.Dock="Top">
-			<TextBlock Style="{StaticResource PanelTitle}"
-					   Text="Query" />
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="*" MinHeight="100" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+				
+				<TextBlock Style="{StaticResource PanelTitle}"
+						   Text="Query" />
 
-			<Editors:QueryEditor x:Name="QueryEditor"
-								 Text="{Binding Path=Query.Value, Mode=TwoWay}"
-								 CompletionProvider="{Binding Path=CompletionProvider.Value}"
-								 MinHeight="100">
-				<i:Interaction.Triggers>
-					<ei:KeyTrigger Key="Enter"
-								   Modifiers="Control">
-						<i:InvokeCommandAction Command="{Binding Execute}" />
-					</ei:KeyTrigger>
-				</i:Interaction.Triggers>
-			</Editors:QueryEditor>
-			<HyperlinkButton Content="Execute"
-							 Command="{Binding Execute}"
-							 HorizontalAlignment="Right" />
-		</StackPanel>
+				<Editors:QueryEditor x:Name="QueryEditor" Grid.Row="1"
+									 Text="{Binding Path=Query.Value, Mode=TwoWay}"
+									 CompletionProvider="{Binding Path=CompletionProvider.Value}"
+									 MinHeight="100">
+					<i:Interaction.Triggers>
+						<ei:KeyTrigger Key="Enter"
+									   Modifiers="Control">
+							<i:InvokeCommandAction Command="{Binding Execute}" />
+						</ei:KeyTrigger>
+					</i:Interaction.Triggers>
+				</Editors:QueryEditor>
+				<HyperlinkButton Content="Execute" Grid.Row="2"
+								 Command="{Binding Execute}"
+								 HorizontalAlignment="Right" />
+			</Grid>
 
-		<StackPanel>
-			<TextBlock Text="{Binding Error}"
-					   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
-			<Canvas Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
-				<Documents:DocumentsView DataContext="{Binding Path=DocumentsResult.Value}" />
-			</Canvas>
-		</StackPanel>
+			<sdk:GridSplitter Grid.Row="1"
+							  Background="Transparent"
+							  HorizontalAlignment="Stretch" />
 
+			<StackPanel Grid.Row="2">
+				<TextBlock Text="{Binding Error}"
+						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
+				<Canvas Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
+					<Documents:DocumentsView DataContext="{Binding Path=DocumentsResult.Value}" />
+				</Canvas>
+			</StackPanel>
+		</Grid>
 	</toolkit:DockPanel>
 </Infrastructure:View>
