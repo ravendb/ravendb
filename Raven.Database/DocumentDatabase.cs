@@ -1202,7 +1202,7 @@ namespace Raven.Database
 			get
 			{
 				if (buildVersion == null)
-					buildVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).FilePrivatePart.ToString();
+					buildVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).FileBuildPart.ToString();
 				return buildVersion;
 			}
 		}
@@ -1215,7 +1215,7 @@ namespace Raven.Database
 			get
 			{
 				if (productVersion == null)
-					productVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).ProductVersion.ToString();
+					productVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).ProductVersion;
 				return productVersion;
 			}
 		}
