@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Studio.Models;
 
@@ -31,7 +32,7 @@ namespace Raven.Studio.Infrastructure
 				if (currentTask != null)
 					return;
 
-				if (DateTime.Now - lastRefresh < RefreshRate)
+				if (DateTime.Now - lastRefresh < GetRefreshRate())
 					return;
 
 				currentTask = TimerTickedAsync();
@@ -47,6 +48,13 @@ namespace Raven.Studio.Infrastructure
 						currentTask = null;
 					});
 			}
+		}
+
+		private TimeSpan GetRefreshRate()
+		{
+			if (Debugger.IsAttached)
+				return RefreshRate.Add(TimeSpan.FromMinutes(5));
+			return RefreshRate;
 		}
 
 		protected virtual Task TimerTickedAsync()

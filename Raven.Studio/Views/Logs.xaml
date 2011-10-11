@@ -3,9 +3,9 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                      xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
-                     DataContext="{Binding Path=Current.Value, Source={StaticResource LogsModelLocator}}">
+                     DataContext="{Binding Source={StaticResource LogsModelLocator}}">
 
 	<Grid>
-		<Logs:LogsView />
+		<Logs:LogsView DataContext="{Binding Path=Current.Value}" />
 	</Grid>
 </Infrastructure:View>
