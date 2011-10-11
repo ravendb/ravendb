@@ -64,7 +64,7 @@ namespace Raven.Bundles.Expiration
 				{
 					var queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
 					{
-						PageSize = Database.Configuration.MaxPageSize,
+						PageSize = 1024,
 						Cutoff = currentTime,
 						Query = "Expiry:[* TO " + nowAsStr + "]",
 						FieldsToFetch = new[] { "__document_id" }
