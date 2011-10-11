@@ -33,6 +33,11 @@ namespace Raven.Client.Document
 			lng = longitude;
 		}
 
+		public override IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields)
+		{
+			return new SpatialDocumentQuery<TProjection>((DocumentQuery<TProjection>)base.SelectFields<TProjection>(fields), radius, lat, lng);
+		}
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="SpatialDocumentQuery&lt;T&gt;"/> class.
 		/// </summary>
