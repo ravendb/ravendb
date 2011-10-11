@@ -4,8 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -17,7 +19,7 @@ namespace Raven.Bundles.Expiration
 	public class ExpiredDocumentsCleaner : IStartupTask, IDisposable
 	{
 		private const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
-
+		private Logger logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 		public DocumentDatabase Database { get; set; }
 
@@ -27,24 +29,26 @@ namespace Raven.Bundles.Expiration
 		{
 			Database = database;
 
-			
+
 			var indexDefinition = database.GetIndexDefinition(RavenDocumentsByExpirationDate);
 			if (indexDefinition == null)
 			{
 				database.PutIndex(RavenDocumentsByExpirationDate,
-				                  new IndexDefinition
-				                  {
-				                  	Map =
-				                  		@"
+								  new IndexDefinition
+								  {
+									  Map =
+										  @"
 	from doc in docs
 	let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
 	where expiry != null
 	select new { Expiry = expiry }
 "
-				                  });
+								  });
 			}
 
 			var deleteFrequencyInSeconds = database.Configuration.GetConfigurationValue<int>("Raven/Expiration/DeleteFrequencySeconds") ?? 300;
+			logger.Info("Initialied expired document cleaner, will check for expired documents every {0} seconds",
+			            deleteFrequencyInSeconds);
 			timer = new Timer(TimerCallback, null, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
 
 		}
@@ -70,7 +74,7 @@ namespace Raven.Bundles.Expiration
 						FieldsToFetch = new[] { "__document_id" }
 					});
 
-					if(queryResult.IsStale)
+					if (queryResult.IsStale)
 					{
 						Thread.Sleep(100);
 						continue;
@@ -79,20 +83,28 @@ namespace Raven.Bundles.Expiration
 					if (queryResult.Results.Count == 0)
 						return;
 
+					var docIds = queryResult.Results.Select(result => result.Value<string>("__document_id")).ToArray();
+
+					logger.Debug(()=> string.Format("Deleting {0} expired documents: [{1}]", queryResult.Results.Count, string.Join(", ", docIds)));
+
 					Database.TransactionalStorage.Batch(accessor => // delete all expired items in a single tx
 					{
-						foreach (var docId in queryResult.Results.Select(result => result.Value<string>("__document_id")))
+						foreach (var docId in docIds)
 						{
 							Database.Delete(docId, null, null);
 						}
 					});
 				}
 			}
+			catch (Exception e)
+			{
+				logger.ErrorException("Error when trying to find expired documents", e);
+			}
 			finally
 			{
 				executing = false;
 			}
-			
+
 		}
 
 		/// <summary>
