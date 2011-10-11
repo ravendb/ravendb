@@ -16,6 +16,5 @@
 	<Indexes:IndexesErrorsModelLocator x:Key="ErrorsModelLocator" />
 	<Query:QueryModelLocator x:Key="QueryModelLocator" />
 
-	<Collections:CollectionsModelLocator x:Key="CollectionModelLocator" />
 	<Logs:LogsModelLocator x:Key="LogsModelLocator" />
 </ResourceDictionary>
