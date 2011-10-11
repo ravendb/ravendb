@@ -17,15 +17,15 @@ namespace Raven.Studio.Features.Logs
 		{
 			InitializeComponent();
 
-			errorColorBrush = new SolidColorBrush(Color.FromArgb());
-			debugColorBrush = new SolidColorBrush(Colors.Yellow);
-			infoColorBrush = new SolidColorBrush(Colors.Green);
+			errorColorBrush = GetBrushFromHexString("FFFFC0CB");
+			debugColorBrush = GetBrushFromHexString("FFFFEFD5");
+			infoColorBrush = GetBrushFromHexString("FFE0FFFF");
 			defaultColorBrush = new SolidColorBrush(Colors.White);
 
 			LogsList.LoadingRow += LogsList_LoadingRow;
 		}
 
-		private void   LogsList_LoadingRow(object sender, System.Windows.Controls.DataGridRowEventArgs e)
+		private void LogsList_LoadingRow(object sender, DataGridRowEventArgs e)
 		{
 			var log = (LogItem)e.Row.DataContext;
 			switch (log.Name)
@@ -43,6 +43,13 @@ namespace Raven.Studio.Features.Logs
 					e.Row.Background = defaultColorBrush;
 					break;
 			}
+		}
+
+		public static SolidColorBrush GetBrushFromHexString(string aarrggbb)
+		{
+			String xamlString = "<Canvas xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" Background=\"#" + aarrggbb + "\"/>";
+			var c = (Canvas)System.Windows.Markup.XamlReader.Load(xamlString);
+			return (SolidColorBrush)c.Background;
 		}
 	}
 }
