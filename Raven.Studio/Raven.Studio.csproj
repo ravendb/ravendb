@@ -124,7 +124,6 @@
     </Compile>
     <Compile Include="Commands\DeleteDocumentCommand.cs" />
     <Compile Include="Features\Documents\DocumentsModelLocator.cs" />
-    <Compile Include="Features\Documents\HomeModelLoactor.cs" />
     <Compile Include="Commands\NavigateToCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
@@ -198,6 +197,7 @@
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\ModelLocatorBase.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />
+    <Compile Include="Infrastructure\ViewModel.cs" />
     <Compile Include="Models\DocumentsModel.cs" />
     <Compile Include="Models\HomeModel.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />

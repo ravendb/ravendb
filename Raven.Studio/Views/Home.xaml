@@ -5,11 +5,11 @@
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 Title="Home"
 					 Style="{StaticResource PageStyle}"
-           DataContext="{Binding Source={StaticResource HomeModelLoactor}, Path=Current.Value}">
+					 Infrastructure:ModelAttacher.AttachModel="Raven.Studio.Models.HomeModel">
 
 	<Grid>
 		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments.Value}"
-								 Margin="{StaticResource Margin_ContentPage}" 
+								 Margin="{StaticResource Margin_ContentPage}"
 								 Tag="Recent Documents" />
 	</Grid>
 </Infrastructure:View>

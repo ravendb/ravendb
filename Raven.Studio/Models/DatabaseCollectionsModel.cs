@@ -4,7 +4,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class DatabaseCollectionsModel : Model
+	public class DatabaseCollectionsModel : ViewModel
 	{
 		public BindableCollection<CollectionModel> Collections { get; set; }
 		public Observable<CollectionModel> SelectedCollection { get; set; }

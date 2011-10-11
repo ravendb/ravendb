@@ -16,6 +16,7 @@ namespace Raven.Studio.Models
 		static ApplicationModel()
 		{
 			Current = new ApplicationModel();
+			Current.Initialize();
 			threadSafeNavigationState = Application.Current.Host.NavigationState;
 			Application.Current.Host.NavigationStateChanged += (sender, args) =>
 			{
@@ -30,6 +31,10 @@ namespace Raven.Studio.Models
 			Notifications = new BindableCollection<Notification>(new PrimaryKeyComparer<Notification>(x=>x.Message));
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel>();
+		}
+
+		private void Initialize()
+		{
 			var serverModel = new ServerModel();
 			serverModel.Initialize()
 				.ContinueOnSuccess(() => Server.Value = serverModel);

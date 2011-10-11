@@ -11,7 +11,6 @@
 	<Indexes:IndexDefinitionModelLocator x:Key="IndexDefinitionModelLocator" />
 	<Indexes:IndexesModelLocator x:Key="IndexesModelLocator" />
 	<Documents:DocumentsModelLocator x:Key="DocumentsModelLocator" />
-	<Documents:HomeModelLoactor x:Key="HomeModelLoactor" />
 	<Stats:StatisticsModelLocator x:Key="StatisticsModelLocator" />
 	<Indexes:IndexesErrorsModelLocator x:Key="ErrorsModelLocator" />
 	<Query:QueryModelLocator x:Key="QueryModelLocator" />
