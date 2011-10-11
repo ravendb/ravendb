@@ -677,7 +677,7 @@ namespace Raven.Database
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
 			var stale = false;
-			Tuple<DateTime, Guid> indexTimestamp = null;
+	    	Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			TransactionalStorage.Batch(
 				actions =>
 				{
