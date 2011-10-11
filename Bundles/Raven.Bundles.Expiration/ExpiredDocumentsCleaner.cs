@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -19,6 +20,9 @@ namespace Raven.Bundles.Expiration
 
 		private Timer timer;
 		public DocumentDatabase Database { get; set; }
+
+		private volatile bool executing;
+
 		public void Execute(DocumentDatabase database)
 		{
 			Database = database;
@@ -47,21 +51,48 @@ namespace Raven.Bundles.Expiration
 
 		private void TimerCallback(object state)
 		{
-			var currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
-			var nowAsStr = DateTools.DateToString(currentTime, DateTools.Resolution.SECOND);
-			
-			var queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
-			{
-				Cutoff = currentTime,
-				Query = "Expiry:[* TO " + nowAsStr + "]",
-				FieldsToFetch = new[] { "__document_id" }
-			});
+			if (executing)
+				return;
 
-			foreach (var result in queryResult.Results)
+			executing = true;
+			try
 			{
-				var docId = result.Value<string>("__document_id");
-				Database.Delete(docId, null, null);
+				var currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
+				var nowAsStr = DateTools.DateToString(currentTime, DateTools.Resolution.SECOND);
+
+				while (true)
+				{
+					var queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
+					{
+						PageSize = Database.Configuration.MaxPageSize,
+						Cutoff = currentTime,
+						Query = "Expiry:[* TO " + nowAsStr + "]",
+						FieldsToFetch = new[] { "__document_id" }
+					});
+
+					if(queryResult.IsStale)
+					{
+						Thread.Sleep(100);
+						continue;
+					}
+
+					if (queryResult.Results.Count == 0)
+						return;
+
+					Database.TransactionalStorage.Batch(accessor => // delete all expired items in a single tx
+					{
+						foreach (var docId in queryResult.Results.Select(result => result.Value<string>("__document_id")))
+						{
+							Database.Delete(docId, null, null);
+						}
+					});
+				}
 			}
+			finally
+			{
+				executing = false;
+			}
+			
 		}
 
 		/// <summary>
