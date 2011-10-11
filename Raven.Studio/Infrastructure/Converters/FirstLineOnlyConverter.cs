@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.IO;
 using System.Windows.Data;
 
 namespace Raven.Studio.Infrastructure.Converters
@@ -12,10 +13,16 @@ namespace Raven.Studio.Infrastructure.Converters
 			if (str == null)
 				return value;
 
-			int newLinePosition = str.IndexOf(Environment.NewLine[0]);
-			if (newLinePosition == -1)
-				return str;
-			return str.Substring(0, newLinePosition);
+			using (var reader = new StringReader(str))
+			{
+				var readLine = reader.ReadLine();
+				var hasMoreLines = reader.ReadLine() != null;
+				if (hasMoreLines)
+				{
+					readLine = readLine + " ...";
+				}
+				return readLine;
+			}
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
