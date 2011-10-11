@@ -3,7 +3,7 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections"
-					 DataContext="{Binding Path=Current.Value, Source={StaticResource CollectionModelLocator}}">
+					 Infrastructure:ModelAttacher.AttachModel="Raven.Studio.Models.DatabaseCollectionsModel">
 
 	<Grid>
 		<Grid.RowDefinitions>

@@ -6,7 +6,7 @@ namespace Raven.Studio.Infrastructure
     {
         public static int GetSkipCount()
         {
-            var queryParam = ApplicationModel.Current.GetQueryParam("skip");
+            var queryParam = ApplicationModel.GetQueryParam("skip");
             if (string.IsNullOrEmpty(queryParam))
                 return 0;
             int result;

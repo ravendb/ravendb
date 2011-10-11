@@ -51,7 +51,7 @@ namespace Raven.Studio.Models
 				Deployment.Current.Dispatcher.InvokeAsync(() => Application.Current.Host.NavigationState = source.ToString());
 		}
 
-		public string GetQueryParam(string name)
+		public static string GetQueryParam(string name)
 		{
 			var indexOf = threadSafeNavigationState.IndexOf('?');
 			if (indexOf == -1)

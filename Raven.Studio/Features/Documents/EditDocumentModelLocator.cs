@@ -9,7 +9,7 @@ namespace Raven.Studio.Features.Documents
 	{
 		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<EditableDocumentModel> observable)
 		{
-			var docId = ApplicationModel.Current.GetQueryParam("id");
+			var docId = ApplicationModel.GetQueryParam("id");
 
 			if (docId == null)
 				return;
