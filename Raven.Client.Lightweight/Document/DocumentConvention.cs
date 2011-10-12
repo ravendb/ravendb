@@ -334,6 +334,13 @@ namespace Raven.Client.Document
 				jsonSerializer.Converters.Insert(0, Default.Converters[i]);
 			}
 
+			if(SaveEnumsAsIntegers)
+			{
+				var converter = jsonSerializer.Converters.FirstOrDefault(x => x is JsonEnumConverter);
+				if (converter != null)
+					jsonSerializer.Converters.Remove(converter);
+			}
+
 			CustomizeJsonSerializer(jsonSerializer);
 			return jsonSerializer;
 		}
@@ -374,11 +381,9 @@ namespace Raven.Client.Document
 		public Func<object, string, string> FindIdValuePartForValueTypeConversion { get; set; }
 
 		/// <summary>
-		/// Instruct the Linq provider to query enums as integer values.
-		/// This is usually only useful if you customized the json serializer to serialize
-		/// enums as integers.
+		/// Saves Enums as integers and instruct the Linq provider to query enums as integer values.
 		/// </summary>
-		public bool QueryEnumsAsIntegers { get; set; }
+		public bool SaveEnumsAsIntegers { get; set; }
 	}
 
 
