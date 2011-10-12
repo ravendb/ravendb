@@ -29,7 +29,6 @@ namespace Raven.Tests.Bugs
 			public DateTime Date { get; set; }
 			public double Latitude { get; set; }
 			public double Longitude { get; set; }
-			public object _ { get; set; }
 		}
 
 		public class MyIndex : AbstractIndexCreationTask<MyDocument, MyProjection>
@@ -70,14 +69,14 @@ namespace Raven.Tests.Bugs
 					{
 						Id = "First",
 						Items = new[]
-                    {
-                        new MyDocumentItem
-                        {
-                            Date = new DateTime(2011, 1, 1),
-                            Latitude = 10,
-                            Longitude = 10
-                        }
-                    }
+						{
+							new MyDocumentItem
+							{
+								Date = new DateTime(2011, 1, 1),
+								Latitude = 10,
+								Longitude = 10
+							}
+						}
 					});
 					session.SaveChanges();
 
@@ -114,14 +113,14 @@ namespace Raven.Tests.Bugs
 					{
 						Id = "First",
 						Items = new[]
-                    {
-                        new MyDocumentItem
-                        {
-                            Date = new DateTime(2011, 1, 1),
-                            Latitude = 10,
-                            Longitude = 10
-                        }
-                    }
+						{
+							new MyDocumentItem
+							{
+								Date = new DateTime(2011, 1, 1),
+								Latitude = 10,
+								Longitude = 10
+							}
+						}
 					});
 					session.SaveChanges();
 
@@ -134,7 +133,7 @@ namespace Raven.Tests.Bugs
 					var result = session.Advanced
 						.LuceneQuery<MyDocument, MyIndex>()
 						.WaitForNonStaleResults()
-						.WithinRadiusOf(1,10, 10)
+						.WithinRadiusOf(1, 10, 10)
 						.Statistics(out stats)
 						.SelectFields<MyProjection>("Id", "Latitude", "Longitude")
 						.Take(50)
