@@ -144,5 +144,60 @@ namespace Raven.Tests.Bugs
 				}
 			}
 		}
+
+		public class MySpatialIndex : AbstractIndexCreationTask<MySpatialDocument>
+		{
+			public MySpatialIndex()
+			{
+				Map = docs =>
+					from doc in docs
+					select new
+					{
+						_ = SpatialIndex.Generate(doc.Latitude, doc.Longitude)
+					};
+			}
+		}
+
+		public class MySpatialDocument
+		{
+
+			public double Latitude { get; set; }
+			public double Longitude { get; set; }
+		}
+
+		[Fact]
+		public void WeirdSpatialResults2()
+		{
+			using (IDocumentStore store = NewDocumentStore())
+			{
+				using (IDocumentSession session = store.OpenSession())
+				{
+					session.Store(new MySpatialDocument
+					{
+						Latitude = 12.3456789f,
+						Longitude = 12.3456789f
+					});
+					session.SaveChanges();
+				}
+
+				new MySpatialIndex().Execute(store);
+
+
+				using (IDocumentSession session = store.OpenSession())
+				{
+					RavenQueryStatistics stats;
+					var result = session.Advanced
+						.LuceneQuery<MySpatialDocument, MySpatialIndex>()
+						.WaitForNonStaleResults()
+						.WithinRadiusOf(200, 12.3456789f, 12.3456789f)
+						.Statistics(out stats)
+						.Take(50)
+						.ToArray();
+
+					Assert.Equal(1, stats.TotalResults); // Assert.AreEqual failed. Expected:<1>. Actual:<0>.
+					Assert.Equal(1, result.Length);
+				}
+			}
+		}
 	}
 }
