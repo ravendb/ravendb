@@ -502,6 +502,10 @@
     <Resource Include="Assets\Images\Remove.png" />
     <Resource Include="Assets\Images\Query.png" />
     <Resource Include="Assets\Images\Edit.png" />
+    <Resource Include="Assets\Images\HtmlBalanceBracesHS.png" />
+    <Resource Include="Assets\Images\DeleteHS.png" />
+    <Resource Include="Assets\Images\RefreshSmall.png" />
+    <Resource Include="Assets\Images\Shortcut.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />

@@ -12,4 +12,8 @@
     <BitmapImage x:Key="Image_Undo_Small" UriSource="Undo.png"/>
     <BitmapImage x:Key="Image_Query_Small" UriSource="Query.png"/>
     <BitmapImage x:Key="Image_Edit_Small" UriSource="Edit.png"/>
+    <BitmapImage x:Key="Image_Reformat_Small" UriSource="HtmlBalanceBracesHS.png"/>
+    <BitmapImage x:Key="Image_Delete_Small" UriSource="DeleteHS.png"/>
+    <BitmapImage x:Key="Image_Refresh_Small" UriSource="RefreshSmall.png"/>
+    <BitmapImage x:Key="Image_Shortcut_Tiny" UriSource="Shortcut.png"/>
 </ResourceDictionary>

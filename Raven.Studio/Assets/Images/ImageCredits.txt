@@ -9,3 +9,9 @@ Save.png
 Undo.png
 Remove.png
 Query.png (find)
+
+The following icons from the Visual Studio 2010 Image Library (http://blogs.msdn.com/b/visualstudio/archive/2010/03/29/tips-and-tricks-visual-studio-2010-image-library.aspx)
+
+HtmlBalanceBracesHS.png
+DeleteHS.png
+Refresh.png

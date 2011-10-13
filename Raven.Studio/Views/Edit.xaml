@@ -7,54 +7,86 @@
 					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 					 xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
-					 mc:Ignorable="d"
+                     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit" mc:Ignorable="d"
 					 DataContext="{Binding Source={StaticResource EditDocumentModelLocator}, Path=Current.Value}">
 
-	<Grid>
+	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="1.5*" />
-			<ColumnDefinition Width="16" />
-			<ColumnDefinition />
+			<ColumnDefinition Width="1*"/>
 		</Grid.ColumnDefinitions>
 
-		<shared:ContextMenuService.ContextMenu>
-			<shared:ContextMenu>
-				<shared:MenuItem Header="Copy Document Id to Clipboard" />
-			</shared:ContextMenu>
-		</shared:ContextMenuService.ContextMenu>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-		<Grid x:Name="document"
-			  Margin="12,0,0,0">
+	  <shared:ContextMenuService.ContextMenu>
+	    <shared:ContextMenu>
+	      <shared:MenuItem Header="Copy Document Id to Clipboard" />
+	    </shared:ContextMenu>
+	  </shared:ContextMenuService.ContextMenu>
+        
+	  <Border 
+            Grid.Row="0"
+            Grid.ColumnSpan="3"
+            Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0">
+            <toolkit:DockPanel Margin="4" LastChildFill="False">
+                <StackPanel Orientation="Horizontal">
+                    <HyperlinkButton Content="Documents" Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									 NavigateUri="/documents"/>
+                    <TextBlock Text=">" VerticalAlignment="Center" Margin="4,0"/>
+                    <TextBlock Text="{Binding DisplayId}" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" toolkit:DockPanel.Dock="Right" VerticalAlignment="Center">
+
+                    <Button Command="{Binding Save}" Style="{StaticResource Style_Button_MouseOverChrome}"
+                            ToolTipService.ToolTip="Save Document">
+                      <Button.Content>
+                            <Image Source="{StaticResource Image_Save_Small}" Stretch="None"/>
+                        </Button.Content>
+                    </Button>
+
+                  <Button Command="{Binding Prettify}" Style="{StaticResource Style_Button_MouseOverChrome}" Margin="4,0"
+                          ToolTipService.ToolTip="Reformat Document">
+                        <Button.Content>
+                            <Image Source="{StaticResource Image_Reformat_Small}" Stretch="None"/>
+                        </Button.Content>
+                    </Button>
+
+                  <Button Command="{Binding Delete}" Style="{StaticResource Style_Button_MouseOverChrome}" Margin="4,0"
+                          ToolTipService.ToolTip="Delete Document">
+                        <Button.Content>
+                            <Image Source="{StaticResource Image_Delete_Small}" Stretch="None"/>
+                        </Button.Content>
+                  </Button>
+
+                  <Button Command="{Binding Refresh}" Style="{StaticResource Style_Button_MouseOverChrome}"
+                          ToolTipService.ToolTip="Refresh Document">
+                        <Button.Content>
+                            <Image Source="{StaticResource Image_Refresh_Small}" Stretch="None"/>
+                        </Button.Content>
+                  </Button>
+
+                </StackPanel>
+            </toolkit:DockPanel>
+        </Border>
+
+	  <Grid x:Name="document"
+			  Margin="0" Grid.Row="1">
+          
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition />
+				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
 
-			<TextBlock Text="{Binding DisplayId}" Style="{StaticResource Style_Text_Header}"/>
+            <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.RowSpan="2"/>
+          
+            <TextBox Text="{Binding Key, Mode=TwoWay}"
+					 Grid.Row="0" Margin="5,10,10,0" />
 
-			<Grid Grid.Row="1">
-				<StackPanel Orientation="Horizontal" Margin="0,5">
-					<Button Content="Save"
-							Command="{Binding Save}" Style="{StaticResource Style_Button}" />
-
-					<Button Content="Prettify"
-							Command="{Binding Prettify}" Style="{StaticResource Style_Button}" Margin="5,0"/>
-
-					<Button Content="Delete"
-							Command="{Binding Delete}" Style="{StaticResource Style_Button}" Margin="5,0"/>
-
-					<Button Content="Refresh"
-							Command="{Binding Refresh}" Style="{StaticResource Style_Button}" />
-				</StackPanel>
-			</Grid>
-
-			<TextBox Text="{Binding Key, Mode=TwoWay}"
-					 Grid.Row="2" />
-
-			<sdk:TabControl Grid.Row="3"
-							Margin="0 8 0 0">
+			<sdk:TabControl Grid.Row="1"
+							Margin="5,8,10,10">
 				<sdk:TabItem Header="Data">
 					<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}" />
 				</sdk:TabItem>
@@ -66,9 +98,11 @@
 		</Grid>
 
 		<Grid x:Name="details"
-			  Grid.Column="2"
-			  Margin="0,42,0,0">
+			  Grid.Column="1"
+              Grid.Row="1"
+			  Margin="0,0,0,0">
 			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
@@ -77,16 +111,15 @@
 				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
 
-			<Border CornerRadius="5,0,0,5"
-					Grid.RowSpan="4" />
+            <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.RowSpan="3"/>
 
-			<TextBlock Text="METADATA"
-					   Margin="12,6,0,6" />
+            <TextBlock Text="Metadata"
+					   Margin="10,10,5,6" Style="{StaticResource Style_TextBlock_PagePartHeader}"/>
 
 			<ItemsControl x:Name="Metadata"
 						  Grid.Row="1"
 						  ItemsSource="{Binding Metadata}"
-						  Margin="12,0,0,12">
+						  Margin="10,0,5,12">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
 						<Grid>
@@ -105,8 +138,8 @@
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
 
-			<Grid Margin="12,12,0,12"
-				  Grid.Row="3">
+			<Grid Margin="10,12,5,12"
+				  Grid.Row="2">
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
@@ -115,68 +148,63 @@
 				</Grid.RowDefinitions>
 
 				<Grid.ColumnDefinitions>
-					<ColumnDefinition MinWidth="75" />
-					<ColumnDefinition />
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
 				</Grid.ColumnDefinitions>
 
 				<TextBlock Text="ETag"
-						   Grid.Row="1" />
+						   Grid.Row="1" Margin="0,0,10,0"/>
 				<TextBlock Text="{Binding Etag}"
 						   Grid.Row="1"
 						   Grid.Column="1" />
 
 				<TextBlock Text="Last-Modified"
-						   Grid.Row="2" />
+						   Grid.Row="2" Margin="0,0,10,0"/>
 				<TextBlock Text="{Binding LastModified}"
 						   Grid.Row="2"
 						   Grid.Column="1" />
 			</Grid>
 
-			<StackPanel Orientation="Vertical"
-						Grid.Row="4"
-						Margin="0,12,0,0"
-						Grid.RowSpan="2">
-				<Border Background="WhiteSmoke"
-						CornerRadius="5,0,0,5"
-						Grid.RowSpan="2" />
+            <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="3" Grid.RowSpan="2"/>
+            
 
-				<Border Background="WhiteSmoke"
-						CornerRadius="5,0,0,5"
-						Grid.RowSpan="2"
-						Grid.Row="2"
-						Margin="0,12,0,0"
-						d:LayoutOverrides="GridBox" />
-
-				<TextBlock Text="REFERENCES"
-						   Margin="12,6,0,6" />
+				<TextBlock Text="References"
+						   Margin="10,6,5,6" Grid.Row="3"  Style="{StaticResource Style_TextBlock_PagePartHeader}"/>
 
 				<ItemsControl x:Name="References"
 							  ItemsSource="{Binding References}"
-							  Grid.Row="1"
+							  Grid.Row="4"
 							  DataContext="{Binding}"
-							  Margin="12,0,0,12">
+							  Margin="10,0,5,12">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
-							<HyperlinkButton Content="{Binding Title}" NavigateUri="{Binding HRef}" />
+							<HyperlinkButton Content="{Binding Title}" 
+                                             NavigateUri="{Binding HRef}" 
+                                             Style="{StaticResource Style_Link_Shortcut}"
+                                             HorizontalAlignment="Left"/>
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>
 
-				<TextBlock Text="RELATED"
-						   Margin="12,6,0,6" />
+            <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="5" Grid.RowSpan="2"/>
+            
+				<TextBlock Text="Related"
+						   Margin="10,6,5,6" Style="{StaticResource Style_TextBlock_PagePartHeader}"
+                           Grid.Row="5"/>
 
 				<ItemsControl x:Name="Related"
 							  ItemsSource="{Binding Related}"
-							  Grid.Row="1"
-							  Margin="12,0,0,12">
+							  Grid.Row="6"
+							  Margin="10,0,5,10">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
 							<HyperlinkButton Content="{Binding Title}"
-											 NavigateUri="{Binding HRef}" />
+											 NavigateUri="{Binding HRef}" 
+                                             Style="{StaticResource Style_Link_Shortcut}"
+                                             HorizontalAlignment="Left"/>
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>
-			</StackPanel>
 		</Grid>
 	</Grid>
 </Infrastructure:View>
