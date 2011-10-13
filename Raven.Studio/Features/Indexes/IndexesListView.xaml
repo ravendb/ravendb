@@ -28,8 +28,10 @@
 						VerticalAlignment="Center"
                         Style="{StaticResource Style_Link_DrillDown}"/>
 					<HyperlinkButton NavigateUri="{Binding StringFormat=/indexes/\{0\}}"
-									 VerticalAlignment="Bottom"
-									 Style="{StaticResource Style_Link_DrillDown}">
+									 VerticalAlignment="Center"
+									 Style="{StaticResource Style_Button_MouseOverChrome}"
+                                     Padding="4"
+                                     Margin="2">
 						<HyperlinkButton.Content>
 							<Image Source="{StaticResource Image_Edit_Small}" />
 						</HyperlinkButton.Content>

@@ -201,7 +201,7 @@
                                         </VisualStateGroup>
                                     </VisualStateManager.VisualStateGroups>
                                     <Grid x:Name="ThumbVisual" Margin="0,1,0,1">
-                                        <Rectangle x:Name="Background" RadiusX="4" RadiusY="2" StrokeThickness="1" Margin="0,1" >
+                                        <Rectangle x:Name="Background" RadiusX="4" RadiusY="4" StrokeThickness="1" Margin="0,1" >
                                         	<Rectangle.Fill>
                                         		<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                         			<GradientStop Color="#FFE4E4E4" Offset="0.032"/>
@@ -1618,7 +1618,7 @@
     </Style>
     <ControlTemplate x:Key="ControlTemplate_Button" TargetType="Button"/>
 	
-	<Style x:Key="Style_Button_PageHeaderBar" TargetType="Button">
+	<Style x:Key="Style_Button_MouseOverChrome" TargetType="ButtonBase">
       <Setter Property="Background">
       	<Setter.Value>
       		<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
@@ -1633,7 +1633,7 @@
       <Setter Property="BorderBrush" Value="#19121212"/>
       <Setter Property="Template">
           <Setter.Value>
-              <ControlTemplate TargetType="Button">
+              <ControlTemplate TargetType="ButtonBase">
                   <Grid>
                   	<Grid.Resources>
                   		<LinearGradientBrush x:Key="PressedBrush" EndPoint="0.5,1" StartPoint="0.5,0">
