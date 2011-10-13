@@ -597,6 +597,7 @@ namespace Raven.Client.Linq
 			switch (expression.Method.Name)
 			{
 				case "Search":
+					VisitExpression(expression.Arguments[0]);
 					var expressionInfo = GetMember(expression.Arguments[1]);
 					object value;
 					if(GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
