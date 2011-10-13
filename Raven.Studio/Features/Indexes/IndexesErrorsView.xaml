@@ -1,35 +1,49 @@
 ﻿<Infrastructure:View x:Class="Raven.Studio.Features.Indexes.IndexesErrorsView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
+					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                     xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
 
-	<ScrollViewer BorderThickness="0"
-				  VerticalScrollBarVisibility="Auto"
-				  HorizontalScrollBarVisibility="Disabled"
-				  Margin="{StaticResource Margin_ContentPage}">
-		<Grid>
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="10" />
-				<RowDefinition Height="*" />
-			</Grid.RowDefinitions>
+    <Grid Margin="{StaticResource Margin_ContentPage}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Border 
+            Grid.Row="0"
+            Grid.ColumnSpan="3"
+            Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0">
+            <toolkit:DockPanel Margin="4" LastChildFill="False">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <HyperlinkButton Content="Indexes" Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									 NavigateUri="/Indexes"/>
+                    <TextBlock Text=">" VerticalAlignment="Center" Margin="4,0"/>
+                    <TextBlock Text="Errors" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Path=Errors.Length, StringFormat='(\{0\} Found)'}" VerticalAlignment="Center" Margin="10,0,0,0" FontWeight="Bold"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" toolkit:DockPanel.Dock="Right" VerticalAlignment="Center">
+
+                   
+                </StackPanel>
+            </toolkit:DockPanel>
+        </Border>
+
+        <sdk:DataGrid Grid.Row="1" ItemsSource="{Binding Errors}" 
+                      AutoGenerateColumns="False"
+                      Margin="0,10,0,0">
+            <sdk:DataGrid.Columns>
+                <sdk:DataGridTextColumn Header="Index" Binding="{Binding Index}" Width="1*"/>
+                <sdk:DataGridTextColumn Header="Error" Binding="{Binding Error}" Width="2*"/>
+                <sdk:DataGridTextColumn Header="Document" Binding="{Binding Document}" />
+                <sdk:DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp}" />
+            </sdk:DataGrid.Columns>
+        </sdk:DataGrid>
+        
+    </Grid>
+
 			
-			<StackPanel>
-				<TextBlock Text="{Binding Path=Errors.Length, StringFormat='Errors Count: \{0\}'}" />
-			</StackPanel>
-			
-			<ItemsControl Grid.Row="3" ItemsSource="{Binding Errors}">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<StackPanel>
-							<TextBlock Text="{Binding Index}" />
-							<TextBlock Text="{Binding Error}" />
-							<TextBlock Text="{Binding Timestamp}" />
-							<TextBlock Text="{Binding Document}" />
-						</StackPanel>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
-		</Grid>
-	</ScrollViewer>
+
+
 </Infrastructure:View>
