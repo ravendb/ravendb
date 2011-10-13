@@ -59,8 +59,6 @@ namespace Raven.Backup
 			{
 				Console.WriteLine(ex.Message);
 			}
-
-			Console.ReadKey();
 		}
 
 		private static void PrintUsage(OptionSet optionSet)
