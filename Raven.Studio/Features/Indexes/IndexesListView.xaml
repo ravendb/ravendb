@@ -51,11 +51,13 @@
 		</Grid.RowDefinitions>
 
         <toolkit:HeaderedContentControl Visibility="{Binding TempIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}"
-                                        Style="{StaticResource Style_HeaderedContentControl}">
+                                        Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
             <toolkit:HeaderedContentControl.Header>
-                <TextBlock
-                       Text="Temp Indexes"
-					   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6" />
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                    <TextBlock Text="Temp Indexes"
+					       Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6" />
+                </StackPanel>
             </toolkit:HeaderedContentControl.Header>
             <ListBox Style="{StaticResource Style_ListBox_Indexes}"
 				ItemsSource="{Binding TempIndexes}"
@@ -64,23 +66,29 @@
 
 
         <toolkit:HeaderedContentControl Grid.Row="1"
-					Visibility="{Binding AutoIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}" Margin="0,20,0,0"
-                    Style="{StaticResource Style_HeaderedContentControl}">
-            <toolkit:HeaderedContentControl.Header>
-			    <TextBlock Text="Auto Indexes"
-					   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6" />
-            </toolkit:HeaderedContentControl.Header>
+					Visibility="{Binding AutoIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}" 
+                    Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
+                <toolkit:HeaderedContentControl.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                        <TextBlock Text="Auto Indexes"
+					       Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6" />
+                    </StackPanel>
+                </toolkit:HeaderedContentControl.Header>
 			<ListBox Style="{StaticResource Style_ListBox_Indexes}"
 					 ItemsSource="{Binding AutoIndexes}"
 					 ItemTemplate="{StaticResource IndexItemTemplate}" Margin="10" />
         </toolkit:HeaderedContentControl>
 
         <toolkit:HeaderedContentControl Grid.Row="2"
-					Visibility="{Binding OtherIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}" Margin="0,20,0,0"
+					Visibility="{Binding OtherIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}" Margin="0,0,0,15"
                     Style="{StaticResource Style_HeaderedContentControl}">
             <toolkit:HeaderedContentControl.Header>
-                <TextBlock Text="Indexes"
-					   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6" />
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                    <TextBlock Text="Indexes"
+					       Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6" />
+                </StackPanel>
             </toolkit:HeaderedContentControl.Header>
             <ListBox Style="{StaticResource Style_ListBox_Indexes}"
 					 ItemsSource="{Binding OtherIndexes}"
