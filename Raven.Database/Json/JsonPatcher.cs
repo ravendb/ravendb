@@ -166,8 +166,7 @@ namespace Raven.Database.Json
 
 			if (value != null && value.Type != JTokenType.Null)
 			{
-				var equalityComparer = new RavenJTokenEqualityComparer();
-				var singleOrDefault = array.FirstOrDefault(x => equalityComparer.Equals(x, value));
+				var singleOrDefault = array.FirstOrDefault(x => RavenJToken.DeepEquals(x, value));
 				if (singleOrDefault == null)
 					return;
 				array.Remove(singleOrDefault);
@@ -288,8 +287,7 @@ namespace Raven.Database.Json
 				default:
 					if (property == null)
 						throw new ConcurrencyException();
-					var equalityComparer = new RavenJTokenEqualityComparer();
-					if (equalityComparer.Equals(property, prevVal) == false)
+					if (RavenJToken.DeepEquals(property, prevVal) == false)
 						throw new ConcurrencyException();
 					break;
 			}

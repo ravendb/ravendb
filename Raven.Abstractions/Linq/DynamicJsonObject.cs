@@ -64,7 +64,7 @@ namespace Raven.Abstractions.Linq
 		{
 			var dynamicJsonObject = other as DynamicJsonObject;
 			if (dynamicJsonObject != null)
-				return new RavenJTokenEqualityComparer().Equals(inner, dynamicJsonObject.inner);
+				return RavenJToken.DeepEquals(inner, dynamicJsonObject.inner);
 			return base.Equals(other);
 		}
 
@@ -77,7 +77,7 @@ namespace Raven.Abstractions.Linq
 		/// <filterpriority>2</filterpriority>
 		public override int GetHashCode()
 		{
-			return new RavenJTokenEqualityComparer().GetHashCode(inner);
+			return RavenJToken.GetDeepHashCode(inner);
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()

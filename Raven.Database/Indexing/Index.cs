@@ -541,7 +541,6 @@ namespace Raven.Database.Indexing
 
 				if (fieldsToFetch.IsDistinctQuery)
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
-				
 			}
 
 			public IEnumerable<IndexQueryResult> Query()
