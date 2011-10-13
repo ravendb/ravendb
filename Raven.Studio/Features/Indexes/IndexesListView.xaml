@@ -26,12 +26,14 @@
                     <HyperlinkButton Content="{Binding}"
 						NavigateUri="{Binding StringFormat=/query/\{0\}}"
 						VerticalAlignment="Center"
-                        Style="{StaticResource Style_Link_DrillDown}"/>
+                        Style="{StaticResource Style_Link_DrillDown}"
+                        ToolTipService.ToolTip="Query Index"/>
 					<HyperlinkButton NavigateUri="{Binding StringFormat=/indexes/\{0\}}"
 									 VerticalAlignment="Center"
 									 Style="{StaticResource Style_Button_MouseOverChrome}"
                                      Padding="4"
-                                     Margin="2">
+                                     Margin="2"
+                                     ToolTipService.ToolTip="Edit Index">
 						<HyperlinkButton.Content>
 							<Image Source="{StaticResource Image_Edit_Small}" />
 						</HyperlinkButton.Content>
