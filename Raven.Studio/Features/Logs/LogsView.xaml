@@ -3,9 +3,16 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:data="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
-					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
+					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+                     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                     xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
+                     xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+                     xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions" mc:Ignorable="d"
+                     d:DataContext="{d:DesignInstance Logs:LogsModel}">
 
-  <Grid>
+    <Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="2*" />
@@ -13,16 +20,45 @@
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 
-		<StackPanel Orientation="Horizontal">
-			<HyperlinkButton Content="All Logs" NavigateUri="/logs" />
-			<HyperlinkButton Content="Errors Only" NavigateUri="/logs/error" />
-		</StackPanel>
-	  
+        <Border 
+            Grid.Row="0"
+            Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0">
+            <toolkit:DockPanel Margin="4" LastChildFill="False">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Logs" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Path=Logs.Count, StringFormat='(\{0\} Entries)'}" VerticalAlignment="Center" Margin="10,0,0,0" FontWeight="Bold"/>
+                </StackPanel>
+                <StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal">
+                    <HyperlinkButton x:Name="AllErrorsHyperlink" Content="All Logs" NavigateUri="/logs" Style="{StaticResource Style_Link_MouseOverChrome}">
+                        <i:Interaction.Triggers>
+                            <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="False">
+                                <ei:GoToStateAction StateName="ActiveLink" TargetObject="{Binding ElementName=AllErrorsHyperlink}"/>
+                            </ei:DataTrigger>
+                            <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="True">
+                                <ei:GoToStateAction StateName="InactiveLink" TargetObject="{Binding ElementName=AllErrorsHyperlink}"/>
+                            </ei:DataTrigger>
+                        </i:Interaction.Triggers>
+                    </HyperlinkButton>
+                  <HyperlinkButton x:Name="ErrorsOnlyHyperlink" Content="Errors Only" NavigateUri="/logs/error" Style="{StaticResource Style_Link_MouseOverChrome}">
+                        <i:Interaction.Triggers>
+                            <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="True">
+                                <ei:GoToStateAction StateName="ActiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
+                            </ei:DataTrigger>
+                            <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="False">
+                                <ei:GoToStateAction StateName="InactiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
+                            </ei:DataTrigger>
+                        </i:Interaction.Triggers>
+                    </HyperlinkButton>
+                </StackPanel>
+            </toolkit:DockPanel>
+        </Border>
+        	  
 		<data:DataGrid x:Name="LogsList"
 					   Grid.Row="1"
 					   AutoGenerateColumns="False"
 					   IsReadOnly="True"
-					   ItemsSource="{Binding Logs}">
+					   ItemsSource="{Binding Logs}"
+                       Margin="0,10,0,0">
 			<data:DataGrid.Columns>
 				<data:DataGridTextColumn Header="Level" Binding="{Binding Name}" />
 				<data:DataGridTextColumn Header="Logged" Binding="{Binding TimeStamp}" />
@@ -45,45 +81,56 @@
 				<ColumnDefinition Width="*" />
 			</Grid.ColumnDefinitions>
 			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
+                <RowDefinition Height="{Binding Message, Converter={StaticResource AutoWhenSingleLineStarSizedWhenMultiLine}}" />
+                <RowDefinition Height="{Binding Exception, Converter={StaticResource HiddenWhenEmptyStarSizedForValue}}" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
-			
-			<TextBox Grid.ColumnSpan="3"
-					 Text="{Binding Message}"
-					 IsReadOnly="True"
-					 Style="{StaticResource LogsDetails_ReadOnly_TextBox}" />
-			
-			<TextBox TextWrapping="Wrap"
-					 IsReadOnly="True"
-					 Text="{Binding Exception}"
-					 Visibility="{Binding Exception, Converter={StaticResource HiddenWhenNull}}"
-					 Grid.ColumnSpan="3"
-					 Grid.Row="1"
-					 VerticalScrollBarVisibility="Auto" />
 
-			<TextBlock Grid.Row="2" Text="Logged" />
+            <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="0" Grid.ColumnSpan="2"/>
+            <TextBlock Grid.Row="0" Text="Message" Style="{StaticResource Style_TextBlock_FieldName}"
+                       VerticalAlignment="Top" Margin="0,3,0,0"/>
+            <TextBox Grid.Column="2"
+					 Text="{Binding Message}"
+					 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"/>
+
+            <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="1" Grid.ColumnSpan="2"/>
+            <TextBlock Grid.Row="1" Text="Exception" Style="{StaticResource Style_TextBlock_FieldName}"
+                       VerticalAlignment="Top"
+                       Margin="0,3,0,0"/>
+            <TextBox Text="{Binding Exception}"
+					 Grid.Column="2"
+					 Grid.Row="1"
+					 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"/>
+
+            <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="2" Grid.ColumnSpan="2"/>
+            <TextBlock Grid.Row="2" Text="Logged" Style="{StaticResource Style_TextBlock_FieldName}"
+                       VerticalAlignment="Center"/>
 			<TextBox Grid.Column="2"
 					 Grid.Row="2"
 					 Text="{Binding TimeStamp}"
-					 IsReadOnly="True"
-					 Style="{StaticResource LogsDetails_ReadOnly_TextBox}" />
+					 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
 
-			<TextBlock Grid.Row="3" Text="Level" />
+            <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="3" Grid.ColumnSpan="2"/>
+            <TextBlock Grid.Row="3" Text="Level" Style="{StaticResource Style_TextBlock_FieldName}"
+                       VerticalAlignment="Center"/>
 			<TextBox Grid.Row="3"
 					 Grid.Column="2"
 					 Text="{Binding Name}"
-					 IsReadOnly="True"
-					 Style="{StaticResource LogsDetails_ReadOnly_TextBox}" />
+					 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
 
-			<TextBlock Grid.Row="4" Text="Log Name" />
+            <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="4" Grid.ColumnSpan="2"/>
+            <TextBlock Grid.Row="4" Text="Log Name" Style="{StaticResource Style_TextBlock_FieldName}"
+                       VerticalAlignment="Center"/>
 			<TextBox Grid.Row="4"
 					 Grid.Column="2"
 					 Text="{Binding LoggerName}"
-					 IsReadOnly="True" Style="{StaticResource LogsDetails_ReadOnly_TextBox}" />
+					 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
 		</Grid>
 	</Grid>
 </Infrastructure:View>

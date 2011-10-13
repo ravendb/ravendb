@@ -123,7 +123,7 @@
                           Style="{StaticResource Style_DataGrid_NoChrome_NoHeader}"
                           FrozenColumnCount="1">
                 <sdk:DataGrid.Columns>
-                    <sdk:DataGridTextColumn FontStyle="Italic" Binding="{Binding Key}"/>
+                    <sdk:DataGridTextColumn FontStyle="Italic" Binding="{Binding Key}" Foreground="{StaticResource Brush_ContrastColor}"/>
                     <sdk:DataGridTextColumn Binding="{Binding Value}"/>
                 </sdk:DataGrid.Columns>
             </sdk:DataGrid>
