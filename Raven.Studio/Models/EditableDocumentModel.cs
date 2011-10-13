@@ -143,19 +143,35 @@ namespace Raven.Studio.Models
 		public Guid? Etag
 		{
 			get { return document.Etag; }
-			set { document.Etag = value; OnPropertyChanged(); }
+			set
+			{
+			    document.Etag = value; 
+                OnPropertyChanged();
+                OnPropertyChanged("Metadata");
+			}
 		}
 
 		public DateTime? LastModified
 		{
 			get { return document.LastModified; }
-			set { document.LastModified = value; OnPropertyChanged(); }
+			set { 
+                document.LastModified = value; 
+                OnPropertyChanged("Metadata"); 
+            }
 		}
 
 		private IDictionary<string, string> metadata;
 		public IEnumerable<KeyValuePair<string, string>> Metadata
 		{
-			get { return metadata.OrderBy(x=>x.Key); }
+            get
+            {
+                return metadata.OrderBy(x => x.Key)
+                    .Concat(new[]
+                                {
+                                    new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : ""),
+                                    new KeyValuePair<string, string>("Last-Modified", LastModified.HasValue ? LastModified.ToString(): ""),
+                                });
+            }
 		}
 
 		public ICommand Save

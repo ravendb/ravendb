@@ -116,54 +116,17 @@
             <TextBlock Text="Metadata"
 					   Margin="10,10,5,6" Style="{StaticResource Style_TextBlock_PagePartHeader}"/>
 
-			<ItemsControl x:Name="Metadata"
+			<sdk:DataGrid x:Name="Metadata"
 						  Grid.Row="1"
 						  ItemsSource="{Binding Metadata}"
-						  Margin="10,0,5,12">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition MinWidth="75"    />
-								<ColumnDefinition Width="*" />
-							</Grid.ColumnDefinitions>
-
-							<TextBlock Text="{Binding Key}"
-									    />
-							<TextBlock Grid.Column="1"
-									   Text="{Binding Value}"
-									    />
-						</Grid>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
-
-			<Grid Margin="10,12,5,12"
-				  Grid.Row="2">
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="*" />
-				</Grid.RowDefinitions>
-
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto"/>
-					<ColumnDefinition Width="*"/>
-				</Grid.ColumnDefinitions>
-
-				<TextBlock Text="ETag"
-						   Grid.Row="1" Margin="0,0,10,0"/>
-				<TextBlock Text="{Binding Etag}"
-						   Grid.Row="1"
-						   Grid.Column="1" />
-
-				<TextBlock Text="Last-Modified"
-						   Grid.Row="2" Margin="0,0,10,0"/>
-				<TextBlock Text="{Binding LastModified}"
-						   Grid.Row="2"
-						   Grid.Column="1" />
-			</Grid>
+						  Margin="10,0,5,12"
+                          Style="{StaticResource Style_DataGrid_NoChrome_NoHeader}"
+                          FrozenColumnCount="1">
+                <sdk:DataGrid.Columns>
+                    <sdk:DataGridTextColumn FontStyle="Italic" Binding="{Binding Key}"/>
+                    <sdk:DataGridTextColumn Binding="{Binding Value}"/>
+                </sdk:DataGrid.Columns>
+            </sdk:DataGrid>
 
             <Border Background="{StaticResource Brush_SubtleBackground2}" Grid.Row="3" Grid.RowSpan="2"/>
             
