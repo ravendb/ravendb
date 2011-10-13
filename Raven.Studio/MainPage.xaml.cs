@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Raven.Studio.Behaviors;
 
 namespace Raven.Studio
 {
@@ -28,25 +29,39 @@ namespace Raven.Studio
 
 	    private void HighlightCurrentPage(Uri currentUri)
 	    {
-	        foreach (var link in MainLinks.Children.OfType<HyperlinkButton>())
+	        foreach (var hyperlink in MainLinks.Children.OfType<HyperlinkButton>())
 	        {
-	            if (link != null && link.NavigateUri != null)
-	            {
-	                if (currentUri.ToString().StartsWith(link.NavigateUri.ToString(), StringComparison.InvariantCultureIgnoreCase))
-	                {
-	                    VisualStateManager.GoToState(link, "ActiveLink", true);
-	                }
-	                else
-	                {
-	                    VisualStateManager.GoToState(link, "InactiveLink", true);
-	                }
-	            }
+                if (HyperlinkMatchesUri(currentUri.ToString(), hyperlink))
+                {
+                    VisualStateManager.GoToState(hyperlink, "ActiveLink", true);
+                }
+                else
+                {
+                    VisualStateManager.GoToState(hyperlink, "InactiveLink", true);
+                }
 	        }
 
             if (currentUri.ToString() == string.Empty)
             {
                 VisualStateManager.GoToState(SummaryLink, "ActiveLink", true);
             }
+	    }
+
+	    private static bool HyperlinkMatchesUri(string uri, HyperlinkButton link)
+	    {
+            if (link.NavigateUri != null && 
+	            uri.StartsWith(link.NavigateUri.ToString(), StringComparison.InvariantCultureIgnoreCase))
+	        {
+	            return true;
+	        }
+
+	        var alternativeUris = LinkHighlighter.GetAlternativeUris(link);
+            if (alternativeUris != null && alternativeUris.Any(alternative => uri.StartsWith(alternative, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                return true;
+            }
+
+	        return false;
 	    }
 
 	    // If an error occurs during navigation, show an error window

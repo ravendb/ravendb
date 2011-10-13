@@ -6,7 +6,9 @@
              xmlns:Controls="clr-namespace:System.Windows.Controls"
              xmlns:TiledBG="clr-namespace:TiledBG;assembly=TiledBG"
              xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases"
-             xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats">
+             xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats"
+             xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+             xmlns:System="clr-namespace:System;assembly=mscorlib">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -84,13 +86,25 @@
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Indexes"
 								 NavigateUri="/indexes"
-								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+								 Style="{StaticResource Style_Text_HeaderLink}">
+                    <Behaviors:LinkHighlighter.AlternativeUris>
+                        <Behaviors:StringCollection>
+                            <System:String>/query</System:String>
+                        </Behaviors:StringCollection>
+                    </Behaviors:LinkHighlighter.AlternativeUris>
+                </HyperlinkButton>
+			  <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
 				<HyperlinkButton Content="Documents"
 								 NavigateUri="/documents"
-								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+								 Style="{StaticResource Style_Text_HeaderLink}">
+                    <Behaviors:LinkHighlighter.AlternativeUris>
+                        <Behaviors:StringCollection>
+                            <System:String>/Edit</System:String>
+                        </Behaviors:StringCollection>
+                    </Behaviors:LinkHighlighter.AlternativeUris>
+                </HyperlinkButton>
+			  <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Tasks"
 								 NavigateUri="/tasks"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
@@ -118,7 +132,8 @@
                 	<TiledBG:TiledBGControl.OpacityMask>
                 		<LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                 			<GradientStop Color="Transparent" Offset="1"/>
-                			<GradientStop Color="#FF040404"/>
+                		    <GradientStop Color="#AA000000" Offset="0.75"/>
+                		    <GradientStop Color="#FF000000"/>
                 		</LinearGradientBrush>
                 	</TiledBG:TiledBGControl.OpacityMask>
                 </TiledBG:TiledBGControl>
@@ -129,7 +144,8 @@
               	<TiledBG:TiledBGControl.OpacityMask>
               		<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
               			<GradientStop Color="Black" Offset="1"/>
-              			<GradientStop Color="Transparent"/>
+                        <GradientStop Color="#AA000000" Offset="0.75"/>
+                        <GradientStop Color="Transparent"/>
               		</LinearGradientBrush>
               	</TiledBG:TiledBGControl.OpacityMask>
               </TiledBG:TiledBGControl>
