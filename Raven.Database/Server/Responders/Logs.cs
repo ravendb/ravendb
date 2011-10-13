@@ -22,7 +22,11 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var boundedMemoryTarget = LogManager.Configuration.AllTargets.OfType<BoundedMemoryTarget>().FirstOrDefault();
+			BoundedMemoryTarget boundedMemoryTarget = null;
+			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
+			{
+				boundedMemoryTarget = LogManager.Configuration.AllTargets.OfType<BoundedMemoryTarget>().FirstOrDefault();
+			}
 			if(boundedMemoryTarget == null)
 			{
 				context.SetStatusToNotFound();
