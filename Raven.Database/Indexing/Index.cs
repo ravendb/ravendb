@@ -511,8 +511,18 @@ namespace Raven.Database.Indexing
 				}
 				else
 				{
-					var clonedField = new Field(field.Name(), field.BinaryValue(),
-												field.IsStored() ? Field.Store.YES : Field.Store.NO);
+					Field clonedField;
+					if (field.IsBinary())
+					{
+						clonedField = new Field(field.Name(), field.BinaryValue(),
+						                        field.IsStored() ? Field.Store.YES : Field.Store.NO);
+					}
+					else
+					{
+						clonedField = new Field(field.Name(), field.StringValue(),
+										field.IsStored() ? Field.Store.YES : Field.Store.NO,
+										field.IsIndexed()? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS);
+					}
 					clonedDocument.Add(clonedField);
 				}
 			}
