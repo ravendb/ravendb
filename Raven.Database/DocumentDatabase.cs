@@ -526,8 +526,9 @@ namespace Raven.Database
 			}
 		}
 
-		public void Delete(string key, Guid? etag, TransactionInformation transactionInformation)
+		public bool Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
+			var deleted = false;
 			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
 			TransactionalStorage.Batch(actions =>
 			{
@@ -540,18 +541,21 @@ namespace Raven.Database
 					RavenJObject metadata;
 					if (actions.Documents.DeleteDocument(key, etag, out metadata))
 					{
+						deleted = true;
 						AddIndexingTask(actions, metadata, () => new RemoveFromIndexTask { Keys = { key } });
 						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
 					}
 				}
 				else
 				{
-					actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
+					deleted = actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
 				}
 				workContext.ShouldNotifyAboutWork();
 			});
 			TransactionalStorage
 				.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterCommit(key)));
+
+			return deleted;
 		}
 
 		public bool HasTransaction(Guid txId)

@@ -87,13 +87,14 @@ namespace Raven.Bundles.Expiration
 
 					logger.Debug(()=> string.Format("Deleting {0} expired documents: [{1}]", queryResult.Results.Count, string.Join(", ", docIds)));
 
+					var deleted = false;
 					Database.TransactionalStorage.Batch(accessor => // delete all expired items in a single tx
 					{
-						foreach (var docId in docIds)
-						{
-							Database.Delete(docId, null, null);
-						}
+						deleted = docIds.Aggregate(deleted, (current, docId) => current | Database.Delete(docId, null, null));
 					});
+
+					if (deleted == false)
+						return;
 				}
 			}
 			catch (Exception e)
