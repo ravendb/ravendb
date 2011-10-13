@@ -890,16 +890,17 @@ more responsive application.
 		{
 			if (documentMetadata == null)
 				return true;
+
 			// prevent saves of a modified read only entity
 			if (documentMetadata.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) &&
 				documentMetadata.OriginalMetadata.Value<bool>(Constants.RavenReadOnly) &&
 				documentMetadata.Metadata.ContainsKey(Constants.RavenReadOnly) &&
 				documentMetadata.Metadata.Value<bool>(Constants.RavenReadOnly))
 				return false;
+
 			var newObj = ConvertEntityToJson(entity, documentMetadata.Metadata);
-			var equalityComparer = new RavenJTokenEqualityComparer();
-			return equalityComparer.Equals(newObj, documentMetadata.OriginalValue) == false ||
-				equalityComparer.Equals(documentMetadata.Metadata, documentMetadata.OriginalMetadata) == false;
+			return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue) == false ||
+				RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata) == false;
 		}
 
 		private RavenJObject ConvertEntityToJson(object entity, RavenJObject metadata)

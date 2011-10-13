@@ -212,6 +212,11 @@ namespace Raven.Json.Linq
 			return (t1 == t2 || (t1 != null && t2 != null && t1.DeepEquals(t2)));
 		}
 
+		public static int GetDeepHashCode(RavenJToken t)
+		{
+			return t == null ? 0 : t.GetDeepHashCode();
+		}
+
 		internal virtual bool DeepEquals(RavenJToken other)
 		{
 			if (other == null)
