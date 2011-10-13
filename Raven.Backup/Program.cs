@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
 using NDesk.Options;
 
 namespace Raven.Backup
@@ -12,14 +7,16 @@ namespace Raven.Backup
 	{
 		static void Main(string[] args)
 		{
+			var doReadKeyOnExit = true;
 			var op = new BackupOperation { NoWait = false };
 
 			var optionSet = new OptionSet
-			            	{
-			            		{"url=", "RavenDB server {0:url}", url=>op.ServerUrl = url},
-								{"dest=", "Full {0:path} to backup folder", path => op.BackupPath = path},
-								{"nowait", "Return immedialtey without waiting for a response from the server", key => op.NoWait = true},
-			            	};
+			                	{
+			                		{"url=", "RavenDB server {0:url}", url => op.ServerUrl = url},
+			                		{"dest=", "Full {0:path} to backup folder", path => op.BackupPath = path},
+			                		{"nowait", "Return immedialtey without waiting for a response from the server", x => op.NoWait = true},
+			                		{"noreadkey", x => doReadKeyOnExit = false},
+			                	};
 
 			try
 			{
@@ -60,7 +57,7 @@ namespace Raven.Backup
 				Console.WriteLine(ex.Message);
 			}
 
-			Console.ReadKey();
+			if (doReadKeyOnExit) Console.ReadKey();
 		}
 
 		private static void PrintUsage(OptionSet optionSet)
