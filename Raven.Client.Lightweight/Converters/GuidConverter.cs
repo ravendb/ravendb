@@ -19,8 +19,7 @@ namespace Raven.Client.Converters
 		/// <returns>
 		/// true if this converter can perform the conversion; otherwise, false.
 		/// </returns>
-		/// <param name="sourceType">A <see cref="T:System.Type"/> that represents the type you want to convert from. 
-		///                 </param>
+		/// <param name="sourceType">A <see cref="T:System.Type"/> that represents the type you want to convert from.</param>
 		public bool CanConvertFrom(Type sourceType)
 		{
 			return sourceType == typeof(Guid);

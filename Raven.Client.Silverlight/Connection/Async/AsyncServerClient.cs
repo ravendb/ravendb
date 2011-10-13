@@ -73,6 +73,11 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 		}
 
+        public HttpJsonRequest CreateRequest(string relativeUrl, string method)
+        {
+            return jsonRequestFactory.CreateHttpJsonRequest(this, url + relativeUrl, method, credentials, convention);
+        }
+
 		/// <summary>
 		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
 		/// with the specified database
@@ -266,6 +271,25 @@ namespace Raven.Client.Silverlight.Connection.Async
 							.ContinueWith(replyTask => JsonConvert.DeserializeObject<GetResponse[]>(replyTask.Result));
 					})
 				.Unwrap();
+		}
+
+		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
+		{
+			var requestUri = url + "/logs";
+			if (errorsOnly)
+				requestUri += "?type=error";
+
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						return convention.CreateSerializer().Deserialize<LogItem[]>(reader);
+					}
+				});
 		}
 
 		/// <summary>

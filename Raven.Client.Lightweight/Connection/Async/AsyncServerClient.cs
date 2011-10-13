@@ -366,7 +366,13 @@ namespace Raven.Client.Connection.Async
 		/// </remarks>
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
 		{
-			throw new NotImplementedException();
+			var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+			return jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention)
+						.ReadResponseStringAsync()
+						.ContinueWith(task => RavenJArray.Parse(task.Result)
+												.Cast<RavenJObject>()
+												.ToJsonDocuments()
+												.ToArray());
 		}
 
 		/// <summary>
@@ -392,6 +398,11 @@ namespace Raven.Client.Connection.Async
 						return jsonAsType;
 					}
 				});
+		}
+
+		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
+		{
+			throw new NotImplementedException();
 		}
 
 		/// <summary>

@@ -3,82 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-extern alias database;
-using System;
-using System.ComponentModel.Composition.Hosting;
-using System.IO;
-using System.Reflection;
-using Raven.Bundles.Versioning.Data;
-using Raven.Bundles.Versioning.Triggers;
-using Raven.Client.Document;
 using Xunit;
-using Raven.Server;
 using Raven.Client.Versioning;
 
 namespace Raven.Bundles.Tests.Versioning
 {
-	public class Versioning : IDisposable
+	public class Versioning : VersioningTest
 	{
-		private readonly DocumentStore documentStore;
-		private readonly string path;
-		private readonly RavenDbServer ravenDbServer;
-
-		public Versioning()
-		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			ravenDbServer = new RavenDbServer(
-				new database::Raven.Database.Config.RavenConfiguration
-				{
-					Port = 8080,
-					DataDirectory = path,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					Catalog =
-					{
-						Catalogs =
-					{
-						new AssemblyCatalog(typeof (VersioningPutTrigger).Assembly)
-					}
-					},
-				});
-			documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8080"
-			};
-			documentStore.Initialize();
-			using(var s = documentStore.OpenSession())
-			{
-				s.Store(new VersioningConfiguration
-				{
-					Exclude = true,
-					Id = "Raven/Versioning/Users",
-				});
-				s.Store(new VersioningConfiguration
-				{
-					Exclude = true,
-					Id = "Raven/Versioning/Comments",
-				});
-				s.Store(new VersioningConfiguration
-				{
-					Exclude = false,
-					Id = "Raven/Versioning/DefaultConfiguration",
-					MaxRevisions = 5
-				});
-				s.SaveChanges();
-			}
-		}
-
-		#region IDisposable Members
-
-		public void Dispose()
-		{
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-	   }
-
-		#endregion
 
 		[Fact]
 		public void Will_automatically_set_metadata()

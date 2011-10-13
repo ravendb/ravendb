@@ -70,6 +70,12 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net.Contrib.Spatial">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.dll</HintPath>
+    </Reference>
+    <Reference Include="Lucene.Net.Contrib.SpellChecker">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.SpellChecker.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualStudio.DebuggerVisualizers, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -80,14 +86,8 @@
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL" />
-    <Reference Include="PSHostsFile">
-      <HintPath>..\Tools\PSHostsFile\PSHostsFile.dll</HintPath>
-    </Reference>
     <Reference Include="Rhino.Mocks">
       <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
-    </Reference>
-    <Reference Include="Spatial.Net">
-      <HintPath>..\SharedLibs\Spatial.Net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -163,18 +163,26 @@
     <Compile Include="Bugs\BackwardCompatability.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
+    <Compile Include="Bugs\CanUseReduceResultInOutput.cs" />
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
+    <Compile Include="Bugs\CompiledIndexesNhsevidence.cs" />
     <Compile Include="Bugs\ConflictsWithIIS.cs" />
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
     <Compile Include="Bugs\CreatingIndexes.cs" />
     <Compile Include="Bugs\DeserializationAcrossTypes.cs" />
     <Compile Include="Bugs\DynamicQuerySorting.cs" />
+    <Compile Include="Bugs\EmbeddableDocumentStoreUsingUrlWithConnectionString.cs" />
     <Compile Include="Bugs\Everett.cs" />
+    <Compile Include="Bugs\FullTextSearchOnTags.cs" />
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
     <Compile Include="Bugs\Identifiers\WithBase64Characters.cs" />
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
+    <Compile Include="Bugs\IndexesWithDateTimeMin.cs" />
+    <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
     <Compile Include="Bugs\Indexing\InvalidIndexes.cs" />
     <Compile Include="Bugs\Issue355.cs" />
+    <Compile Include="Bugs\LarsErik.cs" />
+    <Compile Include="Bugs\Iulian\GeneratesCorrectTemporaryIndex.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\Place.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\Task.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\TaskSummary.cs" />
@@ -187,6 +195,7 @@
     <Compile Include="Bugs\MapRedue\Document.cs" />
     <Compile Include="Bugs\MapRedue\DocumentView.cs" />
     <Compile Include="Bugs\MapRedue\MapReduceIndex.cs" />
+    <Compile Include="Bugs\Marcus.cs" />
     <Compile Include="Bugs\Matthew.cs" />
     <Compile Include="Bugs\MetadataBugs.cs" />
     <Compile Include="Bugs\MetadataIssues.cs" />
@@ -202,6 +211,7 @@
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
     <Compile Include="Bugs\QueryingOnEmptyArray.cs" />
     <Compile Include="Bugs\QueryingOnEmptyString.cs" />
+    <Compile Include="Bugs\QueryingOverTags.cs" />
     <Compile Include="Bugs\QueryOptimizerOnStaticIndex.cs" />
     <Compile Include="Bugs\RacielrodTest.cs" />
     <Compile Include="Bugs\RecursiveQueries.cs" />
@@ -426,6 +436,7 @@
     <Compile Include="Bugs\SimpleJson.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
+    <Compile Include="Bugs\Spatial.cs" />
     <Compile Include="Bugs\spokeypokey.cs" />
     <Compile Include="Bugs\Stacey\InServerDatabase.cs" />
     <Compile Include="Bugs\Stacey\Models.cs" />
@@ -462,6 +473,7 @@
     <Compile Include="Bugs\TranslatingLinqQueriesToIndexes.cs" />
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
+    <Compile Include="Bugs\TypeNameHandlingTest.cs" />
     <Compile Include="Bugs\User.cs" />
     <Compile Include="Bugs\UserGuid.cs" />
     <Compile Include="Bugs\UserInt32.cs" />
@@ -520,6 +532,7 @@
     <Compile Include="Indexes\LinqIndexesFromClient.cs" />
     <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
     <Compile Include="Indexes\MapOnlyView.cs" />
+    <Compile Include="Bugs\Indexing\CanMultiMapIndexNullableValueTypes.cs" />
     <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />

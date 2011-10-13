@@ -13,6 +13,7 @@ using System.Transactions;
 #endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -460,7 +461,7 @@ more responsive application.
 
 			if (identityProperty.CanWrite)
 			{
-				SetPropertyOrField(identityProperty.PropertyType, val => identityProperty.SetValue(entity, val, null), id);
+				SetPropertyOrField(identityProperty.PropertyType, entity, val => identityProperty.SetValue(entity, val, null), id);
 			}
 			else 
 			{
@@ -471,11 +472,11 @@ more responsive application.
 				if (fieldInfo == null)
 					return;
 
-				SetPropertyOrField(identityProperty.PropertyType, val => fieldInfo.SetValue(entity, val), id);
+				SetPropertyOrField(identityProperty.PropertyType, entity, val => fieldInfo.SetValue(entity, val), id);
 			}
 		}
 
-		private void SetPropertyOrField(Type propertyOrFieldType, Action<object> setIdenitifer, string id)
+		private void SetPropertyOrField(Type propertyOrFieldType, object entity, Action<object> setIdenitifer, string id)
 		{
 			if (propertyOrFieldType == typeof (string))
 			{
@@ -489,8 +490,7 @@ more responsive application.
 					throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
 					                            " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-				var value = id.Split(new[] { Conventions.IdentityPartsSeparator },StringSplitOptions.RemoveEmptyEntries).Last();
-				setIdenitifer(converter.ConvertTo(value));
+				setIdenitifer(converter.ConvertTo(Conventions.FindIdValuePartForValueTypeConversion(entity,id)));
 			}
 		}
 
@@ -513,7 +513,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity)
 		{
-			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?)null);
+			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?) null, null);
 		}
 
 		/// <summary>
@@ -521,10 +521,26 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity, Guid etag)
 		{
-			StoreInternal(entity, etag);
+			StoreInternal(entity, etag, null);
 		}
 
-		private void StoreInternal(object entity, Guid? etag)
+		/// <summary>
+		/// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
+		/// </summary>
+		public void Store(object entity, string id)
+		{
+			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?)null, id);
+		}
+
+		/// <summary>
+		/// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
+		/// </summary>
+		public void Store(object entity, Guid etag, string id)
+		{
+			StoreInternal(entity, etag, id);
+		}
+
+		private void StoreInternal(object entity, Guid? etag, string id)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
@@ -532,26 +548,33 @@ more responsive application.
 			if (entitiesAndMetadata.ContainsKey(entity))
 				return;
 
-			string id;
-#if !NET_3_5
-			if (entity is IDynamicMetaObjectProvider)
+			if (id == null)
 			{
-				if(TryGetIdFromDynamic(entity,out id) == false)
+#if !NET_3_5
+				if (entity is IDynamicMetaObjectProvider)
 				{
-					id = Conventions.DocumentKeyGenerator(entity);
-
-					if (id != null)
+					if (TryGetIdFromDynamic(entity, out id) == false)
 					{
-						// Store it back into the Id field so the client has access to to it                    
-						TrySetIdOnynamic(entity, id);
+						id = Conventions.DocumentKeyGenerator(entity);
+
+						if (id != null)
+						{
+							// Store it back into the Id field so the client has access to to it                    
+							TrySetIdOnynamic(entity, id);
+						}
 					}
+				}
+				else
+#endif
+				{
+					id = GetOrGenerateDocumentKey(entity);
+
+					TrySetIdentity(entity, id);
 				}
 			}
 			else
-#endif
 			{
-				id = GetOrGenerateDocumentKey(entity);
-
+				// Store it back into the Id field so the client has access to to it                    
 				TrySetIdentity(entity, id);
 			}
 
@@ -926,17 +949,23 @@ more responsive application.
 
 			var jsonSerializer = Conventions.CreateSerializer();
 			jObject = RavenJObject.FromObject(entity, jsonSerializer);
-
 			if (jsonSerializer.TypeNameHandling == TypeNameHandling.Auto)// remove the default types
-				TrySimplfyingJson(jObject);
+			{
+				var resolveContract = jsonSerializer.ContractResolver.ResolveContract(entity.GetType());
+				TrySimplfyingJson(jObject, resolveContract);
+			}
 
 			if (cachedJsonDocs != null)
 				cachedJsonDocs[entity] = jObject;
 		    return jObject;
 		}
 
-		private static void TrySimplfyingJson(RavenJObject jObject)
+		private static void TrySimplfyingJson(RavenJObject jObject, JsonContract contract)
 		{
+			var objectContract = contract as JsonObjectContract;
+			if (objectContract == null)
+				return;
+
 			var deferredActions = new List<Action>();
 			foreach (var kvp in jObject)
 			{
@@ -946,7 +975,10 @@ more responsive application.
 				var obj = prop.Value as RavenJObject;
 				if(obj == null)
 					continue;
-				if (ShouldSimplfyJsonBasedOnType(obj.Value<string>("$type")) == false)
+
+				var jsonProperty = objectContract.Properties.GetClosestMatchProperty(prop.Key);
+
+				if (ShouldSimplfyJsonBasedOnType(obj.Value<string>("$type"), jsonProperty) == false)
 					continue;
 				
 				if (obj.ContainsKey("$values") == false)
@@ -972,18 +1004,21 @@ more responsive application.
 						{
 							var ravenJObject = item as RavenJObject;
 							if (ravenJObject != null)
-								TrySimplfyingJson(ravenJObject);
+								TrySimplfyingJson(ravenJObject, contract);
 						}
 						break;
 					case JTokenType.Object:
-						TrySimplfyingJson((RavenJObject)prop.Value);
+						TrySimplfyingJson((RavenJObject)prop.Value, contract);
 						break;
 				}
 			}
 		}
 
-		private static bool ShouldSimplfyJsonBasedOnType(string typeValue)
+		private static bool ShouldSimplfyJsonBasedOnType(string typeValue, JsonProperty jsonProperty)
 		{
+			if (jsonProperty != null && (jsonProperty.TypeNameHandling == TypeNameHandling.All || jsonProperty.TypeNameHandling == TypeNameHandling.Arrays))
+				return false; // explicitly rejected what we are trying to do here
+
 			if (typeValue == null)
 				return false;
 			if (typeValue.StartsWith("System.Collections.Generic.List`1[["))

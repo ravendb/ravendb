@@ -132,7 +132,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Holds the query stats
 		/// </summary>
-		protected readonly RavenQueryStatistics queryStats = new RavenQueryStatistics();
+		protected RavenQueryStatistics queryStats = new RavenQueryStatistics();
 
 		/// <summary>
 		///   Get the name of the index being queried
@@ -279,6 +279,9 @@ namespace Raven.Client.Document
 			theWaitForNonStaleResults = other.theWaitForNonStaleResults;
 			includes = other.includes;
 			queryListeners = other.queryListeners;
+			queryStats = other.queryStats;
+
+			AfterQueryExecuted(queryStats.UpdateQueryStats);
 		}
 
 		#region TSelf Members
@@ -1329,8 +1332,14 @@ If you really want to do in memory filtering on the data returned from the query
 			};
 		}
 
-	   
-	   
+		/// <summary>
+		/// Perform a search for documents which fields that match the searchTerms.
+		/// If there is more than a single term, each of them will be checked independently.
+		/// </summary>
+		public void Search(string fieldName, string searchTerms)
+		{
+			theQueryText.Append(' ').Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">> ");
+		}
 
 		private string TransformToEqualValue(WhereParams whereParams)
 		{

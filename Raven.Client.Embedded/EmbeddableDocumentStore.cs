@@ -109,6 +109,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		protected override void SetConnectionStringSettings(RavenConnectionStringOptions options)
 		{
+			base.SetConnectionStringSettings(options);
 			var embeddedRavenConnectionStringOptions = options as EmbeddedRavenConnectionStringOptions;
 
 			if (embeddedRavenConnectionStringOptions == null)

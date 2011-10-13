@@ -342,6 +342,12 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		TSelf CloseSubclause ();
 
+		/// <summary>
+		/// Perform a search for documents which fields that match the searchTerms.
+		/// If there is more than a single term, each of them will be checked independently.
+		/// </summary>
+		TSelf Search(string fieldName, string searchTerms);
+
 		///<summary>
 		///  Instruct the index to group by the specified fields using the specified aggregation operation
 		///</summary>

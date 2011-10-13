@@ -44,6 +44,10 @@ namespace Raven.Bundles.Tests.Expiration
 									new AssemblyCatalog(typeof (ExpirationReadTrigger).Assembly)
 								}
 						},
+					Settings =
+						{
+							{"Raven/Expiration/DeleteFrequencySeconds", "1"}
+						}
 				});
 			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
 			documentStore = new DocumentStore

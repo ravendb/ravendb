@@ -135,7 +135,7 @@ namespace Raven.Database.Indexing
 			var newDocId = dynamicJsonObject.GetDocumentId();
 			return new IndexingResult
 			{
-				Fields = anonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, indexDefinition,
+				Fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, indexDefinition,
 																  Field.Store.NO).ToList(),
 				NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
 				ShouldSkip = false

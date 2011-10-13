@@ -49,6 +49,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\DestinationFailureInformation.cs" />
+    <Compile Include="Plugins\AbstractAttachmentReplicationConflictResolver.cs" />
+    <Compile Include="Plugins\AbstractDocumentReplicationConflictResolver.cs" />
     <Compile Include="Reponsders\AttachmentReplicationResponder.cs" />
     <Compile Include="Triggers\AttachmentAncestryPutTrigger.cs" />
     <Compile Include="Triggers\HideVirtuallyDeletedAttachmentsReadTrigger.cs" />

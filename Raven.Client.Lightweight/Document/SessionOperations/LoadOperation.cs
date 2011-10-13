@@ -19,6 +19,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		public LoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string id)
 		{
+			if (id == null) throw new ArgumentNullException("id","The document id cannot be null");
 			this.sessionOperations = sessionOperations;
 			this.disableAllCaching = disableAllCaching;
 			this.id = id;

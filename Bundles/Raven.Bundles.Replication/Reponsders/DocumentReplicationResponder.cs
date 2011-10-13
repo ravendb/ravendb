@@ -4,11 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Data;
+using Raven.Bundles.Replication.Plugins;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
@@ -19,7 +22,10 @@ namespace Raven.Bundles.Replication.Reponsders
 {
 	public class DocumentReplicationResponder : RequestResponder
 	{
-		private Logger log = LogManager.GetCurrentClassLogger();
+		private readonly Logger log = LogManager.GetCurrentClassLogger();
+
+		[ImportMany]
+		public IEnumerable<AbstractDocumentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
 
 		public override void Respond(IHttpContext context)
 		{
@@ -97,6 +103,11 @@ namespace Raven.Bundles.Replication.Reponsders
 				return;
 			}
 
+			if (ReplicationConflictResolvers.Any(replicationConflictResolver => replicationConflictResolver.TryResolve(id, metadata, document, existingDoc)))
+			{
+				actions.Documents.AddDocument(id, null, document, metadata);
+				return;
+			}
 
 			var newDocumentConflictId = id + "/conflicts/" +
 			                            metadata.Value<string>(ReplicationConstants.RavenReplicationSource) + "/" +

@@ -66,11 +66,11 @@ namespace Raven.Database.Queries
 
 				var topDocs = currentIndexSearcher.Search(joinedQuery, 1);
 
-				if (topDocs.totalHits > 0)
+				if (topDocs.TotalHits > 0)
 				{
 					rangeResults.Add(new FacetValue
 					{
-						Count = topDocs.totalHits,
+						Count = topDocs.TotalHits,
 						Range = range
 					});
 				}
@@ -97,11 +97,11 @@ namespace Raven.Database.Queries
 
 				var topDocs = currentIndexSearcher.Search(joinedQuery, 1);
 
-				if (topDocs.totalHits > 0)
+				if (topDocs.TotalHits > 0)
 				{
 					termResults.Add(new FacetValue
 					{
-						Count = topDocs.totalHits,
+						Count = topDocs.TotalHits,
 						Range = term
 					});
 				}

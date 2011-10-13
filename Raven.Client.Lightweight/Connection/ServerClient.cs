@@ -164,9 +164,9 @@ namespace Raven.Client.Connection
 				replicationInformer.IncrementFailureCount(url);
 			}
 			// this should not be thrown, but since I know the value of should...
-			throw new InvalidOperationException(@"Attempted to conect to master and all replicas has failed, giving up.
+			throw new InvalidOperationException(@"Attempted to conect to master and all replicas have failed, giving up.
 There is a high probability of a network problem preventing access to all the replicas.
-Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven instances.");
+Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven instances.");
 		}
 
 
@@ -192,7 +192,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private static bool IsServerDown(WebException e)
 		{
-			return e.InnerException is SocketException;
+			return e.InnerException is SocketException || 
+				e.InnerException is IOException;
 		}
 
 		/// <summary>

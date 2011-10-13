@@ -19,11 +19,80 @@ namespace Raven.Tests.Bugs.MapRedue
 			}
 		}
 
+
+		[Fact]
+		public void IndexWithoutLetShouldWork()
+		{
+			using(var store = NewDocumentStore())
+			{
+				new IndexWithoutLet().Execute(store);
+			}
+		}
+
+		[Fact]
+		public void IndexWithLetShouldWork()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new IndexWithLet().Execute(store);
+			}
+		}
+
+		public class IndexWithoutLet : AbstractIndexCreationTask<Chris.CalendarWeek, Record>
+		{
+			public IndexWithoutLet()
+			{
+				Map = calendwarWeeks => from calendarWeek in calendwarWeeks
+										select new
+										{
+											calendarWeek.Owner.OwnerId,
+											calendarWeek.PendingCount,
+										};
+
+				Reduce = records => from record in records
+									group record by record.OwnerId
+										into g
+										select new
+										{
+											OwnerId = g.Key,
+											PendingCount = g.Sum(x => (decimal)x.PendingCount),
+										};
+
+			}
+		}
+
+		public class IndexWithLet : AbstractIndexCreationTask<Chris.CalendarWeek, Record>
+		{
+			public IndexWithLet()
+			{
+				Map = calendwarWeeks => from calendarWeek in calendwarWeeks
+										select new
+										{
+											calendarWeek.Owner.OwnerId,
+											calendarWeek.PendingCount,
+										};
+
+				Reduce = records => from record in records
+									group record by record.OwnerId
+										into g
+										let pendingSum = g.Sum(x => (decimal)x.PendingCount)
+										select new
+										{
+											OwnerId = g.Key,
+											PendingCount = pendingSum,
+										};
+
+
+			}
+		}
+
 		public class Record
 		{
 			public decimal CalendarsCount { get; set; }
 			public string OwnerId { get; set; }
 			public decimal SoldCount { get; set; }
+
+			public decimal PendingCount { get; set; }
 		}
 
 
@@ -31,6 +100,8 @@ namespace Raven.Tests.Bugs.MapRedue
 		{
 			public Owner Owner { get; set; }
 			public SalesAssignment[] SalesAssignments { get; set; }
+
+			public decimal PendingCount { get; set; }
 		}
 
 		public class Owner

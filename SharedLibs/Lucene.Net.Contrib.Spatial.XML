@@ -1,0 +1,276 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Lucene.Net.Contrib.Spatial</name>
+    </assembly>
+    <members>
+        <member name="T:Lucene.Net.Spatial.Tier.Projectors.SinusoidalProjector">
+            <summary>
+            Based on Sinusoidal Projections
+            Project a latitude / longitude on a 2D cartesian map
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Tier.DistanceFilter.Reset">
+            <summary>
+            You must call this before re-using this DistanceFilter across searches
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Geometry.Shape.Vector2D">
+            <summary>
+            2D Vector
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.Vector2D.#ctor(System.Double,System.Double)">
+            <summary>
+            Create a vector from the origin of the coordinate system to the given point
+            </summary>
+            <param name="x">The x.</param>
+            <param name="y">The y.</param>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.Vector2D.#ctor(Lucene.Net.Spatial.Geometry.Shape.Point2D)">
+            <summary>
+            Create a vector from the origin of the coordinate system to the given point
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.Vector2D.#ctor(Lucene.Net.Spatial.Geometry.Shape.Point2D,Lucene.Net.Spatial.Geometry.Shape.Point2D)">
+            <summary>
+            Create a vector from one point to another
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.Vector2D.NormSqr">
+            <summary>
+            Vector length (magnitude) squared
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Geometry.Shape.Point2D">
+            <summary>
+            Point class.  This type is mutable.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Geometry.CartesianPoint">
+            <summary>
+            Represents lat/lngs as fixed point numbers translated so that all
+            world coordinates are in the first quadrant.  The same fixed point
+            scale as is used for FixedLatLng is employed.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Spatial.Tier.CartesianPolyFilterBuilder.MilesFloor">
+            <summary>
+            Finer granularity than 1 mile isn't accurate with
+            standard C# math.  Also, there's already a 2nd
+            precise filter, if needed, in DistanceQueryBuilder,
+            that will make the filtering exact.
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Tier.DistanceQueryBuilder.#ctor(System.Double,System.Double,System.Double,System.String,System.String,System.String,System.Boolean)">
+            <summary>
+            Create a distance query using
+            a boundary box wrapper around a more precise
+            DistanceFilter.
+            </summary>
+            <param name="lat">The lat.</param>
+            <param name="lng">The Lng.</param>
+            <param name="miles">The miles.</param>
+            <param name="latField">The lat field.</param>
+            <param name="lngField">The Lng field.</param>
+            <param name="tierFieldPrefix">The tier field prefix.</param>
+            <param name="needPrecise">if set to <c>true</c> [need precise].</param>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Tier.DistanceQueryBuilder.#ctor(System.Double,System.Double,System.Double,System.String,System.String,System.Boolean)">
+            <summary>
+            Create a distance query using
+            a boundary box wrapper around a more precise
+            DistanceFilter.
+            </summary>
+            <param name="lat">The lat.</param>
+            <param name="lng">The Lng.</param>
+            <param name="miles">The miles.</param>
+            <param name="geoHashFieldPrefix">The geo hash field prefix.</param>
+            <param name="tierFieldPrefix">The tier field prefix.</param>
+            <param name="needPrecise">if set to <c>true</c> [need precise].</param>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D">
+            <summary>
+            Common set of operations available on 2d shapes
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D.Translate(Lucene.Net.Spatial.Geometry.Shape.Vector2D)">
+            <summary>
+            Translate according to the vector
+            </summary>
+            <param name="vector">The 2D vector.</param>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D.Contains(Lucene.Net.Spatial.Geometry.Shape.Point2D)">
+            <summary>
+            Does the shape contain the given point
+            </summary>
+            <param name="point">The 2D point.</param>
+            <returns>
+            	<c>true</c> if [contains] [the specified point]; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D.Area">
+            <summary>
+            Return the area
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D.Centroid">
+            <summary>
+            Return the centroid
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D.Intersect(Lucene.Net.Spatial.Geometry.Shape.Rectangle)">
+            <summary>
+            Returns information about how this shape intersects the given rectangle
+            </summary>
+            <param name="rectangle">The rectangle.</param>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.GetTierBoxId(System.Double,System.Double)">
+            <summary>
+            TierBoxId is latitude box id + longitude box id
+            where latitude box id, and longitude box id are transposed in to position
+            coordinates.
+            </summary>
+            <param name="latitude">The latitude.</param>
+            <param name="longitude">The longitude.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.GetTierFieldName">
+            <summary>
+            Get the string name representing current tier _localTier&lt;tiedId&gt;
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.GetTierFieldName(System.Int32)">
+            <summary>
+            Get the string name representing tierId _localTier&lt;tierId&gt;
+            </summary>
+            <param name="tierId">The tier id.</param>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.BestFit(System.Double)">
+             <summary>
+             Find the tier with the best fit for a bounding box
+             Best fit is defined as the ceiling of
+             log2 (circumference of earth / distance) 
+             distance is defined as the smallest box fitting
+             the corner between a radius and a bounding box.
+            
+             Distances less than a mile return 15, finer granularity is
+             in accurate
+             </summary>
+             <param name="miles">The miles.</param>
+             <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.Log2(System.Double)">
+            <summary>
+            A log to the base 2 formula.
+            <code>Math.Log(value) / Math.Log(2)</code>
+            </summary>
+            <param name="value">The value.</param>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.Ellipse.#ctor(Lucene.Net.Spatial.Geometry.Shape.Point2D,Lucene.Net.Spatial.Geometry.Shape.Point2D,System.Double)">
+            <summary>
+            Constructor given bounding rectangle and a rotation.
+            </summary>
+            <param name="p1">The point 1.</param>
+            <param name="p2">The point 2.</param>
+            <param name="angle">The angle.</param>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.LatLng.ToCartesian">
+            <summary>
+            Convert the lat/lng into the cartesian coordinate plane such that all
+            world coordinates are represented in the first quadrant.
+            The x dimension corresponds to latitude and y corresponds to longitude.
+            The translation starts with the normalized latlng and adds 180 to the latitude and 
+            90 to the longitude (subject to fixed point scaling).
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.LatLng.FromCartesian(Lucene.Net.Spatial.Geometry.CartesianPoint)">
+             <summary>
+            The inverse of ToCartesian().  Always returns a FixedLatLng.
+             </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.LatLng.ArcDistance(Lucene.Net.Spatial.Geometry.LatLng)">
+            <summary>
+            Calculates the distance between two lat/lng's in miles.
+            </summary>
+            <param name="latLng">The lat lng.</param>
+            <returns>Returns the distance in miles</returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.LatLng.ArcDistance(Lucene.Net.Spatial.Geometry.LatLng,Lucene.Net.Spatial.Geometry.DistanceUnits)">
+             <summary>
+            Calculates the distance between two lat/lng's in miles or meters.
+             </summary>
+             <param name="ll2">Second lat,lng position to calculate distance to.</param>
+             <param name="lUnits">Units to calculate distance, defaults to miles</param>
+             <returns>Returns the distance in meters or miles</returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.LatLng.CalculateMidpoint(Lucene.Net.Spatial.Geometry.LatLng)">
+            <summary>
+            Calculate the midpoint between this point an another.  Respects fixed vs floating point
+            </summary>
+            <param name="other">The other.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Tier.DistanceHandler">
+            <summary>
+            Provide a high level access point to distances
+            Used by DistanceSortSource and DistanceQuery
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Geometry.Shape.LineSegment">
+            <summary>
+            2D line segment
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.LineSegment.Distance(Lucene.Net.Spatial.Geometry.Shape.Point2D,Lucene.Net.Spatial.Geometry.Shape.Point2D)">
+            <summary>
+            Finds the distance of a specified point from the line segment and the
+            closest point on the segment to the specified point.
+            </summary>
+            <param name="p">The test point.</param>
+            <param name="closestPt">Closest point on the segment to c.</param>
+            <returns>Returns the distance from p to the closest point on the segment.</returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.GeoHash.GeoHashDistanceFilter.#ctor(Lucene.Net.Search.Filter,System.Double,System.Double,System.Double,System.String)">
+            <summary>
+            Provide a distance filter based from a center point with a radius in miles
+            </summary>
+            <param name="startingFilter">The starting filter.</param>
+            <param name="lat">The lat.</param>
+            <param name="lng">The LNG.</param>
+            <param name="miles">The miles.</param>
+            <param name="geoHashField">The geo hash field.</param>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Geometry.Shape.LLRect">
+            <summary>
+            Lat-long rect.  Instances are mutable.
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.LLRect.Area">
+            <summary>
+            Return the area in units of lat-lng squared.  This is a contrived unit
+            that only has value when comparing to something else.
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.LLRect.CreateBox(Lucene.Net.Spatial.Geometry.LatLng,System.Double,System.Double)">
+            <summary>
+            Approximates a box centered at the given point with the given width and height in miles.
+            </summary>
+            <param name="center">The center.</param>
+            <param name="widthMi">The width mi.</param>
+            <param name="heightMi">The height mi.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.LLRect.NormLng(System.Double,System.Double)">
+            <summary>
+            Returns a normalized Lng rectangle shape for the bounding box
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Geometry.Shape.LLRect.NormLat(System.Double,System.Double)">
+            <summary>
+            Returns a normalized Lat rectangle shape for the bounding box
+            If you go over the poles, you need to flip the lng value too
+            </summary>
+        </member>
+    </members>
+</doc>

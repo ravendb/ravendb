@@ -23,7 +23,7 @@ namespace Raven.Abstractions.Extensions
 	    public static RavenJObject ToJObject(object result)
 		{
 #if !NET_3_5
-			var dynamicJsonObject = result as Linq.DynamicJsonObject;
+			var dynamicJsonObject = result as Linq.IDynamicJsonObject;
 			if (dynamicJsonObject != null)
 				return dynamicJsonObject.Inner;
 #endif

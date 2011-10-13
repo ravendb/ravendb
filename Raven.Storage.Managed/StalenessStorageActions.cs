@@ -135,7 +135,7 @@ namespace Raven.Storage.Managed
 		public Guid? GetMostRecentReducedEtag(string name)
 		{
 			var keyWithHighestEqualTo = storage.MappedResults["ByViewAndEtag"]
-				.LowestEqual(new RavenJObject {{"view", name}}, token => token.Value<string>("view") == name);
+				.GreatestEqual(new RavenJObject {{"view", name}}, token => token.Value<string>("view") == name);
 
 			if(keyWithHighestEqualTo == null)
 				return null;
