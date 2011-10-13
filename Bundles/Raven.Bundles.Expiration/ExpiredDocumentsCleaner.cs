@@ -18,7 +18,7 @@ namespace Raven.Bundles.Expiration
 {
 	public class ExpiredDocumentsCleaner : IStartupTask, IDisposable
 	{
-		private const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
+		public const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
 		private Logger logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 		public DocumentDatabase Database { get; set; }
@@ -87,7 +87,7 @@ namespace Raven.Bundles.Expiration
 
 					logger.Debug(()=> string.Format("Deleting {0} expired documents: [{1}]", queryResult.Results.Count, string.Join(", ", docIds)));
 
-					var deleted = false;
+					 var deleted = false;
 					Database.TransactionalStorage.Batch(accessor => // delete all expired items in a single tx
 					{
 						deleted = docIds.Aggregate(deleted, (current, docId) => current | Database.Delete(docId, null, null));
