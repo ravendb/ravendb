@@ -155,9 +155,10 @@ namespace Raven.Studio.Models
 		{
 			get { return document.LastModified; }
 			set { 
-                document.LastModified = value; 
-                OnPropertyChanged("Metadata"); 
-            }
+                document.LastModified = value;
+			    OnPropertyChanged();
+			    OnPropertyChanged("Metadata");
+			}
 		}
 
 		private IDictionary<string, string> metadata;
