@@ -17,11 +17,12 @@ namespace Raven.Abstractions.Data
 		public string DefaultDatabase { get; set; }
 		public Guid ResourceManagerId { get; set; }
 		public string Url { get; set; }
+		public string ApiKey { get; set; }
 
 		public override string ToString()
 		{
 			var user = Credentials == null ? "<none>" : Credentials.UserName;
-			return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url);
+			return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
 		}
 	}
 
@@ -86,6 +87,9 @@ namespace Raven.Abstractions.Data
 			var embeddedRavenConnectionStringOptions = ConnectionStringOptions as EmbeddedRavenConnectionStringOptions;
 			switch (key)
 			{
+				case "apikey":
+					ConnectionStringOptions.ApiKey = value;
+					break;
 				case "memory":
 					if(embeddedRavenConnectionStringOptions  == null)
 						goto default;

@@ -182,7 +182,7 @@ namespace Raven.Bundles.Replication.Tasks
 					}
 					catch (Exception e)
 					{
-						log.Warn("Failed to replicate to: " + destination, e);
+						log.WarnException("Failed to replicate to: " + destination, e);
 						return false;
 					}
 
@@ -309,18 +309,18 @@ namespace Raven.Bundles.Replication.Tasks
 					using (var streamReader = new StreamReader(response.GetResponseStream()))
 					{
 						var error = streamReader.ReadToEnd();
-						log.Warn("Replication to " + destination + " had failed\r\n" + error, e);
+						log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
 					}
 				}
 				else
 				{
-					log.Warn("Replication to " + destination + " had failed", e);
+					log.WarnException("Replication to " + destination + " had failed", e);
 				}
 				return false;
 			}
 			catch (Exception e)
 			{
-				log.Warn("Replication to " + destination + " had failed", e);
+				log.WarnException("Replication to " + destination + " had failed", e);
 				return false;
 			}
 		}
@@ -356,18 +356,18 @@ namespace Raven.Bundles.Replication.Tasks
 					using (var streamReader = new StreamReader(response.GetResponseStream()))
 					{
 						var error = streamReader.ReadToEnd();
-						log.Warn("Replication to " + destination + " had failed\r\n" + error, e);
+						log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
 					}
 				}
 				else
 				{
-					log.Warn("Replication to " + destination + " had failed", e);
+					log.WarnException("Replication to " + destination + " had failed", e);
 				}
 				return false;
 			}
 			catch (Exception e)
 			{
-				log.Warn("Replication to " + destination + " had failed", e);
+				log.WarnException("Replication to " + destination + " had failed", e);
 				return false;
 			}
 		}
@@ -396,7 +396,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 			catch (Exception e)
 			{
-				log.Warn("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastDocumentEtag, e);
+				log.WarnException("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastDocumentEtag, e);
 			}
 			return jsonDocuments;
 		}
@@ -426,7 +426,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 			catch (Exception e)
 			{
-				log.Warn("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
+				log.WarnException("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
 			}
 			return jsonAttachments;
 		}
@@ -450,13 +450,13 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				var response = e.Response as HttpWebResponse;
 				if (response != null && (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound))
-					log.Warn("Replication is not enabled on: " + destination, e);
+					log.WarnException("Replication is not enabled on: " + destination, e);
 				else
-					log.Warn("Failed to contact replication destination: " + destination, e);
+					log.WarnException("Failed to contact replication destination: " + destination, e);
 			}
 			catch (Exception e)
 			{
-				log.Warn("Failed to contact replication destination: " + destination, e);
+				log.WarnException("Failed to contact replication destination: " + destination, e);
 			}
 			return null;
 		}

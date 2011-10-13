@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -17,7 +18,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void ShouldWork()
+		public void ShouldWorkObject()
 		{
 			using(var store = NewDocumentStore())
 			{
@@ -38,6 +39,30 @@ namespace Raven.Tests.Bugs
 					var payload = session.Load<Item>("items/1").Payload as Payload1;
 
 					Assert.Equal("Oren", payload.Name);
+				}
+			}
+		}
+
+		[Fact]
+		public void ShouldWorkList()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Item
+					{
+						Payload = new List<string>{"ayende", "rahien"}
+					});
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					dynamic o = session.Load<Item>("items/1").Payload;
+					var payload = (List<string>)o;
+
+					Assert.Equal(new List<string>{"ayende", "rahien"}, payload);
 				}
 			}
 		}

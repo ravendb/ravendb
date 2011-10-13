@@ -47,7 +47,7 @@ namespace Raven.Database.Server.Responders
 				x.TimeStamp,
 				Message = x.FormattedMessage,
 				x.LoggerName,
-				x.Level.Name,
+				Level = x.Level.Name,
 				Exception = x.Exception == null ? null : x.Exception.ToString()
 			}));
 		}

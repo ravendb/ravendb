@@ -13,6 +13,7 @@ using System.Transactions;
 #endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -948,17 +949,23 @@ more responsive application.
 
 			var jsonSerializer = Conventions.CreateSerializer();
 			jObject = RavenJObject.FromObject(entity, jsonSerializer);
-
 			if (jsonSerializer.TypeNameHandling == TypeNameHandling.Auto)// remove the default types
-				TrySimplfyingJson(jObject);
+			{
+				var resolveContract = jsonSerializer.ContractResolver.ResolveContract(entity.GetType());
+				TrySimplfyingJson(jObject, resolveContract);
+			}
 
 			if (cachedJsonDocs != null)
 				cachedJsonDocs[entity] = jObject;
 		    return jObject;
 		}
 
-		private static void TrySimplfyingJson(RavenJObject jObject)
+		private static void TrySimplfyingJson(RavenJObject jObject, JsonContract contract)
 		{
+			var objectContract = contract as JsonObjectContract;
+			if (objectContract == null)
+				return;
+
 			var deferredActions = new List<Action>();
 			foreach (var kvp in jObject)
 			{
@@ -968,7 +975,10 @@ more responsive application.
 				var obj = prop.Value as RavenJObject;
 				if(obj == null)
 					continue;
-				if (ShouldSimplfyJsonBasedOnType(obj.Value<string>("$type")) == false)
+
+				var jsonProperty = objectContract.Properties.GetClosestMatchProperty(prop.Key);
+
+				if (ShouldSimplfyJsonBasedOnType(obj.Value<string>("$type"), jsonProperty) == false)
 					continue;
 				
 				if (obj.ContainsKey("$values") == false)
@@ -994,18 +1004,21 @@ more responsive application.
 						{
 							var ravenJObject = item as RavenJObject;
 							if (ravenJObject != null)
-								TrySimplfyingJson(ravenJObject);
+								TrySimplfyingJson(ravenJObject, contract);
 						}
 						break;
 					case JTokenType.Object:
-						TrySimplfyingJson((RavenJObject)prop.Value);
+						TrySimplfyingJson((RavenJObject)prop.Value, contract);
 						break;
 				}
 			}
 		}
 
-		private static bool ShouldSimplfyJsonBasedOnType(string typeValue)
+		private static bool ShouldSimplfyJsonBasedOnType(string typeValue, JsonProperty jsonProperty)
 		{
+			if (jsonProperty != null && (jsonProperty.TypeNameHandling == TypeNameHandling.All || jsonProperty.TypeNameHandling == TypeNameHandling.Arrays))
+				return false; // explicitly rejected what we are trying to do here
+
 			if (typeValue == null)
 				return false;
 			if (typeValue.StartsWith("System.Collections.Generic.List`1[["))
