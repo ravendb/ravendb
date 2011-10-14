@@ -78,8 +78,14 @@
 				<HyperlinkButton x:Name="SummaryLink"
                                  Content="Summary"
 								 NavigateUri="/home"
-								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+								 Style="{StaticResource Style_Text_HeaderLink}">
+                    <Behaviors:LinkHighlighter.AlternativeUris>
+                        <Behaviors:StringCollection>
+                            <System:String>/statistics</System:String>
+                        </Behaviors:StringCollection>
+                    </Behaviors:LinkHighlighter.AlternativeUris>
+				</HyperlinkButton>
+			  <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Collections"
 								 NavigateUri="/collections"
 								 Style="{StaticResource Style_Text_HeaderLink}" />

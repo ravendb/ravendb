@@ -1997,37 +1997,7 @@
         <Setter Property="AutoGenerateColumns" Value="False" />
         <Setter Property="RowDetailsVisibilityMode" Value="VisibleWhenSelected" />
         <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="DragIndicatorStyle">
-            <Setter.Value>
-                <!-- TODO: Change the TargetType to Control when the fix Jolt bugs 18719 is verified -->
-                <Style TargetType="ContentControl">
-                    <Setter Property="Foreground" Value="#7FFFFFFF" />
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <!-- TODO: Change the TargetType to Control when the fix Jolt bugs 18719 is verified -->
-                            <ControlTemplate TargetType="ContentControl">
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </Setter.Value>
-        </Setter>
-        <Setter Property="DropLocationIndicatorStyle">
-            <Setter.Value>
-                <Style TargetType="ContentControl">
-                    <Setter Property="Background" Value="#FF3F4346"/>
-                    <Setter Property="Width" Value="2"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="ContentControl">
-                                <Rectangle Fill="{TemplateBinding Background}" Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"/>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="BorderThickness" Value="0" />       
         <Setter Property="GridLinesVisibility" Value="None" />
         <Setter Property="HorizontalGridLinesBrush" Value="#FFC9CACA" />
         <Setter Property="IsTabStop" Value="True" />
@@ -2123,6 +2093,47 @@
                                                             </Style>
                                                         </Grid.Resources>
                                                         <sdk:DataGridCellsPresenter Grid.Column="1" Name="CellsPresenter" sdk:DataGridFrozenGrid.IsFrozen="True"  />
+                                                    </sdk:DataGridFrozenGrid>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+
+                                    <Style TargetType="sdk:DataGridRowGroupHeader">
+                                        <Setter Property="Cursor" Value="Arrow" />
+                                        <Setter Property="IsTabStop" Value="False" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="Height" Value="20"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="sdk:DataGridRowGroupHeader">
+                                                    <sdk:DataGridFrozenGrid Name="Root" Background="{TemplateBinding Background}">
+                                                        <VisualStateManager.VisualStateGroups>
+                                                            <VisualStateGroup x:Name="CurrentStates">
+                                                                <VisualState x:Name="Regular"/>
+                                                                <VisualState x:Name="Current">
+                                                                </VisualState>
+                                                            </VisualStateGroup>
+                                                        </VisualStateManager.VisualStateGroups>
+                                                        <sdk:DataGridFrozenGrid.Resources>
+                                                        </sdk:DataGridFrozenGrid.Resources>
+
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+
+                                                        <TextBlock Margin="4,0,0,0" Text="{Binding Name}" FontWeight="Bold"/>
+
+ 
                                                     </sdk:DataGridFrozenGrid>
                                                 </ControlTemplate>
                                             </Setter.Value>
