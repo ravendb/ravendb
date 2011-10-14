@@ -70,13 +70,13 @@
                         <DataTemplate>
                             <Image Stretch="Uniform" VerticalAlignment="Center" Height="14" Margin="3,2">
                                 <i:Interaction.Triggers>
-                                        <ei:DataTrigger Binding="{Binding Name}" Value="Debug">
+                                        <ei:DataTrigger Binding="{Binding Level}" Value="Debug">
                                             <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Debug_Tiny}"/>
                                         </ei:DataTrigger>
-                                        <ei:DataTrigger Binding="{Binding Name}" Value="Info">
+									<ei:DataTrigger Binding="{Binding Level}" Value="Info">
                                             <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Info_Tiny}"/>
                                         </ei:DataTrigger>
-                                        <ei:DataTrigger Binding="{Binding Name}" Value="Warn">
+                                        <ei:DataTrigger Binding="{Binding Level}" Value="Warn">
                                             <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Warning_Tiny}"/>
                                         </ei:DataTrigger>
                                     </i:Interaction.Triggers>
@@ -84,7 +84,7 @@
                         </DataTemplate>
                     </data:DataGridTemplateColumn.CellTemplate>
                 </data:DataGridTemplateColumn>
-			    <data:DataGridTextColumn Header="Level" Binding="{Binding Name}" />
+			    <data:DataGridTextColumn Header="Level" Binding="{Binding Level}" />
 			    <data:DataGridTextColumn Header="Logged" Binding="{Binding TimeStamp}" />
 				<data:DataGridTextColumn Header="Message" Binding="{Binding Message, Converter={StaticResource FirstLineOnly}}" />
 				<data:DataGridTextColumn Header="Exception" Binding="{Binding Exception, Converter={StaticResource FirstLineOnly}}" />
@@ -147,7 +147,7 @@
                            Margin="4,0,0,0"/>
 			    <TextBox Grid.Row="3"
 					     Grid.Column="2"
-					     Text="{Binding Name}"
+					     Text="{Binding Level}"
 					     Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
 
                 <TextBlock Grid.Row="4" Text="Log Name" Style="{StaticResource Style_TextBlock_FieldName}"
