@@ -87,12 +87,76 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
+		public class SelectIndex : AbstractMultiMapIndexCreationTask<ReduceResult>
+		{
+			public SelectIndex()
+			{
+				{
+					AddMap<Account>(accounts =>
+						from account in accounts
+						select new
+						{
+							DocumentType = "Account",
+							AccountId = account.Id,
+							AccountName = account.Name,
+							DesignName = "",
+							UserName = "",
+						});
+					AddMap<Design>(designs =>
+						from design in designs
+						select new
+						{
+							DocumentType = "Design",
+							AccountId = design.AccountId,
+							AccountName = "",
+							DesignName = design.Name,
+							UserName = "",
+						});
+					AddMap<User>(users =>
+						from user in users
+						select new
+						{
+							DocumentType = "User",
+							AccountId = user.AccountId,
+							AccountName = "",
+							DesignName = "",
+							UserName = user.Name,
+						});
+
+					Reduce = results =>
+						from result in results
+						group result by result.AccountId into accountGroup
+						from account in accountGroup
+						where account.DocumentType == "Account"
+						select new
+						{
+							DocumentType = "Account",
+							AccountId = account.AccountId,
+							AccountName = account.AccountName,
+							UserName = accountGroup.Where(x => x.DocumentType == "User").Select(x => x.UserName),
+							DesignName = accountGroup.Where(x => x.DocumentType == "Design").Select(x => x.DesignName)
+						};
+				}
+			}
+		}
+
+
 		[Fact]
 		public void can_create_index()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new ComplexIndex().Execute(store);
+			}
+		}
+
+		
+        [Fact]
+        public void can_create_index_where_reduce_uses_select()
         {
             using (var store = NewDocumentStore())
             {
-                new ComplexIndex().Execute(store);
+                new SelectIndex().Execute(store);
             }
         }
 	}
