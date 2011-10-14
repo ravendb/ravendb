@@ -40,11 +40,6 @@
                   Margin="0,10,0,0">
             <Grid HorizontalAlignment="Left">
                 <Grid.Resources>
-                    <CollectionViewSource x:Key="GroupedTriggersView"  Source="{Binding Triggers}">
-                        <CollectionViewSource.GroupDescriptions>
-                            <PropertyGroupDescription PropertyName="Type"/>
-                        </CollectionViewSource.GroupDescriptions>
-                    </CollectionViewSource>
                 </Grid.Resources>
                 
                 <Grid.ColumnDefinitions>
@@ -70,7 +65,7 @@
                 <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding ApproximateTaskCount}" />
 
                 <TextBlock Grid.Row="2" Text="Count Of Documents" Style="{StaticResource Style_TextBlock_FieldName}"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CountOfDocuments}" />
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CountOfDocuments, StringFormat='{0:#,#}'}" />
 
                 <TextBlock Grid.Row="3" Text="Stale Indexes" Style="{StaticResource Style_TextBlock_FieldName}"/>
                 <ItemsControl Grid.Row="3"
@@ -85,19 +80,8 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <TextBlock Grid.Row="6" Text="Triggers" Style="{StaticResource Style_TextBlock_FieldName}"/>
-                <sdk:DataGrid Grid.Row="6"
-						  Grid.Column="2"
-						  ItemsSource="{Binding Source={StaticResource GroupedTriggersView}}"
-                          Style="{StaticResource Style_DataGrid_NoChrome_NoHeader}"
-                          AutoGenerateColumns="False">
-                    <sdk:DataGrid.Columns>
-                        <sdk:DataGridTextColumn Binding="{Binding Name}"/>
-                    </sdk:DataGrid.Columns>
-                </sdk:DataGrid>
-
-                <TextBlock Grid.Row="7" Text="Extensions" Style="{StaticResource Style_TextBlock_FieldName}"/>
-                <ItemsControl Grid.Row="7"
+                <TextBlock Grid.Row="6" Text="Extensions" Style="{StaticResource Style_TextBlock_FieldName}"/>
+                <ItemsControl Grid.Row="6"
 						  Grid.Column="2"
 						  ItemsSource="{Binding Extensions}">
                     <ItemsControl.ItemTemplate>
