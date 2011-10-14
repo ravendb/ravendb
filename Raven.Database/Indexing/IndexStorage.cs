@@ -287,12 +287,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		/// <summary>
-		/// if you are calling this method, you _have_ to call 
-		/// searcher.GetIndexReader().DecRef();
-		/// when you are done searching
-		/// </summary>
-		internal IDisposable GetCurrentIndexSearcher(string indexName, out IndexSearcher searcher)
+		public IDisposable GetCurrentIndexSearcher(string indexName, out IndexSearcher searcher)
 		{
 			return GetIndexByName(indexName).GetSearcher(out searcher);
 		}
