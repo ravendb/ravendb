@@ -4,9 +4,12 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                      xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                      xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-                     DataContext="{Binding Path=SelectedDatabase.Value.Statistics.Value}">
+                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                     xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
+                     d:DataContext="{d:DesignInstance Models:ServerModel}">
 
-    <Grid Margin="{StaticResource Margin_ContentPage}">
+    <Grid Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Path=SelectedDatabase.Value.Statistics.Value}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
