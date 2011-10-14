@@ -512,6 +512,9 @@
     <Resource Include="Assets\Images\Debug.png" />
     <Resource Include="Assets\Images\Info.png" />
     <Resource Include="Assets\Images\Warning.png" />
+    <Resource Include="Assets\Images\Document.png" />
+    <Resource Include="Assets\Images\document_page_next.png" />
+    <Resource Include="Assets\Images\document_page_previous.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />

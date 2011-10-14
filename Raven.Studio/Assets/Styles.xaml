@@ -2032,7 +2032,7 @@
                                 </VisualState>
                                 <VisualState x:Name="Disabled">
                                     <Storyboard>
-                                        <DoubleAnimation Duration="0" Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="Opacity" To=".55"/>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="contentPresenter" Storyboard.TargetProperty="Opacity" To=".55"/>
                                     </Storyboard>
                                 </VisualState>
                             </VisualStateGroup>
@@ -2063,7 +2063,6 @@
                   		    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                   		    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                   		    Margin="{TemplateBinding Padding}"/>
-                        <Rectangle x:Name="DisabledVisualElement" RadiusX="3" RadiusY="3" Fill="#FFFFFFFF" Opacity="0" IsHitTestVisible="false" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

@@ -6,6 +6,7 @@
     <BitmapImage x:Key="Image_FooterTexture" UriSource="FooterTexture.png"/>
 
     <BitmapImage x:Key="Image_DocumentIndex_Tiny" UriSource="document-index-icon.png"/>
+    <BitmapImage x:Key="Image_Document_Tiny" UriSource="document.png"/>
     <BitmapImage x:Key="Image_Add_Tiny" UriSource="add.png"/>
     <BitmapImage x:Key="Image_Remove_Tiny" UriSource="Remove.png"/>
     <BitmapImage x:Key="Image_Save_Small" UriSource="Save.png"/>
@@ -19,5 +20,7 @@
     <BitmapImage x:Key="Image_Debug_Tiny" UriSource="Debug.png"/>
     <BitmapImage x:Key="Image_Info_Tiny" UriSource="Info.png"/>
     <BitmapImage x:Key="Image_Warning_Tiny" UriSource="Warning.png"/>
+    <BitmapImage x:Key="Image_NextPage_Tiny" UriSource="document_page_next.png"/>
+    <BitmapImage x:Key="Image_PreviousPage_Tiny" UriSource="document_page_previous.png"/>
     
 </ResourceDictionary>
