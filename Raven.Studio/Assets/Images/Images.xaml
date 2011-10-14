@@ -16,4 +16,8 @@
     <BitmapImage x:Key="Image_Delete_Small" UriSource="DeleteHS.png"/>
     <BitmapImage x:Key="Image_Refresh_Small" UriSource="RefreshSmall.png"/>
     <BitmapImage x:Key="Image_Shortcut_Tiny" UriSource="Shortcut.png"/>
+    <BitmapImage x:Key="Image_Debug_Tiny" UriSource="Debug.png"/>
+    <BitmapImage x:Key="Image_Info_Tiny" UriSource="Info.png"/>
+    <BitmapImage x:Key="Image_Warning_Tiny" UriSource="Warning.png"/>
+    
 </ResourceDictionary>

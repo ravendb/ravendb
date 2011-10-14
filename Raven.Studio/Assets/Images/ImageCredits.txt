@@ -15,3 +15,9 @@ The following icons from the Visual Studio 2010 Image Library (http://blogs.msdn
 HtmlBalanceBracesHS.png
 DeleteHS.png
 Refresh.png
+Info.png
+Warning.png
+
+The following icons came from Gasyoun (http://led24.de/iconset/) via iconfinder (http://www.iconfinder.com/search/?q=iconset%3Aledicons)
+
+Debug.png

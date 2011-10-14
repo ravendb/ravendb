@@ -509,6 +509,9 @@
     <Resource Include="Assets\Images\DeleteHS.png" />
     <Resource Include="Assets\Images\RefreshSmall.png" />
     <Resource Include="Assets\Images\Shortcut.png" />
+    <Resource Include="Assets\Images\Debug.png" />
+    <Resource Include="Assets\Images\Info.png" />
+    <Resource Include="Assets\Images\Warning.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />
