@@ -1591,7 +1591,7 @@
         <Setter Property="IsReadOnly" Value="True"/>
 		<Setter Property="BorderThickness"
 				Value="0" />
-        <Setter Property="Background" Value="{StaticResource Brush_SubtleBackground2}"/>
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -2797,4 +2797,88 @@
 <!-- End of Default Data Grid Styles -->
 <!--************************************************-->  
     
+    <Style x:Key="Style_GridSplitter_Transparent" TargetType="sdk:GridSplitter">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="IsTabStop" Value="true" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="PreviewStyle">
+            <Setter.Value>
+                <Style TargetType="Control">
+                    <Setter Property="Background" Value="#FF868686" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="Control">
+                                <Grid x:Name="Root" Opacity=".5">
+
+                                    <!-- Background -->
+                                    <Rectangle Fill="{TemplateBinding Background}" />
+
+                                    <!-- Horizontal Template -->
+                                    <Grid x:Name="HorizontalTemplate" Height="6">
+                                        <!-- Just show the faint gray grid splitter rectangle with no other details -->
+                                    </Grid>
+
+                                    <!-- Vertical Template -->
+                                    <Grid x:Name="VerticalTemplate" Visibility="Collapsed" Width="6">
+                                        <!-- Just show the faint gray grid splitter rectangle with no other details -->
+                                    </Grid>
+
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sdk:GridSplitter">
+                    <Grid x:Name="Root" IsHitTestVisible="{TemplateBinding IsEnabled}">
+
+                        <!-- VSM -->
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="MouseOver" />
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="Focused">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusVisual" Storyboard.TargetProperty="Opacity" To="1" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+
+                        <!-- Background -->
+                        <Rectangle Fill="{TemplateBinding Background}" StrokeThickness="0" />
+
+                        <!-- Horizontal Template -->
+                        <Grid x:Name="HorizontalTemplate" Height="10">
+                        </Grid>
+
+                        <!-- Vertical Template -->
+                        <Grid x:Name="VerticalTemplate" Visibility="Collapsed" Width="10">
+                         </Grid>
+
+                        <!-- Focus Visual -->
+                        <Rectangle x:Name="FocusVisual" StrokeThickness="1" Opacity="0" IsHitTestVisible="false" >
+                        	<Rectangle.Stroke>
+                        		<SolidColorBrush Color="#6E9A002B"/>
+                        	</Rectangle.Stroke>
+                        </Rectangle>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>
