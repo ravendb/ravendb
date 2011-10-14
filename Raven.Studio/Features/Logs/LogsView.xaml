@@ -9,7 +9,8 @@
                      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                      xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
                      xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-                     xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions" mc:Ignorable="d"
+                     xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+                     xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
                      d:DataContext="{d:DesignInstance Logs:LogsModel}">
 
     <Grid Margin="{StaticResource Margin_ContentPage}">
@@ -32,11 +33,11 @@
                     <HyperlinkButton x:Name="AllErrorsHyperlink" Content="All Logs" NavigateUri="/logs" Style="{StaticResource Style_Link_MouseOverChrome}">
                         <i:Interaction.Triggers>
                             <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="False">
-                                <ei:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
+                                <Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
                                                     StateName="ActiveLink" />
                             </ei:DataTrigger>
                             <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="True">
-                                <ei:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
+                                <Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
                                                     StateName="InactiveLink" />
                             </ei:DataTrigger>
                         </i:Interaction.Triggers>
@@ -45,10 +46,10 @@
                                    Margin="4,0,0,0">
                         <i:Interaction.Triggers>
                             <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="True">
-                                <ei:GoToStateAction StateName="ActiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
+                                <Behaviors:GoToStateAction StateName="ActiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
                             </ei:DataTrigger>
                             <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="False">
-                                <ei:GoToStateAction StateName="InactiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
+                                <Behaviors:GoToStateAction StateName="InactiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
                             </ei:DataTrigger>
                         </i:Interaction.Triggers>
                     </HyperlinkButton>
