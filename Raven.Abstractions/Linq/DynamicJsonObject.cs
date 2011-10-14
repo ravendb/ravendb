@@ -273,6 +273,11 @@ namespace Raven.Abstractions.Linq
 				return inner.Single(predicate);
 			}
 
+			public IEnumerable<dynamic> Distinct()
+			{
+				return new DynamicList(inner.Distinct().ToArray());
+			} 
+
 			public dynamic SingleOrDefault(Func<dynamic, bool> predicate)
 			{
 				return inner.SingleOrDefault(predicate);
