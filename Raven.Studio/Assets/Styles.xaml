@@ -1956,8 +1956,8 @@
                                 <VisualState x:Name="ActiveLink">
                                     <Storyboard>
                                         <Storyboard>
-                                            <DoubleAnimation Duration="0:0:0.1" To="1" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="border" d:IsOptimized="True"/>
-                                            <ObjectAnimationUsingKeyFrames Duration="0:0:0.01" Storyboard.TargetProperty="(Border.Background)" Storyboard.TargetName="border" d:IsOptimized="True">
+                                            <DoubleAnimation Duration="0:0:0.1" To="1" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="ActiveBorder" d:IsOptimized="True"/>
+                                            <ObjectAnimationUsingKeyFrames Duration="0:0:0.01" Storyboard.TargetProperty="(Border.Background)" Storyboard.TargetName="ActiveBorder" d:IsOptimized="True">
                                                 <DiscreteObjectKeyFrame KeyTime="0:0:0.01" Value="{StaticResource PressedBrush}"/>
                                             </ObjectAnimationUsingKeyFrames>
                                         </Storyboard>
@@ -1966,6 +1966,7 @@
                                 <VisualState x:Name="InactiveLink"/>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="ActiveBorder" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Opacity="0" CornerRadius="3" Background="{TemplateBinding Background}"/>
                         <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Opacity="0" CornerRadius="3" Background="{TemplateBinding Background}"/>
                         <ContentPresenter
                   		    x:Name="contentPresenter"

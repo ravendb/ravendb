@@ -19,7 +19,7 @@ namespace Raven.Studio.Features.Logs
 		public LogsModel(IAsyncDatabaseCommands databaseCommands, bool showErrorsOnly)
 		{
 			this.databaseCommands = databaseCommands;
-			this.showErrorsOnly = showErrorsOnly;
+			ShowErrorsOnly = showErrorsOnly;
 			Logs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.TimeStamp));
 		}
 

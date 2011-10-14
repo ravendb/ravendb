@@ -32,14 +32,17 @@
                     <HyperlinkButton x:Name="AllErrorsHyperlink" Content="All Logs" NavigateUri="/logs" Style="{StaticResource Style_Link_MouseOverChrome}">
                         <i:Interaction.Triggers>
                             <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="False">
-                                <ei:GoToStateAction StateName="ActiveLink" TargetObject="{Binding ElementName=AllErrorsHyperlink}"/>
+                                <ei:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
+                                                    StateName="ActiveLink" />
                             </ei:DataTrigger>
                             <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="True">
-                                <ei:GoToStateAction StateName="InactiveLink" TargetObject="{Binding ElementName=AllErrorsHyperlink}"/>
+                                <ei:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
+                                                    StateName="InactiveLink" />
                             </ei:DataTrigger>
                         </i:Interaction.Triggers>
                     </HyperlinkButton>
-                  <HyperlinkButton x:Name="ErrorsOnlyHyperlink" Content="Errors Only" NavigateUri="/logs/error" Style="{StaticResource Style_Link_MouseOverChrome}">
+                  <HyperlinkButton x:Name="ErrorsOnlyHyperlink" Content="Errors Only" NavigateUri="/logs/error" Style="{StaticResource Style_Link_MouseOverChrome}"
+                                   Margin="4,0,0,0">
                         <i:Interaction.Triggers>
                             <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="True">
                                 <ei:GoToStateAction StateName="ActiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
