@@ -36,7 +36,7 @@ namespace Raven.Studio.Features.Query
 
 		public override void Execute(object parameter)
 		{
-			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod, "/query", QueryModel.PageSize);
+			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod, "/query/"+model.IndexName, QueryModel.PageSize);
 		}
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel,int currentPage)
