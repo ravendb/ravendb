@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -67,12 +68,17 @@ namespace Raven.Studio.Models
 		}
 
 		private string jsonMetadata;
-		private IAsyncDatabaseCommands asyncDatabaseCommands;
+		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 
 		public string JsonMetadata
 		{
 			get { return jsonMetadata; }
-			set { jsonMetadata = value; OnPropertyChanged(); }
+			set
+			{
+				jsonMetadata = value;
+				OnPropertyChanged();
+				OnPropertyChanged("DocumentSize");
+			}
 		}
 
 		public string JsonData
@@ -84,6 +90,28 @@ namespace Raven.Studio.Models
 				UpdateReferences();
 				UpdateRelated();
 				OnPropertyChanged();
+				OnPropertyChanged("DocumentSize");
+			}
+		}
+
+		public string DocumentSize
+		{
+			get
+			{
+				double byteCount = Encoding.UTF8.GetByteCount(JsonData) + Encoding.UTF8.GetByteCount(JsonMetadata);
+				string sizeTerm = "Bytes";
+				if(byteCount > 1024*1024)
+				{
+					sizeTerm = "MBytes";
+					byteCount = byteCount/1024*1024;
+				}
+				else if(byteCount > 1024)
+				{
+					sizeTerm = "KBytes";
+					byteCount = byteCount / 1024;
+			
+				}
+				return string.Format("Content-Length: {0:#,#.##} {1}", byteCount,sizeTerm);
 			}
 		}
 
