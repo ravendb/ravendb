@@ -27,43 +27,36 @@ namespace Raven.Studio.Features.Query
 		{
 			this.model = model;
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
-			model.Query.PropertyChanged += (sender, args) => OnCanExecuteChanged();
 		}
 
 		public override bool CanExecute(object parameter)
 		{
-			return string.IsNullOrEmpty(model.Query.Value) == false && 
-				string.IsNullOrEmpty(model.IndexName) == false;
+			return true;
 		}
 
 		public override void Execute(object parameter)
 		{
-			ApplicationModel.Current.AddNotification(new Notification("Executing query..."));
-
-			var q = new IndexQuery {Start = 0, PageSize = QueryModel.PageSize, Query = model.Query.Value};
-			asyncDatabaseCommands.QueryAsync(model.IndexName, q, null)
-				.ContinueWith(result =>
-				              {
-				              	if (result.Exception != null)
-				              	{
-				              		model.Error = result.Exception.ExtractSingleInnerException().SimplifyError();
-				              		return;
-				              	}
-				              	model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod, "/query", QueryModel.PageSize);
-				              })
-				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("Query executed.")))
-				.Catch();
+			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod, "/query", QueryModel.PageSize);
 		}
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel,int currentPage)
 		{
+			ApplicationModel.Current.AddNotification(new Notification("Executing query..."));
 			var q = new IndexQuery { Start = model.CurrentPage * QueryModel.PageSize, PageSize = QueryModel.PageSize, Query = model.Query.Value };
 			return asyncDatabaseCommands.QueryAsync(model.IndexName, q, null)
-				.ContinueOnSuccess(qr =>
-				                   {
-									   documentsModel.Documents.Match(qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray());
-									   documentsModel.TotalPages.Value = qr.TotalResults / QueryModel.PageSize;
-				                   });
+				.ContinueWith(task =>
+				{
+					if (task.Exception != null)
+					{
+						model.Error = task.Exception.ExtractSingleInnerException().SimplifyError();
+						return;
+					}
+					var qr = task.Result;
+					documentsModel.Documents.Match(qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray());
+					documentsModel.TotalPages.Value = qr.TotalResults/QueryModel.PageSize;
+				})
+				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("Query executed.")))
+				.Catch();
 		}
 	}
 }
