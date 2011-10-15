@@ -43,8 +43,7 @@ namespace Raven.Studio.Models
 			if (lastIndex == indexName)
 			{
 				Query.Value = lastQuery;
-				if(string.IsNullOrEmpty(Query.Value) == false)
-					Execute.Execute(null);
+				Execute.Execute(null);
 			}
 			lastIndex = indexName;
 			Query.PropertyChanged += (sender, args) => lastQuery = Query.Value;
