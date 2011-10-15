@@ -88,9 +88,10 @@
 			<StackPanel Grid.Row="2">
 				<TextBlock Text="{Binding Error}"
 						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
-				<Canvas Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
-					<Documents:DocumentsView DataContext="{Binding Path=DocumentsResult.Value}" />
-				</Canvas>
+				<StackPanel Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
+					<Documents:DocumentsView Margin="{StaticResource Margin_ContentPage}"
+											DataContext="{Binding Path=DocumentsResult.Value}" />
+				</StackPanel>
 			</StackPanel>
 		</Grid>
 	</toolkit:DockPanel>
