@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -9,6 +10,13 @@ namespace Raven.Studio.Features.Documents
 	{
 		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<EditableDocumentModel> observable)
 		{
+			if(ApplicationModel.GetQueryParam("projection") == "true")
+			{
+				var state = ApplicationModel.Current.State;
+				ApplicationModel.Current.State = null;
+				observable.Value = new EditableDocumentModel((JsonDocument)state, asyncDatabaseCommands);
+			}
+
 			var docId = ApplicationModel.GetQueryParam("id");
 
 			if (docId == null)
