@@ -52,7 +52,8 @@ namespace Raven.Studio.Features.Query
 						return;
 					}
 					var qr = task.Result;
-					documentsModel.Documents.Match(qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray());
+					var viewableDocuments = qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray();
+					documentsModel.Documents.Match(viewableDocuments);
 					documentsModel.TotalPages.Value = qr.TotalResults/QueryModel.PageSize;
 				})
 				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("Query executed.")))
