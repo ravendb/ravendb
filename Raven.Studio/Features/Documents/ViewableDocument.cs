@@ -113,6 +113,11 @@ namespace Raven.Studio.Features.Documents
 			set { id = value; OnPropertyChanged(); }
 		}
 
+		public JsonDocument InnerDocument
+		{
+			get { return inner; }
+		}
+
 		public override string ToString()
 		{
 			return inner.DataAsJson.ToString();

@@ -1,4 +1,5 @@
 using System;
+using System.Windows;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -15,7 +16,15 @@ namespace Raven.Studio.Features.Documents
 
 		public override void Execute(object parameter)
 		{
-			ApplicationModel.Current.Navigate(new Uri("/Edit?id="+viewableDocument.Id, UriKind.Relative));
+			if (string.IsNullOrEmpty(viewableDocument.Id))
+			{
+				ApplicationModel.Current.State = viewableDocument.InnerDocument;
+				ApplicationModel.Current.Navigate(new Uri("/Edit?projection=true", UriKind.Relative));
+			}
+			else
+			{
+				ApplicationModel.Current.Navigate(new Uri("/Edit?id=" + viewableDocument.Id, UriKind.Relative));
+			}
 		}
 	}
 }
