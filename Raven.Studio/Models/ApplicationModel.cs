@@ -10,7 +10,6 @@ namespace Raven.Studio.Models
 	{
 		public static ApplicationModel Current { get; private set; }
 		private static string threadSafeNavigationState;
-		public object State { get; set; }
 
 		static ApplicationModel()
 		{

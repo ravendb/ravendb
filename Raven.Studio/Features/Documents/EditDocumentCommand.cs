@@ -1,5 +1,4 @@
 using System;
-using System.Windows;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -18,7 +17,7 @@ namespace Raven.Studio.Features.Documents
 		{
 			if (string.IsNullOrEmpty(viewableDocument.Id))
 			{
-				ApplicationModel.Current.State = viewableDocument.InnerDocument;
+				EditDocumentModelLocator.ProjectionDocument = viewableDocument.InnerDocument;
 				ApplicationModel.Current.Navigate(new Uri("/Edit?projection=true", UriKind.Relative));
 			}
 			else
