@@ -26,7 +26,10 @@ namespace Raven.Studio.Infrastructure
 
 		public int GetHashCode(T obj)
 		{
-			return primaryKeyExtractor(obj).GetHashCode();
+			var key = primaryKeyExtractor(obj);
+			if (key == null)
+				return 0;
+			return key.GetHashCode();
 		}
 	}
 }
