@@ -89,6 +89,9 @@ namespace Raven.Studio.Models
 
 		protected override Task TimerTickedAsync()
 		{
+			if (string.IsNullOrEmpty(document.Key))
+				return null;
+
 			return asyncDatabaseCommands.GetAsync(document.Key)
 				.ContinueOnSuccess(docOnServer =>
 				{
