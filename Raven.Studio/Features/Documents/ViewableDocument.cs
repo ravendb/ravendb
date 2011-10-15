@@ -36,6 +36,21 @@ namespace Raven.Studio.Features.Documents
 			get { return new EditDocumentCommand(this); }
 		}
 
+		private const int ToolTipTextLength = 512;
+		public string ToolTipText
+		{
+			get
+			{
+				var json = inner.DataAsJson.ToString();
+				json = (json.Length > ToolTipTextLength)
+						? json.Substring(0, ToolTipTextLength) + "..." + Environment.NewLine + "}"
+						: json;
+
+				return json;
+			
+			}
+		}
+
 		public string DisplayId
 		{
 			get

@@ -75,7 +75,11 @@
 						  Height="50"
 						  Margin="2">
 
-						<Rectangle Fill="#FFF4F4F5" />
+							<ToolTipService.ToolTip>
+								<TextBlock Text="{Binding ToolTipText}" />
+							</ToolTipService.ToolTip>
+						
+							<Rectangle Fill="#FFF4F4F5" />
 						<Rectangle HorizontalAlignment="Left"
 								   Width="10"
 								   x:Name="DocumentGrid"
