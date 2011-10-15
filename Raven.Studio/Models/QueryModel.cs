@@ -105,11 +105,10 @@ namespace Raven.Studio.Models
 			set { error = value; OnPropertyChanged(); }
 		}
 
-		private int currentPage;
 		public int CurrentPage
 		{
-			get { return currentPage; }
-			set { currentPage = value; OnPropertyChanged(); }
+			get { return UrlUtil.GetSkipCount() / PageSize + 1; }
+			
 		}
 
 		public Observable<DocumentsModel> DocumentsResult { get; private set; }

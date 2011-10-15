@@ -42,7 +42,11 @@ namespace Raven.Studio.Features.Query
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel,int currentPage)
 		{
 			ApplicationModel.Current.AddNotification(new Notification("Executing query..."));
-			var q = new IndexQuery { Start = model.CurrentPage * QueryModel.PageSize, PageSize = QueryModel.PageSize, Query = model.Query.Value };
+			var q = new IndexQuery
+			{
+				Start = model.CurrentPage * QueryModel.PageSize, 
+				PageSize = QueryModel.PageSize, Query = model.Query.Value
+			};
 			return asyncDatabaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueWith(task =>
 				{
