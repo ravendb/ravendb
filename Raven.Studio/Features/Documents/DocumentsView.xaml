@@ -73,12 +73,10 @@
 				<DataTemplate>
 					<Grid Width="100"
 						  Height="50"
-						  Margin="2">
+						  Margin="2"
+						  ToolTipService.ToolTip="{Binding ToolTipText}">
 
-							<ToolTipService.ToolTip>
-								<TextBlock Text="{Binding ToolTipText}" />
-							</ToolTipService.ToolTip>
-						
+							
 							<Rectangle Fill="#FFF4F4F5" />
 						<Rectangle HorizontalAlignment="Left"
 								   Width="10"
