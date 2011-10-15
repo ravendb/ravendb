@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows.Input;
 using System.Windows.Media;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Framework;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -55,7 +59,11 @@ namespace Raven.Studio.Features.Documents
 		{
 			get
 			{
-				if (string.IsNullOrEmpty(Id)) return string.Empty;
+				if (string.IsNullOrEmpty(Id))
+				{
+					// this is projection, try to find something meaningful.
+					return GetMeaningfulDisplayIdForProjection();
+				}
 
 				var display = GetIdWithoutPrefixes();
 
@@ -66,6 +74,39 @@ namespace Raven.Studio.Features.Documents
 				}
 				return display;
 			}
+		}
+
+		private string GetMeaningfulDisplayIdForProjection()
+		{
+			var selectedProperty = new KeyValuePair<string, RavenJToken>();
+			var propertyNames = new[] {"Id", "Name"};
+			foreach (var propertyName in propertyNames)
+			{
+				selectedProperty =
+					inner.DataAsJson.FirstOrDefault(x => x.Key.EndsWith(propertyName, StringComparison.InvariantCultureIgnoreCase));
+				if (selectedProperty.Key != null)
+				{
+					break;
+				}
+			}
+
+			if (selectedProperty.Key == null) // couldn't find anything, we will use the first one
+			{
+				selectedProperty = inner.DataAsJson.FirstOrDefault();
+			}
+
+			if (selectedProperty.Key == null) // there aren't any properties 
+			{
+				return "{}";
+			}
+			string value = selectedProperty.Value.Type==JTokenType.String ? 
+				selectedProperty.Value.Value<string>() : 
+				selectedProperty.Value.ToString(Formatting.None);
+			if (value.Length > 30)
+			{
+				value = value.Substring(0, 27) + "...";
+			}
+			return value;
 		}
 
 		private string GetIdWithoutPrefixes()
