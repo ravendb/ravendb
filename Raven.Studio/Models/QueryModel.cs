@@ -58,7 +58,16 @@ namespace Raven.Studio.Models
 		private void GetTermsForField(string field, List<string> terms)
 		{
 			asyncDatabaseCommands.GetTermsAsync(IndexName, field, string.Empty, 1024)
-				.ContinueOnSuccess(terms.AddRange);
+				.ContinueOnSuccess(termsFromServer =>
+				{
+					foreach (var term in termsFromServer)
+					{
+						if(term.IndexOfAny(new[]{' ','\t'})  == -1)
+							terms.Add(term);
+						else
+							terms.Add('"' + term + '"'); // qoute the term
+					}
+				});
 		}
 
 		public Observable<ICompletionProvider> CompletionProvider { get; private set; }
