@@ -17,7 +17,10 @@ namespace Raven.Studio.Models
 
 		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 		private readonly List<string> fields = new List<string>();
-		private readonly Dictionary<string, List<string>> fieldsTermsDictionary = new Dictionary<string, List<string>>(); 
+		private readonly Dictionary<string, List<string>> fieldsTermsDictionary = new Dictionary<string, List<string>>();
+
+		private static string lastQuery;
+		private static string lastIndex;
 
 		public QueryModel(string indexName, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
@@ -25,11 +28,26 @@ namespace Raven.Studio.Models
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
+
+			RememberHistory();
+
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
 
 			GetFields();
 			CompletionProvider.Value = new RavenQueryCompletionProvider(fields, fieldsTermsDictionary);
+		}
+
+		private void RememberHistory()
+		{
+			if (lastIndex == indexName)
+			{
+				Query.Value = lastQuery;
+				if(string.IsNullOrEmpty(Query.Value) == false)
+					Execute.Execute(null);
+			}
+			lastIndex = indexName;
+			Query.PropertyChanged += (sender, args) => lastQuery = Query.Value;
 		}
 
 		private void GetTermsForUsedFields(object sender, PropertyChangedEventArgs e)
