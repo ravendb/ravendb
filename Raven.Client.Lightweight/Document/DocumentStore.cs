@@ -553,7 +553,7 @@ namespace Raven.Client.Document
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
 
-			if (string.IsNullOrEmpty(ApiKey))
+			if (string.IsNullOrEmpty(ApiKey) == false)
 				authRequest.Headers["Api-Key"] = ApiKey;
 
 			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
