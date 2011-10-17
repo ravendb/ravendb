@@ -104,7 +104,7 @@ namespace Raven.Munin
 		}
 
 
-		public RavenJToken LowestEqual(RavenJObject key, Predicate<RavenJToken> predicate)
+		public RavenJToken GreatestEqual(RavenJObject key, Predicate<RavenJToken> predicate)
 		{
 			return persistentSource.Read(
 				() =>
@@ -113,9 +113,14 @@ namespace Raven.Munin
 					if (nearest.IsEmpty)
 						return null;
 
-					while (nearest.Left.IsEmpty == false && predicate(nearest.Left.Value.Value))
-						nearest = nearest.Left;
-					return nearest.Value.Value;
+					var binarySearchTree = nearest.ValuesInOrder
+						.SkipWhile(x => predicate(x.Value) == false)
+						.TakeWhile(x => predicate(x.Value))
+						.LastOrDefault();
+					if (binarySearchTree == null)
+						return null;
+					return binarySearchTree.Value;
+
 				});
 		}
 

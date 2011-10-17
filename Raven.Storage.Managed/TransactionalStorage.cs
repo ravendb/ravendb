@@ -31,6 +31,12 @@ namespace Raven.Storage.Managed
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly Action onCommit;
 		private TableStorage tableStroage;
+
+		public TableStorage TableStroage
+		{
+			get { return tableStroage; }
+		}
+
 		private IPersistentSource persistenceSource;
 		private volatile bool disposed;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Globalization;
 
 namespace Raven.Abstractions.Data
 {
@@ -57,9 +58,9 @@ namespace Raven.Abstractions.Data
 		protected override string GetCustomQueryStringVariables()
 		{
 			return string.Format("latitude={0}&longitude={1}&radius={2}",
-				Uri.EscapeDataString(Latitude.ToString()),
-				Uri.EscapeDataString(Longitude.ToString()),
-				Uri.EscapeDataString(Radius.ToString()));
+				Uri.EscapeDataString(Latitude.ToString(CultureInfo.InvariantCulture)),
+				Uri.EscapeDataString(Longitude.ToString(CultureInfo.InvariantCulture)),
+				Uri.EscapeDataString(Radius.ToString(CultureInfo.InvariantCulture)));
 		}
 	}
 }

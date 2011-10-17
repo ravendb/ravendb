@@ -166,6 +166,12 @@ namespace Raven.Client.Document
 			set { identifier = value; }
 		}
 
+		/// <summary>
+		/// The API Key to use when authenticating against a RavenDB server that
+		/// supports API Key authentication
+		/// </summary>
+		public string ApiKey { get; set; }
+
 #if !SILVERLIGHT
 		private string connectionStringName;
 
@@ -547,6 +553,8 @@ namespace Raven.Client.Document
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
 
+			if (string.IsNullOrEmpty(ApiKey) == false)
+				authRequest.Headers["Api-Key"] = ApiKey;
 
 			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
 			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)

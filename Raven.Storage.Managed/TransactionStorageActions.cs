@@ -99,12 +99,12 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public void DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag)
+		public bool DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag)
 		{
 			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
 			if (readResult == null)
 			{
-				return;
+				return false;
 			}
 			readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
 			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
@@ -133,6 +133,8 @@ namespace Raven.Storage.Managed
 			                                                  		{"deleted", true},
 			                                                  		{"txId", transactionInformation.Id.ToByteArray()}
 			                                                  	});
+
+			return true;
 		}
 
 		public void RollbackTransaction(Guid txId)

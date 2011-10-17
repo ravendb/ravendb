@@ -415,14 +415,14 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public void DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag)
+		public bool DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
-				return;
+				return false;
 			}
 
 			EnsureNotLockedByTransaction(key, transactionInformation.Id);
@@ -458,6 +458,8 @@ namespace Raven.Storage.Esent.StorageActions
 
 				update.Save();
 			}
+
+			return true;
 		}
 
 

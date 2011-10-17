@@ -143,6 +143,12 @@ namespace Raven.Munin.Tree
 			get { yield break; }
 		}
 
+		public IEnumerable<TKey> KeysInReverseOrder
+		{
+			get { yield break; }
+		}
+
+
 		public IEnumerable<TValue> ValuesInOrder
 		{
 			get { yield break; }

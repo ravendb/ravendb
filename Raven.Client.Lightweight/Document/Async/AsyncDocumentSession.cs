@@ -128,6 +128,7 @@ namespace Raven.Client.Document.Async
 		/// <returns></returns>
 		public Task<T> LoadAsync<T>(string id)
 		{
+			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
 			object entity;
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{

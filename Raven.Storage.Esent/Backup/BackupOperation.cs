@@ -22,23 +22,28 @@ namespace Raven.Storage.Esent.Backup
 	{
 		private readonly JET_INSTANCE instance;
 		private readonly DocumentDatabase database;
-		private readonly string to;
-		private readonly string src;
+		private string to;
+		private string src;
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		public BackupOperation(DocumentDatabase database, string src, string to)
 		{
 			instance = ((TransactionalStorage)database.TransactionalStorage).Instance;
+			this.src = src;
+			this.to = to;
 			this.database = database;
-			this.to = to.ToFullPath();
-			this.src = src.ToFullPath();
+			this.src = src;
+			this.to = to;
 		}
 
 		public void Execute(object ignored)
 		{
 			try
 			{
+				to = to.ToFullPath();
+				src = src.ToFullPath();
+		
 				log.Info("Starting backup of '{0}' to '{1}'", src, to);
 				var directoryBackups = new List<DirectoryBackup>
 				{

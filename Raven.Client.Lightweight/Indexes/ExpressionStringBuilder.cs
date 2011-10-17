@@ -1265,7 +1265,7 @@ namespace Raven.Client.Indexes
 			if (expression.NodeType == ExpressionType.Call)
 			{
 				var name = ((MethodCallExpression)expression).Method.Name;
-				return name != "Select" && name != "SelectMany";
+				return name != "Select";
 			}
 
 			return true;

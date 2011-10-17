@@ -132,7 +132,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Holds the query stats
 		/// </summary>
-		protected readonly RavenQueryStatistics queryStats = new RavenQueryStatistics();
+		protected RavenQueryStatistics queryStats = new RavenQueryStatistics();
 
 		/// <summary>
 		///   Get the name of the index being queried
@@ -279,6 +279,9 @@ namespace Raven.Client.Document
 			theWaitForNonStaleResults = other.theWaitForNonStaleResults;
 			includes = other.includes;
 			queryListeners = other.queryListeners;
+			queryStats = other.queryStats;
+
+			AfterQueryExecuted(queryStats.UpdateQueryStats);
 		}
 
 		#region TSelf Members
@@ -1335,6 +1338,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void Search(string fieldName, string searchTerms)
 		{
+			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
 			theQueryText.Append(' ').Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">> ");
 		}
 

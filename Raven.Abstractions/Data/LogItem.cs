@@ -10,7 +10,7 @@ namespace Raven.Abstractions.Data
 {
 	public class LogItem
 	{
-		public string Name { get; set; }
+		public string Level { get; set; }
 		public string Message { get; set; }
 		public string LoggerName { get; set; }
 		public string Exception { get; set; }

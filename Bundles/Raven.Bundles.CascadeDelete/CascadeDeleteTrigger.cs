@@ -16,12 +16,14 @@ namespace Raven.Bundles.CascadeDelete
 			if (CascadeDeleteContext.IsInCascadeDeleteContext)
 				return;
 
-			var document = Database.Get(key, transactionInformation);
-			if (document == null)
-				return;
-
+			using(Database.DisableAllTriggersForCurrentThread())
 			using (CascadeDeleteContext.Enter())
 			{
+				var document = Database.Get(key, transactionInformation);
+				if (document == null)
+					return;
+
+
 				var documentsToDelete = document.Metadata.Value<RavenJArray>(MetadataKeys.DocumentsToCascadeDelete);
 
 				if (documentsToDelete != null)
