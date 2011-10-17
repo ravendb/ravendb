@@ -2,10 +2,10 @@
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-                     xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
-                     DataContext="{Binding Source={StaticResource LogsModelLocator}}">
+					 xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
+					 Infrastructure:ModelAttacher.AttachModel="Raven.Studio.Features.Logs.LogsModel">
 
 	<Grid>
-		<Logs:LogsView DataContext="{Binding Path=Current.Value}" />
+		<Logs:LogsView />
 	</Grid>
 </Infrastructure:View>

@@ -188,7 +188,6 @@
     <Compile Include="Features\Logs\LogsView.xaml.cs">
       <DependentUpon>LogsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Logs\LogsModelLocator.cs" />
     <Compile Include="Features\Logs\LogsModel.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToVisibilityConverter.cs" />

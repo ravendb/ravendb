@@ -5,30 +5,27 @@
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Logs
 {
-	public class LogsModel : Model
+	public class LogsModel : ViewModel
 	{
-		private readonly IAsyncDatabaseCommands databaseCommands;
-		private bool showErrorsOnly;
 		public BindableCollection<LogItem> Logs { get; private set; }
 
-		public LogsModel(IAsyncDatabaseCommands databaseCommands, bool showErrorsOnly)
+		public LogsModel()
 		{
-			this.databaseCommands = databaseCommands;
-			ShowErrorsOnly = showErrorsOnly;
+			ModelUrl = "/logs";
 			Logs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.TimeStamp));
 		}
 
 		protected override Task TimerTickedAsync()
 		{
-			return databaseCommands.GetLogsAsync(showErrorsOnly)
+			return DatabaseCommands.GetLogsAsync(showErrorsOnly)
 				.ContinueOnSuccess(logs => Logs.Match(logs));
 		}
 
+		private bool showErrorsOnly;
 		public bool ShowErrorsOnly
 		{
 			get { return showErrorsOnly; }
@@ -37,6 +34,12 @@ namespace Raven.Studio.Features.Logs
 				showErrorsOnly = value;
 				OnPropertyChanged();
 			}
+		}
+
+		public override void LoadModelParameters(string parameters)
+		{
+			ShowErrorsOnly = GetParamAfter("/", parameters) == "error";
+			ForceTimerTicked();
 		}
 	}
 }

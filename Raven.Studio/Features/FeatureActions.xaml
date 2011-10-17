@@ -2,8 +2,6 @@
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes"
-					xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections"
-					xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
 					xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats"
 					xmlns:Query="clr-namespace:Raven.Studio.Features.Query">
 
@@ -13,6 +11,4 @@
 	<Documents:DocumentsModelLocator x:Key="DocumentsModelLocator" />
 	<Stats:StatisticsModelLocator x:Key="StatisticsModelLocator" />
 	<Query:QueryModelLocator x:Key="QueryModelLocator" />
-
-	<Logs:LogsModelLocator x:Key="LogsModelLocator" />
 </ResourceDictionary>
