@@ -1,4 +1,5 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Features.Indexes.IndexesErrorsView"
+﻿<Infrastructure:View x:Name="this" 
+					 x:Class="Raven.Studio.Features.Indexes.IndexesErrorsView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
@@ -32,8 +33,9 @@
 			<ItemsControl Grid.Row="3" ItemsSource="{Binding Errors}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
-						<StackPanel>
-							<TextBlock Text="{Binding Index}" />
+						<StackPanel Margin="0,0,0,10">
+							<TextBlock Text="{Binding Index}"
+									   Visibility="{Binding Path=DataContext.IsShowingErrorForASpecificIndex, ElementName=this, Converter={StaticResource VisibleWhenFalse}}" />
 							<TextBlock Text="{Binding Error}" />
 							<TextBlock Text="{Binding Timestamp}" />
 							<TextBlock Text="{Binding Document}" />
