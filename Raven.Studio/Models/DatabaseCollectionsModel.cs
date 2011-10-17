@@ -11,6 +11,7 @@ namespace Raven.Studio.Models
 
 		public DatabaseCollectionsModel()
 		{
+			ModelUrl = "/collections";
 			Collections = new BindableCollection<CollectionModel>(new PrimaryKeyComparer<CollectionModel>(model=>model.Name));
 			SelectedCollection = new Observable<CollectionModel>();
 	    }

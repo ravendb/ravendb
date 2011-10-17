@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Studio.Infrastructure
 {
-	public class Model : NotifyPropertyChangedBase
+	public abstract class Model : NotifyPropertyChangedBase
 	{
 		private Task currentTask;
 		private DateTime lastRefresh;

@@ -27,14 +27,19 @@ namespace Raven.Studio.Models
 
 		public IndexesErrorsModel()
 		{
+			ModelUrl = "/indexes-errors";
 			Errors = new BindableCollection<ServerError>(new PrimaryKeyComparer<ServerError>(x => x.Timestamp));
+			Database.Value.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged("Errors");
+		}
 
-			IndexName = GetParamAfter("/indexes-errors/");
+		public override void LoadModelParameters(string parameters)
+		{
+			IndexName = GetParamAfter("/", parameters);
+
 			var errors = Database.Value.Statistics.Value.Errors;
 			if (IsShowingErrorForASpecificIndex)
 				errors = errors.Where(e => e.Index == IndexName).ToArray();
 			Errors.Match(errors);
-			Database.Value.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged("Errors");
 		}
 	}
 }

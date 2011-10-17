@@ -1,15 +1,39 @@
+using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
+using System.Windows.Interop;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
-	public class ViewModel : Model
+	public abstract class ViewModel : Model
 	{
+		public List<string> ModelUrlIgnoreList { get; private set; }
+		public string ModelUrl { get; set; }
+
 		public ViewModel()
 		{
-            Database = new Observable<DatabaseModel>();
+			ModelUrlIgnoreList = new List<string>();
+			Database = new Observable<DatabaseModel>();
 			SetCurrentDatabase();
+
+			Application.Current.Host.NavigationStateChanged += LoadModel;
+		}
+
+		private void LoadModel(object sender, NavigationStateChangedEventArgs args)
+		{
+			var state = args.NewNavigationState;
+			if (state.StartsWith(ModelUrl) && 
+				ModelUrlIgnoreList.Any(state.StartsWith) == false)
+			{
+				Application.Current.Host.NavigationStateChanged -= LoadModel;
+				LoadModelParameters(GetParamAfter(ModelUrl, state));
+			}
+		}
+
+		public virtual void LoadModelParameters(string parameters)
+		{
 		}
 
 		public Observable<DatabaseModel> Database { get; private set; }
@@ -42,7 +66,12 @@ namespace Raven.Studio.Infrastructure
 
 		public static string GetParamAfter(string urlPrefix)
 		{
-			var url = ApplicationModel.Current.NavigationState;
+			return GetParamAfter(urlPrefix, ApplicationModel.Current.NavigationState);
+		}
+
+		public static string GetParamAfter(string urlPrefix, string state)
+		{
+			var url = state;
 			if (url.StartsWith(urlPrefix) == false)
 				return null;
 

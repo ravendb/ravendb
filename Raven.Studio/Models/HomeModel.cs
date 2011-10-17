@@ -14,6 +14,7 @@ namespace Raven.Studio.Models
 
 		public HomeModel()
 		{
+			ModelUrl = "/home";
 			RecentDocuments = new Observable<DocumentsModel>();
 		    Initialize();
 		}
