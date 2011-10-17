@@ -21,7 +21,7 @@ namespace Raven.Studio.Infrastructure
 			if (typeName == null || view == null)
 				return;
 
-			var modelType = Type.GetType(view.GetType().Namespace + "." + typeName) ?? Type.GetType(typeName);
+			var modelType = Type.GetType("Raven.Studio.Models." + typeName) ?? Type.GetType(view.GetType().Namespace + "." + typeName) ?? Type.GetType(typeName);
 			if (modelType == null)
 				return;
 

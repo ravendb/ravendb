@@ -13,6 +13,8 @@
 	<Converters:EnumToIntConverter x:Key="enumeratedValue" />
 	<Converters:EnumToEnumerableConverter x:Key="enumerationFromValue" />
 	<Converters:FirstLineOnlyConverter x:Key="FirstLineOnly" />
+	<Converters:BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
+	<Converters:BooleanToOppositeVisibilityConverter x:Key="VisibleWhenFalse" />
 	
 	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
 	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />

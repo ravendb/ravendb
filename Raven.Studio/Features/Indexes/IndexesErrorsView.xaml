@@ -15,7 +15,15 @@
 			</Grid.RowDefinitions>
 			
 			<StackPanel>
-				<TextBlock Text="{Binding Path=Errors.Length, StringFormat='Errors Count: \{0\}'}" />
+				<TextBlock Text="{Binding Path=Errors.Count, StringFormat='Errors Count: \{0\}'}" />
+
+				<StackPanel>
+					<TextBlock Style="{StaticResource Style_Text_Header}"
+							   Text="Indexes Error" />
+					<TextBlock Text="{Binding IndexName, StringFormat='for index: \{0\}'}"
+							   Visibility="{Binding IsShowingErrorForASpecificIndex, Converter={StaticResource VisibleWhenTrue}}"
+							   FontSize="13" />
+				</StackPanel>
 			</StackPanel>
 			
 			<ItemsControl Grid.Row="3" ItemsSource="{Binding Errors}">
