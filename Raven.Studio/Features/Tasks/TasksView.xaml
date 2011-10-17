@@ -12,65 +12,68 @@
            Title="TasksView Page"
            DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
 
-  <Grid x:Name="LayoutRoot">
+  <Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
 
     </Grid.RowDefinitions>
 
-    <TextBlock x:Name="HeaderText"
-       Style="{StaticResource Style_Text_Header}"
-       Text="Tasks" />
+        <toolkit:DockPanel>
+            <Border Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0"
+				toolkit:DockPanel.Dock="Top">
+                <toolkit:DockPanel Margin="4" LastChildFill="False">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Tasks" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
+                    </StackPanel>
 
-    <toolkit:DockPanel Grid.Row="1">
-      <ListBox toolkit:DockPanel.Dock="Top" ItemsSource="{Binding Tasks}"
-               SelectedItem="{Binding Path=SelectedTask.Value, Mode=TwoWay}"
-               Style="{StaticResource Collections_FluidList}" Padding="10">
-        <ListBox.ItemsPanel>
-          <ItemsPanelTemplate>
-            <StackPanel Orientation="Horizontal"/>
-          </ItemsPanelTemplate>
-        </ListBox.ItemsPanel>
+                    <ListBox toolkit:DockPanel.Dock="Left" Margin="10,0,0,0" ItemsSource="{Binding Tasks}"
+                            SelectedItem="{Binding Path=SelectedTask.Value, Mode=TwoWay}"
+                            Style="{StaticResource Style_ListBox_HeaderOptions}" Padding="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </toolkit:DockPanel>
+            </Border>
+        </toolkit:DockPanel>
 
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <TextBlock Text="{Binding Name}" FontSize="14"/>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+    <TextBlock Grid.Row="1"  FontSize="13" TextWrapping="Wrap" Text="{Binding Path=SelectedTask.Value.Description}"
+               Margin="0,10"/>
+              
+    <Button Grid.Row="2" Content="{Binding Path=SelectedTask.Value.Name}" Width="Auto" HorizontalAlignment="Left"
+            Command="{Binding Path=SelectedTask.Value.Action}" Padding="8,4"
+            Style="{StaticResource Style_Button}" MinWidth="100" Margin="0,10"/>
 
-      <Grid toolkit:DockPanel.Dock="Top">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
 
-        <TextBlock FontSize="13" TextWrapping="Wrap" Text="{Binding Path=SelectedTask.Value.Description}"/>
-        <Button Grid.Row="1" Content="{Binding Path=SelectedTask.Value.Name}" Width="Auto" HorizontalAlignment="Left"
-                Command="{Binding Path=SelectedTask.Value.Action}" Padding="4"
-                />
-      </Grid>
+    <ItemsControl Grid.Row="3"
+                        ItemsSource="{Binding SelectedTask.Value.Output}"
+                        BorderBrush="#FFEAE7E4"
+                        Background="{StaticResource Brush_SubtleBackground2}"
+                        BorderThickness="1"
+                        Margin="0,10,0,0">
+      <ItemsControl.Template>
+        <ControlTemplate TargetType="ItemsControl">
+          <ScrollViewer x:Name="ScrollViewer" VerticalScrollBarVisibility="Auto" 
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        Background="{TemplateBinding Background}">
+            <ItemsPresenter />
+          </ScrollViewer>
+        </ControlTemplate>
+      </ItemsControl.Template>
 
-      <ItemsControl toolkit:DockPanel.Dock="Top"
-                    MinHeight="200"
-                    ItemsSource="{Binding SelectedTask.Value.Output}"
-                    Margin="0,10,0,0">
-        <ItemsControl.Template>
-          <ControlTemplate>
-            <ScrollViewer x:Name="ScrollViewer" VerticalScrollBarVisibility="Auto">
-              <ItemsPresenter />
-            </ScrollViewer>
-          </ControlTemplate>
-        </ItemsControl.Template>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <TextBlock Text="{Binding}"/>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
 
-        <ItemsControl.ItemTemplate>
-          <DataTemplate>
-            <TextBlock Text="{Binding}"/>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
+    </ItemsControl>
 
-      </ItemsControl>
-    </toolkit:DockPanel>
-  </Grid  >
+  </Grid>
 </navigation:Page>

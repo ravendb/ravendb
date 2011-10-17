@@ -102,6 +102,9 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Behaviors\GoToStateAction.cs" />
+    <Compile Include="Behaviors\LinkHighlighter.cs" />
+    <Compile Include="Behaviors\StringCollection.cs" />
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\IncreasePageCommand.cs" />
     <Compile Include="Commands\DecreasePageCommand.cs" />
@@ -189,6 +192,8 @@
     <Compile Include="Features\Logs\LogsModel.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\Converters\SingleLineToAutoMultiLineToStarSizeConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringEmptyToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\ModelAttacher.cs" />
     <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />
@@ -221,9 +226,6 @@
     <Compile Include="Models\EditableDocumentModel.cs" />
     <Compile Include="Features\Documents\EditDocumentCommand.cs" />
     <Compile Include="Features\Documents\EditDocumentModelLocator.cs" />
-    <Compile Include="Features\Documents\EditDocumnetView.xaml.cs">
-      <DependentUpon>EditDocumnetView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Features\Documents\TemplateColorProvider.cs" />
     <Compile Include="Features\Documents\ViewableDocument.cs" />
     <Compile Include="Features\Input\AskUser.cs" />
@@ -422,10 +424,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Documents\EditDocumnetView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Features\Input\ConfirmWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -501,6 +499,16 @@
     <Resource Include="Assets\Images\Remove.png" />
     <Resource Include="Assets\Images\Query.png" />
     <Resource Include="Assets\Images\Edit.png" />
+    <Resource Include="Assets\Images\HtmlBalanceBracesHS.png" />
+    <Resource Include="Assets\Images\DeleteHS.png" />
+    <Resource Include="Assets\Images\RefreshSmall.png" />
+    <Resource Include="Assets\Images\Shortcut.png" />
+    <Resource Include="Assets\Images\Debug.png" />
+    <Resource Include="Assets\Images\Info.png" />
+    <Resource Include="Assets\Images\Warning.png" />
+    <Resource Include="Assets\Images\Document.png" />
+    <Resource Include="Assets\Images\document_page_next.png" />
+    <Resource Include="Assets\Images\document_page_previous.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup />

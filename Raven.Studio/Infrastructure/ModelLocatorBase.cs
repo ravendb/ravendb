@@ -40,8 +40,10 @@ namespace Raven.Studio.Infrastructure
 			var url = ApplicationModel.Current.NavigationState;
 			if (url.StartsWith(urlPrefix) == false)
 				return null;
-
-			return url.Substring(urlPrefix.Length);
+			var queryPart = url.IndexOf('?');
+			if(queryPart == -1)
+				return url.Substring(urlPrefix.Length);
+			return url.Substring(urlPrefix.Length, queryPart - urlPrefix.Length);
 		}
 	}
 }

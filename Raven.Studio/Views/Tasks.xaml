@@ -5,10 +5,6 @@
            xmlns:Tasks="clr-namespace:Raven.Studio.Features.Tasks">
 
 	<Grid>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" MaxHeight="400" />
-		</Grid.RowDefinitions>
-
-    <Tasks:TasksView Margin="{StaticResource Margin_ContentPage}" />
+        <Tasks:TasksView />
   </Grid>
 </Infrastructure:View>

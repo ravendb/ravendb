@@ -1,6 +1,5 @@
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models

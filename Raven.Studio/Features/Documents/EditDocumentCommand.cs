@@ -15,7 +15,15 @@ namespace Raven.Studio.Features.Documents
 
 		public override void Execute(object parameter)
 		{
-			ApplicationModel.Current.Navigate(new Uri("/Edit?id="+viewableDocument.Id, UriKind.Relative));
+			if (string.IsNullOrEmpty(viewableDocument.Id))
+			{
+				EditDocumentModelLocator.ProjectionDocument = viewableDocument.InnerDocument;
+				ApplicationModel.Current.Navigate(new Uri("/Edit?projection=true", UriKind.Relative));
+			}
+			else
+			{
+				ApplicationModel.Current.Navigate(new Uri("/Edit?id=" + viewableDocument.Id, UriKind.Relative));
+			}
 		}
 	}
 }

@@ -21,12 +21,15 @@ namespace Raven.Studio.Infrastructure
 
 		public bool Equals(T x, T y)
 		{
-			return Equals(primaryKeyExtractor(x), primaryKeyExtractor(y));
+			var xKey = primaryKeyExtractor(x);
+			var yKey = primaryKeyExtractor(y);
+			return Equals(xKey ?? x, yKey ?? y);
 		}
 
 		public int GetHashCode(T obj)
 		{
-			return primaryKeyExtractor(obj).GetHashCode();
+			var key = primaryKeyExtractor(obj) ?? obj;
+			return key.GetHashCode();
 		}
 	}
 }

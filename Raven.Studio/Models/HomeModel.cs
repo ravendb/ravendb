@@ -15,13 +15,20 @@ namespace Raven.Studio.Models
 		public HomeModel()
 		{
 			RecentDocuments = new Observable<DocumentsModel>();
+		    Initialize();
 		}
 
-		protected override void Initialize()
+		private void Initialize()
 		{
+            if (Database.Value == null)
+            {
+                Database.RegisterOnce(Initialize);
+                return;
+            }
+
 			RecentDocuments.Value = new DocumentsModel(GetFetchDocumentsMethod, "/home", RecentDocumentsCountPerPage)
 			{
-				TotalPages = new Observable<long>(Database.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / RecentDocumentsCountPerPage + 1)
+				TotalPages = new Observable<long>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / RecentDocumentsCountPerPage + 1)
 			};
 		}
 

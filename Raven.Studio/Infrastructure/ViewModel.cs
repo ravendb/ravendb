@@ -8,16 +8,15 @@ namespace Raven.Studio.Infrastructure
 	{
 		public ViewModel()
 		{
+            Database = new Observable<DatabaseModel>();
 			SetCurrentDatabase();
 		}
 
-		protected virtual void Initialize() { }
-
-		public DatabaseModel Database { get; private set; }
+		public Observable<DatabaseModel> Database { get; private set; }
 
 		public IAsyncDatabaseCommands DatabaseCommands
 		{
-			get { return Database.AsyncDatabaseCommands; }
+			get { return Database.Value.AsyncDatabaseCommands; }
 		}
 
 		private void SetCurrentDatabase()
@@ -37,9 +36,8 @@ namespace Raven.Studio.Infrastructure
 			{
 				server.Value.SelectedDatabase.Value = database;
 			}
-			Database = server.Value.SelectedDatabase.Value;
 
-			Initialize();
+			Database.Value = server.Value.SelectedDatabase.Value;
 		}
 
 		public static string GetParamAfter(string urlPrefix)

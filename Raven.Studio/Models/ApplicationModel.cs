@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Windows;
-using System.Windows.Interop;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 
