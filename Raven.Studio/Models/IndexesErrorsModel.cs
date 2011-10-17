@@ -30,11 +30,11 @@ namespace Raven.Studio.Models
 			Errors = new BindableCollection<ServerError>(new PrimaryKeyComparer<ServerError>(x => x.Timestamp));
 
 			IndexName = GetParamAfter("/indexes-errors/");
-			var errors = Database.Statistics.Value.Errors;
+			var errors = Database.Value.Statistics.Value.Errors;
 			if (IsShowingErrorForASpecificIndex)
 				errors = errors.Where(e => e.Index == IndexName).ToArray();
 			Errors.Match(errors);
-			Database.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged("Errors");
+			Database.Value.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged("Errors");
 		}
 	}
 }
