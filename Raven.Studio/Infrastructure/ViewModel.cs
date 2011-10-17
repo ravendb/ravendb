@@ -24,12 +24,13 @@ namespace Raven.Studio.Infrastructure
 		private void LoadModel(object sender, NavigationStateChangedEventArgs args)
 		{
 			var state = args.NewNavigationState;
-			if (state.StartsWith(ModelUrl) && 
+			if (string.IsNullOrWhiteSpace(state) == false && 
+				state.StartsWith(ModelUrl) && 
 				ModelUrlIgnoreList.Any(state.StartsWith) == false)
 			{
-				Application.Current.Host.NavigationStateChanged -= LoadModel;
 				LoadModelParameters(GetParamAfter(ModelUrl, state));
 			}
+			Application.Current.Host.NavigationStateChanged -= LoadModel;
 		}
 
 		public virtual void LoadModelParameters(string parameters)
