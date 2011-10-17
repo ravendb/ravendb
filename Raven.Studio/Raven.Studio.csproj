@@ -138,7 +138,6 @@
     <Compile Include="Features\Indexes\IndexesErrorsView.xaml.cs">
       <DependentUpon>IndexesErrorsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Indexes\IndexesErrorsModelLocator.cs" />
     <Compile Include="Features\Query\RavenQueryCompletionProvider.cs" />
     <Compile Include="Features\Query\ExecuteQueryCommand.cs" />
     <Compile Include="Features\Query\QueryView.xaml.cs">
@@ -188,6 +187,8 @@
     </Compile>
     <Compile Include="Features\Logs\LogsModelLocator.cs" />
     <Compile Include="Features\Logs\LogsModel.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToOppositeVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\ModelAttacher.cs" />
     <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />

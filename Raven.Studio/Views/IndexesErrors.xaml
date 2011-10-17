@@ -6,7 +6,7 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes"
                      mc:Ignorable="d"
-					 DataContext="{Binding Source={StaticResource ErrorsModelLocator}, Path=Current.Value}">
+					 Infrastructure:ModelAttacher.AttachModel="IndexesErrorsModel">
 
 	<Grid>
 		<Indexes:IndexesErrorsView />

@@ -1,15 +1,41 @@
+using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class IndexesErrorsModel : Model
+	public class IndexesErrorsModel : ViewModel
 	{
-		public ServerError[] Errors { get; set; }
-
-		public void OnStatisticsUpdated()
+		public BindableCollection<ServerError> Errors { get; private set; }
+		
+		private string indexName;
+		public string IndexName
 		{
-			OnPropertyChanged("Errors");
+			get { return indexName; }
+			set
+			{
+				indexName = value;
+				OnPropertyChanged();
+				OnPropertyChanged("IsShowingErrorForASpecificIndex");
+			}
+		}
+
+		public bool IsShowingErrorForASpecificIndex
+		{
+			get { return string.IsNullOrWhiteSpace(IndexName) == false; }
+		}
+
+		public IndexesErrorsModel()
+		{
+			Errors = new BindableCollection<ServerError>(new PrimaryKeyComparer<ServerError>(x => x.Timestamp));
+
+			IndexName = GetParamAfter("/indexes-errors/");
+			var errors = Database.Statistics.Value.Errors;
+			if (IsShowingErrorForASpecificIndex)
+				errors = errors.Where(e => e.Index == IndexName).ToArray();
+			Errors.Match(errors);
+			Database.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged("Errors");
 		}
 	}
 }
