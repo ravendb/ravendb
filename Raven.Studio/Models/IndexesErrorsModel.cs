@@ -6,8 +6,17 @@ namespace Raven.Studio.Models
 {
 	public class IndexesErrorsModel : ViewModel
 	{
-		public BindableCollection<ServerError> Errors { get; private set; }
-		
+		private ServerError[] errors;
+		public ServerError[] Errors
+		{
+			get { return errors; }
+			private set
+			{
+				errors = value;
+				OnPropertyChanged();
+			}
+		}
+
 		private string indexName;
 		public string IndexName
 		{
@@ -28,7 +37,6 @@ namespace Raven.Studio.Models
 		public IndexesErrorsModel()
 		{
 			ModelUrl = "/indexes-errors";
-			Errors = new BindableCollection<ServerError>(new PrimaryKeyComparer<ServerError>(x => x.Timestamp));
 			Database.Value.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged("Errors");
 		}
 
@@ -36,10 +44,10 @@ namespace Raven.Studio.Models
 		{
 			IndexName = GetParamAfter("/", parameters);
 
-			var errors = Database.Value.Statistics.Value.Errors;
+			var allErrors = Database.Value.Statistics.Value.Errors;
 			if (IsShowingErrorForASpecificIndex)
-				errors = errors.Where(e => e.Index == IndexName).ToArray();
-			Errors.Match(errors);
+				allErrors = allErrors.Where(e => e.Index == IndexName).ToArray();
+			Errors = allErrors;
 		}
 	}
 }
