@@ -13,17 +13,20 @@
 				<RowDefinition Height="10" />
 				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
-			
-			<StackPanel>
-				<TextBlock Text="{Binding Path=Errors.Length, StringFormat='Errors Count: \{0\}'}" />
 
-				<StackPanel>
-					<TextBlock Style="{StaticResource Style_Text_Header}"
-							   Text="Indexes Error" />
-					<TextBlock Text="{Binding IndexName, StringFormat='for index: \{0\}'}"
-							   Visibility="{Binding IsShowingErrorForASpecificIndex, Converter={StaticResource VisibleWhenTrue}}"
-							   FontSize="13" />
-				</StackPanel>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock Text="Indexes Error"
+						   Style="{StaticResource Style_TextBlock_Breadcrumb}"
+						   Margin="0,0,10,0"
+						   VerticalAlignment="Center" />
+				<TextBlock Text="{Binding IndexName, StringFormat='for index: \{0\}'}"
+						   Visibility="{Binding IsShowingErrorForASpecificIndex, Converter={StaticResource VisibleWhenTrue}}"
+						   FontSize="12"
+						   Margin="0,0,10,0"
+						   Style="{StaticResource Style_TextBlock_Breadcrumb}"
+						   VerticalAlignment="Center" />
+				<TextBlock Text="{Binding Path=Errors.Length, StringFormat='(\{0\} Errors)'}"
+						   Style="{StaticResource Style_TextBlock_InlineSubHeader}" />
 			</StackPanel>
 			
 			<ItemsControl Grid.Row="3" ItemsSource="{Binding Errors}">

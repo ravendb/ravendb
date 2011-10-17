@@ -27,7 +27,7 @@
             <toolkit:DockPanel Margin="4" LastChildFill="False">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Logs" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding Path=Logs.Count, StringFormat='(\{0\} Entries)'}" VerticalAlignment="Center" Margin="10,0,0,0" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding Path=Logs.Count, StringFormat='(\{0\} Entries)'}" Style="{StaticResource Style_TextBlock_InlineSubHeader}" />
                 </StackPanel>
                 <StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal">
                     <HyperlinkButton x:Name="AllErrorsHyperlink" Content="All Logs" NavigateUri="/logs" Style="{StaticResource Style_Link_MouseOverChrome}">

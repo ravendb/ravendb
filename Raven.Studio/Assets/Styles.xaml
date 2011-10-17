@@ -1788,6 +1788,12 @@
         <Setter Property="Foreground" Value="{StaticResource Brush_ContrastColor}"/>
         <Setter Property="FontSize" Value="14"/>
     </Style>
+
+
+	<Style x:Key="Style_TextBlock_InlineSubHeader" TargetType="TextBlock">
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="FontWeight" Value="Bold"/>
+    </Style>
 	
 	<Style x:Key="Style_TextBlock_PagePartHeader" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource Brush_ContrastColor}"/>
