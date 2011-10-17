@@ -13,7 +13,9 @@
 	<Converters:EnumToIntConverter x:Key="enumeratedValue" />
 	<Converters:EnumToEnumerableConverter x:Key="enumerationFromValue" />
 	<Converters:FirstLineOnlyConverter x:Key="FirstLineOnly" />
-	<Converters:BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />	<Converters:BooleanToOppositeVisibilityConverter x:Key="VisibleWhenFalse" />	<Converters:StringEmptyToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedForValue" ValueWhenEmpty="0" ValueWhenNonEmpty="*" />
+	<Converters:BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />	
+	<Converters:BooleanToOppositeVisibilityConverter x:Key="VisibleWhenFalse" />	
+	<Converters:StringEmptyToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedForValue" ValueWhenEmpty="0" ValueWhenNonEmpty="*" />
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine"/>
 	
 	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
