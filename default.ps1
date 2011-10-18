@@ -9,8 +9,8 @@ properties {
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", `
-    "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???", `
+    "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
