@@ -32,13 +32,13 @@ namespace Raven.Abstractions.Linq
 	{
 		public IEnumerator<object> GetEnumerator()
 		{
-			foreach (var item in inner)
-			{
-				if (item.Key[0] == '$')
-					continue;
-
-				yield return new KeyValuePair<string, object>(item.Key, TransformToValue(item.Value));
-			}
+			return 
+				(
+					from item in inner
+			        where item.Key[0] != '$'
+			        select new KeyValuePair<string, object>(item.Key, TransformToValue(item.Value))
+				)
+				.Cast<object>().GetEnumerator();
 		}
 
 		/// <summary>
