@@ -183,6 +183,7 @@
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
     <Compile Include="Bugs\Indexing\InvalidIndexes.cs" />
     <Compile Include="Bugs\Issue355.cs" />
+    <Compile Include="Bugs\JsonReferences.cs" />
     <Compile Include="Bugs\LarsErik.cs" />
     <Compile Include="Bugs\Iulian\GeneratesCorrectTemporaryIndex.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\Place.cs" />
