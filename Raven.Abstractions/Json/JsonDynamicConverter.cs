@@ -59,7 +59,10 @@ namespace Raven.Abstractions.Json
 		        return val.Value;
 		    var array = token as RavenJArray;
 			if (array != null)
-				return new DynamicJsonObject.DynamicList(array.Select(DynamicJsonObject.TransformToValue).ToArray());
+			{
+				var dynamicJsonObject = new DynamicJsonObject(new RavenJObject());
+				return new DynamicJsonObject.DynamicList(array.Select(dynamicJsonObject.TransformToValue).ToArray());
+			}
 
 			var typeName = token.Value<string>("$type");
 			if(typeName != null)
