@@ -323,7 +323,10 @@ namespace Raven.Client.Linq
 			var parameterExpression = expression as ParameterExpression;
 			if (parameterExpression != null)
 			{
-				return new ExpressionInfo(CurrentPath, parameterExpression.Type, false);
+				var current = CurrentPath;
+				if (current.EndsWith(","))
+					current = current.Substring(0, current.Length - 1);
+				return new ExpressionInfo(current, parameterExpression.Type, false);
 			}
 
 			string fullPath;
