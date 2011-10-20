@@ -451,7 +451,7 @@ namespace Raven.Client.Document
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 #if !SILVERLIGHT
-					var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
+					var generator = new MultiTypeHiLoKeyGenerator(this, 32);
 					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
 #else
 
