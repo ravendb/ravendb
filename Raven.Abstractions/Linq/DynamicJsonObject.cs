@@ -30,15 +30,17 @@ namespace Raven.Abstractions.Linq
 	/// </summary>
 	public class DynamicJsonObject : DynamicObject, IEnumerable<object>, IDynamicJsonObject
 	{
+		private DynamicJsonObject parent;
+
 		public IEnumerator<object> GetEnumerator()
 		{
-			foreach (var item in inner)
-			{
-				if (item.Key[0] == '$')
-					continue;
-
-				yield return new KeyValuePair<string, object>(item.Key, TransformToValue(item.Value));
-			}
+			return 
+				(
+					from item in inner
+			        where item.Key[0] != '$'
+			        select new KeyValuePair<string, object>(item.Key, TransformToValue(item.Value))
+				)
+				.Cast<object>().GetEnumerator();
 		}
 
 		/// <summary>
@@ -96,6 +98,13 @@ namespace Raven.Abstractions.Linq
 			this.inner = inner;
 		}
 
+
+		private DynamicJsonObject(DynamicJsonObject parent, RavenJObject inner)
+		{
+			this.parent = parent;
+			this.inner = inner;
+		}
+
 		/// <summary>
 		/// Provides the implementation for operations that get member values. Classes derived from the <see cref="T:System.Dynamic.DynamicObject"/> class can override this method to specify dynamic behavior for operations such as getting a value for a property.
 		/// </summary>
@@ -127,7 +136,7 @@ namespace Raven.Abstractions.Linq
 			return true;
 		}
 
-		public static object TransformToValue(RavenJToken jToken)
+		public object TransformToValue(RavenJToken jToken)
 		{
 			switch (jToken.Type)
 			{
@@ -136,12 +145,19 @@ namespace Raven.Abstractions.Linq
 					var values = jObject.Value<RavenJArray>("$values");
 					if (values != null)
 					{
-						return new DynamicList(values.Select(TransformToValue).ToArray());
+						return new DynamicList(this, values.Select(TransformToValue).ToArray());
 					}
-					return new DynamicJsonObject(jObject);
+					var refId = jObject.Value<string>("$ref");
+					if(refId != null)
+					{
+						var ravenJObject = FindReference(refId);
+						if (ravenJObject != null)
+							return new DynamicJsonObject(this, ravenJObject);
+					}
+					return new DynamicJsonObject(this, jObject);
 				case JTokenType.Array:
-					var ar = jToken as RavenJArray; // cannot result in null because jToken.Type is set to Array
-					return new DynamicList(ar.Select(TransformToValue).ToArray());
+					var ar = (RavenJArray) jToken; 
+					return new DynamicList(this, ar.Select(TransformToValue).ToArray());
 				case JTokenType.Date:
 					return jToken.Value<DateTime>();
 				case JTokenType.Null:
@@ -162,6 +178,63 @@ namespace Raven.Abstractions.Linq
 							return dateTime;
 					}
 					return value;
+			}
+		}
+
+		private RavenJObject FindReference(string refId)
+		{
+			var p = this;
+			while (p.parent != null)
+				p = p.parent;
+
+			return p.Scan().FirstOrDefault(x => x.Value<string>("$id") == refId);
+		}
+
+		private IEnumerable<RavenJObject> Scan()
+		{
+			var objs = new List<RavenJObject>();
+			var lists = new List<RavenJArray>();
+
+			objs.Add(inner);
+
+			while (objs.Count > 0 || lists.Count > 0)
+			{
+				var objCopy = objs;
+				objs = new List<RavenJObject>();
+				foreach (var obj in objCopy)
+				{
+					yield return obj;
+					foreach (var property in obj.Properties)
+					{
+						switch (property.Value.Type)
+						{
+							case JTokenType.Object:
+								objs.Add((RavenJObject)property.Value);
+								break;
+							case JTokenType.Array:
+								lists.Add((RavenJArray)property.Value);
+								break;
+						}
+					}
+				}
+
+				var listsCopy = lists;
+				lists = new List<RavenJArray>();
+				foreach (var list in listsCopy)
+				{
+					foreach (var item in list)
+					{
+						switch (item.Type)
+						{
+							case JTokenType.Object:
+								objs.Add((RavenJObject)item);
+								break;
+							case JTokenType.Array:
+								lists.Add((RavenJArray)item);
+								break;
+						}
+					}
+				}
 			}
 		}
 
@@ -219,6 +292,7 @@ namespace Raven.Abstractions.Linq
 		/// </summary>
 		public class DynamicList : DynamicObject, IEnumerable<object>
 		{
+			private readonly DynamicJsonObject parent;
 			private readonly object[] inner;
 
 			/// <summary>
@@ -228,6 +302,11 @@ namespace Raven.Abstractions.Linq
 			public DynamicList(object[] inner)
 			{
 				this.inner = inner;
+			}
+
+			internal DynamicList(DynamicJsonObject parent, object[] inner):this(inner)
+			{
+				this.parent = parent;
 			}
 
 			/// <summary>
@@ -258,29 +337,43 @@ namespace Raven.Abstractions.Linq
 				return base.TryInvokeMember(binder, args, out result);
 			}
 
+			private IEnumerable<dynamic> Enumerate()
+			{
+				foreach (var item in inner)
+				{
+					var ravenJObject = item as RavenJObject;
+					if(ravenJObject != null)
+						yield return new DynamicJsonObject(parent, ravenJObject);
+					var ravenJArray = item as RavenJArray;
+					if (ravenJArray != null)
+						yield return new DynamicList(parent, ravenJArray.ToArray());
+					yield return item;
+				}
+			}
+
 			public dynamic First(Func<dynamic, bool> predicate)
 			{
-				return inner.First(predicate);
+				return Enumerate().First(predicate);
 			}
 
 			public dynamic FirstOrDefault(Func<dynamic, bool> predicate)
 			{
-				return inner.FirstOrDefault(predicate);
+				return Enumerate().FirstOrDefault(predicate);
 			}
 
 			public dynamic Single(Func<dynamic, bool> predicate)
 			{
-				return inner.Single(predicate);
+				return Enumerate().Single(predicate);
 			}
 
 			public IEnumerable<dynamic> Distinct()
 			{
-				return new DynamicList(inner.Distinct().ToArray());
+				return new DynamicList(Enumerate().Distinct().ToArray());
 			} 
 
 			public dynamic SingleOrDefault(Func<dynamic, bool> predicate)
 			{
-				return inner.SingleOrDefault(predicate);
+				return Enumerate().SingleOrDefault(predicate);
 			}
 
 			/// <summary>
@@ -289,12 +382,12 @@ namespace Raven.Abstractions.Linq
 			/// <returns></returns>
 			public IEnumerator<object> GetEnumerator()
 			{
-				return ((IEnumerable<object>)inner).GetEnumerator();
+				return Enumerate().GetEnumerator();
 			}
 
 			IEnumerator IEnumerable.GetEnumerator()
 			{
-				return ((IEnumerable)inner).GetEnumerator();
+				return Enumerate().GetEnumerator();
 			}
 
 			/// <summary>
@@ -404,7 +497,7 @@ namespace Raven.Abstractions.Linq
 			/// </summary>
 			public int Sum(Func<dynamic, int> aggregator)
 			{
-				return inner.Sum(aggregator);
+				return Enumerate().Sum(aggregator);
 			}
 
 			/// <summary>
@@ -412,7 +505,7 @@ namespace Raven.Abstractions.Linq
 			/// </summary>
 			public decimal Sum(Func<dynamic, decimal> aggregator)
 			{
-				return inner.Sum(aggregator);
+				return Enumerate().Sum(aggregator);
 			}
 
 			/// <summary>
@@ -420,7 +513,7 @@ namespace Raven.Abstractions.Linq
 			/// </summary>
 			public float Sum(Func<dynamic, float> aggregator)
 			{
-				return inner.Sum(aggregator);
+				return Enumerate().Sum(aggregator);
 			}
 
 			/// <summary>
@@ -428,7 +521,7 @@ namespace Raven.Abstractions.Linq
 			/// </summary>
 			public double Sum(Func<dynamic, double> aggregator)
 			{
-				return inner.Sum(aggregator);
+				return Enumerate().Sum(aggregator);
 			}
 
 			/// <summary>
@@ -436,7 +529,7 @@ namespace Raven.Abstractions.Linq
 			/// </summary>
 			public long Sum(Func<dynamic, long> aggregator)
 			{
-				return inner.Sum(aggregator);
+				return Enumerate().Sum(aggregator);
 			}
 
 			/// <summary>
@@ -450,12 +543,12 @@ namespace Raven.Abstractions.Linq
 
 			public IEnumerable<object> Select(Func<object, object> func)
 			{
-				return new DynamicList(inner.Select(func).ToArray());
+				return new DynamicList(parent, inner.Select(func).ToArray());
 			}
 
 			public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
 			{
-				return new DynamicList(inner.SelectMany(func).ToArray());
+				return new DynamicList(parent, inner.SelectMany(func).ToArray());
 			}
 		}
 

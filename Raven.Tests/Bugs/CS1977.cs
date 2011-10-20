@@ -150,14 +150,14 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		
-        [Fact]
-        public void can_create_index_where_reduce_uses_select()
-        {
-            using (var store = NewDocumentStore())
-            {
-                new SelectIndex().Execute(store);
-            }
-        }
+
+		[Fact]
+		public void can_create_index_where_reduce_uses_select()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new SelectIndex().Execute(store);
+			}
+		}
 	}
 }
