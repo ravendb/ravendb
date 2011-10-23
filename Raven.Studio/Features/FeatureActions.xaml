@@ -9,6 +9,5 @@
 	<Indexes:IndexDefinitionModelLocator x:Key="IndexDefinitionModelLocator" />
 	<Indexes:IndexesModelLocator x:Key="IndexesModelLocator" />
 	<Documents:DocumentsModelLocator x:Key="DocumentsModelLocator" />
-	<Stats:StatisticsModelLocator x:Key="StatisticsModelLocator" />
 	<Query:QueryModelLocator x:Key="QueryModelLocator" />
 </ResourceDictionary>

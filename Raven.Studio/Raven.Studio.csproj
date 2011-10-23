@@ -147,7 +147,6 @@
       <DependentUpon>QueryView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Query\QueryModelLocator.cs" />
-    <Compile Include="Features\Stats\StatisticsModelLocator.cs" />
     <Compile Include="Features\Stats\StatisticsView.xaml.cs">
       <DependentUpon>StatisticsView.xaml</DependentUpon>
     </Compile>
@@ -266,6 +265,7 @@
     <Compile Include="Models\DatabaseModel.cs" />
     <Compile Include="Models\QueryModel.cs" />
     <Compile Include="Models\ServerModel.cs" />
+    <Compile Include="Models\StatisticsModel.cs" />
     <Compile Include="Models\TaskModel.cs" />
     <Compile Include="Views\Collections.xaml.cs">
       <DependentUpon>Collections.xaml</DependentUpon>
