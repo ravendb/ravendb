@@ -19,7 +19,7 @@ namespace Raven.Studio.Features.Logs
 			Logs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.TimeStamp));
 		}
 
-		protected override Task TimerTickedAsync()
+		protected override Task LoadedTimerTickedAsync()
 		{
 			return DatabaseCommands.GetLogsAsync(showErrorsOnly)
 				.ContinueOnSuccess(logs => Logs.Match(logs));

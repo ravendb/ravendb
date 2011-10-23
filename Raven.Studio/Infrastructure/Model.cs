@@ -51,8 +51,8 @@ namespace Raven.Studio.Infrastructure
 
 		private TimeSpan GetRefreshRate()
 		{
-			if (Debugger.IsAttached)
-				return RefreshRate.Add(TimeSpan.FromMinutes(5));
+			//if (Debugger.IsAttached)
+			//    return RefreshRate.Add(TimeSpan.FromMinutes(5));
 			return RefreshRate;
 		}
 

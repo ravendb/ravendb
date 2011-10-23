@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Raven.Client.Connection.Async;
@@ -11,6 +12,7 @@ namespace Raven.Studio.Infrastructure
 	{
 		public List<string> ModelUrlIgnoreList { get; private set; }
 		public string ModelUrl { get; set; }
+		public bool IsLoaded { get; private set; }
 
 		public ViewModel()
 		{
@@ -30,11 +32,21 @@ namespace Raven.Studio.Infrastructure
 			{
 				LoadModelParameters(GetParamAfter(ModelUrl, state));
 			}
+			IsLoaded = true;
 			Application.Current.Host.NavigationStateChanged -= LoadModel;
 		}
 
-		public virtual void LoadModelParameters(string parameters)
+		public virtual void LoadModelParameters(string parameters) { }
+		public virtual void LoadedTimerTickedAsync(string parameters) { }
+
+		protected override Task TimerTickedAsync()
 		{
+			return IsLoaded == false ? null : LoadedTimerTickedAsync();
+		}
+
+		protected virtual Task LoadedTimerTickedAsync()
+		{
+			return null;
 		}
 
 		public Observable<DatabaseModel> Database { get; private set; }

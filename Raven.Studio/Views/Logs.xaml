@@ -3,7 +3,7 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
-					 Infrastructure:ModelAttacher.AttachModel="Raven.Studio.Features.Logs.LogsModel">
+					 Infrastructure:ModelAttacher.AttachObservableModel="Raven.Studio.Features.Logs.LogsModel">
 
 	<Grid>
 		<Logs:LogsView />
