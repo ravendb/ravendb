@@ -9,6 +9,7 @@ using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 
 namespace Raven.Client
 {
@@ -106,6 +107,14 @@ namespace Raven.Client
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		IRavenQueryable<T> Query<T>();
+
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
+		IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 	}
 }
 #endif
