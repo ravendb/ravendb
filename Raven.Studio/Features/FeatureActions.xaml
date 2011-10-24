@@ -1,13 +1,10 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
-					xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes"
-					xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats"
-					xmlns:Query="clr-namespace:Raven.Studio.Features.Query">
+					xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes">
 
 	<Documents:EditDocumentModelLocator x:Key="EditDocumentModelLocator" />
 	<Indexes:IndexDefinitionModelLocator x:Key="IndexDefinitionModelLocator" />
 	<Indexes:IndexesModelLocator x:Key="IndexesModelLocator" />
 	<Documents:DocumentsModelLocator x:Key="DocumentsModelLocator" />
-	<Query:QueryModelLocator x:Key="QueryModelLocator" />
 </ResourceDictionary>

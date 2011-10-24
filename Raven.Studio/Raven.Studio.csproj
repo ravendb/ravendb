@@ -146,7 +146,6 @@
     <Compile Include="Features\Query\QueryView.xaml.cs">
       <DependentUpon>QueryView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Query\QueryModelLocator.cs" />
     <Compile Include="Features\Stats\StatisticsView.xaml.cs">
       <DependentUpon>StatisticsView.xaml</DependentUpon>
     </Compile>

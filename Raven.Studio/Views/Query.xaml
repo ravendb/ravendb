@@ -6,9 +6,9 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Query="clr-namespace:Raven.Studio.Features.Query"
 					 mc:Ignorable="d"
-					 DataContext="{Binding Source={StaticResource QueryModelLocator}}">
+					 Infrastructure:ModelAttacher.AttachObservableModel="QueryModel">
 
 	<Grid>
-		<Query:QueryView DataContext="{Binding Path=Current.Value}" />
+		<Query:QueryView />
 	</Grid>
 </Infrastructure:View>

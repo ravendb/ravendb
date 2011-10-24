@@ -1,52 +1,77 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
-using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class QueryModel : Model
+	public class QueryModel : ViewModel
 	{
-		private readonly string indexName;
-		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+		private string indexName;
+		public string IndexName
+		{
+			get
+			{
+				return indexName;
+			}
+			private set
+			{
+				if (string.IsNullOrWhiteSpace(value))
+				{
+					ApplicationModel.Current.Navigate(new Uri("/indexes", UriKind.Relative));
+				}
+
+				indexName = value;
+				OnPropertyChanged();
+				RestoreHistory();
+			}
+		}
+
 		public const int PageSize = 25;
 
 		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-		private readonly List<string> fields = new List<string>();
+
+		private readonly BindableCollection<string> fields = new BindableCollection<string>(new PrimaryKeyComparer<string>(x => x));
 		private readonly Dictionary<string, List<string>> fieldsTermsDictionary = new Dictionary<string, List<string>>();
 
 		private static string lastQuery;
 		private static string lastIndex;
 
-		public QueryModel(string indexName, IAsyncDatabaseCommands asyncDatabaseCommands)
+		public QueryModel()
 		{
-			this.indexName = indexName;
-			this.asyncDatabaseCommands = asyncDatabaseCommands;
+			ModelUrl = "/query";
+
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
 
-			RememberHistory();
-
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
-
-			GetFields();
 			CompletionProvider.Value = new RavenQueryCompletionProvider(fields, fieldsTermsDictionary);
 		}
 
-		private void RememberHistory()
+		public override void LoadModelParameters(string parameters)
 		{
-			if (lastIndex == indexName)
-			{
-				Query.Value = lastQuery;
-				Execute.Execute(null);
-			}
-			lastIndex = indexName;
-			Query.PropertyChanged += (sender, args) => lastQuery = Query.Value;
+			IndexName = GetParamAfter("/", parameters);
+			GetFields();
+		}
+
+		public void RememberHistory()
+		{
+			lastIndex = IndexName;
+			lastQuery = Query.Value;
+		}
+
+		public void RestoreHistory()
+		{
+			if (IndexName == null || lastIndex != IndexName)
+				return;
+
+			Query.Value = lastQuery;
+			Execute.Execute(null);
 		}
 
 		private void GetTermsForUsedFields(object sender, PropertyChangedEventArgs e)
@@ -68,13 +93,13 @@ namespace Raven.Studio.Models
 
 		private void GetFields()
 		{
-			asyncDatabaseCommands.GetIndexAsync(indexName)
-				.ContinueOnSuccess(definition => fields.AddRange(definition.Fields));
+			DatabaseCommands.GetIndexAsync(IndexName)
+				.ContinueOnSuccess(definition => fields.Match(definition.Fields));
 		}
 
 		private void GetTermsForField(string field, List<string> terms)
 		{
-			asyncDatabaseCommands.GetTermsAsync(IndexName, field, string.Empty, 1024)
+			DatabaseCommands.GetTermsAsync(IndexName, field, string.Empty, 1024)
 				.ContinueOnSuccess(termsFromServer =>
 				{
 					foreach (var term in termsFromServer)
@@ -89,14 +114,9 @@ namespace Raven.Studio.Models
 
 		public Observable<ICompletionProvider> CompletionProvider { get; private set; }
 
-		public ICommand Execute { get { return new ExecuteQueryCommand(this, asyncDatabaseCommands); } }
+		public ICommand Execute { get { return new ExecuteQueryCommand(this, DatabaseCommands); } }
 
 		public Observable<string> Query { get; set; }
-
-		public string IndexName
-		{
-			get { return indexName; }
-		}
 
 		private string error;
 		public string Error

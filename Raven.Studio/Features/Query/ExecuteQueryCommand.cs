@@ -36,6 +36,8 @@ namespace Raven.Studio.Features.Query
 
 		public override void Execute(object parameter)
 		{
+			model.Error = null;
+			model.RememberHistory();
 			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod, "/query/"+model.IndexName, QueryModel.PageSize);
 		}
 
