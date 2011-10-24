@@ -44,11 +44,11 @@ namespace Raven.Studio.Models
 		private void UpdateMetadata(RavenJObject metadataAsJson)
 		{
 			metadata = metadataAsJson.ToDictionary(x => x.Key, x =>
-			                                                   {
-			                                                   	if (x.Value.Type == JTokenType.String)
-			                                                   		return x.Value.Value<string>();
-			                                                   	return x.Value.ToString(Formatting.None);
-			                                                   });
+															   {
+																if (x.Value.Type == JTokenType.String)
+																	return x.Value.Value<string>();
+																return x.Value.ToString(Formatting.None);
+															   });
 			OnPropertyChanged("Metadata");
 		}
 
@@ -141,10 +141,10 @@ namespace Raven.Studio.Models
 			foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
 			{
 				References.Add(new LinkModel
-				               {
+							   {
 								   Title = source,
 								   HRef = "/Edit?id="+source
-				               });
+							   });
 			}
 		}
 
@@ -152,17 +152,17 @@ namespace Raven.Studio.Models
 		{
 			asyncDatabaseCommands.GetDocumentsStartingWithAsync(Key + "/", 0, 15)
 				.ContinueOnSuccess(items =>
-				                   {
-				                   	if (items == null)
-				                   		return;
+								   {
+									if (items == null)
+										return;
 
-				                   	var linkModels = items.Select(doc => new LinkModel
-				                   	                                     {
-				                   	                                     	Title = doc.Key,
-				                   	                                     	HRef = "/Edit?id=" + doc.Key
-				                   	                                     }).ToArray();
-				                   	Related.Set(linkModels);
-				                   });
+									var linkModels = items.Select(doc => new LinkModel
+																		 {
+																			Title = doc.Key,
+																			HRef = "/Edit?id=" + doc.Key
+																		 }).ToArray();
+									Related.Set(linkModels);
+								   });
 		}
 
 		public string Key
@@ -176,9 +176,9 @@ namespace Raven.Studio.Models
 			get { return document.Etag; }
 			set
 			{
-			    document.Etag = value; 
-                OnPropertyChanged();
-                OnPropertyChanged("Metadata");
+				document.Etag = value; 
+				OnPropertyChanged();
+				OnPropertyChanged("Metadata");
 			}
 		}
 
@@ -186,24 +186,24 @@ namespace Raven.Studio.Models
 		{
 			get { return document.LastModified; }
 			set { 
-                document.LastModified = value;
-			    OnPropertyChanged();
-			    OnPropertyChanged("Metadata");
+				document.LastModified = value;
+				OnPropertyChanged();
+				OnPropertyChanged("Metadata");
 			}
 		}
 
 		private IDictionary<string, string> metadata;
 		public IEnumerable<KeyValuePair<string, string>> Metadata
 		{
-            get
-            {
-                return metadata.OrderBy(x => x.Key)
-                    .Concat(new[]
-                                {
-                                    new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : ""),
-                                    new KeyValuePair<string, string>("Last-Modified", LastModified.HasValue ? LastModified.ToString(): ""),
-                                });
-            }
+			get
+			{
+				return metadata.OrderBy(x => x.Key)
+					.Concat(new[]
+								{
+									new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : ""),
+									new KeyValuePair<string, string>("Last-Modified", LastModified.HasValue ? LastModified.ToString(): ""),
+								});
+			}
 		}
 
 		public ICommand Save
