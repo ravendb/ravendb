@@ -1,23 +1,20 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class IndexesModel : Model
+	public class IndexesModel : ViewModel
 	{
-		private readonly IAsyncDatabaseCommands databaseCommands;
-
 		public BindableCollection<string> Indexes { get; private set; }
 		public BindableCollection<string> TempIndexes { get; private set; }
 		public BindableCollection<string> AutoIndexes { get; private set; }
 		public BindableCollection<string> OtherIndexes { get; private set; }
 
-		public IndexesModel(IAsyncDatabaseCommands databaseCommands)
+		public IndexesModel()
 		{
-			this.databaseCommands = databaseCommands;
+			ModelUrl = "/indexes";
 			Indexes = new BindableCollection<string>(new PrimaryKeyComparer<string>(name => name));
 			TempIndexes = new BindableCollection<string>(new PrimaryKeyComparer<string>(name => name));
 			AutoIndexes = new BindableCollection<string>(new PrimaryKeyComparer<string>(name => name));
@@ -25,9 +22,9 @@ namespace Raven.Studio.Models
 			ForceTimerTicked();
 		}
 
-		protected override Task TimerTickedAsync()
+		protected override Task LoadedTimerTickedAsync()
 		{
-			return databaseCommands
+			return DatabaseCommands
 				.GetIndexNamesAsync(0, 256)
 				.ContinueOnSuccess(indexes =>
 								   {

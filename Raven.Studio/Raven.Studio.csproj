@@ -134,7 +134,6 @@
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
       <DependentUpon>IndexesListView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Indexes\IndexesModelLocator.cs" />
     <Compile Include="Features\Indexes\EditIndexView.xaml.cs">
       <DependentUpon>EditIndexView.xaml</DependentUpon>
     </Compile>

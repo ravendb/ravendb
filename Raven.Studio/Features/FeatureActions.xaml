@@ -5,6 +5,5 @@
 
 	<Documents:EditDocumentModelLocator x:Key="EditDocumentModelLocator" />
 	<Indexes:IndexDefinitionModelLocator x:Key="IndexDefinitionModelLocator" />
-	<Indexes:IndexesModelLocator x:Key="IndexesModelLocator" />
 	<Documents:DocumentsModelLocator x:Key="DocumentsModelLocator" />
 </ResourceDictionary>
