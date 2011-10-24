@@ -203,7 +203,6 @@
     <Compile Include="Models\DocumentsModel.cs" />
     <Compile Include="Models\HomeModel.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
-    <Compile Include="Features\Indexes\IndexDefinitionModelLocator.cs" />
     <Compile Include="Infrastructure\ContextMenu\ContextMenu.cs" />
     <Compile Include="Infrastructure\ContextMenu\ContextMenuService.cs" />
     <Compile Include="Infrastructure\ContextMenu\MenuBase.cs" />

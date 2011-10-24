@@ -11,21 +11,19 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class IndexDefinitionModel : Model
+	public class IndexDefinitionModel : ViewModel
 	{
-		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
-		private readonly string originalIndex;
+		private string originalIndex;
 
-		public IndexDefinitionModel(IndexDefinition index, IAsyncDatabaseCommands asyncDatabaseCommands, Observable<DatabaseStatistics> statistics)
+		public IndexDefinitionModel()
 		{
-			this.asyncDatabaseCommands = asyncDatabaseCommands;
-			originalIndex = JsonConvert.SerializeObject(index);
-			UpdateFromIndex(index);
+			ModelUrl = "/indexes/";
+			index = new IndexDefinition();
 
-			this.statistics = statistics;
-			this.statistics.PropertyChanged += (sender, args) => OnPropertyChanged("ErrorsCount");
+			statistics = Database.Value.Statistics;
+			statistics.PropertyChanged += (sender, args) => OnPropertyChanged("ErrorsCount");
 		}
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
@@ -41,6 +39,25 @@ namespace Raven.Studio.Models
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
 
 			OnEverythingChanged();
+		}
+
+		public override void LoadModelParameters(string parameters)
+		{
+			var name = parameters;
+			if (string.IsNullOrWhiteSpace(name))
+				ApplicationModel.Current.Navigate(new Uri("/indexes", UriKind.Relative));
+
+			DatabaseCommands.GetIndexAsync(name)
+				.ContinueOnSuccess(index1 =>
+				                   {
+				                   	if (index1 == null)
+				                   	{
+				                   		ApplicationModel.Current.Navigate(new Uri("/NotFound?id=" + name, UriKind.Relative));
+				                   		return;
+				                   	}
+									originalIndex = JsonConvert.SerializeObject(index);
+									UpdateFromIndex(index1);
+				                   }).Catch();
 		}
 
 		private void ResetToOriginal()
@@ -174,7 +191,7 @@ namespace Raven.Studio.Models
 
 		public ICommand SaveIndex
 		{
-			get { return new SaveIndexCommand(this, asyncDatabaseCommands); }
+			get { return new SaveIndexCommand(this, DatabaseCommands); }
 		}
 
 		public ICommand ResetIndex
