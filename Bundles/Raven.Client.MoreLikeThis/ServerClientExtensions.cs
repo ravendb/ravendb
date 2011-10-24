@@ -1,36 +1,27 @@
 ﻿using System;
+using Newtonsoft.Json;
 using Raven.Client.Connection;
 
 namespace Raven.Client.MoreLikeThis
 {
     public static class ServerClientExtensions
     {
-        public static string MoreLikeThis(this ISyncAdvancedSessionOperation advancedSession, string index, string documentId, string fields)
+        public static T[] MoreLikeThis<T>(this ISyncAdvancedSessionOperation advancedSession, string index, string documentId, string fields)
         {
-            return advancedSession.DatabaseCommands.MoreLikeThis(index, documentId, fields);
-        }
+			var cmd = advancedSession.DatabaseCommands as ServerClient;
+			if (cmd == null)
+				throw new NotImplementedException("Embedded client isn't supported");
 
+			// /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
+			EnsureIsNotNullOrEmpty(index, "index");
 
-        public static string MoreLikeThis(this IDatabaseCommands commands, string index, string documentId, string fields)
-        {
-            if (commands is ServerClient) return (commands as ServerClient).MoreLikeThis(index, documentId, fields);
-            //if (commands is EmbeddableDocumentStore) return (commands as EmbeddableDocumentStore).MoreLikeThis(index, documentId, fields);
-            throw new NotImplementedException();
-        }
+			var requestUri = string.Format("/morelikethis/{0}/{1}?fields={2}",
+													 Uri.EscapeUriString(index),
+													 documentId,
+													 Uri.EscapeDataString(fields));
 
-        public static string MoreLikeThis(this ServerClient server, string index, string documentId, string fields)
-        {
-            // /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
-            EnsureIsNotNullOrEmpty(index, "index");
-
-            var requestUri = string.Format("/morelikethis/{0}/{1}?fields={2}",
-				                                     Uri.EscapeUriString(index),
-				                                     documentId,
-				                                     Uri.EscapeDataString(fields));
-
-            return server.ExecuteGetRequest(requestUri);
-
-            //return SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
+			var result = cmd.ExecuteGetRequest(requestUri);
+			return JsonConvert.DeserializeObject<T[]>(result);
         }
 
 		//public static string MoreLikeThis(this EmbeddedDatabaseCommands server, string index, string documentId, string fields)
