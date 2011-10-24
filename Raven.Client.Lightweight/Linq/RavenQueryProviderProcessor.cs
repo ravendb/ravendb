@@ -313,35 +313,36 @@ namespace Raven.Client.Linq
 			return info.Type;
 		}
 
-		/// <summary>
-		/// Gets member info for the specified expression and the path to that expression
-		/// </summary>
-		/// <param name="expression"></param>
-		/// <returns></returns>
-		protected virtual ExpressionInfo GetMember(Expression expression)
-		{
-			var parameterExpression = expression as ParameterExpression;
-			if (parameterExpression != null)
-			{
-				var current = CurrentPath;
-				if (current.EndsWith(","))
-					current = current.Substring(0, current.Length - 1);
-				return new ExpressionInfo(current, parameterExpression.Type, false);
-			}
+        /// <summary>
+        /// Gets member info for the specified expression and the path to that expression
+        /// </summary>
+        /// <param name="expression"></param>
+        /// <returns></returns>
+        protected virtual ExpressionInfo GetMember(System.Linq.Expressions.Expression expression)
+        {
+            var parameterExpression = expression as ParameterExpression;
+            if (parameterExpression != null)
+            {
 
-			string fullPath;
-			Type memberType;
-			bool isNestedPath;
-			GetPath(expression, out fullPath, out memberType, out isNestedPath);
+                if (currentPath.EndsWith(","))
+                    currentPath = currentPath.Substring(0, currentPath.Length - 1);
+                return new ExpressionInfo(currentPath, parameterExpression.Type, false);
 
-			//for stnadard queries, we take just the last part. But for dynamic queries, we take the whole part
-			var prop = fullPath.Substring(fullPath.LastIndexOf('.') + 1);
-			var path = fullPath.Substring(fullPath.IndexOf('.') + 1);
+            }
 
-			return new ExpressionInfo(
-				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, path, prop),
-				memberType, isNestedPath);
-		}
+            string path;
+            Type memberType;
+            bool isNestedPath;
+            GetPath(expression, out path, out memberType, out isNestedPath);
+
+            //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
+            path = path.Substring(path.IndexOf('.') + 1);
+
+            return new ExpressionInfo(
+                queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path),
+                memberType,
+                isNestedPath);
+        }
 
 		/// <summary>
 		/// Get the path from the expression, including considering dictionary calls
@@ -600,7 +601,6 @@ namespace Raven.Client.Linq
 			switch (expression.Method.Name)
 			{
 				case "Search":
-					VisitExpression(expression.Arguments[0]);
 					var expressionInfo = GetMember(expression.Arguments[1]);
 					object value;
 					if(GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
@@ -941,8 +941,8 @@ namespace Raven.Client.Linq
 			object value;
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
-				if (type.IsEnum && (value is IEnumerable == false) && // skip arrays, lists
-					queryGenerator.Conventions.SaveEnumsAsIntegers == false) 
+				if (type.IsEnum && (value is IEnumerable == false) && 
+					queryGenerator.Conventions.QueryEnumsAsIntegers == false) // skip arrays, lists
 				{
 					return Enum.GetName(type, value);
 				}
