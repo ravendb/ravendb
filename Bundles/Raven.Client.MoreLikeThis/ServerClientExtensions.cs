@@ -24,11 +24,6 @@ namespace Raven.Client.MoreLikeThis
 			return JsonConvert.DeserializeObject<T[]>(result);
         }
 
-		//public static string MoreLikeThis(this EmbeddedDatabaseCommands server, string index, string documentId, string fields)
-		//{
-		//    throw new NotImplementedException();
-		//}
-
         private static void EnsureIsNotNullOrEmpty(string key, string argName)
         {
             if (string.IsNullOrEmpty(key))
