@@ -467,7 +467,7 @@ namespace Raven.Tests.Linq
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers
 				.Where(x => x.Properties.Any(y => y.Key == "first"));
-			Assert.Equal("Key:first", q.ToString());
+            Assert.Equal("Properties_Key:first", q.ToString());
 		}
 
 		public class IndexedUser

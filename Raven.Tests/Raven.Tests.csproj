@@ -541,6 +541,7 @@
     <Compile Include="Json\RavenJObjects.cs" />
     <Compile Include="Linq\Any.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
+    <Compile Include="Linq\DynamicQueriesWithStaticIndexes.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
     <Compile Include="Linq\SampleGeoLocation.cs" />
     <Compile Include="Linq\User.cs" />
