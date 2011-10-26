@@ -5,8 +5,8 @@
 					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes"
-                     mc:Ignorable="d"
-					 Infrastructure:ModelAttacher.AttachModel="IndexesErrorsModel">
+					 mc:Ignorable="d"
+					 Infrastructure:ModelAttacher.AttachObservableModel="IndexesErrorsModel">
 
 	<Grid>
 		<Indexes:IndexesErrorsView />

@@ -5,7 +5,7 @@
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 Title="Home"
 					 Style="{StaticResource PageStyle}"
-					 Infrastructure:ModelAttacher.AttachModel="Raven.Studio.Models.HomeModel">
+					 Infrastructure:ModelAttacher.AttachObservableModel="Raven.Studio.Models.HomeModel">
 
 	<Grid>
 		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments.Value}"
