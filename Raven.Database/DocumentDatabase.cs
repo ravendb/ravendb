@@ -534,6 +534,20 @@ namespace Raven.Database
 						deleted = true;
 						foreach (var indexName in IndexDefinitionStorage.IndexNames)
 						{
+							AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
+							if(abstractViewGenerator == null)
+								continue;
+
+							var token = metadata.Value<string>(Constants.RavenEntityName);
+
+							if (token != null && // the document has a entity name
+								abstractViewGenerator.ForEntityNames.Count > 0) // the index operations on specific entities
+							{
+								if(abstractViewGenerator.ForEntityNames.Contains(token) == false)
+									continue;
+							}
+
+
 							var task = ((Func<Task>) (() => new RemoveFromIndexTask { Keys = { key } }))();
 							task.Index = indexName;
 							actions.Tasks.AddTask(task, SystemTime.UtcNow);
