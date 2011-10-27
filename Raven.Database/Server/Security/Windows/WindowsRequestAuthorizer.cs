@@ -34,24 +34,26 @@ namespace Raven.Database.Server.Security.Windows
 
 		public override bool Authorize(IHttpContext ctx)
 		{
-			var requestUrl = ctx.GetRequestUrl();
-
-			if (neverSecretUrls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
-				return true;
-
-
 			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx))
 			{
+				var requestUrl = ctx.GetRequestUrl();
+				if (neverSecretUrls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
+					return true;
+
 				ctx.SetStatusToUnauthorized();
 				return false;
 			}
 
-			IHttpRequest httpRequest = ctx.Request;
+			var httpRequest = ctx.Request;
 
 			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
 				IsInvalidUser(ctx) &&
 				IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false)
 			{
+				var requestUrl = ctx.GetRequestUrl();
+				if (neverSecretUrls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
+					return true;
+
 				ctx.SetStatusToUnauthorized();
 				return false;
 			}
