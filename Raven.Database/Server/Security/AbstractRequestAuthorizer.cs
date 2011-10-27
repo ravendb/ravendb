@@ -21,8 +21,14 @@ namespace Raven.Database.Server.Security
 			this.database = databaseGetter;
 			this.settings = settingsGetter;
 			this.tenantId = tenantIdGetter;
+
+			Initialize();
 		}
-		
+
+		protected virtual void Initialize()
+		{
+		}
+
 		public abstract bool Authorize(IHttpContext context);
 
 		public static bool IsGetRequest(string httpMethod, string requestPath)

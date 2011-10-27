@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
@@ -18,6 +19,18 @@ namespace Raven.Database.Server.Security.Windows
 				"/clientaccesspolicy.xml",
 				"/build/version",
 			};
+
+		private readonly List<string> requiredGroups = new List<string>();
+
+		protected override void Initialize()
+		{
+			var requiredGroupsString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredGroups"];
+			if (requiredGroupsString == null)
+				return;
+
+			var groups = requiredGroupsString.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);
+			requiredGroups.AddRange(groups);
+		}
 
 		public override bool Authorize(IHttpContext ctx)
 		{
@@ -48,12 +61,16 @@ namespace Raven.Database.Server.Security.Windows
 
 	  
 
-		private static bool IsInvalidUser(IHttpContext ctx)
+		private bool IsInvalidUser(IHttpContext ctx)
 		{
-			return (ctx.User == null || 
-				ctx.User.Identity == null || 
-				ctx.User.Identity.IsAuthenticated == false) || 
-				ctx.User.IsInRole();
+			var invalidUser = (ctx.User == null || 
+			                     ctx.User.Identity == null || 
+			                     ctx.User.Identity.IsAuthenticated == false);
+			if(invalidUser == false &&  requiredGroups.Count > 0)
+			{
+				return requiredGroups.All(requiredGroup => !ctx.User.IsInRole(requiredGroup));
+			}
+			return invalidUser;
 		}
 	}
 }
