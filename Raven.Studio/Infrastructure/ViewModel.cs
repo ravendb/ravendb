@@ -63,7 +63,7 @@ namespace Raven.Studio.Infrastructure
 				return;
 			}
 
-			var databaseName = ApplicationModel.GetQueryParam("database");
+			var databaseName = new UrlUtil().GetQueryParam("database");
 			var database = server.Value.Databases.Where(x => x.Name == databaseName).FirstOrDefault();
 			if (database != null)
 			{
