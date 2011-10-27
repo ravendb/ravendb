@@ -322,7 +322,7 @@ namespace Raven.Abstractions.Linq
 							result = Count;
 							return true;
 						}
-						result = Enumerate().Count((Func<object, bool>)args[0]);
+						result = Enumerable.Count(this,(Func<object, bool>)args[0]);
 						return true;
 					case "DefaultIfEmpty":
 						if (inner.Length > 0)
