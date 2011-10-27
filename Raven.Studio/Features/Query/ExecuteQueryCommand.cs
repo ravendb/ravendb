@@ -29,11 +29,6 @@ namespace Raven.Studio.Features.Query
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 		}
 
-		public override bool CanExecute(object parameter)
-		{
-			return true;
-		}
-
 		public override void Execute(object parameter)
 		{
 			model.Error = null;
