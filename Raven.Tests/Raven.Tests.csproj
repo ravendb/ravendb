@@ -595,6 +595,7 @@
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />
+    <Compile Include="Querying\SearchOperator.cs" />
     <Compile Include="Querying\UsingDocumentQuery.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithLocalServer.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithRemoteServer.cs" />
