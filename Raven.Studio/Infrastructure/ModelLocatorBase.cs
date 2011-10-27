@@ -37,7 +37,7 @@ namespace Raven.Studio.Infrastructure
 
 		public static string GetParamAfter(string urlPrefix)
 		{
-			var url = ApplicationModel.Current.NavigationState;
+			var url = ApplicationModel.NavigationState;
 			if (url.StartsWith(urlPrefix) == false)
 				return null;
 			var queryPart = url.IndexOf('?');

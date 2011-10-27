@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -17,8 +18,8 @@ namespace Raven.Studio.Features.Documents
 		{
 			if (string.IsNullOrEmpty(viewableDocument.Id))
 			{
-				EditDocumentModelLocator.ProjectionDocument = viewableDocument.InnerDocument;
-				ApplicationModel.Current.Navigate(new Uri("/Edit?projection=true", UriKind.Relative));
+				var projection = JsonConvert.SerializeObject(viewableDocument.InnerDocument);
+				ApplicationModel.Current.Navigate(new Uri("/Edit?projection=" + Uri.EscapeDataString(projection), UriKind.Relative));
 			}
 			else
 			{

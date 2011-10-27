@@ -22,7 +22,7 @@ namespace Raven.Studio.Models
 			};
 		}
 
-		public string NavigationState { get { return threadSafeNavigationState; } }
+		public static string NavigationState { get { return threadSafeNavigationState; } }
 
 		private ApplicationModel()
 		{
