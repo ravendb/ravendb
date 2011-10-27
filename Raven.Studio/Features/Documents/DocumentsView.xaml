@@ -6,44 +6,46 @@
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-                     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit" Tag="Documents">
+					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+					 Tag="Documents">
 
 	<Grid>
-        <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}">
-            <toolkit:HeaderedContentControl.Header>
-                <toolkit:DockPanel LastChildFill="False">
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="{StaticResource Image_Document_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
-                        <TextBlock x:Name="HeaderText"
-				        Style="{StaticResource Style_Text_Header}"
-				        Text="Documents" 
-                        toolkit:DockPanel.Dock="Left"
-                        VerticalAlignment="Center"
-                         Margin="6"/>
-                    </StackPanel>
+		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}">
+			<toolkit:HeaderedContentControl.Header>
+				<toolkit:DockPanel LastChildFill="False">
+					<StackPanel Orientation="Horizontal">
+						<Image Source="{StaticResource Image_Document_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+						<TextBlock x:Name="HeaderText"
+						Style="{StaticResource Style_Text_Header}"
+						Text="Documents" 
+						toolkit:DockPanel.Dock="Left"
+						VerticalAlignment="Center"
+						 Margin="6"/>
+					</StackPanel>
 
-                    <StackPanel  toolkit:DockPanel.Dock="Right"
+					<StackPanel  toolkit:DockPanel.Dock="Right"
 					 Orientation="Horizontal" VerticalAlignment="Center">
-                        <HyperlinkButton Command="{Binding PreviousPage}" Style="{StaticResource Style_Link_MouseOverChrome}"
-                                         ToolTipService.ToolTip="Previous Page">
-                            <HyperlinkButton.Content>
-                                <Image Source="{StaticResource Image_PreviousPage_Tiny}" Stretch="None" VerticalAlignment="Center"/>
-                            </HyperlinkButton.Content>
-                        </HyperlinkButton>
-                      <TextBlock Text="Page " VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding CurrentPage}" VerticalAlignment="Center"/>
-                        <TextBlock Text=" of " VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding TotalPages.Value}" VerticalAlignment="Center"/>
-                        <HyperlinkButton Command="{Binding NextPage}" Style="{StaticResource Style_Link_MouseOverChrome}"
-                                         ToolTipService.ToolTip="Next Page">
-                            <HyperlinkButton.Content>
-                                <Image Source="{StaticResource Image_NextPage_Tiny}" Stretch="None" VerticalAlignment="Center"/>
-                            </HyperlinkButton.Content>
-                        </HyperlinkButton>
-                    </StackPanel>
-                </toolkit:DockPanel>
-               
-            </toolkit:HeaderedContentControl.Header>
+						<HyperlinkButton Command="{Binding Path=Pager.PrevPage}" Style="{StaticResource Style_Link_MouseOverChrome}"
+										 ToolTipService.ToolTip="Previous Page">
+							<HyperlinkButton.Content>
+								<Image Source="{StaticResource Image_PreviousPage_Tiny}" Stretch="None" VerticalAlignment="Center"/>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
+						<TextBlock Text="Page " VerticalAlignment="Center"/>
+						<TextBlock Text="{Binding Path=Pager.CurrentPage}" VerticalAlignment="Center"/>
+						<TextBlock Text=" of " VerticalAlignment="Center"/>
+						<TextBlock Text="{Binding Path=Pager.TotalPages.Value}" VerticalAlignment="Center"/>
+						<HyperlinkButton Command="{Binding Path=Pager.NextPage}"
+										 Style="{StaticResource Style_Link_MouseOverChrome}"
+										 ToolTipService.ToolTip="Next Page">
+							<HyperlinkButton.Content>
+								<Image Source="{StaticResource Image_NextPage_Tiny}" Stretch="None" VerticalAlignment="Center"/>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
+					</StackPanel>
+				</toolkit:DockPanel>
+			   
+			</toolkit:HeaderedContentControl.Header>
 
 
 		<ListBox ItemsSource="{Binding Documents}"
@@ -51,7 +53,7 @@
 				 Style="{StaticResource DocumentList}"
 				 Grid.Row="1"
 				 Grid.ColumnSpan="3"
-                 Margin="10">
+				 Margin="10">
 			<Controls:ContextMenuService.ContextMenu>
 				<Controls:ContextMenu>
 					<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
@@ -98,16 +100,16 @@
 									Orientation="Horizontal"
 									HorizontalAlignment="Right"
 									VerticalAlignment="Bottom">
-                                <Button 
+								<Button 
 									 VerticalAlignment="Center"
 									 Style="{StaticResource Style_Button_MouseOverChrome}"
-                                     Padding="4"                                     
-                                     Command="{Binding Path=Edit}"
+									 Padding="4"                                     
+									 Command="{Binding Path=Edit}"
 											 ToolTipService.ToolTip="click here to edit the document">
-                                    <Button.Content>
-                                        <Image Source="{StaticResource Image_Edit_Small}" Stretch="None"/>
-                                    </Button.Content>
-                                </Button>
+									<Button.Content>
+										<Image Source="{StaticResource Image_Edit_Small}" Stretch="None"/>
+									</Button.Content>
+								</Button>
 						</StackPanel>
 					</Grid>
 				</DataTemplate>

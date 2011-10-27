@@ -21,6 +21,10 @@ namespace Raven.Studio.Models
 			return fetchDocuments(this);
 		}
 
-		public readonly PagerModel Pager = new PagerModel();
+		private readonly PagerModel pager = new PagerModel();
+		public PagerModel Pager
+		{
+			get { return pager; }
+		}
 	}
 }
