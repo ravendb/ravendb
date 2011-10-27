@@ -63,7 +63,7 @@ namespace Raven.Tests
 				IOExtensions.DeleteDirectory(path);
 			documentStore.Initialize();
 
-			new RavenDocumentsByEntityName().Execute(documentStore);
+			CreateDefaultIndexes(documentStore);
 
 			if (allocatedMemory != null && inMemory)
 			{
@@ -72,6 +72,11 @@ namespace Raven.Tests
 			}
 
 			return documentStore;
+		}
+
+		protected virtual void CreateDefaultIndexes(EmbeddableDocumentStore documentStore)
+		{
+			new RavenDocumentsByEntityName().Execute(documentStore);
 		}
 
 		protected virtual void ModifyStore(EmbeddableDocumentStore documentStore)

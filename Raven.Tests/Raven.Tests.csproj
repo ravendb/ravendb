@@ -552,6 +552,7 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\NicolasGarfinkiel.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>

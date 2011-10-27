@@ -238,6 +238,16 @@ namespace Raven.Abstractions.Linq
 			}
 		}
 
+		public IEnumerable<object> Select(Func<object, object> func)
+		{
+			return new DynamicList(parent, Enumerable.Select(this, func).ToArray());
+		}
+
+		public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
+		{
+			return new DynamicList(parent, Enumerable.SelectMany(this, func).ToArray());
+		}
+
 		/// <summary>
 		/// Gets the value for the specified name
 		/// </summary>
@@ -325,7 +335,7 @@ namespace Raven.Abstractions.Linq
 							result = Count;
 							return true;
 						}
-						result = Enumerable.Count<object>(this, (Func<object, bool>)args[0]);
+						result = Enumerate().Count((Func<object, bool>)args[0]);
 						return true;
 					case "DefaultIfEmpty":
 						if (inner.Length > 0)
@@ -560,6 +570,11 @@ namespace Raven.Abstractions.Linq
 		{
 			get { return inner; }
 		}
+	}
+
+	public class DynamicEnumerableObject
+	{
+		
 	}
 }
 #endif
