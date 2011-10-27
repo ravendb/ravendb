@@ -106,8 +106,8 @@
     <Compile Include="Behaviors\LinkHighlighter.cs" />
     <Compile Include="Behaviors\StringCollection.cs" />
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
-    <Compile Include="Commands\IncreasePageCommand.cs" />
-    <Compile Include="Commands\DecreasePageCommand.cs" />
+    <Compile Include="Commands\NavigateToNextPageCommand.cs" />
+    <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
     <Compile Include="Controls\Editors\QueryEditor.cs" />
@@ -260,6 +260,7 @@
     </Compile>
     <Compile Include="Models\ApplicationModel.cs" />
     <Compile Include="Models\DatabaseModel.cs" />
+    <Compile Include="Models\PagerModel.cs" />
     <Compile Include="Models\QueryModel.cs" />
     <Compile Include="Models\ServerModel.cs" />
     <Compile Include="Models\StatisticsModel.cs" />

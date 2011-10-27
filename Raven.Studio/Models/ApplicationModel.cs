@@ -54,18 +54,9 @@ namespace Raven.Studio.Models
 				Deployment.Current.Dispatcher.InvokeAsync(() => Application.Current.Host.NavigationState = source.ToString());
 		}
 
-		public static string GetQueryParam(string name)
+		public void Navigate(string url)
 		{
-			var indexOf = threadSafeNavigationState.IndexOf('?');
-			if (indexOf == -1)
-				return null;
-
-			var options = threadSafeNavigationState.Substring(indexOf + 1).Split(new[] { '&', }, StringSplitOptions.RemoveEmptyEntries);
-
-			return (from option in options
-					where option.StartsWith(name) && option.Length > name.Length && option[name.Length] == '='
-					select option.Substring(name.Length + 1)
-					).FirstOrDefault();
+			Navigate((new Uri(url, UriKind.Relative)));
 		}
 
 		public void AddNotification(Notification notification)

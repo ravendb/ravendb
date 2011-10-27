@@ -1,5 +1,4 @@
 using System;
-using System.Windows.Browser;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -11,8 +10,14 @@ namespace Raven.Studio.Models
 		public PagerModel()
 		{
 			PageSize = 25;
-			TotalPages = new Observable<long>();
 			url = new UrlUtil();
+			SetTotalPages(new Observable<long>());
+		}
+
+		public void SetTotalPages(Observable<long> observable)
+		{
+			TotalPages = observable;
+			TotalPages.PropertyChanged += (sender, args) => OnPropertyChanged("HasNextPage");
 		}
 
 		public int PageSize { get; set; }
@@ -22,7 +27,7 @@ namespace Raven.Studio.Models
 			get { return Skip / PageSize; }
 		}
 
-		public Observable<long> TotalPages { get; set; }
+		public Observable<long> TotalPages { get; private set; }
 
 		private ushort skip;
 		public ushort Skip
@@ -61,7 +66,7 @@ namespace Raven.Studio.Models
 		{
 			if (HasPrevPage() == false)
 				return false;
-			NavigateToPage(CurrentPage + 1);
+			NavigateToPage(Math.Max(CurrentPage - 1, 0));
 			return true;
 		}
 
