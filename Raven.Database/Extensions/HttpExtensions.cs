@@ -157,17 +157,17 @@ namespace Raven.Database.Extensions
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
-	    private static string GetHeaderValue(RavenJToken header)
-	    {
-	    	if (header.Type == JTokenType.Date)
+		private static string GetHeaderValue(RavenJToken header)
+		{
+			if (header.Type == JTokenType.Date)
 			{
 				return header.Value<DateTime>().ToString("r");
 			}
 
-	        return StripQuotesIfNeeded(header.ToString(Formatting.None));
-	    }
+			return StripQuotesIfNeeded(header.ToString(Formatting.None));
+		}
 
-	    private static string StripQuotesIfNeeded(string str)
+		private static string StripQuotesIfNeeded(string str)
 		{
 			if (str.StartsWith("\"") && str.EndsWith("\""))
 				return str.Substring(1, str.Length - 2);
@@ -356,21 +356,21 @@ namespace Raven.Database.Extensions
 		public static double GetLat(this IHttpContext context)
 		{
 			double lat;
-			double.TryParse(context.Request.QueryString["latitude"], out lat);
+			double.TryParse(context.Request.QueryString["latitude"], NumberStyles.Any, CultureInfo.InvariantCulture, out lat);
 			return lat;
 		}
 
 		public static double GetLng(this IHttpContext context)
 		{
 			double lng;
-			double.TryParse(context.Request.QueryString["longitude"], out lng);
+			double.TryParse(context.Request.QueryString["longitude"], NumberStyles.Any, CultureInfo.InvariantCulture, out lng);
 			return lng;
 		}
 
 		public static double GetRadius(this IHttpContext context)
 		{
 			double radius;
-			double.TryParse(context.Request.QueryString["radius"], out radius);
+			double.TryParse(context.Request.QueryString["radius"], NumberStyles.Any, CultureInfo.InvariantCulture, out radius);
 			return radius;
 		}
 
