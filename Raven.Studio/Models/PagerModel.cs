@@ -26,7 +26,7 @@ namespace Raven.Studio.Models
 
 		public int CurrentPage
 		{
-			get { return Skip / PageSize; }
+			get { return Skip / PageSize + 1; }
 		}
 
 		public Observable<long> TotalPages { get; private set; }
@@ -37,11 +37,7 @@ namespace Raven.Studio.Models
 			get
 			{
 				if (skip == 0)
-				{
 					ushort.TryParse(url.GetQueryParam("skip"), out skip);
-					if (skip < 1)
-						skip = 1;
-				}
 				return skip;
 			}
 		}
