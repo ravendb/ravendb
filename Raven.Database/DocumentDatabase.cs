@@ -682,6 +682,7 @@ namespace Raven.Database
 		        actions.Indexing.AddIndex(name, definition.IsMapReduce);
 		        workContext.ShouldNotifyAboutWork();
 		    });
+			workContext.ClearErrorsFor(name);
 			return name;
 		}
 

@@ -830,7 +830,10 @@ If you really want to do in memory filtering on the data returned from the query
 		public void WhereContains(string fieldName, params object [] values)
 		{
 			if (values == null || values.Length == 0)
+			{
+				WhereEquals(fieldName, "Empty_Contains_" + Guid.NewGuid());
 				return;
+			}
 
 			OpenSubclause();
 

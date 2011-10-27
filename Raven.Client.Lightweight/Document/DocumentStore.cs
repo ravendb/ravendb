@@ -476,7 +476,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			if (string.IsNullOrEmpty(DefaultDatabase) == false)
 			{
-				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase);
+				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 			}
 #endif
 

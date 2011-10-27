@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
@@ -53,7 +54,8 @@ namespace Raven.Storage.Esent
 
 		public void LimitSystemCache()
 		{
-			int cacheSizeMaxInMegabytes = GetValueFromConfiguration("Raven/Esent/CacheSizeMax",1024);
+			var defaultCacheSize = Environment.Is64BitProcess ? 1024 : 256;
+			int cacheSizeMaxInMegabytes = GetValueFromConfiguration("Raven/Esent/CacheSizeMax",defaultCacheSize);
 			int cacheSizeMax = TranslateToSizeInDatabasePages(cacheSizeMaxInMegabytes);
 			if (SystemParameters.CacheSizeMax > cacheSizeMax)
 			{

@@ -642,7 +642,8 @@ namespace Raven.Database.Indexing
 					{
 						f = f.Substring(0, f.Length - "_Range".Length);
 					}
-					if (parent.viewGenerator.ContainsField(f) == false)
+					if (parent.viewGenerator.ContainsField(f) == false && 
+						parent.viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
 						throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
 				}
 

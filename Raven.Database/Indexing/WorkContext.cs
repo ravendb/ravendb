@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using NLog;
 using Raven.Abstractions;
@@ -132,9 +133,26 @@ namespace Raven.Database.Indexing
 		}
 
 
-	    public void Dispose()
-	    {
-	        shouldNotifyOnWork.Dispose();
-	    }
+		public void Dispose()
+		{
+			shouldNotifyOnWork.Dispose();
+		}
+
+		public void ClearErrorsFor(string name)
+		{
+			var list = new List<ServerError>();
+
+			ServerError error;
+			while (serverErrors.TryDequeue(out error))
+			{
+				if (StringComparer.InvariantCultureIgnoreCase.Equals(error.Index, name) == false)
+					list.Add(error);
+			}
+
+			foreach (var serverError in list)
+			{
+				serverErrors.Enqueue(serverError);
+			}
+		}
 	}
 }
