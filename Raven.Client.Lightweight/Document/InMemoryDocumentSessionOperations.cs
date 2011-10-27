@@ -278,7 +278,7 @@ namespace Raven.Client.Document
 			return EntityChanged(entity, value);
 		}
 
-		internal void IncrementRequestCount()
+		public void IncrementRequestCount()
 		{
 			if (++NumberOfRequests > MaxNumberOfRequestsPerSession)
 				throw new InvalidOperationException(
