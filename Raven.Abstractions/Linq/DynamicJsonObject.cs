@@ -177,7 +177,7 @@ namespace Raven.Abstractions.Linq
 						if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
 							return dateTime;
 					}
-					return value;
+					return value ?? new DynamicNullObject { IsExplicitNull = true };
 			}
 		}
 
