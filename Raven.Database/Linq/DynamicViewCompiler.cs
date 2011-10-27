@@ -132,14 +132,17 @@ namespace Raven.Database.Linq
 			VariableDeclaration mapDefinition = map.Trim().StartsWith("from") ? 
 				TransformMapDefinitionFromLinqQuerySyntax(map, out entityName) : 
 				TransformMapDefinitionFromLinqMethodSyntax(map, out entityName);
-	
-			
-			//this.ForEntityNames.Add(entityName);
-			ctor.Body.AddChild(new ExpressionStatement(
-			                   	new InvocationExpression(
-			                   		new MemberReferenceExpression(new MemberReferenceExpression(new ThisReferenceExpression(), "ForEntityNames"), "Add"),
-			                   		new List<Expression> { new PrimitiveExpression(entityName, entityName) })
-			                   	));
+
+			if (string.IsNullOrEmpty(entityName) == false)
+			{
+				//this.ForEntityNames.Add(entityName);
+				ctor.Body.AddChild(new ExpressionStatement(
+				                   	new InvocationExpression(
+				                   		new MemberReferenceExpression(
+				                   			new MemberReferenceExpression(new ThisReferenceExpression(), "ForEntityNames"), "Add"),
+				                   		new List<Expression> {new PrimitiveExpression(entityName, entityName)})
+				                   	));
+			}
 			// this.AddMapDefinition(from doc in docs ...);
 			ctor.Body.AddChild(new ExpressionStatement(
 			                   	new InvocationExpression(new MemberReferenceExpression(new ThisReferenceExpression(), "AddMapDefinition"),
