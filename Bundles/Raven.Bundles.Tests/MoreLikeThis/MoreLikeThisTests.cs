@@ -114,9 +114,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
                 //WaitForUserToContinueTheTest(documentStore);
 
-                var str = session.Advanced.MoreLikeThis("DataBodyIndex", key, "Body");
+                var items = session.Advanced.MoreLikeThis<Data>("DataBodyIndex", key, "Body");
 
-                Assert.False(String.IsNullOrEmpty(str));
+                Assert.NotEmpty(items);
             }
         }
 
