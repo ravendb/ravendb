@@ -9,17 +9,14 @@ namespace Raven.Studio.Infrastructure
 	{
 		public string Url { get; private set; }
 
+		public UrlUtil() : this(ApplicationModel.NavigationState) { }
+
 		public UrlUtil(string url)
 		{
 			Url = url;
 		}
 
 		private Dictionary<string, string> queryParams;
-
-		public UrlUtil()
-		{
-			throw new NotImplementedException();
-		}
 
 		public Dictionary<string, string> QueryParams
 		{
