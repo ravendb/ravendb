@@ -4,7 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
@@ -12,6 +15,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.MoreLikeThis
 {
@@ -79,14 +83,47 @@ namespace Raven.Bundles.MoreLikeThis
 				searcher.Search(mltQuery, tsdc);
 				var hits = tsdc.TopDocs().ScoreDocs;
 
-				var documentIds = hits.Select(hit => searcher.Doc(hit.doc).Get(Constants.DocumentIdFieldName)).Distinct();
+				var documentIds = hits.Select(hit => searcher.Doc(hit.doc).Get(Constants.DocumentIdFieldName))
+					.Distinct();
 
-				context.WriteJson(
-					from docId in documentIds
-					let doc = Database.Get(docId, null)
-					where doc != null
-					select doc
-					);
+				var jsonDocuments =
+					documentIds
+						.Select(docId => Database.Get(docId, null))
+						.Where(it => it != null)
+						.ToArray();
+
+				var result = new MultiLoadResult();
+
+				var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.Value.ToByteArray()));
+				includedEtags.AddRange(Database.GetIndexEtag(indexName).ToByteArray());
+				var loadedIds = new HashSet<string>(jsonDocuments.Select(x=>x.Key));
+				var addIncludesCommand = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, includedDoc) =>
+				{
+					includedEtags.AddRange(etag.ToByteArray());
+					result.Includes.Add(includedDoc);
+				}, context.Request.QueryString.GetValues("include"), loadedIds);
+
+				foreach (var jsonDocumet in jsonDocuments)
+				{
+					addIncludesCommand.Execute(jsonDocumet.DataAsJson);
+				}
+
+				Guid computedEtag;
+
+				using (var md5 = MD5.Create())
+				{
+					var computeHash = md5.ComputeHash(includedEtags.ToArray());
+					computedEtag = new Guid(computeHash);
+				}
+
+				if (context.MatchEtag(computedEtag))
+				{
+					context.SetStatusToNotModified();
+					return;
+				}
+
+				context.Response.AddHeader("ETag", computedEtag.ToString());
+				context.WriteJson(result);
 			}
 		}
 	}
