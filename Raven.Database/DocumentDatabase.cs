@@ -459,16 +459,6 @@ namespace Raven.Database
 			return nextIdentityValue;
 		}
 
-		private void AddIndexingTask(IStorageActionsAccessor actions, RavenJToken metadata, Func<Task> taskGenerator)
-		{
-			foreach (var indexName in IndexDefinitionStorage.IndexNames)
-			{
-				var task = taskGenerator();
-				task.Index = indexName;
-				actions.Tasks.AddTask(task, SystemTime.UtcNow);
-			}
-		}
-
 		private void AssertPutOperationNotVetoed(string key, RavenJObject metadata, RavenJObject document, TransactionInformation transactionInformation)
 		{
 			var vetoResult = PutTriggers
@@ -542,7 +532,26 @@ namespace Raven.Database
 					if (actions.Documents.DeleteDocument(key, etag, out metadata))
 					{
 						deleted = true;
-						AddIndexingTask(actions, metadata, () => new RemoveFromIndexTask { Keys = { key } });
+						foreach (var indexName in IndexDefinitionStorage.IndexNames)
+						{
+							AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
+							if(abstractViewGenerator == null)
+								continue;
+
+							var token = metadata.Value<string>(Constants.RavenEntityName);
+
+							if (token != null && // the document has a entity name
+								abstractViewGenerator.ForEntityNames.Count > 0) // the index operations on specific entities
+							{
+								if(abstractViewGenerator.ForEntityNames.Contains(token) == false)
+									continue;
+							}
+
+
+							var task = ((Func<Task>) (() => new RemoveFromIndexTask { Keys = { key } }))();
+							task.Index = indexName;
+							actions.Tasks.AddTask(task, SystemTime.UtcNow);
+						}
 						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
 					}
 				}
