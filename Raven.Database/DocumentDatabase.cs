@@ -547,10 +547,12 @@ namespace Raven.Database
 									continue;
 							}
 
-
-							var task = ((Func<Task>) (() => new RemoveFromIndexTask { Keys = { key } }))();
-							task.Index = indexName;
-							actions.Tasks.AddTask(task, SystemTime.UtcNow);
+							string indexNameCopy = indexName;
+							var task = actions.GetTask<RemoveFromIndexTask>(x => x.Index == indexNameCopy, new RemoveFromIndexTask
+							{
+								Index = indexNameCopy
+							});
+							task.Keys.Add(key);
 						}
 						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
 					}

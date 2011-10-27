@@ -4,8 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions;
 using Raven.Database.Storage;
+using Raven.Database.Tasks;
 using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Storage.Esent
@@ -15,6 +19,7 @@ namespace Raven.Storage.Esent
 	{
 		private readonly DocumentStorageActions inner;
 
+		private readonly DateTime createdAt = SystemTime.UtcNow;
 		[CLSCompliant(false)]
 		public StorageActionsAccessor(DocumentStorageActions inner)
 		{
@@ -87,8 +92,28 @@ namespace Raven.Storage.Esent
 					return false;
 			}
 		}
+		private readonly List<Task> tasks = new List<Task>();
 
-	    public void Dispose()
+		public T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Task
+		{
+			T task = tasks.OfType<T>().FirstOrDefault(predicate);
+			if (task == null)
+			{
+				tasks.Add(newTask);
+				return newTask;
+			}
+			return task;
+		}
+
+		public void SaveAllTasks()
+		{
+			foreach (var task in tasks)
+			{
+				Tasks.AddTask(task, createdAt);
+			}
+		}
+
+		public void Dispose()
 	    {
 			// nothing to do here
 	    }

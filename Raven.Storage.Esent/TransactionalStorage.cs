@@ -374,8 +374,10 @@ namespace Raven.Storage.Esent
 				: CommitTransactionGrbit.None;
 			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher))
 			{
-				current.Value = new StorageActionsAccessor(pht);
+				var storageActionsAccessor = new StorageActionsAccessor(pht);
+				current.Value = storageActionsAccessor;
 				action(current.Value);
+				storageActionsAccessor.SaveAllTasks();
 				pht.Commit(txMode);
 			}
 		}
