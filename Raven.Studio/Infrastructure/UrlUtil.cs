@@ -17,7 +17,6 @@ namespace Raven.Studio.Infrastructure
 		}
 
 		private Dictionary<string, string> queryParams;
-
 		public Dictionary<string, string> QueryParams
 		{
 			get
@@ -27,7 +26,7 @@ namespace Raven.Studio.Infrastructure
 					queryParams = new Dictionary<string, string>();
 					var indexOf = Url.IndexOf('?');
 					if (indexOf == -1)
-						return null;
+						return queryParams;
 
 					var options = Url.Substring(indexOf + 1).Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
 					foreach (var option in options)
