@@ -1174,6 +1174,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
+		/// <param name="index"></param>
 		/// <param name="query"></param>
 		/// <param name="facetSetupDoc"></param>
 		/// <returns></returns>
