@@ -297,18 +297,11 @@ namespace Raven.Abstractions.Linq
 			return inner.Value<string>(Constants.DocumentIdFieldName) ?? (object)new DynamicNullObject();
 		}
 
-		/// <summary>
-		/// A list that responds to the dynamic object protocol
-		/// </summary>
 		public class DynamicList : DynamicObject, IEnumerable<object>
 		{
 			private readonly DynamicJsonObject parent;
 			private readonly object[] inner;
 
-			/// <summary>
-			/// Initializes a new instance of the <see cref="DynamicList"/> class.
-			/// </summary>
-			/// <param name="inner">The inner.</param>
 			public DynamicList(object[] inner)
 			{
 				this.inner = inner;
@@ -319,12 +312,6 @@ namespace Raven.Abstractions.Linq
 				this.parent = parent;
 			}
 
-			/// <summary>
-			/// Provides the implementation for operations that invoke a member. Classes derived from the <see cref="T:System.Dynamic.DynamicObject"/> class can override this method to specify dynamic behavior for operations such as calling a method.
-			/// </summary>
-			/// <returns>
-			/// true if the operation is successful; otherwise, false. If this method returns false, the run-time binder of the language determines the behavior. (In most cases, a language-specific run-time exception is thrown.)
-			/// </returns>
 			public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
 			{
 				switch (binder.Name)
@@ -361,6 +348,11 @@ namespace Raven.Abstractions.Linq
 				}
 			}
 
+			public dynamic First()
+			{
+				return Enumerate().First();
+			}
+
 			public dynamic First(Func<dynamic, bool> predicate)
 			{
 				return Enumerate().First(predicate);
@@ -386,10 +378,6 @@ namespace Raven.Abstractions.Linq
 				return Enumerate().SingleOrDefault(predicate);
 			}
 
-			/// <summary>
-			/// Gets the enumerator.
-			/// </summary>
-			/// <returns></returns>
 			public IEnumerator<object> GetEnumerator()
 			{
 				return Enumerate().GetEnumerator();
@@ -400,146 +388,98 @@ namespace Raven.Abstractions.Linq
 				return Enumerate().GetEnumerator();
 			}
 
-			/// <summary>
-			/// Copies to the specified array
-			/// </summary>
-			/// <param name="array">The array.</param>
-			/// <param name="index">The index.</param>
+			
 			public void CopyTo(Array array, int index)
 			{
 				((ICollection)inner).CopyTo(array, index);
 			}
 
-			/// <summary>
-			/// Gets the sync root.
-			/// </summary>
-			/// <value>The sync root.</value>
+			
 			public object SyncRoot
 			{
 				get { return inner.SyncRoot; }
 			}
 
-			/// <summary>
-			/// Gets a value indicating whether this instance is synchronized.
-			/// </summary>
-			/// <value>
-			/// 	<c>true</c> if this instance is synchronized; otherwise, <c>false</c>.
-			/// </value>
+			
 			public bool IsSynchronized
 			{
 				get { return inner.IsSynchronized; }
 			}
 
-			/// <summary>
-			/// Gets or sets the <see cref="System.Object"/> at the specified index.
-			/// </summary>
-			/// <value></value>
 			public object this[int index]
 			{
 				get { return inner[index]; }
 				set { inner[index] = value; }
 			}
 
-			/// <summary>
-			/// Gets a value indicating whether this instance is fixed size.
-			/// </summary>
-			/// <value>
-			/// 	<c>true</c> if this instance is fixed size; otherwise, <c>false</c>.
-			/// </value>
+			
 			public bool IsFixedSize
 			{
 				get { return inner.IsFixedSize; }
 			}
 
-			/// <summary>
-			/// Determines whether the list contains the specified item.
-			/// </summary>
-			/// <param name="item">The item.</param>
+			
 			public bool Contains(object item)
 			{
 				return inner.Contains(item);
 			}
 
-			/// <summary>
-			/// Find the index of the specified item in the list
-			/// </summary>
-			/// <param name="item">The item.</param>
-			/// <returns></returns>
+			
 			public int IndexOf(object item)
 			{
 				return Array.IndexOf(inner, item);
 			}
 
-			/// <summary>
-			/// Find the index of the specified item in the list
-			///  </summary>
-			/// <param name="item">The item.</param>
-			/// <param name="index">The index.</param>
-			/// <returns></returns>
+		
 			public int IndexOf(object item, int index)
 			{
 				return Array.IndexOf(inner, item, index);
 			}
 
-			/// <summary>
-			/// Find the index of the specified item in the list/// 
-			/// </summary>
-			/// <param name="item">The item.</param>
-			/// <param name="index">The index.</param>
-			/// <param name="count">The count.</param>
-			/// <returns></returns>
+		
 			public int IndexOf(object item, int index, int count)
 			{
 				return Array.IndexOf(inner, item, index, count);
 			}
 
-			/// <summary>
-			/// Gets the count.
-			/// </summary>
-			/// <value>The count.</value>
 			public int Count
 			{
 				get { return inner.Length; }
 			}
 
-			/// <summary>
-			/// Redirector for sum operation
-			/// </summary>
 			public int Sum(Func<dynamic, int> aggregator)
 			{
 				return Enumerate().Sum(aggregator);
 			}
 
-			/// <summary>
-			/// Redirector for sum operation
-			/// </summary>
 			public decimal Sum(Func<dynamic, decimal> aggregator)
 			{
 				return Enumerate().Sum(aggregator);
 			}
 
-			/// <summary>
-			/// Redirector for sum operation
-			/// </summary>
 			public float Sum(Func<dynamic, float> aggregator)
 			{
 				return Enumerate().Sum(aggregator);
 			}
 
-			/// <summary>
-			/// Redirector for sum operation
-			/// </summary>
 			public double Sum(Func<dynamic, double> aggregator)
 			{
 				return Enumerate().Sum(aggregator);
 			}
 
-			/// <summary>
-			/// Redirector for sum operation
-			/// </summary>
 			public long Sum(Func<dynamic, long> aggregator)
 			{
 				return Enumerate().Sum(aggregator);
+			}
+
+			public dynamic Last()
+			{
+				return Enumerate().Last();
+			}
+
+			public dynamic LastOrDefault()
+			{
+				return Enumerate().LastOrDefault();
 			}
 
 			/// <summary>
