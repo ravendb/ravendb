@@ -51,9 +51,17 @@ namespace Raven.Database.Queries
 						if (abstractViewGenerator.CountOfSelectMany > 1) 
 							return false;
 
-						if (abstractViewGenerator.ForEntityNames.Count != 1 || // we only allow indexes with a single entity name
-							abstractViewGenerator.ForEntityNames.Contains(entityName) == false) // for the specified entity name
-							return false;
+						if(entityName == null)
+						{
+							if (abstractViewGenerator.ForEntityNames.Count != 0)
+								return false;
+						}
+						else
+						{
+							if (abstractViewGenerator.ForEntityNames.Count != 1 || // we only allow indexes with a single entity name
+								abstractViewGenerator.ForEntityNames.Contains(entityName) == false) // for the specified entity name
+								return false;
+						}
 
 						return fieldsQueriedUpon.All(abstractViewGenerator.ContainsFieldOnMap);
 					})
