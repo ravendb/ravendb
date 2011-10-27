@@ -1,4 +1,6 @@
 using System;
+using System.Windows.Input;
+using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -74,6 +76,16 @@ namespace Raven.Studio.Models
 		{
 			url.SetQueryParam("skip", skip + PageSize);
 			url.NavigateTo();
+		}
+
+		public ICommand NextPage
+		{
+			get { return new NavigateToNextPageCommand(this); }
+		}
+
+		public ICommand PrevPage
+		{
+			get { return new NavigateToPrevPageCommand(this); }
 		}
 	}
 }

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using System.Windows.Input;
-using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 
@@ -24,15 +22,5 @@ namespace Raven.Studio.Models
 		}
 
 		public readonly PagerModel Pager = new PagerModel();
-
-		public ICommand NextPage
-		{
-			get{ return new NavigateToNextPageCommand(Pager);}
-		}
-
-		public ICommand PreviousPage
-		{
-			get { return new NavigateToPrevPageCommand(Pager); }
-		}
 	}
 }
