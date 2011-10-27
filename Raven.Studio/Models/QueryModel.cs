@@ -107,7 +107,7 @@ namespace Raven.Studio.Models
 						if(term.IndexOfAny(new[]{' ','\t'})  == -1)
 							terms.Add(term);
 						else
-							terms.Add('"' + term + '"'); // quote the term
+							terms.Add('"' + term + '"'); // qoute the term
 					}
 				});
 		}
