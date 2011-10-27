@@ -5,7 +5,7 @@
 					 xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
 					 Infrastructure:ModelAttacher.AttachObservableModel="Raven.Studio.Features.Logs.LogsModel">
 
-	<Grid>
+	<Grid DataContext="{Binding Value}">
 		<Logs:LogsView />
 	</Grid>
 </Infrastructure:View>
