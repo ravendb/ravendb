@@ -131,7 +131,7 @@ namespace Raven.Tests.Bugs
 		public class TestResultItem
 		{
 			public string DocId { get; set; }
-			public string Name { get; set; }
+			public string Name2 { get; set; }
 		}
 
 		[Fact]
@@ -144,8 +144,8 @@ namespace Raven.Tests.Bugs
 				store.DatabaseCommands.PutIndex("TestItemsIndex", new IndexDefinition
 				                                                  	{
 				                                                  		Name = "TestItemsIndex",
-				                                                  		Map = "from item in docs.TestItems select new { DocId = item.DocId, Name = item.Name, City = item.City };",
-				                                                  		TransformResults = "from item in results select new { DocId = item.DocId, Name = item.Name, City = item.City };",
+				                                                  		Map = "from item in docs.TestItems select new { DocId = item.__document_id, Name2 = item.Name, City = item.City };",
+																		TransformResults = "from item in results select new { DocId = item.__document_id, Name2 = item.Name, City = item.City };",
 				                                                  		Fields = new List<string> {"DocId", "Name", "City"}
 				                                                  	}, true);
 
@@ -170,6 +170,7 @@ namespace Raven.Tests.Bugs
 						.ToList().First();
 
 					Assert.NotNull(item.DocId);
+					Assert.NotNull(item.Name2);
 				}
 			}
 		}
