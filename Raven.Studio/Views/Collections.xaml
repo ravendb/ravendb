@@ -3,9 +3,9 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections"
-					 Infrastructure:ModelAttacher.AttachModel="Raven.Studio.Models.DatabaseCollectionsModel">
+					 Infrastructure:ModelAttacher.AttachObservableModel="Raven.Studio.Models.DatabaseCollectionsModel">
 
-	<Grid>
+	<Grid DataContext="{Binding Value}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" MaxHeight="400" />
 			<RowDefinition Height="*" MinHeight="50" />

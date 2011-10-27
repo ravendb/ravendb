@@ -5,10 +5,20 @@
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 Title="Home"
 					 Style="{StaticResource PageStyle}"
-					 Infrastructure:ModelAttacher.AttachModel="Raven.Studio.Models.HomeModel">
+					 Infrastructure:ModelAttacher.AttachObservableModel="Raven.Studio.Models.HomeModel">
 
-	<Grid>
+	<Grid DataContext="{Binding Value}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
+		
+		
+		<HyperlinkButton Content="New Database"
+						 Command="{Binding Path=CreateNewDatabase}" />
+		
 		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments.Value}"
+								 Grid.Row="1"
 								 Margin="{StaticResource Margin_ContentPage}"
 								 Tag="Recent Documents" />
 	</Grid>
