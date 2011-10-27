@@ -9,41 +9,30 @@ namespace Raven.Studio.Models
 {
 	public class DocumentsModel : Model
 	{
-		private readonly Func<DocumentsModel, int, Task> fetchDocuments;
-		private readonly int itemsPerPages;
+		private readonly Func<DocumentsModel, Task> fetchDocuments;
 		public BindableCollection<ViewableDocument> Documents { get; private set; }
 
-		public DocumentsModel(Func<DocumentsModel,int, Task> fetchDocuments, string location, int itemsPerPages)
+		public DocumentsModel(Func<DocumentsModel, Task> fetchDocuments)
 		{
 			this.fetchDocuments = fetchDocuments;
-			this.location = location;
-			this.itemsPerPages = itemsPerPages;
-			TotalPages = new Observable<long>();
 			Documents = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(document => document.Id));
 		}
 	
 		protected override Task TimerTickedAsync()
 		{
-			return fetchDocuments(this, CurrentPage - 1);
+			return fetchDocuments(this);
 		}
 
-		public int CurrentPage
-		{
-			get { return UrlUtil.GetSkipCount() / itemsPerPages + 1; }
-		}
+		public readonly PagerModel Pager = new PagerModel();
 
 		public ICommand NextPage
 		{
-			get{ return new IncreasePageCommand(location, itemsPerPages, TotalPages);}
+			get{ return new NavigateToNextPageCommand(Pager);}
 		}
 
 		public ICommand PreviousPage
 		{
-			get { return new DecreasePageCommand(location, itemsPerPages); }
+			get { return new NavigateToPrevPageCommand(Pager); }
 		}
-
-		private readonly string location;
-
-		public Observable<long> TotalPages { get; set; }
 	}
 }
