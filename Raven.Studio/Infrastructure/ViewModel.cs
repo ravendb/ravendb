@@ -19,25 +19,20 @@ namespace Raven.Studio.Infrastructure
 			ModelUrlIgnoreList = new List<string>();
 			Database = new Observable<DatabaseModel>();
 			SetCurrentDatabase();
-
-			Application.Current.Host.NavigationStateChanged += LoadModel;
 		}
 
-		private void LoadModel(object sender, NavigationStateChangedEventArgs args)
+		public void LoadModel(string state)
 		{
-			var state = args.NewNavigationState;
-			if (string.IsNullOrWhiteSpace(state) == false && 
-				state.StartsWith(ModelUrl) && 
+			if (string.IsNullOrWhiteSpace(state) == false &&
+				state.StartsWith(ModelUrl) &&
 				ModelUrlIgnoreList.Any(state.StartsWith) == false)
 			{
 				LoadModelParameters(GetParamAfter(ModelUrl, state));
 			}
 			IsLoaded = true;
-			Application.Current.Host.NavigationStateChanged -= LoadModel;
 		}
 
 		public virtual void LoadModelParameters(string parameters) { }
-		public virtual void LoadedTimerTickedAsync(string parameters) { }
 
 		protected override Task TimerTickedAsync()
 		{
@@ -80,7 +75,7 @@ namespace Raven.Studio.Infrastructure
 
 		public static string GetParamAfter(string urlPrefix)
 		{
-			return GetParamAfter(urlPrefix, ApplicationModel.Current.NavigationState);
+			return GetParamAfter(urlPrefix, ApplicationModel.NavigationState);
 		}
 
 		public static string GetParamAfter(string urlPrefix, string state)

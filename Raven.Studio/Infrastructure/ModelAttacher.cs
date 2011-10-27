@@ -6,6 +6,7 @@
 
 using System;
 using System.Windows;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -33,6 +34,13 @@ namespace Raven.Studio.Infrastructure
 				var piValue = observableType.GetProperty("Value");
 				piValue.SetValue(observable, model, null);
 				view.DataContext = observable;
+
+				view.Loaded += (sender, eventArgs) =>
+				{
+					var viewModel = model as ViewModel;
+					if (viewModel == null) return;
+					viewModel.LoadModel(ApplicationModel.NavigationState);
+				};
 			}
 			catch (Exception ex)
 			{
