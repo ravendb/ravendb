@@ -39,11 +39,12 @@ namespace Raven.Tests.Querying
 					session.SaveChanges();
 
 					// search for the keyword software
-					var results = session.Advanced.LuceneQuery<Something>().Search("MyProp", "software")
-						.WaitForNonStaleResultsAsOfLastWrite().ToList();
+					var results = session.Advanced.LuceneQuery<Something>("FTSIndex").Search("MyProp", "software")
+						.WaitForNonStaleResultsAsOfLastWrite()
+						.ToList();
 					Assert.Equal(1, results.Count);
 
-					results = session.Advanced.LuceneQuery<Something>().Search("MyProp", "software~")
+					results = session.Advanced.LuceneQuery<Something>("FTSIndex").Search("MyProp", "software~")
 						.WaitForNonStaleResultsAsOfLastWrite().ToList();
 					Assert.Equal(2, results.Count);
 				}
