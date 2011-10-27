@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
@@ -12,18 +13,19 @@ namespace Raven.Studio.Features.Documents
 
 		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<EditableDocumentModel> observable)
 		{
-			if(ApplicationModel.GetQueryParam("projection") == "true")
-			{
-				var state = ProjectionDocument;
-				ProjectionDocument = null;
-				observable.Value = new EditableDocumentModel(state, asyncDatabaseCommands);
-			}
-
-			var docId = ApplicationModel.GetQueryParam("id");
+			var url = new UrlUtil();
+			var docId = url.GetQueryParam("id");
 
 			if (docId == null)
-				return;
+			{
+				var projection = url.GetQueryParam("projection");
+				if (projection == null) return;
 
+				var document = JsonConvert.DeserializeObject<JsonDocument>(projection);
+				observable.Value = new EditableDocumentModel(document, asyncDatabaseCommands);
+				return;
+			}
+		
 			asyncDatabaseCommands.GetAsync(docId)
 				.ContinueOnSuccess(document =>
 				{
