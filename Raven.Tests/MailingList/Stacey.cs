@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using Xunit;
 
 namespace Raven.Tests.MailingList
@@ -23,6 +20,7 @@ namespace Raven.Tests.MailingList
 			public string Name { get; set; }
 		}
 
+		[Fact]
 		public void LoadWithInclude()
 		{
 			using (var store = NewDocumentStore())

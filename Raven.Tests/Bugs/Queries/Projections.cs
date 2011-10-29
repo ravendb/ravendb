@@ -82,6 +82,7 @@ namespace Raven.Tests.Bugs.Queries
 			}
 		}
 
+		[Fact]
 		public void Projections_to_anonym()
 		{
 			using (var store = NewDocumentStore())
