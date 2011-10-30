@@ -8,13 +8,13 @@ namespace Raven.Studio.Infrastructure
 {
 	public class UrlUtil
 	{
-		public UrlUtil()
+		static UrlUtil()
 		{
 			Url = Application.Current.Host.NavigationState;
 			Application.Current.Host.NavigationStateChanged += (sender, args) => Url = args.NewNavigationState;
 		}
 
-		public string Url { get; private set; }
+		public static string Url { get; private set; }
 
 		private Dictionary<string, string> queryParams;
 		public Dictionary<string, string> QueryParams
