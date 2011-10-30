@@ -8,12 +8,13 @@ namespace Raven.Studio.Infrastructure
 {
 	public class UrlUtil
 	{
-		private string url;
-		public string Url
+		public UrlUtil()
 		{
-			get { return url ?? (url = ApplicationModel.NavigationState); }
-			private set { url = value; }
+			Url = Application.Current.Host.NavigationState;
+			Application.Current.Host.NavigationStateChanged += (sender, args) => Url = args.NewNavigationState;
 		}
+
+		public string Url { get; private set; }
 
 		private Dictionary<string, string> queryParams;
 		public Dictionary<string, string> QueryParams
@@ -52,12 +53,8 @@ namespace Raven.Studio.Infrastructure
 
 		public void NavigateTo()
 		{
-			var uri = string.Empty;
 			var indexOf = Url.IndexOf('?');
-			if (indexOf != -1)
-			{
-				uri = Url.Substring(indexOf);
-			}
+			var uri = indexOf != -1 ? Url.Substring(0, indexOf) : Url;
 			var query = string.Join("&", QueryParams.Select(x => string.Format("{0}={1}", x.Key, x.Value)));
 			if (string.IsNullOrEmpty(query) == false)
 			{
