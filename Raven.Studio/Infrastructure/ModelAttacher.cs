@@ -39,7 +39,7 @@ namespace Raven.Studio.Infrastructure
 				{
 					var viewModel = model as ViewModel;
 					if (viewModel == null) return;
-					viewModel.LoadModel(ApplicationModel.NavigationState);
+					viewModel.LoadModel(UrlUtil.Url);
 				};
 			}
 			catch (Exception ex)

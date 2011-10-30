@@ -76,7 +76,7 @@ namespace Raven.Studio.Infrastructure
 
 		public static string GetParamAfter(string urlPrefix)
 		{
-			return GetParamAfter(urlPrefix, ApplicationModel.NavigationState);
+			return GetParamAfter(urlPrefix, UrlUtil.Url);
 		}
 
 		public static string GetParamAfter(string urlPrefix, string state)

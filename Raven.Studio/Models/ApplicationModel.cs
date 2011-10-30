@@ -9,20 +9,12 @@ namespace Raven.Studio.Models
 	public class ApplicationModel
 	{
 		public static ApplicationModel Current { get; private set; }
-		private static string threadSafeNavigationState;
 
 		static ApplicationModel()
 		{
 			Current = new ApplicationModel();
 			Current.Initialize();
-			threadSafeNavigationState = Application.Current.Host.NavigationState;
-			Application.Current.Host.NavigationStateChanged += (sender, args) =>
-			{
-				threadSafeNavigationState = args.NewNavigationState;
-			};
 		}
-
-		public static string NavigationState { get { return threadSafeNavigationState; } }
 
 		private ApplicationModel()
 		{
