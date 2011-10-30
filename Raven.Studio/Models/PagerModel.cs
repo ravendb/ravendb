@@ -60,7 +60,7 @@ namespace Raven.Studio.Models
 		{
 			if (HasNextPage() == false)
 				return false;
-			NavigateToPage(CurrentPage + 1);
+			NavigateToPage(1);
 			return true;
 		}
 
@@ -68,13 +68,13 @@ namespace Raven.Studio.Models
 		{
 			if (HasPrevPage() == false)
 				return false;
-			NavigateToPage(Math.Max(CurrentPage - 1, 0));
+			NavigateToPage(-1);
 			return true;
 		}
 
-		private void NavigateToPage(int page)
+		private void NavigateToPage(int pageOffset)
 		{
-			url.SetQueryParam("skip", skip + PageSize);
+			url.SetQueryParam("skip", skip + pageOffset * PageSize);
 			url.NavigateTo();
 		}
 
