@@ -14,19 +14,11 @@ namespace Raven.Studio.Features.Documents
 		protected override void Load(IAsyncDatabaseCommands asyncDatabaseCommands, Observable<EditableDocumentModel> observable)
 		{
 			var url = new UrlUtil();
+
 			var docId = url.GetQueryParam("id");
-
-			if (docId == null)
+			if (string.IsNullOrWhiteSpace(docId) == false)
 			{
-				var projection = url.GetQueryParam("projection");
-				if (projection == null) return;
-
-				var document = JsonConvert.DeserializeObject<JsonDocument>(projection);
-				observable.Value = new EditableDocumentModel(document, asyncDatabaseCommands);
-				return;
-			}
-		
-			asyncDatabaseCommands.GetAsync(docId)
+				asyncDatabaseCommands.GetAsync(docId)
 				.ContinueOnSuccess(document =>
 				{
 					if (document == null)
@@ -38,6 +30,23 @@ namespace Raven.Studio.Features.Documents
 				}
 				)
 				.Catch();
+				return;
+			}
+
+			var projection = url.GetQueryParam("projection");
+			if (string.IsNullOrWhiteSpace(projection) == false)
+			{
+				try
+				{
+					var unescapedprojection = Uri.UnescapeDataString(projection);
+					var document = JsonConvert.DeserializeObject<JsonDocument>(unescapedprojection);
+					observable.Value = new EditableDocumentModel(document, asyncDatabaseCommands);
+				}
+				catch
+				{
+					ApplicationModel.Current.Navigate(new Uri("/NotFound", UriKind.Relative));
+				}
+			}
 		}
 	}
 }
