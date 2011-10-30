@@ -37,20 +37,6 @@ namespace Raven.Studio.Models
 			rootVisual.DataContext = this;
 		}
 
-
-		public void Navigate(Uri source)
-		{
-			if (Deployment.Current.Dispatcher.CheckAccess())
-				Application.Current.Host.NavigationState = source.ToString();
-			else
-				Deployment.Current.Dispatcher.InvokeAsync(() => Application.Current.Host.NavigationState = source.ToString());
-		}
-
-		public void Navigate(string url)
-		{
-			Navigate((new Uri(url, UriKind.Relative)));
-		}
-
 		public void AddNotification(Notification notification)
 		{
 			Notifications.Execute(() =>

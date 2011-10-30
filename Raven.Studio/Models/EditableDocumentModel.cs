@@ -47,7 +47,7 @@ namespace Raven.Studio.Models
 					                   {
 					                   	if (newdoc == null)
 					                   	{
-					                   		ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + docId, UriKind.Relative));
+					                   		UrlUtil.Navigate("/DocumentNotFound?id=" + docId);
 					                   		return;
 					                   	}
 					                   	document.Value = newdoc;
@@ -67,7 +67,7 @@ namespace Raven.Studio.Models
 				}
 				catch
 				{
-					ApplicationModel.Current.Navigate(new Uri("/NotFound", UriKind.Relative));
+					UrlUtil.Navigate(new Uri("/NotFound", UriKind.Relative));
 				}
 			}
 		}
@@ -281,8 +281,7 @@ namespace Raven.Studio.Models
 									   {
 										   if (doc == null)
 										   {
-											   ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + parent.Key,
-																						 UriKind.Relative));
+											   UrlUtil.Navigate("/DocumentNotFound?id=" + parent.Key);
 											   return;
 										   }
 

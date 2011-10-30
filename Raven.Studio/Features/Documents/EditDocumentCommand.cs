@@ -1,7 +1,6 @@
 using System;
 using Newtonsoft.Json;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -19,11 +18,11 @@ namespace Raven.Studio.Features.Documents
 			if (string.IsNullOrEmpty(viewableDocument.Id))
 			{
 				var projection = JsonConvert.SerializeObject(viewableDocument.InnerDocument);
-				ApplicationModel.Current.Navigate(new Uri("/Edit?projection=" + Uri.EscapeDataString(projection), UriKind.Relative));
+				UrlUtil.Navigate("/edit?projection=" + Uri.EscapeDataString(projection));
 			}
 			else
 			{
-				ApplicationModel.Current.Navigate(new Uri("/Edit?id=" + viewableDocument.Id, UriKind.Relative));
+				UrlUtil.Navigate("/edit?id=" + viewableDocument.Id);
 			}
 		}
 	}

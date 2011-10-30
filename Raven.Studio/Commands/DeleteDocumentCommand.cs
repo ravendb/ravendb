@@ -34,7 +34,7 @@ namespace Raven.Studio.Features.Documents
 				.ContinueOnSuccess(() =>
 								   {
 									   if (navigateToHome)
-										   ApplicationModel.Current.Navigate(new Uri("/Home", UriKind.Relative));
+										   UrlUtil.Navigate("/home");
 								   })
 								   .Catch();
 		}

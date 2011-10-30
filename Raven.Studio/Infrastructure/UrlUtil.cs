@@ -60,7 +60,20 @@ namespace Raven.Studio.Infrastructure
 			{
 				uri += "?" + query;
 			}
-			ApplicationModel.Current.Navigate(uri);
+			Navigate(uri);
+		}
+
+		public static void Navigate(Uri source)
+		{
+			if (Deployment.Current.Dispatcher.CheckAccess())
+				Application.Current.Host.NavigationState = source.ToString();
+			else
+				Deployment.Current.Dispatcher.InvokeAsync(() => Application.Current.Host.NavigationState = source.ToString());
+		}
+
+		public static void Navigate(string url)
+		{
+			Navigate((new Uri(url, UriKind.Relative)));
 		}
 	}
 }

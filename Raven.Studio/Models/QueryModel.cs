@@ -22,7 +22,7 @@ namespace Raven.Studio.Models
 			{
 				if (string.IsNullOrWhiteSpace(value))
 				{
-					ApplicationModel.Current.Navigate(new Uri("/indexes", UriKind.Relative));
+					UrlUtil.Navigate("/indexes");
 				}
 
 				indexName = value;
