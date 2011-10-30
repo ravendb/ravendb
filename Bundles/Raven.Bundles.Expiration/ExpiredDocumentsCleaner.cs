@@ -60,11 +60,14 @@ namespace Raven.Bundles.Expiration
 			executing = true;
 			try
 			{
+
+				string nowAsStr;
+				DateTime currentTime;
+				UpdateTimes(out nowAsStr, out currentTime);
+				
 				while (true)
 				{
-					var currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
-					var nowAsStr = DateTools.DateToString(currentTime, DateTools.Resolution.SECOND);
-
+					
 					var queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
 					{
 						PageSize = 1024,
@@ -94,6 +97,8 @@ namespace Raven.Bundles.Expiration
 
 					if (deleted == false)
 						return;
+
+					UpdateTimes(out nowAsStr, out currentTime); // update the staleness cutoff point for the index, to reflect the newly deleted documents
 				}
 			}
 			catch (Exception e)
@@ -105,6 +110,12 @@ namespace Raven.Bundles.Expiration
 				executing = false;
 			}
 
+		}
+
+		private static void UpdateTimes(out string nowAsStr, out DateTime currentTime)
+		{
+			currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
+			nowAsStr = DateTools.DateToString(currentTime, DateTools.Resolution.SECOND);
 		}
 
 		/// <summary>
