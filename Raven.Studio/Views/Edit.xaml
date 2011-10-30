@@ -9,9 +9,9 @@
 					 xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					 mc:Ignorable="d"
-					 DataContext="{Binding Source={StaticResource EditDocumentModelLocator}, Path=Current.Value}">
+					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel">
 
-	<Grid Margin="{StaticResource Margin_ContentPage}">
+	<Grid Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Value}">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="1.5*" />
 			<ColumnDefinition Width="1*" />

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ namespace Raven.Studio.Infrastructure
 		public void LoadModel(string state)
 		{
 			if (string.IsNullOrWhiteSpace(state) == false &&
-				state.StartsWith(ModelUrl) &&
+				state.StartsWith(ModelUrl, StringComparison.InvariantCultureIgnoreCase) &&
 				ModelUrlIgnoreList.Any(state.StartsWith) == false)
 			{
 				LoadModelParameters(GetParamAfter(ModelUrl, state));

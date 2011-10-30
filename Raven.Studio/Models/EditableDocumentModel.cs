@@ -18,20 +18,56 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class EditableDocumentModel : Model
+	public class EditableDocumentModel : ViewModel
 	{
 		private JsonDocument document;
 		private string jsonData;
 
-		public EditableDocumentModel(JsonDocument document, IAsyncDatabaseCommands asyncDatabaseCommands)
+		public EditableDocumentModel()
 		{
-			this.asyncDatabaseCommands = asyncDatabaseCommands;
-			UpdateFromDocument(document);
+			ModelUrl = "/edit";
+		}
+
+		public override void LoadModelParameters(string parameters)
+		{
+			var url = new UrlUtil();
+
+			var docId = url.GetQueryParam("id");
+			if (string.IsNullOrWhiteSpace(docId) == false)
+			{
+				DatabaseCommands.GetAsync(docId)
+					.ContinueOnSuccess(newdoc =>
+					                   {
+					                   	if (newdoc == null)
+					                   	{
+					                   		ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + docId, UriKind.Relative));
+					                   		return;
+					                   	}
+					                   	UpdateFromDocument(newdoc);
+					                   })
+					.Catch();
+				return;
+			}
+
+			var projection = url.GetQueryParam("projection");
+			if (string.IsNullOrWhiteSpace(projection) == false)
+			{
+				try
+				{
+					// TODO: this throwing an exception. Please load the projection form the query-string parameter.
+					var newdoc = JsonConvert.DeserializeObject<JsonDocument>(Uri.UnescapeDataString(projection));
+					UpdateFromDocument(newdoc);
+				}
+				catch
+				{
+					ApplicationModel.Current.Navigate(new Uri("/NotFound", UriKind.Relative));
+				}
+			}
 		}
 
 		private void UpdateFromDocument(JsonDocument newdoc)
 		{
-			this.document = newdoc;
+			document = newdoc;
 			IsProjection = string.IsNullOrEmpty(newdoc.Key);
 			References = new ObservableCollection<LinkModel>();
 			Related = new BindableCollection<LinkModel>(new PrimaryKeyComparer<LinkModel>(model => model.HRef));
@@ -68,8 +104,6 @@ namespace Raven.Studio.Models
 		}
 
 		private string jsonMetadata;
-		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
-
 		public string JsonMetadata
 		{
 			get { return jsonMetadata; }
@@ -115,12 +149,12 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		protected override Task TimerTickedAsync()
+		protected override Task LoadedTimerTickedAsync()
 		{
-			if (string.IsNullOrEmpty(document.Key))
+			if (document == null || string.IsNullOrEmpty(document.Key))
 				return null;
 
-			return asyncDatabaseCommands.GetAsync(document.Key)
+			return DatabaseCommands.GetAsync(document.Key)
 				.ContinueOnSuccess(docOnServer =>
 				{
 					if (docOnServer == null)
@@ -150,7 +184,7 @@ namespace Raven.Studio.Models
 
 		private void UpdateRelated()
 		{
-			asyncDatabaseCommands.GetDocumentsStartingWithAsync(Key + "/", 0, 15)
+			DatabaseCommands.GetDocumentsStartingWithAsync(Key + "/", 0, 15)
 				.ContinueOnSuccess(items =>
 								   {
 									if (items == null)
@@ -208,12 +242,12 @@ namespace Raven.Studio.Models
 
 		public ICommand Save
 		{
-			get { return new SaveDocumentCommand(this, asyncDatabaseCommands); }
+			get { return new SaveDocumentCommand(this, DatabaseCommands); }
 		}
 
 		public ICommand Delete
 		{
-			get { return new DeleteDocumentCommand(this.Key, asyncDatabaseCommands, navigateToHome: true); }
+			get { return new DeleteDocumentCommand(this.Key, DatabaseCommands, navigateToHome: true); }
 		}
 
 		public ICommand Prettify
@@ -237,7 +271,7 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				parent.asyncDatabaseCommands.GetAsync(parent.Key)
+				parent.DatabaseCommands.GetAsync(parent.Key)
 					.ContinueOnSuccess(doc =>
 									   {
 										   if (doc == null)

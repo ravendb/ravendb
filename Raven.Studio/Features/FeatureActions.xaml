@@ -2,6 +2,5 @@
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents">
 
-	<Documents:EditDocumentModelLocator x:Key="EditDocumentModelLocator" />
 	<Documents:DocumentsModelLocator x:Key="DocumentsModelLocator" />
 </ResourceDictionary>

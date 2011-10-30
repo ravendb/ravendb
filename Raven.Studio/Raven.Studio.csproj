@@ -220,7 +220,6 @@
     <Compile Include="Models\Notification.cs" />
     <Compile Include="Models\EditableDocumentModel.cs" />
     <Compile Include="Features\Documents\EditDocumentCommand.cs" />
-    <Compile Include="Features\Documents\EditDocumentModelLocator.cs" />
     <Compile Include="Features\Documents\TemplateColorProvider.cs" />
     <Compile Include="Features\Documents\ViewableDocument.cs" />
     <Compile Include="Features\Input\AskUser.cs" />
