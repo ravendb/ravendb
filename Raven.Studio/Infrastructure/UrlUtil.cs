@@ -1,19 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
 	public class UrlUtil
 	{
-		public string Url { get; private set; }
-
-		public UrlUtil() : this(ApplicationModel.NavigationState) { }
-
-		public UrlUtil(string url)
+		private string url;
+		public string Url
 		{
-			Url = url;
+			get { return url ?? (url = ApplicationModel.NavigationState); }
+			private set { url = value; }
 		}
 
 		private Dictionary<string, string> queryParams;
@@ -53,9 +52,18 @@ namespace Raven.Studio.Infrastructure
 
 		public void NavigateTo()
 		{
-			var uri = new UriBuilder(new Uri(Url, UriKind.Relative));
-			uri.Query = string.Join("&", QueryParams.Select(x => string.Format("{0}={1}", x.Key, x.Value)));
-			ApplicationModel.Current.Navigate(uri.Uri);
+			var uri = string.Empty;
+			var indexOf = Url.IndexOf('?');
+			if (indexOf != -1)
+			{
+				uri = Url.Substring(indexOf);
+			}
+			var query = string.Join("&", QueryParams.Select(x => string.Format("{0}={1}", x.Key, x.Value)));
+			if (string.IsNullOrEmpty(query) == false)
+			{
+				uri += "?" + query;
+			}
+			ApplicationModel.Current.Navigate(uri);
 		}
 	}
 }
