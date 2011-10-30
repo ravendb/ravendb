@@ -126,7 +126,6 @@
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Commands\DeleteDocumentCommand.cs" />
-    <Compile Include="Features\Documents\DocumentsModelLocator.cs" />
     <Compile Include="Commands\NavigateToCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
@@ -197,9 +196,9 @@
     <Compile Include="Infrastructure\Converters\HiddenWhenLessOrEqualToConverter.cs" />
     <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
-    <Compile Include="Infrastructure\ModelLocatorBase.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />
     <Compile Include="Infrastructure\ViewModel.cs" />
+    <Compile Include="Models\AllDocumentsModel.cs" />
     <Compile Include="Models\DocumentsModel.cs" />
     <Compile Include="Models\HomeModel.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
@@ -411,10 +410,6 @@
     <Page Include="Features\Databases\DatabaseSelectionView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Features\FeatureActions.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\DocumentsView.xaml">
       <SubType>Designer</SubType>
