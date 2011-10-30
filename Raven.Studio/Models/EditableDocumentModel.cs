@@ -20,12 +20,19 @@ namespace Raven.Studio.Models
 {
 	public class EditableDocumentModel : ViewModel
 	{
-		private JsonDocument document;
+		private readonly Observable<JsonDocument> document;
 		private string jsonData;
 
 		public EditableDocumentModel()
 		{
 			ModelUrl = "/edit";
+			
+			References = new ObservableCollection<LinkModel>();
+			Related = new BindableCollection<LinkModel>(new PrimaryKeyComparer<LinkModel>(model => model.HRef));
+
+			document = new Observable<JsonDocument>();
+			document.PropertyChanged += (sender, args) => UpdateFromDocument();
+			document.Value = new JsonDocument { DataAsJson = new RavenJObject(), Metadata = new RavenJObject(), Key = " " };
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -43,7 +50,7 @@ namespace Raven.Studio.Models
 					                   		ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + docId, UriKind.Relative));
 					                   		return;
 					                   	}
-					                   	UpdateFromDocument(newdoc);
+					                   	document.Value = newdoc;
 					                   })
 					.Catch();
 				return;
@@ -56,7 +63,7 @@ namespace Raven.Studio.Models
 				{
 					// TODO: this throwing an exception. Please load the projection form the query-string parameter.
 					var newdoc = JsonConvert.DeserializeObject<JsonDocument>(Uri.UnescapeDataString(projection));
-					UpdateFromDocument(newdoc);
+					document.Value = newdoc;
 				}
 				catch
 				{
@@ -65,15 +72,13 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private void UpdateFromDocument(JsonDocument newdoc)
+		private void UpdateFromDocument()
 		{
-			document = newdoc;
+			var newdoc = document.Value;
 			IsProjection = string.IsNullOrEmpty(newdoc.Key);
-			References = new ObservableCollection<LinkModel>();
-			Related = new BindableCollection<LinkModel>(new PrimaryKeyComparer<LinkModel>(model => model.HRef));
-			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			UpdateMetadata(newdoc.Metadata);
+			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 			OnEverythingChanged();
 		}
 
@@ -151,19 +156,19 @@ namespace Raven.Studio.Models
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (document == null || string.IsNullOrEmpty(document.Key))
+			if (document.Value == null || string.IsNullOrEmpty(document.Value.Key))
 				return null;
 
-			return DatabaseCommands.GetAsync(document.Key)
+			return DatabaseCommands.GetAsync(document.Value.Key)
 				.ContinueOnSuccess(docOnServer =>
 				{
 					if (docOnServer == null)
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Key + " was deleted on the server"));
+						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Value.Key + " was deleted on the server"));
 					}
 					else if (docOnServer.Etag != Etag)
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Key + " was changed on the server"));
+						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Value.Key + " was changed on the server"));
 					}
 				});
 		}
@@ -201,16 +206,16 @@ namespace Raven.Studio.Models
 
 		public string Key
 		{
-			get { return document.Key; }
-			set { document.Key = value; OnPropertyChanged(); }
+			get { return document.Value.Key; }
+			set { document.Value.Key = value; OnPropertyChanged(); }
 		}
 
 		public Guid? Etag
 		{
-			get { return document.Etag; }
+			get { return document.Value.Etag; }
 			set
 			{
-				document.Etag = value; 
+				document.Value.Etag = value; 
 				OnPropertyChanged();
 				OnPropertyChanged("Metadata");
 			}
@@ -218,9 +223,9 @@ namespace Raven.Studio.Models
 
 		public DateTime? LastModified
 		{
-			get { return document.LastModified; }
-			set { 
-				document.LastModified = value;
+			get { return document.Value.LastModified; }
+			set {
+				document.Value.LastModified = value;
 				OnPropertyChanged();
 				OnPropertyChanged("Metadata");
 			}
@@ -247,7 +252,7 @@ namespace Raven.Studio.Models
 
 		public ICommand Delete
 		{
-			get { return new DeleteDocumentCommand(this.Key, DatabaseCommands, navigateToHome: true); }
+			get { return new DeleteDocumentCommand(Key, DatabaseCommands, navigateToHome: true); }
 		}
 
 		public ICommand Prettify
@@ -281,7 +286,7 @@ namespace Raven.Studio.Models
 											   return;
 										   }
 
-										   parent.UpdateFromDocument(doc);
+										   parent.document.Value = doc;
 										   ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was refreshed", doc.Key)));
 									   })
 									   .Catch();
