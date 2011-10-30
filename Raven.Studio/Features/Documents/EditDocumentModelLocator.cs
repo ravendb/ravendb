@@ -37,9 +37,9 @@ namespace Raven.Studio.Features.Documents
 			if (string.IsNullOrWhiteSpace(projection) == false)
 			{
 				try
-				{
-					var unescapedprojection = Uri.UnescapeDataString(projection);
-					var document = JsonConvert.DeserializeObject<JsonDocument>(unescapedprojection);
+				{ 
+					// TODO: this throwing an exception. Please load the projection form the query-string parameter.
+					var document = JsonConvert.DeserializeObject<JsonDocument>(Uri.UnescapeDataString(projection));
 					observable.Value = new EditableDocumentModel(document, asyncDatabaseCommands);
 				}
 				catch
