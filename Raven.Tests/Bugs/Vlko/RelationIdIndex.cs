@@ -55,7 +55,7 @@ namespace Raven.Tests.Bugs.Vlko
 			public ThorIndex()
 			{
 				Map = thors => from doc in thors
-							   select new { doc.Name, doc.Rel.Id };
+							   select new { doc.Name, Rel_Id = doc.Rel.Id };
 			}
 		}
 
