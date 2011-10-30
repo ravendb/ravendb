@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -29,25 +28,20 @@ namespace Raven.Studio.Features.Query
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 		}
 
-		public override bool CanExecute(object parameter)
-		{
-			return true;
-		}
-
 		public override void Execute(object parameter)
 		{
 			model.Error = null;
 			model.RememberHistory();
-			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod, "/query/"+model.IndexName, QueryModel.PageSize);
+			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod);
 		}
 
-		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel,int currentPage)
+		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
 		{
 			ApplicationModel.Current.AddNotification(new Notification("Executing query..."));
 			var q = new IndexQuery
 			{
-				Start = model.CurrentPage * QueryModel.PageSize, 
-				PageSize = QueryModel.PageSize, Query = model.Query.Value
+				Start = (model.Pager.CurrentPage - 1) * model.Pager.PageSize, 
+				PageSize = model.Pager.PageSize, Query = model.Query.Value
 			};
 			return asyncDatabaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueWith(task =>
@@ -60,7 +54,7 @@ namespace Raven.Studio.Features.Query
 					var qr = task.Result;
 					var viewableDocuments = qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray();
 					documentsModel.Documents.Match(viewableDocuments);
-					documentsModel.TotalPages.Value = qr.TotalResults/QueryModel.PageSize;
+					documentsModel.Pager.TotalResults.Value = qr.TotalResults;
 				})
 				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("Query executed.")))
 				.Catch();

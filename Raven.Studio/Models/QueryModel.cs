@@ -22,7 +22,7 @@ namespace Raven.Studio.Models
 			{
 				if (string.IsNullOrWhiteSpace(value))
 				{
-					ApplicationModel.Current.Navigate(new Uri("/indexes", UriKind.Relative));
+					UrlUtil.Navigate("/indexes");
 				}
 
 				indexName = value;
@@ -30,8 +30,6 @@ namespace Raven.Studio.Models
 				RestoreHistory();
 			}
 		}
-
-		public const int PageSize = 25;
 
 		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
@@ -107,7 +105,7 @@ namespace Raven.Studio.Models
 						if(term.IndexOfAny(new[]{' ','\t'})  == -1)
 							terms.Add(term);
 						else
-							terms.Add('"' + term + '"'); // qoute the term
+							terms.Add('"' + term + '"'); // quote the term
 					}
 				});
 		}
@@ -125,11 +123,7 @@ namespace Raven.Studio.Models
 			set { error = value; OnPropertyChanged(); }
 		}
 
-		public int CurrentPage
-		{
-			get { return UrlUtil.GetSkipCount() / PageSize + 1; }
-			
-		}
+		public readonly PagerModel Pager = new PagerModel();
 
 		public Observable<DocumentsModel> DocumentsResult { get; private set; }
 	}

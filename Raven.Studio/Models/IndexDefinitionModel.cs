@@ -45,14 +45,14 @@ namespace Raven.Studio.Models
 		{
 			var name = parameters;
 			if (string.IsNullOrWhiteSpace(name))
-				ApplicationModel.Current.Navigate(new Uri("/indexes", UriKind.Relative));
+				UrlUtil.Navigate("/indexes");
 
 			DatabaseCommands.GetIndexAsync(name)
 				.ContinueOnSuccess(index1 =>
 				                   {
 				                   	if (index1 == null)
 				                   	{
-				                   		ApplicationModel.Current.Navigate(new Uri("/NotFound?id=" + name, UriKind.Relative));
+										UrlUtil.Navigate("/NotFound?id=" + name);
 				                   		return;
 				                   	}
 									originalIndex = JsonConvert.SerializeObject(index);

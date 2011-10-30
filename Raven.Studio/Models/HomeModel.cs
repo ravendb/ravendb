@@ -9,33 +9,32 @@ namespace Raven.Studio.Models
 {
 	public class HomeModel : ViewModel
 	{
-		private const int RecentDocumentsCountPerPage = 15;
 		public Observable<DocumentsModel> RecentDocuments { get; private set; }
 
 		public HomeModel()
 		{
 			ModelUrl = "/home";
 			RecentDocuments = new Observable<DocumentsModel>();
-		    Initialize();
+			Initialize();
 		}
 
 		private void Initialize()
 		{
-            if (Database.Value == null)
-            {
-                Database.RegisterOnce(Initialize);
-                return;
-            }
-
-			RecentDocuments.Value = new DocumentsModel(GetFetchDocumentsMethod, "/home", RecentDocumentsCountPerPage)
+			if (Database.Value == null)
 			{
-				TotalPages = new Observable<long>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / RecentDocumentsCountPerPage + 1)
-			};
+				Database.RegisterOnce(Initialize);
+				return;
+			}
+
+			var documents = new DocumentsModel(GetFetchDocumentsMethod);
+			documents.Pager.PageSize = 15;
+			documents.Pager.SetTotalResults(new Observable<long>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
+			RecentDocuments.Value = documents;
 		}
 
-		private Task GetFetchDocumentsMethod(DocumentsModel documents, int currentPage)
+		private Task GetFetchDocumentsMethod(DocumentsModel documents)
 		{
-			return DatabaseCommands.GetDocumentsAsync(currentPage * RecentDocumentsCountPerPage, RecentDocumentsCountPerPage)
+			return DatabaseCommands.GetDocumentsAsync(documents.Pager.Skip, documents.Pager.PageSize)
 				.ContinueOnSuccess(docs => documents.Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
 		}
 	}

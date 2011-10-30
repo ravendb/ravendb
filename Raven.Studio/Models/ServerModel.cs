@@ -44,13 +44,10 @@ namespace Raven.Studio.Models
 
 		public Task Initialize()
 		{
-			defaultDatabase = new[] { new DatabaseModel("Default", documentStore.AsyncDatabaseCommands) };
+			defaultDatabase = new[] {new DatabaseModel("Default", documentStore.AsyncDatabaseCommands)};
+			Databases.Set(defaultDatabase);
+			SelectedDatabase.Value = defaultDatabase[0];
 			return documentStore.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync()
-				.ContinueOnSuccess(() =>
-				{
-					Databases.Set(defaultDatabase);
-					SelectedDatabase.Value = defaultDatabase[0];
-				})
 				.Catch();
 		}
 

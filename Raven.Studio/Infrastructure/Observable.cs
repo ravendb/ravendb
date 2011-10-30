@@ -60,7 +60,6 @@ namespace Raven.Studio.Infrastructure
 
 		public void RegisterOnce(Action act)
 		{
-
 			actions += act;
 		}
 	}

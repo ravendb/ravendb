@@ -106,8 +106,8 @@
     <Compile Include="Behaviors\LinkHighlighter.cs" />
     <Compile Include="Behaviors\StringCollection.cs" />
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
-    <Compile Include="Commands\IncreasePageCommand.cs" />
-    <Compile Include="Commands\DecreasePageCommand.cs" />
+    <Compile Include="Commands\NavigateToNextPageCommand.cs" />
+    <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
     <Compile Include="Controls\Editors\QueryEditor.cs" />
@@ -126,7 +126,6 @@
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Commands\DeleteDocumentCommand.cs" />
-    <Compile Include="Features\Documents\DocumentsModelLocator.cs" />
     <Compile Include="Commands\NavigateToCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
@@ -197,9 +196,9 @@
     <Compile Include="Infrastructure\Converters\HiddenWhenLessOrEqualToConverter.cs" />
     <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
-    <Compile Include="Infrastructure\ModelLocatorBase.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />
     <Compile Include="Infrastructure\ViewModel.cs" />
+    <Compile Include="Models\AllDocumentsModel.cs" />
     <Compile Include="Models\DocumentsModel.cs" />
     <Compile Include="Models\HomeModel.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
@@ -220,7 +219,6 @@
     <Compile Include="Models\Notification.cs" />
     <Compile Include="Models\EditableDocumentModel.cs" />
     <Compile Include="Features\Documents\EditDocumentCommand.cs" />
-    <Compile Include="Features\Documents\EditDocumentModelLocator.cs" />
     <Compile Include="Features\Documents\TemplateColorProvider.cs" />
     <Compile Include="Features\Documents\ViewableDocument.cs" />
     <Compile Include="Features\Input\AskUser.cs" />
@@ -260,6 +258,7 @@
     </Compile>
     <Compile Include="Models\ApplicationModel.cs" />
     <Compile Include="Models\DatabaseModel.cs" />
+    <Compile Include="Models\PagerModel.cs" />
     <Compile Include="Models\QueryModel.cs" />
     <Compile Include="Models\ServerModel.cs" />
     <Compile Include="Models\StatisticsModel.cs" />
@@ -411,10 +410,6 @@
     <Page Include="Features\Databases\DatabaseSelectionView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Features\FeatureActions.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\DocumentsView.xaml">
       <SubType>Designer</SubType>

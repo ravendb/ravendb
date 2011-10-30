@@ -31,7 +31,7 @@
 									Margin="4,0,10,0">
 							<TextBlock Text="{Binding Name}"
 									   FontSize="14.667" />
-							<TextBlock Text="{Binding Count}"
+							<TextBlock Text="{Binding Count, StringFormat='\{0:#,#;;0\}'}"
 									   FontStyle="Italic"
 									   Foreground="#9000"
 									   FontSize="10.667" />

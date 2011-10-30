@@ -8,7 +8,7 @@
 					 mc:Ignorable="d"
 					 Infrastructure:ModelAttacher.AttachObservableModel="QueryModel">
 
-	<Grid>
+	<Grid DataContext="{Binding Value}">
 		<Query:QueryView />
 	</Grid>
 </Infrastructure:View>

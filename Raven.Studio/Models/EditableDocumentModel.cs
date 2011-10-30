@@ -18,26 +18,67 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class EditableDocumentModel : Model
+	public class EditableDocumentModel : ViewModel
 	{
-		private JsonDocument document;
+		private readonly Observable<JsonDocument> document;
 		private string jsonData;
 
-		public EditableDocumentModel(JsonDocument document, IAsyncDatabaseCommands asyncDatabaseCommands)
+		public EditableDocumentModel()
 		{
-			this.asyncDatabaseCommands = asyncDatabaseCommands;
-			UpdateFromDocument(document);
-		}
-
-		private void UpdateFromDocument(JsonDocument newdoc)
-		{
-			this.document = newdoc;
-			IsProjection = string.IsNullOrEmpty(newdoc.Key);
+			ModelUrl = "/edit";
+			
 			References = new ObservableCollection<LinkModel>();
 			Related = new BindableCollection<LinkModel>(new PrimaryKeyComparer<LinkModel>(model => model.HRef));
-			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
+
+			document = new Observable<JsonDocument>();
+			document.PropertyChanged += (sender, args) => UpdateFromDocument();
+			document.Value = new JsonDocument { DataAsJson = new RavenJObject(), Metadata = new RavenJObject(), Key = " " };
+		}
+
+		public override void LoadModelParameters(string parameters)
+		{
+			var url = new UrlUtil();
+
+			var docId = url.GetQueryParam("id");
+			if (string.IsNullOrWhiteSpace(docId) == false)
+			{
+				DatabaseCommands.GetAsync(docId)
+					.ContinueOnSuccess(newdoc =>
+					                   {
+					                   	if (newdoc == null)
+					                   	{
+					                   		UrlUtil.Navigate("/DocumentNotFound?id=" + docId);
+					                   		return;
+					                   	}
+					                   	document.Value = newdoc;
+					                   })
+					.Catch();
+				return;
+			}
+
+			var projection = url.GetQueryParam("projection");
+			if (string.IsNullOrWhiteSpace(projection) == false)
+			{
+				try
+				{
+					// TODO: this throwing an exception. Please load the projection form the query-string parameter.
+					var newdoc = JsonConvert.DeserializeObject<JsonDocument>(Uri.UnescapeDataString(projection));
+					document.Value = newdoc;
+				}
+				catch
+				{
+					UrlUtil.Navigate(new Uri("/NotFound", UriKind.Relative));
+				}
+			}
+		}
+
+		private void UpdateFromDocument()
+		{
+			var newdoc = document.Value;
+			IsProjection = string.IsNullOrEmpty(newdoc.Key);
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			UpdateMetadata(newdoc.Metadata);
+			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 			OnEverythingChanged();
 		}
 
@@ -68,8 +109,6 @@ namespace Raven.Studio.Models
 		}
 
 		private string jsonMetadata;
-		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
-
 		public string JsonMetadata
 		{
 			get { return jsonMetadata; }
@@ -115,21 +154,21 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		protected override Task TimerTickedAsync()
+		protected override Task LoadedTimerTickedAsync()
 		{
-			if (string.IsNullOrEmpty(document.Key))
+			if (document.Value == null || string.IsNullOrEmpty(document.Value.Key))
 				return null;
 
-			return asyncDatabaseCommands.GetAsync(document.Key)
+			return DatabaseCommands.GetAsync(document.Value.Key)
 				.ContinueOnSuccess(docOnServer =>
 				{
 					if (docOnServer == null)
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Key + " was deleted on the server"));
+						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Value.Key + " was deleted on the server"));
 					}
 					else if (docOnServer.Etag != Etag)
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Key + " was changed on the server"));
+						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Value.Key + " was changed on the server"));
 					}
 				});
 		}
@@ -150,7 +189,7 @@ namespace Raven.Studio.Models
 
 		private void UpdateRelated()
 		{
-			asyncDatabaseCommands.GetDocumentsStartingWithAsync(Key + "/", 0, 15)
+			DatabaseCommands.GetDocumentsStartingWithAsync(Key + "/", 0, 15)
 				.ContinueOnSuccess(items =>
 								   {
 									if (items == null)
@@ -167,16 +206,16 @@ namespace Raven.Studio.Models
 
 		public string Key
 		{
-			get { return document.Key; }
-			set { document.Key = value; OnPropertyChanged(); }
+			get { return document.Value.Key; }
+			set { document.Value.Key = value; OnPropertyChanged(); }
 		}
 
 		public Guid? Etag
 		{
-			get { return document.Etag; }
+			get { return document.Value.Etag; }
 			set
 			{
-				document.Etag = value; 
+				document.Value.Etag = value; 
 				OnPropertyChanged();
 				OnPropertyChanged("Metadata");
 			}
@@ -184,9 +223,9 @@ namespace Raven.Studio.Models
 
 		public DateTime? LastModified
 		{
-			get { return document.LastModified; }
-			set { 
-				document.LastModified = value;
+			get { return document.Value.LastModified; }
+			set {
+				document.Value.LastModified = value;
 				OnPropertyChanged();
 				OnPropertyChanged("Metadata");
 			}
@@ -208,12 +247,12 @@ namespace Raven.Studio.Models
 
 		public ICommand Save
 		{
-			get { return new SaveDocumentCommand(this, asyncDatabaseCommands); }
+			get { return new SaveDocumentCommand(this, DatabaseCommands); }
 		}
 
 		public ICommand Delete
 		{
-			get { return new DeleteDocumentCommand(this.Key, asyncDatabaseCommands, navigateToHome: true); }
+			get { return new DeleteDocumentCommand(Key, DatabaseCommands, navigateToHome: true); }
 		}
 
 		public ICommand Prettify
@@ -237,17 +276,16 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				parent.asyncDatabaseCommands.GetAsync(parent.Key)
+				parent.DatabaseCommands.GetAsync(parent.Key)
 					.ContinueOnSuccess(doc =>
 									   {
 										   if (doc == null)
 										   {
-											   ApplicationModel.Current.Navigate(new Uri("/DocumentNotFound?id=" + parent.Key,
-																						 UriKind.Relative));
+											   UrlUtil.Navigate("/DocumentNotFound?id=" + parent.Key);
 											   return;
 										   }
 
-										   parent.UpdateFromDocument(doc);
+										   parent.document.Value = doc;
 										   ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was refreshed", doc.Key)));
 									   })
 									   .Catch();

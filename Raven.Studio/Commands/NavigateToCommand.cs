@@ -1,6 +1,4 @@
-using System;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
@@ -11,7 +9,7 @@ namespace Raven.Studio.Commands
 			var href = parameter as string;
 			if (href == null)
 				return;
-			ApplicationModel.Current.Navigate(new Uri(href, UriKind.Relative));
+			UrlUtil.Navigate(href);
 		}
 	}
 }

@@ -58,13 +58,13 @@
                 </Grid.RowDefinitions>
 
                 <TextBlock Text="Count Of Indexes" Style="{StaticResource Style_TextBlock_FieldName}"/>
-                <TextBlock Grid.Column="2" Text="{Binding CountOfIndexes}" />
+                <TextBlock Grid.Column="2" Text="{Binding CountOfIndexes, StringFormat='\{0:#,#;;0\}'}" />
 
                 <TextBlock Grid.Row="1" Text="Tasks Count" Style="{StaticResource Style_TextBlock_FieldName}"/>
-                <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding ApproximateTaskCount}" />
+                <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding ApproximateTaskCount, StringFormat='\{0:#,#;;0\}'}" />
 
                 <TextBlock Grid.Row="2" Text="Count Of Documents" Style="{StaticResource Style_TextBlock_FieldName}"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CountOfDocuments, StringFormat='{0:#,#}'}" />
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CountOfDocuments, StringFormat='\{0:#,#;;0\}'}" />
 
                 <TextBlock Grid.Row="3" Text="Stale Indexes" Style="{StaticResource Style_TextBlock_FieldName}"/>
                 <ItemsControl Grid.Row="3"

@@ -6,6 +6,7 @@
 
 using System;
 using System.Windows;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -13,7 +14,7 @@ namespace Raven.Studio.Infrastructure
 	{
 		public static readonly DependencyProperty AttachObservableModelProperty =
 			DependencyProperty.RegisterAttached("AttachObservableModel", typeof(string), typeof(ModelAttacher), new PropertyMetadata(null, AttachObservableModelCallback));
-
+		
 		private static void AttachObservableModelCallback(DependencyObject source, DependencyPropertyChangedEventArgs args)
 		{
 			var typeName = args.NewValue as string;
@@ -33,6 +34,13 @@ namespace Raven.Studio.Infrastructure
 				var piValue = observableType.GetProperty("Value");
 				piValue.SetValue(observable, model, null);
 				view.DataContext = observable;
+
+				view.Loaded += (sender, eventArgs) =>
+				{
+					var viewModel = model as ViewModel;
+					if (viewModel == null) return;
+					viewModel.LoadModel(UrlUtil.Url);
+				};
 			}
 			catch (Exception ex)
 			{
