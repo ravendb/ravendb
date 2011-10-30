@@ -19,7 +19,11 @@ namespace Raven.Studio.Models
 		public void SetTotalResults(Observable<long> observable)
 		{
 			TotalResults = observable;
-			TotalResults.PropertyChanged += (sender, args) => OnPropertyChanged("HasNextPage");
+			TotalResults.PropertyChanged += (sender, args) =>
+			                                {
+			                                	OnPropertyChanged("TotalPages");
+			                                	OnPropertyChanged("HasNextPage");
+			                                };
 		}
 
 		public int PageSize { get; set; }

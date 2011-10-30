@@ -34,7 +34,7 @@
 						<TextBlock Text="Page " VerticalAlignment="Center"/>
 						<TextBlock Text="{Binding Path=Pager.CurrentPage}" VerticalAlignment="Center"/>
 						<TextBlock Text=" of " VerticalAlignment="Center"/>
-						<TextBlock Text="{Binding Path=Pager.TotalPages.Value}" VerticalAlignment="Center"/>
+						<TextBlock Text="{Binding Path=Pager.TotalPages}" VerticalAlignment="Center"/>
 						<HyperlinkButton Command="{Binding Path=Pager.NextPage}"
 										 Style="{StaticResource Style_Link_MouseOverChrome}"
 										 ToolTipService.ToolTip="Next Page">
