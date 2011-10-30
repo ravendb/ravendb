@@ -13,13 +13,13 @@ namespace Raven.Studio.Models
 		{
 			PageSize = 25;
 			url = new UrlUtil();
-			SetTotalPages(new Observable<long>());
+			SetTotalResults(new Observable<long>());
 		}
 
-		public void SetTotalPages(Observable<long> observable)
+		public void SetTotalResults(Observable<long> observable)
 		{
-			TotalPages = observable;
-			TotalPages.PropertyChanged += (sender, args) => OnPropertyChanged("HasNextPage");
+			TotalResults = observable;
+			TotalResults.PropertyChanged += (sender, args) => OnPropertyChanged("HasNextPage");
 		}
 
 		public int PageSize { get; set; }
@@ -29,7 +29,11 @@ namespace Raven.Studio.Models
 			get { return Skip / PageSize + 1; }
 		}
 
-		public Observable<long> TotalPages { get; private set; }
+		public Observable<long> TotalResults { get; private set; }
+		public long TotalPages
+		{
+			get { return TotalResults.Value / PageSize + 1; }
+		}
 
 		private ushort skip;
 		public ushort Skip
@@ -44,7 +48,7 @@ namespace Raven.Studio.Models
 
 		public bool HasNextPage()
 		{
-			return CurrentPage < TotalPages.Value;
+			return CurrentPage < TotalPages;
 		}
 
 		public bool HasPrevPage()

@@ -15,20 +15,20 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/home";
 			RecentDocuments = new Observable<DocumentsModel>();
-		    Initialize();
+			Initialize();
 		}
 
 		private void Initialize()
 		{
-            if (Database.Value == null)
-            {
-                Database.RegisterOnce(Initialize);
-                return;
-            }
+			if (Database.Value == null)
+			{
+				Database.RegisterOnce(Initialize);
+				return;
+			}
 
 			var documents = new DocumentsModel(GetFetchDocumentsMethod);
 			documents.Pager.PageSize = 15;
-			documents.Pager.SetTotalPages(new Observable<long>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / documents.Pager.PageSize + 1));
+			documents.Pager.SetTotalResults(new Observable<long>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 			RecentDocuments.Value = documents;
 		}
 

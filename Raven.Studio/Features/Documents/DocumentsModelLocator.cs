@@ -22,7 +22,7 @@ namespace Raven.Studio.Features.Documents
 		{
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 			var documents = new DocumentsModel(GetFetchDocumentsMethod);
-			documents.Pager.SetTotalPages(new Observable<long>(DatabaseModel.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments / 25 + 1));
+			documents.Pager.SetTotalResults(new Observable<long>(DatabaseModel.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 			observable.Value = documents;
 		}
 

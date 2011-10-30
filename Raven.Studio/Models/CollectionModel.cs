@@ -28,7 +28,7 @@ namespace Raven.Studio.Models
 
 		private int count;
 
-	    public int Count
+		public int Count
 		{
 			get { return count; }
 			set { count = value; OnPropertyChanged();}
@@ -39,19 +39,19 @@ namespace Raven.Studio.Models
 		public CollectionModel(IAsyncDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
-		    Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(GetFetchDocumentsMethod)};
+			Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(GetFetchDocumentsMethod)};
 		}
 
-	    private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
-	    {
-	        return databaseCommands
-                .QueryAsync("Raven/DocumentsByEntityName", new IndexQuery { Start = documentsModel.Pager.Skip, PageSize = documentsModel.Pager.PageSize, Query = "Tag:" + Name }, new string[] { })
-                .ContinueOnSuccess(queryResult =>
-                {
-                    var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
-                    documentsModel.Documents.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
-					Documents.Value.Pager.TotalPages.Value = queryResult.TotalResults / documentsModel.Pager.PageSize;
-                });
-	    }
+		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
+		{
+			return databaseCommands
+				.QueryAsync("Raven/DocumentsByEntityName", new IndexQuery { Start = documentsModel.Pager.Skip, PageSize = documentsModel.Pager.PageSize, Query = "Tag:" + Name }, new string[] { })
+				.ContinueOnSuccess(queryResult =>
+				{
+					var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
+					documentsModel.Documents.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
+					Documents.Value.Pager.TotalResults.Value = queryResult.TotalResults;
+				});
+		}
 	}
 }

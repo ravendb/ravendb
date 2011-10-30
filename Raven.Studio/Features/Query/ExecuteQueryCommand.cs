@@ -54,7 +54,7 @@ namespace Raven.Studio.Features.Query
 					var qr = task.Result;
 					var viewableDocuments = qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray();
 					documentsModel.Documents.Match(viewableDocuments);
-					documentsModel.Pager.TotalPages.Value = qr.TotalResults/model.Pager.PageSize;
+					documentsModel.Pager.TotalResults.Value = qr.TotalResults;
 				})
 				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("Query executed.")))
 				.Catch();
