@@ -313,36 +313,36 @@ namespace Raven.Client.Linq
 			return info.Type;
 		}
 
-        /// <summary>
-        /// Gets member info for the specified expression and the path to that expression
-        /// </summary>
-        /// <param name="expression"></param>
-        /// <returns></returns>
-        protected virtual ExpressionInfo GetMember(System.Linq.Expressions.Expression expression)
-        {
-            var parameterExpression = expression as ParameterExpression;
-            if (parameterExpression != null)
-            {
+		/// <summary>
+		/// Gets member info for the specified expression and the path to that expression
+		/// </summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		protected virtual ExpressionInfo GetMember(System.Linq.Expressions.Expression expression)
+		{
+			var parameterExpression = expression as ParameterExpression;
+			if (parameterExpression != null)
+			{
 
-                if (currentPath.EndsWith(","))
-                    currentPath = currentPath.Substring(0, currentPath.Length - 1);
-                return new ExpressionInfo(currentPath, parameterExpression.Type, false);
+				if (currentPath.EndsWith(","))
+					currentPath = currentPath.Substring(0, currentPath.Length - 1);
+				return new ExpressionInfo(currentPath, parameterExpression.Type, false);
 
-            }
+			}
 
-            string path;
-            Type memberType;
-            bool isNestedPath;
-            GetPath(expression, out path, out memberType, out isNestedPath);
+			string path;
+			Type memberType;
+			bool isNestedPath;
+			GetPath(expression, out path, out memberType, out isNestedPath);
 
-            //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
-            path = path.Substring(path.IndexOf('.') + 1);
+			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
+			path = path.Substring(path.IndexOf('.') + 1);
 
-            return new ExpressionInfo(
-                queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path),
-                memberType,
-                isNestedPath);
-        }
+			return new ExpressionInfo(
+				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path),
+				memberType,
+				isNestedPath);
+		}
 
 		/// <summary>
 		/// Get the path from the expression, including considering dictionary calls
@@ -549,7 +549,7 @@ namespace Raven.Client.Linq
 		private static string GetFullMemberPath(MemberExpression memberExpression)
 		{
 			var parentExpression = memberExpression.Expression as MemberExpression;
-			if(parentExpression != null)
+			if (parentExpression != null)
 			{
 				return GetFullMemberPath(parentExpression) + "." + memberExpression.Member.Name;
 			}
@@ -604,11 +604,11 @@ namespace Raven.Client.Linq
 					VisitExpression(expression.Arguments[0]);
 					var expressionInfo = GetMember(expression.Arguments[1]);
 					object value;
-					if(GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
+					if (GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
 					{
 						throw new InvalidOperationException("Could not extract value from " + expression);
 					}
-					luceneQuery.Search(expressionInfo.Path, (string) value);
+					luceneQuery.Search(expressionInfo.Path, (string)value);
 					break;
 				case "In":
 					var memberInfo = GetMember(expression.Arguments[0]);
@@ -619,7 +619,7 @@ namespace Raven.Client.Linq
 						luceneQuery.WhereContains(memberInfo.Path, array);
 					else
 					{
-						luceneQuery.WhereContains(memberInfo.Path, ((IEnumerable) objects).Cast<object>());
+						luceneQuery.WhereContains(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
 					}
 
 					break;
@@ -943,7 +943,7 @@ namespace Raven.Client.Linq
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
 				if (type.IsEnum && (value is IEnumerable == false) && // skip arrays, lists
-					queryGenerator.Conventions.SaveEnumsAsIntegers == false) 
+					queryGenerator.Conventions.SaveEnumsAsIntegers == false)
 				{
 					return Enum.GetName(type, value);
 				}
@@ -1138,10 +1138,10 @@ namespace Raven.Client.Linq
 					}
 #if !SILVERLIGHT
 				case SpecialQueryType.Count:
-				{
-					var queryResultAsync = finalQuery.QueryResult;
-					return queryResultAsync.TotalResults;
-				}
+					{
+						var queryResultAsync = finalQuery.QueryResult;
+						return queryResultAsync.TotalResults;
+					}
 #else
 				case SpecialQueryType.Count:
 					{

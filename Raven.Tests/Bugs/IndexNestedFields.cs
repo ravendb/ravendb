@@ -37,9 +37,9 @@ namespace Raven.Tests.Bugs
 		{
 			UsingPrepoulatedDatabase(delegate(IDocumentSession session3)
 			{
-                var results1 = session3.Advanced.LuceneQuery<Outer>("matryoshka").Where("middle_inner_ID:" + ExpectedId).ToArray();
+				var results1 = session3.Advanced.LuceneQuery<Outer>("matryoshka").Where("middle_inner_ID:" + ExpectedId).ToArray();
 
-                Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
+				Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
 			});
 		}
 
@@ -52,8 +52,8 @@ namespace Raven.Tests.Bugs
 						.Where(d => d.middle.inner.ID == ExpectedId)
 						.ToArray();
 
-				Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
-			});
+					Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
+				});
 		}
 
 		void UsingPrepoulatedDatabase(Action<IDocumentSession> testOperation)
@@ -61,17 +61,17 @@ namespace Raven.Tests.Bugs
 			using (var store = NewDocumentStore())
 			{
 
-			    var indexedFields = new { middle_inner_ID = FieldIndexing.NotAnalyzed };
+				var indexedFields = new { middle_inner_ID = FieldIndexing.NotAnalyzed };
 
 				store.DatabaseCommands.PutIndex("matryoshka", new IndexDefinitionBuilder<Outer, Outer>()
 				{
 
 					Map = docs => from doc in docs select new { middle_inner_ID = doc.middle.inner.ID },
-                    Indexes = { { d => indexedFields.middle_inner_ID, indexedFields.middle_inner_ID } }
+					Indexes = { { d => indexedFields.middle_inner_ID, indexedFields.middle_inner_ID } }
 
-                });
-			    
-				using(var session = store.OpenSession())
+				});
+
+				using (var session = store.OpenSession())
 				{
 					session.Store(new Outer
 						{
@@ -83,7 +83,7 @@ namespace Raven.Tests.Bugs
 										}
 								}
 						});
-					
+
 					session.SaveChanges();
 				}
 

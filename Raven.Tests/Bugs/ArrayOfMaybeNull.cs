@@ -19,18 +19,18 @@ namespace Raven.Tests.Bugs
 			public Orders_Search()
 			{
 				Map = orders => from order in orders
-								select new
-								{
-									Query = new[]
-                           {
-                               order.FirstName,
-                               order.LastName,
-                               order.OrderNumber,
-                               order.Email,
-                               order.CompanyName
-                           },
-									order.OrderedAt
-								};
+				                select new
+				                {
+				                	Query = new[]
+				                	{
+				                		order.FirstName,
+				                		order.LastName,
+				                		order.OrderNumber,
+				                		order.Email,
+				                		order.CompanyName
+				                	},
+				                	order.OrderedAt
+				                };
 			}
 		}
 
@@ -65,7 +65,7 @@ namespace Raven.Tests.Bugs
 
 				new Orders_Search().Execute(store);
 
-				using(var session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					var orders = session.Query<Orders_Search.ReduceResult, Orders_Search>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
