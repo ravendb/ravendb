@@ -63,7 +63,7 @@ namespace Raven.Studio.Infrastructure
 			Navigate(uri);
 		}
 
-		public static void Navigate(Uri source)
+		private static void Navigate(Uri source)
 		{
 			if (Deployment.Current.Dispatcher.CheckAccess())
 				Application.Current.Host.NavigationState = source.ToString();

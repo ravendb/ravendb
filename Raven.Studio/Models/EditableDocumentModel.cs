@@ -67,7 +67,7 @@ namespace Raven.Studio.Models
 				}
 				catch
 				{
-					UrlUtil.Navigate(new Uri("/NotFound", UriKind.Relative));
+					UrlUtil.Navigate("/NotFound");
 				}
 			}
 		}
