@@ -82,6 +82,54 @@ namespace Raven.Tests.Bugs.Queries
 			}
 		}
 
+		[Fact]
+		public void Projections_to_anonym()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var entity = new Company {Name = "Simple Company", Id = "companies/1", Address1 = "Tel-Aviv"};
+				using (var session = store.OpenSession())
+				{
+					session.Store(entity);
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var results = session.Query<Company>().ToArray();
+					var a = results[0];
+
+					Assert.NotNull(a);
+					Assert.NotNull(a.Name);
+					Assert.NotNull(a.Address1);
+
+					var projectedResults = results.Select(x => new
+						                                     	{
+						                                     		CompanyName = x.Name,
+						                                     		Address = x.Address1
+						                                     	}).ToArray();
+
+					var b = projectedResults[0];
+					Assert.NotNull(b.CompanyName);
+					Assert.NotNull(b.Address);
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var results =
+						session.Query<Company>().Select(x => new
+						                                     	{
+						                                     		CompanyName = x.Name,
+						                                     		Address = x.Address1
+						                                     	}).ToArray();
+					var a = results[0];
+					Assert.NotNull(a.CompanyName);
+					Assert.NotNull(a.Address);
+				}
+
+			}
+		}
+
 		public class User
 		{
 			public LiveProjection.Address[] Addresses { get; set; }
