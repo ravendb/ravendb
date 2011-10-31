@@ -180,6 +180,11 @@ namespace Raven.Tests.Linq
 			return (RavenQueryInspector<IndexedUser>)documentSession.Query<IndexedUser>();
 		}
 
+		private RavenQueryInspector<IndexedUser> GetRavenQueryInspectorStatic()
+		{
+			return (RavenQueryInspector<IndexedUser>)documentSession.Query<IndexedUser>("static");
+		}
+
 		[Fact]
 		public void CanUnderstandSimpleEqualityWithVariable()
 		{
@@ -462,12 +467,21 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void CanUnderstandSimpleAny()
+		public void CanUnderstandSimpleAny_Dynamic()
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers
 				.Where(x => x.Properties.Any(y => y.Key == "first"));
-            Assert.Equal("Properties_Key:first", q.ToString());
+            Assert.Equal("Properties,Key:first", q.ToString());
+		}
+
+		[Fact]
+		public void CanUnderstandSimpleAny_Static()
+		{
+			var indexedUsers = GetRavenQueryInspectorStatic();
+			var q = indexedUsers
+				.Where(x => x.Properties.Any(y => y.Key == "first"));
+			Assert.Equal("Properties_Key:first", q.ToString());
 		}
 
 		public class IndexedUser
