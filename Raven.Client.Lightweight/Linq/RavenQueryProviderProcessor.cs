@@ -601,6 +601,7 @@ namespace Raven.Client.Linq
 			switch (expression.Method.Name)
 			{
 				case "Search":
+					VisitExpression(expression.Arguments[0]);
 					var expressionInfo = GetMember(expression.Arguments[1]);
 					object value;
 					if(GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
@@ -941,8 +942,8 @@ namespace Raven.Client.Linq
 			object value;
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
-				if (type.IsEnum && (value is IEnumerable == false) && 
-					queryGenerator.Conventions.QueryEnumsAsIntegers == false) // skip arrays, lists
+				if (type.IsEnum && (value is IEnumerable == false) && // skip arrays, lists
+					queryGenerator.Conventions.SaveEnumsAsIntegers == false) 
 				{
 					return Enum.GetName(type, value);
 				}
