@@ -11,6 +11,7 @@ namespace Raven.Studio.Models
 {
 	public class ServerModel : Model
 	{
+		public const string DefaultDatabaseName = "Default";
 		private readonly DocumentStore documentStore;
 		private DatabaseModel[] defaultDatabase;
 
@@ -43,22 +44,12 @@ namespace Raven.Studio.Models
 
 		private void SelectDatabase(DatabaseModel database)
 		{
-			var url = UrlUtil.Url.Trim();
-			if (string.IsNullOrEmpty(url))
-				return;
-			var start = url.StartsWith("/") ? 1 : 0;
-			var end = url.IndexOf('/', start + 1);
-			var databaseName = url.Substring(start, end - start);
-			if (Databases.Where(x => x.Name == databaseName).Any())
-				url = url.ReplaceSingle(databaseName, database.Name);
-			else
-				url = "/" + database.Name + url;
-			UrlUtil.Navigate(url);
+			UrlUtil.Navigate(UrlUtil.Url);
 		}
 
 		public Task Initialize()
 		{
-			defaultDatabase = new[] { new DatabaseModel("Default", documentStore.AsyncDatabaseCommands) };
+			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
 			SelectedDatabase.Value = defaultDatabase[0];
 			return documentStore.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync()

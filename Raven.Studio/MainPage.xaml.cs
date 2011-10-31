@@ -11,6 +11,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Raven.Studio.Behaviors;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio
 {
@@ -70,6 +71,12 @@ namespace Raven.Studio
 			e.Handled = true;
 			ChildWindow errorWin = new ErrorWindow(e.Uri);
 			errorWin.Show();
+		}
+
+		private void ContentFrame_Navigating(object sender, NavigatingCancelEventArgs e)
+		{
+			e.Cancel = true;
+			UrlUtil.Navigate(e.Uri.ToString());
 		}
 	}
 }
