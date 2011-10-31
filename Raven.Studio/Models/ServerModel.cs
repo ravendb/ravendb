@@ -3,11 +3,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
 using System.Windows.Input;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Studio.Features.Databases;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
@@ -26,6 +24,7 @@ namespace Raven.Studio.Models
 		{
 			Databases = new BindableCollection<DatabaseModel>(new PrimaryKeyComparer<DatabaseModel>(model => model.Name));
 			SelectedDatabase = new Observable<DatabaseModel>();
+			SelectedDatabase.PropertyChanged += (sender, args) => SelectDatabase(SelectedDatabase.Value);
 
 			documentStore = new DocumentStore
 			{
@@ -42,9 +41,24 @@ namespace Raven.Studio.Models
 				false;
 		}
 
+		private void SelectDatabase(DatabaseModel database)
+		{
+			var url = UrlUtil.Url.Trim();
+			if (string.IsNullOrEmpty(url))
+				return;
+			var start = url.StartsWith("/") ? 1 : 0;
+			var end = url.IndexOf('/', start + 1);
+			var databaseName = url.Substring(start, end - start);
+			if (Databases.Where(x => x.Name == databaseName).Any())
+				url = url.ReplaceSingle(databaseName, database.Name);
+			else
+				url = "/" + database.Name + url;
+			UrlUtil.Navigate(url);
+		}
+
 		public Task Initialize()
 		{
-			defaultDatabase = new[] {new DatabaseModel("Default", documentStore.AsyncDatabaseCommands)};
+			defaultDatabase = new[] { new DatabaseModel("Default", documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
 			SelectedDatabase.Value = defaultDatabase[0];
 			return documentStore.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync()
@@ -62,7 +76,7 @@ namespace Raven.Studio.Models
 				.Catch();
 		}
 
-		public Observable<DatabaseModel> SelectedDatabase { get; set; } 
+		public Observable<DatabaseModel> SelectedDatabase { get; set; }
 		public BindableCollection<DatabaseModel> Databases { get; set; }
 
 		public ICommand CreateNewDatabase

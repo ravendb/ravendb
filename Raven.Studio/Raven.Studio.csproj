@@ -196,6 +196,7 @@
     <Compile Include="Infrastructure\Converters\HiddenWhenLessOrEqualToConverter.cs" />
     <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\StringExtensions.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />
     <Compile Include="Infrastructure\ViewModel.cs" />
     <Compile Include="Models\AllDocumentsModel.cs" />
