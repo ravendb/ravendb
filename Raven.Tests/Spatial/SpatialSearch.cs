@@ -29,10 +29,10 @@ namespace Raven.Tests.Spatial
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new Event("a/1", 38.9579000, -77.3572000, DateTimeOffset.Now));
-					session.Store(new Event("a/2", 38.9690000, -77.3862000, DateTimeOffset.Now.AddDays(1)));
-					session.Store(new Event("b/2", 38.9690000, -77.3862000, DateTimeOffset.Now.AddDays(2)));
-					session.Store(new Event("c/3", 38.9510000, -77.4107000, DateTimeOffset.Now.AddYears(3)));
+					session.Store(new Event("a/1", 38.9579000, -77.3572000, DateTime.Now));
+					session.Store(new Event("a/2", 38.9690000, -77.3862000, DateTime.Now.AddDays(1)));
+					session.Store(new Event("b/2", 38.9690000, -77.3862000, DateTime.Now.AddDays(2)));
+					session.Store(new Event("c/3", 38.9510000, -77.4107000, DateTime.Now.AddYears(3)));
 					session.SaveChanges();
 				}
 

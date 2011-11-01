@@ -19,7 +19,7 @@ namespace Raven.Tests.Spatial
 			this.Longitude = lng;
 		}
 
-		public Event(string venue, double lat, double lng, DateTimeOffset date)
+		public Event(string venue, double lat, double lng, DateTime date)
 		{
 			this.Venue = venue;
 			this.Latitude = lat;
@@ -30,6 +30,6 @@ namespace Raven.Tests.Spatial
 		public string Venue { get; set; }
 		public double Latitude { get; set; }
 		public double Longitude { get; set; }
-		public DateTimeOffset Date { get; set; }
+		public DateTime Date { get; set; }
 	}
 }
