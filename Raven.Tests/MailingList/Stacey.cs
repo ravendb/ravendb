@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Client.Document;
 using Xunit;
 
 namespace Raven.Tests.MailingList
@@ -23,7 +24,8 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void LoadWithInclude()
 		{
-			using (var store = NewDocumentStore())
+			using(GetNewServer())
+			using (var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
 			{
 
 				var aggregate = new Aggregate
@@ -34,7 +36,8 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					session.Advanced.UseOptimisticConcurrency = true;
-					session.Store(aggregate); session.SaveChanges();
+					session.Store(aggregate); 
+					session.SaveChanges();
 				}
 
 				var root = new Root
