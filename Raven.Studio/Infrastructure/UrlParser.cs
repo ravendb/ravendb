@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -58,27 +57,14 @@ namespace Raven.Studio.Infrastructure
 		{
 			var indexOf = Url.IndexOf('?');
 			var uri = indexOf != -1 ? Url.Substring(0, indexOf) : Url;
+			if (string.IsNullOrWhiteSpace(uri))
+				uri = "/home";
 			var query = string.Join("&", QueryParams.Select(x => string.Format("{0}={1}", x.Key, x.Value)));
 			if (string.IsNullOrEmpty(query) == false)
 			{
 				uri += "?" + query;
 			}
-			Navigate(uri);
-		}
-
-		private static void Navigate(Uri source)
-		{
-			if (Deployment.Current.Dispatcher.CheckAccess())
-				Application.Current.Host.NavigationState = source.ToString();
-			else
-				Deployment.Current.Dispatcher.InvokeAsync(() => Application.Current.Host.NavigationState = source.ToString());
-		}
-
-		public static void Navigate(string url)
-		{
-			if (url == null)
-				return;
-			Navigate((new Uri(url, UriKind.Relative)));
+			UrlUtil.Navigate(uri);
 		}
 	}
 }
