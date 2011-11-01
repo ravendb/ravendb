@@ -459,16 +459,6 @@ namespace Raven.Database
 			return nextIdentityValue;
 		}
 
-		private void AddIndexingTask(IStorageActionsAccessor actions, RavenJToken metadata, Func<Task> taskGenerator)
-		{
-			foreach (var indexName in IndexDefinitionStorage.IndexNames)
-			{
-				var task = taskGenerator();
-				task.Index = indexName;
-				actions.Tasks.AddTask(task, SystemTime.UtcNow);
-			}
-		}
-
 		private void AssertPutOperationNotVetoed(string key, RavenJObject metadata, RavenJObject document, TransactionInformation transactionInformation)
 		{
 			var vetoResult = PutTriggers
@@ -542,7 +532,28 @@ namespace Raven.Database
 					if (actions.Documents.DeleteDocument(key, etag, out metadata))
 					{
 						deleted = true;
-						AddIndexingTask(actions, metadata, () => new RemoveFromIndexTask { Keys = { key } });
+						foreach (var indexName in IndexDefinitionStorage.IndexNames)
+						{
+							AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
+							if(abstractViewGenerator == null)
+								continue;
+
+							var token = metadata.Value<string>(Constants.RavenEntityName);
+
+							if (token != null && // the document has a entity name
+								abstractViewGenerator.ForEntityNames.Count > 0) // the index operations on specific entities
+							{
+								if(abstractViewGenerator.ForEntityNames.Contains(token) == false)
+									continue;
+							}
+
+							string indexNameCopy = indexName;
+							var task = actions.GetTask<RemoveFromIndexTask>(x => x.Index == indexNameCopy, new RemoveFromIndexTask
+							{
+								Index = indexNameCopy
+							});
+							task.Keys.Add(key);
+						}
 						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
 					}
 				}
@@ -673,6 +684,7 @@ namespace Raven.Database
 		        actions.Indexing.AddIndex(name, definition.IsMapReduce);
 		        workContext.ShouldNotifyAboutWork();
 		    });
+			workContext.ClearErrorsFor(name);
 			return name;
 		}
 
@@ -691,6 +703,9 @@ namespace Raven.Database
 						throw new InvalidOperationException("Could not find index named: " + index);
 
 					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
+
+					AskForIndexUpdateIfStale(stale);
+
 					indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
 					var indexFailureInformation = actions.Indexing.GetFailureRate(index);
 					if (indexFailureInformation.IsInvalidIndex)
@@ -753,6 +768,19 @@ namespace Raven.Database
 				IndexTimestamp = indexTimestamp.Item1,
 				IndexEtag = indexTimestamp.Item2
 			};
+		}
+
+		private void AskForIndexUpdateIfStale(bool stale)
+		{
+			if (stale == false) 
+				return;
+
+			// This is a sort of a hack
+			// Using it in this manner ensures that even if we somehow lost an update, we would still
+			// kick up indexing, anyway, because the querying for this would trigger that.
+			// This doesn't mean that we don't have a problem with losing updates, mind, just that we have
+			// no way to reproduce this.
+			workContext.ShouldNotifyAboutWork();
 		}
 
 		public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)

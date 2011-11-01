@@ -17,8 +17,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
-using Raven.Database.Linq;
 using Raven.Json.Linq;
 using DateTools = Lucene.Net.Documents.DateTools;
 
@@ -26,8 +24,6 @@ namespace Raven.Database.Indexing
 {
 	public class AnonymousObjectToLuceneDocumentConverter
 	{
-		private const string NullValueMarker = "NULL_VALUE";
-
 		private readonly IndexDefinition indexDefinition;
 		private readonly List<int> multipleItemsSameFieldCount = new List<int>();
 		private readonly Dictionary<object, Field> fieldsCache = new Dictionary<object, Field>();

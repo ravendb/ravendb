@@ -6,18 +6,22 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Abstractions;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Database.Tasks;
 using Raven.Storage.Managed.Impl;
+using System.Linq;
 
 namespace Raven.Storage.Managed
 {
 	public class StorageActionsAccessor : IStorageActionsAccessor
 	{
+		readonly DateTime createdAt = SystemTime.UtcNow;
 		public StorageActionsAccessor(TableStorage storage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher)
 		{
 			General = new GeneralStorageActions(storage);
@@ -90,6 +94,27 @@ namespace Raven.Storage.Managed
 		public bool IsWriteConflict(Exception exception)
 		{
 			return exception is ConcurrencyException;
+		}
+
+		private readonly List<Task> tasks = new List<Task>();
+
+		public T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Task
+		{
+			T task = tasks.OfType<T>().FirstOrDefault(predicate);
+			if(task == null)
+			{
+				tasks.Add(newTask);
+				return newTask;
+			}
+			return task;
+		}
+
+		public void SaveAllTasks()
+		{
+			foreach (var task in tasks)
+			{
+				Tasks.AddTask(task, createdAt);
+			}
 		}
 
 		[DebuggerNonUserCode]

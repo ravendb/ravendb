@@ -160,6 +160,7 @@
     <Compile Include="Bugs\AggressiveCaching.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
+    <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
     <Compile Include="Bugs\BackwardCompatability.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
@@ -436,6 +437,7 @@
     <Compile Include="Bugs\SelectManyTests .cs" />
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SerializingEntities.cs" />
+    <Compile Include="Bugs\SimonCropp.cs" />
     <Compile Include="Bugs\SimpleJson.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
@@ -546,11 +548,16 @@
     <Compile Include="Json\RavenJObjects.cs" />
     <Compile Include="Linq\Any.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
+    <Compile Include="Linq\DynamicQueriesWithStaticIndexes.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
     <Compile Include="Linq\SampleGeoLocation.cs" />
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
+    <Compile Include="MailingList\NicolasGarfinkiel.cs" />
+    <Compile Include="MailingList\Stacey.cs" />
+    <Compile Include="MailingList\transformedresults_customid_test.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -592,6 +599,7 @@
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />
+    <Compile Include="Querying\SearchOperator.cs" />
     <Compile Include="Querying\UsingDocumentQuery.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithLocalServer.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithRemoteServer.cs" />
@@ -605,7 +613,7 @@
     <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
     <Compile Include="Some.cs" />
     <Compile Include="Spatial\Event.cs" />
-    <Compile Include="Spatial\SpatialIndex.cs" />
+    <Compile Include="Spatial\SpatialIndexTest.cs" />
     <Compile Include="Indexes\Statistics.cs" />
     <Compile Include="Indexes\UsingQueryBuilder.cs" />
     <Compile Include="Linq\UsingRavenQueryProvider.cs" />
@@ -623,6 +631,7 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Spatial\SpatialIndexTestHelper.cs" />
+    <Compile Include="Spatial\SpatialSearch.cs" />
     <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
     <Compile Include="Storage\BackupRestore.cs" />
     <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
@@ -730,7 +739,9 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
     <EmbeddedResource Include="DefaultLogging.config" />
   </ItemGroup>
   <ItemGroup />

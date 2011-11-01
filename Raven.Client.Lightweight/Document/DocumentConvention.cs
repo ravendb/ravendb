@@ -61,7 +61,7 @@ namespace Raven.Client.Document
 			FindFullDocumentKeyFromNonStringIdentifier = DefaultFindFullDocumentKeyFromNonStringIdentifier;
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
 			FindTypeTagName = DefaultTypeTagName;
-			FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => prop;
+			FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace(",", "_").Replace(".", "_");
 			FindPropertyNameForDynamicIndex = (indexedType, indexedName, path, prop) => path + prop;
 			IdentityPartsSeparator = "/";
 			JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)

@@ -129,12 +129,19 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public override string ToString()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>());
+			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
 			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
 			string fields = "";
 			if (ravenQueryProvider.FieldsToFetch.Count > 0)
 				fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
 			return fields + luceneQuery;
+		}
+
+		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
+		{
+			return indexName.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) ? 
+				new DynamicQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>()) : 
+				new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>( ));
 		}
 
 		/// <summary>
@@ -144,7 +151,7 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>());
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
 				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
 			}
@@ -175,7 +182,7 @@ namespace Raven.Client.Linq
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>());
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>());
 			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
 			return ((IRavenQueryInspector)luceneQuery).GetLastEqualityTerm();
 		}

@@ -151,6 +151,8 @@ namespace Raven.Database.Linq
 
 		public virtual bool ContainsFieldOnMap(string field)
 		{
+			if (ReduceDefinition == null)
+				return fields.Contains(field);
 			return mapFields.Contains(field);
 		}
 

@@ -116,6 +116,7 @@ namespace Raven.Storage.Managed
 					var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
 					current.Value = storageActionsAccessor;
 					action(current.Value);
+					storageActionsAccessor.SaveAllTasks();
 					tableStroage.Commit();
 					storageActionsAccessor.InvokeOnCommit();
 				}

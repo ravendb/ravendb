@@ -24,8 +24,8 @@ namespace Raven.Client.Linq
 			Action<IDocumentQueryCustomization> customizeQuery, 
 			Action<QueryResult> afterQueryExecuted,
 			string indexName,
-			HashSet<string> fieldsToFetch) 
-			: base(queryGenerator, customizeQuery, afterQueryExecuted, indexName, fieldsToFetch)
+			HashSet<string> fieldsToFetch, Dictionary<string, string> fieldsTRename) 
+			: base(queryGenerator, customizeQuery, afterQueryExecuted, indexName, fieldsToFetch, fieldsTRename)
 		{
 
 		}

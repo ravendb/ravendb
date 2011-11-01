@@ -205,6 +205,7 @@ namespace Raven.Abstractions.Indexing
 				int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc*397 ^ val.GetHashCode());
 				result = (result*397) ^ Maps.Count;
 				result = (result*397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
+				result = (result * 397) ^ (TransformResults != null ? TransformResults.GetHashCode() : 0);
 				result = (result*397) ^ DictionaryHashCode(Stores);
 				result = (result*397) ^ DictionaryHashCode(Indexes);
 				result = (result*397) ^ DictionaryHashCode(Analyzers);
