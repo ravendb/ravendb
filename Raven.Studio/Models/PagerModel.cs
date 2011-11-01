@@ -1,4 +1,3 @@
-using System;
 using System.Windows.Input;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
@@ -7,12 +6,9 @@ namespace Raven.Studio.Models
 {
 	public class PagerModel : NotifyPropertyChangedBase
 	{
-		private readonly UrlUtil url;
-
 		public PagerModel()
 		{
 			PageSize = 25;
-			url = new UrlUtil();
 			SetTotalResults(new Observable<long>());
 		}
 
@@ -39,14 +35,18 @@ namespace Raven.Studio.Models
 			get { return TotalResults.Value / PageSize + 1; }
 		}
 
-		private ushort skip;
+		private ushort? skip;
 		public ushort Skip
 		{
 			get
 			{
-				if (skip == 0)
-					ushort.TryParse(url.GetQueryParam("skip"), out skip);
-				return skip;
+				if (skip == null)
+				{
+					ushort s;
+					ushort.TryParse(new UrlParser(UrlUtil.Url).GetQueryParam("skip"), out s);
+					skip = s;
+				}
+				return skip.Value;
 			}
 		}
 
@@ -78,8 +78,9 @@ namespace Raven.Studio.Models
 
 		private void NavigateToPage(int pageOffset)
 		{
-			url.SetQueryParam("skip", skip + pageOffset * PageSize);
-			url.NavigateTo();
+			var urlParser = new UrlParser(UrlUtil.Url);
+			urlParser.SetQueryParam("skip", skip + pageOffset * PageSize);
+			urlParser.NavigateTo();
 		}
 
 		public ICommand NextPage

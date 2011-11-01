@@ -84,7 +84,7 @@ namespace Raven.Studio
 				{
 					e.Cancel = true;
 					navigationMode = NavigationMode.Refresh;
-					UrlUtil.Navigate(e.Uri.ToString());
+					// new UrlUtil().NavigateTo();
 					navigationMode = NavigationMode.New;
 				}
 			}

@@ -37,7 +37,7 @@ namespace Raven.Studio.Models
 
 		public override void LoadModelParameters(string parameters)
 		{
-			var url = new UrlUtil();
+			var url = new UrlParser(UrlUtil.Url);
 
 			var docId = url.GetQueryParam("id");
 			if (string.IsNullOrWhiteSpace(docId) == false)
