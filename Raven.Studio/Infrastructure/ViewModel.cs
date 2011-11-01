@@ -57,20 +57,12 @@ namespace Raven.Studio.Infrastructure
 			var applicationModel = ApplicationModel.Current;
 
 			var server = applicationModel.Server;
-			// TODO: Due a recent change, Server is not null on startup
-			if (server.Value == null)
-			{
-				server.RegisterOnce(SetCurrentDatabase);
-				return;
-			}
-
 			var databaseName = new UrlUtil().GetQueryParam("database");
 			var database = server.Value.Databases.Where(x => x.Name == databaseName).FirstOrDefault();
 			if (database != null)
 			{
 				server.Value.SelectedDatabase.Value = database;
 			}
-
 			Database.Value = server.Value.SelectedDatabase.Value;
 		}
 
