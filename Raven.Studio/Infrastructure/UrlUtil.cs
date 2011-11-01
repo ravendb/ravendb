@@ -96,5 +96,17 @@ namespace Raven.Studio.Infrastructure
 				return url.ReplaceSingle(databaseName, currentDatabaseName);
 			return "/" + currentDatabaseName + url;
 		}
+
+		public static string GetDatabaseFromUrl(string url)
+		{
+			url = url.Trim(new []{' ', '/'});
+			const int start = 0;
+			var end = url.IndexOf('/', start + 1);
+			var databaseName = end == -1 ? url.Substring(start) : url.Substring(start, end - start);
+
+			if (ApplicationModel.Current.Server.Value.Databases.Where(x => x.Name == databaseName).Any()) // Is database exists?
+				return databaseName;
+			return null;
+		}
 	}
 }

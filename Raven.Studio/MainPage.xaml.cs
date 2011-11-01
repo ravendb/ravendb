@@ -73,10 +73,21 @@ namespace Raven.Studio
 			errorWin.Show();
 		}
 
+		private NavigationMode navigationMode = NavigationMode.New;
+		private readonly object lockObject = new object();
+
 		private void ContentFrame_Navigating(object sender, NavigatingCancelEventArgs e)
 		{
-			e.Cancel = true;
-			UrlUtil.Navigate(e.Uri.ToString());
+			if (navigationMode == NavigationMode.New)
+			{
+				lock (lockObject)
+				{
+					e.Cancel = true;
+					navigationMode = NavigationMode.Refresh;
+					UrlUtil.Navigate(e.Uri.ToString());
+					navigationMode = NavigationMode.New;
+				}
+			}
 		}
 	}
 }

@@ -8,7 +8,8 @@
              xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases"
              xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats"
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-             xmlns:System="clr-namespace:System;assembly=mscorlib">
+             xmlns:System="clr-namespace:System;assembly=mscorlib"
+             xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -178,22 +179,9 @@
 							      Navigated="ContentFrame_Navigated"
 							      NavigationFailed="ContentFrame_NavigationFailed">
                     <navigation:Frame.UriMapper>
-                        <uriMapper:UriMapper>
-                            <uriMapper:UriMapping Uri=""
-											      MappedUri="/Views/Home.xaml" />
-							<uriMapper:UriMapping Uri="/indexes-errors/{indexName}"
-												  MappedUri="/Views/IndexesErrors.xaml" />
-							<uriMapper:UriMapping Uri="/indexes-errors"
-												  MappedUri="/Views/IndexesErrors.xaml" />
-							<uriMapper:UriMapping Uri="/indexes/{indexName}"
-												  MappedUri="/Views/Index.xaml" />
-							<uriMapper:UriMapping Uri="/query/{indexName}"
-												  MappedUri="/Views/Query.xaml" />
-							<uriMapper:UriMapping Uri="/logs/{errors}"
-												  MappedUri="/Views/Logs.xaml" />
-							<uriMapper:UriMapping Uri="/{pageName}"
-											      MappedUri="/Views/{pageName}.xaml" />
-                        </uriMapper:UriMapper>
+                        <Infrastructure:StudioUriMapper>
+                            <Infrastructure:StudioUriMapping Uri="/{_database}/{view}" MappedUri="/Views/{view}.xaml" />
+                        </Infrastructure:StudioUriMapper>
                     </navigation:Frame.UriMapper>
                 </navigation:Frame>
             </Grid>
