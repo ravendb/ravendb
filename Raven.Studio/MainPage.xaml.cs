@@ -81,14 +81,13 @@ namespace Raven.Studio
 		{
 			if (navigationMode != NavigationMode.New) return;
 
-			var currentDatabase = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 			var urlParser = new UrlParser(e.Uri.ToString());
 			if (urlParser.GetQueryParam("database") != null)
 				return;
 
 			e.Cancel = true;
 			navigationMode = NavigationMode.Refresh;
-			urlParser.SetQueryParam("database", currentDatabase);
+			urlParser.SetQueryParam("database", ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
 			urlParser.NavigateTo();
 			navigationMode = NavigationMode.New;
 		}

@@ -44,7 +44,9 @@ namespace Raven.Studio.Models
 
 		private void SelectDatabase(DatabaseModel database)
 		{
-			UrlUtil.Navigate(UrlUtil.Url);
+			var urlParser = new UrlParser(UrlUtil.Url);
+			urlParser.SetQueryParam("database", database.Name);
+			urlParser.NavigateTo();
 		}
 
 		public Task Initialize()
