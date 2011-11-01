@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
@@ -110,6 +112,7 @@ namespace Raven.Tests.Bugs.Queries
 						                                     	}).ToArray();
 
 					var b = projectedResults[0];
+
 					Assert.NotNull(b.CompanyName);
 					Assert.NotNull(b.Address);
 				}
