@@ -703,6 +703,9 @@ namespace Raven.Database
 						throw new InvalidOperationException("Could not find index named: " + index);
 
 					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
+
+					AskForIndexUpdateIfStale(stale);
+
 					indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
 					var indexFailureInformation = actions.Indexing.GetFailureRate(index);
 					if (indexFailureInformation.IsInvalidIndex)
@@ -765,6 +768,19 @@ namespace Raven.Database
 				IndexTimestamp = indexTimestamp.Item1,
 				IndexEtag = indexTimestamp.Item2
 			};
+		}
+
+		private void AskForIndexUpdateIfStale(bool stale)
+		{
+			if (stale == false) 
+				return;
+
+			// This is a sort of a hack
+			// Using it in this manner ensures that even if we somehow lost an update, we would still
+			// kick up indexing, anyway, because the querying for this would trigger that.
+			// This doesn't mean that we don't have a problem with losing updates, mind, just that we have
+			// no way to reproduce this.
+			workContext.ShouldNotifyAboutWork();
 		}
 
 		public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
