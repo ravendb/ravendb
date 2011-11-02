@@ -138,7 +138,7 @@ namespace Similarity.Net
     /// </author>
     /// <author>  Mark Harwood
     /// </author>
-    public sealed class MoreLikeThis
+    public class MoreLikeThis
     {
 		
         /// <summary> Default maximum number of tokens to parse in each example doc field that is not stored with TermVector support.</summary>
@@ -607,7 +607,7 @@ namespace Similarity.Net
         /// </summary>
         /// <param name="words">a map of words keyed on the word(String) with Int objects as the values.
         /// </param>
-        private PriorityQueue CreateQueue(System.Collections.IDictionary words)
+        protected PriorityQueue CreateQueue(System.Collections.IDictionary words)
         {
             // have collected all words in doc and their freqs
             int numDocs = ir.NumDocs();
@@ -752,7 +752,7 @@ namespace Similarity.Net
         /// </summary>
         /// <param name="docNum">the id of the lucene document from which to find terms
         /// </param>
-        private PriorityQueue RetrieveTerms(int docNum)
+        protected virtual PriorityQueue RetrieveTerms(int docNum)
         {
             System.Collections.IDictionary termFreqMap = new System.Collections.Hashtable();
             for (int i = 0; i < fieldNames.Length; i++)
@@ -787,7 +787,7 @@ namespace Similarity.Net
         /// </param>
         /// <param name="vector">List of terms and their frequencies for a doc/field
         /// </param>
-        private void  AddTermFrequencies(System.Collections.IDictionary termFreqMap, TermFreqVector vector)
+        protected void AddTermFrequencies(System.Collections.IDictionary termFreqMap, TermFreqVector vector)
         {
             System.String[] terms = vector.GetTerms();
             int[] freqs = vector.GetTermFrequencies();
@@ -820,7 +820,7 @@ namespace Similarity.Net
         /// </param>
         /// <param name="fieldName">Used by analyzer for any special per-field analysis
         /// </param>
-        private void  AddTermFrequencies(System.IO.StreamReader r, System.Collections.IDictionary termFreqMap, System.String fieldName)
+        protected void AddTermFrequencies(System.IO.StreamReader r, System.Collections.IDictionary termFreqMap, System.String fieldName)
         {
             TokenStream ts = analyzer.TokenStream(fieldName, r);
             Lucene.Net.Analysis.Token token;
@@ -860,7 +860,7 @@ namespace Similarity.Net
         /// </param>
         /// <returns> true if should be ignored, false if should be used in further analysis
         /// </returns>
-        private bool IsNoiseWord(System.String term)
+        protected bool IsNoiseWord(System.String term)
         {
             int len = term.Length;
             if (minWordLen > 0 && len < minWordLen)
@@ -962,7 +962,7 @@ namespace Similarity.Net
         }
 		
         /// <summary> Use for frequencies and to avoid renewing Integers.</summary>
-        private class Int
+        protected class Int
         {
             internal int x;
 			

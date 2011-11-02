@@ -7,7 +7,9 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using System.Threading;
+using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.MoreLikeThis;
@@ -22,6 +24,8 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 {
     public class MoreLikeThisTests : IDisposable
     {
+        #region Test Setup
+
         private readonly DocumentStore documentStore;
 		private readonly string path;
 		private readonly RavenDbServer ravenDbServer;
@@ -47,7 +51,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			documentStore.Initialize();
 		}
 
-        static public void WaitForUserToContinueTheTest(DocumentStore documentStore)
+        static private void WaitForUserToContinueTheTest(DocumentStore documentStore)
         {
             if (Debugger.IsAttached == false)
                 return;
@@ -64,6 +68,22 @@ namespace Raven.Bundles.Tests.MoreLikeThis
             
         }
 
+        private static string GetLorem(int numWords)
+        {
+            const string theLorem = "Morbi nec purus eu libero interdum laoreet Nam metus quam posuere in elementum eget egestas eget justo Aenean orci ligula ullamcorper nec convallis non placerat nec lectus Quisque convallis porta suscipit Aliquam sollicitudin ligula sit amet libero cursus egestas Maecenas nec mauris neque at faucibus justo Fusce ut orci neque Nunc sodales pulvinar lobortis Praesent dui tellus fermentum sed faucibus nec faucibus non nibh Vestibulum adipiscing porta purus ut varius mi pulvinar eu Nam sagittis sodales hendrerit Vestibulum et tincidunt urna Fusce lacinia nisl at luctus lobortis lacus quam rhoncus risus a posuere nulla lorem at nisi Sed non erat nisl Cras in augue velit a mattis ante Etiam lorem dui elementum eget facilisis vitae viverra sit amet tortor Suspendisse potenti Nunc egestas accumsan justo viverra viverra Sed faucibus ullamcorper mauris ut pharetra ligula ornare eget Donec suscipit luctus rhoncus Pellentesque eget justo ac nunc tempus consequat Nullam fringilla egestas leo Praesent condimentum laoreet magna vitae luctus sem cursus sed Mauris massa purus suscipit ac malesuada a accumsan non neque Proin et libero vitae quam ultricies rhoncus Praesent urna neque molestie et suscipit vestibulum iaculis ac nulla Integer porta nulla vel leo ullamcorper eu rhoncus dui semper Donec dictum dui";
+            var loremArray = theLorem.Split();
+            var output = new StringBuilder();
+            var rnd = new Random();
+
+            for (var i = 0; i < numWords; i++)
+            {
+                output.Append(loremArray[rnd.Next(0, loremArray.Length - 1)]).Append(" ");
+            }
+            return output.ToString();
+        }
+
+        #endregion
+
         #region IDisposable Members
 
         public void Dispose()
@@ -75,23 +95,23 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
         #endregion
 
-        [Fact]
-        public void Basic_Test_Returning_String()
-        {
-            //InsertData();
+        #region Test Facts
 
+        [Fact]
+        public void Can_Get_Results()
+        {
             const string key = "datas/1";
 
             using (var session = documentStore.OpenSession())
             {
-                new DataBodyIndex().Execute(documentStore);
+                new DataIndex().Execute(documentStore);
 
                 var list = new List<Data>
                                {
-                                   new Data {Body = "This is a test. Isn't it great?"},
+                                   new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
                                    new Data {Body = "I have a test tomorrow. I hate having a test"},
                                    new Data {Body = "Cake is great."},
-                                   new Data {Body = "test"},
+                                   new Data {Body = "This document has the word test only once"},
                                    new Data {Body = "test"},
                                    new Data {Body = "test"},
                                    new Data {Body = "test"},
@@ -102,29 +122,244 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                 session.SaveChanges();
 
                 //Ensure non stale index
-                var testObj = session.Query<Data, DataBodyIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+                Assert.NotNull(testObj);
             }
-
-            
 
             using (var session = documentStore.OpenSession())
             {
-                var testObj = session.Query<Data, DataBodyIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-                Assert.NotNull(testObj);
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body");
 
-                //WaitForUserToContinueTheTest(documentStore);
-
-                var str = session.Advanced.MoreLikeThis("DataBodyIndex", key, "Body");
-
-                Assert.False(String.IsNullOrEmpty(str));
+                Assert.NotEqual(0, list.Count());
             }
         }
+
+        [Fact]
+        public void Query_On_Document_That_Does_Not_Have_High_Enough_Word_Frequency()
+        {
+            const string key = "datas/4";
+
+            using (var session = documentStore.OpenSession())
+            {
+                new DataIndex().Execute(documentStore);
+
+                var list = new List<Data>
+                               {
+                                   new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
+                                   new Data {Body = "I have a test tomorrow. I hate having a test"},
+                                   new Data {Body = "Cake is great."},
+                                   new Data {Body = "This document has the word test only once"},
+                                   new Data {Body = "test"},
+                                   new Data {Body = "test"},
+                                   new Data {Body = "test"},
+                                   new Data {Body = "test"}
+                               };
+                list.ForEach(session.Store);
+
+                session.SaveChanges();
+
+                //Ensure non stale index
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+                Assert.NotNull(testObj);
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body");
+
+                Assert.Equal(0, list.Count());
+            }
+        }
+
+        [Fact]
+        public void Test_With_Lots_Of_Random_Data()
+        {
+            var key = "datas/1";
+            using (var session = documentStore.OpenSession())
+            {
+                new DataIndex().Execute(documentStore);
+
+                for (var i = 0; i < 100; i++)
+                {
+                    var data = new Data {Body = GetLorem(200)};
+                    session.Store(data);
+                }
+                session.SaveChanges();
+
+                //Ensure non stale index
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+                Assert.NotNull(testObj);
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body");
+
+                Assert.NotEqual(0, list.Count());
+            }
+        }
+
+        [Fact]
+        public void Do_Not_Pass_FieldNames()
+        {
+            var key = "datas/1";
+            using (var session = documentStore.OpenSession())
+            {
+                new DataIndex().Execute(documentStore);
+
+                for (var i = 0; i < 10; i++)
+                {
+                    var data = new Data { Body = "Body" + i, WhitespaceAnalyzerField = "test test" };
+                    session.Store(data);
+                }
+                session.SaveChanges();
+
+                //Ensure non stale index
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+                Assert.NotNull(testObj);
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+
+                Assert.NotEqual(0, list.Count());
+            }
+        }
+
+        [Fact]
+        public void Each_Field_Should_Use_Correct_Analyzer()
+        {
+            var key = "datas/1";
+            using (var session = documentStore.OpenSession())
+            {
+                new DataIndex().Execute(documentStore);
+
+                for (var i = 0; i < 10; i++)
+                {
+                    var data = new Data { WhitespaceAnalyzerField = "Bob@hotmail.com hotmail" };
+                    session.Store(data);
+                }
+                session.SaveChanges();
+
+                //Ensure non stale index
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+                Assert.NotNull(testObj);
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+
+                Assert.Equal(0, list.Count());
+            }
+
+            key = "datas/11";
+            using (var session = documentStore.OpenSession())
+            {
+                new DataIndex().Execute(documentStore);
+
+                for (var i = 0; i < 10; i++)
+                {
+                    var data = new Data { WhitespaceAnalyzerField = "Bob@hotmail.com Bob@hotmail.com" };
+                    session.Store(data);
+                }
+                session.SaveChanges();
+
+                //Ensure non stale index
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+                Assert.NotNull(testObj);
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+
+                Assert.NotEqual(0, list.Count());
+            }
+        }
+
+        [Fact]
+        public void Can_Use_Min_Doc_Freq_Param()
+        {
+            const string key = "datas/1";
+
+            using (var session = documentStore.OpenSession())
+            {
+                new DataIndex().Execute(documentStore);
+
+                var list = new List<Data>
+                               {
+                                   new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
+                                   new Data {Body = "I have a test tomorrow. I hate having a test"},
+                                   new Data {Body = "Cake is great."},
+                                   new Data {Body = "This document has the word test only once"}
+                               };
+                list.ForEach(session.Store);
+
+                session.SaveChanges();
+
+                //Ensure non stale index
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+                Assert.NotNull(testObj);
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body", new MoreLikeThisQueryParameters { MinimumDocumentFrequency = 2 });
+
+                Assert.NotEqual(0, list.Count());
+            }
+        }
+
+        [Fact]
+        public void Can_Use_Boost_Param()
+        {
+            const string key = "datas/1";
+
+            using (var session = documentStore.OpenSession())
+            {
+                new DataIndex().Execute(documentStore);
+
+                var list = new List<Data>
+                               {
+                                   new Data {Body = "This is a test. it is a great test. I hope I pass my great test!"},
+                                   new Data {Body = "Cake is great."},
+                                   new Data {Body = "I have a test tomorrow."}
+                               };
+                list.ForEach(session.Store);
+
+                session.SaveChanges();
+
+                //Ensure non stale index
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+                Assert.NotNull(testObj);
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body", 
+                    new MoreLikeThisQueryParameters
+                        {
+                            MinimumWordLength = 3,
+                            MinimumDocumentFrequency = 1,
+                            Boost = true
+                        });
+
+                Assert.NotEqual(0, list.Count());
+                Assert.Equal("I have a test tomorrow.", list[0].Body);
+            }
+        }
+        
+        #endregion
+
+        #region Private Methods - Does NOT work!
 
         private void InsertData()
         {
             using (var session = documentStore.OpenSession())
             {
-                new DataBodyIndex().Execute(documentStore);
+                new DataIndex().Execute(documentStore);
 
                 var list = new List<Data>
                                {
@@ -147,9 +382,11 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                 session.SaveChanges();
 
                 //Ensure non stale index
-                var testObj = session.Query<Data, DataBodyIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == list[0].Id).SingleOrDefault();
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == list[0].Id).SingleOrDefault();
             }
         }
+
+        #endregion
 
         #region Data Classes
 
@@ -157,24 +394,29 @@ namespace Raven.Bundles.Tests.MoreLikeThis
         {
             public string Id { get; set; }
             public string Body { get; set; }
+            public string WhitespaceAnalyzerField { get; set; }
         }
 
         #endregion
 
-        #region "Indexes"
+        #region Indexes
 
-        public class DataBodyIndex : AbstractIndexCreationTask<Data>
+        public class DataIndex : AbstractIndexCreationTask<Data>
         {
-            public DataBodyIndex()
+            public DataIndex()
             {
                 Map = docs => from doc in docs
-                              select new {doc.Id, doc.Body};
+                              select new { doc.Body, doc.WhitespaceAnalyzerField };
 
                 Analyzers = new Dictionary<Expression<Func<Data, object>>, string>
                                 {
                                     {
                                         x => x.Body,
                                         typeof (StandardAnalyzer).FullName
+                                    },
+                                    {
+                                        x => x.WhitespaceAnalyzerField,
+                                        typeof (WhitespaceAnalyzer).FullName
                                     }
                                 };
 
@@ -182,6 +424,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                              {
                                  {
                                      x => x.Body, FieldStorage.Yes
+                                 }, 
+                                 {
+                                     x => x.WhitespaceAnalyzerField, FieldStorage.Yes
                                  }
                              };
 

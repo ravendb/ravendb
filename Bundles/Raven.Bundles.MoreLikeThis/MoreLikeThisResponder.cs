@@ -4,19 +4,27 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Linq;
+using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Raven.Abstractions.Data;
+using Lucene.Net.Util;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Bundles.MoreLikeThis
 {
 	public class MoreLikeThisResponder : RequestResponder
 	{
+        //private readonly Analyzer DEFAULT_ANALYZER = new StandardAnalyzer(Version.LUCENE_29);
+
+        //private readonly Analyzer DEFAULT_ANALYZER = new WhitespaceAnalyzer();
+
 		public override string UrlPattern
 		{
 			get { return @"^/morelikethis/([\w\-_]+)/(.+)"; } // /morelikethis/(index-name)/(ravendb-document-id)
@@ -35,12 +43,17 @@ namespace Raven.Bundles.MoreLikeThis
 
 			var fieldNames = context.Request.QueryString.GetValues("fields");
 
-			if (fieldNames == null || fieldNames.Length == 0)
-			{
-				context.SetStatusToBadRequest();
-				context.WriteJson(new { Error = "The query string must specify the fields to check" });
-				return;
-			}
+		    var parameters = new MoreLikeThisQueryParameters
+		                         {
+                                     Boost = GetNullableBool(context.Request.QueryString.Get("boost")),
+                                     MaximumNumberOfTokensParsed = GetNullableInt(context.Request.QueryString.Get("maxNumTokens")),
+                                     MaximumQueryTerms = GetNullableInt(context.Request.QueryString.Get("maxQueryTerms")),
+                                     MaximumWordLength = GetNullableInt(context.Request.QueryString.Get("maxWordLen")),
+                                     MinimumDocumentFrequency = GetNullableInt(context.Request.QueryString.Get("minDocFreq")),
+                                     MinimumTermFrequency = GetNullableInt(context.Request.QueryString.Get("minTermFreq")),
+                                     MinimumWordLength = GetNullableInt(context.Request.QueryString.Get("minWordLen"))
+		                         };
+            
 
 			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
@@ -51,28 +64,31 @@ namespace Raven.Bundles.MoreLikeThis
 			}
 
 
-			PerformSearch(context, indexName, fieldNames, documentId, indexDefinition);
+			PerformSearch(context, indexName, fieldNames, documentId, indexDefinition, parameters);
 		}
 
-		private void PerformSearch(IHttpContext context, string indexName, string[] fieldNames, string documentId,
-		                           IndexDefinition indexDefinition)
+	    private void PerformSearch(IHttpContext context, string indexName, string[] fieldNames, string documentId, IndexDefinition indexDefinition, MoreLikeThisQueryParameters parameters)
 		{
 			IndexSearcher searcher;
 			using (Database.IndexStorage.GetCurrentIndexSearcher(indexName, out searcher))
 			{
 				var td = searcher.Search(new TermQuery(new Term(Constants.DocumentIdFieldName, documentId)), 1);
-					// get the current Lucene docid for the given RavenDB doc ID
+			    // get the current Lucene docid for the given RavenDB doc ID
 				if (td.ScoreDocs.Length == 0)
 				{
 					context.SetStatusToNotFound();
 					context.WriteJson(new {Error = "Document " + documentId + " could not be found"});
 					return;
 				}
-				var mlt = new Similarity.Net.MoreLikeThis(searcher.GetIndexReader());
+			    var ir = searcher.GetIndexReader();
+                var mlt = new RavenMoreLikeThis(ir);
 
-				mlt.SetAnalyzer(indexDefinition.GetAnalyzer(fieldNames[0])); // we use the analyzer of the first speciifed field
+			    AssignParameters(mlt, parameters);
 
-				mlt.SetFieldNames(fieldNames);
+                fieldNames = fieldNames ?? GetFieldNames(ir);
+                mlt.SetFieldNames(fieldNames);
+
+			    mlt.Analyzers = GetAnalyzers(indexDefinition, fieldNames);
 
 				var mltQuery = mlt.Like(td.ScoreDocs[0].doc);
 				var tsdc = TopScoreDocCollector.create(context.GetPageSize(Database.Configuration.MaxPageSize), true);
@@ -89,5 +105,44 @@ namespace Raven.Bundles.MoreLikeThis
 					);
 			}
 		}
+
+        private static int? GetNullableInt(string value)
+        {
+            if (value == null) return null;
+            return int.Parse(value);
+        }
+
+        private static bool? GetNullableBool(string value)
+        {
+            if (value == null) return null;
+            return true;
+        }
+
+	    private void AssignParameters(Similarity.Net.MoreLikeThis mlt, MoreLikeThisQueryParameters parameters)
+	    {
+	        if(parameters.Boost != null) mlt.SetBoost(parameters.Boost.Value);
+            if(parameters.MaximumNumberOfTokensParsed!= null) mlt.SetMaxNumTokensParsed(parameters.MaximumNumberOfTokensParsed.Value);
+            if(parameters.MaximumQueryTerms != null) mlt.SetMaxQueryTerms(parameters.MaximumQueryTerms.Value);
+            if(parameters.MaximumWordLength != null) mlt.SetMaxWordLen(parameters.MaximumWordLength.Value);
+            if(parameters.MinimumDocumentFrequency != null) mlt.SetMinDocFreq(parameters.MinimumDocumentFrequency.Value);
+            if(parameters.MinimumTermFrequency != null) mlt.SetMinTermFreq(parameters.MinimumTermFrequency.Value);
+            if(parameters.MinimumWordLength != null) mlt.SetMinWordLen(parameters.MinimumWordLength.Value);
+	    }
+
+	    private static Dictionary<string, Analyzer> GetAnalyzers(IndexDefinition indexDefinition, IEnumerable<string> fieldNames)
+	    {
+	        var dictionary = new Dictionary<string, Analyzer>();
+	        foreach (var fieldName in fieldNames)
+	        {
+	            dictionary.Add(fieldName, indexDefinition.GetAnalyzer(fieldName));
+	        }
+	        return dictionary;
+	    }
+
+	    private static string[] GetFieldNames(IndexReader indexReader)
+	    {
+            var fields = indexReader.GetFieldNames(IndexReader.FieldOption.INDEXED);
+	        return fields.Where(x => x != "__document_id").ToArray();
+	    }
 	}
 }

@@ -43,9 +43,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MoreLikeThisQueryParameters.cs" />
     <Compile Include="MoreLikeThisResponder.cs" />
     <Compile Include="MoreLikeThis.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RavenMoreLikeThis.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
