@@ -7,6 +7,11 @@
                      Infrastructure:ModelAttacher.AttachObservableModel="DatabasesListModel">
 
     <Grid DataContext="{Binding Value}">
+        <StackPanel>
+            <HyperlinkButton Content="New Database"
+                             Command="{Binding Path=CreateNewDatabase}" />
+        </StackPanel>
+        
         <StackPanel Margin="{StaticResource Margin_ContentPage}">
             <TextBlock Text="Databases"
                        Style="{StaticResource Style_Text_Header}" />

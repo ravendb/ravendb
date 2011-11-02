@@ -12,12 +12,10 @@ namespace Raven.Studio.Features.Databases
 {
 	public class CreateDatabaseCommand : Command
 	{
-		private readonly ServerModel serverModel;
 		private readonly IAsyncDatabaseCommands databaseCommands;
 
-		public CreateDatabaseCommand(ServerModel serverModel, IAsyncDatabaseCommands databaseCommands)
+		public CreateDatabaseCommand(IAsyncDatabaseCommands databaseCommands)
 		{
-			this.serverModel = serverModel;
 			this.databaseCommands = databaseCommands;
 		}
 

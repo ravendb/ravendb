@@ -1,3 +1,5 @@
+using System.Windows.Input;
+using Raven.Studio.Features.Databases;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -22,6 +24,14 @@ namespace Raven.Studio.Models
 			{
 				selectedDatabase = value;
 				OnPropertyChanged();
+			}
+		}
+
+		public ICommand CreateNewDatabase
+		{
+			get
+			{
+				return new CreateDatabaseCommand(DatabaseCommands);
 			}
 		}
 	}

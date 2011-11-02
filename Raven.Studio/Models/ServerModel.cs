@@ -2,9 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
-using System.Windows.Input;
 using Raven.Client.Document;
-using Raven.Studio.Features.Databases;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -71,14 +69,6 @@ namespace Raven.Studio.Models
 
 		public Observable<DatabaseModel> SelectedDatabase { get; set; }
 		public BindableCollection<DatabaseModel> Databases { get; set; }
-
-		public ICommand CreateNewDatabase
-		{
-			get
-			{
-				return new CreateDatabaseCommand(this, documentStore.AsyncDatabaseCommands);
-			}
-		}
 
 		public void Dispose()
 		{
