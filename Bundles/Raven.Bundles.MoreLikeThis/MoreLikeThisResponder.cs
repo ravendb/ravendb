@@ -4,13 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Lucene.Net.Util;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
@@ -51,7 +51,8 @@ namespace Raven.Bundles.MoreLikeThis
                                      MaximumWordLength = GetNullableInt(context.Request.QueryString.Get("maxWordLen")),
                                      MinimumDocumentFrequency = GetNullableInt(context.Request.QueryString.Get("minDocFreq")),
                                      MinimumTermFrequency = GetNullableInt(context.Request.QueryString.Get("minTermFreq")),
-                                     MinimumWordLength = GetNullableInt(context.Request.QueryString.Get("minWordLen"))
+                                     MinimumWordLength = GetNullableInt(context.Request.QueryString.Get("minWordLen")),
+                                     StopWordsDocumentId = context.Request.QueryString.Get("stopWords")
 		                         };
             
 
@@ -85,7 +86,24 @@ namespace Raven.Bundles.MoreLikeThis
 
 			    AssignParameters(mlt, parameters);
 
-                fieldNames = fieldNames ?? GetFieldNames(ir);
+                if (parameters.StopWordsDocumentId != null)
+                {
+                    var stopWordsDoc = Database.Get(parameters.StopWordsDocumentId, null);
+                    if (stopWordsDoc == null)
+                    {
+                        context.SetStatusToNotFound();
+                        context.WriteJson(
+                            new
+                                {
+                                    Error = "Stop words document " + parameters.StopWordsDocumentId + " could not be found"
+                                });
+                        return;
+                    }
+                    var stopWords = stopWordsDoc.DataAsJson.JsonDeserialization<StopWordsSetup>().StopWords;
+                    mlt.SetStopWords(new Hashtable(stopWords.ToDictionary(x => x.ToLower())));
+                }
+
+			    fieldNames = fieldNames ?? GetFieldNames(ir);
                 mlt.SetFieldNames(fieldNames);
 
 			    mlt.Analyzers = GetAnalyzers(indexDefinition, fieldNames);
@@ -142,7 +160,7 @@ namespace Raven.Bundles.MoreLikeThis
 	    private static string[] GetFieldNames(IndexReader indexReader)
 	    {
             var fields = indexReader.GetFieldNames(IndexReader.FieldOption.INDEXED);
-	        return fields.Where(x => x != "__document_id").ToArray();
+            return fields.Where(x => x != Constants.DocumentIdFieldName).ToArray();
 	    }
 	}
 }

@@ -1,8 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
+using Raven.Json.Linq;
 
 namespace Raven.Client.MoreLikeThis
 {
@@ -94,6 +99,8 @@ namespace Raven.Client.MoreLikeThis
                 if (parameters.MinimumWordLength != null &&
                     parameters.MinimumWordLength != MoreLikeThisQueryParameters.DefaultMinimumWordLength)
                     uri.AppendFormat("minWordLen={0}&", parameters.MinimumWordLength);
+                if (parameters.StopWordsDocumentId != null)
+                    uri.AppendFormat("stopWords={0}&", parameters.StopWordsDocumentId);
             }
             var ret = uri.ToString();
             return ret.Substring(0, ret.Length - 1);
@@ -108,7 +115,8 @@ namespace Raven.Client.MoreLikeThis
                 (parameters.MinimumDocumentFrequency != null && parameters.MinimumDocumentFrequency != MoreLikeThisQueryParameters.DefaltMinimumDocumentFrequency) ||
                 (parameters.MinimumTermFrequency != null && parameters.MinimumTermFrequency != MoreLikeThisQueryParameters.DefaultMinimumTermFrequency) ||
                 (parameters.MinimumWordLength != null && parameters.MinimumWordLength != MoreLikeThisQueryParameters.DefaultMinimumWordLength) ||
-                (parameters.MaximumNumberOfTokensParsed != null && parameters.MaximumNumberOfTokensParsed != MoreLikeThisQueryParameters.DefaultMaximumNumberOfTokensParsed)));
+                (parameters.MaximumNumberOfTokensParsed != null && parameters.MaximumNumberOfTokensParsed != MoreLikeThisQueryParameters.DefaultMaximumNumberOfTokensParsed) ||
+                parameters.StopWordsDocumentId != null));
         }
     }
 }

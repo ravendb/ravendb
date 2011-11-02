@@ -44,5 +44,7 @@
         /// The maximum number of tokens to parse in each example doc field that is not stored with TermVector support. Default is 5000.
         /// </summary>
         public int? MaximumNumberOfTokensParsed { get; set; }
+
+        public string StopWordsDocumentId { get; set; }
     }
 }

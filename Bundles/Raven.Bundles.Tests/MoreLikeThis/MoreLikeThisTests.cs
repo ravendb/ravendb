@@ -130,7 +130,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body");
 
-                Assert.NotEqual(0, list.Count());
+                Assert.NotEmpty(list);
             }
         }
 
@@ -167,7 +167,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body");
 
-                Assert.Equal(0, list.Count());
+                Assert.Empty(list);
             }
         }
 
@@ -195,7 +195,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body");
 
-                Assert.NotEqual(0, list.Count());
+                Assert.NotEmpty(list);
             }
         }
 
@@ -223,7 +223,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
-                Assert.NotEqual(0, list.Count());
+                Assert.NotEmpty(list);
             }
         }
 
@@ -251,7 +251,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
-                Assert.Equal(0, list.Count());
+                Assert.Empty(list);
             }
 
             key = "datas/11";
@@ -275,7 +275,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
-                Assert.NotEqual(0, list.Count());
+                Assert.NotEmpty(list);
             }
         }
 
@@ -308,7 +308,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body", new MoreLikeThisQueryParameters { MinimumDocumentFrequency = 2 });
 
-                Assert.NotEqual(0, list.Count());
+                Assert.NotEmpty(list);
             }
         }
 
@@ -348,6 +348,49 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
                 Assert.NotEqual(0, list.Count());
                 Assert.Equal("I have a test tomorrow.", list[0].Body);
+            }
+        }
+
+        [Fact]
+        public void Can_Use_Stop_Words()
+        {
+            const string key = "datas/1";
+
+            using (var session = documentStore.OpenSession())
+            {
+                new DataIndex().Execute(documentStore);
+
+                var list = new List<Data>
+                               {
+                                   new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
+                                   new Data {Body = "I should not hit this documet. I hope"},
+                                   new Data {Body = "Cake is great."},
+                                   new Data {Body = "This document has the word test only once"},
+                                   new Data {Body = "test"},
+                                   new Data {Body = "test"},
+                                   new Data {Body = "test"},
+                                   new Data {Body = "test"}
+                               };
+                list.ForEach(session.Store);
+
+                session.Store(new StopWordsSetup{ Id = "Config/Stopwords", StopWords = new List<string> { "I", "A", "Be" }});
+
+                session.SaveChanges();
+
+                //Ensure non stale index
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+                Assert.NotNull(testObj);
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, new MoreLikeThisQueryParameters
+                                                                                        {
+                                                                                            StopWordsDocumentId = "Config/Stopwords",
+                                                                                            MinimumDocumentFrequency = 1
+                                                                                        });
+
+                Assert.Equal(6, list.Count());
             }
         }
         

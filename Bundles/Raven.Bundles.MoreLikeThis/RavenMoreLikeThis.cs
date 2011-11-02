@@ -83,5 +83,26 @@ namespace Raven.Bundles.MoreLikeThis
                 }
             }
         }
+
+        protected new bool IsNoiseWord(System.String term)
+        {
+            int len = term.Length;
+            var minWordLen = GetMinWordLen();
+            var maxWordLen = GetMaxWordLen();
+            var stopWords = GetStopWords();
+            if (minWordLen > 0 && len < minWordLen)
+            {
+                return true;
+            }
+            if (maxWordLen > 0 && len > maxWordLen)
+            {
+                return true;
+            }
+            if (stopWords != null && stopWords.Contains(term.ToLower()))
+            {
+                return true;
+            }
+            return false;
+        }
     }
 }
