@@ -1165,7 +1165,7 @@ namespace Raven.Database
 			}
 		}
 
-		public void StartBackup(string backupDestinationDirectory)
+		public void StartBackup(string backupDestinationDirectory, bool incrementalBackup)
 		{
 			var document = Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 			if (document != null)
@@ -1183,7 +1183,7 @@ namespace Raven.Database
 			}), new RavenJObject(), null);
 			IndexStorage.FlushMapIndexes();
 			IndexStorage.FlushReduceIndexes();
-			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory);
+			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup);
 		}
 
 		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation)

@@ -58,7 +58,7 @@ namespace Raven.Tests.Storage
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-			db.StartBackup("raven.db.test.backup");
+			db.StartBackup("raven.db.test.backup", false);
 			WaitForBackup(true);
 
 			db.Dispose();
@@ -78,7 +78,7 @@ namespace Raven.Tests.Storage
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
-			db.StartBackup("raven.db.test.backup");
+			db.StartBackup("raven.db.test.backup", false);
 			WaitForBackup(true);
 
 			db.Dispose();
@@ -117,7 +117,7 @@ namespace Raven.Tests.Storage
 			} while (queryResult.IsStale);
 			Assert.Equal(1, queryResult.Results.Count);
 
-			db.StartBackup("raven.db.test.backup");
+			db.StartBackup("raven.db.test.backup", false);
 			WaitForBackup(true);
 
 			db.Dispose();
@@ -154,7 +154,7 @@ namespace Raven.Tests.Storage
 
 
 			File.WriteAllText("raven.db.test.backup.txt", "Sabotage!");
-			db.StartBackup("raven.db.test.backup.txt");
+			db.StartBackup("raven.db.test.backup.txt", false);
 			WaitForBackup(false);
 
 			Assert.True(GetStateOfLastStatusMessage().Severity == BackupStatus.BackupMessageSeverity.Error);

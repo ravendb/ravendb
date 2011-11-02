@@ -36,7 +36,11 @@ namespace Raven.Database.Server.Responders
 			}
 
 			var backupRequest = context.ReadJsonObject<BackupRequest>();
-			Database.StartBackup(backupRequest.BackupLocation);
+			var incremetalString = context.Request.QueryString["incremental"];
+			bool incrementalBackup;
+			if (bool.TryParse(incremetalString, out incrementalBackup) == false)
+				incrementalBackup = false;
+			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup);
 			context.SetStatusToCreated(BackupStatus.RavenBackupStatusDocumentKey);
 		}
 	}

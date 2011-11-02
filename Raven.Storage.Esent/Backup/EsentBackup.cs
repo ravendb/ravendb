@@ -13,18 +13,20 @@ namespace Raven.Storage.Esent.Backup
 	{
 		private readonly JET_INSTANCE instance;
 		private readonly string destination;
+		private readonly BackupGrbit backupOptions;
 		public event Action<string,BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
-		public EsentBackup(JET_INSTANCE instance, string destination)
+		public EsentBackup(JET_INSTANCE instance, string destination, BackupGrbit backupOptions)
 		{
 			this.instance = instance;
 			this.destination = destination;
+			this.backupOptions = backupOptions;
 		}
 
 		public void Execute()
 		{
 			Api.JetBackupInstance(instance, destination,
-								  BackupGrbit.Atomic,
+								  backupOptions,
 								  StatusCallback);
 
 		}
