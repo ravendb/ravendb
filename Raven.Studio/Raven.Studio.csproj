@@ -482,12 +482,6 @@
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\ravendb\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
-      <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
-      <Name>Raven.Client.Silverlight</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Assets\Images\BackgroundTexture.png" />
     <Resource Include="Assets\Images\RavenDBLogo.png" />
     <Resource Include="Assets\Images\FooterTexture.png" />
@@ -512,7 +506,12 @@
     <Resource Include="Assets\Images\document_page_previous.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
+      <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
+      <Name>Raven.Client.Silverlight</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
