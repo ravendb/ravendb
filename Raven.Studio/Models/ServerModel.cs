@@ -67,8 +67,8 @@ namespace Raven.Studio.Models
 				.Catch();
 		}
 
-		public Observable<DatabaseModel> SelectedDatabase { get; set; }
-		public BindableCollection<DatabaseModel> Databases { get; set; }
+		public Observable<DatabaseModel> SelectedDatabase { get; private set; }
+		public BindableCollection<DatabaseModel> Databases { get; private set; }
 
 		public void Dispose()
 		{
