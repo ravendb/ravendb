@@ -1,0 +1,48 @@
+﻿<Infrastructure:View x:Name="this" 
+					 x:Class="Raven.Studio.Features.Indexes.IndexesErrorsView"
+					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
+
+	<ScrollViewer BorderThickness="0"
+				  VerticalScrollBarVisibility="Auto"
+				  HorizontalScrollBarVisibility="Disabled"
+				  Margin="{StaticResource Margin_ContentPage}">
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="10" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
+
+			<StackPanel Orientation="Horizontal">
+				<TextBlock Text="Indexes Error"
+						   Style="{StaticResource Style_TextBlock_Breadcrumb}"
+						   Margin="0,0,10,0"
+						   VerticalAlignment="Center" />
+				<TextBlock Text="{Binding IndexName, StringFormat='for index: \{0\}'}"
+						   Visibility="{Binding IsShowingErrorForASpecificIndex, Converter={StaticResource VisibleWhenTrue}}"
+						   FontSize="12"
+						   Margin="0,0,10,0"
+						   Style="{StaticResource Style_TextBlock_Breadcrumb}"
+						   VerticalAlignment="Center" />
+				<TextBlock Text="{Binding Path=Errors.Length, StringFormat='(\{0\} Errors)'}"
+						   Style="{StaticResource Style_TextBlock_InlineSubHeader}" />
+			</StackPanel>
+			
+			<ItemsControl Grid.Row="3" ItemsSource="{Binding Errors}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<StackPanel Margin="0,0,0,10">
+							<TextBlock Text="{Binding Index}"
+									   Visibility="{Binding Path=DataContext.IsShowingErrorForASpecificIndex, ElementName=this, Converter={StaticResource VisibleWhenFalse}}" />
+							<TextBlock Text="{Binding Error}" />
+							<TextBlock Text="{Binding Timestamp}" />
+							<TextBlock Text="{Binding Document}" />
+						</StackPanel>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+		</Grid>
+	</ScrollViewer>
+</Infrastructure:View>

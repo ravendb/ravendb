@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+Actipro Syntax Language Definition (.langdef)
+  For use with Actipro SyntaxEditor and related products.
+  http://www.actiprosoftware.com
+
+'JScript' language created by Actipro Software LLC.
+  Copyright (c) 2001-2011 Actipro Software LLC.  All rights reserved.
+
+-->
+<LanguageDefinition LanguageKey="JScript" Creator="Actipro Software LLC" Copyright="Copyright (c) 2001-2011 Actipro Software LLC.  All rights reserved." xmlns="http://schemas.actiprosoftware.com/langdef/1.0">
+	<!-- Classification types -->
+	<LanguageDefinition.ClassificationTypes>
+		<ClassificationType Key="Comment" DefaultStyle="#FF008000" />
+		<ClassificationType Key="Identifier" />
+		<ClassificationType Key="Keyword" DefaultStyle="#FF0000FF" />
+		<ClassificationType Key="Number" />
+		<ClassificationType Key="Operator" />
+		<ClassificationType Key="String" DefaultStyle="#FF800000" />
+	</LanguageDefinition.ClassificationTypes>
+	<!-- Lexer -->
+	<LanguageDefinition.Lexer>
+		<DynamicLexer>
+			<!-- Default state -->
+			<State Key="Default" DefaultCaseSensitivity="Sensitive">
+				<State.ChildStates>
+					<StateRef Key="PrimaryString" />
+					<StateRef Key="AlternateString" />
+					<StateRef Key="SingleLineComment" />
+					<StateRef Key="MultiLineComment" />
+					<StateRef Key="RegExpLiteral" />
+				</State.ChildStates>
+				<RegexPatternGroup TokenKey="Whitespace" Pattern="{Whitespace}+" />
+				<RegexPatternGroup TokenKey="LineTerminator" Pattern="{LineTerminator}" />
+				<ExplicitPatternGroup TokenKey="OpenParenthesis" Pattern="(" />
+				<ExplicitPatternGroup TokenKey="CloseParenthesis" Pattern=")" />
+				<ExplicitPatternGroup TokenKey="OpenCurlyBrace" Pattern="{" />
+				<ExplicitPatternGroup TokenKey="CloseCurlyBrace" Pattern="}" />
+				<ExplicitPatternGroup TokenKey="OpenSquareBrace" Pattern="[" />
+				<ExplicitPatternGroup TokenKey="CloseSquareBrace" Pattern="]" />
+				<ExplicitPatternGroup TokenKey="Punctuation">
+					<ExplicitPatterns><![CDATA[
+						. , : ;
+					]]></ExplicitPatterns>
+				</ExplicitPatternGroup>
+				<ExplicitPatternGroup TokenKey="Null" ClassificationTypeKey="Keyword" Pattern="null" LookAheadPattern="{NonWord}|\z" />
+				<ExplicitPatternGroup TokenKey="NativeType" ClassificationTypeKey="Keyword" LookAheadPattern="{NonWord}|\z">
+					<ExplicitPatterns><![CDATA[
+						boolean byte char double float int long short
+					]]></ExplicitPatterns>
+				</ExplicitPatternGroup>
+				<ExplicitPatternGroup TokenKey="Boolean" ClassificationTypeKey="Keyword" LookAheadPattern="{NonWord}|\z">
+					<ExplicitPatterns><![CDATA[
+						false true
+					]]></ExplicitPatterns>
+				</ExplicitPatternGroup>
+				<ExplicitPatternGroup TokenKey="Keyword" ClassificationTypeKey="Keyword" LookAheadPattern="{NonWord}|\z">
+					<ExplicitPatterns><![CDATA[
+						break case catch continue debugger default delete do else finally for function if instanceof in
+						new return switch this throw try typeof var void while with
+					]]></ExplicitPatterns>
+				</ExplicitPatternGroup>
+				<RegexPatternGroup TokenKey="Identifier" ClassificationTypeKey="Identifier" Pattern="(_ | {Alpha})({Word})*" />
+				<ExplicitPatternGroup TokenKey="Operator" ClassificationTypeKey="Operator">
+					<ExplicitPatterns><![CDATA[
+						!== != ! %= % && &= & *= * ++ += + -- -= - /= / <<= << <= < === == = >= >>= >>>= >>> >> > ? ^= ^ |= || | ~
+					]]></ExplicitPatterns>
+				</ExplicitPatternGroup>
+				<RegexPatternGroup TokenKey="RealNumber" ClassificationTypeKey="Number" LookAheadPattern="{NonWord}|\z">
+					<RegexPattern Value="{Digit}* \. {Digit}+ ([Ee] [\+\-]? {Digit}+)?" />
+					<RegexPattern Value="{Digit}+ [Ee] [\+\-]? {Digit}+" />
+				</RegexPatternGroup>
+				<RegexPatternGroup TokenKey="IntegerNumber" ClassificationTypeKey="Number" Pattern="{Digit}+" LookAheadPattern="{NonWord}|\z" />
+				<RegexPatternGroup TokenKey="HexNumber" ClassificationTypeKey="Number" Pattern="0x {HexDigit}+" LookAheadPattern="{NonWord}|\z" CaseSensitivity="Insensitive" />
+			</State>
+			<!-- PrimaryString state -->
+			<State Key="PrimaryString" DefaultTokenKey="PrimaryStringText" DefaultClassificationTypeKey="String">
+				<State.Scopes>
+					<Scope>
+						<Scope.StartPatternGroup>
+							<ExplicitPatternGroup TokenKey="PrimaryStringStartDelimiter" Pattern="&quot;" />
+						</Scope.StartPatternGroup>
+						<Scope.EndPatternGroup>
+							<RegexPatternGroup TokenKey="PrimaryStringEndDelimiter" Pattern="[\&quot;\n]" />
+						</Scope.EndPatternGroup>
+					</Scope>
+				</State.Scopes>
+				<RegexPatternGroup TokenKey="PrimaryStringEscapedCharacter" Pattern="\\." />
+				<RegexPatternGroup TokenKey="PrimaryStringText" Pattern="[^\&quot;\\\n]+" />
+			</State>
+			<!-- AlternateString state -->
+			<State Key="AlternateString" DefaultTokenKey="AlternateStringText" DefaultClassificationTypeKey="String">
+				<State.Scopes>
+					<Scope>
+						<Scope.StartPatternGroup>
+							<ExplicitPatternGroup TokenKey="AlternateStringStartDelimiter" Pattern="'" />
+						</Scope.StartPatternGroup>
+						<Scope.EndPatternGroup>
+							<RegexPatternGroup TokenKey="AlternateStringEndDelimiter" Pattern="[\'\n]" />
+						</Scope.EndPatternGroup>
+					</Scope>
+				</State.Scopes>
+				<RegexPatternGroup TokenKey="AlternateStringEscapedCharacter" Pattern="\\." />
+				<RegexPatternGroup TokenKey="AlternateStringText" Pattern="[^\'\\\n]+" />
+			</State>
+			<!-- SingleLineComment state -->
+			<State Key="SingleLineComment" DefaultTokenKey="SingleLineCommentText" DefaultClassificationTypeKey="Comment">
+				<State.Scopes>
+					<Scope>
+						<Scope.StartPatternGroup>
+							<ExplicitPatternGroup TokenKey="SingleLineCommentStartDelimiter" Pattern="//" />
+						</Scope.StartPatternGroup>
+						<Scope.EndPatternGroup>
+							<RegexPatternGroup TokenKey="SingleLineCommentEndDelimiter" Pattern="\n" />
+						</Scope.EndPatternGroup>
+					</Scope>
+				</State.Scopes>
+				<RegexPatternGroup TokenKey="SingleLineCommentText" Pattern="[^\n]+" />
+			</State>
+			<!-- MultiLineComment state -->
+			<State Key="MultiLineComment" DefaultTokenKey="MultiLineCommentText" DefaultClassificationTypeKey="Comment">
+				<State.Scopes>
+					<Scope>
+						<Scope.StartPatternGroup>
+							<ExplicitPatternGroup TokenKey="MultiLineCommentStartDelimiter" Pattern="/*" />
+						</Scope.StartPatternGroup>
+						<Scope.EndPatternGroup>
+							<ExplicitPatternGroup TokenKey="MultiLineCommentEndDelimiter" Pattern="*/" />
+						</Scope.EndPatternGroup>
+					</Scope>
+				</State.Scopes>
+				<RegexPatternGroup TokenKey="MultiLineCommentLineTerminator" Pattern="\n" />
+				<RegexPatternGroup TokenKey="MultiLineCommentText" Pattern="[^\*\n]+" />
+			</State>
+			<!-- RegExpLiteral state -->
+			<State Key="RegExpLiteral" DefaultTokenKey="RegExpLiteralText" DefaultClassificationTypeKey="String">
+				<State.Scopes>
+					<Scope>
+						<Scope.StartPatternGroup>
+							<RegexPatternGroup TokenKey="RegExpLiteralStartDelimiter" Pattern="/(?! [\*/\s\n])" />
+						</Scope.StartPatternGroup>
+						<Scope.EndPatternGroup>
+							<RegexPatternGroup TokenKey="RegExpLiteralEndDelimiter" Pattern="[/\n]" />
+						</Scope.EndPatternGroup>
+					</Scope>
+				</State.Scopes>
+				<RegexPatternGroup TokenKey="RegExpLiteralEscapedCharacter" Pattern="\\." />
+				<RegexPatternGroup TokenKey="RegExpLiteralText" Pattern="[^\\/\n]+" />
+			</State>
+		</DynamicLexer>
+	</LanguageDefinition.Lexer>
+	<!-- Example text -->
+	<LanguageDefinition.ExampleText><![CDATA[/* Comment */
+
+var labelString = 'Screen pixel count: ';
+
+function displayScreenPixelCount(screenWidth, screenHeight) {
+	// Write a paragraph with the screen's pixel count
+	document.write("<p>" + sampleString);
+
+	var pixelCount = product(width, height);
+	document.write(pixelCount);
+
+	if (pixelCount <= 64000) {
+		document.write(" (small)");
+	}
+	else {
+		document.write(" (large)");
+	}
+
+	document.write("</p>");
+}
+
+function product(x, y) {
+	return x * y;
+}
+]]></LanguageDefinition.ExampleText>
+</LanguageDefinition>

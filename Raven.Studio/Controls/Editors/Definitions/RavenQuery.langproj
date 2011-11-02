@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+Actipro Syntax Language Project (.langproj)
+  For use with Actipro SyntaxEditor and related products.
+  http://www.actiprosoftware.com
+
+'Raven Query Syntax' language created by Hibernating Rhinos LTD.
+  Hibernating Rhinos LTD 2011
+
+-->
+<LanguageProject LanguageKey="RavenQuery" LanguageDescription="Raven Query Syntax" OutputLanguageDefinition="True" OutputLanguageKey="CSharp" OutputNamespaceName="HibernatingRhinos.Text.Languages.RavenQuery" OutputPath="C:\Work\studio\Raven.Studio\Controls\Editors\Definitions" Creator="Hibernating Rhinos LTD" Copyright="Hibernating Rhinos LTD 2011" xmlns="http://schemas.actiprosoftware.com/langproj/1.0">
+	<!-- Classification types -->
+	<LanguageProject.ClassificationTypes>
+		<ClassificationType Key="Field" Description="Field Name" DefaultStyle="#FF0000CD" />
+		<ClassificationType Key="Keyword" DefaultStyle="#FFC0C0C0" />
+		<ClassificationType Key="KeywordValue" DefaultStyle="#FF6B8E23" />
+		<ClassificationType Key="SearchValue" DefaultStyle="#FF008080" />
+		<ClassificationType Key="StringValue" Description="String Value" DefaultStyle="#FFFF0000" />
+		<ClassificationType Key="Value" Description="General Value" DefaultStyle="#FF808080" />
+	</LanguageProject.ClassificationTypes>
+	<!-- Lexer -->
+	<LanguageProject.Lexer>
+		<DynamicLexer>
+			<!-- Default state -->
+			<State Key="Default">
+				<RegexPatternGroup ClassificationTypeKey="Keyword" CaseSensitivity="Sensitive">
+					<RegexPattern Value="AND" />
+					<RegexPattern Value="OR" />
+				</RegexPatternGroup>
+				<RegexPatternGroup Key="Field" ClassificationTypeKey="Field" Pattern="([^\s\r\n:]+)\s*:" CaseSensitivity="Sensitive" />
+				<RegexPatternGroup ClassificationTypeKey="SearchValue" Pattern="&lt;&lt;[^&gt;]+&gt;&gt;" />
+				<RegexPatternGroup ClassificationTypeKey="KeywordValue" Pattern="\[\[[^\]]+\]\]" />
+				<RegexPatternGroup ClassificationTypeKey="StringValue" Pattern="\&quot;[^\&quot;]*\&quot;" CaseSensitivity="Insensitive" />
+				<RegexPatternGroup Key="String" ClassificationTypeKey="Value" Pattern="[^\s\r\n:]*" CaseSensitivity="Insensitive" />
+			</State>
+		</DynamicLexer>
+	</LanguageProject.Lexer>
+	<!-- Example text -->
+	<LanguageProject.ExampleText><![CDATA[Users,Name:Ayende
+Title:<<dsl in boo>>
+UserId:authors/123
+Name:"Ayende Rahien"
+Inner.Prop:123 EmailAddress: "ayende@ayende.com" blog: "www.ayende.com/blog"
+__document_id:[[AUTHORs/123]]]]></LanguageProject.ExampleText>
+</LanguageProject>
