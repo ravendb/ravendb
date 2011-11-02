@@ -41,6 +41,20 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
+		private string path;
+		public string Path
+		{
+			get
+			{
+				if (path == null)
+				{
+					var indexOf = Url.IndexOf('?');
+					path = indexOf != -1 ? Url.Substring(0, indexOf) : Url;
+				}
+				return path;
+			}
+		}
+
 		public string GetQueryParam(string name)
 		{
 			if (QueryParams.ContainsKey(name))
@@ -55,8 +69,7 @@ namespace Raven.Studio.Infrastructure
 
 		public void NavigateTo()
 		{
-			var indexOf = Url.IndexOf('?');
-			var uri = indexOf != -1 ? Url.Substring(0, indexOf) : Url;
+			var uri = Path;
 			if (string.IsNullOrWhiteSpace(uri))
 				uri = "/home";
 			var query = string.Join("&", QueryParams.Select(x => string.Format("{0}={1}", x.Key, x.Value)));

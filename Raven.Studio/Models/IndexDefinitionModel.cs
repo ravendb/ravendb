@@ -43,7 +43,7 @@ namespace Raven.Studio.Models
 
 		public override void LoadModelParameters(string parameters)
 		{
-			var name = parameters;
+			var name = new UrlParser(parameters).Path;
 			if (string.IsNullOrWhiteSpace(name))
 				UrlUtil.Navigate("/indexes");
 
