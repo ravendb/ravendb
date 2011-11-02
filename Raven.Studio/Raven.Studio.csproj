@@ -201,6 +201,7 @@
     <Compile Include="Infrastructure\UrlUtil.cs" />
     <Compile Include="Infrastructure\ViewModel.cs" />
     <Compile Include="Models\AllDocumentsModel.cs" />
+    <Compile Include="Models\DatabasesListModel.cs" />
     <Compile Include="Models\DocumentsModel.cs" />
     <Compile Include="Models\HomeModel.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
@@ -267,6 +268,9 @@
     <Compile Include="Models\TaskModel.cs" />
     <Compile Include="Views\Collections.xaml.cs">
       <DependentUpon>Collections.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Databases.xaml.cs">
+      <DependentUpon>Databases.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Query.xaml.cs">
       <DependentUpon>Query.xaml</DependentUpon>
@@ -348,6 +352,10 @@
     <Page Include="Features\Tasks\TasksView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Databases.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Query.xaml">
       <Generator>MSBuild:Compile</Generator>

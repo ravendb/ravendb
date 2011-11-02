@@ -2,9 +2,9 @@
 
 namespace Raven.Studio.Views
 {
-	public partial class Collections : View
+	public partial class Databases : View
 	{
-		public Collections()
+		public Databases()
 		{
 			InitializeComponent();
 		}

@@ -9,7 +9,7 @@
 					FontFamily="Tahoma">
 		<StackPanel Orientation="Horizontal">
 			<HyperlinkButton Content="Databases"
-							 NavigateUri="/Home"
+							 NavigateUri="/databases"
 							 Foreground="{StaticResource Brush_ContrastColor}"
 							 VerticalAlignment="Center" />
 			<TextBlock Text=">"

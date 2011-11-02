@@ -703,6 +703,12 @@
 				Value="Transparent" />
 	</Style>
 
+    <Style x:Name="Databases_FluidList" BasedOn="{StaticResource Style_ListBox_Fluid}"
+		   TargetType="ListBox">
+		<Setter Property="Background"
+				Value="Transparent" />
+	</Style>
+
     <Style x:Key="Style_ListBoxItem_Index" TargetType="ListBoxItem">
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Template">

@@ -1,0 +1,40 @@
+﻿<Infrastructure:View x:Class="Raven.Studio.Views.Databases"
+                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                     Title="Databases"
+                     Style="{StaticResource PageStyle}"
+                     Infrastructure:ModelAttacher.AttachObservableModel="DatabasesListModel">
+
+    <Grid DataContext="{Binding Value}">
+        <StackPanel Margin="{StaticResource Margin_ContentPage}">
+            <TextBlock Text="Databases"
+                       Style="{StaticResource Style_Text_Header}" />
+
+            <ListBox Style="{StaticResource Databases_FluidList}"
+                     ItemsSource="{Binding Databases}"
+                     SelectedItem="{Binding SelectedDatabase}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="{Binding Name}"
+                                       FontSize="14.667" />
+                            <TextBlock Grid.Column="2"
+                                       FontStyle="Italic"
+                                       Foreground="#9000"
+                                       FontSize="10.667"
+                                       VerticalAlignment="Bottom"
+                                       Text="{Binding Path=Statistics.Value.CountOfDocuments, StringFormat='\{0:#,#;;0\} documents'}" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+    </Grid>
+</Infrastructure:View>
