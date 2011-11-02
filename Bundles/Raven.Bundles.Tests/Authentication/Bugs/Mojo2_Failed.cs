@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Raven.Bundles.Tests.Authentication.Bugs
 {
-	public class Mojo2 : AuthorizationTest
+	public class Mojo2_Failed : AuthorizationTest
 	{
 		private static void SetupRoles(IDocumentSession session)
 		{
@@ -60,7 +60,7 @@ namespace Raven.Bundles.Tests.Authentication.Bugs
 					new List<client::Raven.Bundles.Authorization.Model.OperationPermission>
                                           {
                                               new client::Raven.Bundles.Authorization.Model.OperationPermission
-                                                  {Allow = true, Operation = "Library/Fake"}
+                                                  {Allow = true, Operation = "Library/View" }
                                           }
 			});
 
@@ -123,9 +123,8 @@ namespace Raven.Bundles.Tests.Authentication.Bugs
 					                                                                                              "paolo",
 					                                                                                              "Library/View",
 					                                                                                              "library/andrea-lib");
-
-				//Paolo cannot View 
-				Assert.True(!paoloCanView.IsAllowed);
+				//Paolo can View 
+				Assert.True(paoloCanView.IsAllowed);
 
 
 				client::Raven.Bundles.Authorization.OperationAllowedResult paoloCanMange =
