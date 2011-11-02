@@ -6,7 +6,7 @@
     mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400">
     
-    <Grid x:Name="LayoutRoot" Background="White">
+    <Grid Background="White">
 		<TextBlock Text="Opps, could not find" />
 	</Grid>
 </UserControl>

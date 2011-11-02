@@ -4,7 +4,7 @@
 					  xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
 					  Title="Error">
 
-	<Grid x:Name="LayoutRoot">
+	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />

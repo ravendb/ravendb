@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
-using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -13,25 +12,25 @@ namespace Raven.Studio.Models
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private string name;
 
-        public Observable<TaskModel> SelectedTask { get; set; }
+		public Observable<TaskModel> SelectedTask { get; set; }
 
 		public DatabaseModel(string name, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			Name = name;
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 
-		    Tasks = new BindableCollection<TaskModel>(new PrimaryKeyComparer<TaskModel>(x => x))
-		    {
-                new ImportTask(asyncDatabaseCommands),
-                new ExportTask(asyncDatabaseCommands)
-		    };
-		    SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
-		    Statistics = new Observable<DatabaseStatistics>();
+			Tasks = new BindableCollection<TaskModel>(new PrimaryKeyComparer<TaskModel>(x => x))
+			{
+				new ImportTask(asyncDatabaseCommands),
+				new ExportTask(asyncDatabaseCommands)
+			};
+			SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
+			Statistics = new Observable<DatabaseStatistics>();
 		}
 
-	    public BindableCollection<TaskModel> Tasks { get; private set; }
+		public BindableCollection<TaskModel> Tasks { get; private set; }
 
-	    public BindableCollection<string> Indexes { get; private set; }
+		public BindableCollection<string> Indexes { get; private set; }
 
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands

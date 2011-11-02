@@ -12,7 +12,7 @@
            Title="TasksView Page"
            DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
 
-  <Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
+  <Grid Margin="{StaticResource Margin_ContentPage}">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />

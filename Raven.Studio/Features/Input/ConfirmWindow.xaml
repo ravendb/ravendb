@@ -4,8 +4,7 @@
 					  xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
 					  Title="{Binding Path=Title}">
 	
-	<Grid x:Name="LayoutRoot"
-		  Margin="2"
+	<Grid Margin="2"
 		  KeyDown="LayoutRoot_OnKeyDown">
 		
 		<Grid.RowDefinitions>
