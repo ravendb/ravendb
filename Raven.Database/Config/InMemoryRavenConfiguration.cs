@@ -171,6 +171,7 @@ namespace Raven.Database.Config
 			var path = Settings["Raven/OAuthTokenCertificatePath"];
 			if (string.IsNullOrEmpty(path) == false)
 			{
+			    path = path.ToFullPath();
 				var pwd = Settings["Raven/OAuthTokenCertificatePassword"];
 				if (string.IsNullOrEmpty(pwd) == false)
 				{
