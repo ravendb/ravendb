@@ -42,7 +42,7 @@ namespace Raven.Studio.Models
 
 		public override void LoadModelParameters(string parameters)
 		{
-			IndexName = GetParamAfter("/", parameters);
+			IndexName = new UrlParser(parameters).Path.Trim('/');
 
 			var allErrors = Database.Value.Statistics.Value.Errors;
 			if (IsShowingErrorForASpecificIndex)

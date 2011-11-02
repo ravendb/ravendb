@@ -38,7 +38,8 @@ namespace Raven.Studio.Features.Logs
 
 		public override void LoadModelParameters(string parameters)
 		{
-			ShowErrorsOnly = GetParamAfter("/", parameters) == "error";
+			ShowErrorsOnly = new UrlParser(parameters).Path.Trim('/') == "error";
+
 			ForceTimerTicked();
 		}
 	}

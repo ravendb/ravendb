@@ -28,7 +28,7 @@ namespace Raven.Studio.Infrastructure
 				state.StartsWith(ModelUrl, StringComparison.InvariantCultureIgnoreCase) &&
 				ModelUrlIgnoreList.Any(state.StartsWith) == false)
 			{
-				LoadModelParameters(GetParamAfter(ModelUrl, state));
+				LoadModelParameters(state.Substring(ModelUrl.Length));
 			}
 			IsLoaded = true;
 		}
@@ -64,20 +64,6 @@ namespace Raven.Studio.Infrastructure
 				server.Value.SelectedDatabase.Value = database;
 			}
 			Database.Value = server.Value.SelectedDatabase.Value;
-		}
-
-		public static string GetParamAfter(string urlPrefix)
-		{
-			return GetParamAfter(urlPrefix, UrlUtil.Url);
-		}
-
-		public static string GetParamAfter(string urlPrefix, string state)
-		{
-			var url = state;
-			if (url.StartsWith(urlPrefix) == false)
-				return null;
-
-			return url.Substring(urlPrefix.Length);
 		}
 	}
 }
