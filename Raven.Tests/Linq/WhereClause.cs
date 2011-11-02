@@ -110,7 +110,7 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from user in indexedUsers
-					where 15 > user.Age 
+					where 15 > user.Age
 					select user;
 			Assert.Equal("Age_Range:[* TO 0x0000000F]", q.ToString());
 		}
@@ -180,6 +180,11 @@ namespace Raven.Tests.Linq
 			return (RavenQueryInspector<IndexedUser>)documentSession.Query<IndexedUser>();
 		}
 
+		private RavenQueryInspector<IndexedUser> GetRavenQueryInspectorStatic()
+		{
+			return (RavenQueryInspector<IndexedUser>)documentSession.Query<IndexedUser>("static");
+		}
+
 		[Fact]
 		public void CanUnderstandSimpleEqualityWithVariable()
 		{
@@ -206,9 +211,9 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from x in indexedUsers
-			        where x.Name.Contains("ayende")
-			        select x;
-					
+					where x.Name.Contains("ayende")
+					select x;
+
 
 			Assert.NotNull(q);
 			Assert.Equal("Name:ayende", q.ToString());
@@ -219,8 +224,8 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from x in indexedUsers
-			        where x.Name.Contains("ayende")
-			        select x;
+					where x.Name.Contains("ayende")
+					select x;
 
 			Assert.NotNull(q);
 			Assert.Equal("Name:ayende", q.ToString());
@@ -231,8 +236,8 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from x in indexedUsers
-			        where x.Name.Contains("ayende")
-			        select x;
+					where x.Name.Contains("ayende")
+					select x;
 
 			Assert.NotNull(q);
 			Assert.Equal("Name:ayende", q.ToString());
@@ -243,8 +248,8 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from x in indexedUsers
-			        where  x.Name.StartsWith("ayende")
-			        select x;
+					where x.Name.StartsWith("ayende")
+					select x;
 
 			Assert.NotNull(q);
 			Assert.Equal("Name:ayende*", q.ToString());
@@ -256,8 +261,8 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from indexedUser in indexedUsers
-			        where indexedUser.Name.StartsWith("ayende")
-			        select indexedUser;
+					where indexedUser.Name.StartsWith("ayende")
+					select indexedUser;
 
 			Assert.NotNull(q);
 			Assert.Equal("Name:ayende*", q.ToString());
@@ -331,7 +336,7 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from user in indexedUsers
-					where user.Birthday < new DateTime(2010,05,15)
+					where user.Birthday < new DateTime(2010, 05, 15)
 					select user;
 			Assert.Equal("Birthday:{* TO 20100515000000000}", q.ToString());
 		}
@@ -462,12 +467,21 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void CanUnderstandSimpleAny()
+		public void CanUnderstandSimpleAny_Dynamic()
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers
 				.Where(x => x.Properties.Any(y => y.Key == "first"));
 			Assert.Equal("Properties,Key:first", q.ToString());
+		}
+
+		[Fact]
+		public void CanUnderstandSimpleAny_Static()
+		{
+			var indexedUsers = GetRavenQueryInspectorStatic();
+			var q = indexedUsers
+				.Where(x => x.Properties.Any(y => y.Key == "first"));
+			Assert.Equal("Properties_Key:first", q.ToString());
 		}
 
 		public class IndexedUser
@@ -481,7 +495,7 @@ namespace Raven.Tests.Linq
 
 		public class UserProperty
 		{
-			public string Key { get; set;}
+			public string Key { get; set; }
 		}
 
 		public void Dispose()

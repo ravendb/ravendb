@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Org.BouncyCastle.Utilities.Collections;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
@@ -26,7 +29,18 @@ namespace Raven.Database.Queries
 			if(indexQuery.AggregationOperation != AggregationOperation.None)
 				return null;
 
-			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2);
+			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2).ToArray();
+			var normalizedFieldsQueriedUpon =
+				fieldsQueriedUpon.Select(DynamicQueryMapping.ReplaceIndavlidCharactersForFields).ToArray();
+			var distinctSelectManyFields = new HashSet<string>();
+			foreach (var field in fieldsQueriedUpon)
+			{
+				var parts = field.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
+				for (int i = 1; i < parts.Length; i++)
+				{
+					distinctSelectManyFields.Add(string.Join(",", parts.Take(i)));
+				}
+			}
 
 			return database.IndexDefinitionStorage.IndexNames
 					.Where(indexName =>
@@ -48,7 +62,9 @@ namespace Raven.Database.Queries
 						// you query it for things like Count, see https://github.com/ravendb/ravendb/issues/250
 						// for indexes with internal projections, we use the exact match based on the generated index name
 						// rather than selecting the optimal one
-						if (abstractViewGenerator.CountOfSelectMany > 1) 
+						// in order to handle that, we count the number of select many that would happen because of the query
+						// and match it to the number of select many in the index
+						if (Math.Abs(abstractViewGenerator.CountOfSelectMany - distinctSelectManyFields.Count) > 1 /* There is also the root to consider*/) 
 							return false;
 
 						if(entityName == null)
@@ -63,18 +79,14 @@ namespace Raven.Database.Queries
 								return false;
 						}
 
-						return fieldsQueriedUpon.All(abstractViewGenerator.ContainsFieldOnMap);
-					})
-					.Where(indexName =>
-					{
+						if (normalizedFieldsQueriedUpon.All(abstractViewGenerator.ContainsFieldOnMap) == false)
+							return false;
+					
 						var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 						if (indexDefinition == null)
 							return false;
-						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
-						if (abstractViewGenerator == null)
-							return false;
 
-						if (indexQuery.SortedFields != null)
+						if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length> 0)
 						{
 							var sortInfo = DynamicQueryMapping.GetSortInfo(s => { });
 
@@ -107,10 +119,10 @@ namespace Raven.Database.Queries
 							}
 						}
 
-						if(indexDefinition.Analyzers != null)
+						if(indexDefinition.Analyzers != null && indexDefinition.Analyzers.Count > 0)
 						{
 							// none of the fields have custom analyzers
-							if (fieldsQueriedUpon.Any(indexDefinition.Analyzers.ContainsKey)) 
+							if (normalizedFieldsQueriedUpon.Any(indexDefinition.Analyzers.ContainsKey)) 
 								return false;
 						}
 

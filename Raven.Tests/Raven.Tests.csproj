@@ -548,12 +548,16 @@
     <Compile Include="Json\RavenJObjects.cs" />
     <Compile Include="Linq\Any.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
+    <Compile Include="Linq\DynamicQueriesWithStaticIndexes.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
     <Compile Include="Linq\SampleGeoLocation.cs" />
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
     <Compile Include="MailingList\NicolasGarfinkiel.cs" />
+    <Compile Include="MailingList\Stacey.cs" />
+    <Compile Include="MailingList\transformedresults_customid_test.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -609,7 +613,7 @@
     <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
     <Compile Include="Some.cs" />
     <Compile Include="Spatial\Event.cs" />
-    <Compile Include="Spatial\SpatialIndex.cs" />
+    <Compile Include="Spatial\SpatialIndexTest.cs" />
     <Compile Include="Indexes\Statistics.cs" />
     <Compile Include="Indexes\UsingQueryBuilder.cs" />
     <Compile Include="Linq\UsingRavenQueryProvider.cs" />
@@ -627,6 +631,7 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Spatial\SpatialIndexTestHelper.cs" />
+    <Compile Include="Spatial\SpatialSearch.cs" />
     <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
     <Compile Include="Storage\BackupRestore.cs" />
     <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
