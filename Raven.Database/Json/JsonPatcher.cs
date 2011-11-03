@@ -70,7 +70,7 @@ namespace Raven.Database.Json
 						RenameProperty(patchCmd, patchCmd.Name, token);
 						break;
 					default:
-						throw new ArgumentException("Cannot understand command: " + patchCmd.Type);
+						throw new ArgumentException(string.Format("Cannot understand command: '{0}'", patchCmd.Type));
 				}
 			}
 		}

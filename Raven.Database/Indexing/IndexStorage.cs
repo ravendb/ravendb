@@ -184,8 +184,7 @@ namespace Raven.Database.Indexing
 									 where analyzerType == null
 									 select analyzer)
 			{
-				throw new ArgumentException("Could not create analyzer for field: " + analyzer.Key +
-					"' because the type was not found: " + analyzer.Value);
+				throw new ArgumentException(string.Format("Could not create analyzer for field: '{0}' because the type '{1}' was not found", analyzer.Key, analyzer.Value));
 			}
 		}
 
@@ -195,7 +194,7 @@ namespace Raven.Database.Indexing
 			if (indexes.TryGetValue(index, out value) == false)
 			{
 				log.Debug("Query on non existing index {0}", index);
-				throw new InvalidOperationException("Index " + index + " does not exists");
+				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 			var fieldsToFetch = new FieldsToFetch(new string[0], AggregationOperation.None, null);
 			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetLuceneQuery();
@@ -212,8 +211,8 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
 			{
-				log.Debug("Query on non existing index {0}", index);
-				throw new InvalidOperationException("Index " + index + " does not exists");
+				log.Debug("Query on non existing index '{0}'", index);
+				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 			return new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers).Query();
 		}
@@ -240,7 +239,7 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
 			{
-				log.Debug("Removing from non existing index {0}, ignoring", index);
+				log.Debug("Removing from non existing index '{0}', ignoring", index);
 				return;
 			}
 			value.Remove(keys, context);
@@ -256,7 +255,7 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
 			{
-				log.Debug("Tried to index on a non existant index {0}, ignoring", index);
+				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
 				return;
 			}
 			using (EnsureInvariantCulture())
@@ -272,7 +271,7 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
 			{
-				log.Debug("Tried to index on a non existant index {0}, ignoring", index);
+				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
 				return;
 			}
 			var mapReduceIndex = value as MapReduceIndex;

@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Security.Windows
 					};
 					break;
 				default:
-					throw new ArgumentException("Cannot understand access mode: " + config.AnonymousUserAccessMode);
+					throw new ArgumentException(string.Format("Cannot understand access mode: '{0}'", config.AnonymousUserAccessMode));
 			}
 		}
 	}

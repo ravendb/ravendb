@@ -298,7 +298,7 @@ namespace Raven.Storage.Esent.StorageActions
 		public Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
-				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters, key is: " + key, "key");
+				throw new ArgumentException(string.Format("The key must be a maximum of 255 bytes in Unicode, 127 characters, key is: '{0}'", key), "key");
 
 			Guid existingEtag;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");

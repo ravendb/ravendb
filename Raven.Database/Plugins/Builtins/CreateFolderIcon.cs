@@ -37,6 +37,7 @@ namespace Raven.Database.Plugins.Builtins
 				File.WriteAllText(desktopIni, string.Format(@"
 [.ShellClassInfo]
 IconResource={0},0
+InfoTip=RavenDB's data folder. It's recomand that you will have a backup of this folder.
 [ViewState]
 Mode=
 Vid=
