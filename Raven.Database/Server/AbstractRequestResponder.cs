@@ -63,7 +63,7 @@ namespace Raven.Database.Server
 				return null;
 			var parts = txInfo.Split(new[]{", "}, StringSplitOptions.RemoveEmptyEntries);
 			if(parts.Length != 2)
-				throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss");
+				throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss'");
 			return new TransactionInformation
 			{
 				Id = new Guid(parts[0]),

@@ -38,7 +38,7 @@ namespace Raven.Json.Linq
 				throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
 
 			if (ContainsKey(key))
-				throw new ArgumentException("An item with the same key has already been added: " + key);
+				throw new ArgumentException(string.Format("An item with the same key has already been added: '{0}'", key));
 
 			count = -1;
 			LocalChanges[key] = value; // we can't use Add, because LocalChanges may contain a DeletedMarker
