@@ -115,32 +115,32 @@ namespace Raven.Json.Linq
 		{
 		}
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
-        /// </summary>
-        /// <param name="value">The value.</param>
-        public RavenJValue(Guid value)
-          : this(value, JTokenType.String)
-        {
-        }
+		/// <summary>
+		/// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+		/// </summary>
+		/// <param name="value">The value.</param>
+		public RavenJValue(Guid value)
+		  : this(value, JTokenType.String)
+		{
+		}
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
-        /// </summary>
-        /// <param name="value">The value.</param>
-        public RavenJValue(Uri value)
-          : this(value, JTokenType.String)
-        {
-        }
+		/// <summary>
+		/// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+		/// </summary>
+		/// <param name="value">The value.</param>
+		public RavenJValue(Uri value)
+		  : this(value, JTokenType.String)
+		{
+		}
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
-        /// </summary>
-        /// <param name="value">The value.</param>
-        public RavenJValue(TimeSpan value)
-          : this(value, JTokenType.String)
-        {
-        }
+		/// <summary>
+		/// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+		/// </summary>
+		/// <param name="value">The value.</param>
+		public RavenJValue(TimeSpan value)
+		  : this(value, JTokenType.String)
+		{
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
@@ -176,12 +176,12 @@ namespace Raven.Json.Linq
 				return JTokenType.Bytes;
 			else if (value is bool)
 				return JTokenType.Boolean;
-            else if (value is Guid)
-                return JTokenType.Guid;
-            else if (value is Uri)
-                return JTokenType.Uri;
-            else if (value is TimeSpan)
-                return JTokenType.TimeSpan;
+			else if (value is Guid)
+				return JTokenType.Guid;
+			else if (value is Uri)
+				return JTokenType.Uri;
+			else if (value is TimeSpan)
+				return JTokenType.TimeSpan;
 
 			throw new ArgumentException("Could not determine JSON object type for type {0}.".FormatWith(CultureInfo.InvariantCulture, value.GetType()));
 		}
@@ -302,13 +302,13 @@ namespace Raven.Json.Linq
 						writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture));
 					return;
 				case JTokenType.Bytes:
-			        writer.WriteValue((byte[]) _value);
-			        return;
-			    case JTokenType.Guid:
-			    case JTokenType.Uri:
-			    case JTokenType.TimeSpan:
-			        writer.WriteValue((_value != null) ? _value.ToString() : null);
-			        return;
+					writer.WriteValue((byte[]) _value);
+					return;
+				case JTokenType.Guid:
+				case JTokenType.Uri:
+				case JTokenType.TimeSpan:
+					writer.WriteValue((_value != null) ? _value.ToString() : null);
+					return;
 			}
 
 			throw MiscellaneousUtils.CreateArgumentOutOfRangeException("TokenType", _valueType, "Unexpected token type.");
@@ -431,31 +431,31 @@ namespace Raven.Json.Linq
 						return 1;
 
 					return MiscellaneousUtils.ByteArrayCompare(bytes1, bytes2);
-                case JTokenType.Guid:
-                    if (!(objB is Guid))
-                        throw new ArgumentException("Object must be of type Guid.");
+				case JTokenType.Guid:
+					if (!(objB is Guid))
+						throw new ArgumentException("Object must be of type Guid.");
 
-                    Guid guid1 = (Guid)objA;
-                    Guid guid2 = (Guid)objB;
+					Guid guid1 = (Guid)objA;
+					Guid guid2 = (Guid)objB;
 
-                    return guid1.CompareTo(guid2);
-                case JTokenType.Uri:
-                    if (!(objB is Uri))
-                        throw new ArgumentException("Object must be of type Uri.");
+					return guid1.CompareTo(guid2);
+				case JTokenType.Uri:
+					if (!(objB is Uri))
+						throw new ArgumentException("Object must be of type Uri.");
 
-                    Uri uri1 = (Uri)objA;
-                    Uri uri2 = (Uri)objB;
+					Uri uri1 = (Uri)objA;
+					Uri uri2 = (Uri)objB;
 
-                    return Comparer<string>.Default.Compare(uri1.ToString(), uri2.ToString());
-                case JTokenType.TimeSpan:
-                    if (!(objB is TimeSpan))
-                        throw new ArgumentException("Object must be of type TimeSpan.");
+					return Comparer<string>.Default.Compare(uri1.ToString(), uri2.ToString());
+				case JTokenType.TimeSpan:
+					if (!(objB is TimeSpan))
+						throw new ArgumentException("Object must be of type TimeSpan.");
 
-                    TimeSpan ts1 = (TimeSpan)objA;
-                    TimeSpan ts2 = (TimeSpan)objB;
+					TimeSpan ts1 = (TimeSpan)objA;
+					TimeSpan ts2 = (TimeSpan)objB;
 
-                    return ts1.CompareTo(ts2);
-                default:
+					return ts1.CompareTo(ts2);
+				default:
 					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("valueType", valueType, "Unexpected value type: {0}".FormatWith(CultureInfo.InvariantCulture, valueType));
 			}
 		}
@@ -543,9 +543,9 @@ namespace Raven.Json.Linq
 			return _value.ToString();
 		}
 
-	    public static RavenJValue Null
-	    {
-	        get { return new RavenJValue(null, JTokenType.Null); }
-	    }
+		public static RavenJValue Null
+		{
+			get { return new RavenJValue(null, JTokenType.Null); }
+		}
 	}
 }

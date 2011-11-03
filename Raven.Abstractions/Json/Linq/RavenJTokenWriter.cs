@@ -349,26 +349,26 @@ namespace Raven.Json.Linq
 			AddValue(value, JsonToken.String);
 		}
 
-        /// <summary>
-        /// Writes a <see cref="TimeSpan"/> value.
-        /// </summary>
-        /// <param name="value">The <see cref="TimeSpan"/> value to write.</param>
-        public override void WriteValue(TimeSpan value)
-        {
-            base.WriteValue(value);
-            AddValue(value, JsonToken.String);
-        }
+		/// <summary>
+		/// Writes a <see cref="TimeSpan"/> value.
+		/// </summary>
+		/// <param name="value">The <see cref="TimeSpan"/> value to write.</param>
+		public override void WriteValue(TimeSpan value)
+		{
+			base.WriteValue(value);
+			AddValue(value, JsonToken.String);
+		}
 
-        /// <summary>
-        /// Writes a <see cref="Uri"/> value.
-        /// </summary>
-        /// <param name="value">The <see cref="Uri"/> value to write.</param>
-        public override void WriteValue(Uri value)
-        {
-            base.WriteValue(value);
-            AddValue(value, JsonToken.String);
-        }
-        
-        #endregion
+		/// <summary>
+		/// Writes a <see cref="Uri"/> value.
+		/// </summary>
+		/// <param name="value">The <see cref="Uri"/> value to write.</param>
+		public override void WriteValue(Uri value)
+		{
+			base.WriteValue(value);
+			AddValue(value, JsonToken.String);
+		}
+		
+		#endregion
 	}
 }
