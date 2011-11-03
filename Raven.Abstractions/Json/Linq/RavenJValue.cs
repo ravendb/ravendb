@@ -149,6 +149,12 @@ namespace Raven.Json.Linq
 				return JTokenType.Bytes;
 			else if (value is bool)
 				return JTokenType.Boolean;
+            else if (value is Guid)
+                return JTokenType.Guid;
+            else if (value is Uri)
+                return JTokenType.Uri;
+            else if (value is TimeSpan)
+                return JTokenType.TimeSpan;
 
 			throw new ArgumentException("Could not determine JSON object type for type {0}.".FormatWith(CultureInfo.InvariantCulture, value.GetType()));
 		}
@@ -269,8 +275,13 @@ namespace Raven.Json.Linq
 						writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture));
 					return;
 				case JTokenType.Bytes:
-					writer.WriteValue((byte[])_value);
-					return;
+			        writer.WriteValue((byte[]) _value);
+			        return;
+			    case JTokenType.Guid:
+			    case JTokenType.Uri:
+			    case JTokenType.TimeSpan:
+			        writer.WriteValue((_value != null) ? _value.ToString() : null);
+			        return;
 			}
 
 			throw MiscellaneousUtils.CreateArgumentOutOfRangeException("TokenType", _valueType, "Unexpected token type.");
