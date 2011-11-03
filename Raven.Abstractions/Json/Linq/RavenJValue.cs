@@ -115,6 +115,33 @@ namespace Raven.Json.Linq
 		{
 		}
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        public RavenJValue(Guid value)
+          : this(value, JTokenType.String)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        public RavenJValue(Uri value)
+          : this(value, JTokenType.String)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        public RavenJValue(TimeSpan value)
+          : this(value, JTokenType.String)
+        {
+        }
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
 		/// </summary>
@@ -404,7 +431,31 @@ namespace Raven.Json.Linq
 						return 1;
 
 					return MiscellaneousUtils.ByteArrayCompare(bytes1, bytes2);
-				default:
+                case JTokenType.Guid:
+                    if (!(objB is Guid))
+                        throw new ArgumentException("Object must be of type Guid.");
+
+                    Guid guid1 = (Guid)objA;
+                    Guid guid2 = (Guid)objB;
+
+                    return guid1.CompareTo(guid2);
+                case JTokenType.Uri:
+                    if (!(objB is Uri))
+                        throw new ArgumentException("Object must be of type Uri.");
+
+                    Uri uri1 = (Uri)objA;
+                    Uri uri2 = (Uri)objB;
+
+                    return Comparer<string>.Default.Compare(uri1.ToString(), uri2.ToString());
+                case JTokenType.TimeSpan:
+                    if (!(objB is TimeSpan))
+                        throw new ArgumentException("Object must be of type TimeSpan.");
+
+                    TimeSpan ts1 = (TimeSpan)objA;
+                    TimeSpan ts2 = (TimeSpan)objB;
+
+                    return ts1.CompareTo(ts2);
+                default:
 					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("valueType", valueType, "Unexpected value type: {0}".FormatWith(CultureInfo.InvariantCulture, valueType));
 			}
 		}
