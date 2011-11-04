@@ -1359,7 +1359,6 @@
                                         <DoubleAnimation Duration="0:0:0.05" To="1" Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Opacity)" Storyboard.TargetName="OuterBorder" d:IsOptimized="True"/>
                                     </Storyboard>
                                 </VisualState>
-                                <VisualState x:Name="SelectedUnfocused"/>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
                         <Border x:Name="OuterBorder" BorderThickness="1" Margin="0" CornerRadius="4">
