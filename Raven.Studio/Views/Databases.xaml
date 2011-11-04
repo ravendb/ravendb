@@ -63,7 +63,8 @@
                      ItemsSource="{Binding Databases}"
                      SelectedItem="{Binding SelectedDatabase, Mode=TwoWay}"
                      ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
-                     ItemTemplate="{StaticResource DatabaseItemTemplate}">
+                     ItemTemplate="{StaticResource DatabaseItemTemplate}"
+                     Margin="10">
             </ListBox>
         </toolkit:HeaderedContentControl>
     </Grid>
