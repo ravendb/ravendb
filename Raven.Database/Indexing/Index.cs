@@ -495,15 +495,15 @@ namespace Raven.Database.Indexing
 					{
 						clonedNumericField.SetIntValue((int)numericValue);
 					}
-					if (numericValue is long)
+					else if (numericValue is long)
 					{
 						clonedNumericField.SetLongValue((long)numericValue);
 					}
-					if (numericValue is double)
+					else if (numericValue is double)
 					{
 						clonedNumericField.SetDoubleValue((double)numericValue);
 					}
-					if (numericValue is float)
+					else if (numericValue is float)
 					{
 						clonedNumericField.SetFloatValue((float)numericValue);
 					}

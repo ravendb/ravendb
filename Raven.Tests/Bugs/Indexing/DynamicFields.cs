@@ -35,9 +35,11 @@ namespace Raven.Tests.Bugs.Indexing
 			{
 				Map = products =>
 					from p in products
+					from att in p.Attributes
+					group att by att.Name into g
 					select new
 					{
-						_ = Project(p.Attributes, attribute => new Field(attribute.Name, attribute.Value, Field.Store.NO, Field.Index.ANALYZED))
+						_ = g.Select(attribute => new Field(attribute.Name, attribute.Value, Field.Store.NO, Field.Index.ANALYZED))
 					};
 			}
 		}
@@ -48,9 +50,11 @@ namespace Raven.Tests.Bugs.Indexing
 			{
 				Map = products =>
 					from p in products
+					from att in p.Attributes
+					group att by att.Name into g
 					select new
 					{
-						_ = Project(p.Attributes, attribute => new NumericField(attribute.Name, Field.Store.NO, true).SetDoubleValue(attribute.NumericValue))
+						_ = g.Select(attribute => new NumericField(attribute.Name, Field.Store.NO, true).SetDoubleValue(attribute.NumericValue))
 					};
 			}
 		}
@@ -61,9 +65,11 @@ namespace Raven.Tests.Bugs.Indexing
 			{
 				Map = products =>
 					from p in products
+					from att in p.Attributes
+					group att by att.Name into g
 					select new
 					{
-						_ = Project(p.Attributes, attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS))
+						_ = g.Select(attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS))
 					};
 			}
 		}
@@ -74,9 +80,11 @@ namespace Raven.Tests.Bugs.Indexing
 			{
 				Map = products =>
 					from p in products
+					from att in p.Attributes
+					group att by att.Name into g
 					select new
 					{
-						_ = Project(p.Attributes, attribute => new NumericField(attribute.Name, Field.Store.NO, true).SetIntValue(attribute.IntValue ))
+						_ = g.Select(attribute => new NumericField(attribute.Name, Field.Store.NO, true).SetIntValue(attribute.IntValue ))
 					};
 			}
 		}
