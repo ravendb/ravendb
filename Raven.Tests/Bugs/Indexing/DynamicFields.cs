@@ -69,7 +69,7 @@ namespace Raven.Tests.Bugs.Indexing
 					group att by att.Name into g
 					select new
 					{
-						_ = g.Select(attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS))
+						_ = g.Select(attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS))
 					};
 			}
 		}
