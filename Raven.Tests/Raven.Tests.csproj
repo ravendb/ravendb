@@ -556,6 +556,7 @@
     <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
     <Compile Include="MailingList\GuidProjection.cs" />
+    <Compile Include="MailingList\LazyStats.cs" />
     <Compile Include="MailingList\NicolasGarfinkiel.cs" />
     <Compile Include="MailingList\Stacey.cs" />
     <Compile Include="MailingList\Stats.cs" />
