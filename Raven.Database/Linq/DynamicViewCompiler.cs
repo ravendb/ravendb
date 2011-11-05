@@ -350,6 +350,30 @@ Reduce only fields: {2}
 				AddDocumentIdFieldToLambdaIfCreatingNewObject(lambdaExpression);
 				return base.VisitLambdaExpression(lambdaExpression, data);
 			}
+
+			private void AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
+			{
+				if (lambdaExpression.ExpressionBody is ObjectCreateExpression == false)
+					return;
+				var objectCreateExpression = ((ObjectCreateExpression)lambdaExpression.ExpressionBody);
+				if (objectCreateExpression.IsAnonymousType == false)
+					return;
+
+				var objectInitializer = objectCreateExpression.ObjectInitializer;
+
+				var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
+
+				if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
+					return;
+
+				objectInitializer.CreateExpressions.Add(
+					new NamedArgumentExpression
+					{
+						Name = Constants.DocumentIdFieldName,
+						Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
+					});
+			}
+
 		}
 
 		private void AddEntityNameFilteringIfNeeded(VariableDeclaration variableDeclaration, out string entityName)
@@ -393,24 +417,6 @@ Reduce only fields: {2}
 			}
 		}
 
-		private static void AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
-		{
-			if (lambdaExpression.ExpressionBody is ObjectCreateExpression == false)
-				return;
-			var objectInitializer = ((ObjectCreateExpression)lambdaExpression.ExpressionBody).ObjectInitializer;
-
-			var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
-
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
-				return;
-
-			objectInitializer.CreateExpressions.Add(
-				new NamedArgumentExpression
-				{
-					Name = Constants.DocumentIdFieldName,
-					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
-				});
-		}
 
 		private VariableDeclaration TransformMapDefinitionFromLinqQuerySyntax(string query, out string entityName)
 		{
