@@ -558,6 +558,7 @@
     <Compile Include="MailingList\GuidProjection.cs" />
     <Compile Include="MailingList\NicolasGarfinkiel.cs" />
     <Compile Include="MailingList\Stacey.cs" />
+    <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />
     <Compile Include="MailingList\Vlad.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">

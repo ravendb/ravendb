@@ -1112,6 +1112,18 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		}
 
 		/// <summary>
+		/// Retrieve the statistics for the database
+		/// </summary>
+		public DatabaseStatistics GetStatistics()
+		{
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,url +"/stats", "GET", credentials, convention);
+
+			var response = httpJsonRequest.ReadResponseString();
+			var jo = RavenJObject.Parse(response);
+			return jo.Deserialize<DatabaseStatistics>(convention);
+		}
+
+		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)

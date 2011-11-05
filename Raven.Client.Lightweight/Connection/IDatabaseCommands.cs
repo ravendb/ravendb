@@ -296,6 +296,11 @@ namespace Raven.Client.Connection
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>
 		GetResponse[] MultiGet(GetRequest[] requests);
+
+		/// <summary>
+		/// Retrieve the statistics for the database
+		/// </summary>
+		DatabaseStatistics GetStatistics();
 	}
 }
 #endif
