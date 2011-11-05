@@ -12,41 +12,141 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex()
 		{
-			CanGetTotalResultsFromStatisticsOnLazySearchAgainstAnIndex(false);
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				new UserByFirstName().Execute(store);
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User
+					{
+						FirstName = "Ayende"
+					});
+					session.SaveChanges();
+				}
+				using (var session = store.OpenSession())
+				{
+					session.Query<User>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Take(15).ToList();
+					RavenQueryStatistics stats;
+
+					var query = session.Query<User>().Statistics(out stats).Where(x => x.FirstName == "Ayende");
+
+					var results = query.Take(8).Lazily();
+
+					var enumerable = results.Value; //force evaluation
+					Assert.Equal(1, enumerable.Count());
+					Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+					Assert.True(stats.TotalResults > 0);
+				}
+			}
 		}
 
 		[Fact]
-		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex()
-		{
-			CanGetTotalResultsFromStatisticsOnLazySearchAgainstAnIndex(true);
-		}
-
-		private void CanGetTotalResultsFromStatisticsOnLazySearchAgainstAnIndex(bool staticIndex)
+		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_NonLazy()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
 			{
 				new UserByFirstName().Execute(store);
-
 				using (var session = store.OpenSession())
 				{
-					var names = session.Query<User>().Customize(x=>x.WaitForNonStaleResults())
+					session.Store(new User
+					{
+						FirstName = "Ayende"
+					});
+					session.SaveChanges();
+				}
+				using (var session = store.OpenSession())
+				{
+					session.Query<User>()
+						.Customize(x => x.WaitForNonStaleResults())
 						.Take(15).ToList();
-
 					RavenQueryStatistics stats;
 
-					var query = staticIndex == false
-							? session.Query<User>().Statistics(out stats).Where(x => x.FirstName == "test")
-							: session.Query<User, UserByFirstName>().Statistics(out stats).Where(x => x.FirstName == "test");
+					var query = session.Query<User>().Statistics(out stats).Where(x => x.FirstName == "Ayende");
 
-					var results = query.Take(8).Lazily();
+					var results = query.Take(8).ToList();
 
+					Assert.Equal(1, results.Count());
 					Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
-					Assert.True(stats.TotalResults > 0, "The stats should return total results");
+					Assert.True(stats.TotalResults > 0);
 				}
 			}
 		}
 
+
+		[Fact]
+		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				new UserByFirstName().Execute(store);
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User
+					{
+						FirstName = "Ayende"
+					});
+					session.SaveChanges();
+				}
+				using (var session = store.OpenSession())
+				{
+						session.Query<User, UserByFirstName>()
+							.Customize(x => x.WaitForNonStaleResults())
+							.Take(15).ToList();
+
+					RavenQueryStatistics stats;
+
+					var query = session.Query<User, UserByFirstName>().Statistics(out stats).Where(x => x.FirstName == "Ayende");
+
+					var results = query.Take(8).Lazily();
+
+					var enumerable = results.Value;//force evaluation
+					Assert.Equal(1, enumerable.Count());
+					Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+					Assert.True(stats.TotalResults > 0);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex_NonLazy()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				new UserByFirstName().Execute(store);
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User
+					{
+						FirstName = "Ayende"
+					});
+					session.SaveChanges();
+				}
+				using (var session = store.OpenSession())
+				{
+					session.Query<User, UserByFirstName>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Take(15).ToList();
+
+					RavenQueryStatistics stats;
+
+					var query = session.Query<User, UserByFirstName>().Statistics(out stats).Where(x => x.FirstName == "Ayende");
+
+					var results = query.Take(8).ToList();
+
+					Assert.Equal(1, results.Count());
+					Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+					Assert.True(stats.TotalResults > 0);
+				}
+			}
+		}
+
+		
 	}
 
 	public class User
