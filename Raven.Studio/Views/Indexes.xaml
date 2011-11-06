@@ -6,6 +6,10 @@
 					 Infrastructure:ModelAttacher.AttachObservableModel="IndexesModel"
 					 Title="Indexes Page">
 	<Grid DataContext="{Binding Value}">
+		<StackPanel>
+			<HyperlinkButton Content="Create an Index"
+							 NavigateUri="/indexes/new?mode=new" />
+		</StackPanel>
 		<Indexes:IndexesListView />
 	</Grid>
 </Infrastructure:View>

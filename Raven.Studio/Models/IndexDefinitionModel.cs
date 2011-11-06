@@ -16,6 +16,7 @@ namespace Raven.Studio.Models
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
 		private string originalIndex;
+		private bool createNewIndexMode;
 
 		public IndexDefinitionModel()
 		{
@@ -43,7 +44,15 @@ namespace Raven.Studio.Models
 
 		public override void LoadModelParameters(string parameters)
 		{
-			var name = new UrlParser(parameters).Path;
+			var urlParser = new UrlParser(parameters);
+			if (urlParser.GetQueryParam("mode") == "new")
+			{
+				createNewIndexMode = true;
+				OnPropertyChanged("ViewTitle");
+				return;
+			}
+
+			var name = urlParser.Path;
 			if (string.IsNullOrWhiteSpace(name))
 				UrlUtil.Navigate("/indexes");
 
@@ -114,6 +123,11 @@ namespace Raven.Studio.Models
 				index.Name = value;
 				OnPropertyChanged();
 			}
+		}
+
+		public string ViewTitle
+		{
+			get { return createNewIndexMode ? "Create an Index" : Name; }
 		}
 
 		public string Reduce

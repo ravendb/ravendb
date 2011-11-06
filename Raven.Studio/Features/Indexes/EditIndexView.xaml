@@ -105,7 +105,7 @@
 					<HyperlinkButton Content="Indexes" Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 									 NavigateUri="/Indexes"/>
 					<TextBlock Text=">" VerticalAlignment="Center" Margin="4,0"/>
-					<TextBlock Text="{Binding Name}" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
+					<TextBlock Text="{Binding ViewTitle}" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal" toolkit:DockPanel.Dock="Right" VerticalAlignment="Center">
 
