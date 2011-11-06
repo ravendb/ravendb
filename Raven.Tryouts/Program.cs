@@ -8,6 +8,7 @@ using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using NLog;
+using Raven.Tryouts.Json;
 
 namespace etobi.EmbeddedTest
 {
@@ -20,7 +21,9 @@ namespace etobi.EmbeddedTest
 
 		static void Main()
 		{
-			try
+			PerfTest.RunPerfTest();
+		    return;
+            try
 			{
 				IOExtensions.DeleteDirectory("Data");
 				using (var documentStore = new EmbeddableDocumentStore())
