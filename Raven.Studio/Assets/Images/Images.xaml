@@ -22,5 +22,7 @@
     <BitmapImage x:Key="Image_Warning_Tiny" UriSource="Warning.png"/>
     <BitmapImage x:Key="Image_NextPage_Tiny" UriSource="document_page_next.png"/>
     <BitmapImage x:Key="Image_PreviousPage_Tiny" UriSource="document_page_previous.png"/>
+    <BitmapImage x:Key="Image_Database_Tiny" UriSource="database.png"/>
+    <BitmapImage x:Key="Image_AddDatabase_Tiny" UriSource="database_add.png"/>
     
 </ResourceDictionary>

@@ -12,7 +12,7 @@
 	<Grid>
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}">
 			<toolkit:HeaderedContentControl.Header>
-				<toolkit:DockPanel LastChildFill="False">
+				<toolkit:DockPanel Margin="4"  LastChildFill="False">
 					<StackPanel Orientation="Horizontal">
 						<Image Source="{StaticResource Image_Document_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
 						<TextBlock x:Name="HeaderText"
@@ -20,7 +20,7 @@
 						Text="Documents" 
 						toolkit:DockPanel.Dock="Left"
 						VerticalAlignment="Center"
-						 Margin="6"/>
+						 Margin="6,0"/>
 					</StackPanel>
 
 					<StackPanel  toolkit:DockPanel.Dock="Right"
