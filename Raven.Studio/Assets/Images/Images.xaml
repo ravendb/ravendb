@@ -24,5 +24,6 @@
     <BitmapImage x:Key="Image_PreviousPage_Tiny" UriSource="document_page_previous.png"/>
     <BitmapImage x:Key="Image_Database_Tiny" UriSource="database.png"/>
     <BitmapImage x:Key="Image_AddDatabase_Tiny" UriSource="database_add.png"/>
+    <BitmapImage x:Key="Image_AddIndex_Tiny" UriSource="document_prepare.png"/>
     
 </ResourceDictionary>
