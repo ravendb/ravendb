@@ -22,6 +22,9 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/indexes/";
 			index = new IndexDefinition();
+			Maps = new BindableCollection<MapItem>(new PrimaryKeyComparer<MapItem>(x => x.Text));
+			Maps.Add(new MapItem()); // We must have at least one map item in a new index.
+			Fields = new BindableCollection<FieldProperties>(new PrimaryKeyComparer<FieldProperties>(field => field.Name));
 
 			statistics = Database.Value.Statistics;
 			statistics.PropertyChanged += (sender, args) => OnPropertyChanged("ErrorsCount");
@@ -30,10 +33,8 @@ namespace Raven.Studio.Models
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
 		{
 			index = indexDefinition;
-			Maps = new BindableCollection<MapItem>(new PrimaryKeyComparer<MapItem>(x => x.Text));
 			Maps.Set(index.Maps.Select(x => new MapItem {Text = x}));
 
-			Fields = new BindableCollection<FieldProperties>(new PrimaryKeyComparer<FieldProperties>(field => field.Name));
 			CreateOrEditField(index.Indexes, (f, i) => f.Indexing = i);
 			CreateOrEditField(index.Stores, (f, i) => f.Storage = i);
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
@@ -57,7 +58,7 @@ namespace Raven.Studio.Models
 				UrlUtil.Navigate("/indexes");
 
 			DatabaseCommands.GetIndexAsync(name)
-				.ContinueOnSuccess(index1 =>
+				.ContinueOnSuccessInTheUIThread(index1 =>
 				                   {
 				                   	if (index1 == null)
 				                   	{
@@ -153,7 +154,14 @@ namespace Raven.Studio.Models
 		public BindableCollection<MapItem> Maps { get; private set; }
 		public BindableCollection<FieldProperties> Fields { get; private set; }
 
-		public int ErrorsCount { get { return statistics.Value.Errors.Count(); } }
+		public int ErrorsCount
+		{
+			get
+			{
+				var databaseStatistics = statistics.Value;
+				return databaseStatistics == null ? 0 : databaseStatistics.Errors.Count();
+			}
+		}
 
 #region Commands
 
