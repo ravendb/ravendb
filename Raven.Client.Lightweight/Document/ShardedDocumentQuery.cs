@@ -726,6 +726,17 @@ If you really want to do in memory filtering on the data returned from the query
 			throw new NotImplementedException();
 		}
 
+        /// <summary>
+        /// Statistics about the query, such as total count of matching records, after the query executed
+        /// </summary>
+        public RavenQueryStatistics QueryStatistics
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
 		/// <summary>
 		/// Simplified method for closing a clause within the query
 		/// </summary>

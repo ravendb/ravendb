@@ -370,5 +370,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Provide statistics about the query, such as total count of matching records
 		/// </summary>
 		TSelf Statistics(out RavenQueryStatistics stats);
+
+	    /// <summary>
+	    /// Provide statistics about the query, such as total count of matching records, after the query executed
+	    /// </summary>
+	    RavenQueryStatistics QueryStatistics { get; }
 	}
 }

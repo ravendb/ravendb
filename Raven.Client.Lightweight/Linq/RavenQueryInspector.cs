@@ -110,7 +110,15 @@ namespace Raven.Client.Linq
 			return this;
 		}
 
-		/// <summary>
+	    /// <summary>
+        /// Statistics about the query, such as total count of matching records, after the query executed
+	    /// </summary>
+	    public RavenQueryStatistics QueryStatistics 
+        { 
+            get { return queryStats; }
+        }
+
+	    /// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
 		/// <param name="action">The action.</param>

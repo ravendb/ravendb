@@ -18,6 +18,11 @@ namespace Raven.Client.Linq
 		/// </summary>
 		IRavenQueryable<T> Statistics(out RavenQueryStatistics stats);
 
+	    /// <summary>
+	    /// Provide statistics about the query, such as total count of matching records, after the query executed
+	    /// </summary>
+        RavenQueryStatistics QueryStatistics { get; }
+
 		/// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
