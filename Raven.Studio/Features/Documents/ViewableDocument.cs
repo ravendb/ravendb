@@ -40,7 +40,7 @@ namespace Raven.Studio.Features.Documents
 			get { return new EditDocumentCommand(this); }
 		}
 
-		private const int ToolTipTextLength = 512;
+		private const int ToolTipTextLength = 150;
 		public string ToolTipText
 		{
 			get
@@ -51,7 +51,6 @@ namespace Raven.Studio.Features.Documents
 						: json;
 
 				return json;
-			
 			}
 		}
 
