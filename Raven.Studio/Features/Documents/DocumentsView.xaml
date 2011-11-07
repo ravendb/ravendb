@@ -78,25 +78,24 @@
 						  Margin="2"
 						  ToolTipService.ToolTip="{Binding ToolTipText}">
 
-							
 							<Rectangle Fill="#FFF4F4F5" />
-						<Rectangle HorizontalAlignment="Left"
-								   Width="10"
-								   x:Name="DocumentGrid"
-								   Fill="{Binding Path=Fill}" />
+							<Rectangle HorizontalAlignment="Left"
+									   Width="10"
+									   x:Name="DocumentGrid"
+									   Fill="{Binding Path=Fill}" />
 
-						<Grid Margin="14,0,0,0">
-							<StackPanel Orientation="Vertical">
-								<TextBlock Text="{Binding CollectionType}"
-										   TextTrimming="WordEllipsis"
-										   HorizontalAlignment="Left" />
-								<TextBlock Text="{Binding DisplayId}"
-										   TextTrimming="WordEllipsis"
-										   HorizontalAlignment="Left" />
-							</StackPanel>
-						</Grid>
+							<Grid Margin="14,0,0,0">
+								<StackPanel Orientation="Vertical">
+									<TextBlock Text="{Binding CollectionType}"
+											   TextTrimming="WordEllipsis"
+											   HorizontalAlignment="Left" />
+									<TextBlock Text="{Binding DisplayId}"
+											   TextTrimming="WordEllipsis"
+											   HorizontalAlignment="Left" />
+								</StackPanel>
+							</Grid>
 
-						<StackPanel x:Name="overlay"
+							<StackPanel x:Name="overlay"
 									Orientation="Horizontal"
 									HorizontalAlignment="Right"
 									VerticalAlignment="Bottom">
