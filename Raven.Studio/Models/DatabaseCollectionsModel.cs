@@ -16,6 +16,16 @@ namespace Raven.Studio.Models
 			ModelUrl = "/collections";
 			Collections = new BindableCollection<CollectionModel>(new PrimaryKeyComparer<CollectionModel>(model => model.Name));
 			SelectedCollection = new Observable<CollectionModel>();
+			SelectedCollection.PropertyChanged += (sender, args) =>
+			                                      	{
+			                                      		var urlParser = new UrlParser(UrlUtil.Url);
+			                                      		var name = SelectedCollection.Value.Name;
+														if (urlParser.GetQueryParam("name") != name)
+														{
+															urlParser.SetQueryParam("name", name);
+															urlParser.NavigateTo();
+														}
+			                                      	};
 		}
 
 		public override void LoadModelParameters(string parameters)
