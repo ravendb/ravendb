@@ -647,6 +647,22 @@
 		</toolkit:WrapPanel>
 	</ItemsPanelTemplate>
 
+    <ItemsPanelTemplate x:Key="VerticalFluidWrapPanel">
+        <toolkit:WrapPanel Orientation="Vertical">
+            <i:Interaction.Behaviors>
+                <ei:FluidMoveBehavior AppliesTo="Children"
+                                      Duration="0:0:0.5">
+                    <ei:FluidMoveBehavior.EaseY>
+                        <CircleEase EasingMode="EaseInOut" />
+                    </ei:FluidMoveBehavior.EaseY>
+                    <ei:FluidMoveBehavior.EaseX>
+                        <CubicEase EasingMode="EaseInOut" />
+                    </ei:FluidMoveBehavior.EaseX>
+                </ei:FluidMoveBehavior>
+            </i:Interaction.Behaviors>
+        </toolkit:WrapPanel>
+    </ItemsPanelTemplate>
+
     <Style x:Name="Style_ItemsControl_Fluid"
 		   TargetType="ItemsControl">
         <Setter Property="ItemsPanel"
@@ -695,7 +711,19 @@
 				Value="0" />
 	</Style>
 
-	<Style x:Name="Collections_FluidList" BasedOn="{StaticResource Style_ListBox_Fluid}"
+    <Style x:Name="Style_ListBox_VerticalFluid"
+           TargetType="ListBox">
+        <Setter Property="ItemsPanel"
+                Value="{StaticResource VerticalFluidWrapPanel}" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+                Value="Auto" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+                Value="Auto" />
+        <Setter Property="BorderThickness"
+                Value="0" />
+    </Style>
+
+    <Style x:Name="Collections_FluidList" BasedOn="{StaticResource Style_ListBox_Fluid}"
 		   TargetType="ListBox">
 		<Setter Property="MaxHeight"
 				Value="400" />
@@ -731,7 +759,7 @@
     </Style>
 
     <Style x:Name="Style_ListBox_Indexes"
-		   BasedOn="{StaticResource Style_ListBox_Fluid}"
+           BasedOn="{StaticResource Style_ListBox_VerticalFluid}"
 		   TargetType="ListBox">
 		<Setter Property="Background"
 				Value="Transparent" />

@@ -511,6 +511,7 @@
     <Resource Include="Assets\Images\document_page_previous.png" />
     <Resource Include="Assets\Images\database.png" />
     <Resource Include="Assets\Images\database_add.png" />
+    <Resource Include="Assets\Images\document_prepare.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup>
