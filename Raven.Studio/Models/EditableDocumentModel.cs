@@ -32,7 +32,7 @@ namespace Raven.Studio.Models
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
-			document.Value = new JsonDocument { DataAsJson = new RavenJObject(), Metadata = new RavenJObject(), Key = " " };
+			document.Value = new JsonDocument { DataAsJson = new RavenJObject(), Metadata = new RavenJObject(), Key = "" };
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -156,7 +156,7 @@ namespace Raven.Studio.Models
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (document.Value == null || string.IsNullOrEmpty(document.Value.Key))
+			if (document.Value == null || string.IsNullOrWhiteSpace(document.Value.Key))
 				return null;
 
 			return DatabaseCommands.GetAsync(document.Value.Key)
