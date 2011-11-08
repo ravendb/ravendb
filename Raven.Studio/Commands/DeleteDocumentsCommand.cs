@@ -5,8 +5,6 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows.Controls;
-using System.Windows.Interactivity;
 using Raven.Abstractions.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Input;
@@ -16,18 +14,11 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
-	public class DeleteDocumentsCommand : Command
+	public class DeleteDocumentsCommand : ListBoxCommand<ViewableDocument>
 	{
 		public override void Execute(object parameter)
 		{
-			var listBox = GetList(parameter);
-			if (listBox == null || listBox.SelectedItems.Count == 0)
-				return;
-
-			var documents = listBox.SelectedItems
-				.Cast<ViewableDocument>()
-				.ToList();
-			var documentsIds = documents
+			var documentsIds = Items
 				.Select(x => x.Id)
 				.ToList();
 
@@ -35,12 +26,12 @@ namespace Raven.Studio.Commands
 										? string.Format("Are you sure you want to delete these {0} documents?", documentsIds.Count)
 										: string.Format("Are you sure that you want to delete this document? ({0})", documentsIds.First()))
 				.ContinueWhenTrue(() => DeleteDocuments(documentsIds))
-				.ContinueOnSuccessInTheUIThread(() =>
+				.ContinueWhenTrueInTheUIThread(() =>
 									{
-										var col = (BindableCollection<ViewableDocument>)listBox.DataContext;
-										foreach (var document in documents)
+										var model = (DocumentsModel)Context;
+										foreach (var document in Items)
 										{
-											col.Remove(document);
+											model.Documents.Remove(document);
 										}
 									});
 		}
@@ -63,21 +54,6 @@ namespace Raven.Studio.Commands
 				                   	                                                          		"Document {0} was deleted",
 				                   	                                                          		documentIds.First())));
 				                   });
-		}
-
-		private static ListBox GetList(object parameter)
-		{
-			if (parameter == null)
-				return null;
-			var attachedObject = parameter as IAttachedObject;
-			if (attachedObject != null)
-				return (ListBox) attachedObject.AssociatedObject;
-
-			var menuItem = (MenuItem) parameter;
-			var contextMenu = (ContextMenu) menuItem.Parent;
-			if (contextMenu == null)
-				return null;
-			return (ListBox) contextMenu.Owner;
 		}
 	}
 }

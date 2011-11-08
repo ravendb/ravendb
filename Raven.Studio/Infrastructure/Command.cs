@@ -14,7 +14,7 @@ namespace Raven.Studio.Infrastructure
 
 		public event EventHandler CanExecuteChanged = delegate { };
 
-		protected void OnCanExecuteChanged()
+		public void RaiseCanExecuteChanged()
 		{
 			EventHandler handler = CanExecuteChanged;
 			if (handler != null) handler(this, EventArgs.Empty);

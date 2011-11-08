@@ -35,14 +35,26 @@ namespace Raven.Studio.Infrastructure
 		}
 
 
-		public static Task ContinueWhenTrue(this Task<bool> parent, Action action)
+		public static Task<bool> ContinueWhenTrue(this Task<bool> parent, Action action)
 		{
 			return parent.ContinueWith(task =>
-									   {
-										   if (task.Result == false)
-											   return;
-										   action();
-									   });
+			                           	{
+			                           		if (task.Result == false)
+			                           			return false;
+			                           		action();
+			                           		return true;
+			                           	});
+		}
+
+		public static Task<bool> ContinueWhenTrueInTheUIThread(this Task<bool> parent, Action action)
+		{
+			return parent.ContinueWhenTrue(() =>
+			{
+				if (Deployment.Current.Dispatcher.CheckAccess())
+					action();
+				Deployment.Current.Dispatcher.InvokeAsync(action)
+					.Catch();
+			});
 		}
 
 		public static Task<TResult> ContinueOnSuccess<T, TResult>(this Task<T> parent, Func<T, TResult> action)

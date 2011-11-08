@@ -40,7 +40,7 @@ namespace Raven.Studio.Features.Documents
 			get { return new EditDocumentCommand(this); }
 		}
 
-		private const int ToolTipTextLength = 150;
+		private const int ToolTipTextLength = 250;
 		public string ToolTipText
 		{
 			get

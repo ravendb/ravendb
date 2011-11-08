@@ -22,6 +22,8 @@ namespace Raven.Studio.Models
 	{
 		private readonly Observable<JsonDocument> document;
 		private string jsonData;
+		private bool isLoaded;
+		private string documentKey;
 
 		public EditableDocumentModel()
 		{
@@ -32,16 +34,24 @@ namespace Raven.Studio.Models
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
-			document.Value = new JsonDocument { DataAsJson = new RavenJObject(), Metadata = new RavenJObject(), Key = "" };
+			document.Value = new JsonDocument { DataAsJson = new RavenJObject(), Metadata = new RavenJObject() };
 		}
 
 		public override void LoadModelParameters(string parameters)
 		{
 			var url = new UrlParser(UrlUtil.Url);
 
+			if (url.GetQueryParam("mode") == "new")
+			{
+				Mode = DocumentMode.New;
+				return;
+			}
+
 			var docId = url.GetQueryParam("id");
 			if (string.IsNullOrWhiteSpace(docId) == false)
 			{
+				Mode = DocumentMode.DocumentWithId;
+				documentKey = Key = docId;
 				DatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccess(newdoc =>
 					                   {
@@ -51,6 +61,7 @@ namespace Raven.Studio.Models
 					                   		return;
 					                   	}
 					                   	document.Value = newdoc;
+					                   	isLoaded = true;
 					                   })
 					.Catch();
 				return;
@@ -59,6 +70,7 @@ namespace Raven.Studio.Models
 			var projection = url.GetQueryParam("projection");
 			if (string.IsNullOrWhiteSpace(projection) == false)
 			{
+				Mode = DocumentMode.Projection;
 				try
 				{
 					// TODO: this throwing an exception. Please load the projection form the query-string parameter.
@@ -75,7 +87,6 @@ namespace Raven.Studio.Models
 		private void UpdateFromDocument()
 		{
 			var newdoc = document.Value;
-			IsProjection = string.IsNullOrEmpty(newdoc.Key);
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			UpdateMetadata(newdoc.Metadata);
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
@@ -95,16 +106,16 @@ namespace Raven.Studio.Models
 
 		public ObservableCollection<LinkModel> References { get; private set; }
 		public BindableCollection<LinkModel> Related { get; private set; }
-		public bool IsProjection { get; private set; }
 
 		public string DisplayId
 		{
 			get
 			{
-				if (IsProjection) return "Projection";
-				return string.IsNullOrEmpty(Key)
-					? "New Document"
-					: Key;
+				if (Mode == DocumentMode.Projection)
+					return "Projection";
+				if (Mode == DocumentMode.New)
+					return "New Document";
+				return Key;
 			}
 		}
 
@@ -117,6 +128,18 @@ namespace Raven.Studio.Models
 				jsonMetadata = value;
 				OnPropertyChanged();
 				OnPropertyChanged("DocumentSize");
+			}
+		}
+
+		private DocumentMode mode = DocumentMode.NotInitializedYet;
+		public DocumentMode Mode
+		{
+			get { return mode; }
+			set
+			{
+				mode = value;
+				OnPropertyChanged();
+				OnPropertyChanged("DisplayId");
 			}
 		}
 
@@ -156,19 +179,19 @@ namespace Raven.Studio.Models
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (document.Value == null || string.IsNullOrWhiteSpace(document.Value.Key))
+			if (isLoaded && Mode != DocumentMode.DocumentWithId)
 				return null;
 
-			return DatabaseCommands.GetAsync(document.Value.Key)
+			return DatabaseCommands.GetAsync(documentKey)
 				.ContinueOnSuccess(docOnServer =>
 				{
 					if (docOnServer == null)
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Value.Key + " was deleted on the server"));
+						ApplicationModel.Current.AddNotification(new Notification("Document " + Key + " was deleted on the server"));
 					}
 					else if (docOnServer.Etag != Etag)
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Value.Key + " was changed on the server"));
+						ApplicationModel.Current.AddNotification(new Notification("Document " + Key + " was changed on the server"));
 					}
 				});
 		}
@@ -371,5 +394,13 @@ namespace Raven.Studio.Models
 				editableDocumentModel.UpdateMetadata(metadata);
 			}
 		}
+	}
+
+	public enum DocumentMode
+	{
+		NotInitializedYet,
+		DocumentWithId,
+		Projection,
+		New,
 	}
 }
