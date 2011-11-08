@@ -18,7 +18,7 @@ namespace Raven.Studio.Commands
 		{
 			if (e.PropertyName == "HasNextPage")
 			{
-				OnCanExecuteChanged();
+				RaiseCanExecuteChanged();
 			}
 		}
 

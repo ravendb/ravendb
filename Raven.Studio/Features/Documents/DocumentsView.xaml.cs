@@ -20,7 +20,7 @@ namespace Raven.Studio.Features.Documents
 			
 			foreach (var command in commands)
 			{
-				command.OnCanExecuteChanged();
+				command.RaiseCanExecuteChanged();
 			}
 		}
 	}
