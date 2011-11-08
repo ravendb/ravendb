@@ -22,6 +22,7 @@ namespace Raven.Studio.Models
 	{
 		private readonly Observable<JsonDocument> document;
 		private string jsonData;
+		private bool isLoaded;
 
 		public EditableDocumentModel()
 		{
@@ -49,6 +50,7 @@ namespace Raven.Studio.Models
 			if (string.IsNullOrWhiteSpace(docId) == false)
 			{
 				Mode = DocumentMode.DocumentWithId;
+				Key = docId;
 				DatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccess(newdoc =>
 					                   {
@@ -58,6 +60,7 @@ namespace Raven.Studio.Models
 					                   		return;
 					                   	}
 					                   	document.Value = newdoc;
+					                   	isLoaded = true;
 					                   })
 					.Catch();
 				return;
@@ -175,19 +178,19 @@ namespace Raven.Studio.Models
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (Mode != DocumentMode.DocumentWithId)
+			if (isLoaded && Mode != DocumentMode.DocumentWithId)
 				return null;
 
-			return DatabaseCommands.GetAsync(document.Value.Key)
+			return DatabaseCommands.GetAsync(Key)
 				.ContinueOnSuccess(docOnServer =>
 				{
 					if (docOnServer == null)
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Value.Key + " was deleted on the server"));
+						ApplicationModel.Current.AddNotification(new Notification("Document " + Key + " was deleted on the server"));
 					}
 					else if (docOnServer.Etag != Etag)
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + document.Value.Key + " was changed on the server"));
+						ApplicationModel.Current.AddNotification(new Notification("Document " + Key + " was changed on the server"));
 					}
 				});
 		}
