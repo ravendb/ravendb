@@ -98,6 +98,15 @@
 		<GradientStop Color="#BF123C65"
 					  Offset="0.75" />
 	</LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush_TextBox_Background"
+						 EndPoint="0.5,1"
+						 StartPoint="0.5,0">
+        <GradientStop Color="#F7F7F7" />
+		<GradientStop Color="#FEFEFE" Offset="0.15" />
+		<GradientStop Color="#FEFEFE" Offset="0.15" />
+		<GradientStop Color="#F7F7F7" Offset="1" />
+	</LinearGradientBrush>
     
     <ImageBrush x:Key="Brush_BackgroundTexture" ImageSource="{StaticResource Image_BackgroundTexture}" 
                 AlignmentX="Left" 

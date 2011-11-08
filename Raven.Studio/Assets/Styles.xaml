@@ -965,10 +965,27 @@
 				Value="0,2,2,2" />
 	</Style>
 
-	<Style x:Key="LinqEditor"
-		   TargetType="Editors:LinqEditor">
-		<Setter Property="MinHeight"
-				Value="100" />
+	<Style TargetType="TextBox">
+		<Setter Property="Background"
+				Value="{StaticResource Brush_TextBox_Background}" />
+		<Setter Property="Padding" Value="4,2,4,2" />
+	</Style>
+
+	<Style TargetType="Editors:LinqEditor">
+		<Setter Property="Background"
+				Value="{StaticResource Brush_TextBox_Background}" />
+	</Style>
+	<Style TargetType="Editors:JsonEditor">
+		<Setter Property="Background"
+				Value="{StaticResource Brush_TextBox_Background}" />
+	</Style>
+	<Style TargetType="Editors:QueryEditor">
+		<Setter Property="Background"
+				Value="{StaticResource Brush_TextBox_Background}" />
+	</Style>
+	<Style TargetType="Editors:XamlEditor">
+		<Setter Property="Background"
+				Value="{StaticResource Brush_TextBox_Background}" />
 	</Style>
 
 	<Style x:Key="PagePadding"

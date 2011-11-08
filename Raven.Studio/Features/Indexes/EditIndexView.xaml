@@ -106,6 +106,10 @@
 			<Setter Property="Background"
 					Value="{StaticResource Brush_TextBox_Background}" />
 		</Style>
+		<Style TargetType="Editors:LinqEditor">
+			<Setter Property="MinHeight"
+					Value="100" />
+		</Style>
 	</UserControl.Resources>
 	<toolkit:DockPanel Margin="{StaticResource Margin_ContentPage}">
 		<Border Background="{StaticResource Brush_HeaderBackground}"
@@ -316,8 +320,7 @@
 									<ColumnDefinition Width="24" />
 								</Grid.ColumnDefinitions>
 
-								<Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}"
-													Style="{StaticResource LinqEditor}" />
+								<Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}" />
 
 								<sdk:GridSplitter Grid.Row="1"
 												  Grid.ColumnSpan="2"
@@ -364,8 +367,7 @@
 						<ColumnDefinition Width="*" />
 						<ColumnDefinition Width="Auto" />
 					</Grid.ColumnDefinitions>
-					<Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}"
-										Style="{StaticResource LinqEditor}" />
+					<Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}" />
 					<Button Grid.Column="1"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Padding="4"
