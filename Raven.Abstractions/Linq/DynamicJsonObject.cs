@@ -328,7 +328,7 @@ namespace Raven.Abstractions.Linq
 						if (inner.Length > 0)
 							result = this;
 						else
-							result = new object[] { null };
+							result = new object[] { new DynamicNullObject() };
 						return true;
 				}
 				return base.TryInvokeMember(binder, args, out result);
