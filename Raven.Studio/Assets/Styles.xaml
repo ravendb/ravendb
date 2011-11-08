@@ -1327,10 +1327,13 @@
 								<VisualState x:Name="Unselected"/>
 								<VisualState x:Name="Selected">
 									<Storyboard>
-										<ColorAnimation Duration="0:0:0.05" To="{StaticResource Color_Contrast}" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" Storyboard.TargetName="OuterBorder" d:IsOptimized="True"/>
+										<ColorAnimation Duration="0:0:0.05"
+														To="{StaticResource Color_Contrast}"
+														Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+														Storyboard.TargetName="OuterBorder"
+														d:IsOptimized="True" />
 									</Storyboard>
 								</VisualState>
-								<VisualState x:Name="SelectedUnfocused"/>
 							</VisualStateGroup>
 						</VisualStateManager.VisualStateGroups>
 						<Path Data="M0.3333298,26.999214 C0.3333298,26.999214 15.499666,27.000048 15.499666,27.000048 C3.666585,28.663843 -0.00033684066,29.163502 -0.00033684066,29.163502 z" Fill="#20000000" HorizontalAlignment="Left" Margin="1,0,0,-4.5" StrokeStartLineCap="Square" Stretch="Fill" UseLayoutRounding="False" VerticalAlignment="Bottom" StrokeThickness="0" Height="5" Width="60"/>
