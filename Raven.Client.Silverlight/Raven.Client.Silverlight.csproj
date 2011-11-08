@@ -61,8 +61,8 @@
       <HintPath>..\SharedLibs\MissingBitFromSilverlight.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
-    <Reference Include="Newtonsoft.Json.Silverlight">
-      <HintPath>..\SharedLibs\Newtonsoft.Json.Silverlight.dll</HintPath>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\SharedLibs\Newtonsoft.Json\Silverlight\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
       <HintPath>..\SharedLibs\Silverlight\NLog.dll</HintPath>
