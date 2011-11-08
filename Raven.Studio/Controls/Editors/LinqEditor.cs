@@ -1,9 +1,8 @@
 ﻿namespace Raven.Studio.Controls.Editors
 {
 	using ActiproSoftware.Text;
-	using ActiproSoftware.Windows.Controls.SyntaxEditor;
 
-	public class LinqEditor : SyntaxEditor
+	public class LinqEditor : EditorBase
 	{
 		private static readonly ISyntaxLanguage DefaultLanguage;
 
@@ -15,7 +14,6 @@
 		public LinqEditor()
 		{
 			Document.Language = DefaultLanguage;
-			IsTextDataBindingEnabled = true; 
 		}
 	}
 }

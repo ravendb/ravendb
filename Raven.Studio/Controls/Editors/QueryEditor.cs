@@ -1,14 +1,12 @@
 ﻿using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using ActiproSoftware.Text;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 
 namespace Raven.Studio.Controls.Editors
 {
-	using ActiproSoftware.Text;
-	using ActiproSoftware.Windows.Controls.SyntaxEditor;
-
-	public class QueryEditor : SyntaxEditor
+	public class QueryEditor : EditorBase
 	{
 		private static readonly ISyntaxLanguage DefaultLanguage;
 
@@ -20,16 +18,13 @@ namespace Raven.Studio.Controls.Editors
 		public QueryEditor()
 		{
 			Document.Language = DefaultLanguage;
-			IsTextDataBindingEnabled = true;
 			AreLineModificationMarksVisible = false;
-			IsLineNumberMarginVisible = false;
 
 			foreach (var key in InputBindings.Where(x => x.Key == Key.Enter && x.Modifiers == ModifierKeys.Control).ToList())
 			{
 				InputBindings.Remove(key);
 			}
 		}
-
 
 		public ICompletionProvider CompletionProvider
 		{
@@ -39,6 +34,7 @@ namespace Raven.Studio.Controls.Editors
 				SetValue(CompletionProviderProperty, value);
 			}
 		}
+
 		public static readonly DependencyProperty CompletionProviderProperty =
 			DependencyProperty.Register("CompletionProvider", typeof(ICompletionProvider), typeof(QueryEditor), new PropertyMetadata(null, PropertyChangedCallback));
 

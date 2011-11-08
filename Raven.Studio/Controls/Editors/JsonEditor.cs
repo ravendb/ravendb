@@ -1,9 +1,8 @@
-﻿namespace Raven.Studio.Controls.Editors
-{
-	using ActiproSoftware.Text;
-	using ActiproSoftware.Windows.Controls.SyntaxEditor;
+﻿using ActiproSoftware.Text;
 
-	public class JsonEditor : SyntaxEditor
+namespace Raven.Studio.Controls.Editors
+{
+	public class JsonEditor : EditorBase
 	{
 		private static readonly ISyntaxLanguage DefaultLanguage;
 
@@ -15,7 +14,6 @@
 		public JsonEditor()
 		{
 			Document.Language = DefaultLanguage;
-			IsTextDataBindingEnabled = true;
 		}
 	}
 }
