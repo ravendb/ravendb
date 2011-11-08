@@ -47,30 +47,33 @@
 			   
 			</toolkit:HeaderedContentControl.Header>
 
-
-		<ListBox ItemsSource="{Binding Documents}"
-				 Style="{StaticResource DocumentList}"
-				 Grid.Row="1"
-				 Grid.ColumnSpan="3"
-				 Margin="10">
-			<Controls:ContextMenuService.ContextMenu>
-				<Controls:ContextMenu>
-					<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
-									   Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
-									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-					<Controls:MenuItem Header="Delete"
-									   Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
-									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-				</Controls:ContextMenu>
-			</Controls:ContextMenuService.ContextMenu>
-			<i:Interaction.Triggers>
-				<ei:KeyTrigger Key="Delete">
-					<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+			<ListBox x:Name="DocumentsList"
+					 ItemsSource="{Binding Documents}"
+					 Style="{StaticResource DocumentList}"
+					 SelectionChanged="DocumentsList_SelectionChanged"
+					 Grid.Row="1"
+					 Grid.ColumnSpan="3"
+					 Margin="10">
+				
+				<Controls:ContextMenuService.ContextMenu>
+                    <Controls:ContextMenu x:Name="DocumentsContextMenu">
+						<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
+										   Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
 										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-				</ei:KeyTrigger>
-			</i:Interaction.Triggers>
+						<Controls:MenuItem Header="Delete"
+										   Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
+										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+					</Controls:ContextMenu>
+				</Controls:ContextMenuService.ContextMenu>
+				
+				<i:Interaction.Triggers>
+					<ei:KeyTrigger Key="Delete">
+						<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+											   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+					</ei:KeyTrigger>
+				</i:Interaction.Triggers>
 
-			<ListBox.ItemTemplate>
+				<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid Width="100"
 						  Height="50"

@@ -9,12 +9,16 @@ namespace Raven.Studio.Commands
 {
 	public class CopyDocumentsIdsCommand : Command
 	{
+		private ListBox listBox;
+
+		public override bool CanExecute(object parameter)
+		{
+			listBox = GetList(parameter);
+			return listBox != null && listBox.SelectedItems.Count > 0;
+		}
+
 		public override void Execute(object parameter)
 		{
-			var listBox = GetList(parameter);
-			if (listBox == null || listBox.SelectedItems.Count == 0)
-				return;
-
 			var documents = listBox.SelectedItems
 				.Cast<ViewableDocument>()
 				.ToList();
