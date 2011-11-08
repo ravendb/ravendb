@@ -35,12 +35,12 @@ namespace Raven.Studio.Commands
 										? string.Format("Are you sure you want to delete these {0} documents?", documentsIds.Count)
 										: string.Format("Are you sure that you want to delete this document? ({0})", documentsIds.First()))
 				.ContinueWhenTrue(() => DeleteDocuments(documentsIds))
-				.ContinueOnSuccessInTheUIThread(() =>
+				.ContinueWhenTrueInTheUIThread(() =>
 									{
-										var col = (BindableCollection<ViewableDocument>)listBox.DataContext;
+										var model = (DocumentsModel)listBox.DataContext;
 										foreach (var document in documents)
 										{
-											col.Remove(document);
+											model.Documents.Remove(document);
 										}
 									});
 		}
