@@ -3,38 +3,36 @@
 					  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					  xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
 					  Title="{Binding Path=Title}">
-	
+
 	<Grid Margin="2"
 		  KeyDown="LayoutRoot_OnKeyDown">
-		
+		<Grid.Resources>
+			<Style TargetType="Button">
+				<Setter Property="Width" Value="75" />
+				<Setter Property="Height" Value="23" />
+				<Setter Property="HorizontalAlignment" Value="Left" />
+				<Setter Property="Margin" Value="6,0,0,0" />
+			</Style>
+		</Grid.Resources>
+
 		<Grid.RowDefinitions>
-			<RowDefinition />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="12" />
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition />
-			<ColumnDefinition />
-		</Grid.ColumnDefinitions>
 
 		<TextBlock Text="{Binding Path=Question}" />
-		<Button x:Name="OKButton"
-				Content="OK"
-				Click="OKButton_Click"
-				Width="75"
-				Height="23"
-				HorizontalAlignment="Right"
-				Margin="0,12,79,0"
-				Grid.Row="1"
-				Grid.Column="0" />
 
-		<Button x:Name="CancelButton"
-				Content="Cancel"
-				Click="CancelButton_Click"
-				Width="75"
-				Height="23"
-				HorizontalAlignment="Right"
-				Margin="0,12,0,0"
-				Grid.Row="1"
-				Grid.Column="1" />
+		<StackPanel Grid.Row="2"
+					Orientation="Horizontal"
+					HorizontalAlignment="Right">
+			<Button x:Name="OKButton"
+					Content="OK"
+					Click="OKButton_Click" />
+
+			<Button x:Name="CancelButton"
+					Content="Cancel"
+					Click="CancelButton_Click" />
+		</StackPanel>
 	</Grid>
 </controls:ChildWindow>
