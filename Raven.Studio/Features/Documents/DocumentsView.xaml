@@ -49,7 +49,6 @@
 
 
 		<ListBox ItemsSource="{Binding Documents}"
-				 
 				 Style="{StaticResource DocumentList}"
 				 Grid.Row="1"
 				 Grid.ColumnSpan="3"
