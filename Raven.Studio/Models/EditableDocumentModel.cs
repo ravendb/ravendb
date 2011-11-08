@@ -39,9 +39,16 @@ namespace Raven.Studio.Models
 		{
 			var url = new UrlParser(UrlUtil.Url);
 
+			if (url.GetQueryParam("mode") == "new")
+			{
+				Mode = DocumentMode.New;
+				return;
+			}
+
 			var docId = url.GetQueryParam("id");
 			if (string.IsNullOrWhiteSpace(docId) == false)
 			{
+				Mode = DocumentMode.DocumentWithId;
 				DatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccess(newdoc =>
 					                   {
@@ -59,6 +66,7 @@ namespace Raven.Studio.Models
 			var projection = url.GetQueryParam("projection");
 			if (string.IsNullOrWhiteSpace(projection) == false)
 			{
+				Mode = DocumentMode.Projection;
 				try
 				{
 					// TODO: this throwing an exception. Please load the projection form the query-string parameter.
@@ -75,7 +83,6 @@ namespace Raven.Studio.Models
 		private void UpdateFromDocument()
 		{
 			var newdoc = document.Value;
-			IsProjection = newdoc.Key == null;
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			UpdateMetadata(newdoc.Metadata);
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
@@ -95,16 +102,16 @@ namespace Raven.Studio.Models
 
 		public ObservableCollection<LinkModel> References { get; private set; }
 		public BindableCollection<LinkModel> Related { get; private set; }
-		public bool IsProjection { get; private set; }
 
 		public string DisplayId
 		{
 			get
 			{
-				if (IsProjection) return "Projection";
-				return Key == string.Empty
-					? "New Document"
-					: Key;
+				if (Mode == DocumentMode.Projection)
+					return "Projection";
+				if (Mode == DocumentMode.New)
+					return "New Document";
+				return Key;
 			}
 		}
 
@@ -117,6 +124,18 @@ namespace Raven.Studio.Models
 				jsonMetadata = value;
 				OnPropertyChanged();
 				OnPropertyChanged("DocumentSize");
+			}
+		}
+
+		private DocumentMode mode = DocumentMode.NotInitializedYet;
+		public DocumentMode Mode
+		{
+			get { return mode; }
+			set
+			{
+				mode = value;
+				OnPropertyChanged();
+				OnPropertyChanged("DisplayId");
 			}
 		}
 
@@ -156,7 +175,7 @@ namespace Raven.Studio.Models
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (document.Value == null || document.Value.Key == null)
+			if (Mode != DocumentMode.DocumentWithId)
 				return null;
 
 			return DatabaseCommands.GetAsync(document.Value.Key)
@@ -371,5 +390,13 @@ namespace Raven.Studio.Models
 				editableDocumentModel.UpdateMetadata(metadata);
 			}
 		}
+	}
+
+	public enum DocumentMode
+	{
+		NotInitializedYet,
+		DocumentWithId,
+		Projection,
+		New,
 	}
 }
