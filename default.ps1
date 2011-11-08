@@ -9,13 +9,8 @@ properties {
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-<<<<<<< HEAD
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???", `
+  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???", `
     "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
-=======
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", `
-    "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
->>>>>>> 2f0c311ce836a341fe93d807b747a23ce6f19f11
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
