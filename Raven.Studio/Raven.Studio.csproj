@@ -110,6 +110,7 @@
     <Compile Include="Behaviors\LinkHighlighter.cs" />
     <Compile Include="Behaviors\StringCollection.cs" />
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
+    <Compile Include="Commands\ListBoxCommand.cs" />
     <Compile Include="Commands\NavigateToNextPageCommand.cs" />
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />

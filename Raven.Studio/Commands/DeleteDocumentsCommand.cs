@@ -5,8 +5,6 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows.Controls;
-using System.Windows.Interactivity;
 using Raven.Abstractions.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Input;
@@ -16,22 +14,11 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
-	public class DeleteDocumentsCommand : Command
+	public class DeleteDocumentsCommand : ListBoxCommand<ViewableDocument>
 	{
-		private ListBox listBox;
-
-		public override bool CanExecute(object parameter)
-		{
-			listBox = GetList(parameter);
-			return listBox != null && listBox.SelectedItems.Count > 0;
-		}
-
 		public override void Execute(object parameter)
 		{
-			var documents = listBox.SelectedItems
-				.Cast<ViewableDocument>()
-				.ToList();
-			var documentsIds = documents
+			var documentsIds = Items
 				.Select(x => x.Id)
 				.ToList();
 
@@ -41,8 +28,8 @@ namespace Raven.Studio.Commands
 				.ContinueWhenTrue(() => DeleteDocuments(documentsIds))
 				.ContinueWhenTrueInTheUIThread(() =>
 									{
-										var model = (DocumentsModel)listBox.DataContext;
-										foreach (var document in documents)
+										var model = (DocumentsModel)Context;
+										foreach (var document in Items)
 										{
 											model.Documents.Remove(document);
 										}
@@ -67,21 +54,6 @@ namespace Raven.Studio.Commands
 				                   	                                                          		"Document {0} was deleted",
 				                   	                                                          		documentIds.First())));
 				                   });
-		}
-
-		private static ListBox GetList(object parameter)
-		{
-			if (parameter == null)
-				return null;
-			var attachedObject = parameter as IAttachedObject;
-			if (attachedObject != null)
-				return (ListBox) attachedObject.AssociatedObject;
-
-			var menuItem = (MenuItem) parameter;
-			var contextMenu = (ContextMenu) menuItem.Parent;
-			if (contextMenu == null)
-				return null;
-			return (ListBox) contextMenu.Owner;
 		}
 	}
 }
