@@ -134,7 +134,6 @@
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
 
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
@@ -169,30 +168,30 @@
 
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
 					Grid.Row="4"
-					Grid.RowSpan="2" />
+					Visibility="{Binding References, Converter={StaticResource HiddenWhenEmpty}}">
+				<StackPanel>
+					<TextBlock Text="References"
+							   Margin="10,6,5,6"
+							   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
-			<TextBlock Text="References"
-					   Margin="10,6,5,6"
-					   Grid.Row="4"
-					   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
-
-			<ItemsControl x:Name="References"
-						  ItemsSource="{Binding References}"
-						  Grid.Row="5"
-						  DataContext="{Binding}"
-						  Margin="10,0,5,12">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<HyperlinkButton Content="{Binding Title}"
-										 NavigateUri="{Binding HRef}"
-										 Style="{StaticResource Style_Link_Shortcut}"
-										 HorizontalAlignment="Left" />
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
+					<ItemsControl x:Name="References"
+								  ItemsSource="{Binding References}"
+								  DataContext="{Binding}"
+								  Margin="10,0,5,12">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<HyperlinkButton Content="{Binding Title}"
+												 NavigateUri="{Binding HRef}"
+												 Style="{StaticResource Style_Link_Shortcut}"
+												 HorizontalAlignment="Left" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</StackPanel>
+			</Border>
 
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
-					Grid.Row="6"
+					Grid.Row="5"
 					Visibility="{Binding Related, Converter={StaticResource HiddenWhenEmpty}}">
 				<StackPanel>
 					<TextBlock Text="Related"
