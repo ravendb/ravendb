@@ -23,6 +23,7 @@ namespace Raven.Studio.Models
 		private readonly Observable<JsonDocument> document;
 		private string jsonData;
 		private bool isLoaded;
+		private string documentKey;
 
 		public EditableDocumentModel()
 		{
@@ -50,7 +51,7 @@ namespace Raven.Studio.Models
 			if (string.IsNullOrWhiteSpace(docId) == false)
 			{
 				Mode = DocumentMode.DocumentWithId;
-				Key = docId;
+				documentKey = Key = docId;
 				DatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccess(newdoc =>
 					                   {
@@ -181,7 +182,7 @@ namespace Raven.Studio.Models
 			if (isLoaded && Mode != DocumentMode.DocumentWithId)
 				return null;
 
-			return DatabaseCommands.GetAsync(Key)
+			return DatabaseCommands.GetAsync(documentKey)
 				.ContinueOnSuccess(docOnServer =>
 				{
 					if (docOnServer == null)
