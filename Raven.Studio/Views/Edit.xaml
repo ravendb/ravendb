@@ -168,7 +168,7 @@
 
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
 					Grid.Row="4"
-					Visibility="{Binding References, Converter={StaticResource HiddenWhenEmpty}}">
+					Visibility="{Binding Path=References.Count, Converter={StaticResource HiddenWhenEmpty}}">
 				<StackPanel>
 					<TextBlock Text="References"
 							   Margin="10,6,5,6"
@@ -192,7 +192,7 @@
 
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
 					Grid.Row="5"
-					Visibility="{Binding Related, Converter={StaticResource HiddenWhenEmpty}}">
+					Visibility="{Binding Path=Related.Count, Converter={StaticResource HiddenWhenEmpty}}">
 				<StackPanel>
 					<TextBlock Text="Related"
 							   Margin="10,6,5,6"
