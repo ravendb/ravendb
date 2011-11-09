@@ -44,8 +44,8 @@ namespace Raven.Studio
 
 		private static bool HyperlinkMatchesUri(string uri, HyperlinkButton link)
 		{
-			if (link.NavigateUri != null && 
-				uri.StartsWith(link.NavigateUri.ToString(), StringComparison.InvariantCultureIgnoreCase))
+			if (link.CommandParameter != null && 
+				uri.StartsWith(link.CommandParameter.ToString(), StringComparison.InvariantCultureIgnoreCase))
 			{
 				return true;
 			}
