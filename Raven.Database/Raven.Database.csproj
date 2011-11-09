@@ -118,6 +118,8 @@
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
     <Compile Include="Config\CertGenerator.cs" />
+    <Compile Include="Linq\Ast\DynamicExtensionMethodsTranslator.cs" />
+    <Compile Include="Linq\PrivateExtensions\DynamicExtensionMethods.cs" />
     <Compile Include="Plugins\AbstractIndexQueryTrigger.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
     <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
