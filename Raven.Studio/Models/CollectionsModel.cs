@@ -8,30 +8,34 @@ namespace Raven.Studio.Models
 	public class CollectionsModel : ViewModel
 	{
 		private string initialSelectedDatabaseName;
-		public BindableCollection<CollectionModel> Collections { get; set; }
-		public Observable<CollectionModel> SelectedCollection { get; set; }
+		public static BindableCollection<CollectionModel> Collections { get; set; }
+		public static Observable<CollectionModel> SelectedCollection { get; set; }
 
-		public CollectionsModel()
+		static CollectionsModel()
 		{
-			ModelUrl = "/collections";
 			Collections = new BindableCollection<CollectionModel>(new PrimaryKeyComparer<CollectionModel>(model => model.Name));
 			SelectedCollection = new Observable<CollectionModel>();
+
 			SelectedCollection.PropertyChanged += (sender, args) =>
 			                                      	{
 			                                      		var urlParser = new UrlParser(UrlUtil.Url);
 			                                      		var name = SelectedCollection.Value.Name;
-														if (urlParser.GetQueryParam("name") != name)
-														{
-															urlParser.SetQueryParam("name", name);
-															UrlUtil.Navigate(urlParser.BuildUrl());
-														}
+			                                      		if (urlParser.GetQueryParam("name") != name)
+			                                      		{
+			                                      			urlParser.SetQueryParam("name", name);
+			                                      			UrlUtil.Navigate(urlParser.BuildUrl());
+			                                      		}
 			                                      	};
+		}
+
+		public CollectionsModel()
+		{
+			ModelUrl = "/collections";
 		}
 
 		public override void LoadModelParameters(string parameters)
 		{
-			var urlParser = new UrlParser(parameters);
-			initialSelectedDatabaseName = urlParser.GetQueryParam("name");
+			initialSelectedDatabaseName = new UrlParser(parameters).GetQueryParam("name");
 		}
 
 		protected override Task LoadedTimerTickedAsync()
