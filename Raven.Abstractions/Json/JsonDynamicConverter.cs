@@ -61,7 +61,7 @@ namespace Raven.Abstractions.Json
 			if (array != null)
 			{
 				var dynamicJsonObject = new DynamicJsonObject(new RavenJObject());
-				return new DynamicJsonObject.DynamicList(array.Select(dynamicJsonObject.TransformToValue).ToArray());
+				return new DynamicList(array.Select(dynamicJsonObject.TransformToValue).ToArray());
 			}
 
 			var typeName = token.Value<string>("$type");

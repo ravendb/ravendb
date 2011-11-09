@@ -14,14 +14,11 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (EmbeddableDocumentStore store = NewDocumentStore())
 			{
-				// Wait for all indexes to finish indexing.
-				store.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
-
 				store.DatabaseCommands.PutIndex("StringReverseIndex",
 				                                new IndexDefinition
 				                                	{
 				                                		Map =
-				                                			"from doc in docs select new { doc.Name, ReverseName = new string(doc.Name.Reverse().ToArray())}"
+															"from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse())}"
 				                                	});
 
 				using (IDocumentSession documentSession = store.OpenSession())
@@ -39,7 +36,10 @@ namespace Raven.Tests.Bugs.Indexing
 				{
 					var users = documentSession
 						.Query<User>("StringReverseIndex")
+						.Customize(x=>x.WaitForNonStaleResults())
 						.ToList();
+
+					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 					Assert.NotNull(users);
 					Assert.True(users.Count > 0);
 

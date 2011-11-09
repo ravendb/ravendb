@@ -118,7 +118,7 @@ namespace Raven.Database.Linq
 				item = func(item);
 			}
 
-			return new DynamicJsonObject.DynamicList(resultsOrdered.ToArray());
+			return new DynamicList(resultsOrdered.ToArray());
 		}
 
 		public void AddQueryParameterForMap(string field)
