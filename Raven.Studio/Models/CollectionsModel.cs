@@ -35,10 +35,12 @@ namespace Raven.Studio.Models
 
 		public override void LoadModelParameters(string parameters)
 		{
-			initialSelectedDatabaseName = new UrlParser(parameters).GetQueryParam("name");
+			var name = new UrlParser(parameters).GetQueryParam("name");
+			if (string.IsNullOrEmpty(null) == false)
+				initialSelectedDatabaseName = name;
 		}
 
-		protected override Task LoadedTimerTickedAsync()
+		protected override Task TimerTickedAsync()
 		{
 			return DatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
 				.ContinueOnSuccess(Update);
