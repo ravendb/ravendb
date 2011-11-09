@@ -10,10 +10,19 @@
 	<Grid DataContext="{Binding Value}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
+			<RowDefinition Height="8" />
+			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 		
 		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments.Value}"
 								 Margin="{StaticResource Margin_ContentPage}"
 								 Tag="Recent Documents" />
+		
+		<StackPanel Grid.Row="2">
+			<Button x:Name="CreateSampleData"
+					Command="{Binding CreateSampleData}"
+					Visibility="{Binding ShowCreateSampleData, Converter={StaticResource VisibleWhenTrue}}"
+					Content="Create sample data" />
+		</StackPanel>
 	</Grid>
 </Infrastructure:View>
