@@ -569,7 +569,17 @@ namespace Raven.Client.Linq
 		{
 			if (expression.Method.DeclaringType == typeof(object) && expression.Method.Name == "Equals")
 			{
-				VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Arguments[0], expression.Arguments[1]));
+				switch (expression.Arguments.Count)
+				{
+					case 1:
+						VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Object, expression.Arguments[0]));
+						break;
+					case 2:
+						VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Arguments[0], expression.Arguments[1]));
+						break;
+					default:
+						throw new ArgumentException("Can't understand Equals with " + expression.Arguments.Count + " arguments");
+				}
 				return;
 			}
 			if (expression.Method.DeclaringType == typeof(LinqExtensions))

@@ -15,7 +15,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var store = NewDocumentStore())
 			{
-				IndexCreation.CreateIndexes(Assembly.GetExecutingAssembly(), store);
+				new Article_Index().Execute(store);
 
 				using (var session = store.OpenSession())
 				{
