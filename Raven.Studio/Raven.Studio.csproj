@@ -219,7 +219,7 @@
     <Compile Include="Infrastructure\Converters\LastItemInListConverter.cs" />
     <Compile Include="Infrastructure\Converters\MagnitudeToListConverter.cs" />
     <Compile Include="Models\CollectionModel.cs" />
-    <Compile Include="Models\DatabaseCollectionsModel.cs" />
+    <Compile Include="Models\CollectionsModel.cs" />
     <Compile Include="Infrastructure\PrimaryKeyComparer.cs" />
     <Compile Include="Models\IndexesErrorsModel.cs" />
     <Compile Include="Models\IndexesModel.cs" />

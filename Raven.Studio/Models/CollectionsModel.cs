@@ -5,13 +5,13 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class DatabaseCollectionsModel : ViewModel
+	public class CollectionsModel : ViewModel
 	{
 		private string initialSelectedDatabaseName;
 		public BindableCollection<CollectionModel> Collections { get; set; }
 		public Observable<CollectionModel> SelectedCollection { get; set; }
 
-		public DatabaseCollectionsModel()
+		public CollectionsModel()
 		{
 			ModelUrl = "/collections";
 			Collections = new BindableCollection<CollectionModel>(new PrimaryKeyComparer<CollectionModel>(model => model.Name));
