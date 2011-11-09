@@ -31,14 +31,16 @@
 						VerticalAlignment="Center" Margin="2"/>
                 <HyperlinkButton Content="Indexes"
 								 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-								 NavigateUri="/Indexes" 
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/Indexes" 
                                  VerticalAlignment="Center"/>
 				<TextBlock Text=">"
 						   VerticalAlignment="Center"
 						   Margin="4,0" />
                 <HyperlinkButton Content="{Binding IndexName}"
 								 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-								 NavigateUri="{Binding IndexName, StringFormat=/indexes/\{0\}}" 
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}" 
                                  VerticalAlignment="Center"/>
                 <TextBlock Text=">"
 						   VerticalAlignment="Center"

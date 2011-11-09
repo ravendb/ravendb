@@ -77,7 +77,8 @@
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton x:Name="SummaryLink"
 								 Content="Summary"
-								 NavigateUri="/home"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/home"
 								 Style="{StaticResource Style_Text_HeaderLink}">
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
@@ -87,11 +88,13 @@
 				</HyperlinkButton>
 			  <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Collections"
-								 NavigateUri="/collections"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/collections"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Indexes"
-								 NavigateUri="/indexes"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/indexes"
 								 Style="{StaticResource Style_Text_HeaderLink}">
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
@@ -102,7 +105,8 @@
 			  <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
 				<HyperlinkButton Content="Documents"
-								 NavigateUri="/documents"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/documents"
 								 Style="{StaticResource Style_Text_HeaderLink}">
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
@@ -112,11 +116,13 @@
 				</HyperlinkButton>
 			  <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Tasks"
-								 NavigateUri="/tasks"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/tasks"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Logs"
-								 NavigateUri="/logs"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/logs"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 			</StackPanel>

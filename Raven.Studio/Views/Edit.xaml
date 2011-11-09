@@ -41,7 +41,8 @@
 						   Margin="4,0,4,0" />
 					<HyperlinkButton Content="Documents"
 									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									 NavigateUri="/documents" />
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="/documents" />
 					<TextBlock Text=">"
 							   VerticalAlignment="Center"
 							   Margin="4,0" />
@@ -181,7 +182,8 @@
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
 								<HyperlinkButton Content="{Binding Title}"
-												 NavigateUri="{Binding HRef}"
+												 Command="{StaticResource NavigateToCommand}"
+												 CommandParameter="{Binding HRef}"
 												 Style="{StaticResource Style_Link_Shortcut}"
 												 HorizontalAlignment="Left" />
 							</DataTemplate>
@@ -204,7 +206,8 @@
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
 								<HyperlinkButton Content="{Binding Title}"
-												 NavigateUri="{Binding HRef}"
+												 Command="{StaticResource NavigateToCommand}"
+												 CommandParameter="{Binding HRef}"
 												 Style="{StaticResource Style_Link_Shortcut}"
 												 HorizontalAlignment="Left" />
 							</DataTemplate>

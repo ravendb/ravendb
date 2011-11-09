@@ -124,7 +124,8 @@
 						   Margin="0,0,4,0" />
 					<HyperlinkButton Content="Indexes"
 									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									 NavigateUri="/Indexes" />
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="/Indexes" />
 					<TextBlock Text=">"
 							   VerticalAlignment="Center"
 							   Margin="4,0" />
@@ -468,7 +469,8 @@
 					<StackPanel>
 						<HyperlinkButton Content="{Binding ErrorsCount, StringFormat=\{0\} errors}"
 										 Visibility="{Binding ErrorsCount, Converter={StaticResource HiddenWhenEmpty}}"
-										 NavigateUri="{Binding Name, StringFormat=/indexes-errors/\{0\}}" />
+										 Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="{Binding Name, StringFormat=/indexes-errors/\{0\}}" />
 					</StackPanel>
 
 				</Grid>
