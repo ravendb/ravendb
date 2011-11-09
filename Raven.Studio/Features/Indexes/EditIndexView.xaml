@@ -247,6 +247,16 @@
 							   Stretch="None" />
 					</Button>
 
+					<Button x:Name="Delete"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							HorizontalAlignment="Left"
+							Margin="4 0 0 0"
+							ToolTipService.ToolTip="Delete this index"
+							Command="{Binding DeleteIndex}">
+						<Image Source="{StaticResource Image_Delete_Small}"
+							   Stretch="None" />
+					</Button>
+
 				</StackPanel>
 			</toolkit:DockPanel>
 		</Border>

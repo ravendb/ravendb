@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
+using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 
@@ -216,6 +217,11 @@ namespace Raven.Studio.Models
 			get { return new SaveIndexCommand(this, DatabaseCommands); }
 		}
 
+		public ICommand DeleteIndex
+		{
+			get { return new DeleteIndexCommand(this, DatabaseCommands); }
+		}
+
 		public ICommand ResetIndex
 		{
 			get { return new ResetIndexCommand(this); }
@@ -384,6 +390,41 @@ namespace Raven.Studio.Models
 				ApplicationModel.Current.AddNotification(new Notification("resetting index " + index.Name));
 				index.ResetToOriginal();
 				ApplicationModel.Current.AddNotification(new Notification("index " + index.Name + " was reset"));
+			}
+		}
+
+		public class DeleteIndexCommand : Command
+		{
+			private readonly IndexDefinitionModel index;
+			private readonly IAsyncDatabaseCommands databaseCommands;
+
+			public DeleteIndexCommand(IndexDefinitionModel index,IAsyncDatabaseCommands databaseCommands)
+			{
+				this.index = index;
+				this.databaseCommands = databaseCommands;
+			}
+
+			public override bool CanExecute(object parameter)
+			{
+				return index != null && string.IsNullOrWhiteSpace(index.Name) == false;
+			}
+
+			public override void Execute(object parameter)
+			{
+				AskUser.ConfirmationAsync("Confirm Delete", "Really delete '" + index.Name + "' index?")
+					.ContinueWhenTrue(DeleteIndex);
+			}
+
+			private void DeleteIndex()
+			{
+				databaseCommands
+					.DeleteIndexAsync(index.Name)
+					.ContinueOnSuccessInTheUIThread(() =>
+					                                	{
+					                                		ApplicationModel.Current.AddNotification(
+					                                			new Notification("index " + index.Name + " successfully deleted"));
+					                                		UrlUtil.Navigate("/indexes");
+					                                	});
 			}
 		}
 
