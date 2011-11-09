@@ -174,7 +174,6 @@
 								  Style="{StaticResource ContentFrameStyle}"
 								  Grid.Row="1"
 								  Source=""
-								  Navigating="ContentFrame_Navigating"
 								  Navigated="ContentFrame_Navigated"
 								  NavigationFailed="ContentFrame_NavigationFailed">
 					<navigation:Frame.UriMapper>

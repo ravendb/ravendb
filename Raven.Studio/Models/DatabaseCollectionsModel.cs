@@ -23,7 +23,7 @@ namespace Raven.Studio.Models
 														if (urlParser.GetQueryParam("name") != name)
 														{
 															urlParser.SetQueryParam("name", name);
-															urlParser.NavigateTo();
+															UrlUtil.Navigate(urlParser.BuildUrl());
 														}
 			                                      	};
 		}

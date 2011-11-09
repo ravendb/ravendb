@@ -44,7 +44,7 @@ namespace Raven.Studio.Models
 		{
 			var urlParser = new UrlParser(UrlUtil.Url);
 			urlParser.SetQueryParam("database", database.Name);
-			urlParser.NavigateTo();
+			UrlUtil.Navigate(urlParser.BuildUrl());
 		}
 
 		public Task Initialize()

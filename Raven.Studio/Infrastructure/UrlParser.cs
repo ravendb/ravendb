@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -67,8 +68,10 @@ namespace Raven.Studio.Infrastructure
 			QueryParams[name] = value.ToString();
 		}
 
-		public void NavigateTo()
+		public string BuildUrl()
 		{
+			EnsureDatabaseParameterIncluded();
+
 			var uri = Path;
 			if (string.IsNullOrWhiteSpace(uri))
 				uri = "/home";
@@ -77,7 +80,15 @@ namespace Raven.Studio.Infrastructure
 			{
 				uri += "?" + query;
 			}
-			UrlUtil.Navigate(uri);
+			return uri;
+		}
+
+		private void EnsureDatabaseParameterIncluded()
+		{
+			if (GetQueryParam("database") != null)
+				return;
+
+			SetQueryParam("database", ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
 		}
 	}
 }

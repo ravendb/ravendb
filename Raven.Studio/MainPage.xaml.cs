@@ -1,15 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -72,24 +65,6 @@ namespace Raven.Studio
 			e.Handled = true;
 			ChildWindow errorWin = new ErrorWindow(e.Uri);
 			errorWin.Show();
-		}
-
-		private NavigationMode navigationMode = NavigationMode.New;
-
-		// EnsureDatabaseParameterIncluded
-		private void ContentFrame_Navigating(object sender, NavigatingCancelEventArgs e)
-		{
-			if (navigationMode != NavigationMode.New) return;
-
-			var urlParser = new UrlParser(e.Uri.ToString());
-			if (urlParser.GetQueryParam("database") != null)
-				return;
-
-			e.Cancel = true;
-			navigationMode = NavigationMode.Refresh;
-			urlParser.SetQueryParam("database", ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
-			urlParser.NavigateTo();
-			navigationMode = NavigationMode.New;
 		}
 	}
 }
