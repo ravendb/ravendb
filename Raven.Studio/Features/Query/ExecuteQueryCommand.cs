@@ -20,12 +20,12 @@ namespace Raven.Studio.Features.Query
 	public class ExecuteQueryCommand : Command
 	{
 		private readonly QueryModel model;
-		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+		private readonly IAsyncDatabaseCommands databaseCommands;
 
-		public ExecuteQueryCommand(QueryModel model, IAsyncDatabaseCommands asyncDatabaseCommands)
+		public ExecuteQueryCommand(QueryModel model, IAsyncDatabaseCommands databaseCommands)
 		{
 			this.model = model;
-			this.asyncDatabaseCommands = asyncDatabaseCommands;
+			this.databaseCommands = databaseCommands;
 		}
 
 		public override void Execute(object parameter)
@@ -43,7 +43,7 @@ namespace Raven.Studio.Features.Query
 				Start = (model.Pager.CurrentPage - 1) * model.Pager.PageSize, 
 				PageSize = model.Pager.PageSize, Query = model.Query.Value
 			};
-			return asyncDatabaseCommands.QueryAsync(model.IndexName, q, null)
+			return databaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueWith(task =>
 				{
 					if (task.Exception != null)
