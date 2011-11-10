@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
@@ -53,12 +52,29 @@ namespace Raven.Client.MoreLikeThis
 			if (cmd == null)
 				throw new NotImplementedException("Embedded client isn't supported");
 
+			var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
+
 			// /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
 			EnsureIsNotNullOrEmpty(index, "index");
 
-            var requestUri = GetRequestURI(index, documentId, fields, parameters);
-			var result = cmd.ExecuteGetRequest(requestUri);
-			return JsonConvert.DeserializeObject<T[]>(result);
+			inMemoryDocumentSessionOperations.IncrementRequestCount();
+			var multiLoadOperation = new MultiLoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching);
+			MultiLoadResult multiLoadResult;
+			do
+			{
+				multiLoadOperation.LogOperation();
+				using (multiLoadOperation.EnterMultiLoadContext())
+				{
+
+					var requestUri = GetRequestUri(index, documentId, fields, parameters);
+
+					var result = cmd.ExecuteGetRequest(requestUri);
+
+					multiLoadResult = RavenJObject.Parse(result).Deserialize<MultiLoadResult>(inMemoryDocumentSessionOperations.Conventions);
+				}
+			} while (multiLoadOperation.SetResult(multiLoadResult));
+
+			return multiLoadOperation.Complete<T>();
         }
 
         private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -67,7 +83,7 @@ namespace Raven.Client.MoreLikeThis
                 throw new ArgumentException("Key cannot be null or empty", argName);
         }
 
-        private static string GetRequestURI(string index, string documentId, string fields, MoreLikeThisQueryParameters parameters)
+        private static string GetRequestUri(string index, string documentId, string fields, MoreLikeThisQueryParameters parameters)
         {
             var hasParams = CheckIfHasParameters(fields, parameters);
             var uri = new StringBuilder();
