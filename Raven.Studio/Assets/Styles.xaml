@@ -716,7 +716,7 @@
 		<Setter Property="ItemsPanel"
 				Value="{StaticResource VerticalFluidWrapPanel}" />
 		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
-				Value="Auto" />
+				Value="Disabled" />
 		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
 				Value="Auto" />
 		<Setter Property="BorderThickness"
@@ -1534,7 +1534,7 @@
 		<Setter Property="MinHeight" Value="0"/>
 		<Setter Property="MinWidth" Value="0"/>
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
-		<Setter Property="HorizontalContentAlignment" Value="Center"/>
+		<Setter Property="HorizontalContentAlignment" Value="Left"/>
 		<Setter Property="Padding" Value="2"/>
 		<Setter Property="Template">
 			<Setter.Value>
@@ -1555,7 +1555,7 @@
 										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="InteractiveElementBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
 											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.95"/>
 										</DoubleAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                        <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="Content" Storyboard.TargetProperty="(UIElement.Opacity)">
 											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
 										</DoubleAnimationUsingKeyFrames>
 										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="InteractiveBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
@@ -1575,7 +1575,7 @@
 										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="InteractiveElementBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
 											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.8"/>
 										</DoubleAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                        <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="Content" Storyboard.TargetProperty="(UIElement.Opacity)">
 											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.5"/>
 										</DoubleAnimationUsingKeyFrames>
 										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="InteractiveBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
@@ -1592,7 +1592,7 @@
 												</DiscreteObjectKeyFrame.Value>
 											</DiscreteObjectKeyFrame>
 										</ObjectAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                        <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="Content" Storyboard.TargetProperty="(UIElement.Opacity)">
 											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
 										</DoubleAnimationUsingKeyFrames>
 										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="DisabledOverlay" Storyboard.TargetProperty="(UIElement.Opacity)">
@@ -1607,7 +1607,7 @@
 										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="ActiveBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
 											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
 										</DoubleAnimationUsingKeyFrames>
-										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="ContentBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                        <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="Content" Storyboard.TargetProperty="(UIElement.Opacity)">
 											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
 										</DoubleAnimationUsingKeyFrames>
 									</Storyboard>
@@ -1634,11 +1634,11 @@
 						<Rectangle x:Name="FocusVisualElement" Stroke="{TemplateBinding BorderBrush}" StrokeThickness="2" Opacity="0" Margin="-1" RadiusX="1" RadiusY="1"/>
 						<Border x:Name="ActiveBorder" MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="1" Opacity="0" Margin="{TemplateBinding Padding}"/>
 						<Border x:Name="ContentBorder" MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}" Opacity="1" Margin="{TemplateBinding Padding}">
-							<ContentPresenter x:Name="ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Opacity="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="Content" Foreground="Black" FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}" Text="{TemplateBinding Content}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
 						</Border>
 						<Border x:Name="InteractiveBorder" MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}" BorderThickness="1,1,1,1" Opacity="0" CornerRadius="1,1,1,1" Margin="{TemplateBinding Padding}"/>
-						<Border x:Name="InteractiveElementBorder" Visibility="Collapsed" Margin="{TemplateBinding Padding}">
-							<TextBlock x:Name="InteractiveElement" Foreground="{StaticResource Brush_ContrastColor}" FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}" Text="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border x:Name="InteractiveElementBorder" Visibility="Collapsed" Margin="{TemplateBinding Padding}"  MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}">
+							<TextBlock x:Name="InteractiveElement" Foreground="{StaticResource Brush_ContrastColor}" FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}" Text="{TemplateBinding Content}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
 						</Border>
 						<TextBlock x:Name="DisabledOverlay" Text="{TemplateBinding Content}" Foreground="#FFAAAAAA" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
 					</Grid>
@@ -1888,8 +1888,28 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
-	
-	<Style x:Key="Style_TextBlock_Breadcrumb" TargetType="TextBlock">
+
+    <Style x:Key="Style_HeaderedContentControl_Stretch" TargetType="toolkit:HeaderedContentControl">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:HeaderedContentControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*" MinHeight="40"/>
+                        </Grid.RowDefinitions>
+                        <Border BorderThickness="1" CornerRadius="4" Grid.RowSpan="2" BorderBrush="#FFEAE7E4"/>
+                        <Border BorderThickness="0" Margin="1" CornerRadius="4,4,0,0" Background="{StaticResource Brush_HeaderBackground}">
+                        </Border>
+                        <ContentPresenter Grid.Row="0" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"/>
+                        <ContentPresenter Grid.Row="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_TextBlock_Breadcrumb" TargetType="TextBlock">
 		<Setter Property="Foreground" Value="{StaticResource Brush_ContrastColor}"/>
 		<Setter Property="FontSize" Value="14"/>
 	</Style>
@@ -1899,8 +1919,14 @@
 		<Setter Property="VerticalAlignment" Value="Center"/>
 		<Setter Property="FontWeight" Value="Bold"/>
 	</Style>
-	
-	<Style x:Key="Style_TextBlock_PagePartHeader" TargetType="TextBlock">
+
+    <Style x:Key="Style_TextBlock_GroupHeader" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource Brush_ContrastColor}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+    
+    <Style x:Key="Style_TextBlock_PagePartHeader" TargetType="TextBlock">
 		<Setter Property="Foreground" Value="{StaticResource Brush_ContrastColor}"/>
 		<Setter Property="FontSize" Value="12"/>
 	</Style>

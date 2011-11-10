@@ -193,8 +193,12 @@
     <Compile Include="Features\Logs\LogsModel.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\Converters\TargetedDataTemplateCollection.cs" />
+    <Compile Include="Infrastructure\Converters\DataTemplateSelectorConverter.cs" />
     <Compile Include="Infrastructure\Converters\SingleLineToAutoMultiLineToStarSizeConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToGridLengthConverter.cs" />
+    <Compile Include="Infrastructure\Converters\TargetedDataTemplate.cs" />
+    <Compile Include="Infrastructure\IListExtensions.cs" />
     <Compile Include="Infrastructure\ModelAttacher.cs" />
     <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />
@@ -223,6 +227,9 @@
     <Compile Include="Infrastructure\PrimaryKeyComparer.cs" />
     <Compile Include="Models\IndexesErrorsModel.cs" />
     <Compile Include="Models\IndexesModel.cs" />
+    <Compile Include="Models\IndexListItemModel.cs" />
+    <Compile Include="Models\IndexModel.cs" />
+    <Compile Include="Models\IndexGroupHeader.cs" />
     <Compile Include="Models\LinkModel.cs" />
     <Compile Include="Models\NotificationLevel.cs" />
     <Compile Include="Models\Notification.cs" />
