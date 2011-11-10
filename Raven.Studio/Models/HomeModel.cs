@@ -36,7 +36,7 @@ namespace Raven.Studio.Models
 				return;
 			}
 
-			var documents = new DocumentsModel(GetFetchDocumentsMethod);
+			var documents = new DocumentsModel(GetFetchDocumentsMethod){ViewTitle = "Recent Documents"};
 			documents.Pager.PageSize = 15;
 			documents.Pager.SetTotalResults(new Observable<long>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 			RecentDocuments.Value = documents;

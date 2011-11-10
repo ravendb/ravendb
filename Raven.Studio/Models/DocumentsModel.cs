@@ -15,7 +15,7 @@ namespace Raven.Studio.Models
 			this.fetchDocuments = fetchDocuments;
 			Documents = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(document => document.Id));
 		}
-	
+
 		protected override Task TimerTickedAsync()
 		{
 			return fetchDocuments(this);
@@ -25,6 +25,13 @@ namespace Raven.Studio.Models
 		public PagerModel Pager
 		{
 			get { return pager; }
+		}
+
+		private string viewTitle;
+		public string ViewTitle
+		{
+			get { return viewTitle ?? (viewTitle = "Documents"); }
+			set { viewTitle = value; OnPropertyChanged(); }
 		}
 	}
 }

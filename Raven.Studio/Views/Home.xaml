@@ -15,8 +15,7 @@
 		</Grid.RowDefinitions>
 		
 		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments.Value}"
-								 Margin="{StaticResource Margin_ContentPage}"
-								 Tag="Recent Documents" />
+								 Margin="{StaticResource Margin_ContentPage}" />
 		
 		<StackPanel Grid.Row="2">
 			<Button x:Name="CreateSampleData"
