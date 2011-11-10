@@ -58,13 +58,16 @@
 					<ColumnDefinition Width="Auto" />
 				</Grid.ColumnDefinitions>
 
-				<Image Source="{StaticResource Image_RavenDBLogo}" 
-					   Grid.Column="1"
-					   Stretch="Uniform"
-					   HorizontalAlignment="Left"
-					   Height="25"
-					   Margin="0,5,5,1"/>
-
+				<HyperlinkButton Grid.Column="1"
+								 HorizontalAlignment="Left"
+								 Margin="0,5,5,1"
+								 NavigateUri="http://beta.ravendb.net/"
+								 TargetName="_blank">
+					<Image Source="{StaticResource Image_RavenDBLogo}"
+						   Stretch="Uniform"
+						   Height="25" />
+				</HyperlinkButton>
+				
 				<Databases:DatabaseSelectionView VerticalAlignment="Bottom"
 												 HorizontalAlignment="Right" />
 			</Grid>

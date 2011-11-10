@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
 using Raven.Client.Document;
+using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -21,9 +22,15 @@ namespace Raven.Studio.Models
 
 		private ServerModel(string url)
 		{
+			var changeDatabaseCommand = new ChangeDatabaseCommand();
 			Databases = new BindableCollection<DatabaseModel>(new PrimaryKeyComparer<DatabaseModel>(model => model.Name));
 			SelectedDatabase = new Observable<DatabaseModel>();
-			SelectedDatabase.PropertyChanged += (sender, args) => SelectDatabase(SelectedDatabase.Value);
+			SelectedDatabase.PropertyChanged += (sender, args) =>
+			                                    	{
+			                                    		var databaseName = SelectedDatabase.Value.Name;
+			                                    		if (changeDatabaseCommand.CanExecute(databaseName))
+			                                    			changeDatabaseCommand.Execute(databaseName);
+			                                    	};
 
 			documentStore = new DocumentStore
 			{
@@ -38,13 +45,6 @@ namespace Raven.Studio.Models
 			documentStore.JsonRequestFactory.
 				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 				false;
-		}
-
-		private void SelectDatabase(DatabaseModel database)
-		{
-			var urlParser = new UrlParser(UrlUtil.Url);
-			urlParser.SetQueryParam("database", database.Name);
-			UrlUtil.Navigate(urlParser.BuildUrl());
 		}
 
 		public Task Initialize()
