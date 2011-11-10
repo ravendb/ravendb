@@ -7,7 +7,7 @@
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-					 Tag="Documents">
+                     xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" Tag="Documents">
 
 	<Grid>
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}">
@@ -74,11 +74,15 @@
 				</i:Interaction.Triggers>
 
 				<ListBox.ItemTemplate>
-				<DataTemplate>
-					<Grid Width="100"
-						  Height="50"
-						  Margin="2"
-						  ToolTipService.ToolTip="{Binding ToolTipText}">
+					<DataTemplate>
+						<Grid Width="100"
+							  Height="50"
+							  Margin="2"
+							  ToolTipService.ToolTip="{Binding ToolTipText}">
+
+							<i:Interaction.Behaviors>
+								<Behaviors:DoubleClickBehavior Command="{Binding Edit}" />
+							</i:Interaction.Behaviors>
 
 							<Rectangle Fill="#FFF4F4F5" />
 							<Rectangle HorizontalAlignment="Left"
@@ -98,24 +102,24 @@
 							</Grid>
 
 							<StackPanel x:Name="overlay"
-									Orientation="Horizontal"
-									HorizontalAlignment="Right"
-									VerticalAlignment="Bottom">
-								<Button 
-									 VerticalAlignment="Center"
-									 Style="{StaticResource Style_Button_MouseOverChrome}"
-									 Padding="4"                                     
-									 Command="{Binding Path=Edit}"
-											 ToolTipService.ToolTip="click here to edit the document">
+										Orientation="Horizontal"
+										HorizontalAlignment="Right"
+										VerticalAlignment="Bottom">
+								<Button VerticalAlignment="Center"
+										Style="{StaticResource Style_Button_MouseOverChrome}"
+										Padding="4"
+										Command="{Binding Path=Edit}"
+										ToolTipService.ToolTip="click here to edit the document">
 									<Button.Content>
-										<Image Source="{StaticResource Image_Edit_Small}" Stretch="None"/>
+										<Image Source="{StaticResource Image_Edit_Small}"
+											   Stretch="None" />
 									</Button.Content>
 								</Button>
-						</StackPanel>
-					</Grid>
-				</DataTemplate>
-			</ListBox.ItemTemplate>
-		</ListBox>
+							</StackPanel>
+						</Grid>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</ListBox>
 </toolkit:HeaderedContentControl>
 
 	</Grid>
