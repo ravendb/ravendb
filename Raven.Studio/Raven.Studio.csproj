@@ -107,10 +107,13 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
+    <Compile Include="Behaviors\DoubleClickBehavior.cs" />
     <Compile Include="Behaviors\GoToStateAction.cs" />
     <Compile Include="Behaviors\LinkHighlighter.cs" />
     <Compile Include="Behaviors\StringCollection.cs" />
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
+    <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ListBoxCommand.cs" />
     <Compile Include="Commands\NavigateToNextPageCommand.cs" />
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
@@ -220,7 +223,7 @@
     <Compile Include="Infrastructure\Converters\LastItemInListConverter.cs" />
     <Compile Include="Infrastructure\Converters\MagnitudeToListConverter.cs" />
     <Compile Include="Models\CollectionModel.cs" />
-    <Compile Include="Models\DatabaseCollectionsModel.cs" />
+    <Compile Include="Models\CollectionsModel.cs" />
     <Compile Include="Infrastructure\PrimaryKeyComparer.cs" />
     <Compile Include="Models\IndexesErrorsModel.cs" />
     <Compile Include="Models\IndexesModel.cs" />
@@ -522,6 +525,7 @@
       <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
