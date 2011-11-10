@@ -237,7 +237,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
                 for (var i = 0; i < 10; i++)
                 {
-                    var data = new Data { WhitespaceAnalyzerField = "Bob@hotmail.com hotmail" };
+                    var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com hotmail" };
                     session.Store(data);
                 }
                 session.SaveChanges();
@@ -261,7 +261,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
                 for (var i = 0; i < 10; i++)
                 {
-                    var data = new Data { WhitespaceAnalyzerField = "Bob@hotmail.com Bob@hotmail.com" };
+                    var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com bob@hotmail.com" };
                     session.Store(data);
                 }
                 session.SaveChanges();
@@ -390,7 +390,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                                                                                             MinimumDocumentFrequency = 1
                                                                                         });
 
-                Assert.Equal(6, list.Count());
+                Assert.Equal(5, list.Count());
             }
         }
         
