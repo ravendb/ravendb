@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,7 @@ using System.Security.Cryptography;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Extensions;
@@ -133,7 +135,7 @@ namespace Raven.Bundles.MoreLikeThis
 				{
 					includedEtags.AddRange(etag.ToByteArray());
 					result.Includes.Add(includedDoc);
-				}, context.Request.QueryString.GetValues("include"), loadedIds);
+				}, context.Request.QueryString.GetValues("include") ?? new string[0], loadedIds);
 
 				foreach (var jsonDocumet in jsonDocuments)
 				{
