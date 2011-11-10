@@ -122,6 +122,7 @@ namespace Raven.Bundles.MoreLikeThis
 
 				var jsonDocuments =
 					documentIds
+						.Where(docId => string.Equals(docId,documentId, StringComparison.InvariantCultureIgnoreCase) == false)
 						.Select(docId => Database.Get(docId, null))
 						.Where(it => it != null)
 						.ToArray();
@@ -139,6 +140,7 @@ namespace Raven.Bundles.MoreLikeThis
 
 				foreach (var jsonDocumet in jsonDocuments)
 				{
+					result.Results.Add(jsonDocumet.ToJson());
 					addIncludesCommand.Execute(jsonDocumet.DataAsJson);
 				}
 
