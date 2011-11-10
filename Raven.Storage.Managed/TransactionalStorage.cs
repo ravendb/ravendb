@@ -170,7 +170,7 @@ namespace Raven.Storage.Managed
 			return persistenceSource.CreatedNew;
 		}
 
-		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory)
+		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup)
 		{
 			var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);

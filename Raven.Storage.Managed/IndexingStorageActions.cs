@@ -50,7 +50,7 @@ namespace Raven.Storage.Managed
 		{
 			var readResult = storage.IndexingStats.Read(currentIndex.Value);
 			if (readResult == null)
-				throw new ArgumentException("There is no index with the name: " + currentIndex.Value);
+				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", currentIndex.Value));
 			var key = (RavenJObject)readResult.Key;
 			return key;
 		}
@@ -131,7 +131,7 @@ namespace Raven.Storage.Managed
 		{
 			var readResult = storage.IndexingStats.Read(name);
 			if(readResult != null)
-				throw new ArgumentException("There is already an index with the name: " + name);
+				throw new ArgumentException(string.Format("There is already an index with the name: '{0}'", name));
 
 			storage.IndexingStats.UpdateKey(new RavenJObject
 			{
@@ -178,7 +178,7 @@ namespace Raven.Storage.Managed
 		{
 			var readResult = storage.IndexingStats.Read(index);
 			if (readResult == null)
-				throw new ArgumentException("There is no index with the name: " + currentIndex.Value);
+				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", currentIndex.Value));
 			var key = (RavenJObject)readResult.Key;
 			key["touches"] = key.Value<int>("touches") + 1;
 			storage.IndexingStats.UpdateKey(key);
@@ -201,7 +201,7 @@ namespace Raven.Storage.Managed
 		{
 			var readResult = storage.IndexingStats.Read(index);
 			if (readResult == null)
-				throw new ArgumentException("There is no index with the name: " + index);
+				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", index));
 
 			var ravenJObject = (RavenJObject)readResult.Key;
 			ravenJObject["lastReducedEtag"] = etag.ToByteArray();

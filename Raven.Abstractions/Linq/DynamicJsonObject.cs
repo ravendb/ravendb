@@ -99,7 +99,7 @@ namespace Raven.Abstractions.Linq
 		}
 
 
-		private DynamicJsonObject(DynamicJsonObject parent, RavenJObject inner)
+		internal DynamicJsonObject(DynamicJsonObject parent, RavenJObject inner)
 		{
 			this.parent = parent;
 			this.inner = inner;
@@ -297,210 +297,6 @@ namespace Raven.Abstractions.Linq
 			return inner.Value<string>(Constants.DocumentIdFieldName) ?? (object)new DynamicNullObject();
 		}
 
-		public class DynamicList : DynamicObject, IEnumerable<object>
-		{
-			private readonly DynamicJsonObject parent;
-			private readonly object[] inner;
-
-			public DynamicList(object[] inner)
-			{
-				this.inner = inner;
-			}
-
-			internal DynamicList(DynamicJsonObject parent, object[] inner):this(inner)
-			{
-				this.parent = parent;
-			}
-
-			public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
-			{
-				switch (binder.Name)
-				{
-					case "Count":
-						if (args.Length == 0)
-						{
-							result = Count;
-							return true;
-						}
-						result = Enumerable.Count(this,(Func<object, bool>)args[0]);
-						return true;
-					case "DefaultIfEmpty":
-						if (inner.Length > 0)
-							result = this;
-						else
-							result = new object[] { null };
-						return true;
-				}
-				return base.TryInvokeMember(binder, args, out result);
-			}
-
-			private IEnumerable<dynamic> Enumerate()
-			{
-				foreach (var item in inner)
-				{
-					var ravenJObject = item as RavenJObject;
-					if(ravenJObject != null)
-						yield return new DynamicJsonObject(parent, ravenJObject);
-					var ravenJArray = item as RavenJArray;
-					if (ravenJArray != null)
-						yield return new DynamicList(parent, ravenJArray.ToArray());
-					yield return item;
-				}
-			}
-
-			public dynamic First()
-			{
-				return Enumerate().First();
-			}
-
-			public dynamic First(Func<dynamic, bool> predicate)
-			{
-				return Enumerate().First(predicate);
-			}
-
-			public dynamic FirstOrDefault(Func<dynamic, bool> predicate)
-			{
-				return Enumerate().FirstOrDefault(predicate);
-			}
-
-			public dynamic Single(Func<dynamic, bool> predicate)
-			{
-				return Enumerate().Single(predicate);
-			}
-
-			public IEnumerable<dynamic> Distinct()
-			{
-				return new DynamicList(Enumerate().Distinct().ToArray());
-			} 
-
-			public dynamic SingleOrDefault(Func<dynamic, bool> predicate)
-			{
-				return Enumerate().SingleOrDefault(predicate);
-			}
-
-			public IEnumerator<object> GetEnumerator()
-			{
-				return Enumerate().GetEnumerator();
-			}
-
-			IEnumerator IEnumerable.GetEnumerator()
-			{
-				return Enumerate().GetEnumerator();
-			}
-
-			
-			public void CopyTo(Array array, int index)
-			{
-				((ICollection)inner).CopyTo(array, index);
-			}
-
-			
-			public object SyncRoot
-			{
-				get { return inner.SyncRoot; }
-			}
-
-			
-			public bool IsSynchronized
-			{
-				get { return inner.IsSynchronized; }
-			}
-
-			public object this[int index]
-			{
-				get { return inner[index]; }
-				set { inner[index] = value; }
-			}
-
-			
-			public bool IsFixedSize
-			{
-				get { return inner.IsFixedSize; }
-			}
-
-			
-			public bool Contains(object item)
-			{
-				return inner.Contains(item);
-			}
-
-			
-			public int IndexOf(object item)
-			{
-				return Array.IndexOf(inner, item);
-			}
-
-		
-			public int IndexOf(object item, int index)
-			{
-				return Array.IndexOf(inner, item, index);
-			}
-
-		
-			public int IndexOf(object item, int index, int count)
-			{
-				return Array.IndexOf(inner, item, index, count);
-			}
-
-			public int Count
-			{
-				get { return inner.Length; }
-			}
-
-			public int Sum(Func<dynamic, int> aggregator)
-			{
-				return Enumerate().Sum(aggregator);
-			}
-
-			public decimal Sum(Func<dynamic, decimal> aggregator)
-			{
-				return Enumerate().Sum(aggregator);
-			}
-
-			public float Sum(Func<dynamic, float> aggregator)
-			{
-				return Enumerate().Sum(aggregator);
-			}
-
-			public double Sum(Func<dynamic, double> aggregator)
-			{
-				return Enumerate().Sum(aggregator);
-			}
-
-			public long Sum(Func<dynamic, long> aggregator)
-			{
-				return Enumerate().Sum(aggregator);
-			}
-
-			public dynamic Last()
-			{
-				return Enumerate().Last();
-			}
-
-			public dynamic LastOrDefault()
-			{
-				return Enumerate().LastOrDefault();
-			}
-
-			/// <summary>
-			/// Gets the length.
-			/// </summary>
-			/// <value>The length.</value>
-			public int Length
-			{
-				get { return inner.Length; }
-			}
-
-			public IEnumerable<object> Select(Func<object, object> func)
-			{
-				return new DynamicList(parent, inner.Select(func).ToArray());
-			}
-
-			public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
-			{
-				return new DynamicList(parent, inner.SelectMany(func).ToArray());
-			}
-		}
 
 		/// <summary>
 		/// Gets the inner json object
@@ -512,9 +308,211 @@ namespace Raven.Abstractions.Linq
 		}
 	}
 
-	public class DynamicEnumerableObject
+	public class DynamicList : DynamicObject, IEnumerable<object>
 	{
-		
+		private readonly DynamicJsonObject parent;
+		private readonly object[] inner;
+
+		public DynamicList(object[] inner)
+		{
+			this.inner = inner;
+		}
+
+		internal DynamicList(DynamicJsonObject parent, object[] inner)
+			: this(inner)
+		{
+			this.parent = parent;
+		}
+
+		public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
+		{
+			switch (binder.Name)
+			{
+				case "Count":
+					if (args.Length == 0)
+					{
+						result = Count;
+						return true;
+					}
+					result = Enumerable.Count(this, (Func<object, bool>)args[0]);
+					return true;
+				case "DefaultIfEmpty":
+					if (inner.Length > 0)
+						result = this;
+					else
+						result = new object[] { new DynamicNullObject() };
+					return true;
+			}
+			return base.TryInvokeMember(binder, args, out result);
+		}
+
+		private IEnumerable<dynamic> Enumerate()
+		{
+			foreach (var item in inner)
+			{
+				var ravenJObject = item as RavenJObject;
+				if (ravenJObject != null)
+					yield return new DynamicJsonObject(parent, ravenJObject);
+				var ravenJArray = item as RavenJArray;
+				if (ravenJArray != null)
+					yield return new DynamicList(parent, ravenJArray.ToArray());
+				yield return item;
+			}
+		}
+
+		public dynamic First()
+		{
+			return Enumerate().First();
+		}
+
+		public dynamic First(Func<dynamic, bool> predicate)
+		{
+			return Enumerate().First(predicate);
+		}
+
+		public dynamic FirstOrDefault(Func<dynamic, bool> predicate)
+		{
+			return Enumerate().FirstOrDefault(predicate);
+		}
+
+		public dynamic Single(Func<dynamic, bool> predicate)
+		{
+			return Enumerate().Single(predicate);
+		}
+
+		public IEnumerable<dynamic> Distinct()
+		{
+			return new DynamicList(Enumerate().Distinct().ToArray());
+		}
+
+		public dynamic SingleOrDefault(Func<dynamic, bool> predicate)
+		{
+			return Enumerate().SingleOrDefault(predicate);
+		}
+
+		public IEnumerator<object> GetEnumerator()
+		{
+			return Enumerate().GetEnumerator();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return Enumerate().GetEnumerator();
+		}
+
+
+		public void CopyTo(Array array, int index)
+		{
+			((ICollection)inner).CopyTo(array, index);
+		}
+
+
+		public object SyncRoot
+		{
+			get { return inner.SyncRoot; }
+		}
+
+
+		public bool IsSynchronized
+		{
+			get { return inner.IsSynchronized; }
+		}
+
+		public object this[int index]
+		{
+			get { return inner[index]; }
+			set { inner[index] = value; }
+		}
+
+
+		public bool IsFixedSize
+		{
+			get { return inner.IsFixedSize; }
+		}
+
+
+		public bool Contains(object item)
+		{
+			return inner.Contains(item);
+		}
+
+
+		public int IndexOf(object item)
+		{
+			return Array.IndexOf(inner, item);
+		}
+
+
+		public int IndexOf(object item, int index)
+		{
+			return Array.IndexOf(inner, item, index);
+		}
+
+
+		public int IndexOf(object item, int index, int count)
+		{
+			return Array.IndexOf(inner, item, index, count);
+		}
+
+		public int Count
+		{
+			get { return inner.Length; }
+		}
+
+		public int Sum(Func<dynamic, int> aggregator)
+		{
+			return Enumerate().Sum(aggregator);
+		}
+
+		public decimal Sum(Func<dynamic, decimal> aggregator)
+		{
+			return Enumerate().Sum(aggregator);
+		}
+
+		public float Sum(Func<dynamic, float> aggregator)
+		{
+			return Enumerate().Sum(aggregator);
+		}
+
+		public double Sum(Func<dynamic, double> aggregator)
+		{
+			return Enumerate().Sum(aggregator);
+		}
+
+		public long Sum(Func<dynamic, long> aggregator)
+		{
+			return Enumerate().Sum(aggregator);
+		}
+
+		public dynamic Last()
+		{
+			return Enumerate().Last();
+		}
+
+		public dynamic LastOrDefault()
+		{
+			return Enumerate().LastOrDefault();
+		}
+
+		/// <summary>
+		/// Gets the length.
+		/// </summary>
+		/// <value>The length.</value>
+		public int Length
+		{
+			get { return inner.Length; }
+		}
+
+		public IEnumerable<object> Select(Func<object, object> func)
+		{
+			return new DynamicList(parent, inner.Select(func).ToArray());
+		}
+
+		public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
+		{
+			return new DynamicList(parent, inner.SelectMany(func).ToArray());
+		}
 	}
+
 }
 #endif

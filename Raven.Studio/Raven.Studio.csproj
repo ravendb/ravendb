@@ -3,9 +3,9 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>8.0.50727</ProductVersion>
+    <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{AB130CB7-E4D4-4496-BEE6-0538963475FC}</ProjectGuid>
+    <ProjectGuid>{6828A6A5-B925-4716-8D08-2B26353C54C2}</ProjectGuid>
     <ProjectTypeGuids>{A1591282-1198-4647-A2B1-27E5FF5F6F3B};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -22,17 +22,17 @@
     <XapFilename>Raven.Studio.xap</XapFilename>
     <SilverlightManifestTemplate>Properties\AppManifest.xml</SilverlightManifestTemplate>
     <SilverlightAppEntry>Raven.Studio.App</SilverlightAppEntry>
-    <TestPageFileName>CaliburnMicroSilverlightTestPage.html</TestPageFileName>
+    <TestPageFileName>Raven.StudioTestPage.html</TestPageFileName>
     <CreateTestPage>true</CreateTestPage>
     <ValidateXaml>true</ValidateXaml>
-    <EnableOutOfBrowser>true</EnableOutOfBrowser>
+    <EnableOutOfBrowser>false</EnableOutOfBrowser>
     <OutOfBrowserSettingsFile>Properties\OutOfBrowserSettings.xml</OutOfBrowserSettingsFile>
     <UsePlatformExtensions>false</UsePlatformExtensions>
     <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
     <LinkedServerProject>
     </LinkedServerProject>
     <Utf8Output>true</Utf8Output>
-    <ExpressionBlendVersion>4.0.20901.0</ExpressionBlendVersion>
+    <ExpressionBlendVersion>4.0.20525.0</ExpressionBlendVersion>
   </PropertyGroup>
   <!-- This property group is only here to support building this project using the 
        MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
@@ -44,7 +44,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\debug\</OutputPath>
+    <OutputPath>Bin\Debug</OutputPath>
     <DefineConstants>DEBUG;TRACE;SILVERLIGHT</DefineConstants>
     <NoStdLib>true</NoStdLib>
     <NoConfig>true</NoConfig>
@@ -60,464 +60,461 @@
     <NoConfig>true</NoConfig>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.1.111.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
-      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware\ActiproSoftware.Shared.Silverlight.dll</HintPath>
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.1.113.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Shared.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.1.111.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
-      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.1.113.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.1.111.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
-      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware\ActiproSoftware.Text.Silverlight.dll</HintPath>
+    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.1.113.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="Caliburn.Micro, Version=1.0.0.0, Culture=neutral, PublicKeyToken=8e5891231f2ed21f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Silverlight\Caliburn.Micro.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
-    <Reference Include="Microsoft.Expression.Interactions">
+    <Reference Include="Microsoft.Expression.Interactions, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
-    <Reference Include="Newtonsoft.Json.Silverlight">
-      <HintPath>..\SharedLibs\Newtonsoft.Json.Silverlight.dll</HintPath>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\SharedLibs\Newtonsoft.Json\Silverlight\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="Raven.Studio.Controls.SyntaxHighlighting">
-      <HintPath>..\SharedLibs\Silverlight\Raven.Studio.Controls.SyntaxHighlighting.dll</HintPath>
-    </Reference>
-    <Reference Include="SL4PopupMenu">
-      <HintPath>..\SharedLibs\Silverlight\SL4PopupMenu\SL4PopupMenu.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
-    <Reference Include="System.ComponentModel.Composition.Initialization, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
-    <Reference Include="System.ComponentModel.DataAnnotations, Version=2.0.5.0, Culture=neutral, PublicKeyToken=ddd0da4d3e678217" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows" />
     <Reference Include="system" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
-    <Reference Include="System.Windows.Controls, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Controls.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
-    <Reference Include="System.Windows.Controls.Input, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
-    <Reference Include="System.Windows.Controls.Toolkit">
-      <HintPath>..\SharedLibs\Silverlight\Toolkit\System.Windows.Controls.Toolkit.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Windows.Controls.Layout.Toolkit">
-      <HintPath>..\SharedLibs\Silverlight\Toolkit\System.Windows.Controls.Layout.Toolkit.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Windows.Controls.Data.Toolkit">
-      <HintPath>..\SharedLibs\Silverlight\Toolkit\System.Windows.Controls.Data.Toolkit.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Windows.Controls.Input.Toolkit">
-      <HintPath>..\SharedLibs\Silverlight\Toolkit\System.Windows.Controls.Input.Toolkit.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Windows.Interactivity">
+    <Reference Include="System.Windows.Controls.Data.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.Input"/>
+    <Reference Include="System.Windows.Controls.Data.Input"/>
+    <Reference Include="System.Windows.Controls.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Interactivity, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\System.Windows.Interactivity.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="System.Windows.Browser" />
+    <Reference Include="System.Windows.Controls" />
+    <Reference Include="System.Windows.Controls.Navigation" />
+    <Reference Include="TiledBG">
+      <HintPath>..\SharedLibs\Silverlight\TiledBG.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="AppBootstrapper.cs" />
-    <Compile Include="Behaviors\AttachDocumentsMenu.cs" />
-    <Compile Include="Behaviors\ContextMenuBase.cs" />
-    <Compile Include="Behaviors\DocumentsContextMenu.cs" />
-    <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
-    <Compile Include="Behaviors\Watermark.cs" />
-    <Compile Include="Commands\DeleteIndex.cs" />
-    <Compile Include="Commands\CopyDocumentIdToClipboard.cs" />
-    <Compile Include="Commands\CopyDocumentToClipboard.cs" />
-    <Compile Include="Commands\CopyServerError.cs" />
-    <Compile Include="Commands\EditIndex.cs" />
-    <Compile Include="Commands\LoadDocument.cs" />
-    <Compile Include="Common\String.cs" />
-    <Compile Include="Common\VisualTreeHelperExtensions.cs" />
+    <Compile Include="Behaviors\GoToStateAction.cs" />
+    <Compile Include="Behaviors\LinkHighlighter.cs" />
+    <Compile Include="Behaviors\StringCollection.cs" />
+    <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
+    <Compile Include="Commands\ListBoxCommand.cs" />
+    <Compile Include="Commands\NavigateToNextPageCommand.cs" />
+    <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
+    <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
+    <Compile Include="Commands\DeleteDocumentsCommand.cs" />
+    <Compile Include="Controls\Editors\EditorBase.cs" />
+    <Compile Include="Controls\Editors\QueryEditor.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
     <Compile Include="Controls\Editors\LinqEditor.cs" />
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
     <Compile Include="Controls\Editors\XamlEditor.cs" />
-    <Compile Include="Controls\WrapListBox.cs" />
-    <Compile Include="Converters\HiddenWhenEmptyConverter.cs" />
-    <Compile Include="Converters\NotificationLevelToColorConverter.cs" />
-    <Compile Include="Features\Collections\BuiltinCollectionName.cs" />
-    <Compile Include="Features\Collections\CollectionViewModel.cs" />
-    <Compile Include="Features\Collections\EditCollectionTemplateViewModel.cs" />
-    <Compile Include="Features\Documents\BrowseDocumentsView.xaml.cs">
-      <DependentUpon>BrowseDocumentsView.xaml</DependentUpon>
+    <Compile Include="Features\Collections\CollectionsListView.xaml.cs">
+      <DependentUpon>CollectionsListView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Documents\IDocumentTemplateProvider.cs" />
-    <Compile Include="Features\Documents\Resources\DocumentsResources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>DocumentsResources.resx</DependentUpon>
+    <Compile Include="Features\Collections\CollectionView.xaml.cs">
+      <DependentUpon>CollectionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Statistics\StatisticsItem.xaml.cs">
-      <DependentUpon>StatisticsItem.xaml</DependentUpon>
+    <Compile Include="Features\Databases\CreateDatabaseCommand.cs" />
+    <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
+      <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Framework\DebugLogger.cs" />
-    <Compile Include="Framework\EventArgs.cs" />
-    <Compile Include="Framework\IBindablePagedQuery.cs" />
-    <Compile Include="Framework\IRavenConductor.cs" />
-    <Compile Include="Framework\MenuItemMetadata.cs" />
-    <Compile Include="Framework\CustomActionMessage.cs" />
-    <Compile Include="Helpers\StateManager.cs" />
+    <Compile Include="Commands\DeleteDocumentCommand.cs" />
+    <Compile Include="Commands\NavigateToCommand.cs" />
+    <Compile Include="Features\Documents\DocumentsView.xaml.cs">
+      <DependentUpon>DocumentsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
+      <DependentUpon>IndexesListView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Indexes\EditIndexView.xaml.cs">
+      <DependentUpon>EditIndexView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Indexes\IndexesErrorsView.xaml.cs">
+      <DependentUpon>IndexesErrorsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Query\RavenQueryCompletionProvider.cs" />
+    <Compile Include="Features\Query\ExecuteQueryCommand.cs" />
+    <Compile Include="Features\Query\QueryView.xaml.cs">
+      <DependentUpon>QueryView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Stats\StatisticsView.xaml.cs">
+      <DependentUpon>StatisticsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Tasks\ExportTask.cs" />
+    <Compile Include="Features\Tasks\ImportTask.cs" />
+    <Compile Include="Features\Tasks\TasksView.xaml.cs">
+      <DependentUpon>TasksView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Impl\DotNetZip\Adler.cs" />
     <Compile Include="Impl\DotNetZip\BlockState.cs" />
     <Compile Include="Impl\DotNetZip\CompressionLevel.cs" />
     <Compile Include="Impl\DotNetZip\CompressionMode.cs" />
     <Compile Include="Impl\DotNetZip\CompressionStrategy.cs" />
+    <Compile Include="Impl\DotNetZip\Crc32.cs" />
     <Compile Include="Impl\DotNetZip\CrcCalculatorStream.cs" />
     <Compile Include="Impl\DotNetZip\DeflateFlavor.cs" />
-    <Compile Include="Impl\DotNetZip\FlushType.cs" />
-    <Compile Include="Impl\DotNetZip\InflateCodes.cs" />
-    <Compile Include="Impl\DotNetZip\InflateManager.cs" />
-    <Compile Include="Impl\DotNetZip\InternalConstants.cs" />
-    <Compile Include="Impl\DotNetZip\InternalInflateConstants.cs" />
-    <Compile Include="Impl\DotNetZip\SharedUtils.cs" />
-    <Compile Include="Impl\DotNetZip\StaticTree.cs" />
-    <Compile Include="Impl\DotNetZip\WorkItem.cs" />
-    <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
-    <Compile Include="Infrastructure\Navigation\NavigationState.cs" />
-    <Compile Include="Infrastructure\Navigation\Navigators\CollectionsNavigator.cs" />
-    <Compile Include="Infrastructure\Navigation\Navigators\ErrorsNavigator.cs" />
-    <Compile Include="Infrastructure\Navigation\Navigators\IndexesNavigator.cs" />
-    <Compile Include="Infrastructure\Navigation\Navigators\TasksNavigator.cs" />
-    <Compile Include="Infrastructure\Navigation\NavigatorExportAttribute.cs" />
-    <Compile Include="Infrastructure\Navigation\Navigators\BaseNavigator.cs" />
-    <Compile Include="Infrastructure\Navigation\Navigators\EditDocumentNavigator.cs" />
-    <Compile Include="Infrastructure\Navigation\Navigators\DatabaseExplorerNavigator.cs" />
-    <Compile Include="Infrastructure\Navigation\INavigator.cs" />
-    <Compile Include="Infrastructure\Navigation\NavigationService.cs" />
-    <Compile Include="Infrastructure\Navigation\INavigatorMetdata.cs" />
-    <Compile Include="Infrastructure\Navigation\Navigators\SelectDatabaseNavigator.cs" />
-    <Compile Include="Messages\NotificationLevel.cs" />
-    <Compile Include="Plugins\Database\ExportDatabaseExplorerItemAttribute.cs" />
-    <Compile Include="Framework\DynamicViewModel.cs" />
-    <Compile Include="Features\Documents\DocumentTemplateSelector.cs" />
-    <Compile Include="Features\Collections\CollectionsViewModel.cs" />
-    <Compile Include="Commands\DeleteDocument.cs" />
-    <Compile Include="Commands\EditDocument.cs" />
-    <Compile Include="Commands\EditDocumentById.cs" />
-    <Compile Include="Commands\SaveDocument.cs" />
-    <Compile Include="Converters\VisibleWhenEmptyConverter.cs" />
-    <Compile Include="Features\Documents\DocumentViewModel.cs" />
-    <Compile Include="Features\Documents\ISupportDocumentTemplate.cs" />
-    <Compile Include="Features\Query\QueryViewModel.cs" />
-    <Compile Include="Features\Statistics\ErrorsViewModel.cs" />
-    <Compile Include="Features\Statistics\IndexesViewModel.cs" />
-    <Compile Include="Features\Statistics\Statistic.cs" />
-    <Compile Include="Features\Statistics\StatisticsViewModel.cs" />
-    <Compile Include="Features\Tasks\ConsoleOutput.xaml.cs">
-      <DependentUpon>ConsoleOutput.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Features\Tasks\ConsoleOutputTask.cs" />
-    <Compile Include="Features\Tasks\ExportTask.cs" />
-    <Compile Include="Framework\IMenuItemMetadata.cs" />
-    <Compile Include="Features\Tasks\ImportTask.cs" />
-    <Compile Include="Impl\MissingFromSilverlight\InvalidDataException.cs" />
-    <Compile Include="Features\Tasks\TasksViewModel.cs" />
-    <Compile Include="Framework\Extensions\BindableCollectionExtensions.cs" />
-    <Compile Include="Framework\Enumeration.cs" />
-    <Compile Include="Framework\IKeyboardShortcutBinder.cs" />
-    <Compile Include="Framework\KeyboardShortcutBinder.cs" />
-    <Compile Include="Framework\KeyCombination.cs" />
-    <Compile Include="Framework\Extensions\ListExtensions.cs" />
-    <Compile Include="Framework\RavenScreen.cs" />
-    <Compile Include="Framework\ServerUriProvider.cs" />
-    <Compile Include="Framework\SimpleLogger.cs" />
-    <Compile Include="Impl\DotNetZip\Crc32.cs" />
     <Compile Include="Impl\DotNetZip\DeflateManager.cs" />
     <Compile Include="Impl\DotNetZip\DeflateStream.cs" />
+    <Compile Include="Impl\DotNetZip\FlushType.cs" />
     <Compile Include="Impl\DotNetZip\GZipStream.cs" />
     <Compile Include="Impl\DotNetZip\InflateBlocks.cs" />
+    <Compile Include="Impl\DotNetZip\InflateCodes.cs" />
+    <Compile Include="Impl\DotNetZip\InflateManager.cs" />
     <Compile Include="Impl\DotNetZip\InfTree.cs" />
+    <Compile Include="Impl\DotNetZip\InternalConstants.cs" />
+    <Compile Include="Impl\DotNetZip\InternalInflateConstants.cs" />
     <Compile Include="Impl\DotNetZip\ParallelDeflateOutputStream.cs" />
+    <Compile Include="Impl\DotNetZip\SharedUtils.cs" />
+    <Compile Include="Impl\DotNetZip\StaticTree.cs" />
     <Compile Include="Impl\DotNetZip\Tree.cs" />
-    <Compile Include="Impl\DotNetZip\ZlibException.cs" />
+    <Compile Include="Impl\DotNetZip\WorkItem.cs" />
     <Compile Include="Impl\DotNetZip\ZlibBaseStream.cs" />
     <Compile Include="Impl\DotNetZip\ZlibCodec.cs" />
     <Compile Include="Impl\DotNetZip\ZlibConstants.cs" />
+    <Compile Include="Impl\DotNetZip\ZlibException.cs" />
     <Compile Include="Impl\DotNetZip\ZlibStream.cs" />
-    <Compile Include="Messages\CollectionTemplateUpdated.cs" />
-    <Compile Include="Messages\DatabaseScreenRequested.cs" />
-    <Compile Include="Messages\DocumentUpdated.cs" />
-    <Compile Include="Messages\NotificationRaised.cs" />
-    <Compile Include="Commands\PreviewDocument.cs" />
-    <Compile Include="Controls\DatabaseConnection.xaml.cs">
-      <DependentUpon>DatabaseConnection.xaml</DependentUpon>
+    <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
+    <Compile Include="Features\Logs\LogsView.xaml.cs">
+      <DependentUpon>LogsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\ErrorWindow.xaml.cs">
+    <Compile Include="Features\Logs\LogsModel.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToOppositeVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\Converters\SingleLineToAutoMultiLineToStarSizeConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringEmptyToGridLengthConverter.cs" />
+    <Compile Include="Infrastructure\ModelAttacher.cs" />
+    <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
+    <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />
+    <Compile Include="Infrastructure\Converters\FirstLineOnlyConverter.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenLessOrEqualToConverter.cs" />
+    <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\StringExtensions.cs" />
+    <Compile Include="Infrastructure\UrlParser.cs" />
+    <Compile Include="Infrastructure\UrlUtil.cs" />
+    <Compile Include="Infrastructure\ViewModel.cs" />
+    <Compile Include="Models\AllDocumentsModel.cs" />
+    <Compile Include="Models\DatabasesListModel.cs" />
+    <Compile Include="Models\DocumentsModel.cs" />
+    <Compile Include="Models\HomeModel.cs" />
+    <Compile Include="Models\IndexDefinitionModel.cs" />
+    <Compile Include="Infrastructure\ContextMenu\ContextMenu.cs" />
+    <Compile Include="Infrastructure\ContextMenu\ContextMenuService.cs" />
+    <Compile Include="Infrastructure\ContextMenu\MenuBase.cs" />
+    <Compile Include="Infrastructure\ContextMenu\MenuItem.cs" />
+    <Compile Include="Infrastructure\ContextMenu\Separator.cs" />
+    <Compile Include="Infrastructure\Converters\LastItemInListConverter.cs" />
+    <Compile Include="Infrastructure\Converters\MagnitudeToListConverter.cs" />
+    <Compile Include="Models\CollectionModel.cs" />
+    <Compile Include="Models\DatabaseCollectionsModel.cs" />
+    <Compile Include="Infrastructure\PrimaryKeyComparer.cs" />
+    <Compile Include="Models\IndexesErrorsModel.cs" />
+    <Compile Include="Models\IndexesModel.cs" />
+    <Compile Include="Models\LinkModel.cs" />
+    <Compile Include="Models\NotificationLevel.cs" />
+    <Compile Include="Models\Notification.cs" />
+    <Compile Include="Models\EditableDocumentModel.cs" />
+    <Compile Include="Features\Documents\EditDocumentCommand.cs" />
+    <Compile Include="Features\Documents\TemplateColorProvider.cs" />
+    <Compile Include="Features\Documents\ViewableDocument.cs" />
+    <Compile Include="Features\Input\AskUser.cs" />
+    <Compile Include="Features\Input\ConfirmModel.cs" />
+    <Compile Include="Features\Input\ConfirmWindow.xaml.cs">
+      <DependentUpon>ConfirmWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Input\InputModel.cs" />
+    <Compile Include="Features\Input\InputWindow.xaml.cs">
+      <DependentUpon>InputWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Stats\DatabaseStatisticsView.xaml.cs">
+      <DependentUpon>DatabaseStatisticsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Infrastructure\BindableCollection.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Infrastructure\Command.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenEmptyConverter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Infrastructure\DictionaryExtensions.cs" />
+    <Compile Include="Infrastructure\InvocationExtensions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Infrastructure\Model.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Infrastructure\NotifyPropertyChangedBase.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Infrastructure\Observable.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Infrastructure\View.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\ApplicationModel.cs" />
+    <Compile Include="Models\DatabaseModel.cs" />
+    <Compile Include="Models\PagerModel.cs" />
+    <Compile Include="Models\QueryModel.cs" />
+    <Compile Include="Models\ServerModel.cs" />
+    <Compile Include="Models\StatisticsModel.cs" />
+    <Compile Include="Models\TaskModel.cs" />
+    <Compile Include="Views\Collections.xaml.cs">
+      <DependentUpon>Collections.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Databases.xaml.cs">
+      <DependentUpon>Databases.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Query.xaml.cs">
+      <DependentUpon>Query.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\IndexesErrors.xaml.cs">
+      <DependentUpon>IndexesErrors.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Statistics.xaml.cs">
+      <DependentUpon>Statistics.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Logs.xaml.cs">
+      <DependentUpon>Logs.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Indexes.xaml.cs">
+      <DependentUpon>Indexes.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Documents.xaml.cs">
+      <DependentUpon>Documents.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Tasks.xaml.cs">
+      <DependentUpon>Tasks.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\NotFound.xaml.cs">
+      <DependentUpon>NotFound.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\DocumentNotFound.xaml.cs">
+      <DependentUpon>DocumentNotFound.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Edit.xaml.cs">
+      <DependentUpon>Edit.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ErrorWindow.xaml.cs">
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\Label.cs" />
-    <Compile Include="Controls\LabelValuePanel.cs" />
-    <Compile Include="Controls\Pager.xaml.cs">
-      <DependentUpon>Pager.xaml</DependentUpon>
+    <Compile Include="Views\Home.xaml.cs">
+      <DependentUpon>Home.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Converters\BooleanToOppositeBooleanConverter.cs" />
-    <Compile Include="Converters\BooleanToOppositeVisibilityConverter.cs" />
-    <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
-    <Compile Include="Converters\EnumToEnumerableConverter.cs" />
-    <Compile Include="Converters\EnumToIntConverter.cs" />
-    <Compile Include="Converters\HowLongSinceConverter.cs" />
-    <Compile Include="Converters\MagnitudeToListConverter.cs" />
-    <Compile Include="Converters\NullToVisibilityConverter.cs" />
-    <Compile Include="Converters\TypeToBrushConverter.cs" />
-    <Compile Include="Features\Documents\DocumentTemplateProvider.cs" />
-    <Compile Include="Features\Documents\EditDocumentViewModel.cs" />
-    <Compile Include="Framework\ConventionalCatalog.cs" />
-    <Compile Include="Framework\Extensions\DateTimeExtensions.cs" />
-    <Compile Include="Framework\Extensions\DictionaryExtensions.cs" />
-    <Compile Include="Features\Database\SummaryViewModel.cs" />
-    <Compile Include="Framework\BindablePagedQuery.cs" />
-    <Compile Include="Framework\DoubleClickEvent.cs" />
-    <Compile Include="Framework\Extensions\ScreenExtensions.cs" />
-    <Compile Include="Framework\Extensions\TaskExtensions.cs" />
-    <Compile Include="Framework\TemplateColorProvider.cs" />
-    <Compile Include="Messages\DocumentDeleted.cs" />
-    <Compile Include="Messages\NavigationOccurred.cs" />
-    <Compile Include="Commands\OpenErrorsScreen.cs" />
-    <Compile Include="Messages\StatisticsUpdated.cs" />
-    <Compile Include="Messages\StatisticsUpdateRequested.cs" />
-    <Compile Include="Features\Database\Server.cs" />
-    <Compile Include="Features\Indexes\FieldProperties.cs" />
-    <Compile Include="Features\Documents\BrowseDocumentsViewModel.cs" />
-    <Compile Include="Features\Indexes\BrowseIndexesViewModel.cs" />
-    <Compile Include="Messages\IndexUpdated.cs" />
-    <Compile Include="Features\Indexes\EditIndexViewModel.cs" />
-    <Compile Include="Messages\DisplayCurrentDatabaseRequested.cs" />
-    <Compile Include="Messages\WorkCompleted.cs" />
-    <Compile Include="Messages\WorkStarted.cs" />
-    <Compile Include="Plugins\IServer.cs" />
-    <Compile Include="Plugins\Statistics\IStatisticsItem.cs" />
-    <Compile Include="Plugins\Statistics\IStatisticsSet.cs" />
-    <Compile Include="Plugins\Tasks\ExportTaskAttribute.cs" />
+    <Compile Include="MainPage.xaml.cs">
+      <DependentUpon>MainPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SampleData\PagerSampleData\PagerSampleData.xaml.cs">
-      <DependentUpon>PagerSampleData.xaml</DependentUpon>
+    <Compile Include="Views\Index.xaml.cs">
+      <DependentUpon>Index.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Shell\BusyStatusViewModel.cs" />
-    <Compile Include="Shell\ErrorViewModel.cs" />
-    <Compile Include="Shell\MessageBox\IMessageBox.cs" />
-    <Compile Include="Shell\MessageBox\MessageBoxOptions.cs" />
-    <Compile Include="Shell\MessageBox\MessageBoxView.xaml.cs">
-      <DependentUpon>MessageBoxView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Shell\MessageBox\MessageBoxViewModel.cs" />
-    <Compile Include="Shell\NavigationViewModel.cs" />
-    <Compile Include="Shell\NotificationsViewModel.cs" />
-    <Compile Include="Shell\IShell.cs" />
-    <Compile Include="Features\Database\DatabaseExplorer.cs" />
-    <Compile Include="Features\Database\SelectDatabaseViewModel.cs" />
-    <Compile Include="Shell\ShellViewModel.cs" />
-    <Compile Include="Shell\MessageBox\ShowMessageBox.cs" />
-    <Compile Include="StudioViewLocator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
-      <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Resource Include="Resources\Icons.xaml">
-      <SubType>Designer</SubType>
+    <Resource Include="Assets\Brushes.xaml">
       <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Resource>
-    <Resource Include="Resources\Images\chart.png" />
-    <Resource Include="Resources\Images\logo.png" />
-    <Resource Include="Resources\Images\refresh.png" />
-    <Resource Include="Resources\Images\search.png" />
-    <Resource Include="Resources\Manifest.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Resource>
-    <Resource Include="Resources\Templates.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Resource>
-    <Resource Include="Resources\Common.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Resource>
-    <Page Include="Features\Collections\CollectionsView.xaml">
+    <Page Include="Assets\Images\Images.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\DatabaseConnection.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\Pager.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Collections\EditCollectionTemplateView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Documents\BrowseDocumentsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Documents\EditDocumentView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Database\SummaryView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Data\DatabaseStatisticsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Data\JsonDocumentView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Documents\Document\Tooltip.xaml">
+    <Page Include="Features\Indexes\IndexesListView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Features\Query\QueryView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Statistics\IndexesView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Statistics\ErrorView.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Features\Statistics\StatisticsItem.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Statistics\StatisticsView.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Features\Statistics\ErrorsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Indexes\EditIndexView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\ErrorWindow.xaml">
+    <Page Include="Features\Indexes\IndexesErrorsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Indexes\BrowseIndexesView.xaml">
-      <SubType>Designer</SubType>
+    <Page Include="Features\Query\QueryView.xaml">
       <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Tasks\ConsoleOutput.xaml">
-      <SubType>Designer</SubType>
+    <Page Include="Features\Stats\StatisticsView.xaml">
       <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Tasks\ExportTaskView.xaml">
       <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Tasks\ImportTaskView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Tasks\TasksView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Properties\DesignTimeResources.xaml" Condition="'$(DesignTime)'=='true' OR ('$(SolutionPath)'!='' AND Exists('$(SolutionPath)') AND '$(BuildingInsideVisualStudio)'!='true' AND '$(BuildingInsideExpressionBlend)'!='true')">
+    <Page Include="Views\Databases.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-      <ContainsDesignTimeResources>true</ContainsDesignTimeResources>
     </Page>
-    <DesignTimeOnly Include="SampleData\PagerSampleData\PagerSampleData.xaml">
-      <Generator>MSBuild:MarkupCompilePass1</Generator>
-      <SubType>Designer</SubType>
-    </DesignTimeOnly>
-    <ApplicationDefinition Include="Resources\Brushes.xaml">
+    <Page Include="Views\Query.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </ApplicationDefinition>
-    <Resource Include="Resources\Fonts.xaml">
+    </Page>
+    <Page Include="Views\IndexesErrors.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Statistics.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Documents.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Tasks.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Logs\LogsView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Logs.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Indexes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\NotFound.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Index.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Resource Include="Assets\Styles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Resource>
-    <Page Include="Features\Documents\DocumentTemplates.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Resources\Styles.xaml">
+    <Page Include="Assets\DocumentTemplate.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Shell\BusyStatusView.xaml">
+    <Resource Include="Assets\Types.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Resource>
+    <Page Include="Features\Collections\CollectionsListView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Shell\ErrorView.xaml">
+    <Page Include="Features\Collections\CollectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Shell\MessageBox\MessageBoxView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Shell\NavigationView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Shell\NotificationsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Resources\ControlTemplates\Indexes.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Resources\ControlTemplates\Menu.xaml">
+    <Page Include="Features\Databases\DatabaseSelectionView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Database\DatabaseExplorerView.xaml">
+    <Page Include="Features\Documents\DocumentsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Database\SelectDatabaseView.xaml">
+    <Page Include="Features\Input\ConfirmWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Input\InputWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Features\Stats\DatabaseStatisticsView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Resource Include="Infrastructure\ContextMenu\ContextMenu.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Resource>
+    <Resource Include="Infrastructure\ContextMenu\MenuItem.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Resource>
+    <Resource Include="Infrastructure\ContextMenu\Separator.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Resource>
+    <Page Include="Views\Collections.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Shell\ShellView.xaml">
+    <Page Include="Views\DocumentNotFound.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Edit.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ErrorWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Home.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MainPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Controls\Editors\Definitions\CSharp.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\JScript.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
-    <EmbeddedResource Include="Features\Documents\Resources\DocumentsResources.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>DocumentsResources.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-    <EmbeddedResource Include="SampleData\MvcMusicStore_Dump.json" />
+    <EmbeddedResource Include="Controls\Editors\Definitions\RavenQuery.langdef" />
     <None Include="Properties\AppManifest.xml" />
-    <DesignTimeOnly Include="SampleData\PagerSampleData\PagerSampleData.xsd" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Properties\OutOfBrowserSettings.xml" />
+    <Resource Include="Assets\Images\BackgroundTexture.png" />
+    <Resource Include="Assets\Images\RavenDBLogo.png" />
+    <Resource Include="Assets\Images\FooterTexture.png" />
+    <Resource Include="Assets\Images\BackgroundTextureBottom.png" />
+    <Resource Include="Assets\Images\document-index-icon.png" />
+    <None Include="Assets\Images\ImageCredits.txt" />
+    <Resource Include="Assets\Images\Save.png" />
+    <Resource Include="Assets\Images\Undo.png" />
+    <Resource Include="Assets\Images\add.png" />
+    <Resource Include="Assets\Images\Remove.png" />
+    <Resource Include="Assets\Images\Query.png" />
+    <Resource Include="Assets\Images\Edit.png" />
+    <Resource Include="Assets\Images\HtmlBalanceBracesHS.png" />
+    <Resource Include="Assets\Images\DeleteHS.png" />
+    <Resource Include="Assets\Images\RefreshSmall.png" />
+    <Resource Include="Assets\Images\Shortcut.png" />
+    <Resource Include="Assets\Images\Debug.png" />
+    <Resource Include="Assets\Images\Info.png" />
+    <Resource Include="Assets\Images\Warning.png" />
+    <Resource Include="Assets\Images\Document.png" />
+    <Resource Include="Assets\Images\document_page_next.png" />
+    <Resource Include="Assets\Images\document_page_previous.png" />
+    <Resource Include="Assets\Images\database.png" />
+    <Resource Include="Assets\Images\database_add.png" />
+    <Resource Include="Assets\Images\document_prepare.png" />
+    <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
@@ -525,41 +522,7 @@
       <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Images\add-small.png" />
-    <Resource Include="Resources\Images\delete-small.png" />
-    <Resource Include="Resources\Images\edit-cancel-small.png" />
-    <Resource Include="Resources\Images\edit-small.png" />
-    <Resource Include="Resources\Images\save-cancel-small.png" />
-    <Resource Include="Resources\Images\save-small.png" />
-    <Resource Include="Resources\Images\undo-small.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <DesignData Include="SampleData\BrowseDocumentsViewModelSampleData.xaml">
-      <Generator>MSBuild:MarkupCompilePass1</Generator>
-    </DesignData>
-    <DesignData Include="SampleData\CollectionsViewModelSampleData.xaml">
-      <Generator>MSBuild:MarkupCompilePass1</Generator>
-    </DesignData>
-    <DesignData Include="SampleData\DatabaseViewModelSampleData.xaml">
-      <Generator>MSBuild:MarkupCompilePass1</Generator>
-    </DesignData>
-    <DesignData Include="SampleData\ExportTaskSampleData.xaml">
-      <Generator>MSBuild:MarkupCompilePass1</Generator>
-    </DesignData>
-    <DesignData Include="SampleData\NotficiationsSampleData.xaml">
-      <Generator>MSBuild:MarkupCompilePass1</Generator>
-    </DesignData>
-    <DesignData Include="SampleData\ServerErrorSampleData.xaml">
-      <Generator>MSBuild:MarkupCompilePass1</Generator>
-    </DesignData>
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Images\pencil.png" />
-  </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
@@ -574,8 +537,4 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
-  <PropertyGroup>
-    <PostBuildEvent>
-    </PostBuildEvent>
-  </PropertyGroup>
 </Project>

@@ -85,7 +85,8 @@ namespace Raven.Tests.Util
 			Match match;
 			while(true)
 			{
-				var nextLine = output.Take();
+				string nextLine;
+				output.TryTake(out nextLine, 100);
 
 				if (nextLine == null)
 				{

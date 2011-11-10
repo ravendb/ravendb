@@ -41,7 +41,7 @@ Using DateTime.Now invalidate that premise, and is not allowed", ioe.Message);
 				                                                                                                         		"from user in docs.Users orderby user.Id select new { user.Name}"
 				                                                                                                         }));
 
-				Assert.Equal(@"OrderBy calls are not invalid during map or reduce phase, but the following was found:
+				Assert.Equal(@"OrderBy calls are not valid during map or reduce phase, but the following was found:
 orderby user.Id
 OrderBy calls modify the indexing output, but doesn't actually impact the order of results returned from the database.
 You should be calling OrderBy on the QUERY, not on the index, if you want to specify ordering.", ioe.Message);

@@ -235,6 +235,9 @@ namespace Raven.Client.Linq
 		{
 			var processor = GetQueryProviderProcessor<S>();
 			var query = processor.GetLuceneQueryFor(expression);
+			if (afterQueryExecuted != null)
+				query.AfterQueryExecuted(afterQueryExecuted);
+		
 			if (FieldsToFetch.Count > 0)
 				query = query.SelectFields<S>(FieldsToFetch.ToArray());
 			return query.Lazily(onEval);

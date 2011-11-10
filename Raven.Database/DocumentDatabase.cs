@@ -904,7 +904,7 @@ namespace Raven.Database
 		{
 			if (name == null) throw new ArgumentNullException("name");
 			if (Encoding.Unicode.GetByteCount(name) >= 255)
-				throw new ArgumentException("The key must be a maximum of 255 bytes in unicode, 127 characters", "name");
+				throw new ArgumentException("The key must be a maximum of 255 bytes in Unicode, 127 characters", "name");
 
 			Guid newEtag = Guid.Empty;
 			TransactionalStorage.Batch(actions =>
@@ -1165,7 +1165,7 @@ namespace Raven.Database
 			}
 		}
 
-		public void StartBackup(string backupDestinationDirectory)
+		public void StartBackup(string backupDestinationDirectory, bool incrementalBackup)
 		{
 			var document = Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 			if (document != null)
@@ -1183,7 +1183,7 @@ namespace Raven.Database
 			}), new RavenJObject(), null);
 			IndexStorage.FlushMapIndexes();
 			IndexStorage.FlushReduceIndexes();
-			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory);
+			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup);
 		}
 
 		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation)

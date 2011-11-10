@@ -151,7 +151,10 @@ namespace Raven.Json.Linq
 
 					targetType = Nullable.GetUnderlyingType(targetType);
 				}
-
+				if(targetType == typeof(Guid))
+				{
+					return (U)(object)new Guid(value.Value.ToString());
+				}
 				return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
 			}
 		}

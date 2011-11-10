@@ -81,9 +81,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\SharedLibs\Newtonsoft.Json\Net\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL" />
     <Reference Include="Rhino.Mocks">
@@ -182,6 +181,7 @@
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
     <Compile Include="Bugs\IndexesWithDateTimeMin.cs" />
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
+    <Compile Include="Bugs\Indexing\WithStringReverse.cs" />
     <Compile Include="Bugs\Indexing\InvalidIndexes.cs" />
     <Compile Include="Bugs\Issue355.cs" />
     <Compile Include="Bugs\JsonReferences.cs" />
@@ -555,9 +555,14 @@
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
+    <Compile Include="MailingList\GuidProjection.cs" />
+    <Compile Include="MailingList\LazyStats.cs" />
     <Compile Include="MailingList\NicolasGarfinkiel.cs" />
+    <Compile Include="MailingList\Rob.cs" />
     <Compile Include="MailingList\Stacey.cs" />
+    <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />
+    <Compile Include="MailingList\Vlad.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>

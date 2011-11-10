@@ -37,7 +37,7 @@ namespace Raven.Tests.Bugs.Indexing
 					from p in products
 					select new
 					{
-						_ = Project(p.Attributes, attribute => new Field(attribute.Name, attribute.Value, Field.Store.NO, Field.Index.ANALYZED))
+						_ = p.Attributes.Select(attribute => new Field(attribute.Name, attribute.Value, Field.Store.NO, Field.Index.ANALYZED))
 					};
 			}
 		}
@@ -50,7 +50,7 @@ namespace Raven.Tests.Bugs.Indexing
 					from p in products
 					select new
 					{
-						_ = Project(p.Attributes, attribute => new NumericField(attribute.Name, Field.Store.NO, true).SetDoubleValue(attribute.NumericValue))
+						_ = p.Attributes.Select(attribute => new NumericField(attribute.Name, Field.Store.NO, true).SetDoubleValue(attribute.NumericValue))
 					};
 			}
 		}
@@ -63,7 +63,7 @@ namespace Raven.Tests.Bugs.Indexing
 					from p in products
 					select new
 					{
-						_ = Project(p.Attributes, attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS))
+						_ = p.Attributes.Select(attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS))
 					};
 			}
 		}
@@ -76,7 +76,7 @@ namespace Raven.Tests.Bugs.Indexing
 					from p in products
 					select new
 					{
-						_ = Project(p.Attributes, attribute => new NumericField(attribute.Name, Field.Store.NO, true).SetIntValue(attribute.IntValue ))
+						_ = p.Attributes.Select(attribute => new NumericField(attribute.Name, Field.Store.NO, true).SetIntValue(attribute.IntValue))
 					};
 			}
 		}

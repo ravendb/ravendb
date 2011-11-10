@@ -1,24 +1,38 @@
-﻿namespace Raven.Studio
-{
-	using System.Diagnostics;
-	using System.Windows;
-	using Controls;
+﻿using System.Windows;
+using System.Windows.Controls;
+using Raven.Studio.Models;
 
+namespace Raven.Studio
+{
 	public partial class App : Application
 	{
 		public App()
 		{
-			UnhandledException += OnUnhandledException;
+			this.Startup += this.Application_Startup;
+			this.UnhandledException += this.Application_UnhandledException;
 
 			InitializeComponent();
 		}
 
-		static void OnUnhandledException(object sender, ApplicationUnhandledExceptionEventArgs e)
+		private void Application_Startup(object sender, StartupEventArgs e)
 		{
-			if (!Debugger.IsAttached)
+			var rootVisual = new MainPage();
+			ApplicationModel.Current.Setup(rootVisual);
+			this.RootVisual = rootVisual;
+		}
+
+		private void Application_UnhandledException(object sender, ApplicationUnhandledExceptionEventArgs e)
+		{
+			// If the app is running outside of the debugger then report the exception using
+			// a ChildWindow control.
+			if (!System.Diagnostics.Debugger.IsAttached)
 			{
+				// NOTE: This will allow the application to continue running after an exception has been thrown
+				// but not handled. 
+				// For production applications this error handling should be replaced with something that will 
+				// report the error to the website and stop the application.
 				e.Handled = true;
-				var errorWin = new ErrorWindow(e.ExceptionObject);
+				ChildWindow errorWin = new ErrorWindow(e.ExceptionObject);
 				errorWin.Show();
 			}
 		}

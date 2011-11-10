@@ -569,7 +569,17 @@ namespace Raven.Client.Linq
 		{
 			if (expression.Method.DeclaringType == typeof(object) && expression.Method.Name == "Equals")
 			{
-				VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Arguments[0], expression.Arguments[1]));
+				switch (expression.Arguments.Count)
+				{
+					case 1:
+						VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Object, expression.Arguments[0]));
+						break;
+					case 2:
+						VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Arguments[0], expression.Arguments[1]));
+						break;
+					default:
+						throw new ArgumentException("Can't understand Equals with " + expression.Arguments.Count + " arguments");
+				}
 				return;
 			}
 			if (expression.Method.DeclaringType == typeof(LinqExtensions))
@@ -829,9 +839,13 @@ namespace Raven.Client.Linq
 
 		private void VisitSelect(Expression operand)
 		{
-			var body = ((LambdaExpression)operand).Body;
+			var lambdaExpression = operand as LambdaExpression;
+			var body = lambdaExpression != null ? lambdaExpression.Body : operand;
 			switch (body.NodeType)
 			{
+				case ExpressionType.Convert:
+					VisitSelect(((UnaryExpression)body).Operand);
+					break;
 				case ExpressionType.MemberAccess:
 					MemberExpression memberExpression = ((MemberExpression)body);
 					AddToFieldsToFetch(memberExpression.Member.Name, memberExpression.Member.Name) ;

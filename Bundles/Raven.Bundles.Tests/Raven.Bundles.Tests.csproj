@@ -36,8 +36,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.3.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\SharedLibs\Newtonsoft.Json\Net\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -57,6 +58,7 @@
     <Compile Include="Authentication\AuthorizationTest.cs" />
     <Compile Include="Authentication\AsyncSimpleLogin.cs" />
     <Compile Include="Authentication\Bugs\Mojo2.cs" />
+    <Compile Include="Authentication\Bugs\Mojo2_Failed.cs" />
     <Compile Include="Authentication\HttpWebRequestExtensions.cs" />
     <Compile Include="Authentication\SimpleLogin.cs" />
     <Compile Include="Authorization\AuthorizationTest.cs" />

@@ -81,15 +81,15 @@ namespace Raven.Client.Connection
 			{
 				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow
 #if !NET_3_5
-					|| refreshReplicationInformationTask != null
+ || refreshReplicationInformationTask != null
 #endif
-					)
+)
 					return;
 #if !NET_3_5
 				refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
 					.ContinueWith(task =>
 					{
-						if(task.Exception != null)
+						if (task.Exception != null)
 						{
 							log.ErrorException("Failed to refresh replication information", task.Exception);
 						}
@@ -151,8 +151,8 @@ namespace Raven.Client.Connection
 					break;
 			}
 			throw new InvalidOperationException("Could not replicate " + method +
-			                                    " operation to secondary node, failover behavior is: " +
-			                                    conventions.FailoverBehavior);
+												" operation to secondary node, failover behavior is: " +
+												conventions.FailoverBehavior);
 		}
 
 		private IntHolder GetHolder(string operationUrl)
@@ -250,12 +250,12 @@ namespace Raven.Client.Connection
 
 					if (machineStoreForApplication.GetFileNames(path).Length == 0)
 						return null;
-				
+
 					using (var stream = new IsolatedStorageFileStream(path, FileMode.Open, machineStoreForApplication))
 					{
 						return stream.ToJObject().ToJsonDocument();
 					}
-				
+
 				}
 			}
 			catch (Exception e)

@@ -1,0 +1,69 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Interop;
+using Raven.Client.Connection.Async;
+using Raven.Studio.Models;
+
+namespace Raven.Studio.Infrastructure
+{
+	public abstract class ViewModel : Model
+	{
+		public List<string> ModelUrlIgnoreList { get; private set; }
+		public string ModelUrl { get; set; }
+		public bool IsLoaded { get; private set; }
+
+		public ViewModel()
+		{
+			ModelUrlIgnoreList = new List<string>();
+			Database = new Observable<DatabaseModel>();
+			SetCurrentDatabase();
+		}
+
+		public void LoadModel(string state)
+		{
+			if (string.IsNullOrWhiteSpace(state) == false &&
+				state.StartsWith(ModelUrl, StringComparison.InvariantCultureIgnoreCase) &&
+				ModelUrlIgnoreList.Any(state.StartsWith) == false)
+			{
+				LoadModelParameters(state.Substring(ModelUrl.Length));
+			}
+			IsLoaded = true;
+		}
+
+		public virtual void LoadModelParameters(string parameters) { }
+
+		protected override Task TimerTickedAsync()
+		{
+			return IsLoaded == false ? null : LoadedTimerTickedAsync();
+		}
+
+		protected virtual Task LoadedTimerTickedAsync()
+		{
+			return null;
+		}
+
+		public Observable<DatabaseModel> Database { get; private set; }
+
+		public IAsyncDatabaseCommands DatabaseCommands
+		{
+			get { return Database.Value.AsyncDatabaseCommands; }
+		}
+
+		private void SetCurrentDatabase()
+		{
+			var applicationModel = ApplicationModel.Current;
+
+			var server = applicationModel.Server;
+			var databaseName = new UrlParser(UrlUtil.Url).GetQueryParam("database");
+			var database = server.Value.Databases.Where(x => x.Name == databaseName).FirstOrDefault();
+			if (database != null)
+			{
+				server.Value.SelectedDatabase.Value = database;
+			}
+			Database.Value = server.Value.SelectedDatabase.Value;
+		}
+	}
+}

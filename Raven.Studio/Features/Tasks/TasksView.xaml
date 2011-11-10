@@ -1,37 +1,79 @@
-﻿<UserControl x:Class="Raven.Studio.Features.Tasks.TasksView"
-			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
-			 xmlns:r="clr-namespace:Raven.Studio.Controls"
-			 xmlns:input="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input"
-			 xmlns:f="clr-namespace:Raven.Studio.Framework"
-			 mc:Ignorable="d"
-			 d:DesignHeight="600"
-			 d:DesignWidth="800">
+﻿<navigation:Page
+           xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+           xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+           xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+           xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+           xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
+           xmlns:Raven_Studio="clr-namespace:Raven.Studio"
+           xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+           x:Class="Raven.Studio.Features.Tasks.TasksView"
+           mc:Ignorable="d"
+           d:DesignWidth="640" d:DesignHeight="480"
+           Title="TasksView Page"
+           DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
 
-	<tk:DockPanel x:Name="LayoutRoot"
-				  Background="{StaticResource DefaultScreenBackground}">
+  <Grid Margin="{StaticResource Margin_ContentPage}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
 
-		<TextBlock Text="Tasks"
-				   tk:DockPanel.Dock="Top"
-				   Style="{StaticResource Header}" />
+    </Grid.RowDefinitions>
 
-		<tk:DockPanel tk:DockPanel.Dock="Left"
-					  Width="180"
-					  Margin="0 0 8 0">
-			<ListBox ItemsSource="{Binding AvailableTasks}"
-					 SelectedItem="{Binding SelectedTask, Mode=TwoWay}" />
+        <toolkit:DockPanel>
+            <Border Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0"
+				toolkit:DockPanel.Dock="Top">
+                <toolkit:DockPanel Margin="4" LastChildFill="False">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Tasks" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
+                    </StackPanel>
 
-		</tk:DockPanel>
+                    <ListBox toolkit:DockPanel.Dock="Left" Margin="10,0,0,0" ItemsSource="{Binding Tasks}"
+                            SelectedItem="{Binding Path=SelectedTask.Value, Mode=TwoWay}"
+                            Style="{StaticResource Style_ListBox_HeaderOptions}" Padding="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </toolkit:DockPanel>
+            </Border>
+        </toolkit:DockPanel>
 
-		<Grid tk:DockPanel.Dock="Top">
+    <TextBlock Grid.Row="1"  FontSize="13" TextWrapping="Wrap" Text="{Binding Path=SelectedTask.Value.Description}"
+               Margin="0,10"/>
+              
+    <Button Grid.Row="2" Content="{Binding Path=SelectedTask.Value.Name}" Width="Auto" HorizontalAlignment="Left"
+            Command="{Binding Path=SelectedTask.Value.Action}" Padding="8,4"
+            Style="{StaticResource Style_Button}" MinWidth="100" Margin="0,10"/>
 
-			<ContentControl x:Name="ActiveItem" />
 
-		</Grid>
+    <ItemsControl Grid.Row="3"
+                        ItemsSource="{Binding SelectedTask.Value.Output}"
+                        BorderBrush="#FFEAE7E4"
+                        Background="{StaticResource Brush_SubtleBackground2}"
+                        BorderThickness="1"
+                        Margin="0,10,0,0">
+      <ItemsControl.Template>
+        <ControlTemplate TargetType="ItemsControl">
+          <ScrollViewer x:Name="ScrollViewer" VerticalScrollBarVisibility="Auto" 
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        Background="{TemplateBinding Background}">
+            <ItemsPresenter />
+          </ScrollViewer>
+        </ControlTemplate>
+      </ItemsControl.Template>
 
-	</tk:DockPanel>
-</UserControl>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <TextBlock Text="{Binding}"/>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+
+    </ItemsControl>
+
+  </Grid>
+</navigation:Page>

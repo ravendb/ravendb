@@ -123,6 +123,7 @@ namespace Raven.Bundles.Tests.Authentication.Bugs
 					                                                                                              "paolo",
 					                                                                                              "Library/View",
 					                                                                                              "library/andrea-lib");
+
 				//Paolo cannot View 
 				Assert.True(!paoloCanView.IsAllowed);
 

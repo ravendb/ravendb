@@ -125,9 +125,9 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory)
+		public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup)
 		{
-			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory);
+			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		}
 
