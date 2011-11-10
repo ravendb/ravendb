@@ -65,6 +65,7 @@ namespace Raven.Studio.Infrastructure
 
 		public void SetQueryParam(string name, object value)
 		{
+			if (value == null) return;
 			QueryParams[name] = value.ToString();
 		}
 
