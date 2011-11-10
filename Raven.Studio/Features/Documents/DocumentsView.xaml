@@ -56,7 +56,7 @@
 					 Margin="10">
 				
 				<Controls:ContextMenuService.ContextMenu>
-                    <Controls:ContextMenu x:Name="DocumentsContextMenu">
+					<Controls:ContextMenu x:Name="DocumentsContextMenu">
 						<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
 										   Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
 										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
