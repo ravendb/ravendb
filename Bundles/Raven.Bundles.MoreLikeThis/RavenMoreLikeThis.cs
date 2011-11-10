@@ -36,9 +36,7 @@ namespace Raven.Bundles.MoreLikeThis
                     {
                         foreach (var t in text)
                         {
-                            var byteArray = Encoding.ASCII.GetBytes(t);
-                            var stream = new MemoryStream(byteArray);
-                            AddTermFrequencies(new StreamReader(stream), termFreqMap, fieldName);
+                            AddTermFrequencies(new StringReader(t), termFreqMap, fieldName);
                         }
                     }
                 }
