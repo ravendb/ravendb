@@ -113,6 +113,15 @@ namespace Raven.Client.Connection
 			public int Value;
 		}
 
+
+		/// <summary>
+		/// Get the current failure count for the url
+		/// </summary>
+		public int GetFailureCount(string operationUrl)
+		{
+			return GetHolder(operationUrl).Value;
+		}
+
 		/// <summary>
 		/// Should execute the operation using the specified operation URL
 		/// </summary>

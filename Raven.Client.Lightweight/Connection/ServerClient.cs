@@ -138,6 +138,15 @@ namespace Raven.Client.Connection
 			});
 		}
 
+		/// <summary>
+		/// Allow to query whatever we are in failover mode or not
+		/// </summary>
+		/// <returns></returns>
+		public bool InFailoverMode()
+		{
+			return replicationInformer.GetFailureCount(url) > 0;
+		}
+
 		private T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
