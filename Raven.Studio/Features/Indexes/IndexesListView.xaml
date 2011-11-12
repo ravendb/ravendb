@@ -7,7 +7,10 @@
 
 	<UserControl.Resources>
 		<DataTemplate x:Key="IndexItemTemplate">
-			<Grid d:DesignWidth="167" d:DesignHeight="38" d:LayoutOverrides="Width, Height" >
+			<Grid d:DesignWidth="167" d:DesignHeight="38" d:LayoutOverrides="Width, Height">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
 				<Border BorderThickness="1" Margin="0" CornerRadius="4">
 					<Border.Effect>
 						<DropShadowEffect Opacity="0.28" BlurRadius="7" ShadowDepth="1" Direction="0"/>
@@ -19,16 +22,21 @@
 						</LinearGradientBrush>
 					</Border.Background>
 				</Border>
-	
-				<StackPanel Margin="4" Orientation="Horizontal">
-					<Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None"
-						VerticalAlignment="Center" Margin="2"/>
+
+				<StackPanel Margin="4"
+							Orientation="Horizontal">
+					<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
+						   Stretch="None"
+						   VerticalAlignment="Center"
+						   Margin="2" />
 					<HyperlinkButton Content="{Binding}"
-						NavigateUri="{Binding StringFormat=/query/\{0\}}"
-						VerticalAlignment="Center"
-						Style="{StaticResource Style_Link_DrillDown}"
-						ToolTipService.ToolTip="Query Index"/>
-					<HyperlinkButton NavigateUri="{Binding StringFormat=/indexes/\{0\}}"
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="{Binding StringFormat=/query/\{0\}}"
+									 VerticalAlignment="Center"
+									 Style="{StaticResource Style_Link_DrillDown}"
+									 ToolTipService.ToolTip="Query Index" />
+					<HyperlinkButton Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="{Binding StringFormat=/indexes/\{0\}}"
 									 VerticalAlignment="Center"
 									 Style="{StaticResource Style_Button_MouseOverChrome}"
 									 Padding="4"
@@ -43,15 +51,9 @@
 		</DataTemplate>
 	</UserControl.Resources>
 	
-	<Grid Margin="{StaticResource Margin_ContentPage}">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-		</Grid.RowDefinitions>
-
+	<toolkit:WrapPanel Margin="{StaticResource Margin_ContentPage}">
 		<toolkit:HeaderedContentControl Visibility="{Binding Path=TempIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}"
-										Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
+										Style="{StaticResource Style_HeaderedContentControl}" Margin="4">
 			<toolkit:HeaderedContentControl.Header>
 				<StackPanel Orientation="Horizontal">
 					<Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
@@ -64,10 +66,9 @@
 				ItemTemplate="{StaticResource IndexItemTemplate}" Margin="10"/>
 		</toolkit:HeaderedContentControl>
 
-
-		<toolkit:HeaderedContentControl Grid.Row="1"
-										Visibility="{Binding Path=AutoIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}" 
-					Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
+		<toolkit:HeaderedContentControl Visibility="{Binding Path=AutoIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}"
+										Style="{StaticResource Style_HeaderedContentControl}"
+										Margin="4">
 				<toolkit:HeaderedContentControl.Header>
 					<StackPanel Orientation="Horizontal">
 						<Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
@@ -80,8 +81,9 @@
 					 ItemTemplate="{StaticResource IndexItemTemplate}" Margin="10" />
 		</toolkit:HeaderedContentControl>
 
-		<toolkit:HeaderedContentControl Grid.Row="2" Margin="0,0,0,15"
-					Style="{StaticResource Style_HeaderedContentControl}">
+		<toolkit:HeaderedContentControl Grid.Column="2"
+										Style="{StaticResource Style_HeaderedContentControl}"
+										Margin="4">
 			<toolkit:HeaderedContentControl.Header>
 				<toolkit:DockPanel LastChildFill="False">
 					<StackPanel Orientation="Horizontal"
@@ -97,8 +99,9 @@
 					</StackPanel>
 					<StackPanel Orientation="Horizontal"
 								toolkit:DockPanel.Dock="Right"
-								VerticalAlignment="Center">
-						<HyperlinkButton NavigateUri="/indexes/new?mode=new"
+								VerticalAlignment="Center" Margin="0,0,4,0">
+						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="/indexes/new?mode=new"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
 										 VerticalAlignment="Center">
 							<HyperlinkButton.Content>
@@ -119,5 +122,5 @@
 					 ItemsSource="{Binding OtherIndexes}"
 					 ItemTemplate="{StaticResource IndexItemTemplate}" Margin="10" />
 		</toolkit:HeaderedContentControl>
-	</Grid>
+	</toolkit:WrapPanel>
 </UserControl>

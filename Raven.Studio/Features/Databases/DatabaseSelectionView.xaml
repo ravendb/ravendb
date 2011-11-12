@@ -9,7 +9,8 @@
 					FontFamily="Tahoma">
 		<StackPanel Orientation="Horizontal">
 			<HyperlinkButton Content="Databases"
-							 NavigateUri="/databases"
+							 Command="{StaticResource NavigateToCommand}"
+							 CommandParameter="/databases"
 							 Foreground="{StaticResource Brush_ContrastColor}"
 							 VerticalAlignment="Center" />
 			<TextBlock Text=">"

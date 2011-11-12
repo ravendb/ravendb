@@ -80,7 +80,7 @@ namespace Raven.Studio.Models
 		{
 			var urlParser = new UrlParser(UrlUtil.Url);
 			urlParser.SetQueryParam("skip", skip + pageOffset * PageSize);
-			urlParser.NavigateTo();
+			UrlUtil.Navigate(urlParser.BuildUrl());
 		}
 
 		public ICommand NextPage

@@ -54,15 +54,37 @@
 
 		<HyperlinkButton Content="Statistics"
 				   Foreground="Black"
-				   VerticalAlignment="Center" FontSize="14" Margin="0,0,6,0"  NavigateUri="/statistics" />
+						 VerticalAlignment="Center"
+						 FontSize="14"
+						 Margin="0,0,6,0"
+						 Command="{StaticResource NavigateToCommand}"
+						 CommandParameter="/statistics" />
 		
 		<StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-			<HyperlinkButton Content="{Binding CountOfDocuments, StringFormat='\{0:#,#;;0\} documents'}" Style="{StaticResource Statistics_Count}" NavigateUri="/documents" />
-			<HyperlinkButton Content="{Binding CountOfIndexes, StringFormat='\{0:#,#;;0\} indexes'}" Style="{StaticResource Statistics_Count}" NavigateUri="/indexes" />
-			<HyperlinkButton Content="{Binding Path=StaleIndexes.Length, StringFormat='\{0:#,#;;0\} stale'}" Style="{StaticResource Statistics_Count}" NavigateUri="/statistics" />
-			<HyperlinkButton Content="{Binding Path=Errors.Length, StringFormat='\{0:#,#;;0\} errors'}" Style="{StaticResource Statistics_Count}" NavigateUri="/indexes-errors" />
-			<HyperlinkButton Content="{Binding Path=Triggers.Length, StringFormat='\{0:#,#;;0\} triggers'}" Style="{StaticResource Statistics_Count}" NavigateUri="/statistics" />
-			<HyperlinkButton Content="{Binding ApproximateTaskCount, StringFormat='\{0:#,#;;0\} tasks'}" Style="{StaticResource Statistics_Count}" NavigateUri="/statistics" />
+			<HyperlinkButton Content="{Binding CountOfDocuments, StringFormat='\{0:#,#;;0\} documents'}"
+							 Style="{StaticResource Statistics_Count}"
+							 Command="{StaticResource NavigateToCommand}"
+							 CommandParameter="/documents" />
+			<HyperlinkButton Content="{Binding CountOfIndexes, StringFormat='\{0:#,#;;0\} indexes'}"
+							 Style="{StaticResource Statistics_Count}"
+							 Command="{StaticResource NavigateToCommand}"
+							 CommandParameter="/indexes" />
+			<HyperlinkButton Content="{Binding Path=StaleIndexes.Length, StringFormat='\{0:#,#;;0\} stale'}"
+							 Style="{StaticResource Statistics_Count}"
+							 Command="{StaticResource NavigateToCommand}"
+							 CommandParameter="/statistics" />
+			<HyperlinkButton Content="{Binding Path=Errors.Length, StringFormat='\{0:#,#;;0\} errors'}"
+							 Style="{StaticResource Statistics_Count}"
+							 Command="{StaticResource NavigateToCommand}"
+							 CommandParameter="/indexes-errors" />
+			<HyperlinkButton Content="{Binding Path=Triggers.Length, StringFormat='\{0:#,#;;0\} triggers'}"
+							 Style="{StaticResource Statistics_Count}"
+							 Command="{StaticResource NavigateToCommand}"
+							 CommandParameter="/statistics" />
+			<HyperlinkButton Content="{Binding ApproximateTaskCount, StringFormat='\{0:#,#;;0\} tasks'}"
+							 Style="{StaticResource Statistics_Count}"
+							 Command="{StaticResource NavigateToCommand}"
+							 CommandParameter="/statistics" />
 		</StackPanel>
 	</Grid>
 </Infrastructure:View>
