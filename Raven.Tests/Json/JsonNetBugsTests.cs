@@ -1,7 +1,6 @@
 ﻿
 namespace Raven.Tests.Json
 {
-	using System.Collections.Concurrent;
 	using Xunit;
 
 	public class JsonNetBugsTests : LocalClientTest
@@ -35,17 +34,18 @@ namespace Raven.Tests.Json
 			}
 		}
 
+#if !NET_3_5
 		class ObjectWithConcurentDictionary
 		{
-			public ConcurrentDictionary<string, string> Data { get; set; }
+			public System.Collections.Concurrent.ConcurrentDictionary<string, string> Data { get; set; }
 		}
-
+		
 		[Fact]
 		public void cal_serialize_object_with_concurentdictionary()
 		{
 			ObjectWithConcurentDictionary data = new ObjectWithConcurentDictionary
 			{
-				Data = new ConcurrentDictionary<string, string>()
+				Data = new System.Collections.Concurrent.ConcurrentDictionary<string, string>()
 			};
 
 			using (var store = NewDocumentStore())
@@ -63,6 +63,6 @@ namespace Raven.Tests.Json
 				}
 			}
 		}
-
+#endif
 	}
 }
