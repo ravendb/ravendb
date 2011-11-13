@@ -1,0 +1,138 @@
+﻿
+namespace Raven.Tests.Json
+{
+	using System.Collections.Generic;
+	using Xunit;
+
+	public class JsonNetBugsTests : LocalClientTest
+	{
+		class ObjectyWithByteArray
+		{
+			public byte[] Data { get; set; }
+		}
+
+		[Fact]
+		public void can_serialize_object_whth_byte_array_when_TypeNameHandling_is_All()
+		{
+			ObjectyWithByteArray data = new ObjectyWithByteArray { Data = new byte[] { 72, 63, 62, 71, 92, 55 } };
+			using (var store = NewDocumentStore())
+			{
+				// this is an edge case since it does not make a lot of sense for users to set this.
+				store.Conventions.CustomizeJsonSerializer = x => x.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.All;
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(data, "test");
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var result = session.Load<ObjectyWithByteArray>("test");
+					Assert.NotNull(result);
+					Assert.Equal(data.Data, result.Data);   
+				}
+			}
+		}
+
+#if !NET_3_5
+		class ObjectWithConcurentDictionary
+		{
+			public System.Collections.Concurrent.ConcurrentDictionary<string, string> Data { get; set; }
+		}
+		
+		[Fact]
+		public void cal_serialize_object_with_concurentdictionary()
+		{
+			ObjectWithConcurentDictionary data = new ObjectWithConcurentDictionary
+			{
+				Data = new System.Collections.Concurrent.ConcurrentDictionary<string, string>()
+			};
+
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(data, "test");
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var result = session.Load<ObjectWithConcurentDictionary>("test");
+					Assert.NotNull(result);
+				}
+			}
+		}
+#endif
+
+		class ObjectWithPrivateField
+		{
+			private int Value;
+
+			public void Set()
+			{
+				this.Value = 10;
+			}
+
+			public int Get()
+			{
+				return this.Value;
+			}
+		}
+
+		[Fact]
+		public void can_Serialize_object_with_private_field()
+		{
+			ObjectWithPrivateField obj = new ObjectWithPrivateField();
+			obj.Set();
+
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(obj, "test");
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var result = session.Load<ObjectWithPrivateField>("test");
+					Assert.NotNull(result);
+					Assert.Equal(obj.Get(), result.Get());
+				}
+			}
+		}
+
+
+
+		class CollectionOfStrings : List<string>
+		{
+
+		}
+
+		[Fact]
+		public void can_serialize_object_is_collection()
+		{
+			CollectionOfStrings obj = new CollectionOfStrings();
+			obj.Add("foo");
+
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(obj, "test");
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var result = session.Load<CollectionOfStrings>("test");
+					Assert.NotNull(result);
+					Assert.Equal(1, result.Count);
+					Assert.Equal("foo", result[0]);
+				}
+			}
+		}		
+	}
+}
