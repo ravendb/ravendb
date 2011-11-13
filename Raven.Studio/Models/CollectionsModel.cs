@@ -19,7 +19,10 @@ namespace Raven.Studio.Models
 			SelectedCollection.PropertyChanged += (sender, args) =>
 			                                      	{
 			                                      		var urlParser = new UrlParser(UrlUtil.Url);
-			                                      		var name = SelectedCollection.Value.Name;
+			                                      		var collection = SelectedCollection.Value;
+			                                      		if (collection == null)
+			                                      			return;
+			                                      		var name = collection.Name;
 			                                      		if (urlParser.GetQueryParam("name") != name)
 			                                      		{
 			                                      			urlParser.SetQueryParam("name", name);
