@@ -23,7 +23,7 @@ namespace Raven.Studio.Models
 		private ServerModel(string url)
 		{
 			var changeDatabaseCommand = new ChangeDatabaseCommand();
-			Databases = new BindableCollection<DatabaseModel>(new PrimaryKeyComparer<DatabaseModel>(model => model.Name));
+			Databases = new BindableCollection<DatabaseModel>(model => model.Name);
 			SelectedDatabase = new Observable<DatabaseModel>();
 			SelectedDatabase.PropertyChanged += (sender, args) =>
 			                                    	{

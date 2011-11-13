@@ -30,7 +30,7 @@ namespace Raven.Studio.Models
 			ModelUrl = "/edit";
 			
 			References = new ObservableCollection<LinkModel>();
-			Related = new BindableCollection<LinkModel>(new PrimaryKeyComparer<LinkModel>(model => model.HRef));
+			Related = new BindableCollection<LinkModel>(model => model.Title);
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();

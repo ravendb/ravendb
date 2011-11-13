@@ -7,15 +7,22 @@ using System.Linq;
 
 namespace Raven.Studio.Infrastructure
 {
-	public class BindableCollection<T> : ObservableCollection<T>
+	public class BindableCollection<T> : ObservableCollection<T> where T : class
 	{
 		private readonly Dispatcher init = Deployment.Current.Dispatcher;
 
-		private IEqualityComparer<T> comparer;
+		private readonly Func<T, object> primaryKeyExtractor;
+		private readonly KeysComparer<T> objectComparer;
 
-		public BindableCollection(IEqualityComparer<T> comparer)
+		public BindableCollection(Func<T, object> primaryKeyExtractor, KeysComparer<T> objectComparer = null)
 		{
-			this.comparer = comparer;
+			if (objectComparer == null)
+				objectComparer = new KeysComparer<T>(primaryKeyExtractor);
+			else
+				objectComparer.Add(primaryKeyExtractor);
+			
+			this.primaryKeyExtractor = primaryKeyExtractor;
+			this.objectComparer = objectComparer;
 		}
 
 		public void Execute(Action action)
@@ -30,16 +37,24 @@ namespace Raven.Studio.Infrastructure
 		{
 			Execute(() =>
 			{
-				var toAdd = items.Except(this, comparer).ToArray();
-				var toRemove = this.Except(items, comparer).ToArray();
+				var toAdd = items.Except(this, objectComparer).ToList();
+				var toRemove = this.Except(items, objectComparer).ToArray();
 
-				foreach (var remove in toRemove)
+				for (int i = 0; i < toRemove.Length; i++)
 				{
-					Remove(remove);
+					var remove = toRemove[i];
+					var add = toAdd.FirstOrDefault(x => x.Equals(primaryKeyExtractor(remove)));
+					if (add == null)
+					{
+						Remove(remove);
+						continue;
+					}
+					remove = add;
+					toAdd.Remove(remove);
 				}
-
-				foreach (var add in toAdd)
+				for (int i = 0; i < toAdd.Count; i++)
 				{
+					var add = toAdd[i];
 					Add(add);
 				}
 			});

@@ -16,7 +16,7 @@ namespace Raven.Studio.Models
 
 		private ApplicationModel()
 		{
-			Notifications = new BindableCollection<Notification>(new PrimaryKeyComparer<Notification>(x=>x.Message));
+			Notifications = new BindableCollection<Notification>(x=>x.Message);
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel>();
 		}

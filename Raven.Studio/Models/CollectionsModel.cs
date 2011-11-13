@@ -13,7 +13,7 @@ namespace Raven.Studio.Models
 
 		static CollectionsModel()
 		{
-			Collections = new BindableCollection<CollectionModel>(new PrimaryKeyComparer<CollectionModel>(model => model.Name));
+			Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
 			SelectedCollection = new Observable<CollectionModel>();
 
 			SelectedCollection.PropertyChanged += (sender, args) =>

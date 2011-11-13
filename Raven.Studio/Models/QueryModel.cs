@@ -33,7 +33,7 @@ namespace Raven.Studio.Models
 
 		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
-		private readonly BindableCollection<string> fields = new BindableCollection<string>(new PrimaryKeyComparer<string>(x => x));
+		private readonly BindableCollection<string> fields = new BindableCollection<string>(x => x);
 		private readonly Dictionary<string, List<string>> fieldsTermsDictionary = new Dictionary<string, List<string>>();
 
 		private static string lastQuery;
