@@ -1,6 +1,7 @@
 ﻿
 namespace Raven.Tests.Json
 {
+	using System.Collections.Generic;
 	using Xunit;
 
 	public class JsonNetBugsTests : LocalClientTest
@@ -64,5 +65,74 @@ namespace Raven.Tests.Json
 			}
 		}
 #endif
+
+		class ObjectWithPrivateField
+		{
+			private int Value;
+
+			public void Set()
+			{
+				this.Value = 10;
+			}
+
+			public int Get()
+			{
+				return this.Value;
+			}
+		}
+
+		[Fact]
+		public void can_Serialize_object_with_private_field()
+		{
+			ObjectWithPrivateField obj = new ObjectWithPrivateField();
+			obj.Set();
+
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(obj, "test");
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var result = session.Load<ObjectWithPrivateField>("test");
+					Assert.NotNull(result);
+					Assert.Equal(obj.Get(), result.Get());
+				}
+			}
+		}
+
+
+
+		class CollectionOfStrings : List<string>
+		{
+
+		}
+
+		[Fact]
+		public void can_serialize_object_is_collection()
+		{
+			CollectionOfStrings obj = new CollectionOfStrings();
+			obj.Add("foo");
+
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(obj, "test");
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var result = session.Load<CollectionOfStrings>("test");
+					Assert.NotNull(result);
+					Assert.Equal(1, result.Count);
+					Assert.Equal("foo", result[0]);
+				}
+			}
+		}		
 	}
 }
