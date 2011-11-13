@@ -495,15 +495,15 @@ namespace Raven.Database.Indexing
 					{
 						clonedNumericField.SetIntValue((int)numericValue);
 					}
-					if (numericValue is long)
+					else if (numericValue is long)
 					{
 						clonedNumericField.SetLongValue((long)numericValue);
 					}
-					if (numericValue is double)
+					else if (numericValue is double)
 					{
 						clonedNumericField.SetDoubleValue((double)numericValue);
 					}
-					if (numericValue is float)
+					else if (numericValue is float)
 					{
 						clonedNumericField.SetFloatValue((float)numericValue);
 					}
@@ -537,8 +537,9 @@ namespace Raven.Database.Indexing
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
-			readonly HashSet<RavenJObject> alreadyReturned;
+			private readonly HashSet<RavenJObject> alreadyReturned;
 			private readonly FieldsToFetch fieldsToFetch;
+			private readonly HashSet<string> documentsAlreadySeenInPreviousPage = new HashSet<string>();
 			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
 
 			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
@@ -585,7 +586,7 @@ namespace Raven.Database.Indexing
 							TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 							indexQuery.TotalSize.Value = search.TotalHits;
 
-							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start);
+							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
 
 							for (int i = start; i < search.TotalHits && (i - start) < pageSize; i++)
 							{
@@ -612,18 +613,32 @@ namespace Raven.Database.Indexing
 			{
 				if (shouldIncludeInResults(indexQueryResult) == false)
 					return false;
+				if (documentsAlreadySeenInPreviousPage.Contains(indexQueryResult.Key))
+					return false;
 				if (fieldsToFetch.IsDistinctQuery && alreadyReturned.Add(indexQueryResult.Projection) == false)
 						return false;
 				return true;
 			}
 
-			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start)
+			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start, int pageSize)
 			{
+				var min = Math.Min(start, search.TotalHits);
+
+				// we are paging, we need to check that we don't have duplicates in the previous page
+				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
+				if(fieldsToFetch.IsProjection == false && start - pageSize >= 0 && start < search.TotalHits) 
+				{
+					for (int i = start - pageSize; i < min; i++)
+					{
+						var document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+						documentsAlreadySeenInPreviousPage.Add(document.Get(Constants.DocumentIdFieldName));
+					}
+				}
+
 				if (fieldsToFetch.IsDistinctQuery == false) 
 					return;
 
 				// add results that were already there in previous pages
-				var min = Math.Min(start, search.TotalHits);
 				for (int i = 0; i < min; i++)
 				{
 					Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);

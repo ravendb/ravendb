@@ -87,19 +87,6 @@ namespace Raven.Database.Linq
 			Indexes = new Dictionary<string, FieldIndexing>();
 		}
 
-		protected IEnumerable<dynamic> Project(object self, Func<dynamic, dynamic> func)
-		{
-			if (self == null)
-				yield break;
-			if (self is IEnumerable == false || self is string)
-				throw new InvalidOperationException("Attempted to enumerate over " + self.GetType().Name);
-
-			foreach (var item in ((IEnumerable)self))
-			{
-				yield return func(item);
-			}
-		}
-
 		protected IEnumerable<dynamic> Hierarchy(object source, string name)
 		{
 			var djo = (DynamicJsonObject)source;
@@ -131,7 +118,7 @@ namespace Raven.Database.Linq
 				item = func(item);
 			}
 
-			return new DynamicJsonObject.DynamicList(resultsOrdered.ToArray());
+			return new DynamicList(resultsOrdered.ToArray());
 		}
 
 		public void AddQueryParameterForMap(string field)

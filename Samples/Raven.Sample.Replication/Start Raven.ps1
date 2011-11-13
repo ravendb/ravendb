@@ -7,5 +7,6 @@
 Recreate-RavenDB Servers/Shard1 @("Raven.Bundles.Replication")
 Recreate-RavenDB Servers/Shard2 @("Raven.Bundles.Replication")
 
-start .\Servers\Shard1\Raven.Server.exe --set=Raven/Port==8080
-start .\Servers\Shard2\Raven.Server.exe --set=Raven/Port==8081
+
+start .\Servers\Shard1\Raven.Server.exe --set=Raven/Port==8080,--set=Raven/AnonymousAccess==All
+start .\Servers\Shard2\Raven.Server.exe --set=Raven/Port==8081,--set=Raven/AnonymousAccess==All

@@ -56,14 +56,6 @@ namespace Raven.Client.Indexes
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
-
-		/// <summary>
-		/// Allows to use lambdas over dynamic
-		/// </summary>
-		protected IEnumerable<dynamic> Project<T>(IEnumerable<T> self, Func<T, object> projection)
-		{
-			throw new NotSupportedException("This can only be run on the server side");
-		}
 #endif
 
 #if !SILVERLIGHT

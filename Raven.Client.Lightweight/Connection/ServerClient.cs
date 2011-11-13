@@ -138,6 +138,15 @@ namespace Raven.Client.Connection
 			});
 		}
 
+		/// <summary>
+		/// Allow to query whatever we are in failover mode or not
+		/// </summary>
+		/// <returns></returns>
+		public bool InFailoverMode()
+		{
+			return replicationInformer.GetFailureCount(url) > 0;
+		}
+
 		private T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
@@ -1109,6 +1118,18 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					Suggestions = ((RavenJArray) json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
 				};
 			});
+		}
+
+		/// <summary>
+		/// Retrieve the statistics for the database
+		/// </summary>
+		public DatabaseStatistics GetStatistics()
+		{
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,url +"/stats", "GET", credentials, convention);
+
+			var response = httpJsonRequest.ReadResponseString();
+			var jo = RavenJObject.Parse(response);
+			return jo.Deserialize<DatabaseStatistics>(convention);
 		}
 
 		/// <summary>
