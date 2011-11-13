@@ -10,7 +10,7 @@
 
 	<UserControl.Resources>
 		<DataTemplate x:Key="DatabaseItemTemplate">
-			<Grid>
+			<Grid Background="Transparent">
 				<i:Interaction.Behaviors>
 					<Behaviors:DoubleClickBehavior Command="{StaticResource ChangeDatabaseCommand}"
 												   CommandParameter="{Binding Name}" />

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Studio.Infrastructure;
@@ -7,18 +9,12 @@ namespace Raven.Studio.Models
 {
 	public class IndexesModel : ViewModel
 	{
-		public BindableCollection<string> Indexes { get; private set; }
-		public BindableCollection<string> TempIndexes { get; private set; }
-		public BindableCollection<string> AutoIndexes { get; private set; }
-		public BindableCollection<string> OtherIndexes { get; private set; }
+        public BindableCollection<IndexListItemModel> GroupedIndexes { get; private set; }
 
 		public IndexesModel()
 		{
 			ModelUrl = "/indexes";
-			Indexes = new BindableCollection<string>(new PrimaryKeyComparer<string>(name => name));
-			TempIndexes = new BindableCollection<string>(new PrimaryKeyComparer<string>(name => name));
-			AutoIndexes = new BindableCollection<string>(new PrimaryKeyComparer<string>(name => name));
-			OtherIndexes = new BindableCollection<string>(new PrimaryKeyComparer<string>(name => name));
+            GroupedIndexes = new BindableCollection<IndexListItemModel>(EqualityComparer<IndexListItemModel>.Default);
 			ForceTimerTicked();
 		}
 
@@ -26,14 +22,42 @@ namespace Raven.Studio.Models
 		{
 			return DatabaseCommands
 				.GetIndexNamesAsync(0, 256)
-				.ContinueOnSuccess(indexes =>
-								   {
-									   Indexes.Match(indexes);
-									   TempIndexes.Match(indexes.Where(name => name.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase)).ToList());
-									   AutoIndexes.Match(indexes.Where(name => name.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)).ToList());
-									   OtherIndexes.Match(indexes.Where(name => name.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase) == false &&
-										   name.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase) == false).ToList());
-								   });
+				.ContinueOnSuccess(UpdateGroupedIndexList);
 		}
+
+	    private void UpdateGroupedIndexList(IList<string> indexes)
+	    {
+	        var indexGroups = from index in indexes
+	                          let groupDetails = GetIndexGroup(index)
+                              let indexGroup = groupDetails.Item1
+                              let indexOrder = groupDetails.Item2
+                              orderby indexOrder
+	                          group index by indexGroup;
+
+	        var indexesAndGroupHeaders =
+	            indexGroups.SelectMany(
+	                group => (new IndexListItemModel[] {new IndexGroupHeader() {Name = group.Key}})
+	                             .Concat(
+	                                 group.Select(index => new IndexModel() {IndexName = index}).Cast<IndexListItemModel>()));
+
+	        GroupedIndexes.Set(indexesAndGroupHeaders);
+	    }
+
+        private Tuple<string,int> GetIndexGroup(string indexName)
+        {
+            if (indexName.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return Tuple.Create("Temp Indexes", 1);
+            }
+            else if (indexName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return Tuple.Create("Auto Indexes", 2);
+            }
+            else
+            {
+                return Tuple.Create("Other Indexes", 3);
+            }
+        }
+
 	}
 }
