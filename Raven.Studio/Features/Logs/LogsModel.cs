@@ -16,7 +16,7 @@ namespace Raven.Studio.Features.Logs
 		public LogsModel()
 		{
 			ModelUrl = "/logs";
-			Logs = new BindableCollection<LogItem>(new PrimaryKeyComparer<LogItem>(log => log.TimeStamp));
+			Logs = new BindableCollection<LogItem>(log => log.TimeStamp);
 		}
 
 		protected override Task LoadedTimerTickedAsync()

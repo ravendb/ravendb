@@ -14,7 +14,7 @@ namespace Raven.Studio.Models
 		public IndexesModel()
 		{
 			ModelUrl = "/indexes";
-            GroupedIndexes = new BindableCollection<IndexListItemModel>(EqualityComparer<IndexListItemModel>.Default);
+			GroupedIndexes = new BindableCollection<IndexListItemModel>(x => x);
 			ForceTimerTicked();
 		}
 

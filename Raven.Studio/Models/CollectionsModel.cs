@@ -7,20 +7,24 @@ namespace Raven.Studio.Models
 {
 	public class CollectionsModel : ViewModel
 	{
-		private string initialSelectedDatabaseName;
+		private static string initialSelectedDatabaseName;
 		public static BindableCollection<CollectionModel> Collections { get; set; }
 		public static Observable<CollectionModel> SelectedCollection { get; set; }
 
 		static CollectionsModel()
 		{
-			Collections = new BindableCollection<CollectionModel>(new PrimaryKeyComparer<CollectionModel>(model => model.Name));
+			Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
 			SelectedCollection = new Observable<CollectionModel>();
 
 			SelectedCollection.PropertyChanged += (sender, args) =>
 			                                      	{
 			                                      		var urlParser = new UrlParser(UrlUtil.Url);
-			                                      		var name = SelectedCollection.Value.Name;
-			                                      		if (urlParser.GetQueryParam("name") != name)
+			                                      		var collection = SelectedCollection.Value;
+			                                      		if (collection == null)
+			                                      			return;
+														var name = collection.Name;
+			                                      		initialSelectedDatabaseName = name;
+														if (urlParser.GetQueryParam("name") != name)
 			                                      		{
 			                                      			urlParser.SetQueryParam("name", name);
 			                                      			UrlUtil.Navigate(urlParser.BuildUrl());
@@ -36,8 +40,7 @@ namespace Raven.Studio.Models
 		public override void LoadModelParameters(string parameters)
 		{
 			var name = new UrlParser(parameters).GetQueryParam("name");
-			if (string.IsNullOrEmpty(null) == false)
-				initialSelectedDatabaseName = name;
+			initialSelectedDatabaseName = name;
 		}
 
 		protected override Task TimerTickedAsync()
@@ -53,15 +56,20 @@ namespace Raven.Studio.Models
 				Name = col.Name,
 				Count = col.Count
 			}).ToArray();
-			Collections.Match(collectionModels);
 
-			if (initialSelectedDatabaseName != null)
+			Collections.Match(collectionModels, AfterUpdate);
+		}
+
+		private void AfterUpdate()
+		{
+			if (initialSelectedDatabaseName != null &&
+				(SelectedCollection.Value == null || SelectedCollection.Value.Name != initialSelectedDatabaseName || Collections.Contains(SelectedCollection.Value) == false))
 			{
-				SelectedCollection.Value = collectionModels.Where(x => x.Name == initialSelectedDatabaseName).FirstOrDefault();
-				initialSelectedDatabaseName = null;
+				SelectedCollection.Value = Collections.FirstOrDefault(x => x.Name == initialSelectedDatabaseName);
 			}
+
 			if (SelectedCollection.Value == null)
-				SelectedCollection.Value = collectionModels.FirstOrDefault();
+				SelectedCollection.Value = Collections.FirstOrDefault();
 		}
 	}
 }

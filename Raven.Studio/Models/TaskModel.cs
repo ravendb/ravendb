@@ -7,7 +7,7 @@ namespace Raven.Studio.Models
     {
         public TaskModel()
         {
-            Output = new BindableCollection<string>(new PrimaryKeyComparer<string>(x => x));
+            Output = new BindableCollection<string>(x => x);
         }
 
         private string _name;

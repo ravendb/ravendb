@@ -13,7 +13,7 @@ namespace Raven.Studio.Models
 		public DocumentsModel(Func<DocumentsModel, Task> fetchDocuments)
 		{
 			this.fetchDocuments = fetchDocuments;
-			Documents = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(document => document.Id));
+			Documents = new BindableCollection<ViewableDocument>(document => document.Id, new KeysComparer<ViewableDocument>(document => document.LastModified));
 		}
 
 		protected override Task TimerTickedAsync()

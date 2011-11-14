@@ -11,6 +11,17 @@ namespace Raven.Studio.Models
 {
 	public class QueryModel : ViewModel
 	{
+        private Observable<bool> isSpatial;
+        public bool IsSpatial
+        {
+            get { return isSpatial.Value; }
+            set
+            {
+                isSpatial.Value = value;
+                OnPropertyChanged();
+            }
+        }
+
 		private string indexName;
 		public string IndexName
 		{
@@ -33,7 +44,7 @@ namespace Raven.Studio.Models
 
 		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
-		private readonly BindableCollection<string> fields = new BindableCollection<string>(new PrimaryKeyComparer<string>(x => x));
+		private readonly BindableCollection<string> fields = new BindableCollection<string>(x => x);
 		private readonly Dictionary<string, List<string>> fieldsTermsDictionary = new Dictionary<string, List<string>>();
 
 		private static string lastQuery;
@@ -45,6 +56,7 @@ namespace Raven.Studio.Models
 
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
+            isSpatial = new Observable<bool>();
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();

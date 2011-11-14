@@ -4,18 +4,26 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Threading;
 using System.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Studio.Infrastructure
 {
-	public class BindableCollection<T> : ObservableCollection<T>
+	public class BindableCollection<T> : ObservableCollection<T> where T : class
 	{
 		private readonly Dispatcher init = Deployment.Current.Dispatcher;
 
-		private IEqualityComparer<T> comparer;
+		private readonly Func<T, object> primaryKeyExtractor;
+		private readonly KeysComparer<T> objectComparer;
 
-		public BindableCollection(IEqualityComparer<T> comparer)
+		public BindableCollection(Func<T, object> primaryKeyExtractor, KeysComparer<T> objectComparer = null)
 		{
-			this.comparer = comparer;
+			if (objectComparer == null)
+				objectComparer = new KeysComparer<T>(primaryKeyExtractor);
+			else
+				objectComparer.Add(primaryKeyExtractor);
+			
+			this.primaryKeyExtractor = primaryKeyExtractor;
+			this.objectComparer = objectComparer;
 		}
 
 		public void Execute(Action action)
@@ -26,23 +34,39 @@ namespace Raven.Studio.Infrastructure
 				init.InvokeAsync(action);
 		}
 
-		public void Match(ICollection<T> items)
+		public void Match(ICollection<T> items, Action afterUpdate = null)
 		{
 			Execute(() =>
 			{
-				var toAdd = items.Except(this, comparer).ToArray();
-				var toRemove = this.Except(items, comparer).ToArray();
+				var toAdd = items.Except(this, objectComparer).ToList();
+				var toRemove = this.Except(items, objectComparer).ToArray();
 
-				foreach (var remove in toRemove)
+				for (int i = 0; i < toRemove.Length; i++)
 				{
-					Remove(remove);
+					var remove = toRemove[i];
+					var add = toAdd.FirstOrDefault(x => Equals(ExtractKey(x), ExtractKey(remove)));
+					if (add == null)
+					{
+						Remove(remove);
+						continue;
+					}
+					SetItem(Items.IndexOf(remove), add);
+					toAdd.Remove(add);
 				}
-
 				foreach (var add in toAdd)
 				{
 					Add(add);
 				}
+
+				if (afterUpdate != null) afterUpdate();
 			});
+
+			if (afterUpdate != null) afterUpdate();
+		}
+
+		private object ExtractKey(T obj)
+		{
+			return primaryKeyExtractor(obj) ?? obj;
 		}
 
 		public void Set(IEnumerable<T> enumerable)

@@ -23,9 +23,9 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/indexes/";
 			index = new IndexDefinition();
-			Maps = new BindableCollection<MapItem>(new PrimaryKeyComparer<MapItem>(x => x.Text));
+			Maps = new BindableCollection<MapItem>(x => x.Text);
 			Maps.Add(new MapItem()); // We must have at least one map item in a new index.
-			Fields = new BindableCollection<FieldProperties>(new PrimaryKeyComparer<FieldProperties>(field => field.Name));
+			Fields = new BindableCollection<FieldProperties>(field => field.Name);
 
 			statistics = Database.Value.Statistics;
 			statistics.PropertyChanged += (sender, args) => OnPropertyChanged("ErrorsCount");
