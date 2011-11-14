@@ -22,8 +22,9 @@ namespace Raven.Studio.Models
 			                                      		var collection = SelectedCollection.Value;
 			                                      		if (collection == null)
 			                                      			return;
-			                                      		var name = collection.Name;
-			                                      		if (urlParser.GetQueryParam("name") != name)
+														var name = collection.Name;
+			                                      		initialSelectedDatabaseName = name;
+														if (urlParser.GetQueryParam("name") != name)
 			                                      		{
 			                                      			urlParser.SetQueryParam("name", name);
 			                                      			UrlUtil.Navigate(urlParser.BuildUrl());
@@ -56,16 +57,19 @@ namespace Raven.Studio.Models
 				Count = col.Count
 			}).ToArray();
 
-			initialSelectedDatabaseName = SelectedCollection.Value == null ? null : SelectedCollection.Value.Name;
-			Collections.Match(collectionModels);
+			Collections.Match(collectionModels, AfterUpdate);
+		}
 
-			if (initialSelectedDatabaseName != null)
+		private void AfterUpdate()
+		{
+			if (initialSelectedDatabaseName != null &&
+				(SelectedCollection.Value == null || SelectedCollection.Value.Name != initialSelectedDatabaseName || Collections.Contains(SelectedCollection.Value) == false))
 			{
-				SelectedCollection.Value = collectionModels.FirstOrDefault(x => x.Name == initialSelectedDatabaseName);
+				SelectedCollection.Value = Collections.FirstOrDefault(x => x.Name == initialSelectedDatabaseName);
 			}
 
 			if (SelectedCollection.Value == null)
-				SelectedCollection.Value = collectionModels.FirstOrDefault();
+				SelectedCollection.Value = Collections.FirstOrDefault();
 		}
 	}
 }

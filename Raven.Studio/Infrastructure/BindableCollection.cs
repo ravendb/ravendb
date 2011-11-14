@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Threading;
 using System.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -33,7 +34,7 @@ namespace Raven.Studio.Infrastructure
 				init.InvokeAsync(action);
 		}
 
-		public void Match(ICollection<T> items)
+		public void Match(ICollection<T> items, Action afterUpdate = null)
 		{
 			Execute(() =>
 			{
@@ -43,14 +44,7 @@ namespace Raven.Studio.Infrastructure
 				for (int i = 0; i < toRemove.Length; i++)
 				{
 					var remove = toRemove[i];
-					var add = toAdd.FirstOrDefault(x => Equals(ExtractKey(x), ExtractKey(remove)));
-					if (add == null)
-					{
-						Remove(remove);
-						continue;
-					}
-					SetItem(i, add);
-					toAdd.Remove(add);
+					Remove(remove);
 				}
 				for (int i = 0; i < toAdd.Count; i++)
 				{
@@ -58,6 +52,8 @@ namespace Raven.Studio.Infrastructure
 					Add(add);
 				}
 			});
+
+			if (afterUpdate != null) afterUpdate();
 		}
 
 		private object ExtractKey(T obj)
