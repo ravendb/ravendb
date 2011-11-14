@@ -7,7 +7,7 @@ namespace Raven.Studio.Models
 {
 	public class CollectionsModel : ViewModel
 	{
-		private string initialSelectedDatabaseName;
+		private static string initialSelectedDatabaseName;
 		public static BindableCollection<CollectionModel> Collections { get; set; }
 		public static Observable<CollectionModel> SelectedCollection { get; set; }
 
@@ -39,8 +39,7 @@ namespace Raven.Studio.Models
 		public override void LoadModelParameters(string parameters)
 		{
 			var name = new UrlParser(parameters).GetQueryParam("name");
-			if (string.IsNullOrEmpty(null) == false)
-				initialSelectedDatabaseName = name;
+			initialSelectedDatabaseName = name;
 		}
 
 		protected override Task TimerTickedAsync()
@@ -56,13 +55,15 @@ namespace Raven.Studio.Models
 				Name = col.Name,
 				Count = col.Count
 			}).ToArray();
+
+			initialSelectedDatabaseName = SelectedCollection.Value == null ? null : SelectedCollection.Value.Name;
 			Collections.Match(collectionModels);
 
 			if (initialSelectedDatabaseName != null)
 			{
 				SelectedCollection.Value = collectionModels.FirstOrDefault(x => x.Name == initialSelectedDatabaseName);
-				initialSelectedDatabaseName = null;
 			}
+
 			if (SelectedCollection.Value == null)
 				SelectedCollection.Value = collectionModels.FirstOrDefault();
 		}
