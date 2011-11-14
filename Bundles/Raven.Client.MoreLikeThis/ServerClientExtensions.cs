@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text;
-using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Bundles.MoreLikeThis;
 using Raven.Client.Connection;
@@ -51,7 +50,7 @@ namespace Raven.Client.MoreLikeThis
         {
 			var cmd = advancedSession.DatabaseCommands as ServerClient;
 			if (cmd == null)
-				throw new NotImplementedException("Embedded client isn't supported");
+				throw new NotImplementedException("Embedded client isn't supported by the MoreLikeThis bundle");
 
 			var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
 
@@ -66,7 +65,6 @@ namespace Raven.Client.MoreLikeThis
 				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
-
 					var requestUri = GetRequestUri(index, documentId, fields, parameters);
 
 					var result = cmd.ExecuteGetRequest(requestUri);
@@ -90,7 +88,7 @@ namespace Raven.Client.MoreLikeThis
             var uri = new StringBuilder();
             uri.AppendFormat("/morelikethis/{0}/{1}", Uri.EscapeUriString(index), documentId);
             if (!hasParams) return uri.ToString();
-            uri.Append("?");
+            uri.Append('?');
             if (!String.IsNullOrEmpty(fields)) 
                 uri.AppendFormat("fields={0}&", fields);
             if (parameters != null)
