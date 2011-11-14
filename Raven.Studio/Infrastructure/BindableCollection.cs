@@ -60,6 +60,8 @@ namespace Raven.Studio.Infrastructure
 
 				if (afterUpdate != null) afterUpdate();
 			});
+
+			if (afterUpdate != null) afterUpdate();
 		}
 
 		private object ExtractKey(T obj)

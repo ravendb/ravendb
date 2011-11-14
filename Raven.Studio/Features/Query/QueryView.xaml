@@ -64,11 +64,29 @@
 					<RowDefinition Height="*" />
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
-				
-				<TextBlock Style="{StaticResource PanelTitle}"
-						   Text="Query" />
 
-				<Editors:QueryEditor x:Name="QueryEditor" Grid.Row="1"
+                <StackPanel>
+                    <TextBlock Style="{StaticResource PanelTitle}"
+                               Text="Query" />
+
+                    <CheckBox Content="Make spatial queries"
+                              IsChecked="{Binding IsSpatial, Mode=TwoWay}" />
+
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding IsSpatial,Mode=TwoWay,Converter={StaticResource VisibleWhenTrue}}">
+                        <TextBlock Text="Longitude:" />
+                        <TextBox Margin="5,0,5,0"
+                                 Width="100" />
+                        <TextBlock Text="Latitude:" />
+                        <TextBox Margin="5,0,5,0"
+                                 Width="100" />
+                        <TextBlock Text="Radios:" />
+                        <TextBox Margin="5,0,5,0"
+                                 Width="100" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Editors:QueryEditor x:Name="QueryEditor" Grid.Row="1"
 									 Text="{Binding Path=Query.Value, Mode=TwoWay}"
 									 CompletionProvider="{Binding Path=CompletionProvider.Value}">
 					<i:Interaction.Triggers>
