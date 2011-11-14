@@ -60,7 +60,7 @@ namespace Raven.Studio.Models
 
 			if (initialSelectedDatabaseName != null)
 			{
-				SelectedCollection.Value = collectionModels.Where(x => x.Name == initialSelectedDatabaseName).FirstOrDefault();
+				SelectedCollection.Value = collectionModels.FirstOrDefault(x => x.Name == initialSelectedDatabaseName);
 				initialSelectedDatabaseName = null;
 			}
 			if (SelectedCollection.Value == null)
