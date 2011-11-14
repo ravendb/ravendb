@@ -18,7 +18,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
-using Raven.Json.Linq;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Bundles.MoreLikeThis
@@ -49,17 +48,16 @@ namespace Raven.Bundles.MoreLikeThis
 
 		    var parameters = new MoreLikeThisQueryParameters
 		                         {
-                                     Boost = GetNullableBool(context.Request.QueryString.Get("boost")),
-                                     MaximumNumberOfTokensParsed = GetNullableInt(context.Request.QueryString.Get("maxNumTokens")),
-                                     MaximumQueryTerms = GetNullableInt(context.Request.QueryString.Get("maxQueryTerms")),
-                                     MaximumWordLength = GetNullableInt(context.Request.QueryString.Get("maxWordLen")),
-                                     MinimumDocumentFrequency = GetNullableInt(context.Request.QueryString.Get("minDocFreq")),
-                                     MinimumTermFrequency = GetNullableInt(context.Request.QueryString.Get("minTermFreq")),
-                                     MinimumWordLength = GetNullableInt(context.Request.QueryString.Get("minWordLen")),
-                                     StopWordsDocumentId = context.Request.QueryString.Get("stopWords")
+                                     Boost = context.Request.QueryString.Get("boost").ToNullableBool(),
+                                     MaximumNumberOfTokensParsed = context.Request.QueryString.Get("maxNumTokens").ToNullableInt(),
+                                     MaximumQueryTerms = context.Request.QueryString.Get("maxQueryTerms").ToNullableInt(),
+									 MaximumWordLength = context.Request.QueryString.Get("maxWordLen").ToNullableInt(),
+									 MinimumDocumentFrequency = context.Request.QueryString.Get("minDocFreq").ToNullableInt(),
+									 MinimumTermFrequency = context.Request.QueryString.Get("minTermFreq").ToNullableInt(),
+									 MinimumWordLength = context.Request.QueryString.Get("minWordLen").ToNullableInt(),
+                                     StopWordsDocumentId = context.Request.QueryString.Get("stopWords"),
 		                         };
             
-
 			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
 			{
@@ -67,7 +65,6 @@ namespace Raven.Bundles.MoreLikeThis
 				context.WriteJson(new {Error = "The index " + indexName + " cannot be found"});
 				return;
 			}
-
 
 			PerformSearch(context, indexName, fieldNames, documentId, indexDefinition, parameters);
 		}
@@ -90,7 +87,7 @@ namespace Raven.Bundles.MoreLikeThis
 
 			    AssignParameters(mlt, parameters);
 
-                if (parameters.StopWordsDocumentId != null)
+                if (!string.IsNullOrWhiteSpace(parameters.StopWordsDocumentId))
                 {
                     var stopWordsDoc = Database.Get(parameters.StopWordsDocumentId, null);
                     if (stopWordsDoc == null)
@@ -116,14 +113,12 @@ namespace Raven.Bundles.MoreLikeThis
 				var tsdc = TopScoreDocCollector.create(context.GetPageSize(Database.Configuration.MaxPageSize), true);
 				searcher.Search(mltQuery, tsdc);
 				var hits = tsdc.TopDocs().ScoreDocs;
-
-				var documentIds = hits.Select(hit => searcher.Doc(hit.doc).Get(Constants.DocumentIdFieldName))
-					.Distinct();
+				var documentIds = hits.Select(hit => searcher.Doc(hit.doc).Get(Constants.DocumentIdFieldName)).Distinct();
 
 				var jsonDocuments =
 					documentIds
-						.Where(docId => string.Equals(docId,documentId, StringComparison.InvariantCultureIgnoreCase) == false)
-						.Select(docId => Database.Get(docId, null))
+						.Where(resultDocId => string.Equals(resultDocId, documentId, StringComparison.InvariantCultureIgnoreCase) == false)
+						.Select(resultDocId => Database.Get(resultDocId, null))
 						.Where(it => it != null)
 						.ToArray();
 
@@ -145,7 +140,6 @@ namespace Raven.Bundles.MoreLikeThis
 				}
 
 				Guid computedEtag;
-
 				using (var md5 = MD5.Create())
 				{
 					var computeHash = md5.ComputeHash(includedEtags.ToArray());
@@ -163,40 +157,30 @@ namespace Raven.Bundles.MoreLikeThis
 			}
 		}
 
-        private static int? GetNullableInt(string value)
-        {
-            if (value == null) return null;
-            return int.Parse(value);
-        }
+		private static void AssignParameters(Similarity.Net.MoreLikeThis mlt, MoreLikeThisQueryParameters parameters)
+		{
+			if (parameters.Boost != null) mlt.SetBoost(parameters.Boost.Value);
+			if (parameters.MaximumNumberOfTokensParsed != null)
+				mlt.SetMaxNumTokensParsed(parameters.MaximumNumberOfTokensParsed.Value);
+			if (parameters.MaximumQueryTerms != null) mlt.SetMaxQueryTerms(parameters.MaximumQueryTerms.Value);
+			if (parameters.MaximumWordLength != null) mlt.SetMaxWordLen(parameters.MaximumWordLength.Value);
+			if (parameters.MinimumDocumentFrequency != null) mlt.SetMinDocFreq(parameters.MinimumDocumentFrequency.Value);
+			if (parameters.MinimumTermFrequency != null) mlt.SetMinTermFreq(parameters.MinimumTermFrequency.Value);
+			if (parameters.MinimumWordLength != null) mlt.SetMinWordLen(parameters.MinimumWordLength.Value);
+		}
 
-        private static bool? GetNullableBool(string value)
-        {
-            if (value == null) return null;
-            return true;
-        }
+		private static Dictionary<string, Analyzer> GetAnalyzers(IndexDefinition indexDefinition, IEnumerable<string> fieldNames)
+		{
+			var dictionary = new Dictionary<string, Analyzer>();
+			foreach (var fieldName in fieldNames)
+			{
+				dictionary.Add(fieldName, indexDefinition.GetAnalyzer(fieldName));
+			}
 
-	    private void AssignParameters(Similarity.Net.MoreLikeThis mlt, MoreLikeThisQueryParameters parameters)
-	    {
-	        if(parameters.Boost != null) mlt.SetBoost(parameters.Boost.Value);
-            if(parameters.MaximumNumberOfTokensParsed!= null) mlt.SetMaxNumTokensParsed(parameters.MaximumNumberOfTokensParsed.Value);
-            if(parameters.MaximumQueryTerms != null) mlt.SetMaxQueryTerms(parameters.MaximumQueryTerms.Value);
-            if(parameters.MaximumWordLength != null) mlt.SetMaxWordLen(parameters.MaximumWordLength.Value);
-            if(parameters.MinimumDocumentFrequency != null) mlt.SetMinDocFreq(parameters.MinimumDocumentFrequency.Value);
-            if(parameters.MinimumTermFrequency != null) mlt.SetMinTermFreq(parameters.MinimumTermFrequency.Value);
-            if(parameters.MinimumWordLength != null) mlt.SetMinWordLen(parameters.MinimumWordLength.Value);
-	    }
+			return dictionary;
+		}
 
-	    private static Dictionary<string, Analyzer> GetAnalyzers(IndexDefinition indexDefinition, IEnumerable<string> fieldNames)
-	    {
-	        var dictionary = new Dictionary<string, Analyzer>();
-	        foreach (var fieldName in fieldNames)
-	        {
-	            dictionary.Add(fieldName, indexDefinition.GetAnalyzer(fieldName));
-	        }
-	        return dictionary;
-	    }
-
-	    private static string[] GetFieldNames(IndexReader indexReader)
+		private static string[] GetFieldNames(IndexReader indexReader)
 	    {
             var fields = indexReader.GetFieldNames(IndexReader.FieldOption.INDEXED);
             return fields.Where(x => x != Constants.DocumentIdFieldName).ToArray();
