@@ -2,6 +2,7 @@
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
+using Raven.Bundles.MoreLikeThis;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;

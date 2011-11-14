@@ -1,6 +1,6 @@
 ﻿namespace Raven.Bundles.MoreLikeThis
 {
-    class MoreLikeThisQueryParameters
+    public class MoreLikeThisQueryParameters
     {
         public const int DefaultMaximumNumberOfTokensParsed = 5000;
         public const int DefaultMinimumTermFrequency = 2;

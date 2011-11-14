@@ -2,7 +2,7 @@
 
 namespace Raven.Bundles.MoreLikeThis
 {
-    class StopWordsSetup
+    public class StopWordsSetup
     {
         public string Id { get; set; }
         public List<string> StopWords { get; set; } 
