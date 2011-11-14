@@ -11,13 +11,13 @@ namespace Raven.Studio.Models
 {
 	public class QueryModel : ViewModel
 	{
-		private Observable<bool> isSpatial;
+		private bool isSpatial;
 		public bool IsSpatial
 		{
-			get { return isSpatial.Value; }
+			get { return isSpatial; }
 			set
 			{
-				isSpatial.Value = value;
+				isSpatial = value;
 				OnPropertyChanged();
 			}
 		}
@@ -56,7 +56,6 @@ namespace Raven.Studio.Models
 
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
-			isSpatial = new Observable<bool>();
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
