@@ -117,11 +117,40 @@ namespace Raven.Json.Linq
 
 			if (TokenType == JsonToken.Null)
 				return null;
-			if (TokenType == JsonToken.Bytes)
-				return (byte[]) Value;
+			switch (TokenType)
+			{
+				case JsonToken.Bytes:
+					return (byte[]) Value;
+				case JsonToken.StartObject:
+					// maybe it is an array of bytes serialized with TypeNameHandling.All
+					Read(); // read the property name
+					if(!Equals(Value, "$type"))
+					{
+						throw new JsonReaderException(
+							"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture,JsonToken.StartObject));
+					}
+					Read(); // reading the byte array
+					if (Value == null || !Equals(Value, "System.Byte[], mscorlib"))
+					{
+						throw new JsonReaderException(
+							"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, JsonToken.StartObject));
+					}
+					Read(); // read the $value property
+					if (!Equals(Value, "$value"))
+					{
+						throw new JsonReaderException(
+							"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, JsonToken.StartObject));
+					}
+					Read(); // read the value
+					return (byte[])Value;
+					break;
+				default:
+					throw new JsonReaderException(
+						"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+			}
 
-			throw new JsonReaderException(
-				"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+
+			
 		}
 
 		public override decimal? ReadAsDecimal()
