@@ -44,11 +44,17 @@ namespace Raven.Studio.Infrastructure
 				for (int i = 0; i < toRemove.Length; i++)
 				{
 					var remove = toRemove[i];
-					Remove(remove);
+					var add = toAdd.FirstOrDefault(x => Equals(ExtractKey(x), ExtractKey(remove)));
+					if (add == null)
+					{
+						Remove(remove);
+						continue;
+					}
+					SetItem(Items.IndexOf(remove), add);
+					toAdd.Remove(add);
 				}
-				for (int i = 0; i < toAdd.Count; i++)
+				foreach (var add in toAdd)
 				{
-					var add = toAdd[i];
 					Add(add);
 				}
 
