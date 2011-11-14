@@ -24,10 +24,6 @@ namespace Raven.Bundles.MoreLikeThis
 {
 	public class MoreLikeThisResponder : RequestResponder
 	{
-        //private readonly Analyzer DEFAULT_ANALYZER = new StandardAnalyzer(Version.LUCENE_29);
-
-        //private readonly Analyzer DEFAULT_ANALYZER = new WhitespaceAnalyzer();
-
 		public override string UrlPattern
 		{
 			get { return @"^/morelikethis/([\w\-_]+)/(.+)"; } // /morelikethis/(index-name)/(ravendb-document-id)
