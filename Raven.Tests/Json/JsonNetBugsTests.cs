@@ -1,4 +1,8 @@
 ﻿
+using System.Reflection;
+using Newtonsoft.Json.Serialization;
+using Raven.Client.Document;
+
 namespace Raven.Tests.Json
 {
 	using System.Collections.Generic;
@@ -25,7 +29,6 @@ namespace Raven.Tests.Json
 					session.Store(data, "test");
 					session.SaveChanges();
 				}
-
 				using (var session = store.OpenSession())
 				{
 					var result = session.Load<ObjectyWithByteArray>("test");
@@ -34,37 +37,6 @@ namespace Raven.Tests.Json
 				}
 			}
 		}
-
-#if !NET_3_5
-		class ObjectWithConcurentDictionary
-		{
-			public System.Collections.Concurrent.ConcurrentDictionary<string, string> Data { get; set; }
-		}
-		
-		[Fact]
-		public void cal_serialize_object_with_concurentdictionary()
-		{
-			ObjectWithConcurentDictionary data = new ObjectWithConcurentDictionary
-			{
-				Data = new System.Collections.Concurrent.ConcurrentDictionary<string, string>()
-			};
-
-			using (var store = NewDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(data, "test");
-					session.SaveChanges();
-				}
-
-				using (var session = store.OpenSession())
-				{
-					var result = session.Load<ObjectWithConcurentDictionary>("test");
-					Assert.NotNull(result);
-				}
-			}
-		}
-#endif
 
 		class ObjectWithPrivateField
 		{
@@ -89,6 +61,10 @@ namespace Raven.Tests.Json
 
 			using (var store = NewDocumentStore())
 			{
+				store.Conventions.JsonContractResolver = new DefaultContractResolver(true)
+				{
+					DefaultMembersSearchFlags = BindingFlags.NonPublic|BindingFlags.Public|BindingFlags.Instance
+				};
 				using (var session = store.OpenSession())
 				{
 					session.Store(obj, "test");
@@ -103,36 +79,5 @@ namespace Raven.Tests.Json
 				}
 			}
 		}
-
-
-
-		class CollectionOfStrings : List<string>
-		{
-
-		}
-
-		[Fact]
-		public void can_serialize_object_is_collection()
-		{
-			CollectionOfStrings obj = new CollectionOfStrings();
-			obj.Add("foo");
-
-			using (var store = NewDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(obj, "test");
-					session.SaveChanges();
-				}
-
-				using (var session = store.OpenSession())
-				{
-					var result = session.Load<CollectionOfStrings>("test");
-					Assert.NotNull(result);
-					Assert.Equal(1, result.Count);
-					Assert.Equal("foo", result[0]);
-				}
-			}
-		}		
 	}
 }
