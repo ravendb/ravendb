@@ -51,6 +51,8 @@ namespace Raven.Studio.Infrastructure
 					var add = toAdd[i];
 					Add(add);
 				}
+
+				if (afterUpdate != null) afterUpdate();
 			});
 
 			if (afterUpdate != null) afterUpdate();
