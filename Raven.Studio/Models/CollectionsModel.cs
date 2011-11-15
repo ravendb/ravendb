@@ -93,7 +93,7 @@ namespace Raven.Studio.Models
 				SelectedCollection.Value = Collections.FirstOrDefault();
 		}
 
-		public static string ViewTitle
+		public string ViewTitle
 		{
 			get
 			{

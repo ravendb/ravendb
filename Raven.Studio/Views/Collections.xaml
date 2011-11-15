@@ -3,8 +3,7 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections"
-					 Infrastructure:ModelAttacher.AttachObservableModel="CollectionsModel"
-					 Title="{Binding ViewTitle}">
+					 Infrastructure:ModelAttacher.AttachObservableModel="CollectionsModel">
 
 	<Grid DataContext="{Binding Value}">
 		<Grid.RowDefinitions>

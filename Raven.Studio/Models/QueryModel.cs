@@ -139,5 +139,10 @@ namespace Raven.Studio.Models
 		public readonly PagerModel Pager = new PagerModel();
 
 		public Observable<DocumentsModel> DocumentsResult { get; private set; }
+
+		public string ViewTitle
+		{
+			get { return "Query: " + IndexName; }
+		}
 	}
 }
