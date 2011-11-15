@@ -4,7 +4,7 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections"
 					 Infrastructure:ModelAttacher.AttachObservableModel="CollectionsModel"
-					 Title="{Binding Path=Title}">
+					 Title="{Binding ViewTitle}">
 
 	<Grid DataContext="{Binding Value}">
 		<Grid.RowDefinitions>
