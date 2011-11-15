@@ -4,7 +4,7 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes"
 					 Infrastructure:ModelAttacher.AttachObservableModel="IndexDefinitionModel"
-					 Title="Index Page">
+					 Title="{Binding ViewTitle}">
 	<Grid DataContext="{Binding Value}">
 		<Indexes:EditIndexView />
 	</Grid>

@@ -129,7 +129,7 @@ namespace Raven.Studio.Models
 
 		public string ViewTitle
 		{
-			get { return createNewIndexMode ? "Create an Index" : Name; }
+			get { return createNewIndexMode ? "Create an Index" : "Index: " + Name; }
 		}
 
 		public string Reduce

@@ -19,26 +19,30 @@ namespace Raven.Studio.Models
 			Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
 			SelectedCollection = new Observable<CollectionModel>();
 
-			SelectedCollection.PropertyChanged += (sender, args) =>
-			                                      	{
-			                                      		var urlParser = new UrlParser(UrlUtil.Url);
-			                                      		var collection = SelectedCollection.Value;
-			                                      		if (collection == null)
-			                                      			return;
-														var name = collection.Name;
-			                                      		initialSelectedDatabaseName = name;
-														if (urlParser.GetQueryParam("name") != name)
-			                                      		{
-			                                      			urlParser.SetQueryParam("name", name);
-			                                      			urlParser.RemoveQueryParam("skip");
-			                                      			UrlUtil.Navigate(urlParser.BuildUrl());
-			                                      		}
-			                                      	};
+			SelectedCollection.PropertyChanged += (sender, args) => PutCollectionNameInTheUrl();
+		}
+
+		private static void PutCollectionNameInTheUrl()
+		{
+			var urlParser = new UrlParser(UrlUtil.Url);
+			var collection = SelectedCollection.Value;
+			if (collection == null)
+				return;
+			var name = collection.Name;
+			initialSelectedDatabaseName = name;
+			if (urlParser.GetQueryParam("name") != name)
+			{
+				urlParser.SetQueryParam("name", name);
+				urlParser.RemoveQueryParam("skip");
+				UrlUtil.Navigate(urlParser.BuildUrl());
+			}
 		}
 
 		public CollectionsModel()
 		{
+			OnPropertyChanged();
 			ModelUrl = "/collections";
+			SelectedCollection.PropertyChanged += (sender, args) => OnPropertyChanged("ViewTitle");
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -87,6 +91,16 @@ namespace Raven.Studio.Models
 
 			if (SelectedCollection.Value == null)
 				SelectedCollection.Value = Collections.FirstOrDefault();
+		}
+
+		public static string ViewTitle
+		{
+			get
+			{
+				if (SelectedCollection.Value == null || string.IsNullOrEmpty(SelectedCollection.Value.Name))
+					return "Collections";
+				return "Collection: " + SelectedCollection.Value.Name;
+			}
 		}
 	}
 }
