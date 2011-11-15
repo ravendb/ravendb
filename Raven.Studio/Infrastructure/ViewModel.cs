@@ -16,15 +16,7 @@ namespace Raven.Studio.Infrastructure
 		public ViewModel()
 		{
 			ModelUrlIgnoreList = new List<string>();
-			Database = new Observable<DatabaseModel>();
-			SetCurrentDatabase();
-			ApplicationModel.Current.Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => SetCurrentDatabase();
-		}
-
-		protected void SetCurrentDatabase()
-		{
 			ApplicationModel.Current.Server.Value.SetCurrentDatabase(new UrlParser(UrlUtil.Url));
-			Database.Value = ApplicationModel.Current.Server.Value.SelectedDatabase.Value;
 		}
 
 		public void LoadModel(string state)
@@ -50,7 +42,7 @@ namespace Raven.Studio.Infrastructure
 			return null;
 		}
 
-		public Observable<DatabaseModel> Database { get; private set; }
+		public Observable<DatabaseModel> Database {get { return ApplicationModel.Current.Server.Value.SelectedDatabase; }}
 
 		public IAsyncDatabaseCommands DatabaseCommands
 		{
