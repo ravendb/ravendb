@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
@@ -27,6 +28,7 @@ namespace Raven.Studio.Models
 														if (urlParser.GetQueryParam("name") != name)
 			                                      		{
 			                                      			urlParser.SetQueryParam("name", name);
+			                                      			urlParser.RemoveQueryParam("skip");
 			                                      			UrlUtil.Navigate(urlParser.BuildUrl());
 			                                      		}
 			                                      	};
@@ -39,7 +41,13 @@ namespace Raven.Studio.Models
 
 		public override void LoadModelParameters(string parameters)
 		{
-			var name = new UrlParser(parameters).GetQueryParam("name");
+			var urlParser = new UrlParser(parameters);
+			var name = urlParser.GetQueryParam("name");
+			if (SelectedCollection.Value != null && SelectedCollection.Value.Documents.Value != null)
+			{
+				SelectedCollection.Value.Documents.Value.Pager.SetSkip(urlParser);
+				ForceTimerTicked();
+			}
 			initialSelectedDatabaseName = name;
 		}
 

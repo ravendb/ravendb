@@ -11,16 +11,16 @@ namespace Raven.Studio.Models
 {
 	public class QueryModel : ViewModel
 	{
-        private Observable<bool> isSpatial;
-        public bool IsSpatial
-        {
-            get { return isSpatial.Value; }
-            set
-            {
-                isSpatial.Value = value;
-                OnPropertyChanged();
-            }
-        }
+		private bool isSpatial;
+		public bool IsSpatial
+		{
+			get { return isSpatial; }
+			set
+			{
+				isSpatial = value;
+				OnPropertyChanged();
+			}
+		}
 
 		private string indexName;
 		public string IndexName
@@ -56,7 +56,6 @@ namespace Raven.Studio.Models
 
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
-            isSpatial = new Observable<bool>();
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
@@ -65,7 +64,9 @@ namespace Raven.Studio.Models
 
 		public override void LoadModelParameters(string parameters)
 		{
-			IndexName = new UrlParser(parameters).Path.Trim('/');
+			var urlParser = new UrlParser(parameters);
+			IndexName = urlParser.Path.Trim('/');
+			Pager.SetSkip(urlParser);
 			GetFields();
 		}
 
