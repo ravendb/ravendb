@@ -69,9 +69,9 @@ namespace Raven.Studio.Infrastructure
 			QueryParams[name] = value.ToString();
 		}
 
-		public void RemoveQueryParam(string name)
+		public bool RemoveQueryParam(string name)
 		{
-			QueryParams.Remove(name);
+			return QueryParams.Remove(name);
 		}
 
 		public string BuildUrl()
