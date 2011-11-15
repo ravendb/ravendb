@@ -63,7 +63,7 @@ namespace Raven.Studio
 		private void ContentFrame_NavigationFailed(object sender, NavigationFailedEventArgs e)
 		{
 			e.Handled = true;
-			ChildWindow errorWin = new ErrorWindow(e.Uri);
+			ChildWindow errorWin = new ErrorWindow(e.Uri, e.Exception);
 			errorWin.Show();
 		}
 	}
