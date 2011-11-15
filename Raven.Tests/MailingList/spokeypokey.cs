@@ -29,7 +29,6 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
-
 		[Fact]
 		public void Can_use_barn_index2()
 		{
