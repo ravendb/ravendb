@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Interop;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Models;
 
@@ -20,6 +18,13 @@ namespace Raven.Studio.Infrastructure
 			ModelUrlIgnoreList = new List<string>();
 			Database = new Observable<DatabaseModel>();
 			SetCurrentDatabase();
+			ApplicationModel.Current.Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => SetCurrentDatabase();
+		}
+
+		protected void SetCurrentDatabase()
+		{
+			ApplicationModel.Current.Server.Value.SetCurrentDatabase(new UrlParser(UrlUtil.Url));
+			Database.Value = ApplicationModel.Current.Server.Value.SelectedDatabase.Value;
 		}
 
 		public void LoadModel(string state)
@@ -50,20 +55,6 @@ namespace Raven.Studio.Infrastructure
 		public IAsyncDatabaseCommands DatabaseCommands
 		{
 			get { return Database.Value.AsyncDatabaseCommands; }
-		}
-
-		private void SetCurrentDatabase()
-		{
-			var applicationModel = ApplicationModel.Current;
-
-			var server = applicationModel.Server;
-			var databaseName = new UrlParser(UrlUtil.Url).GetQueryParam("database");
-			var database = server.Value.Databases.Where(x => x.Name == databaseName).FirstOrDefault();
-			if (database != null)
-			{
-				server.Value.SelectedDatabase.Value = database;
-			}
-			Database.Value = server.Value.SelectedDatabase.Value;
 		}
 	}
 }

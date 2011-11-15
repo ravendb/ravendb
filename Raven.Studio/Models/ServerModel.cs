@@ -92,5 +92,17 @@ namespace Raven.Studio.Models
 				Path = localPath
 			}.Uri.ToString();
 		}
+
+		public void SetCurrentDatabase(UrlParser urlParser)
+		{
+			var databaseName = urlParser.GetQueryParam("database");
+			if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
+				return;
+			var database = Databases.FirstOrDefault(x => x.Name == databaseName);
+			if (database != null)
+			{
+				SelectedDatabase.Value = database;
+			}
+		}
 	}
 }

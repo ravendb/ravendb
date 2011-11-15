@@ -130,5 +130,27 @@ namespace Raven.Studio.Infrastructure
 
 			return parent;
 		}
+
+		public static Task CatchIgnore<TException>(this Task parent) where TException : Exception
+		{
+			return parent.CatchIgnore<TException>(() => {});
+		}
+
+		public static Task CatchIgnore<TException>(this Task parent, Action action) where TException : Exception
+		{
+			parent.ContinueWith(task =>
+			{
+				if (task.IsFaulted == false)
+					return;
+
+				if (task.Exception.ExtractSingleInnerException() is TException == false)
+					return;
+
+				task.Exception.Handle(exception => true);
+				action();
+			});
+
+			return parent;
+		}
 	}
 }

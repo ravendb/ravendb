@@ -1,4 +1,5 @@
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
@@ -16,6 +17,10 @@ namespace Raven.Studio.Commands
 		{
 			var urlParser = new UrlParser(UrlUtil.Url);
 			urlParser.SetQueryParam("database", databaseName);
+
+			var server = ApplicationModel.Current.Server.Value;
+			server.SetCurrentDatabase(urlParser);
+
 			UrlUtil.Navigate(urlParser.BuildUrl());
 		}
 	}

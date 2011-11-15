@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
@@ -54,12 +56,19 @@ namespace Raven.Studio.Models
 		protected override Task TimerTickedAsync()
 		{
 			return DatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
-				.ContinueOnSuccess(Update);
+				.ContinueOnSuccess(Update)
+				.CatchIgnore<WebException>(() =>
+				       	{
+							var urlParser = new UrlParser(UrlUtil.Url);
+				       		if (urlParser.RemoveQueryParam("name"))
+				       			UrlUtil.Navigate(urlParser.BuildUrl());
+				       		ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error));
+				       	});
 		}
 
 		private void Update(NameAndCount[] collections)
 		{
-			var collectionModels = collections.OrderByDescending(x => x.Count).Select(col => new CollectionModel(DatabaseCommands)
+			var collectionModels = collections.OrderByDescending(x => x.Count).Select(col => new CollectionModel()
 			{
 				Name = col.Name,
 				Count = col.Count
