@@ -47,13 +47,11 @@ namespace Raven.Studio.Models
 				false;
 		}
 
-		public Task Initialize()
+		public void Initialize()
 		{
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
 			SelectedDatabase.Value = defaultDatabase[0];
-			return documentStore.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync()
-				.Catch();
 		}
 
 		protected override Task TimerTickedAsync()

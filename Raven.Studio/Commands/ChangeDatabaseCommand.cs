@@ -25,6 +25,9 @@ namespace Raven.Studio.Commands
 
 			var server = ApplicationModel.Current.Server.Value;
 			server.SetCurrentDatabase(urlParser);
+			server.SelectedDatabase.Value.AsyncDatabaseCommands
+				.EnsureSilverlightStartUpAsync()
+				.Catch();
 
 			if (shouldRedirect)
 			{
