@@ -4,11 +4,10 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-                     xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
+					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
 
 	<Infrastructure:View.Resources>
 		<Style x:Key="PanelTitle"
@@ -27,25 +26,25 @@
 				CornerRadius="4,4,0,0"
 				toolkit:DockPanel.Dock="Top">
 			<StackPanel Orientation="Horizontal">
-                <Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None"
+				<Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None"
 						VerticalAlignment="Center" Margin="2"/>
-                <HyperlinkButton Content="Indexes"
+				<HyperlinkButton Content="Indexes"
 								 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/Indexes" 
-                                 VerticalAlignment="Center"/>
+								 VerticalAlignment="Center"/>
 				<TextBlock Text=">"
 						   VerticalAlignment="Center"
 						   Margin="4,0" />
-                <HyperlinkButton Content="{Binding IndexName}"
+				<HyperlinkButton Content="{Binding IndexName}"
 								 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}" 
-                                 VerticalAlignment="Center"/>
-                <TextBlock Text=">"
+								 VerticalAlignment="Center"/>
+				<TextBlock Text=">"
 						   VerticalAlignment="Center"
 						   Margin="4,0" />
-                <TextBlock Text="Query"
+				<TextBlock Text="Query"
 						   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 						   VerticalAlignment="Center" />
 			</StackPanel>
@@ -58,35 +57,19 @@
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="4*" />
 			</Grid.RowDefinitions>
+			
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="*" />
 					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
-                <StackPanel>
-                    <TextBlock Style="{StaticResource PanelTitle}"
-                               Text="Query" />
+				<TextBlock Style="{StaticResource PanelTitle}"
+						   Text="Query" />
 
-                    <CheckBox Content="Make spatial queries"
-                              IsChecked="{Binding IsSpatial, Mode=TwoWay}" />
-
-                    <StackPanel Orientation="Horizontal"
-                                Visibility="{Binding IsSpatial,Mode=TwoWay,Converter={StaticResource VisibleWhenTrue}}">
-                        <TextBlock Text="Longitude:" />
-                        <TextBox Margin="5,0,5,0"
-                                 Width="100" />
-                        <TextBlock Text="Latitude:" />
-                        <TextBox Margin="5,0,5,0"
-                                 Width="100" />
-                        <TextBlock Text="Radios:" />
-                        <TextBox Margin="5,0,5,0"
-                                 Width="100" />
-                    </StackPanel>
-                </StackPanel>
-
-                <Editors:QueryEditor x:Name="QueryEditor" Grid.Row="1"
+				<Editors:QueryEditor x:Name="QueryEditor" Grid.Row="1"
 									 Text="{Binding Path=Query.Value, Mode=TwoWay}"
 									 CompletionProvider="{Binding Path=CompletionProvider.Value}">
 					<i:Interaction.Triggers>
@@ -96,9 +79,62 @@
 						</ei:KeyTrigger>
 					</i:Interaction.Triggers>
 				</Editors:QueryEditor>
-				<HyperlinkButton Content="Execute" Grid.Row="2"
-								 Command="{Binding Execute}"
-								 HorizontalAlignment="Right" />
+
+				<Grid Grid.Row="2">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" />
+						<ColumnDefinition Width="Auto" />
+					</Grid.ColumnDefinitions>
+
+					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
+						<CheckBox Content="Make spatial queries"
+								  IsChecked="{Binding IsSpatialQuery, Mode=TwoWay}" />
+
+						<StackPanel Orientation="Horizontal"
+									Visibility="{Binding IsSpatialQuery, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
+							<TextBlock Text="Longitude:" />
+							<TextBox Margin="5,0,5,0"
+									 Width="100"
+									 Text="{Binding Longitude}" />
+
+							<TextBlock Text="Latitude:" />
+							<TextBox Margin="5,0,5,0"
+									 Width="100"
+									 Text="{Binding Latitude}" />
+
+							<TextBlock Text="Radius:" />
+							<TextBox Margin="5,0,5,0"
+									 Width="100"
+									 Text="{Binding Radios}"/>
+						</StackPanel>
+					</StackPanel>
+
+					<HyperlinkButton Content="Execute"
+									 Grid.Column="1"
+									 Command="{Binding Execute}"
+									 HorizontalAlignment="Right" />
+				</Grid>
+
+				<HyperlinkButton Command="{Binding AddSortBy}"
+								 Grid.Row="3"
+								 Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNotNull}}"
+								 Content="Add Sort By" />
+				<StackPanel Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNull}}" Grid.Row="3">
+					<TextBlock Text="Sort By" />
+					<ItemsControl ItemsSource="{Binding SortBy}"
+								  Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<StackPanel>
+									<ComboBox ItemsSource="{Binding SortByOptions}" />
+									<HyperlinkButton Command="{Binding RemoveSortBy}"
+													 CommandParameter="{Binding}"
+													 Content="Remove Sort By" />
+								</StackPanel>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</StackPanel>
 			</Grid>
 
 			<sdk:GridSplitter Grid.Row="1"

@@ -47,13 +47,11 @@ namespace Raven.Studio.Models
 				false;
 		}
 
-		public Task Initialize()
+		public void Initialize()
 		{
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
 			SelectedDatabase.Value = defaultDatabase[0];
-			return documentStore.AsyncDatabaseCommands.EnsureSilverlightStartUpAsync()
-				.Catch();
 		}
 
 		protected override Task TimerTickedAsync()
@@ -91,6 +89,18 @@ namespace Raven.Studio.Models
 			{
 				Path = localPath
 			}.Uri.ToString();
+		}
+
+		public void SetCurrentDatabase(UrlParser urlParser)
+		{
+			var databaseName = urlParser.GetQueryParam("database");
+			if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
+				return;
+			var database = Databases.FirstOrDefault(x => x.Name == databaseName);
+			if (database != null)
+			{
+				SelectedDatabase.Value = database;
+			}
 		}
 	}
 }

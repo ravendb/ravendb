@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Raven.Studio.Commands;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
@@ -11,16 +13,65 @@ namespace Raven.Studio.Models
 {
 	public class QueryModel : ViewModel
 	{
-        private Observable<bool> isSpatial;
-        public bool IsSpatial
-        {
-            get { return isSpatial.Value; }
-            set
-            {
-                isSpatial.Value = value;
-                OnPropertyChanged();
-            }
-        }
+		
+		#region SpatialQuery
+
+		private bool isSpatialQuerySupported;
+		public bool IsSpatialQuerySupported
+		{
+			get { return isSpatialQuerySupported; }
+			set
+			{
+				isSpatialQuerySupported = value;
+				OnPropertyChanged();
+			}
+		}
+
+		private bool isSpatialQuery;
+		public bool IsSpatialQuery
+		{
+			get { return isSpatialQuery; }
+			set
+			{
+				isSpatialQuery = value;
+				OnPropertyChanged();
+			}
+		}
+
+		private double? latitude;
+		public double? Latitude
+		{
+			get { return latitude; }
+			set
+			{
+				latitude = value;
+				OnPropertyChanged();
+			}
+		}
+
+		private double? longitude;
+		public double? Longitude
+		{
+			get { return longitude; }
+			set
+			{
+				longitude = value;
+				OnPropertyChanged();
+			}
+		}
+
+		private double? radius;
+		public double? Radius
+		{
+			get { return radius; }
+			set
+			{
+				radius = value;
+				OnPropertyChanged();
+			}
+		}
+
+		#endregion
 
 		private string indexName;
 		public string IndexName
@@ -42,6 +93,28 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		#region Sorting
+
+		public const string SortByDescSuffix = " DESC";
+
+		public BindableCollection<string> SortBy { get; private set; }
+		public BindableCollection<string> SortByOptions { get; private set; }
+
+
+		public ICommand AddSortBy
+		{
+			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(SortByOptions.First())); }
+		}
+
+		public ICommand RemoveSortBy
+		{
+			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy = null); }
+		}
+
+
+		
+		#endregion
+
 		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
 		private readonly BindableCollection<string> fields = new BindableCollection<string>(x => x);
@@ -56,7 +129,8 @@ namespace Raven.Studio.Models
 
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
-            isSpatial = new Observable<bool>();
+			SortBy = new BindableCollection<string>(x => x);
+			SortByOptions = new BindableCollection<string>(x => x);
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
@@ -65,8 +139,21 @@ namespace Raven.Studio.Models
 
 		public override void LoadModelParameters(string parameters)
 		{
-			IndexName = new UrlParser(parameters).Path.Trim('/');
-			GetFields();
+			var urlParser = new UrlParser(parameters);
+			IndexName = urlParser.Path.Trim('/');
+			Pager.SetSkip(urlParser);
+
+			DatabaseCommands.GetIndexAsync(IndexName)
+				.ContinueOnSuccessInTheUIThread(definition =>
+				{
+					if (definition == null)
+					{
+						UrlUtil.Navigate("/NotFound?indexName=" + IndexName);
+						return;
+					}
+					fields.Match(definition.Fields);
+					IsSpatialQuerySupported = definition.Map.Contains("SpatialIndex.Generate");
+				}).Catch();
 		}
 
 		public void RememberHistory()
@@ -101,12 +188,6 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private void GetFields()
-		{
-			DatabaseCommands.GetIndexAsync(IndexName)
-				.ContinueOnSuccess(definition => fields.Match(definition.Fields));
-		}
-
 		private void GetTermsForField(string field, List<string> terms)
 		{
 			DatabaseCommands.GetTermsAsync(IndexName, field, string.Empty, 1024)
@@ -138,5 +219,10 @@ namespace Raven.Studio.Models
 		public readonly PagerModel Pager = new PagerModel();
 
 		public Observable<DocumentsModel> DocumentsResult { get; private set; }
+
+		public string ViewTitle
+		{
+			get { return "Query: " + IndexName; }
+		}
 	}
 }

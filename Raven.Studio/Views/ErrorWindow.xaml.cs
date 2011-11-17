@@ -7,21 +7,13 @@ namespace Raven.Studio
 	public partial class ErrorWindow : ChildWindow
 	{
 		public ErrorWindow(Exception e)
+			: this(e.Message, e.StackTrace)
 		{
-			InitializeComponent();
-			if (e != null)
-			{
-				ErrorTextBox.Text = e.Message + Environment.NewLine + Environment.NewLine + e.StackTrace;
-			}
 		}
 
-		public ErrorWindow(Uri uri)
+		public ErrorWindow(Uri uri, Exception e)
+			: this(string.Format("Could not load page: {0}. {2}Error Message: {1}", uri, e.Message, Environment.NewLine), e.StackTrace)
 		{
-			InitializeComponent();
-			if (uri != null)
-			{
-				ErrorTextBox.Text = "Page not found: \"" + uri.ToString() + "\"";
-			}
 		}
 
 		public ErrorWindow(string message, string details)

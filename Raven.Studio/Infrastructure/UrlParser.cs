@@ -69,6 +69,11 @@ namespace Raven.Studio.Infrastructure
 			QueryParams[name] = value.ToString();
 		}
 
+		public bool RemoveQueryParam(string name)
+		{
+			return QueryParams.Remove(name);
+		}
+
 		public string BuildUrl()
 		{
 			EnsureDatabaseParameterIncluded();

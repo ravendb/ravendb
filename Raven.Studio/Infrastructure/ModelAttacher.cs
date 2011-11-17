@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
@@ -35,6 +37,8 @@ namespace Raven.Studio.Infrastructure
 				piValue.SetValue(observable, model, null);
 				view.DataContext = observable;
 
+				SetPageTitle(modelType, model, view);
+
 				view.Loaded += (sender, eventArgs) =>
 				{
 					var viewModel = model as ViewModel;
@@ -46,6 +50,15 @@ namespace Raven.Studio.Infrastructure
 			{
 				throw new InvalidOperationException(string.Format("Cannot create instance of model type: {0}", modelType), ex);
 			}
+		}
+
+		private static void SetPageTitle(Type modelType, object model, FrameworkElement view)
+		{
+			var piTitle = modelType.GetProperty("ViewTitle");
+			if (piTitle == null) return;
+			var page = view as Page;
+			if (page == null) return;
+			page.Title = piTitle.GetValue(model, null) as string;
 		}
 
 		public static string GetAttachObservableModel(UIElement element)

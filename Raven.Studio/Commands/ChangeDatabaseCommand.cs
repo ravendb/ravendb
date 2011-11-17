@@ -1,4 +1,5 @@
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
@@ -14,9 +15,24 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
+			bool shouldRedirect = true;
+
 			var urlParser = new UrlParser(UrlUtil.Url);
+			if (urlParser.GetQueryParam("database") == databaseName)
+				shouldRedirect = false;
+
 			urlParser.SetQueryParam("database", databaseName);
-			UrlUtil.Navigate(urlParser.BuildUrl());
+
+			var server = ApplicationModel.Current.Server.Value;
+			server.SetCurrentDatabase(urlParser);
+			server.SelectedDatabase.Value.AsyncDatabaseCommands
+				.EnsureSilverlightStartUpAsync()
+				.Catch();
+
+			if (shouldRedirect)
+			{
+				UrlUtil.Navigate(urlParser.BuildUrl());
+			}
 		}
 	}
 }

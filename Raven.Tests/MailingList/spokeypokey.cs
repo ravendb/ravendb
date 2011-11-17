@@ -23,7 +23,7 @@ namespace Raven.Tests.MailingList
 						barn.Name,
 						HouseholdId = household.InternalId,
 						MemberId = member.InternalId,
-						MemberName = member.Name
+						Households_Members_Name = member.Name
 					};
 
 			}
