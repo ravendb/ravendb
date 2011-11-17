@@ -129,7 +129,7 @@ namespace Raven.Database.Storage
 			if (configuration.RunInMemory == false)
 			{
 				var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
-				var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
+				var indexName = Path.Combine(path, encodeIndexNameIfNeeded + ".index");
 				// Hash the name if it's too long (as a path)
 				File.WriteAllText(indexName, JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters));
 			}
@@ -168,13 +168,13 @@ namespace Raven.Database.Storage
 		private string GetIndexSourcePath(string name)
 		{
 			var encodeIndexNameIfNeeded = FixupIndexName(name, path);
-			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index.cs");
+			return Path.Combine(path, encodeIndexNameIfNeeded + ".index.cs");
 		}
 
 		private string GetIndexPath(string name)
 		{
 			var encodeIndexNameIfNeeded = FixupIndexName(name, path);
-			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
+			return Path.Combine(path, encodeIndexNameIfNeeded + ".index");
 		}
 
 
@@ -224,16 +224,17 @@ namespace Raven.Database.Storage
 			{
 				prefix = index.Substring(0, 5);
 			}
-			if (path.Length + index.Length > 230 ||
+			var fixupIndexName = MonoHttpUtility.UrlEncode(index);
+			if (path.Length + fixupIndexName.Length > 230 ||
 				Encoding.Unicode.GetByteCount(index) >= 255)
 			{
 				using (var md5 = MD5.Create())
 				{
 					var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(index));
-					return prefix + Convert.ToBase64String(bytes);
+					return MonoHttpUtility.UrlEncode(prefix + Convert.ToBase64String(bytes));
 				}
 			}
-			return index;
+			return fixupIndexName;
 		}
 
 		public static void ResolveAnalyzers(IndexDefinition indexDefinition)
