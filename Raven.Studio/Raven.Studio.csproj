@@ -524,6 +524,7 @@
     <Resource Include="Assets\Images\database.png" />
     <Resource Include="Assets\Images\database_add.png" />
     <Resource Include="Assets\Images\document_prepare.png" />
+    <Resource Include="Assets\Images\document-new.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup>
