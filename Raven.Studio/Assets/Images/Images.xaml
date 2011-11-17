@@ -21,6 +21,7 @@
     <BitmapImage x:Key="Image_Debug_Tiny" UriSource="Debug.png"/>
     <BitmapImage x:Key="Image_Info_Tiny" UriSource="Info.png"/>
     <BitmapImage x:Key="Image_Warning_Tiny" UriSource="Warning.png"/>
+    <BitmapImage x:Key="Image_Error_Tiny" UriSource="Error.png"/>
     <BitmapImage x:Key="Image_NextPage_Tiny" UriSource="document_page_next.png"/>
     <BitmapImage x:Key="Image_PreviousPage_Tiny" UriSource="document_page_previous.png"/>
     <BitmapImage x:Key="Image_Database_Tiny" UriSource="database.png"/>
