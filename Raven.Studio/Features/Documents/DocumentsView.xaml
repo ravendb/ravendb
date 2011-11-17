@@ -23,22 +23,49 @@
 					</StackPanel>
 
 					<StackPanel  toolkit:DockPanel.Dock="Right"
-					 Orientation="Horizontal" VerticalAlignment="Center">
-						<HyperlinkButton Command="{Binding Path=Pager.PrevPage}" Style="{StaticResource Style_Link_MouseOverChrome}"
+								 Orientation="Horizontal"
+								 VerticalAlignment="Center">
+						<HyperlinkButton Command="{Binding Path=Pager.PrevPage}"
+										 Style="{StaticResource Style_Link_MouseOverChrome}"
 										 ToolTipService.ToolTip="Previous Page">
 							<HyperlinkButton.Content>
-								<Image Source="{StaticResource Image_PreviousPage_Tiny}" Stretch="None" VerticalAlignment="Center"/>
+								<Image Source="{StaticResource Image_PreviousPage_Tiny}"
+									   Stretch="None"
+									   VerticalAlignment="Center" />
 							</HyperlinkButton.Content>
 						</HyperlinkButton>
-						<TextBlock Text="Page " VerticalAlignment="Center"/>
-						<TextBlock Text="{Binding Path=Pager.CurrentPage}" VerticalAlignment="Center"/>
-						<TextBlock Text=" of " VerticalAlignment="Center"/>
-						<TextBlock Text="{Binding Path=Pager.TotalPages}" VerticalAlignment="Center"/>
+						<TextBlock Text="Page "
+								   VerticalAlignment="Center" />
+						<TextBlock Text="{Binding Path=Pager.CurrentPage}"
+								   VerticalAlignment="Center" />
+						<TextBlock Text=" of "
+								   VerticalAlignment="Center" />
+						<TextBlock Text="{Binding Path=Pager.TotalPages}"
+								   VerticalAlignment="Center" />
 						<HyperlinkButton Command="{Binding Path=Pager.NextPage}"
 										 Style="{StaticResource Style_Link_MouseOverChrome}"
 										 ToolTipService.ToolTip="Next Page">
 							<HyperlinkButton.Content>
-								<Image Source="{StaticResource Image_NextPage_Tiny}" Stretch="None" VerticalAlignment="Center"/>
+								<Image Source="{StaticResource Image_NextPage_Tiny}"
+									   Stretch="None"
+									   VerticalAlignment="Center" />
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
+					</StackPanel>
+
+					<StackPanel toolkit:DockPanel.Dock="Right"
+								Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="/edit?mode=new">
+							<HyperlinkButton.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_AddDatabase_Tiny}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="Create a Document"
+											   VerticalAlignment="Center" />
+								</StackPanel>
 							</HyperlinkButton.Content>
 						</HyperlinkButton>
 					</StackPanel>

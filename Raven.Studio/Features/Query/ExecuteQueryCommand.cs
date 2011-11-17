@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -38,11 +39,31 @@ namespace Raven.Studio.Features.Query
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
 		{
 			ApplicationModel.Current.AddNotification(new Notification("Executing query..."));
+
 			var q = new IndexQuery
 			{
-				Start = (model.Pager.CurrentPage - 1) * model.Pager.PageSize, 
-				PageSize = model.Pager.PageSize, Query = model.Query.Value
+				Start = (model.Pager.CurrentPage - 1) * model.Pager.PageSize,
+				PageSize = model.Pager.PageSize,
+				Query = model.Query.Value,
 			};
+
+			if (string.IsNullOrEmpty(model.SortBy) == false)
+			{
+				q.SortedFields = model.SortBy.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
+					.Select(x => new SortedField(x.Trim()))
+					.ToArray();
+			}
+
+			if (model.IsSpatialQuerySupported)
+			{
+				q = new SpatialIndexQuery(q)
+				    {
+				    	Latitude = model.Latitude.HasValue ? model.Latitude.Value : 0,
+						Longitude = model.Longitude.HasValue ? model.Longitude.Value : 0,
+						Radius = model.Radius.HasValue ? model.Radius.Value : 0,
+				    };
+			}
+			
 			return databaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueWith(task =>
 				{
