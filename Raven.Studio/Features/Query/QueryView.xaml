@@ -115,6 +115,11 @@
 									 HorizontalAlignment="Right" />
 				</Grid>
 				
+				<StackPanel Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNull}}">
+					<TextBlock Text="Sort By" />
+					<TextBox Text="{Binding SortBy}" />
+				</StackPanel>
+				
 			</Grid>
 
 			<sdk:GridSplitter Grid.Row="1"

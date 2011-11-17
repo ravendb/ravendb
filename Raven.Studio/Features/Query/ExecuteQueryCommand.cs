@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -45,6 +46,13 @@ namespace Raven.Studio.Features.Query
 				PageSize = model.Pager.PageSize,
 				Query = model.Query.Value,
 			};
+
+			if (string.IsNullOrEmpty(model.SortBy) == false)
+			{
+				q.SortedFields = model.SortBy.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
+					.Select(x => new SortedField(x.Trim()))
+					.ToArray();
+			}
 
 			if (model.IsSpatialQuerySupported)
 			{

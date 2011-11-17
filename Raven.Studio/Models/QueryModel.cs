@@ -91,6 +91,17 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		private string sortBy;
+		public string SortBy
+		{
+			get { return sortBy; }
+			set
+			{
+				sortBy = value;
+				OnPropertyChanged();
+			}
+		}
+
 		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
 		private readonly BindableCollection<string> fields = new BindableCollection<string>(x => x);
