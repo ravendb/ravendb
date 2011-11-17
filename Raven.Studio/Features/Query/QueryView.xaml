@@ -63,6 +63,7 @@
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="*" />
 					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
 				<TextBlock Style="{StaticResource PanelTitle}"
@@ -113,10 +114,15 @@
 									 Command="{Binding Execute}"
 									 HorizontalAlignment="Right" />
 				</Grid>
-				
-				<StackPanel Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNull}}">
+
+				<HyperlinkButton Command="{Binding AddSortBy}"
+								 Grid.Row="3"
+								 Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNotNull}}"
+								 Content="Add Sort By" />
+				<StackPanel Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNull}}" Grid.Row="3">
 					<TextBlock Text="Sort By" />
 					<TextBox Text="{Binding SortBy}" />
+					<HyperlinkButton Command="{Binding RemoveSortBy}" Content="Remove Sort By" />
 				</StackPanel>
 				
 			</Grid>
