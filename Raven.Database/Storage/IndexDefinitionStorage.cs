@@ -125,11 +125,11 @@ namespace Raven.Database.Storage
 
 		public string AddIndex(IndexDefinition indexDefinition)
 		{
-			DynamicViewCompiler transformer = AddAndCompileIndex(indexDefinition);
+			var transformer = AddAndCompileIndex(indexDefinition);
 			if (configuration.RunInMemory == false)
 			{
 				var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
-				var indexName = Path.Combine(path, encodeIndexNameIfNeeded + ".index");
+				var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
 				// Hash the name if it's too long (as a path)
 				File.WriteAllText(indexName, JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters));
 			}
@@ -168,16 +168,14 @@ namespace Raven.Database.Storage
 		private string GetIndexSourcePath(string name)
 		{
 			var encodeIndexNameIfNeeded = FixupIndexName(name, path);
-			return Path.Combine(path, encodeIndexNameIfNeeded + ".index.cs");
+			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index.cs");
 		}
 
 		private string GetIndexPath(string name)
 		{
 			var encodeIndexNameIfNeeded = FixupIndexName(name, path);
-			return Path.Combine(path, encodeIndexNameIfNeeded + ".index");
+			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
 		}
-
-
 
 		public IndexDefinition GetIndexDefinition(string name)
 		{
@@ -226,15 +224,15 @@ namespace Raven.Database.Storage
 			}
 			var fixupIndexName = MonoHttpUtility.UrlEncode(index);
 			if (path.Length + fixupIndexName.Length > 230 ||
-				Encoding.Unicode.GetByteCount(index) >= 255)
+				Encoding.Unicode.GetByteCount(fixupIndexName) >= 255)
 			{
 				using (var md5 = MD5.Create())
 				{
 					var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(index));
-					return MonoHttpUtility.UrlEncode(prefix + Convert.ToBase64String(bytes));
+					return prefix + Convert.ToBase64String(bytes);
 				}
 			}
-			return fixupIndexName;
+			return index;
 		}
 
 		public static void ResolveAnalyzers(IndexDefinition indexDefinition)
