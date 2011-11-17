@@ -545,7 +545,9 @@
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="IndexQueryUrl.cs" />
     <Compile Include="Json\CloningTests.cs" />
+    <Compile Include="Json\JsonNetBugsTests.cs" />
     <Compile Include="Json\RavenJObjects.cs" />
+    <Compile Include="Json\JsonUri.cs" />
     <Compile Include="Linq\Any.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
     <Compile Include="Linq\DynamicQueriesWithStaticIndexes.cs" />
