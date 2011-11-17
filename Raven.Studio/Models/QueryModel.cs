@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
@@ -94,26 +95,23 @@ namespace Raven.Studio.Models
 
 		#region Sorting
 
-		private string sortBy;
-		public string SortBy
-		{
-			get { return sortBy; }
-			set
-			{
-				sortBy = value;
-				OnPropertyChanged();
-			}
-		}
+		public const string SortByDescSuffix = " DESC";
+
+		public BindableCollection<string> SortBy { get; private set; }
+		public BindableCollection<string> SortByOptions { get; private set; }
+
 
 		public ICommand AddSortBy
 		{
-			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy = string.Empty); }
+			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(SortByOptions.First())); }
 		}
 
 		public ICommand RemoveSortBy
 		{
 			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy = null); }
 		}
+
+
 		
 		#endregion
 
@@ -131,6 +129,8 @@ namespace Raven.Studio.Models
 
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
+			SortBy = new BindableCollection<string>(x => x);
+			SortByOptions = new BindableCollection<string>(x => x);
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();

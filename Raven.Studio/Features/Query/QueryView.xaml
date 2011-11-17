@@ -121,10 +121,20 @@
 								 Content="Add Sort By" />
 				<StackPanel Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNull}}" Grid.Row="3">
 					<TextBlock Text="Sort By" />
-					<TextBox Text="{Binding SortBy}" />
-					<HyperlinkButton Command="{Binding RemoveSortBy}" Content="Remove Sort By" />
+					<ItemsControl ItemsSource="{Binding SortBy}"
+								  Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<StackPanel>
+									<ComboBox ItemsSource="{Binding SortByOptions}" />
+									<HyperlinkButton Command="{Binding RemoveSortBy}"
+													 CommandParameter="{Binding}"
+													 Content="Remove Sort By" />
+								</StackPanel>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
 				</StackPanel>
-				
 			</Grid>
 
 			<sdk:GridSplitter Grid.Row="1"

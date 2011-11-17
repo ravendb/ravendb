@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -47,11 +48,20 @@ namespace Raven.Studio.Features.Query
 				Query = model.Query.Value,
 			};
 
-			if (string.IsNullOrEmpty(model.SortBy) == false)
+			if (model.SortBy != null && model.SortBy.Count > 0)
 			{
-				q.SortedFields = model.SortBy.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
-					.Select(x => new SortedField(x.Trim()))
-					.ToArray();
+				var sortedFields = new List<SortedField>();
+				foreach (var sortBy in model.SortBy)
+				{
+					if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
+					{
+						var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length - 1);
+						sortedFields.Add(new SortedField(field) {Descending = true});
+					}
+					else
+						sortedFields.Add(new SortedField(sortBy));
+				}
+				q.SortedFields = sortedFields.ToArray();
 			}
 
 			if (model.IsSpatialQuerySupported)
