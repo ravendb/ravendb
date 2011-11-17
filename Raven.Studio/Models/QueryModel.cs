@@ -58,13 +58,13 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private double? radios;
-		public double? Radios
+		private double? radius;
+		public double? Radius
 		{
-			get { return radios; }
+			get { return radius; }
 			set
 			{
-				radios = value;
+				radius = value;
 				OnPropertyChanged();
 			}
 		}
