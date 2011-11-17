@@ -88,10 +88,10 @@
 
 					<StackPanel>
 						<CheckBox Content="Make spatial queries"
-								  IsChecked="{Binding IsSpatial, Mode=TwoWay}" />
+								  IsChecked="{Binding IsSpatialQuery, Mode=TwoWay}" />
 
 						<StackPanel Orientation="Horizontal"
-									Visibility="{Binding IsSpatial, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
+									Visibility="{Binding IsSpatialQuery, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
 							<TextBlock Text="Longitude:" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100" Text="{Binding }" />

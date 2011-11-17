@@ -11,13 +11,13 @@ namespace Raven.Studio.Models
 {
 	public class QueryModel : ViewModel
 	{
-		private bool isSpatial;
-		public bool IsSpatial
+		private bool isSpatialQuery;
+		public bool IsSpatialQuery
 		{
-			get { return isSpatial; }
+			get { return isSpatialQuery; }
 			set
 			{
-				isSpatial = value;
+				isSpatialQuery = value;
 				OnPropertyChanged();
 			}
 		}
