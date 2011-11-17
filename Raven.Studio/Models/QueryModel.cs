@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Raven.Studio.Commands;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
@@ -91,6 +92,8 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		#region Sorting
+
 		private string sortBy;
 		public string SortBy
 		{
@@ -101,6 +104,18 @@ namespace Raven.Studio.Models
 				OnPropertyChanged();
 			}
 		}
+
+		public ICommand AddSortBy
+		{
+			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy = string.Empty); }
+		}
+
+		public ICommand RemoveSortBy
+		{
+			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy = null); }
+		}
+		
+		#endregion
 
 		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 

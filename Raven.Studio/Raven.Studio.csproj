@@ -114,6 +114,7 @@
     <Compile Include="Behaviors\StringCollection.cs" />
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
+    <Compile Include="Commands\ChangeFieldValueCommand.cs" />
     <Compile Include="Commands\ListBoxCommand.cs" />
     <Compile Include="Commands\NavigateToNextPageCommand.cs" />
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
