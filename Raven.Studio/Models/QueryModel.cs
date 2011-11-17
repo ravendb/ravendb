@@ -11,6 +11,20 @@ namespace Raven.Studio.Models
 {
 	public class QueryModel : ViewModel
 	{
+		
+		#region SpatialQuery
+
+		private bool isSpatialQuerySupported;
+		public bool IsSpatialQuerySupported
+		{
+			get { return isSpatialQuerySupported; }
+			set
+			{
+				isSpatialQuerySupported = value;
+				OnPropertyChanged();
+			}
+		}
+
 		private bool isSpatialQuery;
 		public bool IsSpatialQuery
 		{
@@ -21,6 +35,41 @@ namespace Raven.Studio.Models
 				OnPropertyChanged();
 			}
 		}
+
+		private double latitude;
+		public double Latitude
+		{
+			get { return latitude; }
+			set
+			{
+				latitude = value;
+				OnPropertyChanged();
+			}
+		}
+
+		private double longitude;
+		public double Longitude
+		{
+			get { return longitude; }
+			set
+			{
+				longitude = value;
+				OnPropertyChanged();
+			}
+		}
+
+		private double radios;
+		public double Radios
+		{
+			get { return radios; }
+			set
+			{
+				radios = value;
+				OnPropertyChanged();
+			}
+		}
+
+		#endregion
 
 		private string indexName;
 		public string IndexName
@@ -38,6 +87,7 @@ namespace Raven.Studio.Models
 
 				indexName = value;
 				OnPropertyChanged();
+				IsSpatialQuerySupported = false;
 				RestoreHistory();
 			}
 		}

@@ -86,7 +86,7 @@
 						<ColumnDefinition Width="Auto" />
 					</Grid.ColumnDefinitions>
 
-					<StackPanel>
+					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
 						<CheckBox Content="Make spatial queries"
 								  IsChecked="{Binding IsSpatialQuery, Mode=TwoWay}" />
 
@@ -94,15 +94,18 @@
 									Visibility="{Binding IsSpatialQuery, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
 							<TextBlock Text="Longitude:" />
 							<TextBox Margin="5,0,5,0"
-									 Width="100" Text="{Binding }" />
+									 Width="100"
+									 Text="{Binding Longitude}" />
 
 							<TextBlock Text="Latitude:" />
 							<TextBox Margin="5,0,5,0"
-									 Width="100" />
+									 Width="100"
+									 Text="{Binding Latitude}" />
 
 							<TextBlock Text="Radios:" />
 							<TextBox Margin="5,0,5,0"
-									 Width="100" />
+									 Width="100"
+									 Text="{Binding Radios}"/>
 						</StackPanel>
 					</StackPanel>
 
