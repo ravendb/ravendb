@@ -8,8 +8,8 @@
 			 xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases"
 			 xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats"
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-			 xmlns:System="clr-namespace:System;assembly=mscorlib" xmlns:Studio="clr-namespace:Raven.Studio"
-             xmlns:RavenControls="clr-namespace:Raven.Studio.Controls">
+			 xmlns:System="clr-namespace:System;assembly=mscorlib"
+			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -172,7 +172,7 @@
 								  Source=""
 								  Navigated="ContentFrame_Navigated"
 								  NavigationFailed="ContentFrame_NavigationFailed"
-                                  Margin="15,0">
+								  Margin="15,0">
 					<navigation:Frame.UriMapper>
 						<uriMapper:UriMapper>
 							<uriMapper:UriMapping Uri=""
@@ -194,8 +194,8 @@
 				</navigation:Frame>
 		</Grid>
 
-        <RavenControls:NotificationArea Grid.Row="0" Grid.Column="0" Grid.RowSpan="999" Grid.ColumnSpan="999" Notifications="{Binding Notifications}" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
-        
+		<RavenControls:NotificationArea Grid.Row="0" Grid.Column="0" Grid.RowSpan="999" Grid.ColumnSpan="999" Notifications="{Binding Notifications}" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
+		
 		<Grid x:Name="FooterGrid" Grid.Row="2">
 			<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_FooterTexture}" BorderThickness="0"/>
 			<Rectangle VerticalAlignment="Top" Height="5" Fill="Black" Opacity="0.4"/>
