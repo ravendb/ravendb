@@ -36,8 +36,8 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private double latitude;
-		public double Latitude
+		private double? latitude;
+		public double? Latitude
 		{
 			get { return latitude; }
 			set
@@ -47,8 +47,8 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private double longitude;
-		public double Longitude
+		private double? longitude;
+		public double? Longitude
 		{
 			get { return longitude; }
 			set
@@ -58,8 +58,8 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private double radios;
-		public double Radios
+		private double? radios;
+		public double? Radios
 		{
 			get { return radios; }
 			set
@@ -87,7 +87,6 @@ namespace Raven.Studio.Models
 
 				indexName = value;
 				OnPropertyChanged();
-				IsSpatialQuerySupported = false;
 				RestoreHistory();
 			}
 		}
@@ -117,7 +116,18 @@ namespace Raven.Studio.Models
 			var urlParser = new UrlParser(parameters);
 			IndexName = urlParser.Path.Trim('/');
 			Pager.SetSkip(urlParser);
-			GetFields();
+
+			DatabaseCommands.GetIndexAsync(IndexName)
+				.ContinueOnSuccessInTheUIThread(definition =>
+				{
+					if (definition == null)
+					{
+						UrlUtil.Navigate("/NotFound?indexName=" + IndexName);
+						return;
+					}
+					fields.Match(definition.Fields);
+					IsSpatialQuerySupported = definition.Map.Contains("SpatialIndex.Generate");
+				}).Catch();
 		}
 
 		public void RememberHistory()
@@ -150,12 +160,6 @@ namespace Raven.Studio.Models
 				var terms = fieldsTermsDictionary[field] = new List<string>();
 				GetTermsForField(field, terms);
 			}
-		}
-
-		private void GetFields()
-		{
-			DatabaseCommands.GetIndexAsync(IndexName)
-				.ContinueOnSuccess(definition => fields.Match(definition.Fields));
 		}
 
 		private void GetTermsForField(string field, List<string> terms)
