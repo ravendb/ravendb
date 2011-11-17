@@ -558,6 +558,14 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Retrieve the statistics for the database
+		/// </summary>
+		public DatabaseStatistics GetStatistics()
+		{
+			return database.Statistics;
+		}
+
+		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)

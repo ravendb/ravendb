@@ -81,9 +81,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\SharedLibs\Newtonsoft.Json\Net\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL" />
     <Reference Include="Rhino.Mocks">
@@ -160,11 +159,13 @@
     <Compile Include="Bugs\AggressiveCaching.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
+    <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
     <Compile Include="Bugs\BackwardCompatability.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
     <Compile Include="Bugs\CanUseReduceResultInOutput.cs" />
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
+    <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\CompiledIndexesNhsevidence.cs" />
     <Compile Include="Bugs\ConflictsWithIIS.cs" />
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
@@ -180,8 +181,10 @@
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
     <Compile Include="Bugs\IndexesWithDateTimeMin.cs" />
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
+    <Compile Include="Bugs\Indexing\WithStringReverse.cs" />
     <Compile Include="Bugs\Indexing\InvalidIndexes.cs" />
     <Compile Include="Bugs\Issue355.cs" />
+    <Compile Include="Bugs\JsonReferences.cs" />
     <Compile Include="Bugs\LarsErik.cs" />
     <Compile Include="Bugs\Iulian\GeneratesCorrectTemporaryIndex.cs" />
     <Compile Include="Bugs\LiveProjections\Entities\Place.cs" />
@@ -434,6 +437,7 @@
     <Compile Include="Bugs\SelectManyTests .cs" />
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SerializingEntities.cs" />
+    <Compile Include="Bugs\SimonCropp.cs" />
     <Compile Include="Bugs\SimpleJson.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
@@ -544,11 +548,22 @@
     <Compile Include="Json\RavenJObjects.cs" />
     <Compile Include="Linq\Any.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
+    <Compile Include="Linq\DynamicQueriesWithStaticIndexes.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
     <Compile Include="Linq\SampleGeoLocation.cs" />
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
+    <Compile Include="MailingList\EnumAsInts.cs" />
+    <Compile Include="MailingList\GuidProjection.cs" />
+    <Compile Include="MailingList\LazyStats.cs" />
+    <Compile Include="MailingList\NicolasGarfinkiel.cs" />
+    <Compile Include="MailingList\Rob.cs" />
+    <Compile Include="MailingList\Stacey.cs" />
+    <Compile Include="MailingList\Stats.cs" />
+    <Compile Include="MailingList\transformedresults_customid_test.cs" />
+    <Compile Include="MailingList\Vlad.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -590,6 +605,7 @@
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />
+    <Compile Include="Querying\SearchOperator.cs" />
     <Compile Include="Querying\UsingDocumentQuery.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithLocalServer.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithRemoteServer.cs" />
@@ -603,7 +619,7 @@
     <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
     <Compile Include="Some.cs" />
     <Compile Include="Spatial\Event.cs" />
-    <Compile Include="Spatial\SpatialIndex.cs" />
+    <Compile Include="Spatial\SpatialIndexTest.cs" />
     <Compile Include="Indexes\Statistics.cs" />
     <Compile Include="Indexes\UsingQueryBuilder.cs" />
     <Compile Include="Linq\UsingRavenQueryProvider.cs" />
@@ -621,6 +637,7 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Spatial\SpatialIndexTestHelper.cs" />
+    <Compile Include="Spatial\SpatialSearch.cs" />
     <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
     <Compile Include="Storage\BackupRestore.cs" />
     <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
@@ -728,7 +745,9 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
     <EmbeddedResource Include="DefaultLogging.config" />
   </ItemGroup>
   <ItemGroup />

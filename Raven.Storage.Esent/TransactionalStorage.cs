@@ -125,9 +125,9 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory)
+		public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup)
 		{
-			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory);
+			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		}
 
@@ -374,8 +374,10 @@ namespace Raven.Storage.Esent
 				: CommitTransactionGrbit.None;
 			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher))
 			{
-				current.Value = new StorageActionsAccessor(pht);
+				var storageActionsAccessor = new StorageActionsAccessor(pht);
+				current.Value = storageActionsAccessor;
 				action(current.Value);
+				storageActionsAccessor.SaveAllTasks();
 				pht.Commit(txMode);
 			}
 		}

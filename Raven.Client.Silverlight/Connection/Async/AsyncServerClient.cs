@@ -73,10 +73,10 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 		}
 
-        public HttpJsonRequest CreateRequest(string relativeUrl, string method)
-        {
-            return jsonRequestFactory.CreateHttpJsonRequest(this, url + relativeUrl, method, credentials, convention);
-        }
+		public HttpJsonRequest CreateRequest(string relativeUrl, string method)
+		{
+			return jsonRequestFactory.CreateHttpJsonRequest(this, url + relativeUrl, method, credentials, convention);
+		}
 
 		/// <summary>
 		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
@@ -139,7 +139,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 
-			key = key.Replace("\\",@"/"); //NOTE: the present of \ causes the SL networking stack to barf, even though the Uri seemingly makes this translation itself
+			key = key.Replace("\\", @"/"); //NOTE: the present of \ causes the SL networking stack to barf, even though the Uri seemingly makes this translation itself
 
 			var request = url.Docs(key)
 				.ToJsonRequest(this, credentials, convention);
@@ -206,7 +206,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return false;
 		}
 
-		private T AttemptToProcessResponse<T>(Func<T> process) where T:class 
+		private T AttemptToProcessResponse<T>(Func<T> process) where T : class
 		{
 			try
 			{
@@ -217,9 +217,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 				var webException = e.ExtractSingleInnerException() as WebException;
 				if (webException == null) throw;
 
-				if (HandleException(webException)) return null; 
-				
-				throw; 
+				if (HandleException(webException)) return null;
+
+				throw;
 			}
 			catch (WebException e)
 			{
@@ -259,7 +259,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 			var postedData = JsonConvert.SerializeObject(requests);
 
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, url+ "/multi_get/", "POST",
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/multi_get/", "POST",
 																		   credentials, convention);
 
 			return httpJsonRequest.WriteAsync(postedData)
@@ -341,7 +341,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return request.WriteAsync(new JArray(keys).ToString(Formatting.None))
 				.ContinueWith(writeTask => request.ReadResponseStringAsync())
 				.ContinueWith(task => CompleteMultiGet(task.Result));
-				
+
 		}
 
 		private static MultiLoadResult CompleteMultiGet(Task<string> task)
@@ -360,7 +360,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			{
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse == null ||
-				    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 					throw;
 				throw ThrowConcurrencyException(e);
 			}
@@ -422,10 +422,10 @@ namespace Raven.Client.Silverlight.Connection.Async
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path.NoCache(), "GET", credentials, convention);
 
 			return request.ReadResponseStringAsync()
-				.ContinueWith(task => AttemptToProcessResponse( ()=>
+				.ContinueWith(task => AttemptToProcessResponse(() =>
 				{
 					RavenJObject json;
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
@@ -555,9 +555,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
 					return request
 						.WriteAsync(serializeObject)
-						.ContinueWith(writeTask => AttemptToProcessResponse( ()=> request
+						.ContinueWith(writeTask => AttemptToProcessResponse(() => request
 							.ReadResponseStringAsync()
-							.ContinueWith(readStrTask => AttemptToProcessResponse( ()=>
+							.ContinueWith(readStrTask => AttemptToProcessResponse(() =>
 								{
 									//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctr is private!
 									var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result, new JsonToJsonConverter());
@@ -619,7 +619,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="pageSize">Size of the page.</param>
 		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
 		{
-		    var url2 = (url + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
+			var url2 = (url + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url2, "GET", credentials, convention);
 
 			return request.ReadResponseStringAsync()
@@ -718,43 +718,43 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		}
 
-	    public class ConcurrencyExceptionResult
-	    {
-	        private readonly string url1;
-	        private readonly Guid actualETag1;
-	        private readonly Guid expectedETag1;
-	        private readonly string error1;
+		public class ConcurrencyExceptionResult
+		{
+			private readonly string url1;
+			private readonly Guid actualETag1;
+			private readonly Guid expectedETag1;
+			private readonly string error1;
 
-	        public string url
-	        {
-	            get { return url1; }
-	        }
+			public string url
+			{
+				get { return url1; }
+			}
 
-	        public Guid actualETag
-	        {
-	            get { return actualETag1; }
-	        }
+			public Guid actualETag
+			{
+				get { return actualETag1; }
+			}
 
-	        public Guid expectedETag
-	        {
-	            get { return expectedETag1; }
-	        }
+			public Guid expectedETag
+			{
+				get { return expectedETag1; }
+			}
 
-	        public string error
-	        {
-	            get { return error1; }
-	        }
+			public string error
+			{
+				get { return error1; }
+			}
 
-	        public ConcurrencyExceptionResult(string url, Guid actualETag, Guid expectedETag, string error)
-	        {
-	            url1 = url;
-	            actualETag1 = actualETag;
-	            expectedETag1 = expectedETag;
-	            error1 = error;
-	        }
-	    }
+			public ConcurrencyExceptionResult(string url, Guid actualETag, Guid expectedETag, string error)
+			{
+				url1 = url;
+				actualETag1 = actualETag;
+				expectedETag1 = expectedETag;
+				error1 = error;
+			}
+		}
 
-	    private static Exception ThrowConcurrencyException(WebException e)
+		private static Exception ThrowConcurrencyException(WebException e)
 		{
 			using (var sr = new StreamReader(e.Response.GetResponseStream()))
 			{
@@ -783,7 +783,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return url.Stats()
 				.NoCache()
 				.ToJsonRequest(this, credentials, convention)
-				.AddOperationHeader("Raven-Timer-Request" , "true")
+				.AddOperationHeader("Raven-Timer-Request", "true")
 				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
@@ -920,9 +920,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// starting point for the next query
 		///</summary>
 		///<returns></returns>
-	    public Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize)
-	    {
-			return url.Terms(index,field,fromValue,pageSize)
+		public Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize)
+		{
+			return url.Terms(index, field, fromValue, pageSize)
 				.NoCache()
 				.ToJsonRequest(this, credentials, convention)
 				.ReadResponseStringAsync()
@@ -934,7 +934,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 						return json.Select(x => x.Value<string>()).ToArray();
 					}
 				});
-	    }
+		}
 
 		/// <summary>
 		/// Disable all caching within the given scope

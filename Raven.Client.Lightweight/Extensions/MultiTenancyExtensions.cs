@@ -35,7 +35,7 @@ namespace Raven.Client.Extensions
 		/// <remarks>
 		/// This operation happens _outside_ of any transaction
 		/// </remarks>
-		public static void EnsureDatabaseExists(this IDatabaseCommands self,string name)
+		public static void EnsureDatabaseExists(this IDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
 			AssertValidName(name);
 			var doc = RavenJObject.FromObject(new DatabaseDocument
@@ -46,10 +46,23 @@ namespace Raven.Client.Extensions
 					}
 			});
 			var docId = "Raven/Databases/" + name;
-			if (self.Get(docId) != null)
-				return;
+			
 			using (new TransactionScope(TransactionScopeOption.Suppress))
-				self.Put(docId, null, doc, new RavenJObject());
+			{
+				try
+				{
+					if (self.Get(docId) != null)
+						return;
+
+					self.Put(docId, null, doc, new RavenJObject());
+				}
+				catch (Exception)
+				{
+					if (ignoreFailures == false)
+						throw;
+
+				}
+			}
 		}
 #endif
 
@@ -57,7 +70,7 @@ namespace Raven.Client.Extensions
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
-		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name)
+		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
 			AssertValidName(name);
 			var doc = RavenJObject.FromObject(new DatabaseDocument
@@ -77,7 +90,15 @@ namespace Raven.Client.Extensions
 
 					return (Task)self.PutAsync(docId, null, doc, new RavenJObject());
 				})
-				.Unwrap();
+				.Unwrap()
+				.ContinueWith(x=>
+				{
+					if (ignoreFailures == false)
+						x.Wait(); // will throw on error
+
+					var observedException = x.Exception;
+					GC.KeepAlive(observedException);
+				});
 		}
 
 #endif

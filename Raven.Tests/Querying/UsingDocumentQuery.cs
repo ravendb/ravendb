@@ -72,7 +72,7 @@ namespace Raven.Tests.Querying
 			var array = new string[0];
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
 				.WhereContains("Name", array);
-			Assert.Equal("", q.ToString());
+			Assert.True(q.ToString().StartsWith("Name:Empty_Contains_"));
 		}
 
 		[Fact]

@@ -451,7 +451,7 @@ namespace Raven.Client.Document
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 #if !SILVERLIGHT
-					var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
+					var generator = new MultiTypeHiLoKeyGenerator(this, 32);
 					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
 #else
 
@@ -476,7 +476,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			if (string.IsNullOrEmpty(DefaultDatabase) == false)
 			{
-				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase);
+				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 			}
 #endif
 

@@ -29,6 +29,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Debug", "Raven
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Silverlight", "Raven.Client.Silverlight\Raven.Client.Silverlight.csproj", "{8A1DB308-D56B-49BC-A421-A2AB32617215}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Backup", "Raven.Backup\Raven.Backup.csproj", "{DBB6561C-6264-430D-8F3C-E11C6268981E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Studio", "Raven.Studio\Raven.Studio.csproj", "{6828A6A5-B925-4716-8D08-2B26353C54C2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -179,6 +183,26 @@ Global
 		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|x86.ActiveCfg = Release|Any CPU
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|x86.ActiveCfg = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|x86.Build.0 = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Release|Any CPU.ActiveCfg = Release|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Release|Mixed Platforms.Build.0 = Release|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Release|x86.ActiveCfg = Release|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Release|x86.Build.0 = Release|x86
+		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

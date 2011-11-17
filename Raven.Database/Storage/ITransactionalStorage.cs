@@ -17,7 +17,7 @@ namespace Raven.Database.Storage
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSyncronization(Action action);
 		bool Initialize(IUuidGenerator generator);
-		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory);
+		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup);
 		void Restore(string backupLocation, string databaseLocation);
 		long GetDatabaseSizeInBytes();
 

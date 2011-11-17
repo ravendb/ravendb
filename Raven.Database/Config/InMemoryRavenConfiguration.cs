@@ -13,6 +13,7 @@ using System.Linq;
 using System.Runtime.Caching;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Web;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -118,12 +119,7 @@ namespace Raven.Database.Config
 			// HTTP settings
 			HostName = Settings["Raven/HostName"];
 			Port = PortUtil.GetPort(Settings["Raven/Port"]);
-			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? "/";
-
-			if (VirtualDirectory.EndsWith("/"))
-				VirtualDirectory = VirtualDirectory.Substring(0, VirtualDirectory.Length - 1);
-			if (VirtualDirectory.StartsWith("/") == false)
-				VirtualDirectory = "/" + VirtualDirectory;
+			SetVirtualDirectory();
 
 			bool httpCompressionTemp;
 			if (bool.TryParse(Settings["Raven/HttpCompression"], out httpCompressionTemp) == false)
@@ -149,6 +145,20 @@ namespace Raven.Database.Config
 
 		}
 
+		private void SetVirtualDirectory()
+		{
+			var defaultVirtualDirectory = "/";
+			if(HttpContext.Current != null)
+				defaultVirtualDirectory = HttpContext.Current.Request.ApplicationPath;
+
+			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
+
+			if (VirtualDirectory.EndsWith("/"))
+				VirtualDirectory = VirtualDirectory.Substring(0, VirtualDirectory.Length - 1);
+			if (VirtualDirectory.StartsWith("/") == false)
+				VirtualDirectory = "/" + VirtualDirectory;
+		}
+
 		private void SetupOAuth()
 		{
 			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
@@ -161,6 +171,7 @@ namespace Raven.Database.Config
 			var path = Settings["Raven/OAuthTokenCertificatePath"];
 			if (string.IsNullOrEmpty(path) == false)
 			{
+			    path = path.ToFullPath();
 				var pwd = Settings["Raven/OAuthTokenCertificatePassword"];
 				if (string.IsNullOrEmpty(pwd) == false)
 				{
@@ -211,6 +222,14 @@ namespace Raven.Database.Config
 		{
 			get
 			{
+				if(HttpContext.Current!=null)// running in IIS, let us figure out how
+				{
+					var url = HttpContext.Current.Request.Url;
+					return new UriBuilder(url)
+					{
+						Path = HttpContext.Current.Request.ApplicationPath
+					}.Uri.ToString();
+				}
 				return new UriBuilder("http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
 			}
 		}

@@ -18,7 +18,7 @@ If you want to contribute to Raven source:
     specific for a particular version.
   * Please take care of the code formatting. We don't reject contributions 
     because of a different coding style, but it would be nice if you would take
-    care of the code formatting to match the RavenDB source. On major thing to
+    care of the code formatting to match the RavenDB source. One major thing to
     take care of: We use tabs for indentation, not spaces!
     You can use the "Productivity Power Tools" extension for VisualStudio to
     enforce a consistent indentation.

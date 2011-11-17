@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Json
 			else if (value is DateTimeOffset)
 				writer.WriteValue(((DateTimeOffset) value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 			else
-				throw new ArgumentException("Not idea how to process argument: " + value);
+				throw new ArgumentException(string.Format("Not idea how to process argument: '{0}'", value));
 		}
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)

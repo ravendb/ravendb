@@ -67,7 +67,7 @@ namespace Raven.Tests.Bugs
 			using (var session = documentStore.OpenSession()) {
 				var hilo = session.Load<HiLoKey>("Raven/Hilo/foos");
 				Assert.NotNull(hilo);
-				Assert.Equal(1024, hilo.Max);
+				Assert.Equal(32, hilo.Max);
 			}
 
 			server.Dispose();
@@ -78,7 +78,7 @@ namespace Raven.Tests.Bugs
 			using (var session = documentStore.OpenSession()) {
 				var hilo = session.Load<HiLoKey>("Raven/Hilo/foos");
 				Assert.NotNull(hilo);
-				Assert.Equal(1024, hilo.Max);
+				Assert.Equal(32, hilo.Max);
 			}
 		}
 

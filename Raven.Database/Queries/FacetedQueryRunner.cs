@@ -38,7 +38,7 @@ namespace Raven.Database.Queries
 							HandleRangeFacet(index, facet, indexQuery, currentIndexSearcher, results);
 							break;
 						default:
-							throw new ArgumentException("Could not understand " + facet.Mode);
+							throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Mode));
 					}
 				}
 

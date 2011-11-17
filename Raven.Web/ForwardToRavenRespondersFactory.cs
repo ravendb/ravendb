@@ -14,7 +14,7 @@ namespace Raven.Web
 	{
 		private static readonly object locker = new object();
 
-		static readonly RavenConfiguration ravenConfiguration = new RavenConfiguration();
+		static readonly RavenConfiguration ravenConfiguration;
 		static readonly DocumentDatabase database;
 		static readonly HttpServer server;
 
@@ -25,7 +25,7 @@ namespace Raven.Web
 				if (database != null)
 					return;
 
-
+				ravenConfiguration = new RavenConfiguration();
 				HttpServer.RegisterHttpEndpointTarget();
 				database = new DocumentDatabase(ravenConfiguration);
 				database.SpinBackgroundWorkers();

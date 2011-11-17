@@ -138,6 +138,15 @@ namespace Raven.Client.Connection
 			});
 		}
 
+		/// <summary>
+		/// Allow to query whatever we are in failover mode or not
+		/// </summary>
+		/// <returns></returns>
+		public bool InFailoverMode()
+		{
+			return replicationInformer.GetFailureCount(url) > 0;
+		}
+
 		private T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
@@ -768,9 +777,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
-			// we are fine with that, requests to load > 128 items are going to be rare
+			// we are fine with that, requests to load that many items are probably going to be rare
 			HttpJsonRequest request;
-			if (ids.Length < 128)
+			if (ids.Sum(x=>x.Length) < 1024)
 			{
 				path += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
@@ -1112,6 +1121,18 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		}
 
 		/// <summary>
+		/// Retrieve the statistics for the database
+		/// </summary>
+		public DatabaseStatistics GetStatistics()
+		{
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,url +"/stats", "GET", credentials, convention);
+
+			var response = httpJsonRequest.ReadResponseString();
+			var jo = RavenJObject.Parse(response);
+			return jo.Deserialize<DatabaseStatistics>(convention);
+		}
+
+		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
@@ -1174,6 +1195,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
+		/// <param name="index"></param>
 		/// <param name="query"></param>
 		/// <param name="facetSetupDoc"></param>
 		/// <returns></returns>

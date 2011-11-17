@@ -371,7 +371,6 @@ namespace Raven.Client.Indexes
 			var rightOp = node.Right;
 
 			FixupEnumBinaryExpression(ref leftOp, ref rightOp);
-
 			switch (node.NodeType)
 			{
 				case ExpressionType.Add:
@@ -626,7 +625,7 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
-		private static void FixupEnumBinaryExpression(ref Expression left, ref Expression right)
+		private void FixupEnumBinaryExpression(ref Expression left, ref Expression right)
 		{
 			switch (left.NodeType)
 			{
@@ -639,8 +638,23 @@ namespace Raven.Client.Indexes
 					if (constantExpression == null)
 						return;
 					left = expression;
-					right = Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
+					right = convention.SaveEnumsAsIntegers ? 
+						Expression.Constant((int)constantExpression.Value) : 
+						Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
 					break;
+			}
+
+			while (true)
+			{
+				switch (left.NodeType)
+				{
+					case ExpressionType.ConvertChecked:
+					case ExpressionType.Convert:
+						left = ((UnaryExpression)left).Operand;
+						break;
+					default:
+						return;
+				}
 			}
 		}
 

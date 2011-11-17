@@ -97,6 +97,8 @@ namespace Raven.Sample.ComplexSharding
 				session.Load<Post>("posts/2/2");
 			}
 
+			Console.WriteLine("done");
+			Console.ReadLine();
 			documentStore.Dispose();
 
 			foreach (var server in ravenDbServers)
@@ -107,6 +109,11 @@ namespace Raven.Sample.ComplexSharding
 
 		private static IEnumerable<RavenDbServer> StartServers()
 		{
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8081);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8082);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8083);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8084);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8085);
 			return new[]
 			{
 				new RavenDbServer(new RavenConfiguration

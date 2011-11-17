@@ -14,6 +14,7 @@ using NLog;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
+using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Util;
 
@@ -261,6 +262,11 @@ namespace Raven.Client.Document.Async
 			}
 
 			return Query<T>(indexName);
+		}
+
+		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			return Query<T>(new TIndexCreator().IndexName);
 		}
 
 		public IRavenQueryable<T> Query<T>(string indexName)

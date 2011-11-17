@@ -9,27 +9,27 @@ properties {
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", `
-    "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???", `
+    "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
-  $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", `
+  $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", "Lucene.Net.???", `
                      "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", `
                     "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Storage.Esent.???", `
                     "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
-  $client_dlls_3_5 = @( "nlog.???","Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???");
+  $client_dlls_3_5 = @( "nlog.???", "Newtonsoft.Json\Net35\Newtonsoft.Json.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???");
      
-  $client_dlls = @( "nlog.???","Raven.Client.MvcIntegration.???", "Newtonsoft.Json.???","Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", `
+  $client_dlls = @( "nlog.???","Raven.Client.MvcIntegration.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???","Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", `
 			"AsyncCtpLibrary.???" );
   
-  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json.Silverlight.???");   
+  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json\Silverlight\Newtonsoft.Json.???");   
   
   $silverlight_dlls_libs = @( "NLog.???");   
  
   $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", `
-      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "nlog.???", "Newtonsoft.Json.???", `
+      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", `
       "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  );
       
   $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  );
@@ -231,6 +231,10 @@ task CleanOutputDirectory {
 	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
 }
 
+task CopyJsonLibraries {
+	cp -r "$lib_dir\Newtonsoft.Json" $build_dir
+}
+
 task CopyEmbeddedClient { 
 
   foreach($client_dll in $all_client_dlls) {
@@ -253,13 +257,13 @@ task CopySilverlight{
 
 task CopySmuggler {
 	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
-	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Smuggler
+	cp $build_dir\Newtonsoft.Json\Net\NewtonSoft.Json.??? $build_dir\Output\Smuggler
 	cp $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
 task CopyBackup {
 	cp $build_dir\Raven.Backup.??? $build_dir\Output\Backup
-	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Backup
+	cp $build_dir\Newtonsoft.Json\Net\NewtonSoft.Json.??? $build_dir\Output\Backup
 }
 
 task CopyClient {
@@ -361,6 +365,7 @@ task ResetBuildArtifcats {
 task DoRelease -depends Compile, `
 	CleanOutputDirectory,`
 	CreateOutpuDirectories, `
+	CopyJsonLibraries, `
 	CopyEmbeddedClient, `
 	CopySmuggler, `
 	CopyBackup, `

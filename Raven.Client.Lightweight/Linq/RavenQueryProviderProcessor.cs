@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Linq
 {
@@ -52,14 +53,17 @@ namespace Raven.Client.Linq
 		/// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
 		/// <param name="indexName">The name of the index the query is executed against.</param>
 		/// <param name="fieldsToFetch">The fields to fetch in this query</param>
+		/// <param name="fieldsTRename">The fields to rename for the results of this query</param>
 		public RavenQueryProviderProcessor(
 			IDocumentQueryGenerator queryGenerator,
 			Action<IDocumentQueryCustomization> customizeQuery,
 			Action<QueryResult> afterQueryExecuted,
 			string indexName,
-			HashSet<string> fieldsToFetch)
+			HashSet<string> fieldsToFetch, 
+			Dictionary<string, string> fieldsTRename)
 		{
 			FieldsToFetch = fieldsToFetch;
+			FieldsToRename = fieldsTRename;
 			newExpressionType = typeof(T);
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
@@ -72,6 +76,11 @@ namespace Raven.Client.Linq
 		/// </summary>
 		/// <value>The fields to fetch.</value>
 		public HashSet<string> FieldsToFetch { get; set; }
+
+		/// <summary>
+		/// Rename the fields from one name to another
+		/// </summary>
+		public Dictionary<string, string> FieldsToRename { get; set; }
 
 		/// <summary>
 		/// Visits the expression and generate the lucene query
@@ -318,26 +327,30 @@ namespace Raven.Client.Linq
 		/// </summary>
 		/// <param name="expression"></param>
 		/// <returns></returns>
-		protected virtual ExpressionInfo GetMember(Expression expression)
+		protected virtual ExpressionInfo GetMember(System.Linq.Expressions.Expression expression)
 		{
 			var parameterExpression = expression as ParameterExpression;
 			if (parameterExpression != null)
 			{
-				return new ExpressionInfo(CurrentPath, parameterExpression.Type, false);
+
+				if (currentPath.EndsWith(","))
+					currentPath = currentPath.Substring(0, currentPath.Length - 1);
+				return new ExpressionInfo(currentPath, parameterExpression.Type, false);
+
 			}
 
-			string fullPath;
+			string path;
 			Type memberType;
 			bool isNestedPath;
-			GetPath(expression, out fullPath, out memberType, out isNestedPath);
+			GetPath(expression, out path, out memberType, out isNestedPath);
 
-			//for stnadard queries, we take just the last part. But for dynamic queries, we take the whole part
-			var prop = fullPath.Substring(fullPath.LastIndexOf('.') + 1);
-			var path = fullPath.Substring(fullPath.IndexOf('.') + 1);
+			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
+			path = path.Substring(path.IndexOf('.') + 1);
 
 			return new ExpressionInfo(
-				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, path, prop),
-				memberType, isNestedPath);
+				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path),
+				memberType,
+				isNestedPath);
 		}
 
 		/// <summary>
@@ -545,7 +558,7 @@ namespace Raven.Client.Linq
 		private static string GetFullMemberPath(MemberExpression memberExpression)
 		{
 			var parentExpression = memberExpression.Expression as MemberExpression;
-			if(parentExpression != null)
+			if (parentExpression != null)
 			{
 				return GetFullMemberPath(parentExpression) + "." + memberExpression.Member.Name;
 			}
@@ -556,7 +569,17 @@ namespace Raven.Client.Linq
 		{
 			if (expression.Method.DeclaringType == typeof(object) && expression.Method.Name == "Equals")
 			{
-				VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Arguments[0], expression.Arguments[1]));
+				switch (expression.Arguments.Count)
+				{
+					case 1:
+						VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Object, expression.Arguments[0]));
+						break;
+					case 2:
+						VisitEquals(Expression.MakeBinary(ExpressionType.Equal, expression.Arguments[0], expression.Arguments[1]));
+						break;
+					default:
+						throw new ArgumentException("Can't understand Equals with " + expression.Arguments.Count + " arguments");
+				}
 				return;
 			}
 			if (expression.Method.DeclaringType == typeof(LinqExtensions))
@@ -600,11 +623,11 @@ namespace Raven.Client.Linq
 					VisitExpression(expression.Arguments[0]);
 					var expressionInfo = GetMember(expression.Arguments[1]);
 					object value;
-					if(GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
+					if (GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
 					{
 						throw new InvalidOperationException("Could not extract value from " + expression);
 					}
-					luceneQuery.Search(expressionInfo.Path, (string) value);
+					luceneQuery.Search(expressionInfo.Path, (string)value);
 					break;
 				case "In":
 					var memberInfo = GetMember(expression.Arguments[0]);
@@ -615,7 +638,7 @@ namespace Raven.Client.Linq
 						luceneQuery.WhereContains(memberInfo.Path, array);
 					else
 					{
-						luceneQuery.WhereContains(memberInfo.Path, ((IEnumerable) objects).Cast<object>());
+						luceneQuery.WhereContains(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
 					}
 
 					break;
@@ -816,29 +839,42 @@ namespace Raven.Client.Linq
 
 		private void VisitSelect(Expression operand)
 		{
-			var body = ((LambdaExpression)operand).Body;
+			var lambdaExpression = operand as LambdaExpression;
+			var body = lambdaExpression != null ? lambdaExpression.Body : operand;
 			switch (body.NodeType)
 			{
+				case ExpressionType.Convert:
+					VisitSelect(((UnaryExpression)body).Operand);
+					break;
 				case ExpressionType.MemberAccess:
-					AddToFieldsToFetch(((MemberExpression)body).Member.Name);
+					MemberExpression memberExpression = ((MemberExpression)body);
+					AddToFieldsToFetch(memberExpression.Member.Name, memberExpression.Member.Name) ;
 					break;
 				//Anonomyous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
 				//See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
 				case ExpressionType.New:
 					var newExpression = ((NewExpression)body);
 					newExpressionType = newExpression.Type;
-					foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
+					for (int index = 0; index < newExpression.Arguments.Count; index++)
 					{
-						AddToFieldsToFetch(field);
+						var field = newExpression.Arguments[index] as MemberExpression;
+						if(field == null)
+							continue;
+
+						AddToFieldsToFetch(field.Member.Name, newExpression.Members[index].Name);
 					}
 					break;
 				//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
 				case ExpressionType.MemberInit:
 					var memberInitExpression = ((MemberInitExpression)body);
 					newExpressionType = memberInitExpression.NewExpression.Type;
-					foreach (var field in memberInitExpression.Bindings.Cast<MemberAssignment>().Select(x => x.Member.Name))
+					foreach (MemberBinding t in memberInitExpression.Bindings)
 					{
-						AddToFieldsToFetch(field);
+						var field = t as MemberAssignment;
+						if (field == null)
+							continue;
+
+						AddToFieldsToFetch(field.Member.Name, field.Member.Name);
 					}
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
@@ -849,16 +885,20 @@ namespace Raven.Client.Linq
 			}
 		}
 
-		private void AddToFieldsToFetch(string field)
+		private void AddToFieldsToFetch(string docField, string renamedField)
 		{
 			var identityProperty = luceneQuery.DocumentConvention.GetIdentityProperty(typeof(T));
-			if (identityProperty != null && identityProperty.Name == field)
+			if (identityProperty != null && identityProperty.Name == docField)
 			{
 				FieldsToFetch.Add(Constants.DocumentIdFieldName);
 			}
 			else
 			{
-				FieldsToFetch.Add(field);
+				FieldsToFetch.Add(docField);
+			}
+			if(docField != renamedField)
+			{
+				FieldsToRename[docField] = renamedField;
 			}
 		}
 
@@ -939,7 +979,7 @@ namespace Raven.Client.Linq
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
 				if (type.IsEnum && (value is IEnumerable == false) && // skip arrays, lists
-					queryGenerator.Conventions.SaveEnumsAsIntegers == false) 
+					queryGenerator.Conventions.SaveEnumsAsIntegers == false)
 				{
 					return Enum.GetName(type, value);
 				}
@@ -1086,6 +1126,11 @@ namespace Raven.Client.Linq
 		{
 			var finalQuery = ((IDocumentQuery<T>)luceneQuery).SelectFields<TProjection>(FieldsToFetch.ToArray());
 
+
+			if (FieldsToRename.Count > 0)
+			{
+				finalQuery.AfterQueryExecuted(RenameResults);
+			}
 			var executeQuery = GetQueryResult(finalQuery);
 
 			var queryResult = finalQuery.QueryResult;
@@ -1095,6 +1140,29 @@ namespace Raven.Client.Linq
 			}
 
 			return executeQuery;
+		}
+
+		private void RenameResults(QueryResult queryResult)
+		{
+			for (int index = 0; index < queryResult.Results.Count; index++)
+			{
+				var result = queryResult.Results[index];
+				var safeToModify = result.CreateSnapshot();
+				bool changed = false;
+				foreach (var rename in FieldsToRename)
+				{
+					RavenJToken val;
+					if (safeToModify.TryGetValue(rename.Key, out val) == false)
+						continue;
+					changed = true;
+					safeToModify.Remove(rename.Key);
+					safeToModify[rename.Value] = val;
+				}
+				if (!changed) 
+					continue;
+				safeToModify.EnsureSnapshot();
+				queryResult.Results[index] = safeToModify;
+			}
 		}
 #else
 		private object ExecuteQuery<TProjection>()
@@ -1134,10 +1202,10 @@ namespace Raven.Client.Linq
 					}
 #if !SILVERLIGHT
 				case SpecialQueryType.Count:
-				{
-					var queryResultAsync = finalQuery.QueryResult;
-					return queryResultAsync.TotalResults;
-				}
+					{
+						var queryResultAsync = finalQuery.QueryResult;
+						return queryResultAsync.TotalResults;
+					}
 #else
 				case SpecialQueryType.Count:
 					{
