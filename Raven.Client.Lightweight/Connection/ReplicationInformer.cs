@@ -40,6 +40,12 @@ namespace Raven.Client.Connection
 		private static readonly List<string> Empty = new List<string>();
 
 		/// <summary>
+		/// Notify when the failover status changed
+		/// </summary>
+		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged = delegate { };
+
+
+		/// <summary>
 		/// Gets the replication destinations.
 		/// </summary>
 		/// <value>The replication destinations.</value>
@@ -204,7 +210,15 @@ namespace Raven.Client.Connection
 		public void IncrementFailureCount(string operationUrl)
 		{
 			IntHolder value = GetHolder(operationUrl);
-			Interlocked.Increment(ref value.Value);
+			var current = Interlocked.Increment(ref value.Value);
+			if(current == 1)// first failure
+			{
+				FailoverStatusChanged(this, new FailoverStatusChangedEventArgs
+				{
+					Url = operationUrl,
+					Failing = true
+				});
+			}
 		}
 
 		/// <summary>
@@ -302,8 +316,33 @@ namespace Raven.Client.Connection
 		public void ResetFailureCount(string operationUrl)
 		{
 			IntHolder value = GetHolder(operationUrl);
+			var oldVal = value.Value;
 			Thread.VolatileWrite(ref value.Value, 0);
+			if(oldVal != 0)
+			{
+				FailoverStatusChanged(this,
+					new FailoverStatusChangedEventArgs
+					{
+						Url = operationUrl,
+						Failing = false
+					});
+			}
 		}
+	}
+
+	/// <summary>
+	/// The event arguments for when the failover status changed
+	/// </summary>
+	public class FailoverStatusChangedEventArgs : EventArgs
+	{
+		/// <summary>
+		/// Whatever that url is now failing
+		/// </summary>
+		public bool Failing { get; set; }
+		/// <summary>
+		/// The url whose failover status changed
+		/// </summary>
+		public string Url { get; set; }
 	}
 }
 #endif
