@@ -562,6 +562,13 @@
     <Compile Include="MailingList\LazyStats.cs" />
     <Compile Include="MailingList\NicolasGarfinkiel.cs" />
     <Compile Include="MailingList\Rob.cs" />
+    <Compile Include="MailingList\RobStats\Entity.cs" />
+    <Compile Include="MailingList\RobStats\Opinion.cs" />
+    <Compile Include="MailingList\RobStats\StatisticsBug.cs" />
+    <Compile Include="MailingList\RobStats\Summary.cs" />
+    <Compile Include="MailingList\RobStats\TheIndex.cs" />
+    <Compile Include="MailingList\spokeypokey.cs" />
+    <Compile Include="MailingList\spokeypokey2.cs" />
     <Compile Include="MailingList\Stacey.cs" />
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />

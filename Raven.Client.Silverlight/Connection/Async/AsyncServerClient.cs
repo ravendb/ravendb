@@ -422,7 +422,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path.NoCache(), "GET", credentials, convention);
 
 			return request.ReadResponseStringAsync()
 				.ContinueWith(task => AttemptToProcessResponse(() =>

@@ -4,7 +4,6 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
@@ -64,6 +63,7 @@
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="*" />
 					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
 				<TextBlock Style="{StaticResource PanelTitle}"
@@ -86,23 +86,26 @@
 						<ColumnDefinition Width="Auto" />
 					</Grid.ColumnDefinitions>
 
-					<StackPanel>
+					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
 						<CheckBox Content="Make spatial queries"
-								  IsChecked="{Binding IsSpatial, Mode=TwoWay}" />
+								  IsChecked="{Binding IsSpatialQuery, Mode=TwoWay}" />
 
 						<StackPanel Orientation="Horizontal"
-									Visibility="{Binding IsSpatial, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
+									Visibility="{Binding IsSpatialQuery, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
 							<TextBlock Text="Longitude:" />
 							<TextBox Margin="5,0,5,0"
-									 Width="100" Text="{Binding }" />
+									 Width="100"
+									 Text="{Binding Longitude}" />
 
 							<TextBlock Text="Latitude:" />
 							<TextBox Margin="5,0,5,0"
-									 Width="100" />
+									 Width="100"
+									 Text="{Binding Latitude}" />
 
-							<TextBlock Text="Radios:" />
+							<TextBlock Text="Radius:" />
 							<TextBox Margin="5,0,5,0"
-									 Width="100" />
+									 Width="100"
+									 Text="{Binding Radios}"/>
 						</StackPanel>
 					</StackPanel>
 
@@ -111,7 +114,27 @@
 									 Command="{Binding Execute}"
 									 HorizontalAlignment="Right" />
 				</Grid>
-				
+
+				<HyperlinkButton Command="{Binding AddSortBy}"
+								 Grid.Row="3"
+								 Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNotNull}}"
+								 Content="Add Sort By" />
+				<StackPanel Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNull}}" Grid.Row="3">
+					<TextBlock Text="Sort By" />
+					<ItemsControl ItemsSource="{Binding SortBy}"
+								  Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<StackPanel>
+									<ComboBox ItemsSource="{Binding SortByOptions}" />
+									<HyperlinkButton Command="{Binding RemoveSortBy}"
+													 CommandParameter="{Binding}"
+													 Content="Remove Sort By" />
+								</StackPanel>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</StackPanel>
 			</Grid>
 
 			<sdk:GridSplitter Grid.Row="1"

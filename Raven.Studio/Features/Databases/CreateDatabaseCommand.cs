@@ -31,12 +31,17 @@ namespace Raven.Studio.Features.Databases
 					if (string.IsNullOrEmpty(databaseName))
 						return;
 
-					if(Path.GetInvalidPathChars().Any(databaseName.Contains))
+					if (Path.GetInvalidPathChars().Any(databaseName.Contains))
 						throw new ArgumentException("Cannot create a database with invalid path characters: " + databaseName);
 
 					ApplicationModel.Current.AddNotification(new Notification("Creating database: " + databaseName));
 					databaseCommands.EnsureDatabaseExistsAsync(databaseName)
-						.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("Database " + databaseName + " created")))
+						.ContinueOnSuccess(() => databaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
+						.ContinueOnSuccessInTheUIThread(() =>
+											{
+												ApplicationModel.Current.Server.Value.Databases.Add(new DatabaseModel(databaseName, databaseCommands.ForDatabase(databaseName)));
+												ApplicationModel.Current.AddNotification(new Notification("Database " + databaseName + " created"));
+											})
 						.Catch();
 				});
 		}

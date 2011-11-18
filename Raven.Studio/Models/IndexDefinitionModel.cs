@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
+using Raven.Studio.Commands;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -129,7 +130,7 @@ namespace Raven.Studio.Models
 
 		public string ViewTitle
 		{
-			get { return createNewIndexMode ? "Create an Index" : Name; }
+			get { return createNewIndexMode ? "Create an Index" : "Index: " + Name; }
 		}
 
 		public string Reduce
@@ -168,7 +169,7 @@ namespace Raven.Studio.Models
 
 		public ICommand AddMap
 		{
-			get { return new AddMapCommand(this); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Maps.Add(new MapItem())); }
 		}
 
 		public ICommand RemoveMap
@@ -178,33 +179,27 @@ namespace Raven.Studio.Models
 
 		public ICommand AddReduce
 		{
-			get { return new AddReduceCommand(this); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Reduce = string.Empty); }
 		}
 
 		public ICommand RemoveReduce
 		{
-			get { return new RemoveReduceCommand(this); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Reduce = null); }
 		}
 
 		public ICommand AddTransformResults
 		{
-			get
-			{
-				return new AddTransformResultsCommand(this);
-			}
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.TransformResults = string.Empty); }
 		}
 
 		public ICommand RemoveTransformResults
 		{
-			get { return new RemoveTransformResultsCommand(this); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.TransformResults = null); }
 		}
 
 		public ICommand AddField
 		{
-			get
-			{
-				return new AddFieldCommand(this);
-			}
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Fields.Add(FieldProperties.Defualt)); }
 		}
 
 		public ICommand RemoveField
@@ -227,21 +222,6 @@ namespace Raven.Studio.Models
 			get { return new ResetIndexCommand(this); }
 		}
 
-		public class AddMapCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public AddMapCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.Maps.Add(new MapItem());
-			}
-		}
-
 		public class RemoveMapCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
@@ -258,81 +238,6 @@ namespace Raven.Studio.Models
 					return;
 
 				index.Maps.Remove(map);
-			}
-		}
-
-		public class AddReduceCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public AddReduceCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.Reduce = string.Empty;
-			}
-		}
-
-		public class RemoveReduceCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public RemoveReduceCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.Reduce = null;
-			}
-		}
-
-		public class AddTransformResultsCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public AddTransformResultsCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.TransformResults = string.Empty;
-			}
-		}
-
-		public class RemoveTransformResultsCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public RemoveTransformResultsCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.TransformResults = null;
-			}
-		}
-
-		public class AddFieldCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public AddFieldCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.Fields.Execute(() => index.Fields.Add(FieldProperties.Defualt));
 			}
 		}
 

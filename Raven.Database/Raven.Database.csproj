@@ -460,6 +460,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Server\WebUI\css\smoothness\images\ui-anim_basic_16x16.gif" />
     <Content Include="Server\WebUI\studio_not_found.html" />
     <Content Include="Server\WebUI\studio.html" />
     <Content Include="Server\WebUI\raven-data.ico" />

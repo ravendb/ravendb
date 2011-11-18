@@ -14,6 +14,7 @@ Save.png
 Undo.png
 Remove.png
 Query.png (find)
+document-new.png
 
 The following icons from the Visual Studio 2010 Image Library (http://blogs.msdn.com/b/visualstudio/archive/2010/03/29/tips-and-tricks-visual-studio-2010-image-library.aspx)
 
@@ -22,6 +23,7 @@ DeleteHS.png
 Refresh.png
 Info.png
 Warning.png
+Error.png
 
 The following icons came from Gasyoun (http://led24.de/iconset/) via iconfinder (http://www.iconfinder.com/search/?q=iconset%3Aledicons)
 

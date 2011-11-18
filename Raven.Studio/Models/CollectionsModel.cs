@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
@@ -17,26 +19,30 @@ namespace Raven.Studio.Models
 			Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
 			SelectedCollection = new Observable<CollectionModel>();
 
-			SelectedCollection.PropertyChanged += (sender, args) =>
-			                                      	{
-			                                      		var urlParser = new UrlParser(UrlUtil.Url);
-			                                      		var collection = SelectedCollection.Value;
-			                                      		if (collection == null)
-			                                      			return;
-														var name = collection.Name;
-			                                      		initialSelectedDatabaseName = name;
-														if (urlParser.GetQueryParam("name") != name)
-			                                      		{
-			                                      			urlParser.SetQueryParam("name", name);
-			                                      			urlParser.RemoveQueryParam("skip");
-			                                      			UrlUtil.Navigate(urlParser.BuildUrl());
-			                                      		}
-			                                      	};
+			SelectedCollection.PropertyChanged += (sender, args) => PutCollectionNameInTheUrl();
+		}
+
+		private static void PutCollectionNameInTheUrl()
+		{
+			var urlParser = new UrlParser(UrlUtil.Url);
+			var collection = SelectedCollection.Value;
+			if (collection == null)
+				return;
+			var name = collection.Name;
+			initialSelectedDatabaseName = name;
+			if (urlParser.GetQueryParam("name") != name)
+			{
+				urlParser.SetQueryParam("name", name);
+				urlParser.RemoveQueryParam("skip");
+				UrlUtil.Navigate(urlParser.BuildUrl());
+			}
 		}
 
 		public CollectionsModel()
 		{
+			OnPropertyChanged();
 			ModelUrl = "/collections";
+			SelectedCollection.PropertyChanged += (sender, args) => OnPropertyChanged("ViewTitle");
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -54,12 +60,19 @@ namespace Raven.Studio.Models
 		protected override Task TimerTickedAsync()
 		{
 			return DatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
-				.ContinueOnSuccess(Update);
+				.ContinueOnSuccess(Update)
+				.CatchIgnore<WebException>(() =>
+				       	{
+							var urlParser = new UrlParser(UrlUtil.Url);
+				       		if (urlParser.RemoveQueryParam("name"))
+				       			UrlUtil.Navigate(urlParser.BuildUrl());
+				       		ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error));
+				       	});
 		}
 
 		private void Update(NameAndCount[] collections)
 		{
-			var collectionModels = collections.OrderByDescending(x => x.Count).Select(col => new CollectionModel(DatabaseCommands)
+			var collectionModels = collections.OrderByDescending(x => x.Count).Select(col => new CollectionModel()
 			{
 				Name = col.Name,
 				Count = col.Count
@@ -78,6 +91,16 @@ namespace Raven.Studio.Models
 
 			if (SelectedCollection.Value == null)
 				SelectedCollection.Value = Collections.FirstOrDefault();
+		}
+
+		public string ViewTitle
+		{
+			get
+			{
+				if (SelectedCollection.Value == null || string.IsNullOrEmpty(SelectedCollection.Value.Name))
+					return "Collections";
+				return "Collection: " + SelectedCollection.Value.Name;
+			}
 		}
 	}
 }
