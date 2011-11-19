@@ -183,6 +183,11 @@ namespace Raven.Client.Embedded
 			database.DeleteStatic(key, etag);
 		}
 
+		public string[] GetDatabaseNames()
+		{
+			throw new InvalidOperationException("Embedded mode does not support multi-tenancy");
+		}
+
 		/// <summary>
 		/// Gets the index names from the server
 		/// </summary>
