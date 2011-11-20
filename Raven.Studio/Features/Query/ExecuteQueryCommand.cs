@@ -39,8 +39,6 @@ namespace Raven.Studio.Features.Query
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
 		{
-			ApplicationModel.Current.AddNotification(new Notification("Executing query..."));
-
 			var q = new IndexQuery
 			{
 				Start = (model.Pager.CurrentPage - 1) * model.Pager.PageSize,
@@ -88,7 +86,6 @@ namespace Raven.Studio.Features.Query
 					documentsModel.Documents.Match(viewableDocuments);
 					documentsModel.Pager.TotalResults.Value = qr.TotalResults;
 				})
-				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("Query executed.")))
 				.Catch();
 		}
 	}
