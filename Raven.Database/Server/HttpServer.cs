@@ -605,12 +605,12 @@ namespace Raven.Database.Server
 
 			// gzip must be first, because chrome has an issue accepting deflate data
 			// when sending it json text
-			if ((acceptEncoding.IndexOf("gzip", StringComparison.InvariantCultureIgnoreCase) != -1))
+			if ((acceptEncoding.IndexOf("gzip", StringComparison.OrdinalIgnoreCase) != -1))
 			{
 				ctx.SetResponseFilter(s => new GZipStream(s, CompressionMode.Compress, true));
 				ctx.Response.AddHeader("Content-Encoding", "gzip");
 			}
-			else if (acceptEncoding.IndexOf("deflate", StringComparison.InvariantCultureIgnoreCase) != -1)
+			else if (acceptEncoding.IndexOf("deflate", StringComparison.OrdinalIgnoreCase) != -1)
 			{
 				ctx.SetResponseFilter(s => new DeflateStream(s, CompressionMode.Compress, true));
 				ctx.Response.AddHeader("Content-Encoding", "deflate");

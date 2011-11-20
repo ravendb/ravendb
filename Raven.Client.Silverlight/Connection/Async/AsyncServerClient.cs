@@ -85,7 +85,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
 			var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/");
+			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
 			if (indexOfDatabases != -1)
 				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
 			if (databaseUrl.EndsWith("/") == false)
@@ -112,7 +112,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// </summary>
 		public IAsyncDatabaseCommands GetRootDatabase()
 		{
-			var indexOfDatabases = url.IndexOf("/databases/");
+			var indexOfDatabases = url.IndexOf("/databases/", StringComparison.Ordinal);
 			if (indexOfDatabases == -1)
 				return this;
 
