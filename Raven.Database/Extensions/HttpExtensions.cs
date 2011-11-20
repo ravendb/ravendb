@@ -290,8 +290,7 @@ namespace Raven.Database.Extensions
 		public static int GetPageSize(this IHttpContext context, int maxPageSize)
 		{
 			int pageSize;
-			int.TryParse(context.Request.QueryString["pageSize"], out pageSize);
-			if (pageSize == 0)
+			if (int.TryParse(context.Request.QueryString["pageSize"], out pageSize) == false || pageSize < 0)
 				pageSize = 25;
 			if (pageSize > maxPageSize)
 				pageSize = maxPageSize;

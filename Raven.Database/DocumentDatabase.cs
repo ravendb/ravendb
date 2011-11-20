@@ -749,8 +749,7 @@ namespace Raven.Database
 						results = collection.Select(x => x.ToJson());
 					}
 
-					if (query.PageSize > 0) // maybe they just want the query stats?
-						list.AddRange(results);
+					list.AddRange(results);
 
 					if (transformerErrors.Count > 0)
 					{
