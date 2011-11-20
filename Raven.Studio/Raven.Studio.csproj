@@ -126,6 +126,7 @@
     <Compile Include="Controls\Editors\QueryEditor.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
     <Compile Include="Controls\Editors\LinqEditor.cs" />
+    <Compile Include="Controls\Editors\SettingsRegister.cs" />
     <Compile Include="Controls\Editors\SyntaxEditorHelper.cs" />
     <Compile Include="Controls\Editors\XamlEditor.cs" />
     <Compile Include="Controls\Notification.xaml.cs">
@@ -514,6 +515,7 @@
     <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\RavenQuery.langdef" />
     <None Include="Properties\AppManifest.xml" />
+    <EmbeddedResource Include="Settings.dat" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\Images\BackgroundTexture.png" />

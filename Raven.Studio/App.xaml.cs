@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using System.Windows.Controls;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
