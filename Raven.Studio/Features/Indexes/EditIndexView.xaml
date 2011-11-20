@@ -49,7 +49,7 @@
 							ToolTipService.ToolTip="Remove this field from the index"
 							HorizontalAlignment="Right"
 							VerticalAlignment="Top"
-							Command="{Binding DataContext.RemoveField, ElementName=this}"
+							Command="{Binding Path=DataContext.RemoveField, ElementName=this}"
 							CommandParameter="{Binding}">
 						<Button.Content>
 							<Image Source="{StaticResource Image_Remove_Tiny}"

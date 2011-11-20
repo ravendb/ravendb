@@ -105,7 +105,7 @@
 							<TextBlock Text="Radius:" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Radios}"/>
+									 Text="{Binding Radius}"/>
 						</StackPanel>
 					</StackPanel>
 
@@ -117,12 +117,12 @@
 
 				<HyperlinkButton Command="{Binding AddSortBy}"
 								 Grid.Row="3"
-								 Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNotNull}}"
+								 Visibility="{Binding Path=SortByOptions.Count, Converter={StaticResource HiddenWhenEmpty}}"
 								 Content="Add Sort By" />
-				<StackPanel Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNull}}" Grid.Row="3">
+				<StackPanel Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}"
+							Grid.Row="3">
 					<TextBlock Text="Sort By" />
-					<ItemsControl ItemsSource="{Binding SortBy}"
-								  Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}">
+					<ItemsControl ItemsSource="{Binding SortBy}">
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
 								<StackPanel>
