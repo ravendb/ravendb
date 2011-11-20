@@ -193,12 +193,17 @@
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
 							<StackPanel Orientation="Horizontal">
-								<TextBlock Text="Are you looking for" />
-								<TextBlock Text="{Binding}"
+								<TextBlock Text="Did you mean " />
+								<TextBlock Text="{Binding Term}"
 										   Margin="2,0,0,0"
 										   FontStyle="Italic" />
 								<TextBlock Margin="2,0,0,0"
-										   Text="?" />
+										   Text=" for the field " />
+								<TextBlock Text="{Binding Field}"
+										   Margin="2,0,0,0"
+										   FontStyle="Italic" />
+								<TextBlock Margin="2,0,0,0"
+										   Text=" ?" />
 							</StackPanel>
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>

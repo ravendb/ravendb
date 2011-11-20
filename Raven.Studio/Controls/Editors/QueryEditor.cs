@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using ActiproSoftware.Text;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Raven.Studio.Features.Query;
 
 namespace Raven.Studio.Controls.Editors
 {
@@ -73,15 +74,9 @@ namespace Raven.Studio.Controls.Editors
 				if (currentField == null || currentVal == null) 
 					continue;
 
-				yield return new FieldAndTerm {Field = currentField, Term = currentVal};
+				yield return new FieldAndTerm(currentField, currentVal);
 				currentField = null;
 			}
 		}
-	}
-
-	public class FieldAndTerm
-	{
-		public string Field { get; set; }
-		public string Term { get; set; }
 	}
 }
