@@ -197,6 +197,7 @@ namespace Raven.Studio.Models
 					fields.Match(definition.Fields);
 					IsSpatialQuerySupported = definition.Map.Contains("SpatialIndex.Generate");
 					SetSortByOptions(fields);
+					Execute.Execute(string.Empty);
 				}).Catch();
 		}
 
