@@ -84,7 +84,21 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				
+				var enumerator = CreateSampleData().GetEnumerator();
+				if (enumerator.MoveNext() == false)
+					return;
+				ProcessTasks(enumerator);
+			}
+
+			private static Task ProcessTasks(IEnumerator<Task> enumerator)
+			{
+				return enumerator.Current.ContinueWith(task =>
+													   {
+														   task.Wait();//would throw on error
+														   if (enumerator.MoveNext() == false)
+															   return task;
+														   return ProcessTasks(enumerator);
+													   }).Unwrap();
 			}
 
 			private IEnumerable<Task> CreateSampleData()
@@ -105,26 +119,26 @@ namespace Raven.Studio.Models
 						var ravenJObject = index.Value<RavenJObject>("definition");
 						var putDoc = databaseCommands
 							.PutIndexAsync(indexName,
-							               ravenJObject.JsonDeserialization<IndexDefinition>(),
-							               true);
+										   ravenJObject.JsonDeserialization<IndexDefinition>(),
+										   true);
 						yield return putDoc;
 					}
 
 					var batch = databaseCommands.BatchAsync(
 						musicStoreData.Value<RavenJArray>("Docs").OfType<RavenJObject>().Select(
 							doc =>
-								{
-									var metadata = doc.Value<RavenJObject>("@metadata");
-									doc.Remove("@metadata");
-									return new PutCommandData
-									       	{
-									       		Document = doc,
-									       		Metadata = metadata,
-									       		Key = metadata.Value<string>("@id"),
-									       	};
-								}).ToArray()
+							{
+								var metadata = doc.Value<RavenJObject>("@metadata");
+								doc.Remove("@metadata");
+								return new PutCommandData
+										{
+											Document = doc,
+											Metadata = metadata,
+											Key = metadata.Value<string>("@id"),
+										};
+							}).ToArray()
 						);
-						
+
 					yield return batch;
 
 					model.IsGeneratingSampleData = false;
@@ -132,7 +146,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-#endregion
+		#endregion
 
 	}
 }

@@ -273,5 +273,32 @@ namespace Raven.Studio.Models
 		}
 
 		public BindableCollection<FieldAndTerm> Suggestions { get; private set; }
+		public ICommand RepairTermInQuery
+		{
+			get { return new RepairTermInQueryCommand(this); }
+		}
+
+		private class RepairTermInQueryCommand : Command
+		{
+			private readonly QueryModel model;
+			private FieldAndTerm fieldAndTerm;
+
+			public RepairTermInQueryCommand(QueryModel model)
+			{
+				this.model = model;
+			}
+
+			public override bool CanExecute(object parameter)
+			{
+				fieldAndTerm = parameter as FieldAndTerm;
+				return fieldAndTerm != null;
+			}
+
+			public override void Execute(object parameter)
+			{
+				model.Query.Value = model.Query.Value.Replace(fieldAndTerm.Term, fieldAndTerm.SuggestedTerm);
+				model.Execute.Execute(null);
+			}
+		}
 	}
 }

@@ -10,5 +10,6 @@ namespace Raven.Studio.Features.Query
 
 		public string Field { get; set; }
 		public string Term { get; set; }
+		public string SuggestedTerm { get; set; }
 	}
 }
