@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Web;
 using Raven.Database;
 using Raven.Database.Config;
@@ -12,20 +13,31 @@ namespace Raven.Web
 {
 	public class ForwardToRavenRespondersFactory : IHttpHandlerFactory
 	{
+		internal static DocumentDatabase database;
+		internal static HttpServer server;
 		private static readonly object locker = new object();
 
-		static readonly RavenConfiguration ravenConfiguration;
-		static readonly DocumentDatabase database;
-		static readonly HttpServer server;
-
-		static ForwardToRavenRespondersFactory()
+		public IHttpHandler GetHandler(HttpContext context, string requestType, string url, string pathTranslated)
 		{
+			if (database == null)
+				throw new InvalidOperationException("Database has not been initialized properly");
+			return new ForwardToRavenResponders(server);
+		}
+
+		public void ReleaseHandler(IHttpHandler handler)
+		{
+		}
+
+		public static void Init()
+		{
+			if (database != null)
+				return;
 			lock (locker)
 			{
 				if (database != null)
 					return;
 
-				ravenConfiguration = new RavenConfiguration();
+				var ravenConfiguration = new RavenConfiguration();
 				HttpServer.RegisterHttpEndpointTarget();
 				database = new DocumentDatabase(ravenConfiguration);
 				database.SpinBackgroundWorkers();
@@ -33,13 +45,21 @@ namespace Raven.Web
 			}
 		}
 
-		public IHttpHandler GetHandler(HttpContext context, string requestType, string url, string pathTranslated)
+		public static void Shutdown()
 		{
-			return new ForwardToRavenResponders(server);
-		}
+			if (database == null)
+				return;
+			lock (locker)
+			{
+				if (database == null)
+					return;
 
-		public void ReleaseHandler(IHttpHandler handler)
-		{
+				server.Dispose();
+				database.Dispose();
+
+				server = null;
+				database = null;
+			}
 		}
 	}
 }
