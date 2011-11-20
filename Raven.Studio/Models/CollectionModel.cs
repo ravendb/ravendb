@@ -41,6 +41,8 @@ namespace Raven.Studio.Models
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
 		{
+			if (string.IsNullOrWhiteSpace(Name)) return null;
+
 			return DatabaseCommands
 				.QueryAsync("Raven/DocumentsByEntityName", new IndexQuery { Start = documentsModel.Pager.Skip, PageSize = documentsModel.Pager.PageSize, Query = "Tag:" + Name }, new string[] { })
 				.ContinueOnSuccess(queryResult =>
