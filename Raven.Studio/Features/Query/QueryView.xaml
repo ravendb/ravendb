@@ -151,15 +151,26 @@
 				<StackPanel Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}"
 							Grid.Row="3">
 					<TextBlock Text="Sort By" />
-					<ItemsControl ItemsSource="{Binding SortBy}">
+					<ItemsControl ItemsSource="{Binding SortBy}"
+								  Style="{StaticResource Style_ItemsControl_QuerySortyBy}">
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
-								<StackPanel>
+								<StackPanel Orientation="Horizontal"
+											Margin="0,4,12,4">
 									<ComboBox ItemsSource="{Binding Path=DataContext.SortByOptions, ElementName=this}" 
+											  MinWidth="200"
 											  SelectedItem="{Binding}" />
-									<HyperlinkButton Command="{Binding Path=DataContext.RemoveSortBy, ElementName=this}"
-													 CommandParameter="{Binding}"
-													 Content="Remove Sort By" />
+									<HyperlinkButton ToolTipService.ToolTip="Remove this Sort By option"
+													 Margin="2,0,0,0"
+													 VerticalAlignment="Center"
+													 Command="{Binding Path=DataContext.RemoveSortBy, ElementName=this}"
+													 CommandParameter="{Binding}">
+										<HyperlinkButton.Content>
+											<Image Source="{StaticResource Image_Remove_Tiny}"
+												   Stretch="None"
+												   VerticalAlignment="Center" />
+										</HyperlinkButton.Content>
+									</HyperlinkButton>
 								</StackPanel>
 							</DataTemplate>
 						</ItemsControl.ItemTemplate>

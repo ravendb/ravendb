@@ -698,6 +698,21 @@
 		</Setter>
 		<Setter Property="BorderBrush" Value="#FFE9E9E9"/>
 	</Style>
+	
+	<Style x:Name="Style_ItemsControl_QuerySortyBy"
+		   TargetType="ItemsControl">
+		<Setter Property="ItemsPanel"
+				Value="{StaticResource FluidWrapPanel}" />
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Disabled" />
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Disabled" />
+		<Setter Property="BorderThickness"
+				Value="1" />
+		<Setter Property="BorderBrush" Value="#FFE9E9E9"/>
+	</Style>
+	
+	
 
 	<Style x:Name="Style_ListBox_Fluid"
 		   TargetType="ListBox">
