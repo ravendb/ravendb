@@ -33,12 +33,18 @@ namespace Raven.Studio.Features.Query
 		public override void Execute(object parameter)
 		{
 			query = model.Query.Value;
-			model.Error = null;
+			ClearRecentQuery();
 			model.RememberHistory();
 			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod)
 			                              {
 			                              	SkipAutoRefresh = true
 			                              };
+		}
+
+		private void ClearRecentQuery()
+		{
+			model.Error = null;
+			model.Suggestions.Clear();
 		}
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
@@ -84,17 +90,20 @@ namespace Raven.Studio.Features.Query
 					documentsModel.Documents.Match(viewableDocuments);
 					documentsModel.Pager.TotalResults.Value = qr.TotalResults;
 
-					if (qr.TotalResults != 0)
-						return;
-
-					foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
-					{
-						databaseCommands.SuggestAsync(model.IndexName,
-						                              new SuggestionQuery
-						                              {Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10});
-					}
+					if (qr.TotalResults == 0)
+						SuggestResults();
 				})
 				.Catch(ex => model.Error = ex.ExtractSingleInnerException().SimplifyError());
+		}
+
+		private void SuggestResults()
+		{
+			var fieldAndTerm = QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value).FirstOrDefault();
+			if (fieldAndTerm == null)
+				return;
+
+			databaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery {Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10})
+				.ContinueOnSuccessInTheUIThread(result => model.Suggestions.Match(result.Suggestions));
 		}
 	}
 }

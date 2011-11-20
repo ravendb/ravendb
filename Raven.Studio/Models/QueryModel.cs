@@ -174,6 +174,7 @@ namespace Raven.Studio.Models
 
 			SortBy = new BindableCollection<StringRef>(x => x.Value);
 			SortByOptions = new BindableCollection<string>(x => x);
+			Suggestions = new BindableCollection<string>(x => x);
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
@@ -269,5 +270,7 @@ namespace Raven.Studio.Models
 		{
 			get { return "Query: " + IndexName; }
 		}
+
+		public BindableCollection<string> Suggestions { get; private set; }
 	}
 }
