@@ -80,5 +80,16 @@ namespace Raven.Studio.Infrastructure
 				}
 			});
 		}
+
+		public void AddRange(IEnumerable<T> enumerable)
+		{
+			Execute(() =>
+			{
+				foreach (var v in enumerable)
+				{
+					Add(v);
+				}
+			});
+		}
 	}
 }

@@ -350,7 +350,7 @@ namespace Raven.Studio.Models
 				}
 				catch (JsonReaderException ex)
 				{
-					new ErrorWindow(ex.Message, string.Empty).Show();
+					ErrorPresenter.Show(ex.Message, string.Empty);
 					return;
 				}
 				
@@ -388,7 +388,7 @@ namespace Raven.Studio.Models
 				}
 				catch (JsonReaderException ex)
 				{
-					new ErrorWindow(ex.Message, string.Empty).Show();
+					ErrorPresenter.Show(ex.Message, string.Empty);
 					return;
 				}
 				editableDocumentModel.UpdateMetadata(metadata);

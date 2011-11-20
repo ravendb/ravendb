@@ -1,8 +1,10 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using ActiproSoftware.Text;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Raven.Studio.Features.Query;
 
 namespace Raven.Studio.Controls.Editors
 {
@@ -42,6 +44,39 @@ namespace Raven.Studio.Controls.Editors
 		{
 			var editor = (QueryEditor)dependencyObject;
 			editor.Document.Language.RegisterService<ICompletionProvider>((ICompletionProvider)args.NewValue);
+		}
+
+		public static IEnumerable<FieldAndTerm> GetCurrentFieldsAndTerms(string text)
+		{
+			var editor = new QueryEditor {Text = text};
+			var textSnapshotReader = editor.ActiveView.GetReader();
+			string currentField = null;
+			while (true)
+			{
+				var token = textSnapshotReader.ReadToken();
+				if (token == null)
+					break;
+
+				var txt = textSnapshotReader.ReadTextReverse(token.Length);
+				textSnapshotReader.ReadToken();
+				if(string.IsNullOrWhiteSpace(txt))
+					continue;
+
+				string currentVal = null;
+				if (txt.EndsWith(":"))
+				{
+					currentField = txt.Substring(0, txt.Length - 1);
+				}
+				else 
+				{
+					currentVal = txt;
+				}
+				if (currentField == null || currentVal == null) 
+					continue;
+
+				yield return new FieldAndTerm(currentField, currentVal);
+				currentField = null;
+			}
 		}
 	}
 }

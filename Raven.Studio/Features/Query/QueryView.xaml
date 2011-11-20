@@ -188,10 +188,30 @@
 			<StackPanel Grid.Row="2">
 				<TextBlock Text="{Binding Error}"
 						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
-				<StackPanel Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
-					<Documents:DocumentsView Margin="{StaticResource Margin_ContentPage}"
-											 DataContext="{Binding Path=DocumentsResult.Value}" />
-				</StackPanel>
+
+				<ItemsControl ItemsSource="{Binding Suggestions}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<StackPanel Orientation="Horizontal">
+								<TextBlock Text="Did you mean " />
+								<TextBlock Text="{Binding Term}"
+										   Margin="2,0,0,0"
+										   FontStyle="Italic" />
+								<TextBlock Margin="2,0,0,0"
+										   Text=" for the field " />
+								<TextBlock Text="{Binding Field}"
+										   Margin="2,0,0,0"
+										   FontStyle="Italic" />
+								<TextBlock Margin="2,0,0,0"
+										   Text=" ?" />
+							</StackPanel>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+
+				<Documents:DocumentsView Margin="{StaticResource Margin_ContentPage}"
+										 Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
+										 DataContext="{Binding Path=DocumentsResult.Value}" />
 			</StackPanel>
 		</Grid>
 	</toolkit:DockPanel>

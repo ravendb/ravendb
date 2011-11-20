@@ -117,14 +117,14 @@ namespace Raven.Studio.Infrastructure
 			return parent.Catch(e => { });
 		}
 
-		public static Task Catch(this Task parent, Action<Exception> action)
+		public static Task Catch(this Task parent, Action<AggregateException> action)
 		{
 			parent.ContinueWith(task =>
 			{
 				if (task.IsFaulted == false)
 					return;
 
-				Deployment.Current.Dispatcher.InvokeAsync(() => new ErrorWindow(task.Exception.ExtractSingleInnerException()).Show())
+				Deployment.Current.Dispatcher.InvokeAsync(() => ErrorPresenter.Show(task.Exception.ExtractSingleInnerException()))
 					.ContinueWith(_ => action(task.Exception));
 			});
 

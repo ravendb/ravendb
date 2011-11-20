@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Studio.Commands;
+using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
@@ -174,6 +175,7 @@ namespace Raven.Studio.Models
 
 			SortBy = new BindableCollection<StringRef>(x => x.Value);
 			SortByOptions = new BindableCollection<string>(x => x);
+			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
@@ -197,6 +199,7 @@ namespace Raven.Studio.Models
 					fields.Match(definition.Fields);
 					IsSpatialQuerySupported = definition.Map.Contains("SpatialIndex.Generate");
 					SetSortByOptions(fields);
+					Execute.Execute(string.Empty);
 				}).Catch();
 		}
 
@@ -268,5 +271,7 @@ namespace Raven.Studio.Models
 		{
 			get { return "Query: " + IndexName; }
 		}
+
+		public BindableCollection<FieldAndTerm> Suggestions { get; private set; }
 	}
 }
