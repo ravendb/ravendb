@@ -32,6 +32,21 @@ namespace Raven.Abstractions.Linq
 			yield break;
 		}
 
+		public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
+		{
+			switch (binder.Name)
+			{
+				case "Count":
+					result = 0;
+					return true;
+				case "DefaultIfEmpty":
+					result = new[]{this};
+					return true;
+				default:
+					return base.TryInvokeMember(binder, args, out result);
+			}
+		}
+
 		public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
 		{
 			result = this;
