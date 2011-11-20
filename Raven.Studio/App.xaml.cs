@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
 namespace Raven.Studio
@@ -32,8 +33,7 @@ namespace Raven.Studio
 				// For production applications this error handling should be replaced with something that will 
 				// report the error to the website and stop the application.
 				e.Handled = true;
-				ChildWindow errorWin = new ErrorWindow(e.ExceptionObject);
-				errorWin.Show();
+				ErrorPresenter.Show(e.ExceptionObject);
 			}
 		}
 	}

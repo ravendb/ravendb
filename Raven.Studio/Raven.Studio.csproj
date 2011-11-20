@@ -149,6 +149,7 @@
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\ErrorPresenter.cs" />
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
       <DependentUpon>IndexesListView.xaml</DependentUpon>
     </Compile>
@@ -327,7 +328,7 @@
     <Compile Include="Views\Edit.xaml.cs">
       <DependentUpon>Edit.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\ErrorWindow.xaml.cs">
+    <Compile Include="Features\Errors\ErrorWindow.xaml.cs">
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Home.xaml.cs">
@@ -494,7 +495,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\ErrorWindow.xaml">
+    <Page Include="Features\Errors\ErrorWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
