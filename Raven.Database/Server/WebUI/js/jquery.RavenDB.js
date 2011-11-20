@@ -202,7 +202,7 @@ var indexSearchCache = null;
                 cache: false,
                 beforeSend: function(xhr) {
                     if (etag)
-                        xhr.setRequestHeader("If-Match", etag); 
+                        xhr.setRequestHeader("If-None-Match", etag); 
                     if (metadata) {
                        for (var key in metadata) {
                             xhr.setRequestHeader(key, metadata[key]);       
@@ -227,7 +227,7 @@ var indexSearchCache = null;
                 url: settings.server + 'docs/' + id,
                 cache: false,
                 beforeSend: function(xhr) {
-                    xhr.setRequestHeader("If-Match", etag);        
+                    xhr.setRequestHeader("If-None-Match", etag);        
                 },
                 success: function (data) {
                     successCallback(data);

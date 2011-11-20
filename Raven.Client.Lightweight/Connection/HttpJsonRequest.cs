@@ -359,7 +359,7 @@ namespace Raven.Client.Connection
 
 				var headerName = prop.Key;
 				if (headerName == "ETag")
-					headerName = "If-Match";
+					headerName = "If-None-Match";
 				var value = prop.Value.Value<object>().ToString();
 
 				// Restricted headers require their own special treatment, otherwise an exception will
