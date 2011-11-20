@@ -1,4 +1,5 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Features.Query.QueryView"
+﻿<Infrastructure:View x:Name="this"
+					 x:Class="Raven.Studio.Features.Query.QueryView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
@@ -154,8 +155,9 @@
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
 								<StackPanel>
-									<ComboBox ItemsSource="{Binding SortByOptions}" />
-									<HyperlinkButton Command="{Binding RemoveSortBy}"
+									<ComboBox ItemsSource="{Binding Path=DataContext.SortByOptions, ElementName=this}" 
+											  SelectedItem="{Binding}" />
+									<HyperlinkButton Command="{Binding Path=DataContext.RemoveSortBy, ElementName=this}"
 													 CommandParameter="{Binding}"
 													 Content="Remove Sort By" />
 								</StackPanel>
