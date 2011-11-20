@@ -30,7 +30,7 @@ namespace Raven.Studio.Features.Query
 			this.databaseCommands = databaseCommands;
 		}
 
-		public override void Execute(object parameter)
+		public override void Execute(object _)
 		{
 			query = model.Query.Value;
 			ClearRecentQuery();
