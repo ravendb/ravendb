@@ -179,7 +179,8 @@ namespace Raven.Studio.Models
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (isLoaded && Mode != DocumentMode.DocumentWithId)
+			if (isLoaded == false ||
+				Mode != DocumentMode.DocumentWithId)
 				return null;
 
 			return DatabaseCommands.GetAsync(documentKey)
