@@ -25,29 +25,61 @@
 				Margin="0,0,0,20"
 				CornerRadius="4,4,0,0"
 				toolkit:DockPanel.Dock="Top">
-			<StackPanel Orientation="Horizontal">
-				<Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None"
-						VerticalAlignment="Center" Margin="2"/>
-				<HyperlinkButton Content="Indexes"
-								 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/Indexes" 
-								 VerticalAlignment="Center"/>
-				<TextBlock Text=">"
+			<toolkit:DockPanel Margin="4"
+							   LastChildFill="False">
+				<StackPanel Orientation="Horizontal">
+					<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
+						   Stretch="None"
 						   VerticalAlignment="Center"
-						   Margin="4,0" />
-				<HyperlinkButton Content="{Binding IndexName}"
-								 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}" 
-								 VerticalAlignment="Center"/>
-				<TextBlock Text=">"
-						   VerticalAlignment="Center"
-						   Margin="4,0" />
-				<TextBlock Text="Query"
-						   Style="{StaticResource Style_TextBlock_Breadcrumb}"
-						   VerticalAlignment="Center" />
-			</StackPanel>
+						   Margin="2" />
+					<HyperlinkButton Content="Indexes"
+									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="/Indexes"
+									 VerticalAlignment="Center" />
+					<TextBlock Text=">"
+							   VerticalAlignment="Center"
+							   Margin="4,0" />
+					<HyperlinkButton Content="{Binding IndexName}"
+									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+									 VerticalAlignment="Center" />
+					<TextBlock Text=">"
+							   VerticalAlignment="Center"
+							   Margin="4,0" />
+					<TextBlock Text="Query"
+							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
+							   VerticalAlignment="Center" />
+				</StackPanel>
+
+				<StackPanel Orientation="Horizontal"
+							toolkit:DockPanel.Dock="Right"
+							VerticalAlignment="Center">
+
+					<Button x:Name="AddSortBy"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Add sort by option for this query"
+							VerticalAlignment="Center"
+							HorizontalAlignment="Left"
+							Margin="0"
+							Command="{Binding AddSortBy}"
+							Visibility="{Binding Path=SortByOptions.Count, Converter={StaticResource HiddenWhenEmpty}}"
+							VerticalContentAlignment="Center">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal"
+										VerticalAlignment="Center">
+								<Image Source="{StaticResource Image_Add_Tiny}"
+									   Stretch="None"
+									   VerticalAlignment="Center" />
+								<TextBlock Text="Add Map"
+										   VerticalAlignment="Center"
+										   Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+				</StackPanel>
+			</toolkit:DockPanel>
 		</Border>
 
 		<Grid>
@@ -114,11 +146,7 @@
 									 Command="{Binding Execute}"
 									 HorizontalAlignment="Right" />
 				</Grid>
-
-				<HyperlinkButton Command="{Binding AddSortBy}"
-								 Grid.Row="3"
-								 Visibility="{Binding Path=SortByOptions.Count, Converter={StaticResource HiddenWhenEmpty}}"
-								 Content="Add Sort By" />
+				
 				<StackPanel Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}"
 							Grid.Row="3">
 					<TextBlock Text="Sort By" />
@@ -146,7 +174,7 @@
 						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 				<StackPanel Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
 					<Documents:DocumentsView Margin="{StaticResource Margin_ContentPage}"
-											DataContext="{Binding Path=DocumentsResult.Value}" />
+											 DataContext="{Binding Path=DocumentsResult.Value}" />
 				</StackPanel>
 			</StackPanel>
 		</Grid>
