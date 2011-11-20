@@ -222,7 +222,7 @@ namespace Raven.Studio.Models
 			get { return new ResetIndexCommand(this); }
 		}
 
-		public class RemoveMapCommand : Command
+		private class RemoveMapCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
 
@@ -241,8 +241,9 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public class RemoveFieldCommand : Command
+		private class RemoveFieldCommand : Command
 		{
+			private FieldProperties field;
 			private readonly IndexDefinitionModel index;
 
 			public RemoveFieldCommand(IndexDefinitionModel index)
@@ -250,17 +251,19 @@ namespace Raven.Studio.Models
 				this.index = index;
 			}
 
+			public override bool CanExecute(object parameter)
+			{
+				field = parameter as FieldProperties;
+				return field != null && index.Fields.Contains(field);
+			}
+
 			public override void Execute(object parameter)
 			{
-				var field = parameter as FieldProperties;
-				if (field == null || index.Fields.Contains(field) == false)
-					return;
-
 				index.Fields.Remove(field);
 			}
 		}
 
-		public class SaveIndexCommand : Command
+		private class SaveIndexCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
 			private readonly IAsyncDatabaseCommands databaseCommands;
@@ -281,7 +284,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public class ResetIndexCommand : Command
+		private class ResetIndexCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
 
@@ -298,7 +301,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public class DeleteIndexCommand : Command
+		private class DeleteIndexCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
 			private readonly IAsyncDatabaseCommands databaseCommands;

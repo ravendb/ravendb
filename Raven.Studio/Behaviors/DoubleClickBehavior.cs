@@ -25,13 +25,10 @@ namespace Raven.Studio.Behaviors
 
 
 		public static readonly DependencyProperty CommandProperty = DependencyProperty.Register
-			("Command", typeof(ICommand), typeof(DoubleClickBehavior), new PropertyMetadata(CommandChanged));
+			("Command", typeof(ICommand), typeof(DoubleClickBehavior), null);
 
 		public static readonly DependencyProperty CommandParameterProperty = DependencyProperty.Register
-			("CommandParameter", typeof(object), typeof(DoubleClickBehavior), new PropertyMetadata(CommandParameterChanged));
-
-		private static void CommandParameterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { }
-		private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { }
+			("CommandParameter", typeof(object), typeof(DoubleClickBehavior), null);
 
 		public DoubleClickBehavior()
 		{

@@ -51,8 +51,9 @@ namespace Raven.Studio.Features.Query
 			if (model.SortBy != null && model.SortBy.Count > 0)
 			{
 				var sortedFields = new List<SortedField>();
-				foreach (var sortBy in model.SortBy)
+				foreach (var sortByRef in model.SortBy)
 				{
+					var sortBy = sortByRef.Value;
 					if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
 					{
 						var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length - 1);

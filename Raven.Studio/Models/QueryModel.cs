@@ -97,21 +97,63 @@ namespace Raven.Studio.Models
 
 		public const string SortByDescSuffix = " DESC";
 
-		public BindableCollection<string> SortBy { get; private set; }
-		public BindableCollection<string> SortByOptions { get; private set; }
+		public class StringRef : NotifyPropertyChangedBase
+		{
+			private string value;
+			public string Value
+			{
+				get { return value; }
+				set { this.value = value; OnPropertyChanged();}
+			}
+		}
 
+		public BindableCollection<StringRef> SortBy { get; private set; }
+		public BindableCollection<string> SortByOptions { get; private set; }
 
 		public ICommand AddSortBy
 		{
-			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(SortByOptions.First())); }
+			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(new StringRef { Value = SortByOptions.First() })); }
 		}
 
 		public ICommand RemoveSortBy
 		{
-			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy = null); }
+			get { return new RemoveSortByCommand(this); }
 		}
 
+		private class RemoveSortByCommand : Command
+		{
+			private string field;
+			private readonly QueryModel model;
 
+			public RemoveSortByCommand(QueryModel model)
+			{
+				this.model = model;
+			}
+
+			public override bool CanExecute(object parameter)
+			{
+				field = parameter as string;
+				return field != null && model.SortBy.Any(x => x.Value == field);
+			}
+
+			public override void Execute(object parameter)
+			{
+				if (CanExecute(parameter) == false)
+					return;
+				StringRef firstOrDefault = model.SortBy.FirstOrDefault(x => x.Value == field);
+				if (firstOrDefault != null)
+					model.SortBy.Remove(firstOrDefault);
+			}
+		}
+
+		private void SetSortByOptions(ICollection<string> items)
+		{
+			foreach (var item in items)
+			{
+				SortByOptions.Add(item);
+				SortByOptions.Add(item + SortByDescSuffix);
+			}
+		}
 		
 		#endregion
 
@@ -129,7 +171,8 @@ namespace Raven.Studio.Models
 
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
-			SortBy = new BindableCollection<string>(x => x);
+
+			SortBy = new BindableCollection<StringRef>(x => x.Value);
 			SortByOptions = new BindableCollection<string>(x => x);
 
 			Query.PropertyChanged += GetTermsForUsedFields;
@@ -153,6 +196,7 @@ namespace Raven.Studio.Models
 					}
 					fields.Match(definition.Fields);
 					IsSpatialQuerySupported = definition.Map.Contains("SpatialIndex.Generate");
+					SetSortByOptions(fields);
 				}).Catch();
 		}
 
