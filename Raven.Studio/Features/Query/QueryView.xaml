@@ -8,7 +8,8 @@
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
+					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors">
 
 	<Infrastructure:View.Resources>
 		<Style x:Key="PanelTitle"
@@ -159,8 +160,13 @@
 											Margin="0,4,12,4">
 									<ComboBox ItemsSource="{Binding Path=DataContext.SortByOptions, ElementName=this}" 
 											  MinWidth="200"
-											  SelectedItem="{Binding}" />
-									<HyperlinkButton ToolTipService.ToolTip="Remove this Sort By option"
+											  SelectedItem="{Binding}">
+										<i:Interaction.Behaviors>
+											<Behaviors:RaiseCanExecuteOnSelectionChanged CommandButton="{Binding ElementName=RemoveSortBy}" />
+										</i:Interaction.Behaviors>
+									</ComboBox>
+									<HyperlinkButton x:Name="RemoveSortBy" 
+													 ToolTipService.ToolTip="Remove this Sort By option"
 													 Margin="2,0,0,0"
 													 VerticalAlignment="Center"
 													 Command="{Binding Path=DataContext.RemoveSortBy, ElementName=this}"

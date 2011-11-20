@@ -112,6 +112,7 @@
     <Compile Include="Behaviors\DoubleClickBehavior.cs" />
     <Compile Include="Behaviors\GoToStateAction.cs" />
     <Compile Include="Behaviors\LinkHighlighter.cs" />
+    <Compile Include="Behaviors\RaiseCanExecuteOnSelectionChanged.cs" />
     <Compile Include="Behaviors\StringCollection.cs" />
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
