@@ -49,13 +49,32 @@ namespace Raven.Studio.Controls.Editors
 		{
 			var editor = new QueryEditor {Text = text};
 			var textSnapshotReader = editor.ActiveView.GetReader();
+			string currentField = null;
 			while (true)
 			{
 				var token = textSnapshotReader.ReadToken();
 				if (token == null)
 					break;
 
-				yield return new FieldAndTerm {Field = null, Term = null};
+				var txt = textSnapshotReader.ReadTextReverse(token.Length);
+				textSnapshotReader.ReadToken();
+				if(string.IsNullOrWhiteSpace(txt))
+					continue;
+
+				string currentVal = null;
+				if (txt.EndsWith(":"))
+				{
+					currentField = txt.Substring(0, txt.Length - 1);
+				}
+				else 
+				{
+					currentVal = txt;
+				}
+				if (currentField == null || currentVal == null) 
+					continue;
+
+				yield return new FieldAndTerm {Field = currentField, Term = currentVal};
+				currentField = null;
 			}
 		}
 	}

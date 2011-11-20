@@ -22,6 +22,7 @@ namespace Raven.Studio.Features.Query
 	{
 		private readonly QueryModel model;
 		private readonly IAsyncDatabaseCommands databaseCommands;
+		private string query;
 
 		public ExecuteQueryCommand(QueryModel model, IAsyncDatabaseCommands databaseCommands)
 		{
@@ -31,9 +32,13 @@ namespace Raven.Studio.Features.Query
 
 		public override void Execute(object parameter)
 		{
+			query = model.Query.Value;
 			model.Error = null;
 			model.RememberHistory();
-			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod);
+			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod)
+			                              {
+			                              	SkipAutoRefresh = true
+			                              };
 		}
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
@@ -42,7 +47,7 @@ namespace Raven.Studio.Features.Query
 			{
 				Start = (model.Pager.CurrentPage - 1) * model.Pager.PageSize,
 				PageSize = model.Pager.PageSize,
-				Query = model.Query.Value,
+				Query = query,
 			};
 
 			if (model.SortBy != null && model.SortBy.Count > 0)
@@ -79,12 +84,14 @@ namespace Raven.Studio.Features.Query
 					documentsModel.Documents.Match(viewableDocuments);
 					documentsModel.Pager.TotalResults.Value = qr.TotalResults;
 
-					if (qr.TotalResults == 0)
+					if (qr.TotalResults != 0)
+						return;
+
+					foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
 					{
-						foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
-						{
-							databaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery { Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10 });
-						}
+						databaseCommands.SuggestAsync(model.IndexName,
+						                              new SuggestionQuery
+						                              {Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10});
 					}
 				})
 				.Catch(ex => model.Error = ex.ExtractSingleInnerException().SimplifyError());
