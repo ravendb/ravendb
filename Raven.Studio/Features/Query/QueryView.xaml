@@ -158,19 +158,16 @@
 							<DataTemplate>
 								<StackPanel Orientation="Horizontal"
 											Margin="0,4,12,4">
-									<ComboBox ItemsSource="{Binding Path=DataContext.SortByOptions, ElementName=this}" 
+									<ComboBox x:Name="SortByOptions" 
+											  ItemsSource="{Binding Path=DataContext.SortByOptions, ElementName=this}" 
 											  MinWidth="200"
-											  SelectedItem="{Binding}">
-										<i:Interaction.Behaviors>
-											<Behaviors:RaiseCanExecuteOnSelectionChanged CommandButton="{Binding ElementName=RemoveSortBy}" />
-										</i:Interaction.Behaviors>
-									</ComboBox>
+											  SelectedItem="{Binding Path=Value}" />
 									<HyperlinkButton x:Name="RemoveSortBy" 
 													 ToolTipService.ToolTip="Remove this Sort By option"
 													 Margin="2,0,0,0"
 													 VerticalAlignment="Center"
 													 Command="{Binding Path=DataContext.RemoveSortBy, ElementName=this}"
-													 CommandParameter="{Binding}">
+													 CommandParameter="{Binding ElementName=SortByOptions, Path=SelectedItem}">
 										<HyperlinkButton.Content>
 											<Image Source="{StaticResource Image_Remove_Tiny}"
 												   Stretch="None"
