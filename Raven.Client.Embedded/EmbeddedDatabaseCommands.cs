@@ -184,6 +184,15 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Get tenant database names (Server/Client mode only)
+		/// </summary>
+		/// <returns></returns>
+		public string[] GetDatabaseNames()
+		{
+			throw new InvalidOperationException("Embedded mode does not support multi-tenancy");
+		}
+
+		/// <summary>
 		/// Gets the index names from the server
 		/// </summary>
 		/// <param name="start">Paging start</param>
