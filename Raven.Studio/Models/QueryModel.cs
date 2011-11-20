@@ -131,6 +131,15 @@ namespace Raven.Studio.Models
 				model.SortBy.Remove(field);
 			}
 		}
+
+		private void SetSortByOptions(ICollection<string> items)
+		{
+			foreach (var item in items)
+			{
+				SortByOptions.Add(item);
+				SortByOptions.Add(item + SortByDescSuffix);
+			}
+		}
 		
 		#endregion
 
@@ -151,7 +160,6 @@ namespace Raven.Studio.Models
 
 			SortBy = new BindableCollection<string>(x => x);
 			SortByOptions = new BindableCollection<string>(x => x);
-			SortBy.CollectionChanged += (sender, args) => SortByOptions.Match(SortByOptions.Except(SortBy).ToList());
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
@@ -174,7 +182,7 @@ namespace Raven.Studio.Models
 					}
 					fields.Match(definition.Fields);
 					IsSpatialQuerySupported = definition.Map.Contains("SpatialIndex.Generate");
-					SortByOptions.Match(fields);
+					SetSortByOptions(fields);
 				}).Catch();
 		}
 
