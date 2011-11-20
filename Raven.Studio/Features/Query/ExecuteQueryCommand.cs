@@ -98,12 +98,11 @@ namespace Raven.Studio.Features.Query
 
 		private void SuggestResults()
 		{
-			var fieldAndTerm = QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value).FirstOrDefault();
-			if (fieldAndTerm == null)
-				return;
-
-			databaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery {Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10})
-				.ContinueOnSuccessInTheUIThread(result => model.Suggestions.Match(result.Suggestions));
+			foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
+			{
+				databaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery { Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10 })
+					.ContinueOnSuccessInTheUIThread(result => model.Suggestions.AddRange(result.Suggestions));	
+			}
 		}
 	}
 }
