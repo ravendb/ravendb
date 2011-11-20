@@ -560,6 +560,7 @@
     <Compile Include="MailingList\EnumAsInts.cs" />
     <Compile Include="MailingList\GuidProjection.cs" />
     <Compile Include="MailingList\LazyStats.cs" />
+    <Compile Include="MailingList\RavenDbPutTest.cs" />
     <Compile Include="MailingList\NicolasGarfinkiel.cs" />
     <Compile Include="MailingList\Rob.cs" />
     <Compile Include="MailingList\RobStats\Entity.cs" />

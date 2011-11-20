@@ -361,7 +361,38 @@ namespace Raven.Json.Linq
 
 		private static bool ValuesEquals(RavenJValue v1, RavenJValue v2)
 		{
-			return (v1 == v2 || (v1._valueType == v2._valueType && Compare(v1._valueType, v1._value, v2._value) == 0));
+			if(v1 == v2 )
+				return true;
+
+			switch (v1._valueType)
+			{
+				case JTokenType.Guid:
+					switch (v2._valueType)
+					{
+						case JTokenType.String:
+						case JTokenType.Guid:
+							break;
+						default:
+							return false;
+					}
+					break;
+				case JTokenType.String:
+					switch (v2._valueType)
+					{
+						case JTokenType.String:
+						case JTokenType.Guid:
+							break;
+						default:
+							return false;
+					}
+					break;
+				default:
+					if (v1._valueType != v2._valueType)
+						return false;
+					break;
+			}
+
+			return Compare(v1._valueType, v1._value, v2._value) == 0;
 		}
 
 		public int CompareTo(RavenJValue other)
@@ -433,7 +464,16 @@ namespace Raven.Json.Linq
 					return MiscellaneousUtils.ByteArrayCompare(bytes1, bytes2);
 				case JTokenType.Guid:
 					if (!(objB is Guid))
-						throw new ArgumentException("Object must be of type Guid.");
+					{
+#if !NET_3_5
+						Guid guid;
+						if(Guid.TryParse((string) objB, out guid) == false)
+							throw new ArgumentException("Object must be of type Guid.");
+						objB = guid;
+#else
+						objB = new Guid((string)objB);
+#endif
+					}
 
 					Guid guid1 = (Guid)objA;
 					Guid guid2 = (Guid)objB;
