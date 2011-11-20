@@ -100,14 +100,6 @@ namespace Raven.Studio.Models
 		public BindableCollection<string> SortBy { get; private set; }
 		public BindableCollection<string> SortByOptions { get; private set; }
 
-		private void SortByCtor()
-		{
-			SortBy = new BindableCollection<string>(x => x);
-			SortByOptions = new BindableCollection<string>(x => x);
-
-			SortBy.CollectionChanged += (sender, args) => SortByOptions.Match(SortByOptions.Except(SortBy).ToList());
-		}
-
 		public ICommand AddSortBy
 		{
 			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(SortByOptions.First())); }
@@ -156,7 +148,10 @@ namespace Raven.Studio.Models
 
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
-			SortByCtor();
+
+			SortBy = new BindableCollection<string>(x => x);
+			SortByOptions = new BindableCollection<string>(x => x);
+			SortBy.CollectionChanged += (sender, args) => SortByOptions.Match(SortByOptions.Except(SortBy).ToList());
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
@@ -179,7 +174,7 @@ namespace Raven.Studio.Models
 					}
 					fields.Match(definition.Fields);
 					IsSpatialQuerySupported = definition.Map.Contains("SpatialIndex.Generate");
-					SortByOptions = fields;
+					SortByOptions.Match(fields);
 				}).Catch();
 		}
 
