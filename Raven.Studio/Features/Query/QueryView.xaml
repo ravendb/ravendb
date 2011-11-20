@@ -194,9 +194,9 @@
 						<DataTemplate>
 							<StackPanel Orientation="Horizontal">
 								<TextBlock Text="Did you mean " />
-								<TextBlock Text="{Binding Term}"
-										   Margin="2,0,0,0"
-										   FontStyle="Italic" />
+								<HyperlinkButton Content="{Binding SuggestedTerm}"
+												 Margin="2,0,0,0"
+												 FontStyle="Italic" />
 								<TextBlock Margin="2,0,0,0"
 										   Text=" for the field " />
 								<TextBlock Text="{Binding Field}"

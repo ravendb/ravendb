@@ -101,7 +101,8 @@ namespace Raven.Studio.Features.Query
 			foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
 			{
 				databaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery {Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10})
-					.ContinueOnSuccessInTheUIThread(result => model.Suggestions.AddRange(result.Suggestions.Select(term => new FieldAndTerm(fieldAndTerm.Field, term))));
+					.ContinueOnSuccessInTheUIThread(result => model.Suggestions.AddRange(
+						result.Suggestions.Select(term => new FieldAndTerm(fieldAndTerm.Field, fieldAndTerm.Term){SuggestedTerm = term})));
 			}
 		}
 	}
