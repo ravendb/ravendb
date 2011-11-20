@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using ActiproSoftware.Text;
@@ -43,5 +44,25 @@ namespace Raven.Studio.Controls.Editors
 			var editor = (QueryEditor)dependencyObject;
 			editor.Document.Language.RegisterService<ICompletionProvider>((ICompletionProvider)args.NewValue);
 		}
+
+		public static IEnumerable<FieldAndTerm> GetCurrentFieldsAndTerms(string text)
+		{
+			var editor = new QueryEditor {Text = text};
+			var textSnapshotReader = editor.ActiveView.GetReader();
+			while (true)
+			{
+				var token = textSnapshotReader.ReadToken();
+				if (token == null)
+					break;
+
+				yield return new FieldAndTerm {Field = null, Term = null};
+			}
+		}
+	}
+
+	public class FieldAndTerm
+	{
+		public string Field { get; set; }
+		public string Term { get; set; }
 	}
 }

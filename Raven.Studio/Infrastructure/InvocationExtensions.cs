@@ -117,7 +117,7 @@ namespace Raven.Studio.Infrastructure
 			return parent.Catch(e => { });
 		}
 
-		public static Task Catch(this Task parent, Action<Exception> action)
+		public static Task Catch(this Task parent, Action<AggregateException> action)
 		{
 			parent.ContinueWith(task =>
 			{

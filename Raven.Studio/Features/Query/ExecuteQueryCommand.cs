@@ -4,16 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
 using Raven.Studio.Models;
 using Raven.Client.Extensions;
 
@@ -72,21 +71,23 @@ namespace Raven.Studio.Features.Query
 						Radius = model.Radius.HasValue ? model.Radius.Value : 0,
 				    };
 			}
-			
+
 			return databaseCommands.QueryAsync(model.IndexName, q, null)
-				.ContinueWith(task =>
+				.ContinueOnSuccessInTheUIThread(qr =>
 				{
-					if (task.Exception != null)
-					{
-						model.Error = task.Exception.ExtractSingleInnerException().SimplifyError();
-						return;
-					}
-					var qr = task.Result;
 					var viewableDocuments = qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray();
 					documentsModel.Documents.Match(viewableDocuments);
 					documentsModel.Pager.TotalResults.Value = qr.TotalResults;
+
+					if (qr.TotalResults == 0)
+					{
+						foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
+						{
+							databaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery { Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10 });
+						}
+					}
 				})
-				.Catch();
+				.Catch(ex => model.Error = ex.ExtractSingleInnerException().SimplifyError());
 		}
 	}
 }
