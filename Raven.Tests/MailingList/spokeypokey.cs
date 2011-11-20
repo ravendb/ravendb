@@ -34,7 +34,17 @@ namespace Raven.Tests.MailingList
 		{
 			using (var docStore = NewDocumentStore())
 			{
-				docStore.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => path.Split(',').Last()+prop;
+				docStore.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) =>
+				{
+					var result = path + prop;
+					switch (result)
+					{
+						case "Households,Members,Name":
+							return "MembersName";
+						default:
+							return result;
+					}
+				};
 				new BarnIndex().Execute(docStore);
 
 				var barn1 = new Barn
