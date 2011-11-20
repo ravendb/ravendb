@@ -342,13 +342,13 @@ namespace Raven.Database.Extensions
 
 		public static Guid? GetEtag(this IHttpContext context)
 		{
-			var etagAsString = context.Request.Headers["If-Match"];
+			var etagAsString = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
 			if (etagAsString != null)
 			{
 				Guid result;
 				if (Guid.TryParse(etagAsString, out result))
 					return result;
-				throw new BadRequestException("Could not parse If-Match header as Guid");
+				throw new BadRequestException("Could not parse If-None-Match or If-Match header as Guid");
 			}
 			return null;
 		}
@@ -410,7 +410,7 @@ namespace Raven.Database.Extensions
 		private static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string docPath)
 		{
 			byte[] bytes;
-			var etagValue = context.Request.Headers["If-Match"];
+			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
 			if (etagValue == EmbeddedLastChangedDate)
 			{
 				context.SetStatusToNotModified();
@@ -432,7 +432,7 @@ namespace Raven.Database.Extensions
 
 		public static void WriteFile(this IHttpContext context, string filePath)
 		{
-			var etagValue = context.Request.Headers["If-Match"];
+			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-None-Match"];
 			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
 			if (etagValue == fileEtag)
 			{

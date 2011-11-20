@@ -9,7 +9,7 @@
            x:Class="Raven.Studio.Features.Tasks.TasksView"
            mc:Ignorable="d"
            d:DesignWidth="640" d:DesignHeight="480"
-           Title="TasksView Page"
+           Title="Tasks"
            DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
 
   <Grid Margin="{StaticResource Margin_ContentPage}">

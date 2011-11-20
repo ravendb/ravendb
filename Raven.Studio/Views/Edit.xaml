@@ -41,7 +41,8 @@
 						   Margin="4,0,4,0" />
 					<HyperlinkButton Content="Documents"
 									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									 NavigateUri="/documents" />
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="/documents" />
 					<TextBlock Text=">"
 							   VerticalAlignment="Center"
 							   Margin="4,0" />
@@ -168,7 +169,7 @@
 
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
 					Grid.Row="4"
-					Visibility="{Binding References, Converter={StaticResource HiddenWhenEmpty}}">
+					Visibility="{Binding Path=References.Count, Converter={StaticResource HiddenWhenEmpty}}">
 				<StackPanel>
 					<TextBlock Text="References"
 							   Margin="10,6,5,6"
@@ -181,7 +182,8 @@
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
 								<HyperlinkButton Content="{Binding Title}"
-												 NavigateUri="{Binding HRef}"
+												 Command="{StaticResource NavigateToCommand}"
+												 CommandParameter="{Binding HRef}"
 												 Style="{StaticResource Style_Link_Shortcut}"
 												 HorizontalAlignment="Left" />
 							</DataTemplate>
@@ -192,7 +194,7 @@
 
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
 					Grid.Row="5"
-					Visibility="{Binding Related, Converter={StaticResource HiddenWhenEmpty}}">
+					Visibility="{Binding Path=Related.Count, Converter={StaticResource HiddenWhenEmpty}}">
 				<StackPanel>
 					<TextBlock Text="Related"
 							   Margin="10,6,5,6"
@@ -204,7 +206,8 @@
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
 								<HyperlinkButton Content="{Binding Title}"
-												 NavigateUri="{Binding HRef}"
+												 Command="{StaticResource NavigateToCommand}"
+												 CommandParameter="{Binding HRef}"
 												 Style="{StaticResource Style_Link_Shortcut}"
 												 HorizontalAlignment="Left" />
 							</DataTemplate>

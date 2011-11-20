@@ -6,6 +6,8 @@ using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
+using Raven.Studio.Commands;
+using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 
@@ -22,9 +24,9 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/indexes/";
 			index = new IndexDefinition();
-			Maps = new BindableCollection<MapItem>(new PrimaryKeyComparer<MapItem>(x => x.Text));
+			Maps = new BindableCollection<MapItem>(x => x.Text);
 			Maps.Add(new MapItem()); // We must have at least one map item in a new index.
-			Fields = new BindableCollection<FieldProperties>(new PrimaryKeyComparer<FieldProperties>(field => field.Name));
+			Fields = new BindableCollection<FieldProperties>(field => field.Name);
 
 			statistics = Database.Value.Statistics;
 			statistics.PropertyChanged += (sender, args) => OnPropertyChanged("ErrorsCount");
@@ -128,7 +130,7 @@ namespace Raven.Studio.Models
 
 		public string ViewTitle
 		{
-			get { return createNewIndexMode ? "Create an Index" : Name; }
+			get { return createNewIndexMode ? "Create an Index" : "Index: " + Name; }
 		}
 
 		public string Reduce
@@ -167,7 +169,7 @@ namespace Raven.Studio.Models
 
 		public ICommand AddMap
 		{
-			get { return new AddMapCommand(this); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Maps.Add(new MapItem())); }
 		}
 
 		public ICommand RemoveMap
@@ -177,33 +179,27 @@ namespace Raven.Studio.Models
 
 		public ICommand AddReduce
 		{
-			get { return new AddReduceCommand(this); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Reduce = string.Empty); }
 		}
 
 		public ICommand RemoveReduce
 		{
-			get { return new RemoveReduceCommand(this); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Reduce = null); }
 		}
 
 		public ICommand AddTransformResults
 		{
-			get
-			{
-				return new AddTransformResultsCommand(this);
-			}
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.TransformResults = string.Empty); }
 		}
 
 		public ICommand RemoveTransformResults
 		{
-			get { return new RemoveTransformResultsCommand(this); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.TransformResults = null); }
 		}
 
 		public ICommand AddField
 		{
-			get
-			{
-				return new AddFieldCommand(this);
-			}
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Fields.Add(FieldProperties.Defualt)); }
 		}
 
 		public ICommand RemoveField
@@ -216,27 +212,17 @@ namespace Raven.Studio.Models
 			get { return new SaveIndexCommand(this, DatabaseCommands); }
 		}
 
+		public ICommand DeleteIndex
+		{
+			get { return new DeleteIndexCommand(this, DatabaseCommands); }
+		}
+
 		public ICommand ResetIndex
 		{
 			get { return new ResetIndexCommand(this); }
 		}
 
-		public class AddMapCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public AddMapCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.Maps.Add(new MapItem());
-			}
-		}
-
-		public class RemoveMapCommand : Command
+		private class RemoveMapCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
 
@@ -255,83 +241,9 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public class AddReduceCommand : Command
+		private class RemoveFieldCommand : Command
 		{
-			private readonly IndexDefinitionModel index;
-
-			public AddReduceCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.Reduce = string.Empty;
-			}
-		}
-
-		public class RemoveReduceCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public RemoveReduceCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.Reduce = null;
-			}
-		}
-
-		public class AddTransformResultsCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public AddTransformResultsCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.TransformResults = string.Empty;
-			}
-		}
-
-		public class RemoveTransformResultsCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public RemoveTransformResultsCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.TransformResults = null;
-			}
-		}
-
-		public class AddFieldCommand : Command
-		{
-			private readonly IndexDefinitionModel index;
-
-			public AddFieldCommand(IndexDefinitionModel index)
-			{
-				this.index = index;
-			}
-
-			public override void Execute(object parameter)
-			{
-				index.Fields.Execute(() => index.Fields.Add(FieldProperties.Defualt));
-			}
-		}
-
-		public class RemoveFieldCommand : Command
-		{
+			private FieldProperties field;
 			private readonly IndexDefinitionModel index;
 
 			public RemoveFieldCommand(IndexDefinitionModel index)
@@ -339,17 +251,19 @@ namespace Raven.Studio.Models
 				this.index = index;
 			}
 
+			public override bool CanExecute(object parameter)
+			{
+				field = parameter as FieldProperties;
+				return field != null && index.Fields.Contains(field);
+			}
+
 			public override void Execute(object parameter)
 			{
-				var field = parameter as FieldProperties;
-				if (field == null || index.Fields.Contains(field) == false)
-					return;
-
 				index.Fields.Remove(field);
 			}
 		}
 
-		public class SaveIndexCommand : Command
+		private class SaveIndexCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
 			private readonly IAsyncDatabaseCommands databaseCommands;
@@ -370,7 +284,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public class ResetIndexCommand : Command
+		private class ResetIndexCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
 
@@ -384,6 +298,41 @@ namespace Raven.Studio.Models
 				ApplicationModel.Current.AddNotification(new Notification("resetting index " + index.Name));
 				index.ResetToOriginal();
 				ApplicationModel.Current.AddNotification(new Notification("index " + index.Name + " was reset"));
+			}
+		}
+
+		private class DeleteIndexCommand : Command
+		{
+			private readonly IndexDefinitionModel index;
+			private readonly IAsyncDatabaseCommands databaseCommands;
+
+			public DeleteIndexCommand(IndexDefinitionModel index,IAsyncDatabaseCommands databaseCommands)
+			{
+				this.index = index;
+				this.databaseCommands = databaseCommands;
+			}
+
+			public override bool CanExecute(object parameter)
+			{
+				return index != null && string.IsNullOrWhiteSpace(index.Name) == false;
+			}
+
+			public override void Execute(object parameter)
+			{
+				AskUser.ConfirmationAsync("Confirm Delete", "Really delete '" + index.Name + "' index?")
+					.ContinueWhenTrue(DeleteIndex);
+			}
+
+			private void DeleteIndex()
+			{
+				databaseCommands
+					.DeleteIndexAsync(index.Name)
+					.ContinueOnSuccessInTheUIThread(() =>
+					                                	{
+					                                		ApplicationModel.Current.AddNotification(
+					                                			new Notification("index " + index.Name + " successfully deleted"));
+					                                		UrlUtil.Navigate("/indexes");
+					                                	});
 			}
 		}
 

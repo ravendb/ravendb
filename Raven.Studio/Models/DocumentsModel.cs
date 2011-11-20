@@ -13,18 +13,24 @@ namespace Raven.Studio.Models
 		public DocumentsModel(Func<DocumentsModel, Task> fetchDocuments)
 		{
 			this.fetchDocuments = fetchDocuments;
-			Documents = new BindableCollection<ViewableDocument>(new PrimaryKeyComparer<ViewableDocument>(document => document.Id));
+			Documents = new BindableCollection<ViewableDocument>(document => document.Id, new KeysComparer<ViewableDocument>(document => document.LastModified));
+
+			Pager = new PagerModel();
+			Pager.Navigated += (sender, args) => ForceTimerTicked();
 		}
-	
+
 		protected override Task TimerTickedAsync()
 		{
 			return fetchDocuments(this);
 		}
 
-		private readonly PagerModel pager = new PagerModel();
-		public PagerModel Pager
+		public PagerModel Pager { get; private set; }
+
+		private string viewTitle;
+		public string ViewTitle
 		{
-			get { return pager; }
+			get { return viewTitle ?? (viewTitle = "Documents"); }
+			set { viewTitle = value; OnPropertyChanged(); }
 		}
 	}
 }

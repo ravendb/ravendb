@@ -1,3 +1,10 @@
+Requirements:
+ 
+  - .NET 4.0
+  - silverlight 4.0
+  - MVC 3
+  - Silverlight Tools 4.0
+
 In order to build this project, you need to execute the psake build script from the PowerShell console.
 You do this using the following command from the root project directory:
 

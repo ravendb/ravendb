@@ -4,16 +4,17 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:data="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
 					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-                     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-                     xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
-                     xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-                     xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-                     xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
-                     d:DataContext="{d:DesignInstance Logs:LogsModel}">
+					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+					 xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
+					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+					 mc:Ignorable="d"
+					 d:DataContext="{d:DesignInstance Logs:LogsModel}">
 
-    <Grid Margin="{StaticResource Margin_ContentPage}">
+	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="2*" />
@@ -21,71 +22,75 @@
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 
-        <Border 
-            Grid.Row="0"
-            Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0">
-            <toolkit:DockPanel Margin="4" LastChildFill="False">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Logs" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding Path=Logs.Count, StringFormat='(\{0\} Entries)'}" Margin="10,0,0,0" Style="{StaticResource Style_TextBlock_InlineSubHeader}" />
-                </StackPanel>
-                <StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal">
-                    <HyperlinkButton x:Name="AllErrorsHyperlink" Content="All Logs" NavigateUri="/logs" Style="{StaticResource Style_Link_MouseOverChrome}">
-                        <i:Interaction.Triggers>
-                            <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="False">
-                                <Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
-                                                    StateName="ActiveLink" />
-                            </ei:DataTrigger>
-                            <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="True">
-                                <Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
-                                                    StateName="InactiveLink" />
-                            </ei:DataTrigger>
-                        </i:Interaction.Triggers>
-                    </HyperlinkButton>
-                  <HyperlinkButton x:Name="ErrorsOnlyHyperlink" Content="Errors Only" NavigateUri="/logs/error" Style="{StaticResource Style_Link_MouseOverChrome}"
-                                   Margin="4,0,0,0">
-                        <i:Interaction.Triggers>
-                            <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="True">
-                                <Behaviors:GoToStateAction StateName="ActiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
-                            </ei:DataTrigger>
-                            <ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="False">
-                                <Behaviors:GoToStateAction StateName="InactiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
-                            </ei:DataTrigger>
-                        </i:Interaction.Triggers>
-                    </HyperlinkButton>
-                </StackPanel>
-            </toolkit:DockPanel>
-        </Border>
-        	  
+		<Border 
+			Grid.Row="0"
+			Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0">
+			<toolkit:DockPanel Margin="4" LastChildFill="False">
+				<StackPanel Orientation="Horizontal">
+					<TextBlock Text="Logs" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
+					<TextBlock Text="{Binding Path=Logs.Count, StringFormat='(\{0\} Entries)'}" Margin="10,0,0,0" Style="{StaticResource Style_TextBlock_InlineSubHeader}" />
+				</StackPanel>
+				<StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal">
+					<HyperlinkButton x:Name="AllErrorsHyperlink" Content="All Logs"
+													Command="{StaticResource NavigateToCommand}"
+													CommandParameter="/logs" Style="{StaticResource Style_Link_MouseOverChrome}">
+						<i:Interaction.Triggers>
+							<ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="False">
+								<Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
+													StateName="ActiveLink" />
+							</ei:DataTrigger>
+							<ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="True">
+								<Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
+													StateName="InactiveLink" />
+							</ei:DataTrigger>
+						</i:Interaction.Triggers>
+					</HyperlinkButton>
+				  <HyperlinkButton x:Name="ErrorsOnlyHyperlink" Content="Errors Only"
+										 Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="/logs/error" Style="{StaticResource Style_Link_MouseOverChrome}"
+								   Margin="4,0,0,0">
+						<i:Interaction.Triggers>
+							<ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="True">
+								<Behaviors:GoToStateAction StateName="ActiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
+							</ei:DataTrigger>
+							<ei:DataTrigger Binding="{Binding ShowErrorsOnly}" Value="False">
+								<Behaviors:GoToStateAction StateName="InactiveLink" TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}"/>
+							</ei:DataTrigger>
+						</i:Interaction.Triggers>
+					</HyperlinkButton>
+				</StackPanel>
+			</toolkit:DockPanel>
+		</Border>
+			  
 		<data:DataGrid x:Name="LogsList"
 					   Grid.Row="1"
 					   AutoGenerateColumns="False"
-                       FrozenColumnCount="1"
+					   FrozenColumnCount="1"
 					   IsReadOnly="True"
 					   ItemsSource="{Binding Logs}"
-                       Margin="0,10,0,0">
+					   Margin="0,10,0,0">
 			<data:DataGrid.Columns>
 				<data:DataGridTemplateColumn>
-                    <data:DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Image Stretch="Uniform" VerticalAlignment="Center" Height="14" Margin="3,2">
-                                <i:Interaction.Triggers>
-                                        <ei:DataTrigger Binding="{Binding Level}" Value="Debug">
-                                            <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Debug_Tiny}"/>
-                                        </ei:DataTrigger>
+					<data:DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<Image Stretch="Uniform" VerticalAlignment="Center" Height="14" Margin="3,2">
+								<i:Interaction.Triggers>
+										<ei:DataTrigger Binding="{Binding Level}" Value="Debug">
+											<ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Debug_Tiny}"/>
+										</ei:DataTrigger>
 									<ei:DataTrigger Binding="{Binding Level}" Value="Info">
-                                            <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Info_Tiny}"/>
-                                        </ei:DataTrigger>
-                                        <ei:DataTrigger Binding="{Binding Level}" Value="Warn">
-                                            <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Warning_Tiny}"/>
-                                        </ei:DataTrigger>
-                                    </i:Interaction.Triggers>
-                                </Image>
-                        </DataTemplate>
-                    </data:DataGridTemplateColumn.CellTemplate>
-                </data:DataGridTemplateColumn>
-			    <data:DataGridTextColumn Header="Level" Binding="{Binding Level}" />
-			    <data:DataGridTextColumn Header="Logged" Binding="{Binding TimeStamp}" />
+											<ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Info_Tiny}"/>
+										</ei:DataTrigger>
+										<ei:DataTrigger Binding="{Binding Level}" Value="Warn">
+											<ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Warning_Tiny}"/>
+										</ei:DataTrigger>
+									</i:Interaction.Triggers>
+								</Image>
+						</DataTemplate>
+					</data:DataGridTemplateColumn.CellTemplate>
+				</data:DataGridTemplateColumn>
+				<data:DataGridTextColumn Header="Level" Binding="{Binding Level}" />
+				<data:DataGridTextColumn Header="Logged" Binding="{Binding TimeStamp}" />
 				<data:DataGridTextColumn Header="Message" Binding="{Binding Message, Converter={StaticResource FirstLineOnly}}" />
 				<data:DataGridTextColumn Header="Exception" Binding="{Binding Exception, Converter={StaticResource FirstLineOnly}}" />
 				<data:DataGridTextColumn Header="Log Name" Binding="{Binding LoggerName}" />
@@ -94,70 +99,70 @@
 
 		<sdk:GridSplitter Grid.Row="2"
 						HorizontalAlignment="Stretch" 
-                        Style="{StaticResource Style_GridSplitter_Transparent}"/>
+						Style="{StaticResource Style_GridSplitter_Transparent}"/>
 
-        <Border BorderBrush="#FFEAE7E4"
-                Background="{StaticResource Brush_SubtleBackground2}"
-                BorderThickness="1"
-                Grid.Row="3">
-            <Grid  
-			      DataContext="{Binding ElementName=LogsList, Path=SelectedItem}"
-			      Visibility="{Binding ElementName=LogsList, Path=SelectedItem, Converter={StaticResource HiddenWhenNull}}">
-			    <Grid.ColumnDefinitions>
-				    <ColumnDefinition Width="Auto" />
-				    <ColumnDefinition Width="10" />
-				    <ColumnDefinition Width="*" />
-			    </Grid.ColumnDefinitions>
-			    <Grid.RowDefinitions>
-                    <RowDefinition Height="{Binding Message, Converter={StaticResource AutoWhenSingleLineStarSizedWhenMultiLine}}" />
-                    <RowDefinition Height="{Binding Exception, Converter={StaticResource HiddenWhenEmptyStarSizedForValue}}" />
-				    <RowDefinition Height="Auto" />
-				    <RowDefinition Height="Auto" />
-				    <RowDefinition Height="Auto" />
-			    </Grid.RowDefinitions>
+		<Border BorderBrush="#FFEAE7E4"
+				Background="{StaticResource Brush_SubtleBackground2}"
+				BorderThickness="1"
+				Grid.Row="3">
+			<Grid  
+				  DataContext="{Binding ElementName=LogsList, Path=SelectedItem}"
+				  Visibility="{Binding ElementName=LogsList, Path=SelectedItem, Converter={StaticResource HiddenWhenNull}}">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="10" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="{Binding Message, Converter={StaticResource AutoWhenSingleLineStarSizedWhenMultiLine}}" />
+					<RowDefinition Height="{Binding Exception, Converter={StaticResource HiddenWhenEmptyStarSizedForValue}}" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Message" Style="{StaticResource Style_TextBlock_FieldName}"
-                           VerticalAlignment="Top" Margin="4,3,0,0"/>
-                <TextBox Grid.Column="2"
-					     Text="{Binding Message}"
-					     Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}"
-                         VerticalScrollBarVisibility="Auto"
-                         HorizontalScrollBarVisibility="Auto"/>
+				<TextBlock Grid.Row="0" Text="Message" Style="{StaticResource Style_TextBlock_FieldName}"
+						   VerticalAlignment="Top" Margin="4,3,0,0"/>
+				<TextBox Grid.Column="2"
+						 Text="{Binding Message}"
+						 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}"
+						 VerticalScrollBarVisibility="Auto"
+						 HorizontalScrollBarVisibility="Auto"/>
 
-                <TextBlock Grid.Row="1" Text="Exception" Style="{StaticResource Style_TextBlock_FieldName}"
-                           VerticalAlignment="Top"
-                           Margin="4,3,0,0"/>
-                <TextBox Text="{Binding Exception}"
-					     Grid.Column="2"
-					     Grid.Row="1"
-					     Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}"
-                         VerticalScrollBarVisibility="Auto"
-                         HorizontalScrollBarVisibility="Auto"/>
+				<TextBlock Grid.Row="1" Text="Exception" Style="{StaticResource Style_TextBlock_FieldName}"
+						   VerticalAlignment="Top"
+						   Margin="4,3,0,0"/>
+				<TextBox Text="{Binding Exception}"
+						 Grid.Column="2"
+						 Grid.Row="1"
+						 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}"
+						 VerticalScrollBarVisibility="Auto"
+						 HorizontalScrollBarVisibility="Auto"/>
 
-                <TextBlock Grid.Row="2" Text="Logged" Style="{StaticResource Style_TextBlock_FieldName}"
-                           VerticalAlignment="Center"
-                           Margin="4,0,0,0"/>
-			    <TextBox Grid.Column="2"
-					     Grid.Row="2"
-					     Text="{Binding TimeStamp}"
-					     Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
+				<TextBlock Grid.Row="2" Text="Logged" Style="{StaticResource Style_TextBlock_FieldName}"
+						   VerticalAlignment="Center"
+						   Margin="4,0,0,0"/>
+				<TextBox Grid.Column="2"
+						 Grid.Row="2"
+						 Text="{Binding TimeStamp}"
+						 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
 
-                <TextBlock Grid.Row="3" Text="Level" Style="{StaticResource Style_TextBlock_FieldName}"
-                           VerticalAlignment="Center"
-                           Margin="4,0,0,0"/>
-			    <TextBox Grid.Row="3"
-					     Grid.Column="2"
-					     Text="{Binding Level}"
-					     Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
+				<TextBlock Grid.Row="3" Text="Level" Style="{StaticResource Style_TextBlock_FieldName}"
+						   VerticalAlignment="Center"
+						   Margin="4,0,0,0"/>
+				<TextBox Grid.Row="3"
+						 Grid.Column="2"
+						 Text="{Binding Level}"
+						 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
 
-                <TextBlock Grid.Row="4" Text="Log Name" Style="{StaticResource Style_TextBlock_FieldName}"
-                           VerticalAlignment="Center"
-                           Margin="4,0,0,0"/>
-			    <TextBox Grid.Row="4"
-					     Grid.Column="2"
-					     Text="{Binding LoggerName}"
-					     Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
-		    </Grid>
-        </Border>
-    </Grid>
+				<TextBlock Grid.Row="4" Text="Log Name" Style="{StaticResource Style_TextBlock_FieldName}"
+						   VerticalAlignment="Center"
+						   Margin="4,0,0,0"/>
+				<TextBox Grid.Row="4"
+						 Grid.Column="2"
+						 Text="{Binding LoggerName}"
+						 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
+			</Grid>
+		</Border>
+	</Grid>
 </Infrastructure:View>

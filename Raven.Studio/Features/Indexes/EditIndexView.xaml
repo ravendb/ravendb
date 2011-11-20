@@ -49,7 +49,7 @@
 							ToolTipService.ToolTip="Remove this field from the index"
 							HorizontalAlignment="Right"
 							VerticalAlignment="Top"
-							Command="{Binding DataContext.RemoveField, ElementName=this}"
+							Command="{Binding Path=DataContext.RemoveField, ElementName=this}"
 							CommandParameter="{Binding}">
 						<Button.Content>
 							<Image Source="{StaticResource Image_Remove_Tiny}"
@@ -124,7 +124,8 @@
 						   Margin="0,0,4,0" />
 					<HyperlinkButton Content="Indexes"
 									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									 NavigateUri="/Indexes" />
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="/Indexes" />
 					<TextBlock Text=">"
 							   VerticalAlignment="Center"
 							   Margin="4,0" />
@@ -244,6 +245,16 @@
 							Command="{StaticResource NavigateToCommand}"
 							CommandParameter="{Binding Name, StringFormat='/query/\{0\}'}">
 						<Image Source="{StaticResource Image_Query_Small}"
+							   Stretch="None" />
+					</Button>
+
+					<Button x:Name="Delete"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							HorizontalAlignment="Left"
+							Margin="4 0 0 0"
+							ToolTipService.ToolTip="Delete this index"
+							Command="{Binding DeleteIndex}">
+						<Image Source="{StaticResource Image_Delete_Small}"
 							   Stretch="None" />
 					</Button>
 
@@ -458,7 +469,8 @@
 					<StackPanel>
 						<HyperlinkButton Content="{Binding ErrorsCount, StringFormat=\{0\} errors}"
 										 Visibility="{Binding ErrorsCount, Converter={StaticResource HiddenWhenEmpty}}"
-										 NavigateUri="{Binding Name, StringFormat=/indexes-errors/\{0\}}" />
+										 Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="{Binding Name, StringFormat=/indexes-errors/\{0\}}" />
 					</StackPanel>
 
 				</Grid>

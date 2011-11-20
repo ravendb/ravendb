@@ -182,8 +182,14 @@ namespace Raven.Client.Silverlight.Connection
 				}
 			}
 
-			ResponseHeaders = response.Headers.AllKeys
-					.ToDictionary(key => key, key => (IList<string>)new List<string> { response.Headers[key] });
+			ResponseHeaders = new Dictionary<string, IList<string>>(StringComparer.InvariantCultureIgnoreCase);
+			foreach (var key in response.Headers.AllKeys)
+			{
+				ResponseHeaders[key] = new List<string>
+				{
+					response.Headers[key]
+				};
+			}
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 
 			using (var responseStream = response.GetResponseStream())
@@ -212,7 +218,7 @@ namespace Raven.Client.Silverlight.Connection
 
 				var headerName = prop.Key;
 				if (headerName == "ETag")
-					headerName = "If-Match";
+					headerName = "If-None-Match";
 				if(headerName.StartsWith("@") ||
 					headerName == Constants.LastModified)
 					continue;

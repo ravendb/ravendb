@@ -129,6 +129,7 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter != null)
 				{
+					indexWriter.Optimize();
 					indexWriter.Commit();
 				}
 			}

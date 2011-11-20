@@ -19,7 +19,7 @@ namespace Raven.Studio.Models
 			Name = name;
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 
-			Tasks = new BindableCollection<TaskModel>(new PrimaryKeyComparer<TaskModel>(x => x))
+			Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
 				new ImportTask(asyncDatabaseCommands),
 				new ExportTask(asyncDatabaseCommands)

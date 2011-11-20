@@ -25,6 +25,8 @@ namespace Raven.Studio.Infrastructure
 		{
 			if (url == null)
 				return;
+
+			url = new UrlParser(url).BuildUrl();
 			Navigate((new Uri(url, UriKind.Relative)));
 		}
 	}

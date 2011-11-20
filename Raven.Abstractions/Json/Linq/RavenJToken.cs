@@ -263,8 +263,19 @@ namespace Raven.Json.Linq
 						RavenJToken token;
 						if (otherObj.TryGetValue(kvp.Key, out token) == false)
 							return false;
-						otherStack.Push(token);
-						thisStack.Push(kvp.Value);
+						switch (kvp.Value.Type)
+						{
+							case JTokenType.Array:
+							case JTokenType.Object:
+								otherStack.Push(token);
+								thisStack.Push(kvp.Value);
+								break;
+							default:
+								if (!kvp.Value.DeepEquals(token)) 
+									return false;
+								break;
+						}
+					
 					}
 				}
 				else // value

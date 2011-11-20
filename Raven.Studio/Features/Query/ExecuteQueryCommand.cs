@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -20,12 +22,12 @@ namespace Raven.Studio.Features.Query
 	public class ExecuteQueryCommand : Command
 	{
 		private readonly QueryModel model;
-		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+		private readonly IAsyncDatabaseCommands databaseCommands;
 
-		public ExecuteQueryCommand(QueryModel model, IAsyncDatabaseCommands asyncDatabaseCommands)
+		public ExecuteQueryCommand(QueryModel model, IAsyncDatabaseCommands databaseCommands)
 		{
 			this.model = model;
-			this.asyncDatabaseCommands = asyncDatabaseCommands;
+			this.databaseCommands = databaseCommands;
 		}
 
 		public override void Execute(object parameter)
@@ -38,12 +40,42 @@ namespace Raven.Studio.Features.Query
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
 		{
 			ApplicationModel.Current.AddNotification(new Notification("Executing query..."));
+
 			var q = new IndexQuery
 			{
-				Start = (model.Pager.CurrentPage - 1) * model.Pager.PageSize, 
-				PageSize = model.Pager.PageSize, Query = model.Query.Value
+				Start = (model.Pager.CurrentPage - 1) * model.Pager.PageSize,
+				PageSize = model.Pager.PageSize,
+				Query = model.Query.Value,
 			};
-			return asyncDatabaseCommands.QueryAsync(model.IndexName, q, null)
+
+			if (model.SortBy != null && model.SortBy.Count > 0)
+			{
+				var sortedFields = new List<SortedField>();
+				foreach (var sortByRef in model.SortBy)
+				{
+					var sortBy = sortByRef.Value;
+					if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
+					{
+						var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length - 1);
+						sortedFields.Add(new SortedField(field) {Descending = true});
+					}
+					else
+						sortedFields.Add(new SortedField(sortBy));
+				}
+				q.SortedFields = sortedFields.ToArray();
+			}
+
+			if (model.IsSpatialQuerySupported)
+			{
+				q = new SpatialIndexQuery(q)
+				    {
+				    	Latitude = model.Latitude.HasValue ? model.Latitude.Value : 0,
+						Longitude = model.Longitude.HasValue ? model.Longitude.Value : 0,
+						Radius = model.Radius.HasValue ? model.Radius.Value : 0,
+				    };
+			}
+			
+			return databaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueWith(task =>
 				{
 					if (task.Exception != null)

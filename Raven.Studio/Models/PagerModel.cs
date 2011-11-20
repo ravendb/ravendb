@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Input;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
@@ -6,6 +7,8 @@ namespace Raven.Studio.Models
 {
 	public class PagerModel : NotifyPropertyChangedBase
 	{
+		public event EventHandler Navigated;
+
 		public PagerModel()
 		{
 			PageSize = 25;
@@ -42,12 +45,23 @@ namespace Raven.Studio.Models
 			{
 				if (skip == null)
 				{
-					ushort s;
-					ushort.TryParse(new UrlParser(UrlUtil.Url).GetQueryParam("skip"), out s);
-					skip = s;
+					SetSkip(new UrlParser(UrlUtil.Url));
 				}
 				return skip.Value;
 			}
+			set
+			{
+				skip = value;
+				OnPropertyChanged("CurrentPage");
+				OnPropertyChanged("HasPrevPage");
+			}
+		}
+
+		public void SetSkip(UrlParser urlParser)
+		{
+			ushort s;
+			ushort.TryParse(urlParser.GetQueryParam("skip"), out s);
+			Skip = s;
 		}
 
 		public bool HasNextPage()
@@ -57,30 +71,29 @@ namespace Raven.Studio.Models
 
 		public bool HasPrevPage()
 		{
-			return CurrentPage > 0;
+			return Skip > 0;
 		}
 
-		public bool NavigateToNextPage()
+		public void NavigateToNextPage()
 		{
-			if (HasNextPage() == false)
-				return false;
 			NavigateToPage(1);
-			return true;
 		}
 
-		public bool NavigateToPrevPage()
+		public void NavigateToPrevPage()
 		{
-			if (HasPrevPage() == false)
-				return false;
 			NavigateToPage(-1);
-			return true;
 		}
 
 		private void NavigateToPage(int pageOffset)
 		{
+			var skip1 = Skip + pageOffset*PageSize;
+			Skip = (ushort) skip1;
 			var urlParser = new UrlParser(UrlUtil.Url);
-			urlParser.SetQueryParam("skip", skip + pageOffset * PageSize);
-			urlParser.NavigateTo();
+			urlParser.SetQueryParam("skip", Skip);
+			UrlUtil.Navigate(urlParser.BuildUrl());
+
+			if (Navigated != null)
+				Navigated(this, EventArgs.Empty);
 		}
 
 		public ICommand NextPage

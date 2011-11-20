@@ -3,16 +3,15 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using System.Linq;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class CollectionModel : Model
+	public class CollectionModel : ViewModel
 	{
-		private readonly IAsyncDatabaseCommands databaseCommands;
 		Brush fill;
 		public Brush Fill
 		{
@@ -27,7 +26,6 @@ namespace Raven.Studio.Models
 		}
 
 		private int count;
-
 		public int Count
 		{
 			get { return count; }
@@ -36,22 +34,22 @@ namespace Raven.Studio.Models
 
 		public Observable<DocumentsModel> Documents { get; set; }
 
-		public CollectionModel(IAsyncDatabaseCommands databaseCommands)
+		public CollectionModel()
 		{
-			this.databaseCommands = databaseCommands;
 			Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(GetFetchDocumentsMethod)};
 		}
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
 		{
-			return databaseCommands
+			return DatabaseCommands
 				.QueryAsync("Raven/DocumentsByEntityName", new IndexQuery { Start = documentsModel.Pager.Skip, PageSize = documentsModel.Pager.PageSize, Query = "Tag:" + Name }, new string[] { })
 				.ContinueOnSuccess(queryResult =>
-				{
-					var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
-					documentsModel.Documents.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
-					Documents.Value.Pager.TotalResults.Value = queryResult.TotalResults;
-				});
+					{
+						var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
+						documentsModel.Documents.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
+						Documents.Value.Pager.TotalResults.Value = queryResult.TotalResults;
+					})
+				.CatchIgnore<InvalidOperationException>(() => ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error)));
 		}
 	}
 }

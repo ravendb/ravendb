@@ -9,22 +9,32 @@ namespace Raven.Studio.Commands
 	public abstract class ListBoxCommand<T> : Command
 	{
 		private ListBox listBox;
+		private ListBox ListBox
+		{
+			get { return listBox; }
+			set
+			{
+				listBox = value;
+				items = null;
+			}
+		}
 
 		private List<T> items;
 		protected List<T> Items
 		{
-			get { return items ?? (items = listBox.SelectedItems.Cast<T>().ToList()); }
+			get { return items ?? (items = ListBox.SelectedItems.Cast<T>().ToList()); }
 		}
 
 		protected object Context
 		{
-			get { return listBox.DataContext; }
+			get { return ListBox.DataContext; }
 		}
 
 		public override bool CanExecute(object parameter)
 		{
-			listBox = GetList(parameter);
-			return listBox != null && listBox.SelectedItems.Count > 0;
+			items = null;
+			ListBox = GetList(parameter);
+			return ListBox != null && ListBox.SelectedItems.Count > 0;
 		}
 
 		private static ListBox GetList(object parameter)

@@ -166,10 +166,11 @@ namespace Raven.Database.Json
 
 			if (value != null && value.Type != JTokenType.Null)
 			{
-				var singleOrDefault = array.FirstOrDefault(x => RavenJToken.DeepEquals(x, value));
-				if (singleOrDefault == null)
-					return;
-				array.Remove(singleOrDefault);
+				foreach (var ravenJToken in array.Where(x => RavenJToken.DeepEquals(x, value)).ToList())
+				{
+					array.Remove(ravenJToken);
+				}
+
 				return;
 			}
 
