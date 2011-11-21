@@ -6,7 +6,7 @@ using Raven.Client.Document;
 using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace Raven.Tests.MailingList.spokeypokey
 {
 	public class spokeypokey2 : RavenTest
 	{

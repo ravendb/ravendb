@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Studio.Commands;
+using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
@@ -97,21 +98,63 @@ namespace Raven.Studio.Models
 
 		public const string SortByDescSuffix = " DESC";
 
-		public BindableCollection<string> SortBy { get; private set; }
-		public BindableCollection<string> SortByOptions { get; private set; }
+		public class StringRef : NotifyPropertyChangedBase
+		{
+			private string value;
+			public string Value
+			{
+				get { return value; }
+				set { this.value = value; OnPropertyChanged();}
+			}
+		}
 
+		public BindableCollection<StringRef> SortBy { get; private set; }
+		public BindableCollection<string> SortByOptions { get; private set; }
 
 		public ICommand AddSortBy
 		{
-			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(SortByOptions.First())); }
+			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(new StringRef { Value = SortByOptions.First() })); }
 		}
 
 		public ICommand RemoveSortBy
 		{
-			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy = null); }
+			get { return new RemoveSortByCommand(this); }
 		}
 
+		private class RemoveSortByCommand : Command
+		{
+			private string field;
+			private readonly QueryModel model;
 
+			public RemoveSortByCommand(QueryModel model)
+			{
+				this.model = model;
+			}
+
+			public override bool CanExecute(object parameter)
+			{
+				field = parameter as string;
+				return field != null && model.SortBy.Any(x => x.Value == field);
+			}
+
+			public override void Execute(object parameter)
+			{
+				if (CanExecute(parameter) == false)
+					return;
+				StringRef firstOrDefault = model.SortBy.FirstOrDefault(x => x.Value == field);
+				if (firstOrDefault != null)
+					model.SortBy.Remove(firstOrDefault);
+			}
+		}
+
+		private void SetSortByOptions(ICollection<string> items)
+		{
+			foreach (var item in items)
+			{
+				SortByOptions.Add(item);
+				SortByOptions.Add(item + SortByDescSuffix);
+			}
+		}
 		
 		#endregion
 
@@ -129,8 +172,10 @@ namespace Raven.Studio.Models
 
 			DocumentsResult = new Observable<DocumentsModel>();
 			Query = new Observable<string>();
-			SortBy = new BindableCollection<string>(x => x);
+
+			SortBy = new BindableCollection<StringRef>(x => x.Value);
 			SortByOptions = new BindableCollection<string>(x => x);
+			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
@@ -153,6 +198,8 @@ namespace Raven.Studio.Models
 					}
 					fields.Match(definition.Fields);
 					IsSpatialQuerySupported = definition.Map.Contains("SpatialIndex.Generate");
+					SetSortByOptions(fields);
+					Execute.Execute(string.Empty);
 				}).Catch();
 		}
 
@@ -223,6 +270,35 @@ namespace Raven.Studio.Models
 		public string ViewTitle
 		{
 			get { return "Query: " + IndexName; }
+		}
+
+		public BindableCollection<FieldAndTerm> Suggestions { get; private set; }
+		public ICommand RepairTermInQuery
+		{
+			get { return new RepairTermInQueryCommand(this); }
+		}
+
+		private class RepairTermInQueryCommand : Command
+		{
+			private readonly QueryModel model;
+			private FieldAndTerm fieldAndTerm;
+
+			public RepairTermInQueryCommand(QueryModel model)
+			{
+				this.model = model;
+			}
+
+			public override bool CanExecute(object parameter)
+			{
+				fieldAndTerm = parameter as FieldAndTerm;
+				return fieldAndTerm != null;
+			}
+
+			public override void Execute(object parameter)
+			{
+				model.Query.Value = model.Query.Value.Replace(fieldAndTerm.Term, fieldAndTerm.SuggestedTerm);
+				model.Execute.Execute(null);
+			}
 		}
 	}
 }

@@ -10,6 +10,8 @@ namespace Raven.Studio.Models
 		private readonly Func<DocumentsModel, Task> fetchDocuments;
 		public BindableCollection<ViewableDocument> Documents { get; private set; }
 
+		public bool SkipAutoRefresh { get; set; }
+
 		public DocumentsModel(Func<DocumentsModel, Task> fetchDocuments)
 		{
 			this.fetchDocuments = fetchDocuments;
@@ -17,10 +19,13 @@ namespace Raven.Studio.Models
 
 			Pager = new PagerModel();
 			Pager.Navigated += (sender, args) => ForceTimerTicked();
+			ForceTimerTicked();
 		}
 
 		protected override Task TimerTickedAsync()
 		{
+			if (SkipAutoRefresh && IsForced == false)
+				return null;
 			return fetchDocuments(this);
 		}
 

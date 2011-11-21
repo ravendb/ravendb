@@ -486,6 +486,17 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			ExecuteWithReplication("DELETE", operationUrl => DirectDeleteAttachment(key, etag, operationUrl));
 		}
 
+		public string[] GetDatabaseNames()
+		{
+			var result = ExecuteGetRequest(url.Databases().NoCache());
+
+			var json = (RavenJArray) RavenJToken.Parse(result);
+		
+			return json
+				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+				.ToArray();
+		}
+
 		private void DirectDeleteAttachment(string key, Guid? etag, string operationUrl)
 		{
 			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
@@ -958,7 +969,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		public IDatabaseCommands ForDatabase(string database)
 		{
 			var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/");
+			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
 			if (indexOfDatabases != -1)
 				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
 			if (databaseUrl.EndsWith("/") == false)
@@ -973,7 +984,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// </summary>
 		public IDatabaseCommands GetRootDatabase()
 		{
-			var indexOfDatabases = url.IndexOf("/databases/");
+			var indexOfDatabases = url.IndexOf("/databases/", StringComparison.Ordinal);
 			if (indexOfDatabases == -1)
 				return this;
 

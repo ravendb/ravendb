@@ -73,7 +73,7 @@ namespace Raven.Database.Linq
 			{
 				if(hasWhereClause == null)
 				{
-					hasWhereClause = ViewText.IndexOf("where", StringComparison.InvariantCultureIgnoreCase) > -1;
+					hasWhereClause = ViewText.IndexOf("where", StringComparison.OrdinalIgnoreCase) > -1;
 				}
 				return hasWhereClause.Value;
 			}

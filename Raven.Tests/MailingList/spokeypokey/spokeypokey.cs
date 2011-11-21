@@ -4,7 +4,7 @@ using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace Raven.Tests.MailingList.spokeypokey
 {
 	public class spokeypokey : LocalClientTest
 	{
@@ -23,7 +23,7 @@ namespace Raven.Tests.MailingList
 						barn.Name,
 						HouseholdId = household.InternalId,
 						MemberId = member.InternalId,
-						Households_Members_Name = member.Name
+						MembersName = member.Name
 					};
 
 			}
@@ -34,6 +34,17 @@ namespace Raven.Tests.MailingList
 		{
 			using (var docStore = NewDocumentStore())
 			{
+				docStore.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) =>
+				{
+					var result = path + prop;
+					switch (result)
+					{
+						case "Households,Members,Name":
+							return "MembersName";
+						default:
+							return result;
+					}
+				};
 				new BarnIndex().Execute(docStore);
 
 				var barn1 = new Barn

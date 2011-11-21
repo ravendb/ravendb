@@ -200,6 +200,9 @@
 			<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_FooterTexture}" BorderThickness="0"/>
 			<Rectangle VerticalAlignment="Top" Height="5" Fill="Black" Opacity="0.4"/>
 			<Stats:DatabaseStatisticsView Margin="15,15,0,0" HorizontalAlignment="Left" />
+			<StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,15,15,0">
+				<TextBlock Text="{Binding Path=Server.Value.BuildNumber, StringFormat='Build #\{0\}'}" />
+			</StackPanel>
 		</Grid>
 	</Grid>
 

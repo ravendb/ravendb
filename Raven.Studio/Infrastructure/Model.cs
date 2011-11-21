@@ -8,6 +8,7 @@ namespace Raven.Studio.Infrastructure
 	{
 		private Task currentTask;
 		private DateTime lastRefresh;
+		protected bool IsForced;
 		protected TimeSpan RefreshRate { get; set; }
 
 		protected Model()
@@ -18,6 +19,7 @@ namespace Raven.Studio.Infrastructure
 		internal void ForceTimerTicked()
 		{
 			lastRefresh = DateTime.MinValue;
+			IsForced = true;
 			TimerTicked();
 		}
 
@@ -44,6 +46,7 @@ namespace Raven.Studio.Infrastructure
 					.Finally(() =>
 					{
 						lastRefresh = DateTime.Now;
+						IsForced = false;
 						currentTask = null;
 					});
 			}

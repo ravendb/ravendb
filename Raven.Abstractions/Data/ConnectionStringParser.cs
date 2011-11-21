@@ -82,7 +82,7 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Parse the connection string option
 		/// </summary>
-		protected virtual void ProcessConnectionStringOption(NetworkCredential neworkCredentials, string key, string value)
+		protected virtual void ProcessConnectionStringOption(NetworkCredential networkCredentials, string key, string value)
 		{
 			var embeddedRavenConnectionStringOptions = ConnectionStringOptions as EmbeddedRavenConnectionStringOptions;
 			switch (key)
@@ -118,14 +118,16 @@ namespace Raven.Abstractions.Data
 					ConnectionStringOptions.DefaultDatabase = value;
 					break;
 				case "user":
-					neworkCredentials.UserName = value;
+					networkCredentials.UserName = value;
 					setupUsernameInConnectionString = true;
 					break;
 				case "password":
-					neworkCredentials.Password = value;
+					networkCredentials.Password = value;
 					setupPasswordInConnectionString = true;
 					break;
-
+				case "domain":
+					networkCredentials.Domain = value;
+					break;
 				default:
 					throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed, unknown option: '{1}'", connectionStringName, key));
 			}

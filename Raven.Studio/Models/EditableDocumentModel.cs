@@ -34,7 +34,10 @@ namespace Raven.Studio.Models
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
-			document.Value = new JsonDocument { DataAsJson = new RavenJObject(), Metadata = new RavenJObject() };
+			document.Value = new JsonDocument { DataAsJson = new RavenJObject
+			{
+				{"Name", "..."}
+			}, Metadata = new RavenJObject() };
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -102,6 +105,7 @@ namespace Raven.Studio.Models
 																return x.Value.ToString(Formatting.None);
 															   });
 			OnPropertyChanged("Metadata");
+			JsonMetadata = metadataAsJson.ToString(Formatting.Indented);
 		}
 
 		public ObservableCollection<LinkModel> References { get; private set; }
@@ -179,7 +183,8 @@ namespace Raven.Studio.Models
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (isLoaded && Mode != DocumentMode.DocumentWithId)
+			if (isLoaded == false ||
+				Mode != DocumentMode.DocumentWithId)
 				return null;
 
 			return DatabaseCommands.GetAsync(documentKey)
@@ -347,10 +352,16 @@ namespace Raven.Studio.Models
 				{
 					doc = RavenJObject.Parse(document.JsonData);
 					metadata = RavenJObject.Parse(document.JsonMetadata);
+					if (document.Key != null && document.Key.Contains("/") && 
+						metadata.Value<string>(Constants.RavenEntityName) == null)
+					{
+						metadata[Constants.RavenEntityName] =
+							document.Key.Split(new[] {"/"}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+					}
 				}
 				catch (JsonReaderException ex)
 				{
-					new ErrorWindow(ex.Message, string.Empty).Show();
+					ErrorPresenter.Show(ex.Message, string.Empty);
 					return;
 				}
 				
@@ -388,7 +399,7 @@ namespace Raven.Studio.Models
 				}
 				catch (JsonReaderException ex)
 				{
-					new ErrorWindow(ex.Message, string.Empty).Show();
+					ErrorPresenter.Show(ex.Message, string.Empty);
 					return;
 				}
 				editableDocumentModel.UpdateMetadata(metadata);

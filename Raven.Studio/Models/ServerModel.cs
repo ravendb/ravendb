@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 
@@ -13,6 +14,13 @@ namespace Raven.Studio.Models
 		public const string DefaultDatabaseName = "Default";
 		private readonly DocumentStore documentStore;
 		private DatabaseModel[] defaultDatabase;
+
+		private string buildNumber;
+		public string BuildNumber
+		{
+			get { return buildNumber; }
+			private set { buildNumber = value; OnPropertyChanged(); }
+		}
 
 		public ServerModel()
 			: this(DetermineUri())
@@ -45,6 +53,8 @@ namespace Raven.Studio.Models
 			documentStore.JsonRequestFactory.
 				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 				false;
+
+			SetBuildNumber();
 		}
 
 		public void Initialize()
@@ -101,6 +111,18 @@ namespace Raven.Studio.Models
 			{
 				SelectedDatabase.Value = database;
 			}
+		}
+
+		private void SetBuildNumber()
+		{
+			var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(this, documentStore.Url + "/build/version", "GET", null, documentStore.Conventions);
+			request.ReadResponseStringAsync()
+				.ContinueOnSuccess(result =>
+				                   {
+				                   	var parsedResult = RavenJObject.Parse(result);
+				                   	var ravenJToken = parsedResult["BuildVersion"];
+				                   	BuildNumber = ravenJToken.Value<string>();
+				                   });
 		}
 	}
 }

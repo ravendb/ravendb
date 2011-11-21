@@ -162,9 +162,9 @@ namespace Raven.Client.Document
 			if(t.IsGenericType)
 			{
 				var name = t.GetGenericTypeDefinition().Name;
-				if(name.Contains("`"))
+				if(name.Contains('`'))
 				{
-					name = name.Substring(0, name.IndexOf("`"));
+					name = name.Substring(0, name.IndexOf('`'));
 				}
 				var sb = new StringBuilder(Inflector.Pluralize(name));
 				foreach (var argument in t.GetGenericArguments())

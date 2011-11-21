@@ -5,7 +5,6 @@ namespace Raven.Studio.Features.Input
 	public class InputModel : NotifyPropertyChangedBase
 	{
 		private string title;
-
 		public string Title
 		{
 			get { return title; }
@@ -17,7 +16,6 @@ namespace Raven.Studio.Features.Input
 		}
 
 		private string question;
-
 		public string Question
 		{
 			get { return question; }
@@ -29,7 +27,6 @@ namespace Raven.Studio.Features.Input
 		}
 
 		private string answer;
-
 		public string Answer
 		{
 			get { return answer; }

@@ -94,6 +94,7 @@ namespace Raven.Tests
 			                                   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
 			                                   new RavenJObject());
 
+			documentStore.Configuration.AnonymousUserAccessMode=AnonymousUserAccessMode.All;
 			using (var server = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
 			{
 				server.Start();

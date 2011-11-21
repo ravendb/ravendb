@@ -15,13 +15,31 @@
 		</Grid.RowDefinitions>
 		
 		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments.Value}"
+								 Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
 								 Margin="{StaticResource Margin_ContentPage}" />
 		
-		<StackPanel Grid.Row="2">
-			<Button x:Name="CreateSampleData"
-					Command="{Binding CreateSampleData}"
-					Visibility="{Binding ShowCreateSampleData, Converter={StaticResource VisibleWhenTrue}}"
-					Content="Create sample data" />
+		<StackPanel Grid.Row="2" HorizontalAlignment="Left">
+			<StackPanel Orientation="Horizontal"
+						Visibility="{Binding IsGeneratingSampleData, Converter={StaticResource VisibleWhenTrue}}">
+				<ProgressBar IsIndeterminate="True"
+							 Width="24" />
+				<TextBlock Text="Generating Sample Data"
+						   Margin="4 0 0 0" />
+			</StackPanel>
+
+			<StackPanel Orientation="Horizontal" Visibility="{Binding ShowCreateSampleData, Converter={StaticResource VisibleWhenTrue}}">
+				<TextBlock>
+					<Run Text="There is no any documents in this database yet." />
+					<LineBreak />
+					<Run Text="Would you like to generate some sample data?" />
+				</TextBlock>
+				<Button x:Name="CreateSampleData"
+						Padding="12,0,12,0"
+						Margin="8,0,0,0"
+						HorizontalAlignment="Left"
+						Command="{Binding CreateSampleData}"
+						Content="Create sample data" />
+			</StackPanel>
 		</StackPanel>
 	</Grid>
 </Infrastructure:View>

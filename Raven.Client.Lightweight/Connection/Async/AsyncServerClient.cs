@@ -39,7 +39,7 @@ namespace Raven.Client.Connection.Async
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
 		private readonly IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
-		private readonly HttpJsonRequestFactory jsonRequestFactory;
+		internal readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? sessionId;
 
 		/// <summary>
@@ -233,7 +233,7 @@ namespace Raven.Client.Connection.Async
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
 			var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/");
+			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
 			if (indexOfDatabases != -1)
 				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
 			if (databaseUrl.EndsWith("/") == false)
@@ -248,7 +248,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public IAsyncDatabaseCommands GetRootDatabase()
 		{
-			var indexOfDatabases = url.IndexOf("/databases/");
+			var indexOfDatabases = url.IndexOf("/databases/", StringComparison.Ordinal);
 			if (indexOfDatabases == -1)
 				return this;
 
@@ -615,7 +615,17 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public Task<string[]> GetDatabaseNamesAsync()
 		{
-			throw new NotImplementedException();
+			return url.Databases()
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var json = (RavenJArray)RavenJToken.Parse(task.Result);
+					return json
+						.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+						.ToArray();
+				});
 		}
 		
 		/// <summary>

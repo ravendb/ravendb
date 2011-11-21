@@ -40,6 +40,7 @@ namespace Raven.Studio.Models
 			documents.Pager.PageSize = 15;
 			documents.Pager.SetTotalResults(new Observable<long>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 			RecentDocuments.Value = documents;
+			documents.Pager.TotalResults.PropertyChanged += (sender, args) => ShowCreateSampleData = documents.Pager.TotalResults.Value == 0;
 		}
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documents)
@@ -84,8 +85,10 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				
+				CreateSampleData().ProcessTasks()
+					.ContinueOnSuccessInTheUIThread(() => model.ForceTimerTicked());
 			}
+
 
 			private IEnumerable<Task> CreateSampleData()
 			{
@@ -95,7 +98,7 @@ namespace Raven.Studio.Models
 				model.ShowCreateSampleData = false;
 				model.IsGeneratingSampleData = true;
 
-				using (var sampleData = typeof(HomeModel).Assembly.GetManifestResourceStream("Raven.Studio.EmbeddedData.MvcMusicStore_Dump.json"))
+				using (var sampleData = typeof(HomeModel).Assembly.GetManifestResourceStream("Raven.Studio.Assets.EmbeddedData.MvcMusicStore_Dump.json"))
 				using (var streamReader = new StreamReader(sampleData))
 				{
 					var musicStoreData = (RavenJObject)RavenJToken.ReadFrom(new JsonTextReader(streamReader));
@@ -105,26 +108,26 @@ namespace Raven.Studio.Models
 						var ravenJObject = index.Value<RavenJObject>("definition");
 						var putDoc = databaseCommands
 							.PutIndexAsync(indexName,
-							               ravenJObject.JsonDeserialization<IndexDefinition>(),
-							               true);
+										   ravenJObject.JsonDeserialization<IndexDefinition>(),
+										   true);
 						yield return putDoc;
 					}
 
 					var batch = databaseCommands.BatchAsync(
 						musicStoreData.Value<RavenJArray>("Docs").OfType<RavenJObject>().Select(
 							doc =>
-								{
-									var metadata = doc.Value<RavenJObject>("@metadata");
-									doc.Remove("@metadata");
-									return new PutCommandData
-									       	{
-									       		Document = doc,
-									       		Metadata = metadata,
-									       		Key = metadata.Value<string>("@id"),
-									       	};
-								}).ToArray()
+							{
+								var metadata = doc.Value<RavenJObject>("@metadata");
+								doc.Remove("@metadata");
+								return new PutCommandData
+										{
+											Document = doc,
+											Metadata = metadata,
+											Key = metadata.Value<string>("@id"),
+										};
+							}).ToArray()
 						);
-						
+
 					yield return batch;
 
 					model.IsGeneratingSampleData = false;
@@ -132,7 +135,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-#endregion
+		#endregion
 
 	}
 }

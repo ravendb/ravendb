@@ -1,4 +1,5 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Features.Query.QueryView"
+﻿<Infrastructure:View x:Name="this"
+					 x:Class="Raven.Studio.Features.Query.QueryView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
@@ -7,7 +8,8 @@
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
+					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors">
 
 	<Infrastructure:View.Resources>
 		<Style x:Key="PanelTitle"
@@ -25,29 +27,61 @@
 				Margin="0,0,0,20"
 				CornerRadius="4,4,0,0"
 				toolkit:DockPanel.Dock="Top">
-			<StackPanel Orientation="Horizontal">
-				<Image Source="{StaticResource Image_DocumentIndex_Tiny}" Stretch="None"
-						VerticalAlignment="Center" Margin="2"/>
-				<HyperlinkButton Content="Indexes"
-								 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/Indexes" 
-								 VerticalAlignment="Center"/>
-				<TextBlock Text=">"
+			<toolkit:DockPanel Margin="4"
+							   LastChildFill="False">
+				<StackPanel Orientation="Horizontal">
+					<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
+						   Stretch="None"
 						   VerticalAlignment="Center"
-						   Margin="4,0" />
-				<HyperlinkButton Content="{Binding IndexName}"
-								 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}" 
-								 VerticalAlignment="Center"/>
-				<TextBlock Text=">"
-						   VerticalAlignment="Center"
-						   Margin="4,0" />
-				<TextBlock Text="Query"
-						   Style="{StaticResource Style_TextBlock_Breadcrumb}"
-						   VerticalAlignment="Center" />
-			</StackPanel>
+						   Margin="2" />
+					<HyperlinkButton Content="Indexes"
+									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="/Indexes"
+									 VerticalAlignment="Center" />
+					<TextBlock Text=">"
+							   VerticalAlignment="Center"
+							   Margin="4,0" />
+					<HyperlinkButton Content="{Binding IndexName}"
+									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+									 VerticalAlignment="Center" />
+					<TextBlock Text=">"
+							   VerticalAlignment="Center"
+							   Margin="4,0" />
+					<TextBlock Text="Query"
+							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
+							   VerticalAlignment="Center" />
+				</StackPanel>
+
+				<StackPanel Orientation="Horizontal"
+							toolkit:DockPanel.Dock="Right"
+							VerticalAlignment="Center">
+
+					<Button x:Name="AddSortBy"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Add sort by option for this query"
+							VerticalAlignment="Center"
+							HorizontalAlignment="Left"
+							Margin="0"
+							Command="{Binding AddSortBy}"
+							Visibility="{Binding Path=SortByOptions.Count, Converter={StaticResource HiddenWhenEmpty}}"
+							VerticalContentAlignment="Center">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal"
+										VerticalAlignment="Center">
+								<Image Source="{StaticResource Image_Add_Tiny}"
+									   Stretch="None"
+									   VerticalAlignment="Center" />
+								<TextBlock Text="Add Sort By"
+										   VerticalAlignment="Center"
+										   Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+				</StackPanel>
+			</toolkit:DockPanel>
 		</Border>
 
 		<Grid>
@@ -105,7 +139,7 @@
 							<TextBlock Text="Radius:" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Radios}"/>
+									 Text="{Binding Radius}"/>
 						</StackPanel>
 					</StackPanel>
 
@@ -114,22 +148,32 @@
 									 Command="{Binding Execute}"
 									 HorizontalAlignment="Right" />
 				</Grid>
-
-				<HyperlinkButton Command="{Binding AddSortBy}"
-								 Grid.Row="3"
-								 Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNotNull}}"
-								 Content="Add Sort By" />
-				<StackPanel Visibility="{Binding SortBy, Converter={StaticResource HiddenWhenNull}}" Grid.Row="3">
+				
+				<StackPanel Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}"
+							Grid.Row="3">
 					<TextBlock Text="Sort By" />
 					<ItemsControl ItemsSource="{Binding SortBy}"
-								  Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}">
+								  Style="{StaticResource Style_ItemsControl_QuerySortyBy}">
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
-								<StackPanel>
-									<ComboBox ItemsSource="{Binding SortByOptions}" />
-									<HyperlinkButton Command="{Binding RemoveSortBy}"
-													 CommandParameter="{Binding}"
-													 Content="Remove Sort By" />
+								<StackPanel Orientation="Horizontal"
+											Margin="0,4,12,4">
+									<ComboBox x:Name="SortByOptions" 
+											  ItemsSource="{Binding Path=DataContext.SortByOptions, ElementName=this}" 
+											  MinWidth="200"
+											  SelectedItem="{Binding Path=Value}" />
+									<HyperlinkButton x:Name="RemoveSortBy" 
+													 ToolTipService.ToolTip="Remove this Sort By option"
+													 Margin="2,0,0,0"
+													 VerticalAlignment="Center"
+													 Command="{Binding Path=DataContext.RemoveSortBy, ElementName=this}"
+													 CommandParameter="{Binding ElementName=SortByOptions, Path=SelectedItem}">
+										<HyperlinkButton.Content>
+											<Image Source="{StaticResource Image_Remove_Tiny}"
+												   Stretch="None"
+												   VerticalAlignment="Center" />
+										</HyperlinkButton.Content>
+									</HyperlinkButton>
 								</StackPanel>
 							</DataTemplate>
 						</ItemsControl.ItemTemplate>
@@ -144,10 +188,28 @@
 			<StackPanel Grid.Row="2">
 				<TextBlock Text="{Binding Error}"
 						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
-				<StackPanel Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
-					<Documents:DocumentsView Margin="{StaticResource Margin_ContentPage}"
-											DataContext="{Binding Path=DocumentsResult.Value}" />
-				</StackPanel>
+
+				<ItemsControl ItemsSource="{Binding Suggestions}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<StackPanel Orientation="Horizontal">
+								<TextBlock Text="Did you mean " />
+								<HyperlinkButton Content="{Binding SuggestedTerm}"
+												 FontStyle="Italic"
+												 Command="{Binding Path=DataContext.RepairTermInQuery, ElementName=this}"
+												 CommandParameter="{Binding}" />
+								<TextBlock Text=" for the field " />
+								<TextBlock Text="{Binding Field}"
+										   FontStyle="Italic" />
+								<TextBlock Text=" ?" />
+							</StackPanel>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+
+				<Documents:DocumentsView Margin="{StaticResource Margin_ContentPage}"
+										 Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
+										 DataContext="{Binding Path=DocumentsResult.Value}" />
 			</StackPanel>
 		</Grid>
 	</toolkit:DockPanel>
