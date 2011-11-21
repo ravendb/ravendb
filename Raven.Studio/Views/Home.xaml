@@ -15,6 +15,7 @@
 		</Grid.RowDefinitions>
 		
 		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments.Value}"
+								 Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
 								 Margin="{StaticResource Margin_ContentPage}" />
 		
 		<StackPanel Grid.Row="2">
