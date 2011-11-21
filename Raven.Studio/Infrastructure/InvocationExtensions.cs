@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows;
 using Raven.Client.Extensions;
 using System.Threading.Tasks;
@@ -151,6 +152,25 @@ namespace Raven.Studio.Infrastructure
 			});
 
 			return parent;
+		}
+
+		public static Task ProcessTasks(this IEnumerable<Task> tasks)
+		{
+			var enumerator = tasks.GetEnumerator();
+			if (enumerator.MoveNext() == false)
+				return null;
+			return ProcessTasks(enumerator);
+		}
+
+		private static Task ProcessTasks(IEnumerator<Task> enumerator)
+		{
+			return enumerator.Current.ContinueWith(task =>
+			                                       {
+			                                       	task.Wait(); //would throw on error
+			                                       	if (enumerator.MoveNext() == false)
+			                                       		return task;
+			                                       	return ProcessTasks(enumerator);
+			                                       }).Unwrap();
 		}
 	}
 }

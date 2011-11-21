@@ -84,22 +84,9 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				var enumerator = CreateSampleData().GetEnumerator();
-				if (enumerator.MoveNext() == false)
-					return;
-				ProcessTasks(enumerator);
+				CreateSampleData().ProcessTasks();
 			}
 
-			private static Task ProcessTasks(IEnumerator<Task> enumerator)
-			{
-				return enumerator.Current.ContinueWith(task =>
-													   {
-														   task.Wait();//would throw on error
-														   if (enumerator.MoveNext() == false)
-															   return task;
-														   return ProcessTasks(enumerator);
-													   }).Unwrap();
-			}
 
 			private IEnumerable<Task> CreateSampleData()
 			{
