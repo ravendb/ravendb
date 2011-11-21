@@ -40,6 +40,7 @@ namespace Raven.Studio.Models
 			documents.Pager.PageSize = 15;
 			documents.Pager.SetTotalResults(new Observable<long>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 			RecentDocuments.Value = documents;
+			documents.Pager.TotalResults.PropertyChanged += (sender, args) => ShowCreateSampleData = documents.Pager.TotalResults.Value == 0;
 		}
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documents)
