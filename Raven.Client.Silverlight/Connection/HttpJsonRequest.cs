@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
@@ -34,6 +35,7 @@ namespace Raven.Client.Silverlight.Connection
 		internal HttpWebRequest webRequest;
 		private byte[] postedData;
 		private int retries;
+		private readonly StackTrace usedForDebugging_CreatedBy = Debugger.IsAttached ? new StackTrace() : null;
 
 		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{
@@ -83,7 +85,11 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			return webRequest
 				.GetResponseAsync()
-				.ContinueWith(t => ReadStringInternal(() => t.Result))
+				.ContinueWith(t => ReadStringInternal(() =>
+				                                      {
+				                                      	var localCopy = usedForDebugging_CreatedBy;
+				                                      	return t.Result;
+				                                      }))
 				.ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
 				.Unwrap();
 		}
