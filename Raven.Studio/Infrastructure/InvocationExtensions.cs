@@ -156,18 +156,28 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task ProcessTasks(this IEnumerable<Task> tasks)
 		{
-			return ProcessTasks(tasks.GetEnumerator());
+			var enumerator = tasks.GetEnumerator();
+			if (enumerator.MoveNext() == false)
+			{
+				enumerator.Dispose(); 
+				return null;
+			}
+			return ProcessTasks(enumerator);
 		}
 
 		private static Task ProcessTasks(IEnumerator<Task> enumerator)
 		{
-			return enumerator.Current.ContinueWith(task =>
-			                                       {
-			                                       	task.Wait(); // would throw on error
-			                                       	if (enumerator.MoveNext() == false)
-			                                       		return task;
-			                                       	return ProcessTasks(enumerator);
-			                                       }).Unwrap();
+			return enumerator.Current
+				.ContinueWith(task =>
+				              {
+				              	task.Wait(); // would throw on error
+				              	if (enumerator.MoveNext() == false)
+				              	{
+				              		enumerator.Dispose();
+				              		return task;
+				              	}
+				              	return ProcessTasks(enumerator);
+				              }).Unwrap();
 		}
 	}
 }
