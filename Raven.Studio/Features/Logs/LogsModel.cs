@@ -16,7 +16,7 @@ namespace Raven.Studio.Features.Logs
 		public LogsModel()
 		{
 			ModelUrl = "/logs";
-			Logs = new BindableCollection<LogItem>(log => log.TimeStamp);
+			Logs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
 		}
 
 		protected override Task LoadedTimerTickedAsync()
@@ -39,8 +39,6 @@ namespace Raven.Studio.Features.Logs
 		public override void LoadModelParameters(string parameters)
 		{
 			ShowErrorsOnly = new UrlParser(parameters).Path.Trim('/') == "error";
-
-			ForceTimerTicked();
 		}
 	}
 }
