@@ -82,6 +82,7 @@
     <Compile Include="Replication\ReplicationBase.cs" />
     <Compile Include="Replication\SimpleReplication.cs" />
     <Compile Include="Replication\WritesDuringFailover.cs" />
+    <Compile Include="Versioning\Bugs\MultipleVersions.cs" />
     <Compile Include="Versioning\Bugs\VersioningWithGuidIds.cs" />
     <Compile Include="Versioning\Versioning.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -129,6 +129,7 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter != null)
 				{
+					indexWriter.Optimize();
 					indexWriter.Commit();
 				}
 			}
@@ -736,12 +737,14 @@ namespace Raven.Database.Indexing
 					indexSearcher.Search(luceneQuery, filter, gatherAllCollector);
 					return gatherAllCollector.ToTopDocs();
 				}
+				var minPageSize = Math.Max(pageSize + start, 1);
+
 				// NOTE: We get Start + Pagesize results back so we have something to page on
 				if (sort != null)
 				{
-					return indexSearcher.Search(luceneQuery, filter, pageSize + start, sort);
+					return indexSearcher.Search(luceneQuery, filter, minPageSize, sort);
 				}
-				return indexSearcher.Search(luceneQuery, filter, pageSize + start);
+				return indexSearcher.Search(luceneQuery, filter, minPageSize);
 			}
 		}
 

@@ -89,6 +89,12 @@ namespace Raven.Client.Connection
 		void DeleteAttachment(string key, Guid? etag);
 
 		/// <summary>
+		/// Returns the names of all tenant databases on the RavenDB server
+		/// </summary>
+		/// <returns>List of tenant database names</returns>
+		string[] GetDatabaseNames();
+
+		/// <summary>
 		/// Returns the names of all indexes that exist on the server
 		/// </summary>
 		/// <param name="start">Paging start</param>

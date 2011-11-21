@@ -82,6 +82,7 @@ namespace Raven.Tests.Silverlight
 			{
 				RavenQueryStatistics stats;
 				var query = session.Query<Company>()
+					.Customize(x=>x.WaitForNonStaleResults())
 					.Statistics(out stats)
 					.Where(x => x.Name == "Async Company #1")
 					.CountAsync();

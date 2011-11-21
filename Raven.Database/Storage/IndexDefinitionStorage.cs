@@ -125,7 +125,7 @@ namespace Raven.Database.Storage
 
 		public string AddIndex(IndexDefinition indexDefinition)
 		{
-			DynamicViewCompiler transformer = AddAndCompileIndex(indexDefinition);
+			var transformer = AddAndCompileIndex(indexDefinition);
 			if (configuration.RunInMemory == false)
 			{
 				var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
@@ -177,8 +177,6 @@ namespace Raven.Database.Storage
 			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
 		}
 
-
-
 		public IndexDefinition GetIndexDefinition(string name)
 		{
 			IndexDefinition value;
@@ -224,8 +222,9 @@ namespace Raven.Database.Storage
 			{
 				prefix = index.Substring(0, 5);
 			}
-			if (path.Length + index.Length > 230 ||
-				Encoding.Unicode.GetByteCount(index) >= 255)
+			var fixupIndexName = MonoHttpUtility.UrlEncode(index);
+			if (path.Length + fixupIndexName.Length > 230 ||
+				Encoding.Unicode.GetByteCount(fixupIndexName) >= 255)
 			{
 				using (var md5 = MD5.Create())
 				{

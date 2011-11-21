@@ -224,7 +224,7 @@ namespace Raven.Client.Silverlight.Connection
 
 				var headerName = prop.Key;
 				if (headerName == "ETag")
-					headerName = "If-Match";
+					headerName = "If-None-Match";
 				if(headerName.StartsWith("@") ||
 					headerName == Constants.LastModified)
 					continue;
