@@ -97,7 +97,7 @@ namespace Raven.Studio.Models
 				model.ShowCreateSampleData = false;
 				model.IsGeneratingSampleData = true;
 
-				using (var sampleData = typeof(HomeModel).Assembly.GetManifestResourceStream("Raven.Studio.EmbeddedData.MvcMusicStore_Dump.json"))
+				using (var sampleData = typeof(HomeModel).Assembly.GetManifestResourceStream("Raven.Studio.Assets.EmbeddedData.MvcMusicStore_Dump.json"))
 				using (var streamReader = new StreamReader(sampleData))
 				{
 					var musicStoreData = (RavenJObject)RavenJToken.ReadFrom(new JsonTextReader(streamReader));
