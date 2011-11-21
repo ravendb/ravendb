@@ -85,7 +85,8 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				CreateSampleData().ProcessTasks();
+				CreateSampleData().ProcessTasks()
+					.ContinueOnSuccessInTheUIThread(() => model.ForceTimerTicked());
 			}
 
 
