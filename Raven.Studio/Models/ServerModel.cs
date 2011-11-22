@@ -11,8 +11,9 @@ namespace Raven.Studio.Models
 {
 	public class ServerModel : Model
 	{
+		private readonly string url;
 		public const string DefaultDatabaseName = "Default";
-		private readonly DocumentStore documentStore;
+		private DocumentStore documentStore;
 		private DatabaseModel[] defaultDatabase;
 
 		private string buildNumber;
@@ -30,18 +31,19 @@ namespace Raven.Studio.Models
 
 		private ServerModel(string url)
 		{
+			this.url = url;
 			Databases = new BindableCollection<DatabaseModel>(model => model.Name);
-			
+			SelectedDatabase = new Observable<DatabaseModel>();
+			Initialize();
+		}
+
+		public void Initialize()
+		{
 			documentStore = new DocumentStore
 			{
 				Url = url
 			};
 
-			Initialize();
-		}
-
-		private void Initialize()
-		{
 			documentStore.Initialize();
 
 			// We explicitly enable this for the Studio, we rely on SL to actually get us the credentials, and that 
@@ -55,7 +57,7 @@ namespace Raven.Studio.Models
 
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
-			SelectedDatabase = new Observable<DatabaseModel> {Value = defaultDatabase[0]};
+			SelectedDatabase.Value = defaultDatabase[0];
 
 			var changeDatabaseCommand = new ChangeDatabaseCommand();
 			SelectedDatabase.PropertyChanged += (sender, args) =>
@@ -124,8 +126,7 @@ namespace Raven.Studio.Models
 				                   		var parsedResult = RavenJObject.Parse(result);
 				                   		var ravenJToken = parsedResult["BuildVersion"];
 				                   		BuildNumber = ravenJToken.Value<string>();
-				                   	})
-				.Catch(exception => {});
+				                   	});
 		}
 	}
 }
