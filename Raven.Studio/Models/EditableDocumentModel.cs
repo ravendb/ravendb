@@ -54,7 +54,7 @@ namespace Raven.Studio.Models
 			if (string.IsNullOrWhiteSpace(docId) == false)
 			{
 				Mode = DocumentMode.DocumentWithId;
-				documentKey = Key = docId;
+				SetCurrentDocumentKey(docId);
 				DatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccess(newdoc =>
 					                   {
@@ -85,6 +85,11 @@ namespace Raven.Studio.Models
 					UrlUtil.Navigate("/NotFound");
 				}
 			}
+		}
+
+		public void SetCurrentDocumentKey(string docId)
+		{
+			documentKey = Key = docId;
 		}
 
 		private void UpdateFromDocument()
@@ -235,7 +240,12 @@ namespace Raven.Studio.Models
 		public string Key
 		{
 			get { return document.Value.Key; }
-			set { document.Value.Key = value; OnPropertyChanged(); }
+			set
+			{
+				document.Value.Key = value;
+				OnPropertyChanged();
+				OnPropertyChanged("DisplayId");
+			}
 		}
 
 		public Guid? Etag
@@ -374,6 +384,7 @@ namespace Raven.Studio.Models
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
 						document.Etag = result.ETag;
+						document.SetCurrentDocumentKey(result.Key);
 					})
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
 			}
