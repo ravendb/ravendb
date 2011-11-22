@@ -10,20 +10,6 @@ namespace Raven.Studio.Infrastructure
 {
 	public static class InvocationExtensions
 	{
-		private static readonly ConditionalWeakTable<Task, StackTrace> traces = new ConditionalWeakTable<Task, StackTrace>();
-
-		public static StackTrace GetOriginalStackTrace(this Task task)
-		{
-			StackTrace trace;
-			traces.TryGetValue(task, out trace);
-			return trace;
-		}
-
-		private static void SetOriginalStackTrace(this Task task)
-		{
-			traces.Add(task, new StackTrace());
-		}
-
 		public static Action ViaCurrentDispatcher(this Action action)
 		{
 			var dispatcher = Deployment.Current.Dispatcher;
