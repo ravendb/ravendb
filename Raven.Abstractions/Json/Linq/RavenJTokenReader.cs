@@ -143,14 +143,10 @@ namespace Raven.Json.Linq
 					}
 					Read(); // read the value
 					return (byte[])Value;
-					break;
 				default:
 					throw new JsonReaderException(
 						"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 			}
-
-
-			
 		}
 
 		public override decimal? ReadAsDecimal()
