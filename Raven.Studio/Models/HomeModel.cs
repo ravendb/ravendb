@@ -63,8 +63,6 @@ namespace Raven.Studio.Models
 			set { isGeneratingSampleData = value; OnPropertyChanged(); }
 		}
 
-		public BindableCollection<Notification> CreateSampleDataNotifications { get; set; }
-
 		#region Commands
 
 		public ICommand CreateSampleData

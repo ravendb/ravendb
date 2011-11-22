@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using Raven.Studio.Features.Errors;
 
 namespace Raven.Studio.Infrastructure
@@ -22,6 +23,15 @@ namespace Raven.Studio.Infrastructure
 		public static void Show(Exception e)
 		{
 			Show(e.Message, e.StackTrace);
+		}
+
+		public static void Show(Exception e, StackTrace innerStackTrace)
+		{
+			var details = e.StackTrace +
+			              Environment.NewLine + Environment.NewLine +
+			              "Inner StackTrace: " + Environment.NewLine +
+						  (innerStackTrace == null ? "null" : innerStackTrace.ToString());
+			Show(e.Message, details);
 		}
 
 		public static void Show(string message, string details)

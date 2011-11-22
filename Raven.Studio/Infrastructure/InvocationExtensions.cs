@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using Raven.Client.Extensions;
 using System.Threading.Tasks;
@@ -122,13 +121,16 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task Catch(this Task parent, Action<AggregateException> action)
 		{
+			var stackTrace = new StackTrace();
 			parent.ContinueWith(task =>
 			{
-				if (task.IsFaulted == false)
-					return;
+			    if (task.IsFaulted == false)
+			        return;
 
-				Deployment.Current.Dispatcher.InvokeAsync(() => ErrorPresenter.Show(task.Exception.ExtractSingleInnerException()))
-					.ContinueWith(_ => action(task.Exception));
+			    var ex = task.Exception.ExtractSingleInnerException();
+			    if (ErrorHandler.Handle(ex) == false)
+			        Deployment.Current.Dispatcher.InvokeAsync(() => ErrorPresenter.Show(ex, stackTrace))
+			            .ContinueWith(_ => action(task.Exception));
 			});
 
 			return parent;
