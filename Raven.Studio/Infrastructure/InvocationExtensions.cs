@@ -124,11 +124,13 @@ namespace Raven.Studio.Infrastructure
 			var stackTrace = new StackTrace();
 			parent.ContinueWith(task =>
 			{
-				if (task.IsFaulted == false)
-					return;
+			    if (task.IsFaulted == false)
+			        return;
 
-				Deployment.Current.Dispatcher.InvokeAsync(() => ErrorPresenter.Show(task.Exception.ExtractSingleInnerException(), stackTrace))
-					.ContinueWith(_ => action(task.Exception));
+			    var ex = task.Exception.ExtractSingleInnerException();
+			    if (ErrorHandler.Handle(ex) == false)
+			        Deployment.Current.Dispatcher.InvokeAsync(() => ErrorPresenter.Show(ex, stackTrace))
+			            .ContinueWith(_ => action(task.Exception));
 			});
 
 			return parent;
