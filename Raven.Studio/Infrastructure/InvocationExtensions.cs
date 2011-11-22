@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using Raven.Client.Extensions;
 using System.Threading.Tasks;
@@ -8,6 +10,20 @@ namespace Raven.Studio.Infrastructure
 {
 	public static class InvocationExtensions
 	{
+		private static readonly ConditionalWeakTable<Task, StackTrace> traces = new ConditionalWeakTable<Task, StackTrace>();
+
+		public static StackTrace GetOriginalStackTrace(this Task task)
+		{
+			StackTrace trace;
+			traces.TryGetValue(task, out trace);
+			return trace;
+		}
+
+		private static void SetOriginalStackTrace(this Task task)
+		{
+			traces.Add(task, new StackTrace());
+		}
+
 		public static Action ViaCurrentDispatcher(this Action action)
 		{
 			var dispatcher = Deployment.Current.Dispatcher;
@@ -127,7 +143,8 @@ namespace Raven.Studio.Infrastructure
 
 				Deployment.Current.Dispatcher.InvokeAsync(() => ErrorPresenter.Show(task.Exception.ExtractSingleInnerException()))
 					.ContinueWith(_ => action(task.Exception));
-			});
+			})
+			.SetOriginalStackTrace();
 
 			return parent;
 		}
