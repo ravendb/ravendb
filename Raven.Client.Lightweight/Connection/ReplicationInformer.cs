@@ -81,7 +81,7 @@ namespace Raven.Client.Connection
 			{
 				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow
 #if !NET_3_5
- || refreshReplicationInformationTask != null
+					|| refreshReplicationInformationTask != null
 #endif
 )
 					return;
