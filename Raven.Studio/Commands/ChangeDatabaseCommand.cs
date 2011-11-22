@@ -10,7 +10,7 @@ namespace Raven.Studio.Commands
 		public override bool CanExecute(object parameter)
 		{
 			databaseName = parameter as string;
-			return string.IsNullOrEmpty(databaseName) == false;
+			return string.IsNullOrEmpty(databaseName) == false && ApplicationModel.Current.Server.Value != null;
 		}
 
 		public override void Execute(object parameter)
