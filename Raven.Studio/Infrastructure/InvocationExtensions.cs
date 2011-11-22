@@ -129,8 +129,7 @@ namespace Raven.Studio.Infrastructure
 
 				Deployment.Current.Dispatcher.InvokeAsync(() => ErrorPresenter.Show(task.Exception.ExtractSingleInnerException()))
 					.ContinueWith(_ => action(task.Exception));
-			})
-			.SetOriginalStackTrace();
+			});
 
 			return parent;
 		}
