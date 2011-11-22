@@ -12,7 +12,6 @@ namespace Raven.Studio.Infrastructure
 			if (ex is SecurityException)
 			{
 				Error("Cannot connect to the server");
-				return true;
 			}
 			return false;
 		}
