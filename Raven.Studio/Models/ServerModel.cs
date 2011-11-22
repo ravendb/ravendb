@@ -55,10 +55,7 @@ namespace Raven.Studio.Models
 				false;
 
 			SetBuildNumber();
-		}
 
-		public void Initialize()
-		{
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
 			SelectedDatabase.Value = defaultDatabase[0];

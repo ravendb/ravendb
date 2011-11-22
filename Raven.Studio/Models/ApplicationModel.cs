@@ -23,9 +23,7 @@ namespace Raven.Studio.Models
 
 		private void Initialize()
 		{
-			var serverModel = new ServerModel();
-			Server.Value = serverModel;
-			serverModel.Initialize();
+			Server.Value = new ServerModel();
 		}
 
 		public Observable<ServerModel> Server { get; set; }
