@@ -30,21 +30,18 @@ namespace Raven.Studio.Models
 
 		private ServerModel(string url)
 		{
-			var changeDatabaseCommand = new ChangeDatabaseCommand();
 			Databases = new BindableCollection<DatabaseModel>(model => model.Name);
-			SelectedDatabase = new Observable<DatabaseModel>();
-			SelectedDatabase.PropertyChanged += (sender, args) =>
-			                                    	{
-			                                    		var databaseName = SelectedDatabase.Value.Name;
-			                                    		if (changeDatabaseCommand.CanExecute(databaseName))
-			                                    			changeDatabaseCommand.Execute(databaseName);
-			                                    	};
-
+			
 			documentStore = new DocumentStore
 			{
 				Url = url
 			};
 
+			Initialize();
+		}
+
+		private void Initialize()
+		{
 			documentStore.Initialize();
 
 			// We explicitly enable this for the Studio, we rely on SL to actually get us the credentials, and that 
@@ -58,7 +55,15 @@ namespace Raven.Studio.Models
 
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
-			SelectedDatabase.Value = defaultDatabase[0];
+			SelectedDatabase = new Observable<DatabaseModel> {Value = defaultDatabase[0]};
+
+			var changeDatabaseCommand = new ChangeDatabaseCommand();
+			SelectedDatabase.PropertyChanged += (sender, args) =>
+			{
+				var databaseName = SelectedDatabase.Value.Name;
+				if (changeDatabaseCommand.CanExecute(databaseName))
+					changeDatabaseCommand.Execute(databaseName);
+			};
 		}
 
 		protected override Task TimerTickedAsync()
@@ -115,11 +120,12 @@ namespace Raven.Studio.Models
 			var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(this, documentStore.Url + "/build/version", "GET", null, documentStore.Conventions);
 			request.ReadResponseStringAsync()
 				.ContinueOnSuccess(result =>
-				                   {
-				                   	var parsedResult = RavenJObject.Parse(result);
-				                   	var ravenJToken = parsedResult["BuildVersion"];
-				                   	BuildNumber = ravenJToken.Value<string>();
-				                   });
+				                   	{
+				                   		var parsedResult = RavenJObject.Parse(result);
+				                   		var ravenJToken = parsedResult["BuildVersion"];
+				                   		BuildNumber = ravenJToken.Value<string>();
+				                   	})
+				.Catch(exception => {});
 		}
 	}
 }
