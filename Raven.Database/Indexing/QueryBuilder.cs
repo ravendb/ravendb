@@ -23,9 +23,9 @@ namespace Raven.Database.Indexing
 			Analyzer keywordAnalyzer = new KeywordAnalyzer();
 			try
 			{
-				query = PreProcessUntokenizedTerms(analyzer, query, keywordAnalyzer);
-				query = PreProcessSearchTerms(query);
 				var queryParser = new RangeQueryParser(Version.LUCENE_29, string.Empty, analyzer);
+				query = PreProcessUntokenizedTerms(query, queryParser);
+				query = PreProcessSearchTerms(query);
 				queryParser.SetAllowLeadingWildcard(true); // not the recommended approach, should rather use ReverseFilter
 				return queryParser.Parse(query);
 			}
@@ -60,7 +60,7 @@ namespace Raven.Database.Indexing
 		/// <summary>
 		/// Detects untokenized fields and sets as NotAnalyzed in analyzer
 		/// </summary>
-		private static string PreProcessUntokenizedTerms(PerFieldAnalyzerWrapper analyzer, string query, Analyzer keywordAnalyzer)
+		private static string PreProcessUntokenizedTerms(string query, RangeQueryParser queryParser)
 		{
 			var untokenizedMatches = untokenizedQuery.Matches(query);
 			if (untokenizedMatches.Count < 1)
@@ -74,7 +74,10 @@ namespace Raven.Database.Indexing
 				var match = untokenizedMatches[i - 1];
 
 				// specify that term for this field should not be tokenized
-				analyzer.AddAnalyzer(match.Groups[1].Value, keywordAnalyzer);
+				var value = match.Groups[2].Value;
+
+				var rawTerm = value.Substring(2, value.Length-4);
+				queryParser.SetUntokenized(match.Groups[1].Value, Unescape(rawTerm));
 
 				var term = match.Groups[2];
 
@@ -97,6 +100,85 @@ namespace Raven.Database.Indexing
 			}
 
 			return sb.ToString();
+		}
+
+			public static string Unescape(string term)
+		{
+			// method doesn't allocate a StringBuilder unless the string requires unescaping
+			// also this copies chunks of the original string into the StringBuilder which
+			// is far more efficient than copying character by character because StringBuilder
+			// can access the underlying string data directly
+
+			if (string.IsNullOrEmpty(term))
+			{
+				return term;
+			}
+
+			bool isPhrase = term.StartsWith("\"") && term.EndsWith("\"");
+			int start = 0;
+			int length = term.Length;
+			StringBuilder buffer = null;
+			char prev = '\0';
+			for (int i = start; i < length; i++)
+			{
+				char ch = term[i];
+				if(prev != '\\')
+				{
+					prev = ch;
+					continue;
+				}
+				prev = ch;
+				switch (ch)
+				{
+					case '*':
+					case '?':
+					case '+':
+					case '-':
+					case '&':
+					case '|':
+					case '!':
+					case '(':
+					case ')':
+					case '{':
+					case '}':
+					case '[':
+					case ']':
+					case '^':
+					case '"':
+					case '~':
+					case ':':
+					case '\\':
+						{
+							if (buffer == null)
+							{
+								// allocate builder with headroom
+								buffer = new StringBuilder(length*2);
+							}
+							// append any leading substring
+							buffer.Append(term, start, i - start-1);
+
+							buffer.Append(ch);
+							start = i + 1;
+							break;
+						}
+				}
+			}
+
+			if (buffer == null)
+			{
+				if(isPhrase)
+					return term.Substring(1, term.Length - 2);
+				// no changes required
+				return term;
+			}
+
+			if (length > start)
+			{
+				// append any trailing substring
+				buffer.Append(term, start, length - start);
+			}
+
+			return buffer.ToString();
 		}
 	}
 }

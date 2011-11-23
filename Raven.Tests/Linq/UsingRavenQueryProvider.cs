@@ -25,7 +25,7 @@ using System.Diagnostics;
 
 namespace Raven.Tests.Linq
 {
-    public class UsingRavenQueryProvider
+    public class UsingRavenQueryProvider : RavenTest
     {
         [Fact]
         public void Can_perform_Skip_Take_Query()
@@ -598,10 +598,13 @@ namespace Raven.Tests.Linq
 
                 using (var s = store.OpenSession())
                 {
-                    var items = (from item in s.Query<OrderItem>()
-                                 where item.Description.In(new[] { "", "First" })
-                                 select item
-                                     ).ToArray();
+                	var ravenQueryable = (from item in s.Query<OrderItem>()
+										  .Customize(x=>x.WaitForNonStaleResults())
+                	                      where item.Description.In(new[] { "", "First" })
+                	                      select item
+                	                     );
+                	var items = ravenQueryable.ToArray();
+
 
                     Assert.Equal(items.Length, 1);
                 }
