@@ -17,7 +17,7 @@ namespace Raven.Studio.Infrastructure
 		public static void Show(Uri uri, Exception e)
 		{
 			var message = string.Format("Could not load page: {0}. {2}Error Message: {1}", uri, e.Message, Environment.NewLine);
-			Show(message, e.StackTrace);
+			Show(message, e.ToString());
 		}
 
 		public static void Show(Exception e)
@@ -27,7 +27,7 @@ namespace Raven.Studio.Infrastructure
 
 		public static void Show(Exception e, StackTrace innerStackTrace)
 		{
-			var details = e.StackTrace +
+			var details = e +
 			              Environment.NewLine + Environment.NewLine +
 			              "Inner StackTrace: " + Environment.NewLine +
 						  (innerStackTrace == null ? "null" : innerStackTrace.ToString());
