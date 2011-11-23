@@ -343,7 +343,7 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				if (document.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+				if (document.Key != null && document.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				{
 					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
 						.ContinueWhenTrue(SaveDocument);
