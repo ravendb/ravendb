@@ -60,7 +60,7 @@ namespace Raven.Studio.Models
 					                   {
 					                   	if (newdoc == null)
 					                   	{
-					                   		UrlUtil.Navigate("/DocumentNotFound?id=" + docId);
+					                   		HandleDocumentNotFound();
 					                   		return;
 					                   	}
 					                   	document.Value = newdoc;
@@ -85,6 +85,13 @@ namespace Raven.Studio.Models
 					UrlUtil.Navigate("/NotFound");
 				}
 			}
+		}
+
+		private void HandleDocumentNotFound()
+		{
+			var notification = new Notification(string.Format("Could not find '{0}' document", Key), NotificationLevel.Warning);
+			ApplicationModel.Current.AddNotification(notification);
+			UrlUtil.Navigate("/documents");
 		}
 
 		public void SetCurrentDocumentKey(string docId)
@@ -316,16 +323,16 @@ namespace Raven.Studio.Models
 			{
 				parent.DatabaseCommands.GetAsync(parent.Key)
 					.ContinueOnSuccess(doc =>
-									   {
-										   if (doc == null)
-										   {
-											   UrlUtil.Navigate("/DocumentNotFound?id=" + parent.Key);
-											   return;
-										   }
+					                   	{
+					                   		if (doc == null)
+					                   		{
+					                   			parent.HandleDocumentNotFound();
+												return;
+					                   		}
 
-										   parent.document.Value = doc;
-									   })
-									   .Catch();
+					                   		parent.document.Value = doc;
+					                   	})
+					.Catch();
 			}
 		}
 

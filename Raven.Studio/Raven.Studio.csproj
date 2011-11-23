@@ -327,9 +327,6 @@
     <Compile Include="Views\NotFound.xaml.cs">
       <DependentUpon>NotFound.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\DocumentNotFound.xaml.cs">
-      <DependentUpon>DocumentNotFound.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\Edit.xaml.cs">
       <DependentUpon>Edit.xaml</DependentUpon>
     </Compile>
@@ -489,10 +486,6 @@
       <SubType>Designer</SubType>
     </Resource>
     <Page Include="Views\Collections.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\DocumentNotFound.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
