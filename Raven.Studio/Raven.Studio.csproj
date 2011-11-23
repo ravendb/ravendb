@@ -324,9 +324,6 @@
     <Compile Include="Views\Tasks.xaml.cs">
       <DependentUpon>Tasks.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\NotFound.xaml.cs">
-      <DependentUpon>NotFound.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\Edit.xaml.cs">
       <DependentUpon>Edit.xaml</DependentUpon>
     </Compile>
@@ -422,10 +419,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Indexes.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\NotFound.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
