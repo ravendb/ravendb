@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -6,7 +5,6 @@ using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Studio.Commands;
-using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
@@ -193,7 +191,7 @@ namespace Raven.Studio.Models
 				{
 					if (definition == null)
 					{
-						UrlUtil.Navigate("/NotFound?indexName=" + IndexName);
+						IndexDefinitionModel.HandleIndexNotFound(IndexName);
 						return;
 					}
 					fields.Match(definition.Fields);

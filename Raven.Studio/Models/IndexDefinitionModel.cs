@@ -64,12 +64,19 @@ namespace Raven.Studio.Models
 				                   {
 				                   	if (index1 == null)
 				                   	{
-										UrlUtil.Navigate("/NotFound?id=" + name);
+										HandleIndexNotFound(name);
 				                   		return;
 				                   	}
 									originalIndex = JsonConvert.SerializeObject(index);
 									UpdateFromIndex(index1);
 				                   }).Catch();
+		}
+
+		public static void HandleIndexNotFound(string name)
+		{
+			var notification = new Notification(string.Format("Could not find '{0}' index", name), NotificationLevel.Warning);
+			ApplicationModel.Current.AddNotification(notification);
+			UrlUtil.Navigate("/documents");
 		}
 
 		private void ResetToOriginal()
