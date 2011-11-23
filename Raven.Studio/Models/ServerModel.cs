@@ -51,7 +51,12 @@ namespace Raven.Studio.Models
 			// this is sufficient warning and we don't require an additional step, so we can disable this check safely.
 			documentStore.JsonRequestFactory.
 				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
-				false;
+				true;
+
+
+			// this is to force a single auth request on the server.
+			documentStore.AsyncDatabaseCommands.GetDocumentsAsync(0, 1)
+				.ContinueOnSuccessInTheUIThread(View.StartDispatching);
 
 			SetBuildNumber();
 

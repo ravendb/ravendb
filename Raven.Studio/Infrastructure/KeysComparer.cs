@@ -31,7 +31,8 @@ namespace Raven.Studio.Infrastructure
 			int result = 0;
 			foreach (var keyExtractor in keysExtractor)
 			{
-				result = result ^ keyExtractor(obj).GetHashCode() * 397;
+				var extractor = keyExtractor(obj);
+				result = result ^ extractor.GetHashCode() * 397;
 			}
 			return result;
 		}

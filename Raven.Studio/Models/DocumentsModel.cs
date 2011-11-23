@@ -15,7 +15,7 @@ namespace Raven.Studio.Models
 		public DocumentsModel(Func<DocumentsModel, Task> fetchDocuments)
 		{
 			this.fetchDocuments = fetchDocuments;
-			Documents = new BindableCollection<ViewableDocument>(document => document.Id, new KeysComparer<ViewableDocument>(document => document.LastModified));
+			Documents = new BindableCollection<ViewableDocument>(document => document.Id ?? document.DisplayId, new KeysComparer<ViewableDocument>(document => document.LastModified));
 
 			Pager = new PagerModel();
 			Pager.Navigated += (sender, args) => ForceTimerTicked();

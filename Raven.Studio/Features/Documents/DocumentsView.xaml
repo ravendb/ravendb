@@ -55,6 +55,20 @@
 
 					<StackPanel toolkit:DockPanel.Dock="Right"
 								Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+
+						<HyperlinkButton Command="{StaticResource NavigateToDocumentByIdCommand}">
+							<HyperlinkButton.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_OepnDocument_Small}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="Edit Document By ID"
+											   VerticalAlignment="Center" />
+								</StackPanel>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
+						
 						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
 										 CommandParameter="/edit?mode=new">
 							<HyperlinkButton.Content>

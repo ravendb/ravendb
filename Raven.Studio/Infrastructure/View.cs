@@ -23,8 +23,16 @@ namespace Raven.Studio.Infrastructure
 				Interval = TimeSpan.FromSeconds(1),
 			};
 			dispatcherTimer.Tick += DispatcherTimerOnTick;
-			dispatcherTimer.Start();
+		}
 
+		public static void StartDispatching()
+		{
+			dispatcherTimer.Start();			
+		}
+
+		public static void StopDispatching()
+		{
+			dispatcherTimer.Stop();
 		}
 
 		private static void DispatcherTimerOnTick(object sender, EventArgs eventArgs)

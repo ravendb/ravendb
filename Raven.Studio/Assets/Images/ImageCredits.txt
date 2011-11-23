@@ -15,6 +15,7 @@ Undo.png
 Remove.png
 Query.png (find)
 document-new.png
+edit_pencil_write_icon.png
 
 The following icons from the Visual Studio 2010 Image Library (http://blogs.msdn.com/b/visualstudio/archive/2010/03/29/tips-and-tricks-visual-studio-2010-image-library.aspx)
 

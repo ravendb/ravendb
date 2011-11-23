@@ -118,6 +118,7 @@
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ChangeFieldValueCommand.cs" />
+    <Compile Include="Commands\NavigateToDocumentByIdCommand.cs" />
     <Compile Include="Commands\ListBoxCommand.cs" />
     <Compile Include="Commands\NavigateToNextPageCommand.cs" />
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
@@ -548,6 +549,7 @@
     <Resource Include="Assets\Images\document_prepare.png" />
     <Resource Include="Assets\Images\Error.png" />
     <Resource Include="Assets\Images\document-new.png" />
+    <Resource Include="Assets\Images\edit_pencil_write_icon.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup>
