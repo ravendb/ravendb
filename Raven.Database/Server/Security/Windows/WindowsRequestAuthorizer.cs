@@ -58,7 +58,8 @@ namespace Raven.Database.Server.Security.Windows
 				return false;
 			}
 
-			CurrentOperationContext.Headers.Value["Raven-Authenticated-User"] = ctx.User.Identity.Name;
+			if (ctx.User != null)
+				CurrentOperationContext.Headers.Value["Raven-Authenticated-User"] = ctx.User.Identity.Name;
 			return true;
 		}
 
