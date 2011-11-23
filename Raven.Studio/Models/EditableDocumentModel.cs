@@ -312,7 +312,7 @@ namespace Raven.Studio.Models
 				this.parent = parent;
 			}
 
-			public override void Execute(object parameter)
+			public override void Execute(object _)
 			{
 				parent.DatabaseCommands.GetAsync(parent.Key)
 					.ContinueOnSuccess(doc =>
@@ -324,7 +324,6 @@ namespace Raven.Studio.Models
 										   }
 
 										   parent.document.Value = doc;
-										   ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was refreshed", doc.Key)));
 									   })
 									   .Catch();
 			}
@@ -386,6 +385,7 @@ namespace Raven.Studio.Models
 						document.Etag = result.ETag;
 						document.SetCurrentDocumentKey(result.Key);
 					})
+					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
 			}
 		}
