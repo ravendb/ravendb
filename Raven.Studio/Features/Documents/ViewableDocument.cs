@@ -185,13 +185,13 @@ namespace Raven.Studio.Features.Documents
 			if (string.IsNullOrEmpty(id))
 				return "Projection"; // meaning that the document is a projection and not a 'real' document
 
+			if (id.StartsWith("Raven/"))
+				return "Sys Doc";
+
 			var entity = metadata.IfPresent<string>(Constants.RavenEntityName);
 			if (entity != null)
 				entity = entity.ToLower();
-			return entity ??
-				(id.StartsWith("Raven/")
-					? "Sys doc"
-					: "Doc");
+			return entity ?? "Doc";
 		}
 	}
 }
