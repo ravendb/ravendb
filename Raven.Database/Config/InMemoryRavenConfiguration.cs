@@ -143,6 +143,7 @@ namespace Raven.Database.Config
 			// OAuth
 			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? "windows";
 
+
 		}
 
 		private void SetVirtualDirectory()
@@ -492,7 +493,8 @@ namespace Raven.Database.Config
 				// add new one
 				if (Directory.Exists(pluginsDirectory))
 				{
-					Catalog.Catalogs.Add(new DirectoryCatalog(pluginsDirectory));
+					var pattern = Settings["Raven/BundlesSearchPattern"] ?? "*.dll";
+					Catalog.Catalogs.Add(new DirectoryCatalog(pluginsDirectory, pattern));
 				}
 			}
 		}

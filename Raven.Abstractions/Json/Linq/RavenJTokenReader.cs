@@ -110,7 +110,7 @@ namespace Raven.Json.Linq
 			// attempt to convert possible base 64 string to bytes
 			if (TokenType == JsonToken.String)
 			{
-				var s = (string) Value;
+				var s = (string)Value;
 				var data = (s.Length == 0) ? new byte[0] : Convert.FromBase64String(s);
 				SetToken(JsonToken.Bytes, data);
 			}
@@ -120,14 +120,14 @@ namespace Raven.Json.Linq
 			switch (TokenType)
 			{
 				case JsonToken.Bytes:
-					return (byte[]) Value;
+					return (byte[])Value;
 				case JsonToken.StartObject:
 					// maybe it is an array of bytes serialized with TypeNameHandling.All
 					Read(); // read the property name
-					if(!Equals(Value, "$type"))
+					if (!Equals(Value, "$type"))
 					{
 						throw new JsonReaderException(
-							"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture,JsonToken.StartObject));
+							"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, JsonToken.StartObject));
 					}
 					Read(); // reading the byte array
 					if (Value == null || !Equals(Value, "System.Byte[], mscorlib"))
@@ -158,7 +158,7 @@ namespace Raven.Json.Linq
 			if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
 			{
 				SetToken(JsonToken.Float, Convert.ToDecimal(Value, CultureInfo.InvariantCulture));
-				return (decimal) Value;
+				return (decimal)Value;
 			}
 
 			throw new JsonReaderException(
@@ -178,8 +178,8 @@ namespace Raven.Json.Linq
 				return null;
 			if (TokenType == JsonToken.Date)
 			{
-				SetToken(JsonToken.Date, new DateTimeOffset((DateTime) Value));
-				return (DateTimeOffset) Value;
+				SetToken(JsonToken.Date, new DateTimeOffset((DateTime)Value));
+				return (DateTimeOffset)Value;
 			}
 
 			throw new JsonReaderException(

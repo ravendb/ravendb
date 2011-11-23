@@ -132,6 +132,12 @@ namespace Raven.Database.Extensions
 
 		public static void WriteData(this IHttpContext context, byte[] data, RavenJObject headers, Guid etag)
 		{
+			context.WriteHeaders(headers, etag);
+			context.Response.OutputStream.Write(data, 0, data.Length);
+		}
+
+		public static void WriteHeaders(this IHttpContext context, RavenJObject headers, Guid etag)
+		{
 			foreach (var header in headers)
 			{
 				if (header.Key.StartsWith("@"))
@@ -154,7 +160,6 @@ namespace Raven.Database.Extensions
 				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
 			}
 			context.Response.AddHeader("ETag", etag.ToString());
-			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
 		private static string GetHeaderValue(RavenJToken header)
