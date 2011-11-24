@@ -97,6 +97,7 @@
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />
     <Compile Include="Default.cs" />
+    <Compile Include="Json\JsonDictionaryDateTimeKeysConverter.cs" />
     <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
     <Compile Include="Json\JsonFloatConverter.cs" />
     <Compile Include="Json\Linq\DictionaryWithParentSnapshot.cs" />
