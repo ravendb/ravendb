@@ -64,7 +64,7 @@ namespace Raven.Studio.Features.Query
 					var sortBy = sortByRef.Value;
 					if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
 					{
-						var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length - 1);
+						var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length);
 						sortedFields.Add(new SortedField(field) {Descending = true});
 					}
 					else
