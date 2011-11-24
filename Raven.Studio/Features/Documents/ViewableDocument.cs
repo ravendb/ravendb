@@ -54,6 +54,11 @@ namespace Raven.Studio.Features.Documents
 			}
 		}
 
+	    public string Data
+	    {
+	        get { return inner.DataAsJson.ToString(); }
+	    }
+
 		public string DisplayId
 		{
 			get

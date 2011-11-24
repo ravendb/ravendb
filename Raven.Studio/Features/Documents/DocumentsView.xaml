@@ -13,6 +13,69 @@
                      d:DataContext="{d:DesignInstance Models:DocumentsModel}">
 
 	<Grid>
+        <Grid.Resources>
+            <DataTemplate x:Key="DataTemplate_Document_CardView">
+                <Grid Width="100"
+							  Height="50"
+							  Margin="2"
+							  ToolTipService.ToolTip="{Binding ToolTipText}">
+
+                    <i:Interaction.Behaviors>
+                        <Behaviors:DoubleClickBehavior Command="{Binding Edit}" />
+                    </i:Interaction.Behaviors>
+
+                  <Rectangle HorizontalAlignment="Left"
+									   Width="3"
+									   x:Name="DocumentGrid"
+									   Fill="{Binding Path=Fill}" Margin="-4,0,0,0">
+                        <Rectangle.Effect>
+                            <DropShadowEffect ShadowDepth="0" BlurRadius="5" Opacity="0.6"/>
+                        </Rectangle.Effect>
+                    </Rectangle>
+
+                  <Grid Margin="4,0,0,0">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="{Binding CollectionType}"
+											   TextTrimming="WordEllipsis"
+											   HorizontalAlignment="Left" />
+                            <TextBlock Text="{Binding DisplayId}"
+											   TextTrimming="WordEllipsis"
+											   HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel x:Name="overlay"
+										Orientation="Horizontal"
+										HorizontalAlignment="Right"
+										VerticalAlignment="Bottom">
+                        <Button VerticalAlignment="Center"
+										Style="{StaticResource Style_Button_MouseOverChrome}"
+										Padding="4"
+										Command="{Binding Path=Edit}"
+										ToolTipService.ToolTip="click here to edit the document">
+                            <Button.Content>
+                                <Image Source="{StaticResource Image_Edit_Small}"
+											   Stretch="None" />
+                            </Button.Content>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="DataTemplate_Document_DetailsView">
+                <Grid Width="200"
+							  Height="200"
+							  Margin="2">
+
+                    <Grid Margin="0,0,0,0">
+                            <TextBox Text="{Binding Data}"
+											   VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto" Style="{StaticResource Style_TextBox_DocumentView}" />
+                    </Grid>
+
+                </Grid>
+            </DataTemplate>
+        </Grid.Resources>
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}">
 			<toolkit:HeaderedContentControl.Header>
 				<toolkit:DockPanel Margin="4"  LastChildFill="False">
@@ -99,7 +162,7 @@
 					 SelectionChanged="DocumentsList_SelectionChanged"
 					 Grid.Row="1"
 					 Grid.ColumnSpan="3"
-					 Margin="10">
+					 Margin="10" ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
 				
 				<Controls:ContextMenuService.ContextMenu>
 					<Controls:ContextMenu x:Name="DocumentsContextMenu">
@@ -117,54 +180,14 @@
 						<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
 											   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 					</ei:KeyTrigger>
+                    <ei:DataTrigger Binding="{Binding ViewStyle.Value}" Value="Details">
+                        <ei:ChangePropertyAction PropertyName="ItemTemplate" TargetObject="{Binding ElementName=DocumentsList}" Value="{StaticResource DataTemplate_Document_DetailsView}"/>
+                    </ei:DataTrigger>
+                    <ei:DataTrigger Binding="{Binding ViewStyle.Value}" Value="Card">
+                        <ei:ChangePropertyAction PropertyName="ItemTemplate" TargetObject="{Binding ElementName=DocumentsList}" Value="{StaticResource DataTemplate_Document_CardView}"/>
+                    </ei:DataTrigger>
 				</i:Interaction.Triggers>
 
-				<ListBox.ItemTemplate>
-					<DataTemplate>
-						<Grid Width="100"
-							  Height="50"
-							  Margin="2"
-							  ToolTipService.ToolTip="{Binding ToolTipText}">
-
-							<i:Interaction.Behaviors>
-								<Behaviors:DoubleClickBehavior Command="{Binding Edit}" />
-							</i:Interaction.Behaviors>
-
-							<Rectangle Fill="#FFF4F4F5" />
-							<Rectangle HorizontalAlignment="Left"
-									   Width="10"
-									   x:Name="DocumentGrid"
-									   Fill="{Binding Path=Fill}" />
-
-							<Grid Margin="14,0,0,0">
-								<StackPanel Orientation="Vertical">
-									<TextBlock Text="{Binding CollectionType}"
-											   TextTrimming="WordEllipsis"
-											   HorizontalAlignment="Left" />
-									<TextBlock Text="{Binding DisplayId}"
-											   TextTrimming="WordEllipsis"
-											   HorizontalAlignment="Left" />
-								</StackPanel>
-							</Grid>
-
-							<StackPanel x:Name="overlay"
-										Orientation="Horizontal"
-										HorizontalAlignment="Right"
-										VerticalAlignment="Bottom">
-								<Button VerticalAlignment="Center"
-										Style="{StaticResource Style_Button_MouseOverChrome}"
-										Padding="4"
-										Command="{Binding Path=Edit}"
-										ToolTipService.ToolTip="click here to edit the document">
-									<Button.Content>
-										<Image Source="{StaticResource Image_Edit_Small}"
-											   Stretch="None" />
-									</Button.Content>
-								</Button>
-							</StackPanel>
-						</Grid>
-					</DataTemplate>
-				</ListBox.ItemTemplate>
 			</ListBox>
 </toolkit:HeaderedContentControl>
 

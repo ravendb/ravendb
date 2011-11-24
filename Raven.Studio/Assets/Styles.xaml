@@ -1346,7 +1346,7 @@
 		<Setter Property="FontSize" Value="14.667"/>
 		
 	</Style>
-	
+	    
 	<Style x:Key="Style_ListBoxItem_Document" TargetType="ListBoxItem">
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="Padding" Value="15,6,60,6"/>
@@ -1362,19 +1362,24 @@
 										<ColorAnimation Duration="0:0:0.05"
 														To="{StaticResource Color_Contrast}"
 														Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-														Storyboard.TargetName="OuterBorder"
+														Storyboard.TargetName="InnerMargin"
 														d:IsOptimized="True" />
 									</Storyboard>
 								</VisualState>
 							</VisualStateGroup>
 						</VisualStateManager.VisualStateGroups>
-						<Path Data="M0.3333298,26.999214 C0.3333298,26.999214 15.499666,27.000048 15.499666,27.000048 C3.666585,28.663843 -0.00033684066,29.163502 -0.00033684066,29.163502 z" Fill="#20000000" HorizontalAlignment="Left" Margin="1,0,0,-4.5" StrokeStartLineCap="Square" Stretch="Fill" UseLayoutRounding="False" VerticalAlignment="Bottom" StrokeThickness="0" Height="5" Width="60"/>
-					  <Path Data="M0.3333298,26.999214 C0.3333298,26.999214 15.499666,27.000048 15.499666,27.000048 C3.666585,28.663843 -0.00033684066,29.163502 -0.00033684066,29.163502 z" Fill="#20000000" HorizontalAlignment="Right" Margin="27.404,0,0,-4.5" StrokeStartLineCap="Square" Stretch="Fill" UseLayoutRounding="False" VerticalAlignment="Bottom" StrokeThickness="0" Height="5" Width="60" RenderTransformOrigin="0.5,0.5">
-							<Path.RenderTransform>
-								<CompositeTransform ScaleX="-1"/>
-							</Path.RenderTransform>
-						</Path>
-					  <Border x:Name="OuterBorder" Background="White">
+                        <Border x:Name="OuterBorder" BorderThickness="1" BorderBrush="#CBCBCB">
+                            <Border.Effect>
+                                <DropShadowEffect Opacity="0.28"
+														  BlurRadius="7"
+														  ShadowDepth="1"
+														  Direction="0" />
+                            </Border.Effect>
+                            <Border.CacheMode>
+                                <BitmapCache/>
+                            </Border.CacheMode>
+                        </Border>
+                        <Border x:Name="InnerMargin" Background="White" Margin="1">
 						<Border x:Name="border" BorderBrush="Black" Margin="3" Padding="4,0,0,0">
 						  <Border.Background>
 							<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
@@ -1385,7 +1390,6 @@
 						  <ContentPresenter VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
 						</Border>
 					  </Border>
-					  <Path Data="M0,0 L0,1" HorizontalAlignment="Right" Margin="0,1,-1,0" StrokeStartLineCap="Square" Stretch="Fill" UseLayoutRounding="False" Width="1" Stroke="#20000000"/>
 					</Grid>
 				</ControlTemplate>
 			</Setter.Value>
@@ -1792,8 +1796,55 @@
 	<Style x:Key="Style_Link_DrillDown" TargetType="HyperlinkButton" BasedOn="{StaticResource Style_Link_Command}">
 		<Setter Property="Foreground" Value="Black"/>
 	</Style>
-	
-	<Style x:Key="Style_TextBox_ReadOnly_LogsDetails"
+
+    <Style x:Key="Style_TextBox_DocumentView"
+		   TargetType="TextBox">
+        <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="BorderThickness"
+				Value="0" />
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Grid x:Name="RootElement">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="MouseOver">
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                </VisualState>
+                                <VisualState x:Name="ReadOnly">
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ValidationStates">
+                                <VisualState x:Name="Valid"/>
+                                <VisualState x:Name="InvalidUnfocused">
+                                    <Storyboard>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="InvalidFocused">
+                                    <Storyboard>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="Border" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="1" Opacity="1" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}">
+                            <Grid>
+                                <Border x:Name="MouseOverBorder" BorderThickness="1" BorderBrush="Transparent">
+                                    <ScrollViewer x:Name="ContentElement" Padding="{TemplateBinding Padding}" BorderThickness="0" IsTabStop="False"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Key="Style_TextBox_ReadOnly_LogsDetails"
 		   TargetType="TextBox">
 		<Setter Property="IsReadOnly" Value="True"/>
 		<Setter Property="BorderThickness"
