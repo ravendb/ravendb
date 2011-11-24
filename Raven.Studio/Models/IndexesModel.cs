@@ -55,7 +55,7 @@ namespace Raven.Studio.Models
             }
             else
             {
-                return Tuple.Create("Other Indexes", 3);
+                return Tuple.Create("Indexes", 3);
             }
         }
 
