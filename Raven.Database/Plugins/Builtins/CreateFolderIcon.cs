@@ -37,7 +37,7 @@ namespace Raven.Database.Plugins.Builtins
 				File.WriteAllText(desktopIni, string.Format(@"
 [.ShellClassInfo]
 IconResource={0},0
-InfoTip=RavenDB's data folder. It's recomand that you will have a backup of this folder.
+InfoTip=RavenDB's data folder. It's recommended that you will back up this folder on a regular basis.
 [ViewState]
 Mode=
 Vid=
