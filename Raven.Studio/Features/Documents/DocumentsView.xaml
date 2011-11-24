@@ -76,7 +76,7 @@
                 </Grid>
             </DataTemplate>
         </Grid.Resources>
-		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}">
+		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
 			<toolkit:HeaderedContentControl.Header>
 				<toolkit:DockPanel Margin="4"  LastChildFill="False">
 					<StackPanel Orientation="Horizontal">
