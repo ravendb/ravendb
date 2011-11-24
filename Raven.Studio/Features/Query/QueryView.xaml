@@ -46,10 +46,11 @@
 					<StackPanel Orientation="Horizontal"
 								Visibility="{Binding IsDynamicQuery, Converter={StaticResource VisibleWhenTrue}}">
 						<TextBlock Text="Dynamic/"
-								   Margin="0,0,4,0"
-								   VerticalAlignment="Center" />
+								   Margin="0,0,0,0"
+								   VerticalAlignment="Center" Style="{StaticResource Style_TextBlock_Breadcrumb_Initial}"/>
 						<ComboBox ItemsSource="{Binding DynamicOptions}"
-								  SelectedItem="{Binding DynamicSelectedOption, Mode=TwoWay}" />
+								  SelectedItem="{Binding DynamicSelectedOption, Mode=TwoWay}" 
+                                  Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}"/>
 					</StackPanel>
 					
 					<StackPanel Orientation="Horizontal"
