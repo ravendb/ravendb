@@ -25,6 +25,7 @@ Refresh.png
 Info.png
 Warning.png
 Error.png
+ExecuteQuery.png
 
 The following icons came from Gasyoun (http://led24.de/iconset/) via iconfinder (http://www.iconfinder.com/search/?q=iconset%3Aledicons)
 

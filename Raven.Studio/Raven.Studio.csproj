@@ -536,6 +536,7 @@
     <Resource Include="Assets\Images\Error.png" />
     <Resource Include="Assets\Images\document-new.png" />
     <Resource Include="Assets\Images\edit_pencil_write_icon.png" />
+    <Resource Include="Assets\Images\ExecuteQuery.png" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup>

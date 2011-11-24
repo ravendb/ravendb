@@ -73,7 +73,20 @@
 							toolkit:DockPanel.Dock="Right"
 							VerticalAlignment="Center">
 
-					<Button x:Name="AddSortBy"
+                    <Button Grid.Column="1"
+									 Command="{Binding Execute}"
+									 HorizontalAlignment="Right"
+                                     Style="{StaticResource Style_Button_MouseOverChrome}"
+                                     ToolTipService.ToolTip="Show the Results of the Query">
+                      <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource Image_ExecuteQuery_Small}" Width="16" Height="16"/>
+                                <TextBlock Text="Execute"/>
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+
+				  <Button x:Name="AddSortBy"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							ToolTipService.ToolTip="Add sort by option for this query"
 							VerticalAlignment="Center"
@@ -157,10 +170,6 @@
 						</StackPanel>
 					</StackPanel>
 
-					<HyperlinkButton Content="Execute"
-									 Grid.Column="1"
-									 Command="{Binding Execute}"
-									 HorizontalAlignment="Right" />
 				</Grid>
 				
 				<StackPanel Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}"

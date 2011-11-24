@@ -56,10 +56,10 @@
 					<StackPanel toolkit:DockPanel.Dock="Right"
 								Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
 
-						<HyperlinkButton Command="{StaticResource NavigateToDocumentByIdCommand}">
+						<HyperlinkButton Command="{StaticResource NavigateToDocumentByIdCommand}" Style="{StaticResource Style_Button_MouseOverChrome}">
 							<HyperlinkButton.Content>
 								<StackPanel Orientation="Horizontal">
-									<Image Source="{StaticResource Image_OepnDocument_Small}"
+									<Image Source="{StaticResource Image_OpenDocument_Small}"
 										   Stretch="None"
 										   VerticalAlignment="Center"
 										   Margin="4,0,4,0" />
@@ -70,7 +70,7 @@
 						</HyperlinkButton>
 						
 						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
-										 CommandParameter="/edit?mode=new">
+										 CommandParameter="/edit?mode=new" Style="{StaticResource Style_Button_MouseOverChrome}">
 							<HyperlinkButton.Content>
 								<StackPanel Orientation="Horizontal">
 									<Image Source="{StaticResource Image_AddDocument_Tiny}"
