@@ -74,16 +74,6 @@ namespace Raven.Client
 		TimeSpan NonAuthoritiveInformationTimeout { get; set; }
 
 		/// <summary>
-		/// Gets the conventions used by this session
-		/// </summary>
-		/// <remarks>
-		/// This instance is shared among all sessions, changes to the <see cref="DocumentConvention"/> should be done
-		/// via the <see cref="IDocumentStore"/> instance, not on a single session.
-		/// </remarks>
-		/// <value>The conventions.</value>
-		DocumentConvention Conventions { get; }
-
-		/// <summary>
 		/// Gets or sets the max number of requests per session.
 		/// If the <see cref="NumberOfRequests"/> rise above <see cref="MaxNumberOfRequestsPerSession"/>, an exception will be thrown.
 		/// </summary>
