@@ -12,6 +12,8 @@ namespace Raven.Studio.Models
 
 		public bool SkipAutoRefresh { get; set; }
 
+        public bool ShowEditControls { get; set; }
+
 		public DocumentsModel(Func<DocumentsModel, Task> fetchDocuments)
 		{
 			this.fetchDocuments = fetchDocuments;
@@ -20,6 +22,8 @@ namespace Raven.Studio.Models
 			Pager = new PagerModel();
 			Pager.Navigated += (sender, args) => ForceTimerTicked();
 			ForceTimerTicked();
+
+		    ShowEditControls = true;
 		}
 
 		protected override Task TimerTickedAsync()

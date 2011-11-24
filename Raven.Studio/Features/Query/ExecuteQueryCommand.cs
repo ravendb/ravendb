@@ -37,7 +37,8 @@ namespace Raven.Studio.Features.Query
 			model.RememberHistory();
 			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod)
 			                              {
-			                              	SkipAutoRefresh = true
+			                              	SkipAutoRefresh = true,
+                                            ShowEditControls = false,
 			                              };
 		}
 

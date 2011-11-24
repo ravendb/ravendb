@@ -6,7 +6,11 @@
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors">
+					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                     xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
+                     d:DataContext="{d:DesignInstance Models:DocumentsModel}">
 
 	<Grid>
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}">
@@ -56,8 +60,9 @@
 					<StackPanel toolkit:DockPanel.Dock="Right"
 								Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
 
-						<HyperlinkButton Command="{StaticResource NavigateToDocumentByIdCommand}" Style="{StaticResource Style_Button_MouseOverChrome}">
-							<HyperlinkButton.Content>
+						<Button Command="{StaticResource NavigateToDocumentByIdCommand}" Style="{StaticResource Style_Button_MouseOverChrome}"
+                                Visibility="{Binding ShowEditControls, Converter={StaticResource VisibleWhenTrue}}">
+							<Button.Content>
 								<StackPanel Orientation="Horizontal">
 									<Image Source="{StaticResource Image_OpenDocument_Small}"
 										   Stretch="None"
@@ -66,12 +71,13 @@
 									<TextBlock Text="Edit Document By ID"
 											   VerticalAlignment="Center" />
 								</StackPanel>
-							</HyperlinkButton.Content>
-						</HyperlinkButton>
+							</Button.Content>
+						</Button>
 						
-						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
-										 CommandParameter="/edit?mode=new" Style="{StaticResource Style_Button_MouseOverChrome}">
-							<HyperlinkButton.Content>
+						<Button Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="/edit?mode=new" Style="{StaticResource Style_Button_MouseOverChrome}"
+                                Visibility="{Binding ShowEditControls, Converter={StaticResource VisibleWhenTrue}}">
+							<Button.Content>
 								<StackPanel Orientation="Horizontal">
 									<Image Source="{StaticResource Image_AddDocument_Tiny}"
 										   Stretch="None"
@@ -80,8 +86,8 @@
 									<TextBlock Text="Create a Document"
 											   VerticalAlignment="Center" />
 								</StackPanel>
-							</HyperlinkButton.Content>
-						</HyperlinkButton>
+							</Button.Content>
+						</Button>
 					</StackPanel>
 				</toolkit:DockPanel>
 			   
