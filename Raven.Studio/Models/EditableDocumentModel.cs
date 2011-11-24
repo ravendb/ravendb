@@ -9,6 +9,7 @@ using System.Windows.Input;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Documents;
@@ -60,7 +61,7 @@ namespace Raven.Studio.Models
 					                   {
 					                   	if (newdoc == null)
 					                   	{
-					                   		UrlUtil.Navigate("/DocumentNotFound?id=" + docId);
+					                   		HandleDocumentNotFound();
 					                   		return;
 					                   	}
 					                   	document.Value = newdoc;
@@ -76,15 +77,27 @@ namespace Raven.Studio.Models
 				Mode = DocumentMode.Projection;
 				try
 				{
-					// TODO: this throwing an exception. Please load the projection form the query-string parameter.
-					var newdoc = JsonConvert.DeserializeObject<JsonDocument>(Uri.UnescapeDataString(projection));
+					var unescapeDataString = Uri.UnescapeDataString(projection);
+					var newdoc = RavenJObject.Parse(unescapeDataString).ToJsonDocument();
 					document.Value = newdoc;
 				}
 				catch
 				{
-					UrlUtil.Navigate("/NotFound");
+					HandleDocumentNotFound();
+					throw; // Display why we couldn't parse the projection from the URL correctly
 				}
 			}
+		}
+
+		private void HandleDocumentNotFound()
+		{
+			Notification notification;
+			if (Mode == DocumentMode.Projection)
+				notification = new Notification("Could not parse projection correctly", NotificationLevel.Error);
+			else
+				notification = new Notification(string.Format("Could not find '{0}' document", Key), NotificationLevel.Warning);
+			ApplicationModel.Current.AddNotification(notification);
+			UrlUtil.Navigate("/documents");
 		}
 
 		public void SetCurrentDocumentKey(string docId)
@@ -316,16 +329,16 @@ namespace Raven.Studio.Models
 			{
 				parent.DatabaseCommands.GetAsync(parent.Key)
 					.ContinueOnSuccess(doc =>
-									   {
-										   if (doc == null)
-										   {
-											   UrlUtil.Navigate("/DocumentNotFound?id=" + parent.Key);
-											   return;
-										   }
+					                   	{
+					                   		if (doc == null)
+					                   		{
+					                   			parent.HandleDocumentNotFound();
+												return;
+					                   		}
 
-										   parent.document.Value = doc;
-									   })
-									   .Catch();
+					                   		parent.document.Value = doc;
+					                   	})
+					.Catch();
 			}
 		}
 

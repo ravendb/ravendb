@@ -58,18 +58,16 @@ namespace Raven.Database.Server.Security.Windows
 				return false;
 			}
 
-			CurrentOperationContext.Headers.Value["Raven-Authenticated-User"] = ctx.User.Identity.Name;
+			if (IsInvalidUser(ctx) == false)
+				CurrentOperationContext.Headers.Value["Raven-Authenticated-User"] = ctx.User.Identity.Name;
 			return true;
 		}
 
-	  
-
 		private bool IsInvalidUser(IHttpContext ctx)
 		{
-			var invalidUser = (ctx.User == null || 
-			                     ctx.User.Identity == null || 
-			                     ctx.User.Identity.IsAuthenticated == false);
-			if(invalidUser == false &&  requiredGroups.Count > 0)
+			var invalidUser = (ctx.User == null ||
+			                   ctx.User.Identity.IsAuthenticated == false);
+			if (invalidUser == false && requiredGroups.Count > 0)
 			{
 				return requiredGroups.All(requiredGroup => !ctx.User.IsInRole(requiredGroup));
 			}

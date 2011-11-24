@@ -135,6 +135,22 @@
 							</StackPanel>
 						</HyperlinkButton.Content>
 					</HyperlinkButton>
+
+					<HyperlinkButton Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="/query?mode=dynamic"
+									 Style="{StaticResource Style_Button_MouseOverChrome}"
+									 VerticalAlignment="Center">
+						<HyperlinkButton.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_Query_Small}"
+									   Stretch="None"
+									   VerticalAlignment="Center"
+									   Margin="4,0,4,0" />
+								<TextBlock Text="Dynamic Query"
+										   VerticalAlignment="Center" />
+							</StackPanel>
+						</HyperlinkButton.Content>
+					</HyperlinkButton>
 				</StackPanel>
 			</toolkit:DockPanel>
 		</toolkit:HeaderedContentControl.Header>

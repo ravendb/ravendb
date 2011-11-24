@@ -42,11 +42,25 @@
 					<TextBlock Text=">"
 							   VerticalAlignment="Center"
 							   Margin="4,0" />
-					<HyperlinkButton Content="{Binding IndexName}"
-									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
-									 VerticalAlignment="Center" />
+
+					<StackPanel Orientation="Horizontal"
+								Visibility="{Binding IsDynamicQuery, Converter={StaticResource VisibleWhenTrue}}">
+						<TextBlock Text="Dynamic/"
+								   Margin="0,0,4,0"
+								   VerticalAlignment="Center" />
+						<ComboBox ItemsSource="{Binding DynamicOptions}"
+								  SelectedItem="{Binding DynamicSelectedOption, Mode=TwoWay}" />
+					</StackPanel>
+					
+					<StackPanel Orientation="Horizontal"
+								Visibility="{Binding IsDynamicQuery, Converter={StaticResource VisibleWhenFalse}}">
+						<HyperlinkButton Content="{Binding IndexName}"
+										 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+										 Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+										 VerticalAlignment="Center" />
+					</StackPanel>
+
 					<TextBlock Text=">"
 							   VerticalAlignment="Center"
 							   Margin="4,0" />

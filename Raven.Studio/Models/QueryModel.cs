@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -6,7 +5,6 @@ using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Studio.Commands;
-using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
@@ -158,6 +156,40 @@ namespace Raven.Studio.Models
 		
 		#endregion
 
+		private bool isDynamicQuery;
+		public bool IsDynamicQuery
+		{
+			get { return isDynamicQuery; }
+			set
+			{
+				isDynamicQuery = value;
+				OnPropertyChanged();
+			}
+		}
+
+		public BindableCollection<string> DynamicOptions { get; set; }
+
+		private string dynamicSelectedOption;
+		public string DynamicSelectedOption
+		{
+			get { return dynamicSelectedOption; }
+			set
+			{
+				dynamicSelectedOption = value;
+				switch (dynamicSelectedOption)
+				{
+					case "AllDocs":
+						IndexName = "dynamic";
+						break;
+					default:
+						IndexName = "dynamic/" + dynamicSelectedOption;
+						break;
+				}
+				OnPropertyChanged();
+			}
+		}
+
+
 		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
 		private readonly BindableCollection<string> fields = new BindableCollection<string>(x => x);
@@ -176,6 +208,8 @@ namespace Raven.Studio.Models
 			SortBy = new BindableCollection<StringRef>(x => x.Value);
 			SortByOptions = new BindableCollection<string>(x => x);
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
+			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
+			DynamicSelectedOption = DynamicOptions[0];
 
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
@@ -185,6 +219,15 @@ namespace Raven.Studio.Models
 		public override void LoadModelParameters(string parameters)
 		{
 			var urlParser = new UrlParser(parameters);
+
+			if (urlParser.GetQueryParam("mode") == "dynamic")
+			{
+				IsDynamicQuery = true;
+				DatabaseCommands.GetTermsAsync("Raven/DocumentsByEntityName", "Tag", "", 100)
+					.ContinueOnSuccess(collections => DynamicOptions.Match(new[] { "AllDocs" }.Concat(collections).ToArray()));
+				return;
+			}
+
 			IndexName = urlParser.Path.Trim('/');
 			Pager.SetSkip(urlParser);
 
@@ -193,7 +236,7 @@ namespace Raven.Studio.Models
 				{
 					if (definition == null)
 					{
-						UrlUtil.Navigate("/NotFound?indexName=" + IndexName);
+						IndexDefinitionModel.HandleIndexNotFound(IndexName);
 						return;
 					}
 					fields.Match(definition.Fields);
