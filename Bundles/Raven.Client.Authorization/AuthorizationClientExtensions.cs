@@ -53,7 +53,7 @@ namespace Raven.Client.Authorization
 				return null;
 			return new JsonSerializer
 			{
-				ContractResolver = session.Advanced.Conventions.JsonContractResolver,
+				ContractResolver = session.Advanced.DocumentStore.Conventions.JsonContractResolver,
 			}.Deserialize<DocumentAuthorization>(new RavenJTokenReader(docAuthAsJson));
 		}
 
@@ -62,7 +62,7 @@ namespace Raven.Client.Authorization
 			var metadata = session.Advanced.GetMetadataFor(entity);
 			metadata[RavenDocumentAuthorization] = RavenJObject.FromObject(documentAuthorization, new JsonSerializer
 			{
-				ContractResolver = session.Advanced.Conventions.JsonContractResolver,
+				ContractResolver = session.Advanced.DocumentStore.Conventions.JsonContractResolver,
 			});
 		}
 
