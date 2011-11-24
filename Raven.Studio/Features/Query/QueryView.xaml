@@ -175,7 +175,7 @@
 									<ComboBox x:Name="SortByOptions" 
 											  ItemsSource="{Binding Path=DataContext.SortByOptions, ElementName=this}" 
 											  MinWidth="200"
-											  SelectedItem="{Binding Path=Value}" />
+											  SelectedItem="{Binding Path=Value, Mode=TwoWay}" />
 									<HyperlinkButton x:Name="RemoveSortBy" 
 													 ToolTipService.ToolTip="Remove this Sort By option"
 													 Margin="2,0,0,0"
