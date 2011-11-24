@@ -51,7 +51,7 @@ namespace Raven.Studio.Controls.Editors
 			var editor = new QueryEditor {Text = text};
 			var textSnapshotReader = editor.ActiveView.GetReader();
 			string currentField = null;
-			while (true)
+			while (!textSnapshotReader.IsAtSnapshotEnd)
 			{
 				var token = textSnapshotReader.ReadToken();
 				if (token == null)
