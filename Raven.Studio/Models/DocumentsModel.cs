@@ -6,22 +6,17 @@ using System.Linq;
 
 namespace Raven.Studio.Models
 {
-    public enum DocumentViewStyle
-    {
-        Card,
-        Details,
-    }
-
 	public class DocumentsModel : Model
 	{
+        public const double DefaultDocumentHeight = 66;
+        public const double ExpandedDocumentHeight = 130;
+
 		private readonly Func<DocumentsModel, Task> fetchDocuments;
 		public BindableCollection<ViewableDocument> Documents { get; private set; }
 
 		public bool SkipAutoRefresh { get; set; }
 
         public bool ShowEditControls { get; set; }
-
-        public Observable<DocumentViewStyle> ViewStyle { get; private set; }
  
 		public DocumentsModel(Func<DocumentsModel, Task> fetchDocuments)
 		{
@@ -37,7 +32,6 @@ namespace Raven.Studio.Models
 			ForceTimerTicked();
 
 		    ShowEditControls = true;
-            ViewStyle = new Observable<DocumentViewStyle>();
 		    DocumentHeight = 66;
 		}
 
@@ -51,6 +45,10 @@ namespace Raven.Studio.Models
                 return;
             }
 
+            if (document.CollectionType == "Projection")
+            {
+                DocumentHeight = Math.Max(DocumentHeight, ExpandedDocumentHeight);
+            }
 	    }
 
 	    protected override Task TimerTickedAsync()
@@ -70,6 +68,7 @@ namespace Raven.Studio.Models
 		}
 
 	    private double _documentHeight;
+
 	    public double DocumentHeight
 	    {
             get { return _documentHeight; }
