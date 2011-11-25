@@ -51,7 +51,6 @@ namespace Raven.Studio.Models
                 return;
             }
 
-	        ViewStyle.Value = document.CollectionType == "Projection" ? DocumentViewStyle.Details : DocumentViewStyle.Card;
 	    }
 
 	    protected override Task TimerTickedAsync()

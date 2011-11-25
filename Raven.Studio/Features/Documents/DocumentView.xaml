@@ -32,7 +32,7 @@
                 </VisualState>
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
-        <Grid Margin="0,2,2,2" ToolTipService.ToolTip="{Binding ToolTipText}">
+        <Grid x:Name="Grid"  Margin="0,2,2,2" ToolTipService.ToolTip="{Binding ToolTipText}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />

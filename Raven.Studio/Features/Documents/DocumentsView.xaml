@@ -9,7 +9,8 @@
                      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:Models="clr-namespace:Raven.Studio.Models"
                      xmlns:kiener="clr-namespace:Kieners.Silverlight"
-                     xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" mc:Ignorable="d" d:DataContext="{d:DesignInstance Models:DocumentsModel}">
+                     xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+                     xmlns:Controls1="clr-namespace:Raven.Studio.Controls" mc:Ignorable="d" d:DataContext="{d:DesignInstance Models:DocumentsModel}">
 
   <Grid>
     <Grid.Resources>
@@ -82,7 +83,7 @@
               </Button.Content>
             </Button>
 
-                        <Slider Minimum="66" Maximum="500" Width="100" Value="{Binding DocumentHeight, Mode=TwoWay}"/>
+                        <Controls1:ViewSizeControl ViewSize="{Binding DocumentHeight, Mode=TwoWay}"/>
                     </StackPanel>
         </toolkit:DockPanel>
 

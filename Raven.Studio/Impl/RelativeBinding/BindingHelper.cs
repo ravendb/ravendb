@@ -208,10 +208,6 @@ namespace Kieners.Silverlight
             // ...target property must be set
             if (string.IsNullOrWhiteSpace(bindingConfiguration.TargetProperty))
                 return;
-            // ...path property must be set
-            if (string.IsNullOrWhiteSpace(bindingConfiguration.Path))
-                return;
-
 
 
             // support of attached property binding syntax: TargetProperty='(Grid.Row)'
@@ -253,7 +249,7 @@ namespace Kieners.Silverlight
             {
                 Binding binding = new Binding();
                 binding.Source = sourceElement;
-                binding.Path = new PropertyPath(bindingConfiguration.Path);
+                binding.Path = new PropertyPath(bindingConfiguration.Path ?? string.Empty);
                 binding.Mode = bindingConfiguration.BindingMode;
                 binding.Converter = bindingConfiguration.Converter;
                 binding.ConverterParameter = bindingConfiguration.ConverterParameter;

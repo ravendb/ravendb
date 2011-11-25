@@ -29,5 +29,6 @@
     <BitmapImage x:Key="Image_AddDatabase_Tiny" UriSource="database_add.png"/>
     <BitmapImage x:Key="Image_AddIndex_Tiny" UriSource="document_prepare.png"/>
     <BitmapImage x:Key="Image_ExecuteQuery_Small" UriSource="ExecuteQuery.png"/>
+    <BitmapImage x:Key="Image_ChangeView_Tiny" UriSource="ChangeView.png"/>
     
 </ResourceDictionary>
