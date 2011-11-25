@@ -2066,7 +2066,7 @@
         <Setter Property="IsReadOnly" Value="True"/>
         <Setter Property="BorderThickness"
 				Value="0" />
-        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Background" Value="{StaticResource Brush_SubtleBackground2}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">

@@ -38,6 +38,7 @@ namespace Raven.Studio.Models
 
 		    ShowEditControls = true;
             ViewStyle = new Observable<DocumentViewStyle>();
+		    DocumentHeight = 66;
 		}
 
 	    private void DetermineDocumentViewStyle()
@@ -63,10 +64,35 @@ namespace Raven.Studio.Models
 		public PagerModel Pager { get; private set; }
 
 		private string viewTitle;
-		public string ViewTitle
+	    public string ViewTitle
 		{
 			get { return viewTitle ?? (viewTitle = "Documents"); }
 			set { viewTitle = value; OnPropertyChanged(); }
 		}
+
+	    private double _documentHeight;
+	    public double DocumentHeight
+	    {
+            get { return _documentHeight; }
+            set
+            {
+                _documentHeight = value;
+                OnPropertyChanged();
+                OnPropertyChanged("DocumentWidth");
+            }
+	    }
+
+	    public double DocumentWidth
+	    {
+            get { return DocumentHeight*CalculateAspectRatio(DocumentHeight); }
+	    }
+
+        private double CalculateAspectRatio(double height)
+        {
+            const double gradient = (1.7 - 0.707)/(66 - 200);
+            var aspectRatio = Math.Max(gradient*height + (1.7 - gradient*66), 0.707);
+
+            return aspectRatio;
+        }
 	}
 }

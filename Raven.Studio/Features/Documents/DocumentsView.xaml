@@ -1,195 +1,124 @@
 ﻿<Infrastructure:View x:Class="Raven.Studio.Features.Documents.DocumentsView"
-					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					 xmlns:Controls="clr-namespace:System.Windows.Controls"
-					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:Controls="clr-namespace:System.Windows.Controls"
+                     xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+                     xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+                     xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                     xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
                      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-                     xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
-                     d:DataContext="{d:DesignInstance Models:DocumentsModel}">
+                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:Models="clr-namespace:Raven.Studio.Models"
+                     xmlns:kiener="clr-namespace:Kieners.Silverlight"
+                     xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" mc:Ignorable="d" d:DataContext="{d:DesignInstance Models:DocumentsModel}">
 
-	<Grid>
-        <Grid.Resources>
-            <DataTemplate x:Key="DataTemplate_Document_CardView">
-                <Grid Width="100"
-							  Height="50"
-							  Margin="2"
-							  ToolTipService.ToolTip="{Binding ToolTipText}">
+  <Grid>
+    <Grid.Resources>
+      <DataTemplate x:Key="DataTemplate_Document_CardView">
+                <Documents:DocumentView/>
+        </DataTemplate>
 
-                    <i:Interaction.Behaviors>
-                        <Behaviors:DoubleClickBehavior Command="{Binding Edit}" />
-                    </i:Interaction.Behaviors>
+      <DataTemplate x:Key="DataTemplate_Document_DetailsView">
+        <Grid Width="200" Height="200" Margin="2">
 
-                  <Rectangle HorizontalAlignment="Left"
-									   Width="3"
-									   x:Name="DocumentGrid"
-									   Fill="{Binding Path=Fill}" Margin="-4,0,0,0">
-                        <Rectangle.Effect>
-                            <DropShadowEffect ShadowDepth="0" BlurRadius="5" Opacity="0.6"/>
-                        </Rectangle.Effect>
-                    </Rectangle>
+          <Grid Margin="0,0,0,0">
+            <TextBox Text="{Binding Data}" VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto" Style="{StaticResource Style_TextBox_DocumentView}" />
+          </Grid>
 
-                  <Grid Margin="4,0,0,0">
-                        <StackPanel Orientation="Vertical">
-                            <TextBlock Text="{Binding CollectionType}"
-											   TextTrimming="WordEllipsis"
-											   HorizontalAlignment="Left" />
-                            <TextBlock Text="{Binding DisplayId}"
-											   TextTrimming="WordEllipsis"
-											   HorizontalAlignment="Left" />
-                        </StackPanel>
-                    </Grid>
+        </Grid>
+      </DataTemplate>
+    </Grid.Resources>
+    <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
+      <toolkit:HeaderedContentControl.Header>
+        <toolkit:DockPanel Margin="4" LastChildFill="False">
+          <StackPanel Orientation="Horizontal">
+            <Image Source="{StaticResource Image_Document_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0" />
+            <TextBlock x:Name="HeaderText" Style="{StaticResource Style_Text_Header}" Text="{Binding ViewTitle}"
+                       toolkit:DockPanel.Dock="Left" VerticalAlignment="Center" Margin="6,0" />
+          </StackPanel>
 
-                    <StackPanel x:Name="overlay"
-										Orientation="Horizontal"
-										HorizontalAlignment="Right"
-										VerticalAlignment="Bottom">
-                        <Button VerticalAlignment="Center"
-										Style="{StaticResource Style_Button_MouseOverChrome}"
-										Padding="4"
-										Command="{Binding Path=Edit}"
-										ToolTipService.ToolTip="click here to edit the document">
-                            <Button.Content>
-                                <Image Source="{StaticResource Image_Edit_Small}"
-											   Stretch="None" />
-                            </Button.Content>
-                        </Button>
+          <StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+            <HyperlinkButton Command="{Binding Path=Pager.PrevPage}" Style="{StaticResource Style_Link_MouseOverChrome}"
+                             ToolTipService.ToolTip="Previous Page">
+              <HyperlinkButton.Content>
+                <Image Source="{StaticResource Image_PreviousPage_Tiny}" Stretch="None" VerticalAlignment="Center" />
+              </HyperlinkButton.Content>
+            </HyperlinkButton>
+            <TextBlock Text="Page " VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Path=Pager.CurrentPage}" VerticalAlignment="Center" />
+            <TextBlock Text=" of " VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Path=Pager.TotalPages}" VerticalAlignment="Center" />
+            <HyperlinkButton Command="{Binding Path=Pager.NextPage}" Style="{StaticResource Style_Link_MouseOverChrome}"
+                             ToolTipService.ToolTip="Next Page">
+              <HyperlinkButton.Content>
+                <Image Source="{StaticResource Image_NextPage_Tiny}" Stretch="None" VerticalAlignment="Center" />
+              </HyperlinkButton.Content>
+            </HyperlinkButton>
+          </StackPanel>
+
+          <StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+
+            <Button Command="{StaticResource NavigateToDocumentByIdCommand}"
+                    Style="{StaticResource Style_Button_MouseOverChrome}"
+                    Visibility="{Binding ShowEditControls, Converter={StaticResource VisibleWhenTrue}}">
+              <Button.Content>
+                <StackPanel Orientation="Horizontal">
+                  <Image Source="{StaticResource Image_OpenDocument_Small}" Stretch="None" VerticalAlignment="Center"
+                         Margin="4,0,4,0" />
+                  <TextBlock Text="Edit Document By ID" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button.Content>
+            </Button>
+
+            <Button Command="{StaticResource NavigateToCommand}" CommandParameter="/edit?mode=new"
+                    Style="{StaticResource Style_Button_MouseOverChrome}"
+                    Visibility="{Binding ShowEditControls, Converter={StaticResource VisibleWhenTrue}}">
+              <Button.Content>
+                <StackPanel Orientation="Horizontal">
+                  <Image Source="{StaticResource Image_AddDocument_Tiny}" Stretch="None" VerticalAlignment="Center"
+                         Margin="4,0,4,0" />
+                  <TextBlock Text="Create a Document" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button.Content>
+            </Button>
+
+                        <Slider Minimum="66" Maximum="500" Width="100" Value="{Binding DocumentHeight, Mode=TwoWay}"/>
                     </StackPanel>
-                </Grid>
-            </DataTemplate>
+        </toolkit:DockPanel>
 
-            <DataTemplate x:Key="DataTemplate_Document_DetailsView">
-                <Grid Width="200"
-							  Height="200"
-							  Margin="2">
+      </toolkit:HeaderedContentControl.Header>
 
-                    <Grid Margin="0,0,0,0">
-                            <TextBox Text="{Binding Data}"
-											   VerticalScrollBarVisibility="Auto"
-                                     HorizontalScrollBarVisibility="Auto" Style="{StaticResource Style_TextBox_DocumentView}" />
-                    </Grid>
+      <ListBox x:Name="DocumentsList" ItemsSource="{Binding Documents}" Style="{StaticResource DocumentList}"
+               SelectionChanged="DocumentsList_SelectionChanged" Grid.Row="1" Grid.ColumnSpan="3" Margin="10"
+               ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
 
-                </Grid>
-            </DataTemplate>
-        </Grid.Resources>
-		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
-			<toolkit:HeaderedContentControl.Header>
-				<toolkit:DockPanel Margin="4"  LastChildFill="False">
-					<StackPanel Orientation="Horizontal">
-						<Image Source="{StaticResource Image_Document_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
-						<TextBlock x:Name="HeaderText"
-						Style="{StaticResource Style_Text_Header}"
-						Text="{Binding ViewTitle}" 
-						toolkit:DockPanel.Dock="Left"
-						VerticalAlignment="Center"
-						 Margin="6,0"/>
-					</StackPanel>
+        <Controls:ContextMenuService.ContextMenu>
+          <Controls:ContextMenu x:Name="DocumentsContextMenu">
+            <Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
+                               Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
+                               CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+            <Controls:MenuItem Header="Delete" Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
+                               CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+          </Controls:ContextMenu>
+        </Controls:ContextMenuService.ContextMenu>
 
-					<StackPanel  toolkit:DockPanel.Dock="Right"
-								 Orientation="Horizontal"
-								 VerticalAlignment="Center">
-						<HyperlinkButton Command="{Binding Path=Pager.PrevPage}"
-										 Style="{StaticResource Style_Link_MouseOverChrome}"
-										 ToolTipService.ToolTip="Previous Page">
-							<HyperlinkButton.Content>
-								<Image Source="{StaticResource Image_PreviousPage_Tiny}"
-									   Stretch="None"
-									   VerticalAlignment="Center" />
-							</HyperlinkButton.Content>
-						</HyperlinkButton>
-						<TextBlock Text="Page "
-								   VerticalAlignment="Center" />
-						<TextBlock Text="{Binding Path=Pager.CurrentPage}"
-								   VerticalAlignment="Center" />
-						<TextBlock Text=" of "
-								   VerticalAlignment="Center" />
-						<TextBlock Text="{Binding Path=Pager.TotalPages}"
-								   VerticalAlignment="Center" />
-						<HyperlinkButton Command="{Binding Path=Pager.NextPage}"
-										 Style="{StaticResource Style_Link_MouseOverChrome}"
-										 ToolTipService.ToolTip="Next Page">
-							<HyperlinkButton.Content>
-								<Image Source="{StaticResource Image_NextPage_Tiny}"
-									   Stretch="None"
-									   VerticalAlignment="Center" />
-							</HyperlinkButton.Content>
-						</HyperlinkButton>
-					</StackPanel>
+        <i:Interaction.Triggers>
+          <ei:KeyTrigger Key="Delete">
+            <i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+                                   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+          </ei:KeyTrigger>
+          <ei:DataTrigger Binding="{Binding ViewStyle.Value}" Value="Details">
+            <ei:ChangePropertyAction PropertyName="ItemTemplate"
+                                     TargetObject="{Binding ElementName=DocumentsList}" Value="{StaticResource DataTemplate_Document_DetailsView}" />
+          </ei:DataTrigger>
+          <ei:DataTrigger Binding="{Binding ViewStyle.Value}" Value="Card">
+            <ei:ChangePropertyAction PropertyName="ItemTemplate"
+                                     TargetObject="{Binding ElementName=DocumentsList}" Value="{StaticResource DataTemplate_Document_CardView}" />
+          </ei:DataTrigger>
+        </i:Interaction.Triggers>
 
-					<StackPanel toolkit:DockPanel.Dock="Right"
-								Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+      </ListBox>
+    </toolkit:HeaderedContentControl>
 
-						<Button Command="{StaticResource NavigateToDocumentByIdCommand}" Style="{StaticResource Style_Button_MouseOverChrome}"
-                                Visibility="{Binding ShowEditControls, Converter={StaticResource VisibleWhenTrue}}">
-							<Button.Content>
-								<StackPanel Orientation="Horizontal">
-									<Image Source="{StaticResource Image_OpenDocument_Small}"
-										   Stretch="None"
-										   VerticalAlignment="Center"
-										   Margin="4,0,4,0" />
-									<TextBlock Text="Edit Document By ID"
-											   VerticalAlignment="Center" />
-								</StackPanel>
-							</Button.Content>
-						</Button>
-						
-						<Button Command="{StaticResource NavigateToCommand}"
-										 CommandParameter="/edit?mode=new" Style="{StaticResource Style_Button_MouseOverChrome}"
-                                Visibility="{Binding ShowEditControls, Converter={StaticResource VisibleWhenTrue}}">
-							<Button.Content>
-								<StackPanel Orientation="Horizontal">
-									<Image Source="{StaticResource Image_AddDocument_Tiny}"
-										   Stretch="None"
-										   VerticalAlignment="Center"
-										   Margin="4,0,4,0" />
-									<TextBlock Text="Create a Document"
-											   VerticalAlignment="Center" />
-								</StackPanel>
-							</Button.Content>
-						</Button>
-					</StackPanel>
-				</toolkit:DockPanel>
-			   
-			</toolkit:HeaderedContentControl.Header>
-
-			<ListBox x:Name="DocumentsList"
-					 ItemsSource="{Binding Documents}"
-					 Style="{StaticResource DocumentList}"
-					 SelectionChanged="DocumentsList_SelectionChanged"
-					 Grid.Row="1"
-					 Grid.ColumnSpan="3"
-					 Margin="10" ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
-				
-				<Controls:ContextMenuService.ContextMenu>
-					<Controls:ContextMenu x:Name="DocumentsContextMenu">
-						<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
-										   Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
-										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-						<Controls:MenuItem Header="Delete"
-										   Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
-										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-					</Controls:ContextMenu>
-				</Controls:ContextMenuService.ContextMenu>
-				
-				<i:Interaction.Triggers>
-					<ei:KeyTrigger Key="Delete">
-						<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
-											   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-					</ei:KeyTrigger>
-                    <ei:DataTrigger Binding="{Binding ViewStyle.Value}" Value="Details">
-                        <ei:ChangePropertyAction PropertyName="ItemTemplate" TargetObject="{Binding ElementName=DocumentsList}" Value="{StaticResource DataTemplate_Document_DetailsView}"/>
-                    </ei:DataTrigger>
-                    <ei:DataTrigger Binding="{Binding ViewStyle.Value}" Value="Card">
-                        <ei:ChangePropertyAction PropertyName="ItemTemplate" TargetObject="{Binding ElementName=DocumentsList}" Value="{StaticResource DataTemplate_Document_CardView}"/>
-                    </ei:DataTrigger>
-				</i:Interaction.Triggers>
-
-			</ListBox>
-</toolkit:HeaderedContentControl>
-
-	</Grid>
+  </Grid>
 </Infrastructure:View>

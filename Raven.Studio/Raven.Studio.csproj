@@ -125,6 +125,9 @@
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
     <Compile Include="Controls\Editors\EditorBase.cs" />
+    <Compile Include="Features\Documents\DocumentView.xaml.cs">
+      <DependentUpon>DocumentView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Query\FieldAndTerm.cs" />
     <Compile Include="Controls\Editors\QueryEditor.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
@@ -153,6 +156,12 @@
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Impl\RelativeBinding\BindingHelper.cs" />
+    <Compile Include="Impl\RelativeBinding\BindingList.cs" />
+    <Compile Include="Impl\RelativeBinding\RelativeSourceBase.cs" />
+    <Compile Include="Impl\RelativeBinding\RelativeSourceBinding.cs" />
+    <Compile Include="Impl\RelativeBinding\RelativeSourceMode.cs" />
+    <Compile Include="Impl\RelativeBinding\TypeLoader.cs" />
     <Compile Include="Infrastructure\ErrorHandler.cs" />
     <Compile Include="Infrastructure\ErrorPresenter.cs" />
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
@@ -362,6 +371,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Documents\DocumentView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Indexes\IndexesListView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -537,6 +550,7 @@
     <Resource Include="Assets\Images\document-new.png" />
     <Resource Include="Assets\Images\edit_pencil_write_icon.png" />
     <Resource Include="Assets\Images\ExecuteQuery.png" />
+    <Content Include="Impl\RelativeBinding\Credits.txt" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup>
