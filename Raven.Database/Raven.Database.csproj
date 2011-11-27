@@ -86,9 +86,6 @@
     <Reference Include="NLog">
       <HintPath>..\SharedLibs\NLog.dll</HintPath>
     </Reference>
-    <Reference Include="Rhino.Licensing">
-      <HintPath>..\SharedLibs\Rhino.Licensing.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.configuration" />
@@ -118,7 +115,6 @@
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
-    <Compile Include="Commercial\WarningMessagesHolder.cs" />
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryClient.cs" />

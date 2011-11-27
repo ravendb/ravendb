@@ -3,21 +3,39 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if COMMERCIAL
 using System;
 using System.IO;
-using Newtonsoft.Json.Linq;
+using NLog;
+using Raven.Abstractions.Extensions;
+using Raven.Database.Plugins;
+using Raven.Json.Linq;
 using Rhino.Licensing;
 using System.Linq;
 using Raven.Abstractions;
-using Raven.Database.Json;
+using Rhino.Licensing.Discovery;
 
 namespace Raven.Database.Commercial
 {
+	public class LicensingStatus
+	{
+		public static LicensingStatus Current = new LicensingStatus
+		{
+			Status = "AGPL - Open Source",
+			Error = false,
+			Message = "No license file was found.\r\n" +
+					  "The AGPL license restrictions apply, only Open Source / Development work is permitted."
+		};
+
+		public string Message { get; set; }
+		public string Status { get; set; }
+		public bool Error { get; set; }
+
+	}
 	public class ValidateLicense : IStartupTask
 	{
 		private DocumentDatabase docDb;
 		private LicenseValidator licenseValidator;
+		private readonly Logger logger = LogManager.GetCurrentClassLogger();
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -35,31 +53,71 @@ namespace Raven.Database.Commercial
 				DisableFloatingLicenses = true,
 			};
 			licenseValidator.LicenseInvalidated+=LicenseValidatorOnLicenseInvalidated;
-			if (licenseValidator.TryLoadingLicenseValuesFromValidatedXml() == false)
-				throw new LicenseNotFoundException("Could not find valid license for RavenDB at: " + fullPath);
-			
-			if (SystemTime.UtcNow < licenseValidator.ExpirationDate)
-				return;
+			licenseValidator.MultipleLicensesWereDiscovered += LicenseValidatorOnMultipleLicensesWereDiscovered;
 
-			LicenseValidatorOnLicenseInvalidated(InvalidationType.TimeExpired);
+			if(File.Exists(fullPath) == false)
+			{
+				LicensingStatus.Current = new LicensingStatus
+				{
+					Status = "AGPL - Open Source",
+					Error = false,
+					Message = "No license file was found at " + fullPath +
+					          "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
+				};
+				return;
+			}
+
+			try
+			{
+				licenseValidator.AssertValidLicense();
+
+				LicensingStatus.Current = new LicensingStatus
+				{
+					Status = "Commercial - " + licenseValidator.LicenseType,
+					Error = false,
+					Message = "Valid license " + fullPath
+				};
+			}
+			catch (Exception e)
+			{
+				logger.ErrorException("Could not validate license at " + fullPath, e);
+
+				LicensingStatus.Current = new LicensingStatus
+				{
+					Status = "AGPL - Open Source",
+					Error = true,
+					Message = "Could not validate license file at " + fullPath + Environment.NewLine + e
+				};
+			}
+		}
+
+		private void LicenseValidatorOnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
+		{
+			logger.Error("A duplicate license was found at {0} for user {1}. Id: {2}. Both licenses were disabled!", 
+				clientDiscoveredEventArgs.MachineName, 
+				clientDiscoveredEventArgs.UserName, 
+				clientDiscoveredEventArgs.UserId);
+
+			LicensingStatus.Current = new LicensingStatus
+			{
+				Status = "AGPL - Open Source",
+				Error = true,
+				Message =
+					string.Format("A duplicate license was found at {0} for user {1}. Id: {2}.", clientDiscoveredEventArgs.MachineName,
+					              clientDiscoveredEventArgs.UserName,
+					              clientDiscoveredEventArgs.UserId)
+			};
 		}
 
 		private void LicenseValidatorOnLicenseInvalidated(InvalidationType invalidationType)
 		{
-			var document = docDb.Get("Raven/WarningMessages", null);
-			WarningMessagesHolder messagesHolder = document == null ?
-				new WarningMessagesHolder() :
-				document.DataAsJson.JsonDeserialization<WarningMessagesHolder>();
-
-			if (messagesHolder.Messages.Any(warnMsg => warnMsg.StartsWith("Licensing:")) == false)
+			logger.Error("The license have expired and can no longer be used");
+			LicensingStatus.Current = new LicensingStatus
 			{
-				messagesHolder.Messages.Add("Licensing: RavenDB license has expired at " +
-					licenseValidator.ExpirationDate.ToShortDateString());
-			}
-			docDb.Put("Raven/WarningMessages", null,
-						 RavenJObject.FromObject(messagesHolder), 
-						 new RavenJObject(), null);
+				Status = "AGPL - Open Source",
+				Error = true,
+				Message = "License expired"
+			};
 		}
 	}
 }
-#endif
