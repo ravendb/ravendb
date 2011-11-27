@@ -121,6 +121,9 @@
     <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeOffsetConverter.cs">
       <Link>Imports\Json\JsonDateTimeOffsetConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\JsonDictionaryDateTimeKeysConverter.cs">
+      <Link>Imports\Json\JsonDictionaryDateTimeKeysConverter.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonFloatConverter.cs">
       <Link>Imports\Json\JsonFloatConverter.cs</Link>
     </Compile>

@@ -78,7 +78,7 @@ namespace Kieners.Silverlight
                 }
 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // ignore this exception, because the SL binding engine does not throw exceptions when a binding is wrong.
             }

@@ -154,7 +154,7 @@ namespace Nova.Core.Common
                         return targetType;
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // Try to load type in executing assembly
                     if (!StringHelper.IsNullOrWhiteSpace(xamlNamespace))
