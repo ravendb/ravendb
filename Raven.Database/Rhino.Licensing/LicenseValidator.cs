@@ -54,7 +54,7 @@ namespace Rhino.Licensing
                 catch (Exception e)
                 {
                     inMemoryLicense = value;
-                    Log.Warn("Could not write new license value, using in memory model instrea", e);
+                    Logger.WarnException("Could not write new license value, using in memory model instrea", e);
                 }
             }
         }
@@ -66,7 +66,7 @@ namespace Rhino.Licensing
         {
             if (File.Exists(licensePath) == false)
             {
-                Log.WarnFormat("Could not find license file: {0}", licensePath);
+                Logger.Warn("Could not find license file: {0}", licensePath);
                 throw new LicenseFileNotFoundException();
             }
 
