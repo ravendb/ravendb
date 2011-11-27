@@ -38,13 +38,13 @@ namespace Rhino.Licensing
 
 			for (var i = 0; i <= 3; i++)
 			{
-				intpart = 256*intpart + sntpData[offset + i];
+				intpart = 256 * intpart + sntpData[offset + i];
 			}
 			for (var i = 4; i <= 7; i++)
 			{
-				fractpart = 256*fractpart + sntpData[offset + i];
+				fractpart = 256 * fractpart + sntpData[offset + i];
 			}
-			var milliseconds = intpart*1000 + (fractpart*1000)/0x100000000L;
+			var milliseconds = intpart * 1000 + (fractpart * 1000) / 0x100000000L;
 			return milliseconds;
 		}
 
@@ -60,7 +60,7 @@ namespace Rhino.Licensing
 			{
 				var host = hosts[index];
 				var state = new State(null, null, getTime, failure);
-				var result = Dns.BeginGetHostAddresses(host, EndGetHostAddress, state );
+				var result = Dns.BeginGetHostAddresses(host, EndGetHostAddress, state);
 				RegisterWaitForTimeout(state, result);
 			}
 			catch (Exception)
@@ -70,36 +70,36 @@ namespace Rhino.Licensing
 			}
 		}
 
-	    private void EndGetHostAddress(IAsyncResult asyncResult)
-        {
-	        var state = (State) asyncResult.AsyncState;
-	        try
-	        {
-	            var addresses = Dns.EndGetHostAddresses(asyncResult);
-	            var endPoint = new IPEndPoint(addresses[0], 123);
+		private void EndGetHostAddress(IAsyncResult asyncResult)
+		{
+			var state = (State)asyncResult.AsyncState;
+			try
+			{
+				var addresses = Dns.EndGetHostAddresses(asyncResult);
+				var endPoint = new IPEndPoint(addresses[0], 123);
 
-	            var socket = new UdpClient();
-	            socket.Connect(endPoint);
-	            socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 500);
-	            socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 500);
-	            var sntpData = new byte[SntpDataLength];
-	            sntpData[0] = 0x1B; // version = 4 & mode = 3 (client)
+				var socket = new UdpClient();
+				socket.Connect(endPoint);
+				socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 500);
+				socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 500);
+				var sntpData = new byte[SntpDataLength];
+				sntpData[0] = 0x1B; // version = 4 & mode = 3 (client)
 
-	        	var newState = new State(socket, endPoint, state.GetTime, state.Failure);
-	        	var result = socket.BeginSend(sntpData, sntpData.Length, EndSend, newState);
+				var newState = new State(socket, endPoint, state.GetTime, state.Failure);
+				var result = socket.BeginSend(sntpData, sntpData.Length, EndSend, newState);
 				RegisterWaitForTimeout(newState, result);
-	        }
-	        catch (Exception)
-	        {
-                // retry, recursion stops at the end of the hosts
-                BeginGetDate(state.GetTime, state.Failure);
-	
-	        }
-	    }
+			}
+			catch (Exception)
+			{
+				// retry, recursion stops at the end of the hosts
+				BeginGetDate(state.GetTime, state.Failure);
+
+			}
+		}
 
 		private void RegisterWaitForTimeout(State newState, IAsyncResult result)
 		{
-			if(result != null)
+			if (result != null)
 				ThreadPool.RegisterWaitForSingleObject(result.AsyncWaitHandle, MaybeOperationTimeout, newState, 500, true);
 		}
 
@@ -122,7 +122,7 @@ namespace Rhino.Licensing
 
 		private void EndSend(IAsyncResult ar)
 		{
-			var state = (State) ar.AsyncState;
+			var state = (State)ar.AsyncState;
 			try
 			{
 				state.Socket.EndSend(ar);
@@ -138,12 +138,12 @@ namespace Rhino.Licensing
 
 		private void EndReceive(IAsyncResult ar)
 		{
-			var state = (State) ar.AsyncState;
+			var state = (State)ar.AsyncState;
 			try
 			{
 				var endPoint = state.EndPoint;
 				var sntpData = state.Socket.EndReceive(ar, ref endPoint);
-				if(IsResponseValid(sntpData)==false)
+				if (IsResponseValid(sntpData) == false)
 				{
 					state.Failure();
 					return;
