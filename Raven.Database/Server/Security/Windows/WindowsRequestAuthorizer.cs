@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
@@ -59,7 +60,7 @@ namespace Raven.Database.Server.Security.Windows
 			}
 
 			if (IsInvalidUser(ctx) == false)
-				CurrentOperationContext.Headers.Value["Raven-Authenticated-User"] = ctx.User.Identity.Name;
+				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
 			return true;
 		}
 

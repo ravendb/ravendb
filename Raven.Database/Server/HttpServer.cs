@@ -439,6 +439,7 @@ namespace Raven.Database.Server
 
 			CurrentOperationContext.Headers.Value = ctx.Request.Headers;
 
+			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = null;
 			if (ctx.RequiresAuthentication &&
 				requestAuthorizer.Authorize(ctx) == false)
 				return false;
