@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Browser;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -218,17 +219,25 @@ namespace Raven.Client.Silverlight.Connection
 				if (prop.Value == null)
 					continue;
 
-				if (prop.Value.Type == JTokenType.Object ||
-					prop.Value.Type == JTokenType.Array)
-					continue;
-
+				string value;
+				switch (prop.Value.Type)
+				{
+					case JTokenType.Array:
+						value = prop.Value.Value<RavenJArray>().ToString(Formatting.None);
+						break;
+					case JTokenType.Object:
+						value = prop.Value.Value<RavenJObject>().ToString(Formatting.None);
+						break;
+					default:
+						value = prop.Value.Value<object>().ToString();
+						break;
+				}
 				var headerName = prop.Key;
 				if (headerName == "ETag")
 					headerName = "If-None-Match";
 				if(headerName.StartsWith("@") ||
 					headerName == Constants.LastModified)
 					continue;
-				var value = prop.Value.Value<object>().ToString();
 				switch (headerName)
 				{
 					case "Content-Length":
