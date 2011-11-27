@@ -15,6 +15,8 @@ namespace Raven.Studio.Infrastructure
 		private readonly Func<T, object> primaryKeyExtractor;
 		private readonly KeysComparer<T> objectComparer;
 
+	    public event EventHandler<EventArgs> Updated;
+
 		public BindableCollection(Func<T, object> primaryKeyExtractor, KeysComparer<T> objectComparer = null)
 		{
 			if (objectComparer == null)
@@ -59,6 +61,8 @@ namespace Raven.Studio.Infrastructure
 				}
 
 				if (afterUpdate != null) afterUpdate();
+
+                RaiseUpdated();
 			});
 
 			if (afterUpdate != null) afterUpdate();
@@ -78,6 +82,8 @@ namespace Raven.Studio.Infrastructure
 				{
 					Add(v);
 				}
+
+                RaiseUpdated();
 			});
 		}
 
@@ -89,7 +95,18 @@ namespace Raven.Studio.Infrastructure
 				{
 					Add(v);
 				}
+
+                RaiseUpdated();
 			});
 		}
+
+        private void RaiseUpdated()
+        {
+            var handler = Updated;
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
+            }
+        }
 	}
 }
