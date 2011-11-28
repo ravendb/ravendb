@@ -39,7 +39,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                 
-                    <Slider Orientation="Vertical" Minimum="66" Maximum="500" Value="{Binding ViewSize, Mode=TwoWay}" Grid.Column="0" Margin="4"/>
+                    <Slider Orientation="Vertical" Minimum="66" Maximum="700" Value="{Binding ViewSize, Mode=TwoWay}" Grid.Column="0" Margin="4"/>
                     
                     <Rectangle Width="1" Fill="#DFDFDF" Grid.Column="0" HorizontalAlignment="Right"/>
                     <Rectangle Width="1" Fill="#FEFEFE" Grid.Column="1" HorizontalAlignment="Left"/>

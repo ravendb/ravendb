@@ -8,7 +8,7 @@
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400">
     
-    <Grid x:Name="LayoutRoot">
+    <Grid x:Name="LayoutRoot" Width="112" Height="66">
         <kiener:BindingHelper.Binding>
             <kiener:BindingList>
                 <kiener:RelativeSourceBinding Path="DataContext.DocumentWidth" TargetProperty="Width" RelativeMode="FindAncestor" 
