@@ -303,7 +303,8 @@ namespace Raven.Database.Server
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
-			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25)
+			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && 
+				logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25)
 				return;
 
 			var curReq = Interlocked.Increment(ref reqNum);
