@@ -150,6 +150,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			key = key.Replace("\\", @"/"); //NOTE: the present of \ causes the SL networking stack to barf, even though the Uri seemingly makes this translation itself
 
 			var request = url.Docs(key)
+				.NoCache()
 				.ToJsonRequest(this, credentials, convention);
 
 			return request
