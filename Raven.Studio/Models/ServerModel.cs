@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Browser;
+using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
@@ -38,7 +41,7 @@ namespace Raven.Studio.Models
 			Initialize();
 		}
 
-		public void Initialize()
+		private void Initialize()
 		{
 			documentStore = new DocumentStore
 			{
@@ -46,6 +49,11 @@ namespace Raven.Studio.Models
 			};
 
 			documentStore.Initialize();
+			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
+			{
+				if (onWebRequest != null)
+					onWebRequest(eventArgs.Request);
+			};
 
 			// We explicitly enable this for the Studio, we rely on SL to actually get us the credentials, and that 
 			// already gives the user a clear warning about the dangers of sending passwords in the clear. I think that 
@@ -59,6 +67,7 @@ namespace Raven.Studio.Models
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
 			SelectedDatabase.Value = defaultDatabase[0];
+			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
 
 			var changeDatabaseCommand = new ChangeDatabaseCommand();
 			SelectedDatabase.PropertyChanged += (sender, args) =>
@@ -110,12 +119,20 @@ namespace Raven.Studio.Models
 		public void SetCurrentDatabase(UrlParser urlParser)
 		{
 			var databaseName = urlParser.GetQueryParam("database");
+			if (databaseName == null)
+				return;
 			if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
 				return;
 			var database = Databases.FirstOrDefault(x => x.Name == databaseName);
 			if (database != null)
 			{
 				SelectedDatabase.Value = database;
+			}
+			else
+			{
+				var databaseModel = new DatabaseModel(databaseName, documentStore.AsyncDatabaseCommands.ForDatabase(databaseName));
+				Databases.Add(databaseModel);
+				SelectedDatabase.Value = databaseModel;
 			}
 		}
 
@@ -124,11 +141,11 @@ namespace Raven.Studio.Models
 			var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(this, documentStore.Url + "/build/version", "GET", null, documentStore.Conventions);
 			request.ReadResponseStringAsync()
 				.ContinueOnSuccess(result =>
-				                   	{
-				                   		var parsedResult = RavenJObject.Parse(result);
-				                   		var ravenJToken = parsedResult["BuildVersion"];
-				                   		BuildNumber = ravenJToken.Value<string>();
-				                   	});
+									{
+										var parsedResult = RavenJObject.Parse(result);
+										var ravenJToken = parsedResult["BuildVersion"];
+										BuildNumber = ravenJToken.Value<string>();
+									});
 		}
 	}
 }
