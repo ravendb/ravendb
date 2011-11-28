@@ -152,18 +152,6 @@
 						<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
 											   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 					</ei:KeyTrigger>
-					<ei:DataTrigger Binding="{Binding ViewStyle.Value}"
-									Value="Details">
-						<ei:ChangePropertyAction PropertyName="ItemTemplate"
-												 TargetObject="{Binding ElementName=DocumentsList}"
-												 Value="{StaticResource DataTemplate_Document_DetailsView}" />
-					</ei:DataTrigger>
-					<ei:DataTrigger Binding="{Binding ViewStyle.Value}"
-									Value="Card">
-						<ei:ChangePropertyAction PropertyName="ItemTemplate"
-												 TargetObject="{Binding ElementName=DocumentsList}"
-												 Value="{StaticResource DataTemplate_Document_CardView}" />
-					</ei:DataTrigger>
 				</i:Interaction.Triggers>
 
 			</ListBox>

@@ -75,15 +75,19 @@ namespace Raven.Studio.Models
 
 		public double DocumentWidth
 		{
-			get { return DocumentHeight*CalculateAspectRatio(DocumentHeight); }
+			get
+			{
+                const double wideAspectRatio = 1.7;
+			    const double narrowAspectRatio = 0.707;
+			    const double aspectRatioSwitchoverHeight = 120;
+			    const double wideRatioMaxWidth = aspectRatioSwitchoverHeight*wideAspectRatio;
+			    const double narrowAspectRatioSwitchoverHeight = wideRatioMaxWidth/narrowAspectRatio;
+
+                return DocumentHeight < aspectRatioSwitchoverHeight ? DocumentHeight * wideAspectRatio
+                : DocumentHeight < narrowAspectRatioSwitchoverHeight ? wideRatioMaxWidth
+                : DocumentHeight * narrowAspectRatio;
+            }
 		}
 
-		private double CalculateAspectRatio(double height)
-		{
-			const double gradient = (1.7 - 0.707)/(66 - 200);
-			var aspectRatio = Math.Max(gradient*height + (1.7 - gradient*66), 0.707);
-
-			return aspectRatio;
-		}
 	}
 }
