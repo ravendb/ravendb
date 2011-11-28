@@ -165,6 +165,7 @@
     <Compile Include="Server\Responders\SilverlightPlugins.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
     <Compile Include="Server\Security\OAuth\AccessTokenBody.cs" />
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
