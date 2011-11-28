@@ -64,6 +64,14 @@ namespace Raven.Client.Silverlight.Connection.Async
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
+
+			// required to ensure just a single auth dialog
+			Task task = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs?pageSize=0", "GET", credentials, convention)
+				.ReadResponseStringAsync();
+			jsonRequestFactory.ConfigureRequest += (sender, args) =>
+			{
+				args.JsonRequest.WaitForTask = task;
+			};
 		}
 
 		/// <summary>

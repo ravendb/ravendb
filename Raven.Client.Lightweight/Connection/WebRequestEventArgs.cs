@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Net;
-
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection;
+#endif
 namespace Raven.Client.Connection
 {
 	/// <summary>
@@ -18,5 +20,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <value>The request.</value>
 		public WebRequest Request{ get; set;}
+#if SILVERLIGHT
+		/// <summary>
+		/// The RavenDB json request
+		/// </summary>
+		public HttpJsonRequest JsonRequest { get; set; }
+#endif
 	}
 }

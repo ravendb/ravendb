@@ -36,7 +36,6 @@ namespace Raven.Client.Silverlight.Connection
 		internal HttpWebRequest webRequest;
 		private byte[] postedData;
 		private int retries;
-		private readonly StackTrace usedForDebugging_CreatedBy = Debugger.IsAttached ? new StackTrace() : null;
 
 		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{
@@ -70,6 +69,10 @@ namespace Raven.Client.Silverlight.Connection
 			this.conventions = conventions;
 			webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
 
+			var tcs = new TaskCompletionSource<object>();
+			tcs.SetResult(null);
+			WaitForTask = tcs.Task;
+
 			WriteMetadata(metadata);
 			webRequest.Method = method;
 			if (method != "GET")
@@ -84,15 +87,12 @@ namespace Raven.Client.Silverlight.Connection
 		/// <returns></returns>
 		public Task<string> ReadResponseStringAsync()
 		{
-			return webRequest
-				.GetResponseAsync()
-				.ContinueWith(t => ReadStringInternal(() =>
-				                                      {
-				                                      	var localCopy = usedForDebugging_CreatedBy;
-				                                      	return t.Result;
-				                                      }))
-				.ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
-				.Unwrap();
+			return WaitForTask.ContinueWith(_ => webRequest
+			                                     	.GetResponseAsync()
+			                                     	.ContinueWith(t => ReadStringInternal(() => t.Result))
+			                                     	.ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
+			                                     	.Unwrap())
+													.Unwrap();
 		}
 
 		private Task<T> RetryIfNeedTo<T>(Task<T> task, Func<Task<T>> generator)
@@ -135,11 +135,12 @@ namespace Raven.Client.Silverlight.Connection
 
 		public Task<byte[]> ReadResponseBytesAsync()
 		{
-			return webRequest
-				.GetResponseAsync()
-				.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes))
-				.ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
-				.Unwrap(); ;
+			return WaitForTask.ContinueWith(_ => webRequest
+			                                     	.GetResponseAsync()
+			                                     	.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes))
+			                                     	.ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
+			                                     	.Unwrap())
+													.Unwrap();
 		}
 
 		static byte[] ConvertStreamToBytes(Stream input)
@@ -212,6 +213,11 @@ namespace Raven.Client.Silverlight.Connection
 		/// <value>The response status code.</value>
 		public HttpStatusCode ResponseStatusCode { get; set; }
 
+		/// <summary>
+		/// The task to wait all other actions on
+		/// </summary>
+		public Task WaitForTask { get; set; }
+
 		private void WriteMetadata(RavenJObject metadata)
 		{
 			foreach (var prop in metadata)
@@ -267,7 +273,7 @@ namespace Raven.Client.Silverlight.Connection
 		public Task WriteAsync(byte[] byteArray)
 		{
 			postedData = byteArray;
-			return webRequest.GetRequestStreamAsync().ContinueWith(t =>
+			return WaitForTask.ContinueWith(_ => webRequest.GetRequestStreamAsync().ContinueWith(t =>
 			{
 				var dataStream = t.Result;
 				using (dataStream)
@@ -275,7 +281,7 @@ namespace Raven.Client.Silverlight.Connection
 					dataStream.Write(byteArray, 0, byteArray.Length);
 					dataStream.Close();
 				}
-			});
+			})).Unwrap();
 		}
 
 		/// <summary>
