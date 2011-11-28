@@ -53,11 +53,6 @@ namespace Raven.Studio.Models
 				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 				true;
 
-
-			// this is to force a single auth request on the server.
-			documentStore.AsyncDatabaseCommands.GetDocumentsAsync(0, 1)
-				.ContinueOnSuccessInTheUIThread(View.StartDispatching);
-
 			SetBuildNumber();
 
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
