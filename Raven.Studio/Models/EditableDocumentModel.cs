@@ -111,6 +111,7 @@ namespace Raven.Studio.Models
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			UpdateMetadata(newdoc.Metadata);
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
+			UpdateRelated();
 			OnEverythingChanged();
 		}
 
@@ -172,7 +173,6 @@ namespace Raven.Studio.Models
 			{
 				jsonData = value;
 				UpdateReferences();
-				UpdateRelated();
 				OnPropertyChanged();
 				OnPropertyChanged("DocumentSize");
 			}
