@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Browser;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -101,7 +102,8 @@ namespace Raven.Studio.Models
 			}
 			return new UriBuilder(HtmlPage.Document.DocumentUri)
 			{
-				Path = localPath
+				Path = localPath,
+				Fragment = ""
 			}.Uri.ToString();
 		}
 
