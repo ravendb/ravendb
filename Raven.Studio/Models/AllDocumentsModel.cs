@@ -8,20 +8,23 @@ namespace Raven.Studio.Models
 {
 	public class AllDocumentsModel : ViewModel
 	{
+		static AllDocumentsModel()
+		{
+			Documents = new Observable<DocumentsModel>();
+			Documents.Value = new DocumentsModel(GetFetchDocumentsMethod);
+			Documents.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
+		}
+
 		public AllDocumentsModel()
 		{
 			ModelUrl = "/documents";
-
-			Documents = new Observable<DocumentsModel>();
-			Documents.Value = new DocumentsModel(GetFetchDocumentsMethod);
-			Documents.Value.Pager.SetTotalResults(new Observable<long?>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 		}
 
-		public Observable<DocumentsModel> Documents { get; private set; }
+		public static Observable<DocumentsModel> Documents { get; private set; }
 
-		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
+		private static Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
 		{
-			return DatabaseCommands.GetDocumentsAsync(documentsModel.Pager.Skip, documentsModel.Pager.PageSize)
+			return ApplicationModel.DatabaseCommands.GetDocumentsAsync(documentsModel.Pager.Skip, documentsModel.Pager.PageSize)
 				.ContinueOnSuccess(docs => documentsModel.Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
 		}
 	}
