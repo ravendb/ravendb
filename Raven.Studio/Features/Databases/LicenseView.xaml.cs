@@ -28,11 +28,19 @@ namespace Raven.Studio.Features.Databases
 		private void StartAlert()
 		{
 			Brush originalBrsush = StatusText.Foreground;
-			Brush alertBrush = new SolidColorBrush(Colors.Red);
+			Brush[] alertBrushes = new[]
+			{
+				new SolidColorBrush(Colors.Magenta),
+				new SolidColorBrush(Colors.Orange),
+				new SolidColorBrush(Colors.Red),
+				new SolidColorBrush(Colors.Yellow),
+				new SolidColorBrush(Colors.Cyan),
+			};
 
+			int count = 0;
 			Observable.Timer(TimeSpan.Zero, TimeSpan.FromSeconds(2))
 				.ObserveOnDispatcher()
-				.Subscribe(_ => StatusText.Foreground = alertBrush);
+				.Subscribe(_ => StatusText.Foreground = alertBrushes[count++ % alertBrushes.Length]);
 
 			Observable.Timer(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2))
 				.ObserveOnDispatcher()

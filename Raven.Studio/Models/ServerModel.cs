@@ -6,7 +6,9 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
+using Raven.Studio.Features.Util;
 using Raven.Studio.Infrastructure;
+using Raven.Client.Silverlight.Connection;
 
 namespace Raven.Studio.Models
 {
@@ -140,7 +142,7 @@ namespace Raven.Studio.Models
 
 		private void DisplayBuildNumber()
 		{
-			var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(this, documentStore.Url + "/build/version", "GET", null, documentStore.Conventions);
+			var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(this, (documentStore.Url + "/build/version").NoCache(), "GET", null, documentStore.Conventions);
 			request.ReadResponseStringAsync()
 				.ContinueOnSuccess(result =>
 				                   	{
@@ -154,7 +156,13 @@ namespace Raven.Studio.Models
 		private void DisplyaLicenseStatus()
 		{
 			documentStore.AsyncDatabaseCommands.GetLicenseStatus()
-				.ContinueOnSuccessInTheUIThread(x => License.Value = x)
+				.ContinueOnSuccessInTheUIThread(x =>
+				{
+					License.Value = x;
+					if (x.Error == false)
+						return;
+					new ShowLicensingStatusCommand().Execute(x);
+				})
 				.Catch();
 		}
 
