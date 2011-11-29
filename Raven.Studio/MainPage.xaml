@@ -221,7 +221,8 @@
 
 				<StackPanel toolkit:DockPanel.Dock="Right"
 							Orientation="Horizontal">
-					<Documents:LicenseView Margin="0,0,15,0" />
+					<Documents:LicenseView Margin="0,0,15,0"
+										   DataContext="{Binding Path=Server.Value.License}" />
 					<TextBlock Text="{Binding Path=Server.Value.BuildNumber, StringFormat='Build #\{0\}'}" />
 				</StackPanel>
 			</toolkit:DockPanel>

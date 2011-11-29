@@ -135,13 +135,15 @@ namespace Raven.Studio.Models
 				                   		var parsedResult = RavenJObject.Parse(result);
 				                   		var ravenJToken = parsedResult["BuildVersion"];
 				                   		BuildNumber = ravenJToken.Value<string>();
-				                   	});
+									})
+				.Catch();
 		}
 
 		private void AnalizeLicenseStatus()
 		{
 			documentStore.AsyncDatabaseCommands.GetLicenseStatus()
-				.ContinueOnSuccessInTheUIThread(x => License = x);
+				.ContinueOnSuccessInTheUIThread(x => License = x)
+				.Catch();
 		}
 
 		private LicenseStatus license;
