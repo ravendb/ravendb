@@ -3765,4 +3765,42 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<Style x:Name="HyperlinkButton_FooterLinks" TargetType="HyperlinkButton">
+		<Setter Property="Margin"
+				Value="0,0,8,0" />
+		<Setter Property="Foreground"
+				Value="Black" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="HyperlinkButton">
+					<Grid Cursor="{TemplateBinding Cursor}"
+						  Background="{TemplateBinding Background}">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.2" />
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Normal" />
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<ColorAnimation To="White"
+														Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
+														Storyboard.TargetName="Content"
+														Duration="0" />
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+
+						<TextBlock x:Name="Content"
+								   Text="{TemplateBinding Content}"
+								   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+								   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+								   Margin="{TemplateBinding Padding}" />
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 </ResourceDictionary>

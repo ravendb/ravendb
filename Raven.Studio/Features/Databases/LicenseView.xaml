@@ -4,6 +4,11 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
 
 	<StackPanel Orientation="Horizontal">
+		<StackPanel.Resources>
+			<Style TargetType="HyperlinkButton"
+				   BasedOn="{StaticResource HyperlinkButton_FooterLinks}" />
+		</StackPanel.Resources>
+		
 		<TextBlock Text="Licensing Status: " />
 		<HyperlinkButton Content="{Binding Status}"
 						 Command="{StaticResource ShowLicensingStatusCommand}"
