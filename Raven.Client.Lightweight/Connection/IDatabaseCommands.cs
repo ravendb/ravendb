@@ -253,6 +253,12 @@ namespace Raven.Client.Connection
 		IDatabaseCommands ForDatabase(string database);
 
 		/// <summary>
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+		/// with the default database
+		/// </summary>
+		IDatabaseCommands ForDefaultDatabase();
+
+		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
 		/// with the root database. Useful if the database has works against a tenant database
 		/// </summary>

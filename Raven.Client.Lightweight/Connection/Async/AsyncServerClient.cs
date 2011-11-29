@@ -38,7 +38,7 @@ namespace Raven.Client.Connection.Async
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
-		private readonly IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
+		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
 		internal readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? sessionId;
 
@@ -63,6 +63,7 @@ namespace Raven.Client.Connection.Async
 		public void Dispose()
 		{
 		}
+
 
 		/// <summary>
 		/// Returns a new <see cref="IAsyncDatabaseCommands"/> using the specified credentials
@@ -232,27 +233,42 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
-			var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
-			if (indexOfDatabases != -1)
-				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-			if (databaseUrl.EndsWith("/") == false)
-				databaseUrl += "/";
+			var databaseUrl = RootDatabaseUrl;
 			databaseUrl = databaseUrl + "databases/" + database + "/";
-			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId);
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
+			{
+				operationsHeaders = operationsHeaders
+			};
+		}
+
+		private string RootDatabaseUrl
+		{
+			get
+			{
+				var databaseUrl = url;
+				var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
+				if (indexOfDatabases != -1)
+					databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
+				if (databaseUrl.EndsWith("/") == false)
+					databaseUrl += "/";
+				return databaseUrl;
+			}
 		}
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
 		/// with the root database. Useful if the database has works against a tenant database.
 		/// </summary>
-		public IAsyncDatabaseCommands GetRootDatabase()
+		public IAsyncDatabaseCommands ForDefaultDatabase()
 		{
-			var indexOfDatabases = url.IndexOf("/databases/", StringComparison.Ordinal);
-			if (indexOfDatabases == -1)
+			var databaseUrl = RootDatabaseUrl;
+			if (databaseUrl == url)
 				return this;
 
-			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials, jsonRequestFactory, sessionId);
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
+			       {
+			       	operationsHeaders = operationsHeaders
+			       };
 		}
 
 		/// <summary>
