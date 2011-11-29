@@ -72,6 +72,8 @@ namespace Raven.Studio.Models
 			var changeDatabaseCommand = new ChangeDatabaseCommand();
 			SelectedDatabase.PropertyChanged += (sender, args) =>
 			{
+				if (SelectedDatabase.Value == null)
+					return;
 				var databaseName = SelectedDatabase.Value.Name;
 				if (changeDatabaseCommand.CanExecute(databaseName))
 					changeDatabaseCommand.Execute(databaseName);
