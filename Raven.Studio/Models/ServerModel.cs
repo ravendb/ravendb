@@ -78,7 +78,7 @@ namespace Raven.Studio.Models
 			};
 		}
 
-		protected override Task TimerTickedAsync()
+		public override Task TimerTickedAsync()
 		{
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync()
 				.ContinueOnSuccess(names =>

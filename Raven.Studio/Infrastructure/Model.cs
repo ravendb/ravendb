@@ -64,7 +64,7 @@ namespace Raven.Studio.Infrastructure
 			return RefreshRate;
 		}
 
-		protected virtual Task TimerTickedAsync()
+		public virtual Task TimerTickedAsync()
 		{
 			return null;
 		}

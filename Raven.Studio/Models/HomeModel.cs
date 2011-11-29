@@ -13,51 +13,44 @@ using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
 	public class HomeModel : ViewModel
 	{
-		public Observable<DocumentsModel> RecentDocuments { get; private set; }
+		public static Observable<DocumentsModel> RecentDocuments { get; private set; }
+
+		static HomeModel()
+		{
+			RecentDocuments = new Observable<DocumentsModel>
+			                  {
+			                  	Value = new DocumentsModel(GetFetchDocumentsMethod)
+			                  	        {
+			                  	        	ViewTitle = "Recent Documents",
+			                  	        	Pager = {PageSize = 15}
+			                  	        }
+			                  };
+			RecentDocuments.Value.Pager.SetTotalResults(new Observable<long>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
+			ShowCreateSampleData = new Observable<bool>(RecentDocuments.Value.Pager.TotalResults, x => (long)x == 0);
+		}
 
 		public HomeModel()
 		{
 			ModelUrl = "/home";
-			RecentDocuments = new Observable<DocumentsModel>();
-			Initialize();
 		}
 
-		private void Initialize()
+		private static Task GetFetchDocumentsMethod(DocumentsModel documents)
 		{
-			if (Database.Value == null)
-			{
-				Database.RegisterOnce(Initialize);
-				return;
-			}
-
-			var documents = new DocumentsModel(GetFetchDocumentsMethod)
-			{
-				ViewTitle = "Recent Documents", 
-				Pager = {PageSize = 15}
-			};
-			documents.Pager.SetTotalResults(new Observable<long>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
-			RecentDocuments.Value = documents;
-			documents.Pager.TotalResults.PropertyChanged += (sender, args) => ShowCreateSampleData = documents.Pager.TotalResults.Value == 0;
-		}
-
-		private Task GetFetchDocumentsMethod(DocumentsModel documents)
-		{
-			return DatabaseCommands.GetDocumentsAsync(documents.Pager.Skip, documents.Pager.PageSize)
+			return ApplicationModel.DatabaseCommands.GetDocumentsAsync(documents.Pager.Skip, documents.Pager.PageSize)
 				.ContinueOnSuccess(docs => documents.Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
 		}
 
-		private bool showCreateSampleData;
-		public bool ShowCreateSampleData
+		public override Task TimerTickedAsync()
 		{
-			get { return showCreateSampleData; }
-			set { showCreateSampleData = value; OnPropertyChanged(); }
+			return RecentDocuments.Value.TimerTickedAsync();
 		}
+
+		public static Observable<bool> ShowCreateSampleData { get; private set; }
 
 		private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData
@@ -96,7 +89,7 @@ namespace Raven.Studio.Models
 				// this code assumes a small enough dataset, and doesn't do any sort
 				// of paging or batching whatsoever.
 
-				model.ShowCreateSampleData = false;
+				HomeModel.ShowCreateSampleData.Value = false;
 				model.IsGeneratingSampleData = true;
 
 				using (var sampleData = typeof(HomeModel).Assembly.GetManifestResourceStream("Raven.Studio.Assets.EmbeddedData.MvcMusicStore_Dump.json"))
@@ -137,6 +130,5 @@ namespace Raven.Studio.Models
 		}
 
 		#endregion
-
 	}
 }

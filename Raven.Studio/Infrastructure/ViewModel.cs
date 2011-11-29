@@ -31,7 +31,7 @@ namespace Raven.Studio.Infrastructure
 
 		public virtual void LoadModelParameters(string parameters) { }
 
-		protected override Task TimerTickedAsync()
+		public override Task TimerTickedAsync()
 		{
 			return IsLoaded == false ? null : LoadedTimerTickedAsync();
 		}
