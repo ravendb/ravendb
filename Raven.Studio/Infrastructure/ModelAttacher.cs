@@ -5,10 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -36,6 +34,10 @@ namespace Raven.Studio.Infrastructure
 				var piValue = observableType.GetProperty("Value");
 				piValue.SetValue(observable, model, null);
 				view.DataContext = observable;
+
+				var modelModel = model as Model;
+				if (modelModel == null)	return;
+				modelModel.ForceTimerTicked();
 
 				SetPageTitle(modelType, model, view);
 
