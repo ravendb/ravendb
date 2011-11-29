@@ -13,8 +13,8 @@
 		<DataTemplate x:Key="DatabaseItemTemplate">
 			<Grid Background="Transparent">
 				<i:Interaction.Behaviors>
-					<Behaviors:DoubleClickBehavior Command="{StaticResource ChangeDatabaseCommand}"
-												   CommandParameter="{Binding Name}" />
+					<Behaviors:DoubleClickBehavior Command="{StaticResource NavigateToCommand}"
+												   CommandParameter="/home" />
 				</i:Interaction.Behaviors>
 				
 				<Grid Margin="4">
