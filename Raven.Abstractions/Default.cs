@@ -1,3 +1,4 @@
+using System;
 using Newtonsoft.Json;
 using Raven.Abstractions.Json;
 
@@ -13,7 +14,8 @@ namespace Raven.Abstractions
 			new JsonEnumConverter(),
 			new JsonToJsonConverter(),
 			new JsonDateTimeISO8601Converter(),
-			new JsonDateTimeOffsetConverter()
+			new JsonDateTimeOffsetConverter(),
+			new JsonDictionaryDateTimeKeysConverter(typeof(DateTime), typeof(DateTime?), typeof(DateTimeOffset), typeof(DateTimeOffset?))
 		};
 	}
 }

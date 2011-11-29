@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using Raven.Database.Config;
+using System.Linq;
 
 namespace Raven.Database.Server.Security.Windows
 {
@@ -11,14 +12,20 @@ namespace Raven.Database.Server.Security.Windows
 			if (string.Equals(config.AuthenticationMode, "Windows",StringComparison.InvariantCultureIgnoreCase) == false) 
 				return;
 
+			listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
+												 AuthenticationSchemes.Anonymous;
+			
 			switch (config.AnonymousUserAccessMode)
 			{
 				case AnonymousUserAccessMode.None:
-					listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication;
+					listener.AuthenticationSchemeSelectorDelegate = request =>
+					{
+						if (NeverSecret.Urls.Contains(request.Url.AbsolutePath, StringComparer.InvariantCultureIgnoreCase))
+							return AuthenticationSchemes.Anonymous;
+						return AuthenticationSchemes.IntegratedWindowsAuthentication;
+					};
 					break;
 				case AnonymousUserAccessMode.All:
-					listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
-					   AuthenticationSchemes.Anonymous;
 					listener.AuthenticationSchemeSelectorDelegate = request =>
 					{
 						if (request.RawUrl.StartsWith("/admin", StringComparison.InvariantCultureIgnoreCase))
@@ -28,10 +35,11 @@ namespace Raven.Database.Server.Security.Windows
 					};
 					break;
 				case AnonymousUserAccessMode.Get:
-					listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
-						AuthenticationSchemes.Anonymous;
 					listener.AuthenticationSchemeSelectorDelegate = request =>
 					{
+						if (NeverSecret.Urls.Contains(request.Url.AbsolutePath, StringComparer.InvariantCultureIgnoreCase))
+							return AuthenticationSchemes.Anonymous;
+					
 						return AbstractRequestAuthorizer.IsGetRequest(request.HttpMethod, request.Url.AbsolutePath) ?
 							AuthenticationSchemes.Anonymous | AuthenticationSchemes.IntegratedWindowsAuthentication :
 							AuthenticationSchemes.IntegratedWindowsAuthentication;

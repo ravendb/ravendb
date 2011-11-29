@@ -1,33 +1,20 @@
 using System;
 using System.Security.Principal;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Security.OAuth
 {
 	public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
 	{
-		readonly string[] neverSecretUrls = new[]
-			{
-				// allow to actually handle the authentication
-				"/OAuth/AccessToken",
-				// allow to get files that are static and are never secret, for example, the studio, the cross domain
-				// policy and the fav icon
-				"/",
-				"/raven/studio.html",
-				"/silverlight/Raven.Studio.xap",
-				"/favicon.ico",
-				"/clientaccesspolicy.xml",
-				"/build/version",
-			};
-
 		public override bool Authorize(IHttpContext ctx)
 		{
 			var httpRequest = ctx.Request;
 
 			var requestUrl = ctx.GetRequestUrl();
 			
-			if (neverSecretUrls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
+			if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
 				return true;
 
 			var isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
@@ -85,7 +72,7 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 			
 			ctx.User = new OAuthPrincipal(tokenBody);
-
+			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = tokenBody.UserId;
 			return true;
 		}
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Windows.Input;
 using System.Windows.Media;
 using Newtonsoft.Json;
@@ -51,6 +52,62 @@ namespace Raven.Studio.Features.Documents
 						: json;
 
 				return json;
+			}
+		}
+
+		private int margin = 10;
+		public int Margin
+		{
+			get
+			{
+				return margin;
+			}
+			set
+			{
+				margin = Math.Max(2, value);
+				OnPropertyChanged();
+				OnPropertyChanged("Data");
+			}
+		}
+
+	    public string Data
+	    {
+	        get
+	        {
+	        	var sw = new StringWriter();
+				WriteJsonSnapshot(inner.DataAsJson, sw, Margin);
+	        	return sw.ToString();
+	        }
+	    }
+
+		private static void WriteJsonSnapshot(RavenJObject ravenJObject, StringWriter sw, int margin, int intdent = 0)
+		{
+			foreach (var item in ravenJObject)
+			{
+				if (intdent > 0)
+					sw.Write(new string(' ', intdent * 4));
+				sw.Write(item.Key + ": ");
+				switch (item.Value.Type)
+				{
+					case JTokenType.Object:
+						sw.Write('{');
+						sw.Write(Environment.NewLine);
+						WriteJsonSnapshot((RavenJObject)item.Value, sw, margin, intdent + 1);
+						sw.Write('}');
+						break;
+					case JTokenType.Null:
+						sw.Write("null");
+						break;
+					case JTokenType.String:
+						sw.Write('"');
+						sw.Write(item.Value.ToString().ShortViewOfString(margin - 2));
+						sw.Write('"');
+						break;
+					default:
+						sw.Write(item.Value.ToString().ShortViewOfString(margin));
+						break;
+				}
+				sw.Write(Environment.NewLine);
 			}
 		}
 

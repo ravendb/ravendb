@@ -111,6 +111,7 @@ namespace Raven.Studio.Models
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			UpdateMetadata(newdoc.Metadata);
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
+			UpdateRelated();
 			OnEverythingChanged();
 		}
 
@@ -172,7 +173,6 @@ namespace Raven.Studio.Models
 			{
 				jsonData = value;
 				UpdateReferences();
-				UpdateRelated();
 				OnPropertyChanged();
 				OnPropertyChanged("DocumentSize");
 			}
@@ -377,8 +377,16 @@ namespace Raven.Studio.Models
 					if (document.Key != null && document.Key.Contains("/") && 
 						metadata.Value<string>(Constants.RavenEntityName) == null)
 					{
-						metadata[Constants.RavenEntityName] =
-							document.Key.Split(new[] {"/"}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+						var entityName = document.Key.Split(new[] {"/"}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+						if(entityName!=null && entityName.Length > 1)
+						{
+							metadata[Constants.RavenEntityName] = char.ToUpper(entityName[0]) + entityName.Substring(1);
+						}
+						else
+						{
+							metadata[Constants.RavenEntityName] = entityName;
+						}
+
 					}
 				}
 				catch (JsonReaderException ex)

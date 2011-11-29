@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
@@ -8,17 +9,7 @@ namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsRequestAuthorizer : AbstractRequestAuthorizer
 	{
-		readonly string[] neverSecretUrls = new[]
-			{
-				// allow to get files that are static and are never secret, for example, the studio, the cross domain
-				// policy and the fav icon
-				"/",
-				"/raven/studio.html",
-				"/silverlight/Raven.Studio.xap",
-				"/favicon.ico",
-				"/clientaccesspolicy.xml",
-				"/build/version",
-			};
+	
 
 		private readonly List<string> requiredGroups = new List<string>();
 
@@ -37,7 +28,7 @@ namespace Raven.Database.Server.Security.Windows
 			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx))
 			{
 				var requestUrl = ctx.GetRequestUrl();
-				if (neverSecretUrls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
+				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
 					return true;
 
 				ctx.SetStatusToUnauthorized();
@@ -51,7 +42,7 @@ namespace Raven.Database.Server.Security.Windows
 				IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false)
 			{
 				var requestUrl = ctx.GetRequestUrl();
-				if (neverSecretUrls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
+				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
 					return true;
 
 				ctx.SetStatusToUnauthorized();
@@ -59,7 +50,7 @@ namespace Raven.Database.Server.Security.Windows
 			}
 
 			if (IsInvalidUser(ctx) == false)
-				CurrentOperationContext.Headers.Value["Raven-Authenticated-User"] = ctx.User.Identity.Name;
+				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
 			return true;
 		}
 

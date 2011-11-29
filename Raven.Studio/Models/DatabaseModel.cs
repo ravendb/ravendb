@@ -52,7 +52,8 @@ namespace Raven.Studio.Models
 
 		protected override Task TimerTickedAsync()
 		{
-			return asyncDatabaseCommands.GetStatisticsAsync()
+			return asyncDatabaseCommands
+				.GetStatisticsAsync()
 				.ContinueOnSuccess(stats => Statistics.Value = stats);
 		}
 

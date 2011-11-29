@@ -19,7 +19,13 @@ namespace Raven.Tests.Util
 
 		protected override void Shutdown()
 		{
-			_process.Kill();
+			try
+			{
+				_process.Kill();
+			}
+			catch (Exception)
+			{
+			}
 
 			if (!_process.WaitForExit(10000))
 				throw new Exception("IISExpress did not halt within 10 seconds.");

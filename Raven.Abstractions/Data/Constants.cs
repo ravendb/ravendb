@@ -2,6 +2,7 @@ namespace Raven.Abstractions.Data
 {
 	public static class Constants
 	{
+		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
 		public const string DefaultDatabase = "<default>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";

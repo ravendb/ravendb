@@ -15,7 +15,7 @@ namespace Raven.Database.Config
 {
 	public static class CertGenerator
 	{
-		public static X509Certificate2 GenerateNewCertificate(string name)
+		public static void GenerateNewCertificate(string name, Stream stream)
 		{
 			var kpGen = new RsaKeyPairGenerator();
 			kpGen.Init(new KeyGenerationParameters(new SecureRandom(new CryptoApiRandomGenerator()), 1024));
@@ -33,9 +33,9 @@ namespace Raven.Database.Config
 			gen.SetPublicKey(keyPair.Public);
 
 			gen.AddExtension(X509Extensions.AuthorityKeyIdentifier.Id, false,
-			                 new AuthorityKeyIdentifier(
-			                 	SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(keyPair.Public),
-			                 	new GeneralNames(new GeneralName(certificateName)), serialNumber));
+							 new AuthorityKeyIdentifier(
+								SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(keyPair.Public),
+								new GeneralNames(new GeneralName(certificateName)), serialNumber));
 
 			X509Certificate newCert = gen.Generate(keyPair.Private);
 
@@ -49,17 +49,24 @@ namespace Raven.Database.Config
 				);
 
 			newStore.SetKeyEntry(
-				Environment.MachineName,
-				new AsymmetricKeyEntry(keyPair.Private),
-				new[] {certEntry}
-				);
+			Environment.MachineName,
+			new AsymmetricKeyEntry(keyPair.Private),
+			new[] { certEntry }
+			);
 
-			var memoryStream = new MemoryStream();
 			newStore.Save(
-				memoryStream,
+				stream,
 				new char[0],
 				new SecureRandom(new CryptoApiRandomGenerator())
 				);
+
+		}
+		
+		public static X509Certificate2 GenerateNewCertificate(string name)
+		{
+			var memoryStream = new MemoryStream();
+
+			GenerateNewCertificate(name, memoryStream);
 
 			return new X509Certificate2(memoryStream.ToArray());
 		}
