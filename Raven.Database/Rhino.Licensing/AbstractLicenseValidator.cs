@@ -236,7 +236,7 @@ namespace Rhino.Licensing
 			}
 
 			Logger.Warn("Could not validate existing license\r\n{0}", License);
-			throw new LicenseNotFoundException();
+			throw new LicenseNotFoundException("Could not find a valid license.");
 		}
 
 		private bool HasExistingLicense()
@@ -389,7 +389,14 @@ namespace Rhino.Licensing
 			try
 			{
 				var doc = new XmlDocument();
-				doc.LoadXml(License);
+				try
+				{
+					doc.LoadXml(License);
+				}
+				catch (Exception e)
+				{
+					throw new CorruptLicenseFileException("Could not understand the license, it isn't a valid XML file", e);
+				}
 
 				if (TryGetValidDocument(publicKey, doc) == false)
 				{

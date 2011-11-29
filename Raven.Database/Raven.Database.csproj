@@ -131,6 +131,7 @@
     <Compile Include="Rhino.Licensing\LicenseValidator.cs" />
     <Compile Include="Rhino.Licensing\LicensingService.cs" />
     <Compile Include="Rhino.Licensing\RhinoLicensingException.cs" />
+    <Compile Include="Rhino.Licensing\CorruptLicenseFileException.cs" />
     <Compile Include="Rhino.Licensing\SntpClient.cs" />
     <Compile Include="Rhino.Licensing\StringLicenseValidator.cs" />
     <Compile Include="Linq\Ast\DynamicExtensionMethodsTranslator.cs" />
