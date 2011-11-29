@@ -27,7 +27,8 @@
 						   Margin="4 0 0 0" />
 			</StackPanel>
 
-			<StackPanel Orientation="Horizontal" Visibility="{Binding ShowCreateSampleData, Converter={StaticResource VisibleWhenTrue}}">
+			<StackPanel Orientation="Horizontal"
+						Visibility="{Binding Path=RecentDocuments.Value.Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=1}">
 				<TextBlock>
 					<Run Text="There is no any documents in this database yet." />
 					<LineBreak />

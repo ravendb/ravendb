@@ -184,6 +184,7 @@
     <Compile Include="Impl\RelativeBinding\RelativeSourceBinding.cs" />
     <Compile Include="Impl\RelativeBinding\RelativeSourceMode.cs" />
     <Compile Include="Impl\RelativeBinding\TypeLoader.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThenOrEqualTo.cs" />
     <Compile Include="Infrastructure\ErrorHandler.cs" />
     <Compile Include="Infrastructure\ErrorPresenter.cs" />
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
