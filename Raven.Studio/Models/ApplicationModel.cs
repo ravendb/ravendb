@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 
@@ -19,6 +20,13 @@ namespace Raven.Studio.Models
 			Notifications = new BindableCollection<Notification>(x=>x.Message);
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel>();
+		}
+
+		public static Observable<DatabaseModel> Database { get { return Current.Server.Value.SelectedDatabase; } }
+
+		public static IAsyncDatabaseCommands DatabaseCommands
+		{
+			get { return Database.Value.AsyncDatabaseCommands; }
 		}
 
 		private void Initialize()

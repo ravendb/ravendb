@@ -1,10 +1,6 @@
-using System;
-using System.ComponentModel.Composition;
-using System.IO;
 using Raven.Database.Commercial;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
-using Rhino.Licensing;
 
 namespace Raven.Database.Server.Responders
 {
@@ -22,7 +18,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.WriteJson(LicensingStatus.Current);	
+			context.WriteJson(ValidateLicense.CurrentLicense);	
 		}
 	}
 }

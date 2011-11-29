@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Browser;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
@@ -38,6 +35,7 @@ namespace Raven.Studio.Models
 			this.url = url;
 			Databases = new BindableCollection<DatabaseModel>(model => model.Name);
 			SelectedDatabase = new Observable<DatabaseModel>();
+			License = new Observable<LicensingStatus>();
 			Initialize();
 		}
 
@@ -49,11 +47,6 @@ namespace Raven.Studio.Models
 			};
 
 			documentStore.Initialize();
-			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
-			{
-				if (onWebRequest != null)
-					onWebRequest(eventArgs.Request);
-			};
 
 			// We explicitly enable this for the Studio, we rely on SL to actually get us the credentials, and that 
 			// already gives the user a clear warning about the dangers of sending passwords in the clear. I think that 
@@ -61,8 +54,15 @@ namespace Raven.Studio.Models
 			documentStore.JsonRequestFactory.
 				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 				true;
+			
+			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
+			{
+				if (onWebRequest != null)
+					onWebRequest(eventArgs.Request);
+			};
 
-			SetBuildNumber();
+			DisplayBuildNumber();
+			DisplyaLicenseStatus();
 
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
@@ -72,13 +72,15 @@ namespace Raven.Studio.Models
 			var changeDatabaseCommand = new ChangeDatabaseCommand();
 			SelectedDatabase.PropertyChanged += (sender, args) =>
 			{
+				if (SelectedDatabase.Value == null)
+					return;
 				var databaseName = SelectedDatabase.Value.Name;
 				if (changeDatabaseCommand.CanExecute(databaseName))
 					changeDatabaseCommand.Execute(databaseName);
 			};
 		}
 
-		protected override Task TimerTickedAsync()
+		public override Task TimerTickedAsync()
 		{
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync()
 				.ContinueOnSuccess(names =>
@@ -104,7 +106,7 @@ namespace Raven.Studio.Models
 				return "http://localhost:8080";
 			}
 			var localPath = HtmlPage.Document.DocumentUri.LocalPath;
-			var lastIndexOfRaven = localPath.LastIndexOf("/raven/");
+			var lastIndexOfRaven = localPath.LastIndexOf("/raven/", StringComparison.Ordinal);
 			if (lastIndexOfRaven != -1)
 			{
 				localPath = localPath.Substring(0, lastIndexOfRaven);
@@ -136,16 +138,26 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private void SetBuildNumber()
+		private void DisplayBuildNumber()
 		{
 			var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(this, documentStore.Url + "/build/version", "GET", null, documentStore.Conventions);
 			request.ReadResponseStringAsync()
 				.ContinueOnSuccess(result =>
-									{
-										var parsedResult = RavenJObject.Parse(result);
-										var ravenJToken = parsedResult["BuildVersion"];
-										BuildNumber = ravenJToken.Value<string>();
-									});
+				                   	{
+				                   		var parsedResult = RavenJObject.Parse(result);
+				                   		var ravenJToken = parsedResult["BuildVersion"];
+				                   		BuildNumber = ravenJToken.Value<string>();
+									})
+				.Catch();
 		}
+
+		private void DisplyaLicenseStatus()
+		{
+			documentStore.AsyncDatabaseCommands.GetLicenseStatus()
+				.ContinueOnSuccessInTheUIThread(x => License.Value = x)
+				.Catch();
+		}
+
+		public Observable<LicensingStatus> License { get; private set; }
 	}
 }

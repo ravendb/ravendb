@@ -29,6 +29,8 @@ namespace Raven.Studio.Commands
 				.EnsureSilverlightStartUpAsync()
 				.Catch();
 
+			View.UpdateAllFromServer();
+
 			if (shouldRedirect)
 			{
 				UrlUtil.Navigate(urlParser.BuildUrl());

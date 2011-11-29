@@ -57,7 +57,7 @@ namespace Raven.Studio.Models
 			initialSelectedDatabaseName = name;
 		}
 
-		protected override Task TimerTickedAsync()
+		public override Task TimerTickedAsync()
 		{
 			return DatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
 				.ContinueOnSuccess(Update)

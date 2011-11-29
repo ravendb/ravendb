@@ -2,7 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 
-namespace Raven.Studio.Features.Errors
+namespace Raven.Studio.Features.Util
 {
 	public partial class ErrorWindow : ChildWindow
 	{

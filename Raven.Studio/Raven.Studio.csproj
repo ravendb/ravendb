@@ -82,6 +82,12 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\SharedLibs\Newtonsoft.Json\Silverlight\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="System.Reactive">
+      <HintPath>..\packages\Rx-Main.1.0.10621\lib\SL4\System.Reactive.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Windows.Threading">
+      <HintPath>..\packages\Rx-Silverlight.1.0.10621\lib\SL4\System.Reactive.Windows.Threading.dll</HintPath>
+    </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows" />
     <Reference Include="system" />
@@ -124,12 +130,16 @@
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
+    <Compile Include="Commands\ShowLicensingStatusCommand.cs" />
     <Compile Include="Controls\Editors\EditorBase.cs" />
     <Compile Include="Controls\ViewSizeControl.xaml.cs">
       <DependentUpon>ViewSizeControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Databases\LicenseView.xaml.cs">
+      <DependentUpon>LicenseView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Query\FieldAndTerm.cs" />
     <Compile Include="Controls\Editors\QueryEditor.cs" />
@@ -159,6 +169,9 @@
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Util\MessageBoxWindow.xaml.cs">
+      <DependentUpon>MessageBoxWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Impl\PopupPlacement\Popup.cs" />
     <Compile Include="Impl\PopupPlacement\PopupHorizontalAlignment.cs" />
     <Compile Include="Impl\PopupPlacement\PopupOrientation.cs" />
@@ -171,6 +184,7 @@
     <Compile Include="Impl\RelativeBinding\RelativeSourceBinding.cs" />
     <Compile Include="Impl\RelativeBinding\RelativeSourceMode.cs" />
     <Compile Include="Impl\RelativeBinding\TypeLoader.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThenOrEqualTo.cs" />
     <Compile Include="Infrastructure\ErrorHandler.cs" />
     <Compile Include="Infrastructure\ErrorPresenter.cs" />
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
@@ -345,7 +359,7 @@
     <Compile Include="Views\Edit.xaml.cs">
       <DependentUpon>Edit.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Errors\ErrorWindow.xaml.cs">
+    <Compile Include="Features\Util\ErrorWindow.xaml.cs">
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Home.xaml.cs">
@@ -388,6 +402,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Databases\LicenseView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Features\Indexes\IndexesListView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -411,6 +429,10 @@
     <Page Include="Features\Tasks\TasksView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Util\MessageBoxWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Databases.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -512,7 +534,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Errors\ErrorWindow.xaml">
+    <Page Include="Features\Util\ErrorWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -530,6 +552,7 @@
     <EmbeddedResource Include="Controls\Editors\Definitions\JScript.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\RavenQuery.langdef" />
+    <None Include="packages.config" />
     <None Include="Properties\AppManifest.xml" />
     <EmbeddedResource Include="Settings.dat" />
   </ItemGroup>

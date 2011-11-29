@@ -26,7 +26,6 @@ namespace Raven.Studio.Models
 
 			Pager = new PagerModel();
 			Pager.Navigated += (sender, args) => ForceTimerTicked();
-			ForceTimerTicked();
 
 			ShowEditControls = true;
 			DocumentHeight = 66;
@@ -45,7 +44,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		protected override Task TimerTickedAsync()
+		public override Task TimerTickedAsync()
 		{
 			if (SkipAutoRefresh && IsForced == false)
 				return null;
@@ -77,16 +76,16 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-                const double wideAspectRatio = 1.7;
-			    const double narrowAspectRatio = 0.707;
-			    const double aspectRatioSwitchoverHeight = 120;
-			    const double wideRatioMaxWidth = aspectRatioSwitchoverHeight*wideAspectRatio;
-			    const double narrowAspectRatioSwitchoverHeight = wideRatioMaxWidth/narrowAspectRatio;
+				const double wideAspectRatio = 1.7;
+				const double narrowAspectRatio = 0.707;
+				const double aspectRatioSwitchoverHeight = 120;
+				const double wideRatioMaxWidth = aspectRatioSwitchoverHeight*wideAspectRatio;
+				const double narrowAspectRatioSwitchoverHeight = wideRatioMaxWidth/narrowAspectRatio;
 
-                return DocumentHeight < aspectRatioSwitchoverHeight ? DocumentHeight * wideAspectRatio
-                : DocumentHeight < narrowAspectRatioSwitchoverHeight ? wideRatioMaxWidth
-                : DocumentHeight * narrowAspectRatio;
-            }
+				return DocumentHeight < aspectRatioSwitchoverHeight ? DocumentHeight * wideAspectRatio
+				: DocumentHeight < narrowAspectRatioSwitchoverHeight ? wideRatioMaxWidth
+				: DocumentHeight * narrowAspectRatio;
+			}
 		}
 
 	}

@@ -9,14 +9,15 @@
 			 xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats"
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 			 xmlns:System="clr-namespace:System;assembly=mscorlib"
-			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls">
+			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
+			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
-			<RowDefinition Height="40"/>
+			<RowDefinition Height="35"/>
 		</Grid.RowDefinitions>
 		
 	  <Grid x:Name="HeaderGrid" Grid.Row="0" Grid.ColumnSpan="2">
@@ -195,14 +196,35 @@
 		</Grid>
 
 		<RavenControls:NotificationArea Grid.Row="0" Grid.Column="0" Grid.RowSpan="999" Grid.ColumnSpan="999" Notifications="{Binding Notifications}" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
-		
-		<Grid x:Name="FooterGrid" Grid.Row="2">
-			<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_FooterTexture}" BorderThickness="0"/>
-			<Rectangle VerticalAlignment="Top" Height="5" Fill="Black" Opacity="0.4"/>
-			<Stats:DatabaseStatisticsView Margin="15,15,0,0" HorizontalAlignment="Left" />
-			<StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,15,15,0">
-				<TextBlock Text="{Binding Path=Server.Value.BuildNumber, StringFormat='Build #\{0\}'}" />
-			</StackPanel>
+
+		<Grid Grid.Row="2">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="8" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
+
+			<TiledBG:TiledBGControl Grid.RowSpan="3"
+									TiledImageSource="{StaticResource Image_FooterTexture}"
+									BorderThickness="0" />
+			<Rectangle VerticalAlignment="Top"
+					   Height="5"
+					   Fill="Black"
+					   toolkit:DockPanel.Dock="Top"
+					   Opacity="0.4" />
+
+			<toolkit:DockPanel Grid.Row="2"
+							   Margin="15,0,15,0"
+							   LastChildFill="False">
+				<Stats:DatabaseStatisticsView toolkit:DockPanel.Dock="Left" />
+
+				<StackPanel toolkit:DockPanel.Dock="Right"
+							Orientation="Horizontal">
+					<Databases:LicenseView Margin="0,0,15,0"
+										   DataContext="{Binding Path=Server.Value.License}" />
+					<TextBlock Text="{Binding Path=Server.Value.BuildNumber, StringFormat='Build #\{0\}'}" />
+				</StackPanel>
+			</toolkit:DockPanel>
 		</Grid>
 	</Grid>
 

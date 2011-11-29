@@ -8,6 +8,7 @@
 	<Converters:NotNullToVisibilityConverter x:Key="HiddenWhenNotNull" />
 	<Converters:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
 	<Converters:HiddenWhenLessOrEqualToConverter x:Name="HiddenWhenLessOrEqualTo" />
+	<Converters:HiddenWhenGreaterThenOrEqualTo x:Name="HiddenWhenGreaterThen" />
 	<Converters:LastItemInListConverter x:Name="LastItemInList" />
 	<Converters:MagnitudeToListConverter x:Name="MagnitudeToList"/>
 	<Converters:EnumToIntConverter x:Key="enumeratedValue" />
@@ -23,4 +24,5 @@
 	<Commands:NavigateToCommand x:Name="NavigateToCommand" />
 	<Commands:ChangeDatabaseCommand x:Name="ChangeDatabaseCommand" />
 	<Commands:NavigateToDocumentByIdCommand x:Name="NavigateToDocumentByIdCommand" />
+	<Commands:ShowLicensingStatusCommand x:Name="ShowLicensingStatusCommand" />
 </ResourceDictionary>

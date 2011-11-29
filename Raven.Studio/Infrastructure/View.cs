@@ -67,6 +67,7 @@ namespace Raven.Studio.Infrastructure
 					                              	InvokeOnModel(ctx, action);
 					                              };
 					observable.PropertyChanged += observableOnPropertyChanged;
+					return;
 				}
 			}
 			action(model);

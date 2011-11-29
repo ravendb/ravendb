@@ -40,7 +40,7 @@ namespace Raven.Studio.Infrastructure
 				if (DateTime.Now - lastRefresh < GetRefreshRate())
 					return;
 
-				using(ServerModel.OnWebRequest(request => request.Headers["Raven-Timer-Request"] = "true"))
+				using(OnWebRequest(request => request.Headers["Raven-Timer-Request"] = "true"))
 					currentTask = TimerTickedAsync();
 
 				if (currentTask == null)
@@ -64,12 +64,13 @@ namespace Raven.Studio.Infrastructure
 			return RefreshRate;
 		}
 
-		protected virtual Task TimerTickedAsync()
+		public virtual Task TimerTickedAsync()
 		{
 			return null;
 		}
 		
-		[ThreadStatic] protected static Action<WebRequest> onWebRequest;
+		[ThreadStatic] 
+		protected static Action<WebRequest> onWebRequest;
 
 		public static IDisposable OnWebRequest(Action<WebRequest> action)
 		{

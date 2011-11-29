@@ -50,7 +50,8 @@ namespace Raven.Database.Server
 
 		public bool WillRespond(IHttpContext context)
 		{
-			var match = urlMatcher.Match(context.GetRequestUrl());
+			var requestUrl = context.GetRequestUrl();
+			var match = urlMatcher.Match(requestUrl);
 			return match.Success && supportedVerbsCached.Contains(context.Request.HttpMethod);
 		}
 

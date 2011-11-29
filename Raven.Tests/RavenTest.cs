@@ -97,7 +97,7 @@ namespace Raven.Tests
 			documentStore.Configuration.AnonymousUserAccessMode=AnonymousUserAccessMode.All;
 			using (var server = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
 			{
-				server.Start();
+				server.StartListening();
 				Process.Start(documentStore.Configuration.ServerUrl); // start the server
 
 				do

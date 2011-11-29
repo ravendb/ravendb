@@ -142,7 +142,8 @@ namespace Raven.Database.Server
 
 		public void Dispose()
 		{
-			databasesCleanupTimer.Dispose();
+			if (databasesCleanupTimer != null)
+				databasesCleanupTimer.Dispose();
 			if (listener != null && listener.IsListening)
 				listener.Stop();
 			currentConfiguration.Dispose();
@@ -156,7 +157,7 @@ namespace Raven.Database.Server
 
 		#endregion
 
-		public void Start()
+		public void StartListening()
 		{
 			listener = new HttpListener();
 			string virtualDirectory = DefaultConfiguration.VirtualDirectory;
@@ -169,9 +170,14 @@ namespace Raven.Database.Server
 				configureHttpListener.Value.Configure(listener, DefaultConfiguration);
 			}
 
-			databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+			Init();
 			listener.Start();
 			listener.BeginGetContext(GetContext, null);
+		}
+
+		public void Init()
+		{
+			databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 		}
 
 		private void CleanupDatabases(object state)

@@ -139,7 +139,7 @@ namespace Raven.Client.Embedded
 				if (UseEmbeddedHttpServer)
 				{
 					httpServer = new HttpServer(configuration, DocumentDatabase);
-					httpServer.Start();
+					httpServer.StartListening();
 				}
 				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId);
 			}

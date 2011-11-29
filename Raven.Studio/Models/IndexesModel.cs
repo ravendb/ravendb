@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Studio.Infrastructure;
@@ -9,13 +8,16 @@ namespace Raven.Studio.Models
 {
 	public class IndexesModel : ViewModel
 	{
-		public BindableCollection<IndexListItemModel> GroupedIndexes { get; private set; }
+		public static BindableCollection<IndexListItemModel> GroupedIndexes { get; private set; }
 
+		static IndexesModel()
+		{
+			GroupedIndexes = new BindableCollection<IndexListItemModel>(x => x);
+			
+		}
 		public IndexesModel()
 		{
 			ModelUrl = "/indexes";
-			GroupedIndexes = new BindableCollection<IndexListItemModel>(x => x);
-			ForceTimerTicked();
 		}
 
 		protected override Task LoadedTimerTickedAsync()
