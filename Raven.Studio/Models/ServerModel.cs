@@ -38,7 +38,7 @@ namespace Raven.Studio.Models
 			Initialize();
 		}
 
-		public void Initialize()
+		private void Initialize()
 		{
 			documentStore = new DocumentStore
 			{
@@ -53,20 +53,20 @@ namespace Raven.Studio.Models
 			documentStore.JsonRequestFactory.
 				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 				true;
+			
+			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
+			{
+				if (onWebRequest != null)
+					onWebRequest(eventArgs.Request);
+			};
 
-
-			// this is to force a single auth request on the server.
-			documentStore.AsyncDatabaseCommands.GetDocumentsAsync(0, 1)
-				.ContinueOnSuccessInTheUIThread(View.StartDispatching)
-				.ContinueOnSuccess(() =>
-				                   	{
-										AnalizeBuildNumber();	// This must be done here, in order to not generate a new authentication dialog, where the server is restricted also by IIS.
-										AnalizeLicenseStatus();
-				                   	});
+			DisplayBuildNumber();
+			DisplyaLicenseStatus();
 
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
 			SelectedDatabase.Value = defaultDatabase[0];
+			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
 
 			var changeDatabaseCommand = new ChangeDatabaseCommand();
 			SelectedDatabase.PropertyChanged += (sender, args) =>
@@ -103,20 +103,23 @@ namespace Raven.Studio.Models
 				return "http://localhost:8080";
 			}
 			var localPath = HtmlPage.Document.DocumentUri.LocalPath;
-			var lastIndexOfRaven = localPath.LastIndexOf("/raven/");
+			var lastIndexOfRaven = localPath.LastIndexOf("/raven/", StringComparison.Ordinal);
 			if (lastIndexOfRaven != -1)
 			{
 				localPath = localPath.Substring(0, lastIndexOfRaven);
 			}
 			return new UriBuilder(HtmlPage.Document.DocumentUri)
 			{
-				Path = localPath
+				Path = localPath,
+				Fragment = ""
 			}.Uri.ToString();
 		}
 
 		public void SetCurrentDatabase(UrlParser urlParser)
 		{
 			var databaseName = urlParser.GetQueryParam("database");
+			if (databaseName == null)
+				return;
 			if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
 				return;
 			var database = Databases.FirstOrDefault(x => x.Name == databaseName);
@@ -124,9 +127,15 @@ namespace Raven.Studio.Models
 			{
 				SelectedDatabase.Value = database;
 			}
+			else
+			{
+				var databaseModel = new DatabaseModel(databaseName, documentStore.AsyncDatabaseCommands.ForDatabase(databaseName));
+				Databases.Add(databaseModel);
+				SelectedDatabase.Value = databaseModel;
+			}
 		}
 
-		private void AnalizeBuildNumber()
+		private void DisplayBuildNumber()
 		{
 			var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(this, documentStore.Url + "/build/version", "GET", null, documentStore.Conventions);
 			request.ReadResponseStringAsync()
@@ -139,7 +148,7 @@ namespace Raven.Studio.Models
 				.Catch();
 		}
 
-		private void AnalizeLicenseStatus()
+		private void DisplyaLicenseStatus()
 		{
 			documentStore.AsyncDatabaseCommands.GetLicenseStatus()
 				.ContinueOnSuccessInTheUIThread(x => License = x)
