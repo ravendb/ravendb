@@ -26,7 +26,6 @@ namespace Raven.Studio.Models
 
 			Pager = new PagerModel();
 			Pager.Navigated += (sender, args) => ForceTimerTicked();
-			ForceTimerTicked();
 
 			ShowEditControls = true;
 			DocumentHeight = 66;
