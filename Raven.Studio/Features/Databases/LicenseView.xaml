@@ -3,11 +3,11 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
 
-	<StackPanel Orientation="Horizontal">
+	<StackPanel Orientation="Horizontal" DataContext="{Binding Value}">
 		<TextBlock Text="Licensing Status: " />
 		<HyperlinkButton x:Name="StatusText"
 						 Style="{StaticResource HyperlinkButton_AlertLinks_Style}"
-						 Content="{Binding Path=Value.Status}"
+						 Content="{Binding Path=Status}"
 						 Command="{StaticResource ShowLicensingStatusCommand}"
 						 CommandParameter="{Binding}" />
 	</StackPanel>
