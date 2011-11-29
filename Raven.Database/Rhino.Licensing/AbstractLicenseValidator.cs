@@ -182,7 +182,15 @@ namespace Rhino.Licensing
 			nextLeaseTimer = new Timer(LeaseLicenseAgain);
 			this.publicKey = publicKey;
 			discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
-			discoveryHost.Start();
+			try
+			{
+				discoveryHost.Start();
+			}
+			catch (Exception e)
+			{
+				// we explicitly don't want bad things to happen if we can't do that
+				Logger.ErrorException("Could not setup node discovery", e);
+			}
 		}
 
 		private void DiscoveryHostOnClientDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
