@@ -86,7 +86,7 @@ namespace Raven.Database.Commercial
 
 		private void LicenseValidatorOnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
 		{
-			logger.Error("A duplicate license was found at {0} for user {1}. Id: {2}. Both licenses were disabled!", 
+			logger.Error("A duplicate license was found at {0} for user {1}. User Id: {2}. Both licenses were disabled!", 
 				clientDiscoveredEventArgs.MachineName, 
 				clientDiscoveredEventArgs.UserName, 
 				clientDiscoveredEventArgs.UserId);
@@ -96,7 +96,7 @@ namespace Raven.Database.Commercial
 				Status = "AGPL - Open Source",
 				Error = true,
 				Message =
-					string.Format("A duplicate license was found at {0} for user {1}. Id: {2}.", clientDiscoveredEventArgs.MachineName,
+					string.Format("A duplicate license was found at {0} for user {1}. User Id: {2}.", clientDiscoveredEventArgs.MachineName,
 					              clientDiscoveredEventArgs.UserName,
 					              clientDiscoveredEventArgs.UserId)
 			};
