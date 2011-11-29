@@ -30,6 +30,11 @@ namespace Raven.Studio.Models
 			                  	        	Pager = {PageSize = 15}
 			                  	        }
 			                  };
+		}
+
+		public HomeModel()
+		{
+			ModelUrl = "/home";
 			RecentDocuments.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 			ShowCreateSampleData = new Observable<bool>(RecentDocuments.Value.Pager.TotalResults, ShouldShowCreateSampleData);
 		}
@@ -39,11 +44,6 @@ namespace Raven.Studio.Models
 			if (x == null)
 				return false;
 			return (long)x == 0;
-		}
-
-		public HomeModel()
-		{
-			ModelUrl = "/home";
 		}
 
 		private static Task GetFetchDocumentsMethod(DocumentsModel documents)
