@@ -6,8 +6,8 @@
 
 	<StackPanel Orientation="Horizontal"
 				DataContext="{Binding Path=Value.Statistics.Value}">
-		<HyperlinkButton Content="Statistics"
-						 Margin="0,0,8,0"
+		<HyperlinkButton Content="Statistics: "
+						 Margin="0,0,6,0"
 						 Foreground="Black"
 						 Command="{StaticResource NavigateToCommand}"
 						 CommandParameter="/statistics" />
