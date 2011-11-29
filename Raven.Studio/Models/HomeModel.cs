@@ -31,6 +31,7 @@ namespace Raven.Studio.Models
 			                  	        }
 			                  };
 			RecentDocuments.Value.Pager.SetTotalResults(new Observable<long>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
+			ShowCreateSampleData = new Observable<bool>(RecentDocuments.Value.Pager.TotalResults, x => (long)x == 0);
 		}
 
 		public HomeModel()
@@ -48,6 +49,8 @@ namespace Raven.Studio.Models
 		{
 			return RecentDocuments.Value.TimerTickedAsync();
 		}
+
+		public static Observable<bool> ShowCreateSampleData { get; private set; }
 
 		private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData
@@ -86,6 +89,7 @@ namespace Raven.Studio.Models
 				// this code assumes a small enough dataset, and doesn't do any sort
 				// of paging or batching whatsoever.
 
+				HomeModel.ShowCreateSampleData.Value = false;
 				model.IsGeneratingSampleData = true;
 
 				using (var sampleData = typeof(HomeModel).Assembly.GetManifestResourceStream("Raven.Studio.Assets.EmbeddedData.MvcMusicStore_Dump.json"))
