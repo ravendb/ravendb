@@ -18,7 +18,7 @@
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
-			<RowDefinition Height="40"/>
+			<RowDefinition Height="35"/>
 		</Grid.RowDefinitions>
 		
 	  <Grid x:Name="HeaderGrid" Grid.Row="0" Grid.ColumnSpan="2">
@@ -202,7 +202,7 @@
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="8" />
-				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
 
 			<TiledBG:TiledBGControl Grid.RowSpan="3"
