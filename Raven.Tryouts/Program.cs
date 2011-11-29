@@ -31,6 +31,6 @@ namespace etobi.EmbeddedTest
 
 	public class Item3
 	{
-		public int Age { get; set; }
+		public long Age { get; set; }
 	}
 }

@@ -22,15 +22,15 @@ namespace Rhino.Licensing.Discovery
 		{
 			socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
-            NetworkInterface[] adapters = NetworkInterface.GetAllNetworkInterfaces();
-            foreach (NetworkInterface adapter in adapters.Where(card => card.OperationalStatus == OperationalStatus.Up))
-            {
-                IPInterfaceProperties properties = adapter.GetIPProperties();
-                foreach (var ipaddress in properties.UnicastAddresses.Where(x => x.Address.AddressFamily == AddressFamily.InterNetwork))
-                {
-                    socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, (object)new MulticastOption(IPAddress.Parse("224.0.0.1"), ipaddress.Address));
-                }
-            }
+			NetworkInterface[] adapters = NetworkInterface.GetAllNetworkInterfaces();
+			foreach (NetworkInterface adapter in adapters.Where(card => card.OperationalStatus == OperationalStatus.Up))
+			{
+				IPInterfaceProperties properties = adapter.GetIPProperties();
+				foreach (var ipaddress in properties.UnicastAddresses.Where(x => x.Address.AddressFamily == AddressFamily.InterNetwork))
+				{
+					socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, (object)new MulticastOption(IPAddress.Parse("224.0.0.1"), ipaddress.Address));
+				}
+			}
 
 			socket.Bind(new IPEndPoint(IPAddress.Any, 12391));
 			StartListening();
