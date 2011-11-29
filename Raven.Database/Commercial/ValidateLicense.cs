@@ -15,16 +15,21 @@ namespace Raven.Database.Commercial
 {
 	public class ValidateLicense : IStartupTask
 	{
-		public static LicensingStatus CurrentLicense = new LicensingStatus
-		                                        {
-		                                        	Status = "AGPL - Open Source",
-		                                        	Error = false,
-		                                        	Message = "No license file was found.\r\n" +
-		                                        	          "The AGPL license restrictions apply, only Open Source / Development work is permitted."
-		                                        };
+		public static LicensingStatus CurrentLicense { get; set; }
 
 		private LicenseValidator licenseValidator;
 		private readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+		static ValidateLicense()
+		{
+			CurrentLicense = new LicensingStatus
+			{
+				Status = "AGPL - Open Source",
+				Error = false,
+				Message = "No license file was found.\r\n" +
+				          "The AGPL license restrictions apply, only Open Source / Development work is permitted."
+			};
+		}
 
 		public void Execute(DocumentDatabase database)
 		{
