@@ -35,6 +35,7 @@ namespace Raven.Studio.Models
 			this.url = url;
 			Databases = new BindableCollection<DatabaseModel>(model => model.Name);
 			SelectedDatabase = new Observable<DatabaseModel>();
+			License = new Observable<LicensingStatus>();
 			Initialize();
 		}
 
@@ -151,19 +152,10 @@ namespace Raven.Studio.Models
 		private void DisplyaLicenseStatus()
 		{
 			documentStore.AsyncDatabaseCommands.GetLicenseStatus()
-				.ContinueOnSuccessInTheUIThread(x => License = x)
+				.ContinueOnSuccessInTheUIThread(x => License.Value = x)
 				.Catch();
 		}
 
-		private LicensingStatus license;
-		public LicensingStatus License
-		{
-			get { return license; }
-			set
-			{
-				license = value;
-				OnPropertyChanged();
-			}
-		}
+		public Observable<LicensingStatus> License { get; private set; }
 	}
 }

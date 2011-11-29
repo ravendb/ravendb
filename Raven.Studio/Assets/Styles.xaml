@@ -3803,4 +3803,22 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<Style x:Name="HyperlinkButton_AlertLinks_Style"
+		   TargetType="HyperlinkButton" BasedOn="{StaticResource HyperlinkButton_FooterLinks}">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="HyperlinkButton">
+					<Grid Cursor="{TemplateBinding Cursor}"
+						  Background="{TemplateBinding Background}">
+						<TextBlock x:Name="Content"
+								   Text="{TemplateBinding Content}"
+								   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+								   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+								   Margin="{TemplateBinding Padding}" />
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 </ResourceDictionary>
