@@ -6,40 +6,28 @@
 using System;
 using System.IO;
 using NLog;
-using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
-using Raven.Json.Linq;
 using Rhino.Licensing;
-using System.Linq;
-using Raven.Abstractions;
 using Rhino.Licensing.Discovery;
 
 namespace Raven.Database.Commercial
 {
-	public class LicensingStatus
-	{
-		public static LicensingStatus Current = new LicensingStatus
-		{
-			Status = "AGPL - Open Source",
-			Error = false,
-			Message = "No license file was found.\r\n" +
-					  "The AGPL license restrictions apply, only Open Source / Development work is permitted."
-		};
-
-		public string Message { get; set; }
-		public string Status { get; set; }
-		public bool Error { get; set; }
-
-	}
 	public class ValidateLicense : IStartupTask
 	{
-		private DocumentDatabase docDb;
+		public static LicensingStatus CurrentLicense = new LicensingStatus
+		                                        {
+		                                        	Status = "AGPL - Open Source",
+		                                        	Error = false,
+		                                        	Message = "No license file was found.\r\n" +
+		                                        	          "The AGPL license restrictions apply, only Open Source / Development work is permitted."
+		                                        };
+
 		private LicenseValidator licenseValidator;
 		private readonly Logger logger = LogManager.GetCurrentClassLogger();
 
 		public void Execute(DocumentDatabase database)
 		{
-			docDb = database;
 			string publicKey;
 			using(var stream = typeof(ValidateLicense).Assembly.GetManifestResourceStream("Raven.Database.Commercial.RavenDB.public"))
 			{
@@ -57,7 +45,7 @@ namespace Raven.Database.Commercial
 
 			if(File.Exists(fullPath) == false)
 			{
-				LicensingStatus.Current = new LicensingStatus
+				CurrentLicense = new LicensingStatus
 				{
 					Status = "AGPL - Open Source",
 					Error = false,
@@ -71,7 +59,7 @@ namespace Raven.Database.Commercial
 			{
 				licenseValidator.AssertValidLicense();
 
-				LicensingStatus.Current = new LicensingStatus
+				CurrentLicense = new LicensingStatus
 				{
 					Status = "Commercial - " + licenseValidator.LicenseType,
 					Error = false,
@@ -82,7 +70,7 @@ namespace Raven.Database.Commercial
 			{
 				logger.ErrorException("Could not validate license at " + fullPath, e);
 
-				LicensingStatus.Current = new LicensingStatus
+				CurrentLicense = new LicensingStatus
 				{
 					Status = "AGPL - Open Source",
 					Error = true,
@@ -98,7 +86,7 @@ namespace Raven.Database.Commercial
 				clientDiscoveredEventArgs.UserName, 
 				clientDiscoveredEventArgs.UserId);
 
-			LicensingStatus.Current = new LicensingStatus
+			CurrentLicense = new LicensingStatus
 			{
 				Status = "AGPL - Open Source",
 				Error = true,
@@ -112,7 +100,7 @@ namespace Raven.Database.Commercial
 		private void LicenseValidatorOnLicenseInvalidated(InvalidationType invalidationType)
 		{
 			logger.Error("The license have expired and can no longer be used");
-			LicensingStatus.Current = new LicensingStatus
+			CurrentLicense = new LicensingStatus
 			{
 				Status = "AGPL - Open Source",
 				Error = true,

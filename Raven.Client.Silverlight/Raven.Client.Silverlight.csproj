@@ -106,8 +106,8 @@
     <Compile Include="..\Raven.Abstractions\Data\JsonDocumentMetadata.cs">
       <Link>Imports\Data\JsonDocumentMetadata.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\LicenseStatus.cs">
-      <Link>Imports\Data\LicenseStatus.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Data\LicensingStatus.cs">
+      <Link>Imports\Data\LicensingStatus.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\LogItem.cs">
       <Link>Imports\Data\LogItem.cs</Link>

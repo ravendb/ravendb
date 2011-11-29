@@ -155,8 +155,8 @@ namespace Raven.Studio.Models
 				.Catch();
 		}
 
-		private LicenseStatus license;
-		public LicenseStatus License
+		private LicensingStatus license;
+		public LicensingStatus License
 		{
 			get { return license; }
 			set

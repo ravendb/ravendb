@@ -405,7 +405,7 @@ namespace Raven.Client.Connection.Async
 			throw new NotImplementedException();
 		}
 
-		public Task<LicenseStatus> GetLicenseStatus()
+		public Task<LicensingStatus> GetLicenseStatus()
 		{
 			throw new NotImplementedException();
 		}

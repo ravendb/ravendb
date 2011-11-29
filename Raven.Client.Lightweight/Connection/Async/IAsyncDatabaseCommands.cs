@@ -218,7 +218,7 @@ namespace Raven.Client.Connection.Async
 
 		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
 
-		Task<LicenseStatus> GetLicenseStatus();
+		Task<LicensingStatus> GetLicenseStatus();
 	}
 }
 #endif

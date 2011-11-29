@@ -300,7 +300,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				});
 		}
 
-		public Task<LicenseStatus> GetLicenseStatus()
+		public Task<LicensingStatus> GetLicenseStatus()
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/license/status", "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
@@ -310,7 +310,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				{
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 					{
-						return convention.CreateSerializer().Deserialize<LicenseStatus>(reader);
+						return convention.CreateSerializer().Deserialize<LicensingStatus>(reader);
 					}
 				});
 		}
