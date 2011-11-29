@@ -32,7 +32,7 @@ namespace Raven.Studio.Features.Databases
 			{
 				new SolidColorBrush(Colors.Magenta),
 				new SolidColorBrush(Colors.Orange),
-				new SolidColorBrush(Colors.Red),
+				new SolidColorBrush(0xFFEC1B24.ToColor()),
 				new SolidColorBrush(Colors.Yellow),
 				new SolidColorBrush(Colors.Cyan),
 			};
