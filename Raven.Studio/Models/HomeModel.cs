@@ -30,8 +30,15 @@ namespace Raven.Studio.Models
 			                  	        	Pager = {PageSize = 15}
 			                  	        }
 			                  };
-			RecentDocuments.Value.Pager.SetTotalResults(new Observable<long>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
-			ShowCreateSampleData = new Observable<bool>(RecentDocuments.Value.Pager.TotalResults, x => (long)x == 0);
+			RecentDocuments.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
+			ShowCreateSampleData = new Observable<bool>(RecentDocuments.Value.Pager.TotalResults, ShouldShowCreateSampleData);
+		}
+
+		private static bool ShouldShowCreateSampleData(object x)
+		{
+			if (x == null)
+				return false;
+			return (long)x == 0;
 		}
 
 		public HomeModel()

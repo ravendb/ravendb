@@ -14,7 +14,7 @@ namespace Raven.Studio.Models
 
 			Documents = new Observable<DocumentsModel>();
 			Documents.Value = new DocumentsModel(GetFetchDocumentsMethod);
-			Documents.Value.Pager.SetTotalResults(new Observable<long>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
+			Documents.Value.Pager.SetTotalResults(new Observable<long?>(Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 		}
 
 		public Observable<DocumentsModel> Documents { get; private set; }

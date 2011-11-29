@@ -12,10 +12,10 @@ namespace Raven.Studio.Models
 		public PagerModel()
 		{
 			PageSize = 25;
-			SetTotalResults(new Observable<long>());
+			SetTotalResults(new Observable<long?>());
 		}
 
-		public void SetTotalResults(Observable<long> observable)
+		public void SetTotalResults(Observable<long?> observable)
 		{
 			TotalResults = observable;
 			TotalResults.PropertyChanged += (sender, args) =>
@@ -32,10 +32,10 @@ namespace Raven.Studio.Models
 			get { return Skip / PageSize + 1; }
 		}
 
-		public Observable<long> TotalResults { get; private set; }
+		public Observable<long?> TotalResults { get; private set; }
 		public long TotalPages
 		{
-			get { return TotalResults.Value / PageSize + 1; }
+			get { return (TotalResults.Value ?? 0)/ PageSize + 1; }
 		}
 
 		private ushort? skip;
