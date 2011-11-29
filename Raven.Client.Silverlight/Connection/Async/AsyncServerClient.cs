@@ -292,6 +292,21 @@ namespace Raven.Client.Silverlight.Connection.Async
 				});
 		}
 
+		public Task<LicenseStatus> GetLicenseStatus()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/license/status", "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						return convention.CreateSerializer().Deserialize<LicenseStatus>(reader);
+					}
+				});
+		}
+
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>

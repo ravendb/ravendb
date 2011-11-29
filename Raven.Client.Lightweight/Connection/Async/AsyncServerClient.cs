@@ -405,6 +405,11 @@ namespace Raven.Client.Connection.Async
 			throw new NotImplementedException();
 		}
 
+		public Task<LicenseStatus> GetLicenseStatus()
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>

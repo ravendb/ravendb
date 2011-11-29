@@ -76,6 +76,7 @@
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\JsonDocument.cs" />
     <Compile Include="Data\JsonDocumentMetadata.cs" />
+    <Compile Include="Data\LicenseStatus.cs" />
     <Compile Include="Data\LogItem.cs" />
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="Data\PatchCommandType.cs" />

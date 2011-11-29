@@ -217,6 +217,8 @@ namespace Raven.Client.Connection.Async
 		Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
 
 		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
+
+		Task<LicenseStatus> GetLicenseStatus();
 	}
 }
 #endif

@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
@@ -56,9 +57,12 @@ namespace Raven.Studio.Models
 
 			// this is to force a single auth request on the server.
 			documentStore.AsyncDatabaseCommands.GetDocumentsAsync(0, 1)
-				.ContinueOnSuccessInTheUIThread(View.StartDispatching);
-
-			SetBuildNumber();
+				.ContinueOnSuccessInTheUIThread(View.StartDispatching)
+				.ContinueOnSuccess(() =>
+				                   	{
+										AnalizeBuildNumber();	// This must be done here, in order to not generate a new authentication dialog, where the server is restricted also by IIS.
+										AnalizeLicenseStatus();
+				                   	});
 
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
@@ -122,7 +126,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private void SetBuildNumber()
+		private void AnalizeBuildNumber()
 		{
 			var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(this, documentStore.Url + "/build/version", "GET", null, documentStore.Conventions);
 			request.ReadResponseStringAsync()
@@ -132,6 +136,23 @@ namespace Raven.Studio.Models
 				                   		var ravenJToken = parsedResult["BuildVersion"];
 				                   		BuildNumber = ravenJToken.Value<string>();
 				                   	});
+		}
+
+		private void AnalizeLicenseStatus()
+		{
+			documentStore.AsyncDatabaseCommands.GetLicenseStatus()
+				.ContinueOnSuccessInTheUIThread(x => License = x);
+		}
+
+		private LicenseStatus license;
+		public LicenseStatus License
+		{
+			get { return license; }
+			set
+			{
+				license = value;
+				OnPropertyChanged();
+			}
 		}
 	}
 }
