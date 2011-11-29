@@ -132,7 +132,7 @@
     <Compile Include="Features\Documents\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Documents\LicenseView.xaml.cs">
+    <Compile Include="Features\Databases\LicenseView.xaml.cs">
       <DependentUpon>LicenseView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Query\FieldAndTerm.cs" />
@@ -395,7 +395,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Documents\LicenseView.xaml">
+    <Page Include="Features\Databases\LicenseView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

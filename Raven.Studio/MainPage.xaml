@@ -10,7 +10,6 @@
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 			 xmlns:System="clr-namespace:System;assembly=mscorlib"
 			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
-			 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit">
 
 	<Grid x:Name="LayoutRoot"
@@ -221,7 +220,7 @@
 
 				<StackPanel toolkit:DockPanel.Dock="Right"
 							Orientation="Horizontal">
-					<Documents:LicenseView Margin="0,0,15,0"
+					<Databases:LicenseView Margin="0,0,15,0"
 										   DataContext="{Binding Path=Server.Value.License}" />
 					<TextBlock Text="{Binding Path=Server.Value.BuildNumber, StringFormat='Build #\{0\}'}" />
 				</StackPanel>

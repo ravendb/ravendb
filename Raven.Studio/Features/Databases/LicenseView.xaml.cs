@@ -1,6 +1,6 @@
 ﻿using Raven.Studio.Infrastructure;
 
-namespace Raven.Studio.Features.Documents
+namespace Raven.Studio.Features.Databases
 {
 	public partial class LicenseView : View
 	{
