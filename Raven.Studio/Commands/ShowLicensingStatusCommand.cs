@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using Raven.Abstractions.Data;
+using Raven.Studio.Features.Util;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Commands
@@ -14,7 +15,7 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var licensing = (LicensingStatus) parameter;
-			ErrorPresenter.Show("Licensing Status", licensing.Message);
+			new MessageBoxWindow("Licensing Status", licensing.Message).Show();
 		}
 	}
 }

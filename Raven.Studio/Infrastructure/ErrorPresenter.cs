@@ -6,7 +6,7 @@
 
 using System;
 using System.Diagnostics;
-using Raven.Studio.Features.Errors;
+using Raven.Studio.Features.Util;
 
 namespace Raven.Studio.Infrastructure
 {
