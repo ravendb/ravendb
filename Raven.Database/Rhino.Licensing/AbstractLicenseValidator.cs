@@ -208,7 +208,11 @@ namespace Rhino.Licensing
 						return;
 					break;
 			}
-
+			var client = discoveryClient;
+			if (client != null)
+			{
+				client.PublishMyPresence();			
+			}
 			RaiseLicenseInvalidated();
 			var onMultipleLicensesWereDiscovered = MultipleLicensesWereDiscovered;
 			if (onMultipleLicensesWereDiscovered != null)
