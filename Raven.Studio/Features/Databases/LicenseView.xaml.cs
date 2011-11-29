@@ -28,7 +28,7 @@ namespace Raven.Studio.Features.Databases
 		private void StartAlert()
 		{
 			Brush originalBrsush = StatusText.Foreground;
-			Brush alertBrush = new SolidColorBrush(Colors.Red);
+			Brush alertBrush = new SolidColorBrush(0xFFEC1B24.ToColor());
 
 			Observable.Timer(TimeSpan.Zero, TimeSpan.FromSeconds(2))
 				.ObserveOnDispatcher()

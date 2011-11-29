@@ -249,6 +249,7 @@
     <Compile Include="Infrastructure\Converters\SingleLineToAutoMultiLineToStarSizeConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\TargetedDataTemplate.cs" />
+    <Compile Include="Infrastructure\ColorExtensions.cs" />
     <Compile Include="Infrastructure\ModelAttacher.cs" />
     <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />
