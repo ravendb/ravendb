@@ -40,6 +40,7 @@ namespace Raven.Studio.Features.Query
 											ViewTitle = "Results",
 											CustomFetchingOfDocuments = GetFetchDocumentsMethod,
 										  };
+			model.DocumentsResult.Value.ForceTimerTicked();
 		}
 
 		private void ClearRecentQuery()
