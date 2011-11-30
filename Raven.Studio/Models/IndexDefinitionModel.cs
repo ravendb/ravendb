@@ -19,6 +19,7 @@ namespace Raven.Studio.Models
 		private IndexDefinition index;
 		private string originalIndex;
 		private bool createNewIndexMode;
+		private bool isLoaded;
 
 		public IndexDefinitionModel()
 		{
@@ -34,6 +35,7 @@ namespace Raven.Studio.Models
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
 		{
+			isLoaded = true;
 			index = indexDefinition;
 			Maps.Set(index.Maps.Select(x => new MapItem {Text = x}));
 
@@ -145,6 +147,8 @@ namespace Raven.Studio.Models
 			get { return index.Reduce; }
 			set
 			{
+				if (isLoaded == false)
+					return;
 				index.Reduce = value;
 				OnPropertyChanged();
 			}
@@ -155,6 +159,8 @@ namespace Raven.Studio.Models
 			get { return index.TransformResults; }
 			set
 			{
+				if (isLoaded == false)
+					return;
 				index.TransformResults = value;
 				OnPropertyChanged();
 			}
