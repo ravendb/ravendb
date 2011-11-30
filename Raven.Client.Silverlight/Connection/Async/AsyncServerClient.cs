@@ -339,6 +339,21 @@ namespace Raven.Client.Silverlight.Connection.Async
 				});
 		}
 
+		public Task<BuildNumber> GetBuildNumber()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/build/version", "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						return convention.CreateSerializer().Deserialize<BuildNumber>(reader);
+					}
+				});
+		}
+
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>

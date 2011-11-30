@@ -76,6 +76,9 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Abstractions\Data\BuildNumber.cs">
+      <Link>Imports\Data\BuildNumber.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Constants.cs">
       <Link>Imports\Data\Constants.cs</Link>
     </Compile>

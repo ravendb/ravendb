@@ -426,6 +426,11 @@ namespace Raven.Client.Connection.Async
 			throw new NotImplementedException();
 		}
 
+		public Task<BuildNumber> GetBuildNumber()
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>

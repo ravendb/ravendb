@@ -140,14 +140,8 @@ namespace Raven.Studio.Models
 
 		private void DisplayBuildNumber()
 		{
-			var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(this, documentStore.Url + "/build/version", "GET", null, documentStore.Conventions);
-			request.ReadResponseStringAsync()
-				.ContinueOnSuccess(result =>
-				                   	{
-				                   		var parsedResult = RavenJObject.Parse(result);
-				                   		var ravenJToken = parsedResult["BuildVersion"];
-				                   		BuildNumber = ravenJToken.Value<string>();
-									})
+			documentStore.AsyncDatabaseCommands.GetBuildNumber()
+				.ContinueOnSuccessInTheUIThread(x => BuildNumber = x.BuildVersion)
 				.Catch();
 		}
 
