@@ -370,6 +370,16 @@ namespace Raven.Abstractions.Linq
 			return Enumerate().First(predicate);
 		}
 
+		public dynamic Any(Func<dynamic, bool> predicate)
+		{
+			return Enumerate().Any(predicate);
+		}
+
+		public dynamic All(Func<dynamic, bool> predicate)
+		{
+			return Enumerate().All(predicate);
+		}
+
 		public dynamic FirstOrDefault(Func<dynamic, bool> predicate)
 		{
 			return Enumerate().FirstOrDefault(predicate);

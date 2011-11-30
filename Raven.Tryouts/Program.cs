@@ -10,6 +10,8 @@ using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using NLog;
+using Raven.Tests.Bugs;
+using Raven.Tests.Bugs.Indexing;
 
 namespace etobi.EmbeddedTest
 {
@@ -22,11 +24,13 @@ namespace etobi.EmbeddedTest
 				Url = "http://localhost:8080"
 			}.Initialize();
 
-			documentStore.DatabaseCommands.DeleteByIndex("Temp/AllDocs/By_metadata_Raven_Document_Revision_Status",
-				new IndexQuery
-				{
-					Query = "_metadata_Raven_Document_Revision_Status:Historical"
-				});
+			var s = documentStore.OpenSession().Query<Item3>().Where(x=>x.Age > 100).ToString();
+			Console.WriteLine(s);
 		}
+	}
+
+	public class Item3
+	{
+		public long Age { get; set; }
 	}
 }

@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
 namespace Rhino.Licensing.Discovery
@@ -20,8 +22,15 @@ namespace Rhino.Licensing.Discovery
 		{
 			socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
-			socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership,
-								   new MulticastOption(IPAddress.Parse("224.0.0.1"))); // all hosts group
+			NetworkInterface[] adapters = NetworkInterface.GetAllNetworkInterfaces();
+			foreach (NetworkInterface adapter in adapters.Where(card => card.OperationalStatus == OperationalStatus.Up))
+			{
+				IPInterfaceProperties properties = adapter.GetIPProperties();
+				foreach (var ipaddress in properties.UnicastAddresses.Where(x => x.Address.AddressFamily == AddressFamily.InterNetwork))
+				{
+					socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, (object)new MulticastOption(IPAddress.Parse("224.0.0.1"), ipaddress.Address));
+				}
+			}
 
 			socket.Bind(new IPEndPoint(IPAddress.Any, 12391));
 			StartListening();

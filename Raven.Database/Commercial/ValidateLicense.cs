@@ -15,16 +15,21 @@ namespace Raven.Database.Commercial
 {
 	public class ValidateLicense : IStartupTask
 	{
-		public static LicensingStatus CurrentLicense = new LicensingStatus
-		                                        {
-		                                        	Status = "AGPL - Open Source",
-		                                        	Error = false,
-		                                        	Message = "No license file was found.\r\n" +
-		                                        	          "The AGPL license restrictions apply, only Open Source / Development work is permitted."
-		                                        };
+		public static LicensingStatus CurrentLicense { get; set; }
 
 		private LicenseValidator licenseValidator;
 		private readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+		static ValidateLicense()
+		{
+			CurrentLicense = new LicensingStatus
+			{
+				Status = "AGPL - Open Source",
+				Error = false,
+				Message = "No license file was found.\r\n" +
+				          "The AGPL license restrictions apply, only Open Source / Development work is permitted."
+			};
+		}
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -81,7 +86,7 @@ namespace Raven.Database.Commercial
 
 		private void LicenseValidatorOnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
 		{
-			logger.Error("A duplicate license was found at {0} for user {1}. Id: {2}. Both licenses were disabled!", 
+			logger.Error("A duplicate license was found at {0} for user {1}. User Id: {2}. Both licenses were disabled!", 
 				clientDiscoveredEventArgs.MachineName, 
 				clientDiscoveredEventArgs.UserName, 
 				clientDiscoveredEventArgs.UserId);
@@ -91,7 +96,7 @@ namespace Raven.Database.Commercial
 				Status = "AGPL - Open Source",
 				Error = true,
 				Message =
-					string.Format("A duplicate license was found at {0} for user {1}. Id: {2}.", clientDiscoveredEventArgs.MachineName,
+					string.Format("A duplicate license was found at {0} for user {1}. User Id: {2}.", clientDiscoveredEventArgs.MachineName,
 					              clientDiscoveredEventArgs.UserName,
 					              clientDiscoveredEventArgs.UserId)
 			};

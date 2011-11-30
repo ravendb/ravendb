@@ -182,7 +182,15 @@ namespace Rhino.Licensing
 			nextLeaseTimer = new Timer(LeaseLicenseAgain);
 			this.publicKey = publicKey;
 			discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
-			discoveryHost.Start();
+			try
+			{
+				discoveryHost.Start();
+			}
+			catch (Exception e)
+			{
+				// we explicitly don't want bad things to happen if we can't do that
+				Logger.ErrorException("Could not setup node discovery", e);
+			}
 		}
 
 		private void DiscoveryHostOnClientDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
@@ -200,7 +208,11 @@ namespace Rhino.Licensing
 						return;
 					break;
 			}
-
+			var client = discoveryClient;
+			if (client != null)
+			{
+				client.PublishMyPresence();			
+			}
 			RaiseLicenseInvalidated();
 			var onMultipleLicensesWereDiscovered = MultipleLicensesWereDiscovered;
 			if (onMultipleLicensesWereDiscovered != null)
@@ -236,7 +248,7 @@ namespace Rhino.Licensing
 			}
 
 			Logger.Warn("Could not validate existing license\r\n{0}", License);
-			throw new LicenseNotFoundException();
+			throw new LicenseNotFoundException("Could not find a valid license.");
 		}
 
 		private bool HasExistingLicense()
@@ -389,7 +401,14 @@ namespace Rhino.Licensing
 			try
 			{
 				var doc = new XmlDocument();
-				doc.LoadXml(License);
+				try
+				{
+					doc.LoadXml(License);
+				}
+				catch (Exception e)
+				{
+					throw new CorruptLicenseFileException("Could not understand the license, it isn't a valid XML file", e);
+				}
 
 				if (TryGetValidDocument(publicKey, doc) == false)
 				{

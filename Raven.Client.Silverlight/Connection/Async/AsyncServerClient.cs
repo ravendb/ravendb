@@ -174,6 +174,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			key = key.Replace("\\", @"/"); //NOTE: the present of \ causes the SL networking stack to barf, even though the Uri seemingly makes this translation itself
 
 			var request = url.Docs(key)
+				.NoCache()
 				.ToJsonRequest(this, credentials, convention);
 
 			return request
@@ -326,7 +327,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task<LicensingStatus> GetLicenseStatus()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/license/status", "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/license/status").NoCache(), "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseStringAsync()
