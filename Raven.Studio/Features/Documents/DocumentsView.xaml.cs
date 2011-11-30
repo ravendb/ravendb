@@ -23,15 +23,9 @@ namespace Raven.Studio.Features.Documents
 			switch (args.Key)
 			{
 				case Key.Delete:
-					ExecuteCommand(deleteDocuments, sender);
+					Command.ExecuteCommand(deleteDocuments, sender);
 					break;
 			}
-		}
-
-		private void ExecuteCommand(ICommand command, object param = null)
-		{
-			if (command.CanExecute(param))
-				command.Execute(param);
 		}
 
 		private void DocumentsListOnSelectionChanged(object sender, SelectionChangedEventArgs e)

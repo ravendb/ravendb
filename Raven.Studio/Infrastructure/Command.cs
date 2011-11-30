@@ -26,5 +26,11 @@ namespace Raven.Studio.Infrastructure
 		{
 			get { return ApplicationModel.DatabaseCommands; }
 		}
+
+		public static void ExecuteCommand(ICommand command, object param = null)
+		{
+			if (command.CanExecute(param))
+				command.Execute(param);
+		}
 	}
 }
