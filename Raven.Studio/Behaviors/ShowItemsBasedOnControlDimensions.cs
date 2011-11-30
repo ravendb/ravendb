@@ -28,6 +28,9 @@ namespace Raven.Studio.Behaviors
 
 		private void AssociatedObjectOnSizeChanged(object sender, SizeChangedEventArgs sizeChangedEventArgs)
 		{
+			if (Model == null)
+				return;
+			
 			var row = AssociatedObject.ActualWidth/DocumentsModel.DocumentSize.Width;
 			var column = AssociatedObject.ActualHeight/DocumentsModel.DocumentSize.Height;
 			Model.Pager.PageSize = (int) (row*column);
