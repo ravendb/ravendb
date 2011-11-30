@@ -52,8 +52,8 @@ namespace Raven.Studio.Features.Query
 		{
 			var q = new IndexQuery
 			{
-				Start = model.Pager.Skip,
-				PageSize = model.Pager.PageSize,
+				Start = model.DocumentsResult.Value.Pager.Skip,
+				PageSize = model.DocumentsResult.Value.Pager.PageSize,
 				Query = query,
 			};
 

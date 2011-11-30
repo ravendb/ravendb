@@ -229,7 +229,6 @@ namespace Raven.Studio.Models
 			}
 
 			IndexName = urlParser.Path.Trim('/');
-			Pager.SetSkip(urlParser);
 
 			DatabaseCommands.GetIndexAsync(IndexName)
 				.ContinueOnSuccessInTheUIThread(definition =>
@@ -305,8 +304,6 @@ namespace Raven.Studio.Models
 			get { return error; }
 			set { error = value; OnPropertyChanged(); }
 		}
-
-		public readonly PagerModel Pager = new PagerModel();
 
 		public Observable<DocumentsModel> DocumentsResult { get; private set; }
 
