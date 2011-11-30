@@ -66,7 +66,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			this.sessionId = sessionId;
 
 			// required to ensure just a single auth dialog
-			Task task = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs?pageSize=0", "GET", credentials, convention)
+			Task task = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/docs?pageSize=0").NoCache(), "GET", credentials, convention)
 				.ReadResponseStringAsync();
 			jsonRequestFactory.ConfigureRequest += (sender, args) =>
 			{
@@ -312,7 +312,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			if (errorsOnly)
 				requestUri += "?type=error";
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri.NoCache(), "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseStringAsync()
@@ -342,7 +342,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task<BuildNumber> GetBuildNumber()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/build/version", "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/build/version").NoCache(), "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseStringAsync()
@@ -365,7 +365,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			Uri.EscapeDataString(facetSetupDoc),
 			Uri.EscapeDataString(query.Query));
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri.NoCache(), "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseStringAsync()
@@ -396,7 +396,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			if (keys.Length < 128)
 			{
 				path += "&" + string.Join("&", keys.Select(x => "id=" + x).ToArray());
-				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+				request = jsonRequestFactory.CreateHttpJsonRequest(this, path.NoCache(), "GET", credentials, convention);
 				return request.ReadResponseStringAsync()
 					.ContinueWith(task => CompleteMultiGet(task));
 			}
@@ -730,7 +730,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
 				Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri.NoCache(), "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseStringAsync()
