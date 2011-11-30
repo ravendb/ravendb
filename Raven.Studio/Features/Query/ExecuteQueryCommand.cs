@@ -34,16 +34,11 @@ namespace Raven.Studio.Features.Query
 			ClearRecentQuery();
 			model.RememberHistory();
 
-		    var documentHeight = model.DocumentsResult.Value != null
-		                             ? model.DocumentsResult.Value.DocumentHeight
-		                             : DocumentsModel.DefaultDocumentHeight;
-
 			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod)
 			                              {
 			                              	SkipAutoRefresh = true,
                                             ShowEditControls = false,
                                             ViewTitle = "Results",
-                                            DocumentHeight = documentHeight,
 			                              };
 		}
 

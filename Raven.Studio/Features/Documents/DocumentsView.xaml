@@ -121,7 +121,7 @@
 							</Button.Content>
 						</Button>
 
-						<Controls1:ViewSizeControl ViewSize="{Binding DocumentHeight, Mode=TwoWay}" />
+						<Controls1:ViewSizeControl ViewSize="{Binding Path=DocumentSize.Height, Mode=TwoWay}" />
 					</StackPanel>
 				</toolkit:DockPanel>
 

@@ -11,10 +11,10 @@
     <Grid x:Name="LayoutRoot" Width="112" Height="66">
         <kiener:BindingHelper.Binding>
             <kiener:BindingList>
-                <kiener:RelativeSourceBinding Path="DataContext.DocumentWidth" TargetProperty="Width" RelativeMode="FindAncestor" 
+				<kiener:RelativeSourceBinding Path="DataContext.DocumentSize.Width" TargetProperty="Width" RelativeMode="FindAncestor" 
                                                           AncestorType="Raven.Studio.Features.Documents.DocumentsView"
                                                           />
-                <kiener:RelativeSourceBinding Path="DataContext.DocumentHeight" TargetProperty="Height" RelativeMode="FindAncestor" 
+				<kiener:RelativeSourceBinding Path="DataContext.DocumentSize.Height" TargetProperty="Height" RelativeMode="FindAncestor" 
                                                           AncestorType="Raven.Studio.Features.Documents.DocumentsView"/>
             </kiener:BindingList>
         </kiener:BindingHelper.Binding>

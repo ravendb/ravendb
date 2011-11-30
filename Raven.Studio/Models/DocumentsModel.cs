@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Windows;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -15,9 +16,13 @@ namespace Raven.Studio.Models
 		public BindableCollection<ViewableDocument> Documents { get; private set; }
 
 		public bool SkipAutoRefresh { get; set; }
-
 		public bool ShowEditControls { get; set; }
  
+		static DocumentsModel()
+		{
+			DocumentSize = new DocumentSize {Height = DefaultDocumentHeight};
+		}
+
 		public DocumentsModel(Func<DocumentsModel, Task> fetchDocuments)
 		{
 			this.fetchDocuments = fetchDocuments;
@@ -28,7 +33,6 @@ namespace Raven.Studio.Models
 			Pager.Navigated += (sender, args) => ForceTimerTicked();
 
 			ShowEditControls = true;
-			DocumentHeight = 66;
 		}
 
 		private void DetermineDocumentViewStyle()
@@ -40,7 +44,7 @@ namespace Raven.Studio.Models
 
 			if (document.CollectionType == "Projection")
 			{
-				DocumentHeight = Math.Max(DocumentHeight, ExpandedDocumentHeight);
+				DocumentSize.Height = Math.Max(DocumentSize.Height, ExpandedDocumentHeight);
 			}
 		}
 
@@ -60,33 +64,45 @@ namespace Raven.Studio.Models
 			set { viewTitle = value; OnPropertyChanged(); }
 		}
 
-		private double documentHeight;
-		public double DocumentHeight
+		public static DocumentSize DocumentSize { get; private set; }
+	}
+
+	public class DocumentSize : NotifyPropertyChangedBase
+	{
+		private double height;
+		public double Height
 		{
-			get { return documentHeight; }
+			get { return height; }
 			set
 			{
-				documentHeight = value;
+				height = value;
 				OnPropertyChanged();
-				OnPropertyChanged("DocumentWidth");
+				SetWidthBasedOnHeight();
 			}
 		}
 
-		public double DocumentWidth
+		private double width;
+		public double Width
 		{
-			get
+			get { return width; }
+			set
 			{
-				const double wideAspectRatio = 1.7;
-				const double narrowAspectRatio = 0.707;
-				const double aspectRatioSwitchoverHeight = 120;
-				const double wideRatioMaxWidth = aspectRatioSwitchoverHeight*wideAspectRatio;
-				const double narrowAspectRatioSwitchoverHeight = wideRatioMaxWidth/narrowAspectRatio;
-
-				return DocumentHeight < aspectRatioSwitchoverHeight ? DocumentHeight * wideAspectRatio
-				: DocumentHeight < narrowAspectRatioSwitchoverHeight ? wideRatioMaxWidth
-				: DocumentHeight * narrowAspectRatio;
+				width = value;
+				OnPropertyChanged();
 			}
 		}
 
+		private void SetWidthBasedOnHeight()
+		{
+			const double wideAspectRatio = 1.7;
+			const double narrowAspectRatio = 0.707;
+			const double aspectRatioSwitchoverHeight = 120;
+			const double wideRatioMaxWidth = aspectRatioSwitchoverHeight*wideAspectRatio;
+			const double narrowAspectRatioSwitchoverHeight = wideRatioMaxWidth/narrowAspectRatio;
+
+			Width = Height < aspectRatioSwitchoverHeight ? Height*wideAspectRatio
+			        	: Height < narrowAspectRatioSwitchoverHeight ? wideRatioMaxWidth
+			        	  	: Height*narrowAspectRatio;
+		}
 	}
 }
