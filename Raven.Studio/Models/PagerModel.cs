@@ -11,7 +11,6 @@ namespace Raven.Studio.Models
 
 		public PagerModel()
 		{
-			PageSize = 25;
 			SetTotalResults(new Observable<long?>());
 		}
 
@@ -25,7 +24,17 @@ namespace Raven.Studio.Models
 			                                };
 		}
 
-		public int PageSize { get; set; }
+		private bool isStaticPageSize;
+		private int pageSize;
+		public int PageSize
+		{
+			get { return pageSize; }
+			set
+			{
+				pageSize = value;
+				isStaticPageSize = true;
+			}
+		}
 
 		public int CurrentPage
 		{
@@ -104,6 +113,14 @@ namespace Raven.Studio.Models
 		public ICommand PrevPage
 		{
 			get { return new NavigateToPrevPageCommand(this); }
+		}
+
+		public void SetDynamicPageSize()
+		{
+			if (isStaticPageSize)
+				return;
+
+
 		}
 	}
 }
