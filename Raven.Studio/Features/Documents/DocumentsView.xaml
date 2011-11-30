@@ -129,6 +129,10 @@
 										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 					</Controls:ContextMenu>
 				</Controls:ContextMenuService.ContextMenu>
+				
+				<i:Interaction.Behaviors>
+					<Behaviors:ShowItemsBasedOnControlDimensions Model="{Binding}" />
+				</i:Interaction.Behaviors>
 			</ListBox>
 		</toolkit:HeaderedContentControl>
 
