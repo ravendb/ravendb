@@ -8,6 +8,7 @@ namespace Raven.Studio.Views
 	{
 		private readonly ICommand saveCommand;
 		private readonly ICommand refreshCommand;
+		private bool isCtrlHold;
 
 		public Edit()
 		{
@@ -18,6 +19,17 @@ namespace Raven.Studio.Views
 			refreshCommand = model.Refresh;
 
 			KeyDown +=OnKeyDown;
+			KeyUp += OnKeyUp;
+		}
+
+		private void OnKeyUp(object sender, KeyEventArgs args)
+		{
+			switch (args.Key)
+			{
+				case Key.Ctrl:
+					isCtrlHold = false;
+					break;
+			}
 		}
 
 		private void OnKeyDown(object sender, KeyEventArgs args)
@@ -25,12 +37,15 @@ namespace Raven.Studio.Views
 			switch (args.Key)
 			{
 				case Key.S:
-					if (args.Key == Key.Ctrl)
+					if (isCtrlHold)
 						Command.ExecuteCommand(saveCommand);
 					break;
 				case Key.R:
-					if (args.Key == Key.Ctrl)
+					if (isCtrlHold)
 						Command.ExecuteCommand(refreshCommand);
+					break;
+				case Key.Ctrl:
+					isCtrlHold = true;
 					break;
 			}
 		}
