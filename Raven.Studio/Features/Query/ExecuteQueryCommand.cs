@@ -52,7 +52,7 @@ namespace Raven.Studio.Features.Query
 		{
 			var q = new IndexQuery
 			{
-				Start = (model.Pager.CurrentPage - 1) * model.Pager.PageSize,
+				Start = model.Pager.Skip,
 				PageSize = model.Pager.PageSize,
 				Query = query,
 			};
