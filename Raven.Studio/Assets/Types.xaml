@@ -25,4 +25,5 @@
 	<Commands:ChangeDatabaseCommand x:Name="ChangeDatabaseCommand" />
 	<Commands:NavigateToDocumentByIdCommand x:Name="NavigateToDocumentByIdCommand" />
 	<Commands:ShowLicensingStatusCommand x:Name="ShowLicensingStatusCommand" />
+	<Commands:CreateDatabaseCommand x:Name="CreateDatabaseCommand" />
 </ResourceDictionary>

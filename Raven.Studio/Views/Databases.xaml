@@ -60,7 +60,7 @@
 							   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center"/>
 					</StackPanel>
 					<StackPanel Orientation="Horizontal" toolkit:DockPanel.Dock="Right" VerticalAlignment="Center">
-						<HyperlinkButton Command="{Binding Path=CreateNewDatabase}" 
+						<HyperlinkButton Command="{StaticResource CreateDatabaseCommand}" 
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
 										 VerticalAlignment="Center">
 						  <HyperlinkButton.Content>

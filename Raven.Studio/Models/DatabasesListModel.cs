@@ -32,13 +32,5 @@ namespace Raven.Studio.Models
 					changeDatabase.Execute(selectedDatabase);
 			}
 		}
-
-		public ICommand CreateNewDatabase
-		{
-			get
-			{
-				return new CreateDatabaseCommand();
-			}
-		}
 	}
 }

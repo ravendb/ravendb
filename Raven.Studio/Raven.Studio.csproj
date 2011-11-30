@@ -160,7 +160,7 @@
     <Compile Include="Features\Collections\CollectionView.xaml.cs">
       <DependentUpon>CollectionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Databases\CreateDatabaseCommand.cs" />
+    <Compile Include="Commands\CreateDatabaseCommand.cs" />
     <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>

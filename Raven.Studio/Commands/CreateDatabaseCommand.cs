@@ -7,7 +7,7 @@ using Raven.Studio.Messages;
 using Raven.Studio.Models;
 using System.Linq;
 
-namespace Raven.Studio.Features.Databases
+namespace Raven.Studio.Commands
 {
 	public class CreateDatabaseCommand : Command
 	{
