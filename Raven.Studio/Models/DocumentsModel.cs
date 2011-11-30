@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using System.Windows;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using System.Linq;
