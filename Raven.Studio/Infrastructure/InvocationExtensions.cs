@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using Raven.Client.Extensions;
 using System.Threading.Tasks;
@@ -136,26 +137,23 @@ namespace Raven.Studio.Infrastructure
 			return parent;
 		}
 
-		public static Task CatchIgnore<TException>(this Task parent) where TException : Exception
-		{
-			return parent.CatchIgnore<TException>(() => {});
-		}
-
 		public static Task CatchIgnore<TException>(this Task parent, Action action) where TException : Exception
 		{
-			parent.ContinueWith(task =>
-			{
-				if (task.IsFaulted == false)
-					return;
+			return parent.ContinueWith(task =>
+			                           	{
+			                           		if (task.IsFaulted == false)
+			                           			return task;
 
-				if (task.Exception.ExtractSingleInnerException() is TException == false)
-					return;
+			                           		if (task.Exception.ExtractSingleInnerException() is TException == false)
+			                           			return task;
 
-				task.Exception.Handle(exception => true);
-				action();
-			});
+			                           		action();
 
-			return parent;
+			                           		var asyncTaskMethodBuilder = AsyncTaskMethodBuilder.Create();
+			                           		asyncTaskMethodBuilder.SetResult();
+			                           		return asyncTaskMethodBuilder.Task;
+			                           	})
+				.Unwrap();
 		}
 
 		public static Task ProcessTasks(this IEnumerable<Task> tasks)
