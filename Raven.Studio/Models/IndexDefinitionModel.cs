@@ -216,12 +216,12 @@ namespace Raven.Studio.Models
 
 		public ICommand SaveIndex
 		{
-			get { return new SaveIndexCommand(this, DatabaseCommands); }
+			get { return new SaveIndexCommand(this); }
 		}
 
 		public ICommand DeleteIndex
 		{
-			get { return new DeleteIndexCommand(this, DatabaseCommands); }
+			get { return new DeleteIndexCommand(this); }
 		}
 
 		public ICommand ResetIndex
@@ -273,19 +273,17 @@ namespace Raven.Studio.Models
 		private class SaveIndexCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
-			private readonly IAsyncDatabaseCommands databaseCommands;
 
-			public SaveIndexCommand(IndexDefinitionModel index, IAsyncDatabaseCommands databaseCommands)
+			public SaveIndexCommand(IndexDefinitionModel index)
 			{
 				this.index = index;
-				this.databaseCommands = databaseCommands;
 			}
 
 			public override void Execute(object parameter)
 			{
 				index.UpdateIndex();
 				ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
-				databaseCommands.PutIndexAsync(index.Name, index.index, true)
+				DatabaseCommands.PutIndexAsync(index.Name, index.index, true)
 					.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("index " + index.Name + " saved")))
 					.Catch();
 			}
@@ -311,12 +309,10 @@ namespace Raven.Studio.Models
 		private class DeleteIndexCommand : Command
 		{
 			private readonly IndexDefinitionModel index;
-			private readonly IAsyncDatabaseCommands databaseCommands;
 
-			public DeleteIndexCommand(IndexDefinitionModel index,IAsyncDatabaseCommands databaseCommands)
+			public DeleteIndexCommand(IndexDefinitionModel index)
 			{
 				this.index = index;
-				this.databaseCommands = databaseCommands;
 			}
 
 			public override bool CanExecute(object parameter)
@@ -332,7 +328,7 @@ namespace Raven.Studio.Models
 
 			private void DeleteIndex()
 			{
-				databaseCommands
+				DatabaseCommands
 					.DeleteIndexAsync(index.Name)
 					.ContinueOnSuccessInTheUIThread(() =>
 					                                	{

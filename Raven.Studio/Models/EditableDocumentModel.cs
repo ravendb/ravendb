@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
+using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -298,12 +299,12 @@ namespace Raven.Studio.Models
 
 		public ICommand Save
 		{
-			get { return new SaveDocumentCommand(this, DatabaseCommands); }
+			get { return new SaveDocumentCommand(this); }
 		}
 
 		public ICommand Delete
 		{
-			get { return new DeleteDocumentCommand(Key, DatabaseCommands, navigateToHome: true); }
+			get { return new DeleteDocumentCommand(Key, navigateToHome: true); }
 		}
 
 		public ICommand Prettify
@@ -345,12 +346,10 @@ namespace Raven.Studio.Models
 		private class SaveDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel document;
-			private readonly IAsyncDatabaseCommands databaseCommands;
 
-			public SaveDocumentCommand(EditableDocumentModel document, IAsyncDatabaseCommands asyncDatabaseCommands)
+			public SaveDocumentCommand(EditableDocumentModel document)
 			{
 				this.document = document;
-				this.databaseCommands = asyncDatabaseCommands;
 			}
 
 			public override void Execute(object parameter)
@@ -397,7 +396,7 @@ namespace Raven.Studio.Models
 				
 				document.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
-				databaseCommands.PutAsync(document.Key, document.Etag,
+				DatabaseCommands.PutAsync(document.Key, document.Etag,
 										  doc,
 										  metadata)
 					.ContinueOnSuccess(result =>

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -12,13 +11,6 @@ namespace Raven.Studio.Features.Databases
 {
 	public class CreateDatabaseCommand : Command
 	{
-		private readonly IAsyncDatabaseCommands databaseCommands;
-
-		public CreateDatabaseCommand(IAsyncDatabaseCommands databaseCommands)
-		{
-			this.databaseCommands = databaseCommands;
-		}
-
 		public override void Execute(object parameter)
 		{
 			AskUser.QuestionAsync("Create New Database", "Database name?")
@@ -35,11 +27,11 @@ namespace Raven.Studio.Features.Databases
 						throw new ArgumentException("Cannot create a database with invalid path characters: " + databaseName);
 
 					ApplicationModel.Current.AddNotification(new Notification("Creating database: " + databaseName));
-					databaseCommands.EnsureDatabaseExistsAsync(databaseName)
-						.ContinueOnSuccess(() => databaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
+					DatabaseCommands.EnsureDatabaseExistsAsync(databaseName)
+						.ContinueOnSuccess(() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
 						.ContinueOnSuccessInTheUIThread(() =>
 											{
-												ApplicationModel.Current.Server.Value.Databases.Add(new DatabaseModel(databaseName, databaseCommands.ForDatabase(databaseName)));
+												ApplicationModel.Current.Server.Value.Databases.Add(new DatabaseModel(databaseName, DatabaseCommands.ForDatabase(databaseName)));
 												ApplicationModel.Current.AddNotification(new Notification("Database " + databaseName + " created"));
 											})
 						.Catch();

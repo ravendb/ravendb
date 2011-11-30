@@ -295,7 +295,7 @@ namespace Raven.Studio.Models
 
 		public Observable<ICompletionProvider> CompletionProvider { get; private set; }
 
-		public ICommand Execute { get { return new ExecuteQueryCommand(this, DatabaseCommands); } }
+		public ICommand Execute { get { return new ExecuteQueryCommand(this); } }
 
 		public Observable<string> Query { get; set; }
 

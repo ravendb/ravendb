@@ -37,7 +37,7 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-				return new CreateDatabaseCommand(DatabaseCommands);
+				return new CreateDatabaseCommand();
 			}
 		}
 	}

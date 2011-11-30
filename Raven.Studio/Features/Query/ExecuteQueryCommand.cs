@@ -21,13 +21,11 @@ namespace Raven.Studio.Features.Query
 	public class ExecuteQueryCommand : Command
 	{
 		private readonly QueryModel model;
-		private readonly IAsyncDatabaseCommands databaseCommands;
 		private string query;
 
-		public ExecuteQueryCommand(QueryModel model, IAsyncDatabaseCommands databaseCommands)
+		public ExecuteQueryCommand(QueryModel model)
 		{
 			this.model = model;
-			this.databaseCommands = databaseCommands;
 		}
 
 		public override void Execute(object _)
@@ -91,7 +89,7 @@ namespace Raven.Studio.Features.Query
 				    };
 			}
 
-			return databaseCommands.QueryAsync(model.IndexName, q, null)
+			return DatabaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueOnSuccessInTheUIThread(qr =>
 				{
 					var viewableDocuments = qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray();
@@ -108,7 +106,7 @@ namespace Raven.Studio.Features.Query
 		{
 			foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
 			{
-				databaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery {Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10})
+				DatabaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery {Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10})
 					.ContinueOnSuccessInTheUIThread(result => model.Suggestions.AddRange(
 						result.Suggestions.Select(term => new FieldAndTerm(fieldAndTerm.Field, fieldAndTerm.Term){SuggestedTerm = term})));
 			}
