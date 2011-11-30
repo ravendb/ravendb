@@ -130,7 +130,6 @@
 			<ListBox x:Name="DocumentsList"
 					 ItemsSource="{Binding Documents}"
 					 Style="{StaticResource DocumentList}"
-					 SelectionChanged="DocumentsList_SelectionChanged"
 					 Grid.Row="1"
 					 Grid.ColumnSpan="3"
 					 Margin="10"
@@ -146,14 +145,6 @@
 										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 					</Controls:ContextMenu>
 				</Controls:ContextMenuService.ContextMenu>
-
-				<i:Interaction.Triggers>
-					<ei:KeyTrigger Key="Delete">
-						<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
-											   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-					</ei:KeyTrigger>
-				</i:Interaction.Triggers>
-
 			</ListBox>
 		</toolkit:HeaderedContentControl>
 
