@@ -547,7 +547,9 @@ namespace Raven.Database.Server
 			using (DefaultResourceStore.DisableAllTriggersForCurrentThread())
 				jsonDocument = DefaultResourceStore.Get("Raven/Databases/" + tenantId, null);
 
-			if (jsonDocument == null)
+			if (jsonDocument == null || 
+				jsonDocument.Metadata == null || 
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists))
 				return false;
 
 			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
