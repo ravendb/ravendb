@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
@@ -35,12 +34,12 @@ namespace Raven.Studio.Features.Query
 			model.RememberHistory();
 
 			model.DocumentsResult.Value = new DocumentsModel
-			                              {
-			                              	SkipAutoRefresh = true,
-			                              	ShowEditControls = false,
-			                              	ViewTitle = "Results",
-			                              	CustomFetchingOfDocuments = GetFetchDocumentsMethod,
-			                              };
+										  {
+											SkipAutoRefresh = true,
+											ShowEditControls = false,
+											ViewTitle = "Results",
+											CustomFetchingOfDocuments = GetFetchDocumentsMethod,
+										  };
 		}
 
 		private void ClearRecentQuery()
@@ -78,11 +77,11 @@ namespace Raven.Studio.Features.Query
 			if (model.IsSpatialQuerySupported)
 			{
 				q = new SpatialIndexQuery(q)
-				    {
-				    	Latitude = model.Latitude.HasValue ? model.Latitude.Value : 0,
+					{
+						Latitude = model.Latitude.HasValue ? model.Latitude.Value : 0,
 						Longitude = model.Longitude.HasValue ? model.Longitude.Value : 0,
 						Radius = model.Radius.HasValue ? model.Radius.Value : 0,
-				    };
+					};
 			}
 
 			return DatabaseCommands.QueryAsync(model.IndexName, q, null)

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,7 +10,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
-using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
