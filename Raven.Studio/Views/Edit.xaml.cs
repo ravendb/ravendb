@@ -13,7 +13,7 @@ namespace Raven.Studio.Views
 		{
 			InitializeComponent();
 
-			var model = (EditableDocumentModel)DataContext;
+			var model = ((Observable<EditableDocumentModel>)DataContext).Value;
 			saveCommand = model.Save;
 			refreshCommand = model.Refresh;
 
