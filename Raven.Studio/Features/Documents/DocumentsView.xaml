@@ -10,7 +10,6 @@
 					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 					 xmlns:Models="clr-namespace:Raven.Studio.Models"
-					 xmlns:kiener="clr-namespace:Kieners.Silverlight"
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
 					 mc:Ignorable="d"
@@ -20,21 +19,6 @@
 		<Grid.Resources>
 			<DataTemplate x:Key="DataTemplate_Document_CardView">
 				<Documents:DocumentView />
-			</DataTemplate>
-
-			<DataTemplate x:Key="DataTemplate_Document_DetailsView">
-				<Grid Width="200"
-					  Height="200"
-					  Margin="2">
-
-					<Grid Margin="0,0,0,0">
-						<TextBox Text="{Binding Data}"
-								 VerticalScrollBarVisibility="Auto"
-								 HorizontalScrollBarVisibility="Auto"
-								 Style="{StaticResource Style_TextBox_DocumentView}" />
-					</Grid>
-
-				</Grid>
 			</DataTemplate>
 		</Grid.Resources>
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
