@@ -24,10 +24,10 @@ namespace Raven.Studio.Models
 		{
 			RecentDocuments = new Observable<DocumentsModel>
 			                  {
-			                  	Value = new DocumentsModel(GetFetchDocumentsMethod)
+			                  	Value = new DocumentsModel
 			                  	        {
 			                  	        	ViewTitle = "Recent Documents",
-			                  	        	Pager = {PageSize = 15}
+			                  	        	Pager = {PageSize = 15},
 			                  	        }
 			                  };
 		}
@@ -44,12 +44,6 @@ namespace Raven.Studio.Models
 			if (x == null)
 				return false;
 			return (long)x == 0;
-		}
-
-		private static Task GetFetchDocumentsMethod(DocumentsModel documents)
-		{
-			return ApplicationModel.DatabaseCommands.GetDocumentsAsync(documents.Pager.Skip, documents.Pager.PageSize)
-				.ContinueOnSuccess(docs => documents.Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
 		}
 
 		public override Task TimerTickedAsync()

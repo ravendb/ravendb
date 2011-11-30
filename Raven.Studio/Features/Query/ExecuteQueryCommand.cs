@@ -34,11 +34,12 @@ namespace Raven.Studio.Features.Query
 			ClearRecentQuery();
 			model.RememberHistory();
 
-			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod)
+			model.DocumentsResult.Value = new DocumentsModel
 			                              {
 			                              	SkipAutoRefresh = true,
-                                            ShowEditControls = false,
-                                            ViewTitle = "Results",
+			                              	ShowEditControls = false,
+			                              	ViewTitle = "Results",
+			                              	CustomFetchingOfDocuments = GetFetchDocumentsMethod,
 			                              };
 		}
 

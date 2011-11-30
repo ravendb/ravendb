@@ -11,20 +11,20 @@ namespace Raven.Studio.Models
 		public const double DefaultDocumentHeight = 66;
 		public const double ExpandedDocumentHeight = 130;
 
-		private readonly Func<DocumentsModel, Task> fetchDocuments;
 		public BindableCollection<ViewableDocument> Documents { get; private set; }
 
 		public bool SkipAutoRefresh { get; set; }
 		public bool ShowEditControls { get; set; }
- 
+
+		public Func<DocumentsModel, Task> CustomFetchingOfDocuments { get; set; }
+
 		static DocumentsModel()
 		{
 			DocumentSize = new DocumentSize {Height = DefaultDocumentHeight};
 		}
 
-		public DocumentsModel(Func<DocumentsModel, Task> fetchDocuments)
+		public DocumentsModel()
 		{
-			this.fetchDocuments = fetchDocuments;
 			Documents = new BindableCollection<ViewableDocument>(document => document.Id ?? document.DisplayId, new KeysComparer<ViewableDocument>(document => document.LastModified));
 			Documents.CollectionChanged += (sender, args) => DetermineDocumentViewStyle();
 
@@ -51,7 +51,12 @@ namespace Raven.Studio.Models
 		{
 			if (SkipAutoRefresh && IsForced == false)
 				return null;
-			return fetchDocuments(this);
+
+			if (CustomFetchingOfDocuments != null)
+				return CustomFetchingOfDocuments(this);
+
+			return ApplicationModel.DatabaseCommands.GetDocumentsAsync(Pager.Skip, Pager.PageSize)
+				.ContinueOnSuccess(docs => Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
 		}
 
 		public PagerModel Pager { get; private set; }

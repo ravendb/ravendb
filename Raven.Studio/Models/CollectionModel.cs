@@ -36,7 +36,7 @@ namespace Raven.Studio.Models
 
 		public CollectionModel()
 		{
-			Documents = new Observable<DocumentsModel> {Value = new DocumentsModel(GetFetchDocumentsMethod)};
+			Documents = new Observable<DocumentsModel> {Value = new DocumentsModel {CustomFetchingOfDocuments = GetFetchDocumentsMethod}};
 		}
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
