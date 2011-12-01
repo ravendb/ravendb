@@ -1,6 +1,11 @@
-﻿namespace Raven.Bundles.MoreLikeThis
+﻿using System;
+#if CLIENT
+namespace Raven.Client.MoreLikeThis
+#else
+namespace Raven.Bundles.MoreLikeThis
+#endif
 {
-    class MoreLikeThisQueryParameters
+    public class MoreLikeThisQueryParameters
     {
         public const int DefaultMaximumNumberOfTokensParsed = 5000;
         public const int DefaultMinimumTermFrequency = 2;
@@ -45,6 +50,19 @@
         /// </summary>
         public int? MaximumNumberOfTokensParsed { get; set; }
 
+		/// <summary>
+		/// The document id containing the custom stop words
+		/// </summary>
         public string StopWordsDocumentId { get; set; }
+
+		/// <summary>
+		/// The fields to compare
+		/// </summary>
+    	public string[] Fields { get; set; }
+
+		/// <summary>
+		/// The document id to use as the base for comparison
+		/// </summary>
+    	public string DocumentId { get; set; }
     }
 }
