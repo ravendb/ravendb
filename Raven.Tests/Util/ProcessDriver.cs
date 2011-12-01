@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -82,6 +83,7 @@ namespace Raven.Tests.Util
 		{
 			DateTime t = SystemTime.Now;
 
+			var sb = new StringBuilder();
 			Match match;
 			while(true)
 			{
@@ -91,12 +93,12 @@ namespace Raven.Tests.Util
 				if (nextLine == null)
 				{
 					if ((SystemTime.Now - t).TotalMilliseconds > msMaxWait)
-						throw new TimeoutException("Timeout waiting for regular expression " + pattern);
+						throw new TimeoutException("Timeout waiting for regular expression " + pattern + Environment.NewLine + sb);
 					
 					continue;
 				}
 
-				Console.WriteLine(_name + " console: " + nextLine);
+				sb.AppendLine(nextLine);
 
 				match = Regex.Match(nextLine, pattern);
 

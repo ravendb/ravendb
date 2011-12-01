@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace Raven.Tests.Util
 {
@@ -9,6 +10,12 @@ namespace Raven.Tests.Util
 		public void Start(string physicalPath, int port)
 		{
 			var sitePhysicalDirectory = physicalPath;
+
+			foreach (var process in Process.GetProcessesByName("iisexpress.exd"))
+			{
+				process.Kill();
+			}
+
 			StartProcess(@"c:\program files (x86)\IIS Express\IISExpress.exe",
 				@"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
 
