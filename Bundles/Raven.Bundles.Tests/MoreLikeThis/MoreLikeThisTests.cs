@@ -19,6 +19,7 @@ using Raven.Client.MoreLikeThis;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
+using MoreLikeThisQueryParameters = Raven.Client.MoreLikeThis.MoreLikeThisQueryParameters;
 
 namespace Raven.Bundles.Tests.MoreLikeThis
 {
@@ -128,7 +129,11 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
             using (var session = documentStore.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body");
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
+				{
+					DocumentId = key,
+					Fields = new[] { "Body" }
+				});
 
                 Assert.NotEmpty(list);
             }
@@ -165,7 +170,11 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
             using (var session = documentStore.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body");
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
+                {
+					DocumentId = key,
+					Fields = new[] { "Body" }
+                });
 
                 Assert.Empty(list);
             }
@@ -193,7 +202,11 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
             using (var session = documentStore.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body");
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
+				{
+					DocumentId = key,
+					Fields = new[] { "Body" }
+				});
 
                 Assert.NotEmpty(list);
             }
@@ -306,7 +319,12 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
             using (var session = documentStore.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body", new MoreLikeThisQueryParameters { MinimumDocumentFrequency = 2 });
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
+                {
+					DocumentId = key,
+					Fields = new[]{"Body"},
+                	MinimumDocumentFrequency = 2
+                });
 
                 Assert.NotEmpty(list);
             }
@@ -338,9 +356,11 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
             using (var session = documentStore.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, "Body", 
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
                     new MoreLikeThisQueryParameters
                         {
+							DocumentId = key,
+							Fields = new[]{"Body"},
                             MinimumWordLength = 3,
                             MinimumDocumentFrequency = 1,
                             Boost = true
@@ -384,8 +404,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
             using (var session = documentStore.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key, new MoreLikeThisQueryParameters
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
                                                                                         {
+																							DocumentId = key,
                                                                                             StopWordsDocumentId = "Config/Stopwords",
                                                                                             MinimumDocumentFrequency = 1
                                                                                         });
