@@ -173,7 +173,7 @@ namespace Raven.Database.Indexing
 			}
 			else if (value is DateTimeOffset)
 			{
-				yield return CreateFieldWithCaching(name, DateTools.DateToString(((DateTimeOffset)value).DateTime, DateTools.Resolution.MILLISECOND),
+				yield return CreateFieldWithCaching(name, DateTools.DateToString(((DateTimeOffset)value).UtcDateTime, DateTools.Resolution.MILLISECOND),
 					indexDefinition.GetStorage(name, defaultStorage),
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
