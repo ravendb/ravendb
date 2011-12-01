@@ -23,11 +23,11 @@ using MoreLikeThisQueryParameters = Raven.Client.MoreLikeThis.MoreLikeThisQueryP
 
 namespace Raven.Bundles.Tests.MoreLikeThis
 {
-    public class MoreLikeThisTests : IDisposable
-    {
-        #region Test Setup
+	public class MoreLikeThisTests : IDisposable
+	{
+		#region Test Setup
 
-        private readonly DocumentStore documentStore;
+		private readonly DocumentStore documentStore;
 		private readonly string path;
 		private readonly RavenDbServer ravenDbServer;
 
@@ -42,7 +42,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 					Port = 8080,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					DataDirectory = path,
-                    Catalog = { Catalogs = { new AssemblyCatalog(typeof(MoreLikeThisResponder).Assembly) } },
+					Catalog = { Catalogs = { new AssemblyCatalog(typeof(MoreLikeThisResponder).Assembly) } },
 				});
 
 			documentStore = new DocumentStore
@@ -52,452 +52,434 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			documentStore.Initialize();
 		}
 
-        static private void WaitForUserToContinueTheTest(DocumentStore documentStore)
-        {
-            if (Debugger.IsAttached == false)
-                return;
+		private static string GetLorem(int numWords)
+		{
+			const string theLorem = "Morbi nec purus eu libero interdum laoreet Nam metus quam posuere in elementum eget egestas eget justo Aenean orci ligula ullamcorper nec convallis non placerat nec lectus Quisque convallis porta suscipit Aliquam sollicitudin ligula sit amet libero cursus egestas Maecenas nec mauris neque at faucibus justo Fusce ut orci neque Nunc sodales pulvinar lobortis Praesent dui tellus fermentum sed faucibus nec faucibus non nibh Vestibulum adipiscing porta purus ut varius mi pulvinar eu Nam sagittis sodales hendrerit Vestibulum et tincidunt urna Fusce lacinia nisl at luctus lobortis lacus quam rhoncus risus a posuere nulla lorem at nisi Sed non erat nisl Cras in augue velit a mattis ante Etiam lorem dui elementum eget facilisis vitae viverra sit amet tortor Suspendisse potenti Nunc egestas accumsan justo viverra viverra Sed faucibus ullamcorper mauris ut pharetra ligula ornare eget Donec suscipit luctus rhoncus Pellentesque eget justo ac nunc tempus consequat Nullam fringilla egestas leo Praesent condimentum laoreet magna vitae luctus sem cursus sed Mauris massa purus suscipit ac malesuada a accumsan non neque Proin et libero vitae quam ultricies rhoncus Praesent urna neque molestie et suscipit vestibulum iaculis ac nulla Integer porta nulla vel leo ullamcorper eu rhoncus dui semper Donec dictum dui";
+			var loremArray = theLorem.Split();
+			var output = new StringBuilder();
+			var rnd = new Random();
 
-            documentStore.DatabaseCommands.Put("Pls Delete Me", null,
+			for (var i = 0; i < numWords; i++)
+			{
+				output.Append(loremArray[rnd.Next(0, loremArray.Length - 1)]).Append(" ");
+			}
+			return output.ToString();
+		}
 
-                                               RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
-                                               new RavenJObject());
+		#endregion
 
-            do
-            {
-                Thread.Sleep(100);
-            } while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
-            
-        }
+		#region IDisposable Members
 
-        private static string GetLorem(int numWords)
-        {
-            const string theLorem = "Morbi nec purus eu libero interdum laoreet Nam metus quam posuere in elementum eget egestas eget justo Aenean orci ligula ullamcorper nec convallis non placerat nec lectus Quisque convallis porta suscipit Aliquam sollicitudin ligula sit amet libero cursus egestas Maecenas nec mauris neque at faucibus justo Fusce ut orci neque Nunc sodales pulvinar lobortis Praesent dui tellus fermentum sed faucibus nec faucibus non nibh Vestibulum adipiscing porta purus ut varius mi pulvinar eu Nam sagittis sodales hendrerit Vestibulum et tincidunt urna Fusce lacinia nisl at luctus lobortis lacus quam rhoncus risus a posuere nulla lorem at nisi Sed non erat nisl Cras in augue velit a mattis ante Etiam lorem dui elementum eget facilisis vitae viverra sit amet tortor Suspendisse potenti Nunc egestas accumsan justo viverra viverra Sed faucibus ullamcorper mauris ut pharetra ligula ornare eget Donec suscipit luctus rhoncus Pellentesque eget justo ac nunc tempus consequat Nullam fringilla egestas leo Praesent condimentum laoreet magna vitae luctus sem cursus sed Mauris massa purus suscipit ac malesuada a accumsan non neque Proin et libero vitae quam ultricies rhoncus Praesent urna neque molestie et suscipit vestibulum iaculis ac nulla Integer porta nulla vel leo ullamcorper eu rhoncus dui semper Donec dictum dui";
-            var loremArray = theLorem.Split();
-            var output = new StringBuilder();
-            var rnd = new Random();
+		public void Dispose()
+		{
+			documentStore.Dispose();
+			ravenDbServer.Dispose();
+			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+		}
 
-            for (var i = 0; i < numWords; i++)
-            {
-                output.Append(loremArray[rnd.Next(0, loremArray.Length - 1)]).Append(" ");
-            }
-            return output.ToString();
-        }
+		#endregion
 
-        #endregion
+		#region Test Facts
 
-        #region IDisposable Members
+		[Fact]
+		public void Can_Get_Results()
+		{
+			const string key = "datas/1";
 
-        public void Dispose()
-        {
-            documentStore.Dispose();
-            ravenDbServer.Dispose();
-            database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-        }
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
 
-        #endregion
+				var list = new List<Data>
+				{
+					new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
+					new Data {Body = "I have a test tomorrow. I hate having a test"},
+					new Data {Body = "Cake is great."},
+					new Data {Body = "This document has the word test only once"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"}
+				};
+				list.ForEach(session.Store);
 
-        #region Test Facts
+				session.SaveChanges();
 
-        [Fact]
-        public void Can_Get_Results()
-        {
-            const string key = "datas/1";
+				//Ensure non stale index
+				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+				Assert.NotNull(testObj);
+			}
 
-            using (var session = documentStore.OpenSession())
-            {
-                new DataIndex().Execute(documentStore);
-
-                var list = new List<Data>
-                               {
-                                   new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
-                                   new Data {Body = "I have a test tomorrow. I hate having a test"},
-                                   new Data {Body = "Cake is great."},
-                                   new Data {Body = "This document has the word test only once"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"}
-                               };
-                list.ForEach(session.Store);
-
-                session.SaveChanges();
-
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-                Assert.NotNull(testObj);
-            }
-
-            using (var session = documentStore.OpenSession())
-            {
+			using (var session = documentStore.OpenSession())
+			{
 				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
 				{
 					DocumentId = key,
 					Fields = new[] { "Body" }
 				});
 
-                Assert.NotEmpty(list);
-            }
-        }
+				Assert.NotEmpty(list);
+			}
+		}
 
-        [Fact]
-        public void Query_On_Document_That_Does_Not_Have_High_Enough_Word_Frequency()
-        {
-            const string key = "datas/4";
+		[Fact]
+		public void Query_On_Document_That_Does_Not_Have_High_Enough_Word_Frequency()
+		{
+			const string key = "datas/4";
 
-            using (var session = documentStore.OpenSession())
-            {
-                new DataIndex().Execute(documentStore);
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
 
-                var list = new List<Data>
-                               {
-                                   new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
-                                   new Data {Body = "I have a test tomorrow. I hate having a test"},
-                                   new Data {Body = "Cake is great."},
-                                   new Data {Body = "This document has the word test only once"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"}
-                               };
-                list.ForEach(session.Store);
+				var list = new List<Data>
+				{
+					new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
+					new Data {Body = "I have a test tomorrow. I hate having a test"},
+					new Data {Body = "Cake is great."},
+					new Data {Body = "This document has the word test only once"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"}
+				};
+				list.ForEach(session.Store);
 
-                session.SaveChanges();
+				session.SaveChanges();
 
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-                Assert.NotNull(testObj);
-            }
+				//Ensure non stale index
+				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+				Assert.NotNull(testObj);
+			}
 
-            using (var session = documentStore.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
-                {
-					DocumentId = key,
-					Fields = new[] { "Body" }
-                });
-
-                Assert.Empty(list);
-            }
-        }
-
-        [Fact]
-        public void Test_With_Lots_Of_Random_Data()
-        {
-            var key = "datas/1";
-            using (var session = documentStore.OpenSession())
-            {
-                new DataIndex().Execute(documentStore);
-
-                for (var i = 0; i < 100; i++)
-                {
-                    var data = new Data {Body = GetLorem(200)};
-                    session.Store(data);
-                }
-                session.SaveChanges();
-
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-                Assert.NotNull(testObj);
-            }
-
-            using (var session = documentStore.OpenSession())
-            {
+			using (var session = documentStore.OpenSession())
+			{
 				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
 				{
 					DocumentId = key,
 					Fields = new[] { "Body" }
 				});
 
-                Assert.NotEmpty(list);
-            }
-        }
+				Assert.Empty(list);
+			}
+		}
 
-        [Fact]
-        public void Do_Not_Pass_FieldNames()
-        {
-            var key = "datas/1";
-            using (var session = documentStore.OpenSession())
-            {
-                new DataIndex().Execute(documentStore);
+		[Fact]
+		public void Test_With_Lots_Of_Random_Data()
+		{
+			var key = "datas/1";
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
 
-                for (var i = 0; i < 10; i++)
-                {
-                    var data = new Data { Body = "Body" + i, WhitespaceAnalyzerField = "test test" };
-                    session.Store(data);
-                }
-                session.SaveChanges();
+				for (var i = 0; i < 100; i++)
+				{
+					var data = new Data { Body = GetLorem(200) };
+					session.Store(data);
+				}
+				session.SaveChanges();
 
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-                Assert.NotNull(testObj);
-            }
+				//Ensure non stale index
+				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+				Assert.NotNull(testObj);
+			}
 
-            using (var session = documentStore.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
-
-                Assert.NotEmpty(list);
-            }
-        }
-
-        [Fact]
-        public void Each_Field_Should_Use_Correct_Analyzer()
-        {
-            var key = "datas/1";
-            using (var session = documentStore.OpenSession())
-            {
-                new DataIndex().Execute(documentStore);
-
-                for (var i = 0; i < 10; i++)
-                {
-                    var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com hotmail" };
-                    session.Store(data);
-                }
-                session.SaveChanges();
-
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-                Assert.NotNull(testObj);
-            }
-
-            using (var session = documentStore.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
-
-                Assert.Empty(list);
-            }
-
-            key = "datas/11";
-            using (var session = documentStore.OpenSession())
-            {
-                new DataIndex().Execute(documentStore);
-
-                for (var i = 0; i < 10; i++)
-                {
-                    var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com bob@hotmail.com" };
-                    session.Store(data);
-                }
-                session.SaveChanges();
-
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-                Assert.NotNull(testObj);
-            }
-
-            using (var session = documentStore.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
-
-                Assert.NotEmpty(list);
-            }
-        }
-
-        [Fact]
-        public void Can_Use_Min_Doc_Freq_Param()
-        {
-            const string key = "datas/1";
-
-            using (var session = documentStore.OpenSession())
-            {
-                new DataIndex().Execute(documentStore);
-
-                var list = new List<Data>
-                               {
-                                   new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
-                                   new Data {Body = "I have a test tomorrow. I hate having a test"},
-                                   new Data {Body = "Cake is great."},
-                                   new Data {Body = "This document has the word test only once"}
-                               };
-                list.ForEach(session.Store);
-
-                session.SaveChanges();
-
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-                Assert.NotNull(testObj);
-            }
-
-            using (var session = documentStore.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
-                {
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
+				{
 					DocumentId = key,
-					Fields = new[]{"Body"},
-                	MinimumDocumentFrequency = 2
-                });
+					Fields = new[] { "Body" }
+				});
 
-                Assert.NotEmpty(list);
-            }
-        }
+				Assert.NotEmpty(list);
+			}
+		}
 
-        [Fact]
-        public void Can_Use_Boost_Param()
-        {
-            const string key = "datas/1";
+		[Fact]
+		public void Do_Not_Pass_FieldNames()
+		{
+			var key = "datas/1";
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
 
-            using (var session = documentStore.OpenSession())
-            {
-                new DataIndex().Execute(documentStore);
+				for (var i = 0; i < 10; i++)
+				{
+					var data = new Data { Body = "Body" + i, WhitespaceAnalyzerField = "test test" };
+					session.Store(data);
+				}
+				session.SaveChanges();
 
-                var list = new List<Data>
-                               {
-                                   new Data {Body = "This is a test. it is a great test. I hope I pass my great test!"},
-                                   new Data {Body = "Cake is great."},
-                                   new Data {Body = "I have a test tomorrow."}
-                               };
-                list.ForEach(session.Store);
+				//Ensure non stale index
+				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+				Assert.NotNull(testObj);
+			}
 
-                session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-                Assert.NotNull(testObj);
-            }
+				Assert.NotEmpty(list);
+			}
+		}
 
-            using (var session = documentStore.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
-                    new MoreLikeThisQueryParameters
-                        {
+		[Fact]
+		public void Each_Field_Should_Use_Correct_Analyzer()
+		{
+			var key = "datas/1";
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
+
+				for (var i = 0; i < 10; i++)
+				{
+					var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com hotmail" };
+					session.Store(data);
+				}
+				session.SaveChanges();
+
+				//Ensure non stale index
+				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+				Assert.NotNull(testObj);
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+
+				Assert.Empty(list);
+			}
+
+			key = "datas/11";
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
+
+				for (var i = 0; i < 10; i++)
+				{
+					var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com bob@hotmail.com" };
+					session.Store(data);
+				}
+				session.SaveChanges();
+
+				//Ensure non stale index
+				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+				Assert.NotNull(testObj);
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+
+				Assert.NotEmpty(list);
+			}
+		}
+
+		[Fact]
+		public void Can_Use_Min_Doc_Freq_Param()
+		{
+			const string key = "datas/1";
+
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
+
+				var list = new List<Data>
+				{
+					new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
+					new Data {Body = "I have a test tomorrow. I hate having a test"},
+					new Data {Body = "Cake is great."},
+					new Data {Body = "This document has the word test only once"}
+				};
+				list.ForEach(session.Store);
+
+				session.SaveChanges();
+
+				//Ensure non stale index
+				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+				Assert.NotNull(testObj);
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
+				{
+					DocumentId = key,
+					Fields = new[] { "Body" },
+					MinimumDocumentFrequency = 2
+				});
+
+				Assert.NotEmpty(list);
+			}
+		}
+
+		[Fact]
+		public void Can_Use_Boost_Param()
+		{
+			const string key = "datas/1";
+
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
+
+				var list = new List<Data>
+				{
+					new Data {Body = "This is a test. it is a great test. I hope I pass my great test!"},
+					new Data {Body = "Cake is great."},
+					new Data {Body = "I have a test tomorrow."}
+				};
+				list.ForEach(session.Store);
+
+				session.SaveChanges();
+
+				//Ensure non stale index
+				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+				Assert.NotNull(testObj);
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
+					new MoreLikeThisQueryParameters
+						{
 							DocumentId = key,
-							Fields = new[]{"Body"},
-                            MinimumWordLength = 3,
-                            MinimumDocumentFrequency = 1,
-                            Boost = true
-                        });
+							Fields = new[] { "Body" },
+							MinimumWordLength = 3,
+							MinimumDocumentFrequency = 1,
+							Boost = true
+						});
 
-                Assert.NotEqual(0, list.Count());
-                Assert.Equal("I have a test tomorrow.", list[0].Body);
-            }
-        }
+				Assert.NotEqual(0, list.Count());
+				Assert.Equal("I have a test tomorrow.", list[0].Body);
+			}
+		}
 
-        [Fact]
-        public void Can_Use_Stop_Words()
-        {
-            const string key = "datas/1";
+		[Fact]
+		public void Can_Use_Stop_Words()
+		{
+			const string key = "datas/1";
 
-            using (var session = documentStore.OpenSession())
-            {
-                new DataIndex().Execute(documentStore);
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
 
-                var list = new List<Data>
-                               {
-                                   new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
-                                   new Data {Body = "I should not hit this documet. I hope"},
-                                   new Data {Body = "Cake is great."},
-                                   new Data {Body = "This document has the word test only once"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"}
-                               };
-                list.ForEach(session.Store);
+				var list = new List<Data>
+				{
+					new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
+					new Data {Body = "I should not hit this documet. I hope"},
+					new Data {Body = "Cake is great."},
+					new Data {Body = "This document has the word test only once"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"}
+				};
+				list.ForEach(session.Store);
 
-                session.Store(new StopWordsSetup{ Id = "Config/Stopwords", StopWords = new List<string> { "I", "A", "Be" }});
+				session.Store(new StopWordsSetup { Id = "Config/Stopwords", StopWords = new List<string> { "I", "A", "Be" } });
 
-                session.SaveChanges();
+				session.SaveChanges();
 
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-                Assert.NotNull(testObj);
-            }
+				//Ensure non stale index
+				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+				Assert.NotNull(testObj);
+			}
 
-            using (var session = documentStore.OpenSession())
-            {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
-                                                                                        {
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
+																						{
 																							DocumentId = key,
-                                                                                            StopWordsDocumentId = "Config/Stopwords",
-                                                                                            MinimumDocumentFrequency = 1
-                                                                                        });
+																							StopWordsDocumentId = "Config/Stopwords",
+																							MinimumDocumentFrequency = 1
+																						});
 
-                Assert.Equal(5, list.Count());
-            }
-        }
-        
-        #endregion
+				Assert.Equal(5, list.Count());
+			}
+		}
 
-        #region Private Methods - Does NOT work!
+		#endregion
 
-        private void InsertData()
-        {
-            using (var session = documentStore.OpenSession())
-            {
-                new DataIndex().Execute(documentStore);
+		#region Private Methods - Does NOT work!
 
-                var list = new List<Data>
-                               {
-                                   new Data {Body = "This is a test. Isn't it great?"},
-                                   new Data {Body = "I have a test tomorrow. I hate having a test"},
-                                   new Data {Body = "Cake is great."},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"},
-                                   new Data {Body = "test"}
-                               };
-                //list.ForEach(session.Store);
+		private void InsertData()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
 
-                foreach (var data in list)
-                {
-                    session.Store(data);
-                }
+				var list = new List<Data>
+				{
+					new Data {Body = "This is a test. Isn't it great?"},
+					new Data {Body = "I have a test tomorrow. I hate having a test"},
+					new Data {Body = "Cake is great."},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"}
+				};
 
-                session.SaveChanges();
+				foreach (var data in list)
+				{
+					session.Store(data);
+				}
 
-                //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == list[0].Id).SingleOrDefault();
-            }
-        }
+				session.SaveChanges();
 
-        #endregion
+				//Ensure non stale index
+				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == list[0].Id).SingleOrDefault();
+			}
+		}
 
-        #region Data Classes
+		#endregion
 
-        public class Data
-        {
-            public string Id { get; set; }
-            public string Body { get; set; }
-            public string WhitespaceAnalyzerField { get; set; }
-        }
+		#region Data Classes
 
-        #endregion
+		public class Data
+		{
+			public string Id { get; set; }
+			public string Body { get; set; }
+			public string WhitespaceAnalyzerField { get; set; }
+		}
 
-        #region Indexes
+		#endregion
 
-        public class DataIndex : AbstractIndexCreationTask<Data>
-        {
-            public DataIndex()
-            {
-                Map = docs => from doc in docs
-                              select new { doc.Body, doc.WhitespaceAnalyzerField };
+		#region Indexes
 
-                Analyzers = new Dictionary<Expression<Func<Data, object>>, string>
-                                {
-                                    {
-                                        x => x.Body,
-                                        typeof (StandardAnalyzer).FullName
-                                    },
-                                    {
-                                        x => x.WhitespaceAnalyzerField,
-                                        typeof (WhitespaceAnalyzer).FullName
-                                    }
-                                };
+		public class DataIndex : AbstractIndexCreationTask<Data>
+		{
+			public DataIndex()
+			{
+				Map = docs => from doc in docs
+							  select new { doc.Body, doc.WhitespaceAnalyzerField };
 
-                Stores = new Dictionary<Expression<Func<Data, object>>, FieldStorage>
-                             {
-                                 {
-                                     x => x.Body, FieldStorage.Yes
-                                 }, 
-                                 {
-                                     x => x.WhitespaceAnalyzerField, FieldStorage.Yes
-                                 }
-                             };
+				Analyzers = new Dictionary<Expression<Func<Data, object>>, string>
+				{
+					{
+						x => x.Body,
+						typeof (StandardAnalyzer).FullName
+						},
+					{
+						x => x.WhitespaceAnalyzerField,
+						typeof (WhitespaceAnalyzer).FullName
+						}
+				};
 
-            }
-        }
+				Stores = new Dictionary<Expression<Func<Data, object>>, FieldStorage>
+				{
+					{
+						x => x.Body, FieldStorage.Yes
+						},
+					{
+						x => x.WhitespaceAnalyzerField, FieldStorage.Yes
+						}
+				};
 
-        #endregion
+			}
+		}
 
-    }
+		#endregion
+
+	}
 }
