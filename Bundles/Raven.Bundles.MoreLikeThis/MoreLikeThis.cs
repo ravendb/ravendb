@@ -16,7 +16,7 @@
  */
 
 using System;
-
+using Lucene.Net.Analysis.Tokenattributes;
 using PriorityQueue = Lucene.Net.Util.PriorityQueue;
 using IndexReader = Lucene.Net.Index.IndexReader;
 using Term = Lucene.Net.Index.Term;
@@ -825,12 +825,12 @@ namespace Similarity.Net
         protected void AddTermFrequencies(System.IO.TextReader r, System.Collections.IDictionary termFreqMap, System.String fieldName)
         {
             TokenStream ts = analyzer.TokenStream(fieldName, r);
-            Lucene.Net.Analysis.Token token;
-            int tokenCount = 0;
-            while ((token = ts.Next()) != null)
+			TermAttribute termAtt = (TermAttribute)ts.AddAttribute(typeof(TermAttribute));
+			int tokenCount = 0;
+            while (ts.IncrementToken())
             {
                 // for every token
-                System.String word = token.TermText();
+            	System.String word = termAtt.Term();
                 tokenCount++;
                 if (tokenCount > maxNumTokensParsed)
                 {

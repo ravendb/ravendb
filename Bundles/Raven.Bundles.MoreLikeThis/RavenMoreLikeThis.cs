@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
 
@@ -53,12 +54,12 @@ namespace Raven.Bundles.MoreLikeThis
         {
             var analyzer = Analyzers[fieldName];
             TokenStream ts = analyzer.TokenStream(fieldName, r);
-            Token token;
+			TermAttribute termAtt = (TermAttribute)ts.AddAttribute(typeof(TermAttribute));
             int tokenCount = 0;
-            while ((token = ts.Next()) != null)
+            while (ts.IncrementToken())
             {
                 // for every token
-                System.String word = token.TermText();
+            	System.String word = termAtt.Term();
                 tokenCount++;
                 if (tokenCount > GetMaxNumTokensParsed())
                 {
