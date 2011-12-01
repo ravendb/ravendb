@@ -164,6 +164,7 @@
     <ProjectReference Include="..\Raven.Client.MoreLikeThis\Raven.Client.MoreLikeThis.csproj">
       <Project>{039CB1C3-C4F3-4D87-A2C0-7531E386E6A3}</Project>
       <Name>Raven.Client.MoreLikeThis</Name>
+      <Aliases>global</Aliases>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Versioning\Raven.Client.Versioning.csproj">
       <Project>{ADC25452-35F2-488E-9F2F-40C76F4927DB}</Project>

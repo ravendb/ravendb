@@ -32,6 +32,7 @@ using Analyzer = Lucene.Net.Analysis.Analyzer;
 using TokenStream = Lucene.Net.Analysis.TokenStream;
 using StandardAnalyzer = Lucene.Net.Analysis.Standard.StandardAnalyzer;
 using Document = Lucene.Net.Documents.Document;
+using Version = Lucene.Net.Util.Version;
 
 namespace Similarity.Net
 {
@@ -150,7 +151,7 @@ namespace Similarity.Net
         /// <summary> Default analyzer to parse source doc with.</summary>
         /// <seealso cref="#getAnalyzer">
         /// </seealso>
-        public static readonly Analyzer DEFAULT_ANALYZER = new StandardAnalyzer();
+        public static readonly Analyzer DEFAULT_ANALYZER = new StandardAnalyzer(Version.LUCENE_29);
 		
         /// <summary> Ignore terms with less than this frequency in the source doc.</summary>
         /// <seealso cref="#getMinTermFreq">
