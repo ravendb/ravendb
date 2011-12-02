@@ -94,7 +94,7 @@ namespace Raven.Client.MoreLikeThis
 				uri.AppendFormat("maxNumTokens={0}&", parameters.MaximumNumberOfTokensParsed);
 			if (parameters.MaximumWordLength != null &&
 			    parameters.MaximumWordLength != MoreLikeThisQueryParameters.DefaultMaximumWordLength)
-				uri.AppendFormat("maxWordLen={0}", parameters.MaximumWordLength);
+				uri.AppendFormat("maxWordLen={0}&", parameters.MaximumWordLength);
 			if (parameters.MinimumDocumentFrequency != null &&
 			    parameters.MinimumDocumentFrequency != MoreLikeThisQueryParameters.DefaltMinimumDocumentFrequency)
 				uri.AppendFormat("minDocFreq={0}&", parameters.MinimumDocumentFrequency);
