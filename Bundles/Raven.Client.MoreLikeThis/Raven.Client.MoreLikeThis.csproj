@@ -47,9 +47,11 @@
     <Compile Include="..\Raven.Bundles.MoreLikeThis\MoreLikeThisQueryParameters.cs">
       <Link>MoreLikeThisQueryParameters.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Bundles.MoreLikeThis\StopWordsSetup.cs">
+      <Link>StopWordsSetup.cs</Link>
+    </Compile>
     <Compile Include="ServerClientExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StopWordsSetup.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
