@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Text.RegularExpressions;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -19,6 +21,16 @@ namespace Raven.Studio.Infrastructure
 				return str;
 
 			return str.Substring(0, margin) + replacement + str.Substring(str.Length - margin - 1);
+		}
+
+		private static readonly Regex RegexWhitespaces = new Regex(@"\s", RegexOptions.Multiline | RegexOptions.CultureInvariant);
+
+		public static string ReplaceRegexWhitespacesWithSpace(this string str)
+		{
+			if (str == null)
+				return null;
+
+			return RegexWhitespaces.Replace(str, " ").Trim();
 		}
 	}
 }

@@ -107,7 +107,10 @@ namespace Raven.Studio.Features.Documents
 						break;
 					case JTokenType.String:
 						sw.Write('"');
-						sw.Write(item.Value.ToString().ShortViewOfString(margin - 2));
+						sw.Write(item.Value.ToString()
+						         	.ShortViewOfString(margin - 2)
+						         	.ReplaceRegexWhitespacesWithSpace()
+							);
 						sw.Write('"');
 						break;
 					default:
