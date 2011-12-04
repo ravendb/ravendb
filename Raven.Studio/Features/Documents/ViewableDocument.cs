@@ -72,7 +72,7 @@ namespace Raven.Studio.Features.Documents
 		{
 			margin = Math.Max(4, margin);
 			var sw = new StringWriter();
-			WriteJsonSnapshot(inner.DataAsJson, sw, margin);
+			WriteJsonObject(inner.DataAsJson, sw, margin);
 			return sw.ToString();
 		}
 
@@ -87,39 +87,74 @@ namespace Raven.Studio.Features.Documents
 			}
 		}
 
-		private void WriteJsonSnapshot(RavenJObject ravenJObject, StringWriter sw, int margin, int intdent = 0)
+		private void WriteJsonObject(RavenJObject ravenJObject, StringWriter sw, int margin, int indent = 0)
 		{
-			sw.Write('{');
-			sw.Write(Environment.NewLine);
-			intdent += 1;
+			sw.WriteLine('{');
+			indent += 1;
 			foreach (var item in ravenJObject)
 			{
-				if (intdent > 0)
-					sw.Write(new string(' ', intdent * 4));
-				sw.Write(item.Key + ": ");
-				switch (item.Value.Type)
-				{
-					case JTokenType.Object:
-						WriteJsonSnapshot((RavenJObject)item.Value, sw, margin, intdent);
-						break;
-					case JTokenType.Null:
-						sw.Write("null");
-						break;
-					case JTokenType.String:
-						sw.Write('"');
-						sw.Write(item.Value.ToString()
-						         	.ShortViewOfString(margin - 2)
-						         	.ReplaceRegexWhitespacesWithSpace()
-							);
-						sw.Write('"');
-						break;
-					default:
-						sw.Write(item.Value.ToString().ShortViewOfString(margin));
-						break;
-				}
-				sw.Write(Environment.NewLine);
+				Indent(sw, indent);
+				sw.Write(item.Key);
+				sw.Write(": ");
+				WriteValue(item.Value, sw, margin, indent);
+				sw.WriteLine();
 			}
+			indent -= 1;
+			Indent(sw, indent);
 			sw.Write('}');
+		}
+
+		private void WriteValue(RavenJToken token, StringWriter sw, int margin, int indent)
+		{
+			switch (token.Type)
+			{
+				case JTokenType.Array:
+					WriteJsonArray((RavenJArray) token, sw, margin, indent);
+					break;
+				case JTokenType.Object:
+					WriteJsonObject((RavenJObject) token, sw, margin, indent);
+					break;
+				case JTokenType.Null:
+					sw.Write("null");
+					break;
+				case JTokenType.String:
+					sw.Write('"');
+					sw.Write(token.ToString()
+					         	.NormalizeWhitespace()
+					         	.ShortViewOfString(margin - 2)
+						);
+					sw.Write('"');
+					break;
+				default:
+					sw.Write(token.ToString().ShortViewOfString(margin));
+					break;
+			}
+		}
+
+		private void WriteJsonArray(RavenJArray array, StringWriter sw, int margin, int indent = 0)
+		{
+			sw.WriteLine('[');
+			indent += 1;
+			var isFirstItem = true;
+			foreach (var token in array.Values())
+			{
+				if (isFirstItem)
+					isFirstItem = false;
+				else
+					sw.WriteLine(',');
+				Indent(sw, indent);
+				WriteValue(token, sw, margin, indent);
+			}
+			sw.WriteLine();
+			indent -= 1;
+			Indent(sw, indent);
+			sw.Write(']');
+		}
+
+		private static void Indent(StringWriter sw, int indent)
+		{
+			if (indent > 0)
+				sw.Write(new string(' ', indent*2));
 		}
 
 		public string DisplayId
