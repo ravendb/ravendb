@@ -142,6 +142,7 @@
     <Compile Include="Features\Databases\LicenseView.xaml.cs">
       <DependentUpon>LicenseView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Documents\ShortViewOfJson.cs" />
     <Compile Include="Features\Query\FieldAndTerm.cs" />
     <Compile Include="Controls\Editors\QueryEditor.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
@@ -259,6 +260,7 @@
     <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\KeysComparer.cs" />
+    <Compile Include="Infrastructure\Execute.cs" />
     <Compile Include="Infrastructure\StringExtensions.cs" />
     <Compile Include="Infrastructure\UrlParser.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />

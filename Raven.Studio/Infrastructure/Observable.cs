@@ -43,11 +43,7 @@ namespace Raven.Studio.Infrastructure
 				if (onActions == null) 
 					return;
 
-				var dispatcher = Deployment.Current.Dispatcher;
-				if (dispatcher.CheckAccess())
-					onActions();
-				else
-					dispatcher.InvokeAsync(onActions);
+				Execute.OnTheUI(onActions);
 			}
 		}
 

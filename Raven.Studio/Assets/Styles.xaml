@@ -1995,7 +1995,7 @@
 		<Setter Property="ItemsPanel"
 				Value="{StaticResource FluidWrapPanel}" />
 		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
-				Value="Auto" />
+				Value="Disabled" />
 		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
 				Value="Disabled" />
 		<Setter Property="SelectionMode"
@@ -2375,53 +2375,6 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
-
-    <Style x:Key="Style_TextBox_DocumentView"
-		   TargetType="TextBox">
-        <Setter Property="IsReadOnly" Value="True"/>
-        <Setter Property="BorderThickness"
-				Value="0" />
-        <Setter Property="Background" Value="{StaticResource Brush_SubtleBackground2}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="TextBox">
-                    <Grid x:Name="RootElement">
-                        <VisualStateManager.VisualStateGroups>
-                            <VisualStateGroup x:Name="CommonStates">
-                                <VisualState x:Name="Normal"/>
-                                <VisualState x:Name="MouseOver">
-                                </VisualState>
-                                <VisualState x:Name="Disabled">
-                                </VisualState>
-                                <VisualState x:Name="ReadOnly">
-                                </VisualState>
-                            </VisualStateGroup>
-                            <VisualStateGroup x:Name="FocusStates">
-                            </VisualStateGroup>
-                            <VisualStateGroup x:Name="ValidationStates">
-                                <VisualState x:Name="Valid"/>
-                                <VisualState x:Name="InvalidUnfocused">
-                                    <Storyboard>
-                                    </Storyboard>
-                                </VisualState>
-                                <VisualState x:Name="InvalidFocused">
-                                    <Storyboard>
-                                    </Storyboard>
-                                </VisualState>
-                            </VisualStateGroup>
-                        </VisualStateManager.VisualStateGroups>
-                        <Border x:Name="Border" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="1" Opacity="1" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}">
-                            <Grid>
-                                <Border x:Name="MouseOverBorder" BorderThickness="1" BorderBrush="Transparent">
-                                    <ScrollViewer x:Name="ContentElement" Padding="{TemplateBinding Padding}" BorderThickness="0" IsTabStop="False" Style="{StaticResource Style_ScrollViewer_SlimScrollbars}"/>
-                                </Border>
-                            </Grid>
-                        </Border>
-                    </Grid>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
     
     <Style x:Key="Style_TextBox_ReadOnly_LogsDetails"
 		   TargetType="TextBox">

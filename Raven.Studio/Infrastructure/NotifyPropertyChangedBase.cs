@@ -33,7 +33,6 @@ namespace Raven.Studio.Infrastructure
 		private class EventState
 		{
 			public PropertyChangedEventHandler Value { get; private set; }
-			private readonly Dispatcher dispatcher = Deployment.Current.Dispatcher;
 
 			public EventState(PropertyChangedEventHandler value)
 			{
@@ -42,11 +41,7 @@ namespace Raven.Studio.Infrastructure
 
 			public void Invoke(object sender, PropertyChangedEventArgs e)
 			{
-				if (dispatcher.CheckAccess())
-					Value(sender, e);
-				else
-					dispatcher.InvokeAsync(() => Value(sender, e));
-			
+				Execute.OnTheUI(() => Value(sender, e));
 			}
 		}
 
