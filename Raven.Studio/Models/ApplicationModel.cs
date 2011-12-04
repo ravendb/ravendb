@@ -43,15 +43,15 @@ namespace Raven.Studio.Models
 
 		public void AddNotification(Notification notification)
 		{
-			Notifications.Execute(() =>
-								  {
-									  Notifications.Add(notification);
-									  if (Notifications.Count > 5)
-									  {
-										  Notifications.RemoveAt(0);
-									  }
-									  LastNotification.Value = notification.Message;
-								  });
+			Execute.OnTheUI(() =>
+			                	{
+			                		Notifications.Add(notification);
+			                		if (Notifications.Count > 5)
+			                		{
+			                			Notifications.RemoveAt(0);
+			                		}
+			                		LastNotification.Value = notification.Message;
+			                	});
 		}
 
 		public Observable<string> LastNotification { get; set; }

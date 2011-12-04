@@ -15,10 +15,7 @@ namespace Raven.Studio.Infrastructure
 
 		private static void Navigate(Uri source)
 		{
-			if (Deployment.Current.Dispatcher.CheckAccess())
-				Application.Current.Host.NavigationState = source.ToString();
-			else
-				Deployment.Current.Dispatcher.InvokeAsync(() => Application.Current.Host.NavigationState = source.ToString());
+			Execute.OnTheUI(() => Application.Current.Host.NavigationState = source.ToString());
 		}
 
 		public static void Navigate(string url)
