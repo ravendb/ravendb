@@ -142,6 +142,7 @@
     <Compile Include="Features\Databases\LicenseView.xaml.cs">
       <DependentUpon>LicenseView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Documents\ShortViewOfJson.cs" />
     <Compile Include="Features\Query\FieldAndTerm.cs" />
     <Compile Include="Controls\Editors\QueryEditor.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />

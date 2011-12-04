@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Reactive.Linq;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -38,12 +37,12 @@ namespace Raven.Studio.Features.Documents
 				           		if (DocumentsModel.DocumentSize.Height >= DocumentsModel.ExpandedMinimumHeight)
 				           		{
 				           			var margin = Math.Sqrt(DocumentsModel.DocumentSize.Width) - 4;
-				           			d = GetContentDataWithMargin((int) margin);
+									d = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, (int)margin);
 				           		}
 				           		Execute.OnTheUI(() => Data = d);
 				           	});
 
-			ToolTipText = GetContentDataWithMargin(10);
+			ToolTipText = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, 10);
 		}
 
 		Brush fill;
@@ -68,14 +67,6 @@ namespace Raven.Studio.Features.Documents
 			}
 		}
 
-		private string GetContentDataWithMargin(int margin)
-		{
-			margin = Math.Max(4, margin);
-			var sw = new StringWriter();
-			WriteJsonObject(inner.DataAsJson, sw, margin);
-			return sw.ToString();
-		}
-
 		private string data;
 		public string Data
 		{
@@ -87,75 +78,7 @@ namespace Raven.Studio.Features.Documents
 			}
 		}
 
-		private void WriteJsonObject(RavenJObject ravenJObject, StringWriter sw, int margin, int indent = 0)
-		{
-			sw.WriteLine('{');
-			indent += 1;
-			foreach (var item in ravenJObject)
-			{
-				Indent(sw, indent);
-				sw.Write(item.Key);
-				sw.Write(": ");
-				WriteValue(item.Value, sw, margin, indent);
-				sw.WriteLine();
-			}
-			indent -= 1;
-			Indent(sw, indent);
-			sw.Write('}');
-		}
-
-		private void WriteValue(RavenJToken token, StringWriter sw, int margin, int indent)
-		{
-			switch (token.Type)
-			{
-				case JTokenType.Array:
-					WriteJsonArray((RavenJArray) token, sw, margin, indent);
-					break;
-				case JTokenType.Object:
-					WriteJsonObject((RavenJObject) token, sw, margin, indent);
-					break;
-				case JTokenType.Null:
-					sw.Write("null");
-					break;
-				case JTokenType.String:
-					sw.Write('"');
-					sw.Write(token.ToString()
-					         	.NormalizeWhitespace()
-					         	.ShortViewOfString(margin - 2)
-						);
-					sw.Write('"');
-					break;
-				default:
-					sw.Write(token.ToString().ShortViewOfString(margin));
-					break;
-			}
-		}
-
-		private void WriteJsonArray(RavenJArray array, StringWriter sw, int margin, int indent = 0)
-		{
-			sw.WriteLine('[');
-			indent += 1;
-			var isFirstItem = true;
-			foreach (var token in array.Values())
-			{
-				if (isFirstItem)
-					isFirstItem = false;
-				else
-					sw.WriteLine(',');
-				Indent(sw, indent);
-				WriteValue(token, sw, margin, indent);
-			}
-			sw.WriteLine();
-			indent -= 1;
-			Indent(sw, indent);
-			sw.Write(']');
-		}
-
-		private static void Indent(StringWriter sw, int indent)
-		{
-			if (indent > 0)
-				sw.Write(new string(' ', indent*2));
-		}
+		
 
 		public string DisplayId
 		{
