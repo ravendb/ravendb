@@ -73,8 +73,6 @@ namespace Raven.Studio.Models
 
 	public class DocumentSize : NotifyPropertyChangedBase
 	{
-		public event EventHandler SizeChanged;
-		
 		private double height;
 		public double Height
 		{
@@ -109,9 +107,6 @@ namespace Raven.Studio.Models
 			Width = Height < aspectRatioSwitchoverHeight ? Height*wideAspectRatio
 			        	: Height < narrowAspectRatioSwitchoverHeight ? wideRatioMaxWidth
 			        	  	: Height*narrowAspectRatio;
-
-			if (SizeChanged != null)
-				SizeChanged(this, EventArgs.Empty);
 		}
 	}
 }

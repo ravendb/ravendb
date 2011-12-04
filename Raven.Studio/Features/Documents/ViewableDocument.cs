@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
-using System.Reactive.Linq;
 using System.Windows.Input;
 using System.Windows.Media;
 using Newtonsoft.Json;
@@ -12,7 +11,6 @@ using Raven.Json.Linq;
 using Raven.Studio.Framework;
 using Raven.Studio.Infrastructure;
 using System.Linq;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -30,18 +28,6 @@ namespace Raven.Studio.Features.Documents
 				LastModified = LastModified.ToLocalTime();
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
-
-			Observable.FromEventPattern<PropertyChangedEventArgs>(DocumentsModel.DocumentSize, "PropertyChanged")
-				.Where(e => e.EventArgs.PropertyName == "Height")
-				.Throttle(TimeSpan.FromSeconds(0.5))
-				.Subscribe(e =>
-				           	{
-				           		var margin = (int)Math.Max(4, Math.Sqrt(DocumentsModel.DocumentSize.Width) - 4);
-				           		var d = GetContentDataWithMargin(margin);
-				           		Execute.OnTheUI(() => Data = d);
-				           	});
-
-			ToolTipText = GetContentDataWithMargin(10);
 		}
 
 		Brush fill;
@@ -55,40 +41,47 @@ namespace Raven.Studio.Features.Documents
 			get { return new EditDocumentCommand(this); }
 		}
 
-		private string toolTipText;
+		private const int ToolTipTextLength = 250;
 		public string ToolTipText
 		{
-			get { return toolTipText; }
-			set
+			get
 			{
-				toolTipText = value;
-				OnPropertyChanged();
+				var json = inner.DataAsJson.ToString();
+				json = (json.Length > ToolTipTextLength)
+						? json.Substring(0, ToolTipTextLength) + "..." + Environment.NewLine + "}"
+						: json;
+
+				return json;
 			}
 		}
 
-		private string GetContentDataWithMargin(int margin)
+		private int margin = 10;
+		public int Margin
 		{
-			var sw = new StringWriter();
-			WriteJsonSnapshot(inner.DataAsJson, sw, margin);
-			return sw.ToString();
-		}
-
-		private string data;
-		public string Data
-		{
-			get { return data; }
+			get
+			{
+				return margin;
+			}
 			set
 			{
-				data = value;
+				margin = Math.Max(2, value);
 				OnPropertyChanged();
+				OnPropertyChanged("Data");
 			}
 		}
 
-		private void WriteJsonSnapshot(RavenJObject ravenJObject, StringWriter sw, int margin, int intdent = 0)
+	    public string Data
+	    {
+	        get
+	        {
+	        	var sw = new StringWriter();
+				WriteJsonSnapshot(inner.DataAsJson, sw, Margin);
+	        	return sw.ToString();
+	        }
+	    }
+
+		private static void WriteJsonSnapshot(RavenJObject ravenJObject, StringWriter sw, int margin, int intdent = 0)
 		{
-			sw.Write('{');
-			sw.Write(Environment.NewLine);
-			intdent += 1;
 			foreach (var item in ravenJObject)
 			{
 				if (intdent > 0)
@@ -97,7 +90,10 @@ namespace Raven.Studio.Features.Documents
 				switch (item.Value.Type)
 				{
 					case JTokenType.Object:
-						WriteJsonSnapshot((RavenJObject)item.Value, sw, margin, intdent);
+						sw.Write('{');
+						sw.Write(Environment.NewLine);
+						WriteJsonSnapshot((RavenJObject)item.Value, sw, margin, intdent + 1);
+						sw.Write('}');
 						break;
 					case JTokenType.Null:
 						sw.Write("null");
@@ -113,7 +109,6 @@ namespace Raven.Studio.Features.Documents
 				}
 				sw.Write(Environment.NewLine);
 			}
-			sw.Write('}');
 		}
 
 		public string DisplayId

@@ -9,7 +9,7 @@
 
 	<Grid DataContext="{Binding Value}">
 		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
+			<RowDefinition Height="250" />
 			<RowDefinition Height="8" />
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
