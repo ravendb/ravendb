@@ -9,46 +9,69 @@
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
-	<Grid x:Name="LayoutRoot"
+	<Grid Background="Transparent"
 		  Width="{Binding Path=DocumentSize.Width, Source={StaticResource DocumentsModel}}"
-		  Height="{Binding Path=DocumentSize.Height, Source={StaticResource DocumentsModel}}">
-		
-		<Grid x:Name="Grid"  Margin="0,2,2,2" ToolTipService.ToolTip="{Binding ToolTipText}">
+		  Height="{Binding Path=DocumentSize.Height, Source={StaticResource DocumentsModel}}"
+		  ToolTipService.ToolTip="{Binding ToolTipText}">
+
+		<i:Interaction.Behaviors>
+			<Behaviors:DoubleClickBehavior Command="{Binding Edit}" />
+		</i:Interaction.Behaviors>
+
+		<Grid Margin="0,2,2,2">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
-				<RowDefinition Height="*"/>
-				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="Auto"/>
-				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="4" />
+				<ColumnDefinition Width="*" />
 			</Grid.ColumnDefinitions>
-			<i:Interaction.Behaviors>
-				<Behaviors:DoubleClickBehavior Command="{Binding Edit}" />
-			</i:Interaction.Behaviors>
 
-			<Rectangle HorizontalAlignment="Left" Width="3" x:Name="DocumentGrid" Fill="{Binding Path=Fill}"
-					 Margin="-3,0,4,0" Grid.RowSpan="4" Grid.Column="0" RadiusX="1" RadiusY="1">
+			<Rectangle HorizontalAlignment="Left"
+					   Width="3"
+					   Fill="{Binding Path=Fill}"
+					   Margin="-3,0,0,0"
+					   RadiusX="1"
+					   RadiusY="1"
+					   Grid.RowSpan="3">
 				<Rectangle.Effect>
-					<DropShadowEffect ShadowDepth="0" BlurRadius="5" Opacity="0.6" />
+					<DropShadowEffect ShadowDepth="0"
+									  BlurRadius="5"
+									  Opacity="0.6" />
 				</Rectangle.Effect>
 			</Rectangle>
-
-			<TextBlock Text="{Binding CollectionType}" TextTrimming="WordEllipsis"
-					 HorizontalAlignment="Left" Grid.Row="0" Grid.Column="1" />
-			<TextBlock Text="{Binding DisplayId}" TextTrimming="WordEllipsis"
-					 HorizontalAlignment="Left" Grid.Row="1" Grid.Column="1"/>
+			
+			<TextBlock Text="{Binding CollectionType}"
+					   TextTrimming="WordEllipsis"
+					   HorizontalAlignment="Left"
+					   Grid.Column="3" />
+			<TextBlock Text="{Binding DisplayId}"
+					   TextTrimming="WordEllipsis"
+					   HorizontalAlignment="Left"
+					   Grid.Row="1"
+					   Grid.Column="3" />
 
 			<TextBlock Text="{Binding Data}"
 					   Grid.Row="2"
-					   Grid.Column="1"
-					   Visibility="{Binding Data, Converter={StaticResource HiddenWhenNull}}" />
+					   HorizontalAlignment="Left"
+					   VerticalAlignment="Top"
+					   Visibility="{Binding Data, Converter={StaticResource HiddenWhenNull}}"
+					   Grid.Column="3" />
 
-			<Button VerticalAlignment="Center" HorizontalAlignment="Right" Style="{StaticResource Style_Button_MouseOverChrome}"
-				  Padding="4" Command="{Binding Path=Edit}" ToolTipService.ToolTip="click here to edit the document" Grid.Row="3" Grid.Column="1">
+			<Button VerticalAlignment="Bottom"
+					HorizontalAlignment="Right"
+					Style="{StaticResource Style_Button_MouseOverChrome}"
+					Padding="4"
+					Command="{Binding Path=Edit}"
+					ToolTipService.ToolTip="click here to edit the document"
+					Grid.Row="2"
+					Grid.Column="3">
 				<Button.Content>
-					<Image Source="{StaticResource Image_Edit_Small}" Stretch="None" />
+					<Image Source="{StaticResource Image_Edit_Small}"
+						   Stretch="None" />
 				</Button.Content>
 			</Button>
 		</Grid>
