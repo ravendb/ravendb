@@ -20,6 +20,7 @@ using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
 using MoreLikeThisQueryParameters = Raven.Client.MoreLikeThis.MoreLikeThisQueryParameters;
+using StopWordsSetup = Raven.Client.MoreLikeThis.StopWordsSetup;
 
 namespace Raven.Bundles.Tests.MoreLikeThis
 {
