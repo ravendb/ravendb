@@ -10,6 +10,7 @@ namespace Raven.Studio.Models
 	{
 		public const double DefaultDocumentHeight = 66;
 		public const double ExpandedDocumentHeight = 130;
+		public const double ExpandedMinimumHeight = 110;
 
 		public BindableCollection<ViewableDocument> Documents { get; private set; }
 
@@ -73,6 +74,8 @@ namespace Raven.Studio.Models
 
 	public class DocumentSize : NotifyPropertyChangedBase
 	{
+		public event EventHandler SizeChanged;
+		
 		private double height;
 		public double Height
 		{
@@ -107,6 +110,9 @@ namespace Raven.Studio.Models
 			Width = Height < aspectRatioSwitchoverHeight ? Height*wideAspectRatio
 			        	: Height < narrowAspectRatioSwitchoverHeight ? wideRatioMaxWidth
 			        	  	: Height*narrowAspectRatio;
+
+			if (SizeChanged != null)
+				SizeChanged(this, EventArgs.Empty);
 		}
 	}
 }

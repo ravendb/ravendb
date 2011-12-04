@@ -13,20 +13,6 @@
 		  Width="{Binding Path=DocumentSize.Width, Source={StaticResource DocumentsModel}}"
 		  Height="{Binding Path=DocumentSize.Height, Source={StaticResource DocumentsModel}}">
 		
-		<VisualStateManager.VisualStateGroups>
-			<VisualStateGroup>
-				<VisualState x:Name="Collapsed">
-					<Storyboard>
-						<DoubleAnimation Duration="0:0:0.1" To="0" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="textBox" d:IsOptimized="True"/>
-					</Storyboard>
-				</VisualState>
-				<VisualState x:Name="Expanded">
-					<Storyboard>
-						<DoubleAnimation Duration="0:0:0.1" To="1" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="textBox" d:IsOptimized="True"/>
-					</Storyboard>
-				</VisualState>
-			</VisualStateGroup>
-		</VisualStateManager.VisualStateGroups>
 		<Grid x:Name="Grid"  Margin="0,2,2,2" ToolTipService.ToolTip="{Binding ToolTipText}">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
@@ -54,8 +40,10 @@
 			<TextBlock Text="{Binding DisplayId}" TextTrimming="WordEllipsis"
 					 HorizontalAlignment="Left" Grid.Row="1" Grid.Column="1"/>
 
-			<TextBox x:Name="textBox" Text="{Binding Data}" VerticalScrollBarVisibility="Auto"
-				HorizontalScrollBarVisibility="Auto" Style="{StaticResource Style_TextBox_DocumentView}" Grid.Row="2" Grid.Column="1" Opacity="0"/>
+			<TextBlock Text="{Binding Data}"
+					   Grid.Row="2"
+					   Grid.Column="1"
+					   Visibility="{Binding Data, Converter={StaticResource HiddenWhenNull}}" />
 
 			<Button VerticalAlignment="Center" HorizontalAlignment="Right" Style="{StaticResource Style_Button_MouseOverChrome}"
 				  Padding="4" Command="{Binding Path=Edit}" ToolTipService.ToolTip="click here to edit the document" Grid.Row="3" Grid.Column="1">
