@@ -9,7 +9,13 @@ namespace Raven.Studio.Models
 		{
 			Documents = new Observable<DocumentsModel>();
 			Documents.Value = new DocumentsModel();
-			Documents.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
+			SetTotalResults();
+			ApplicationModel.Current.Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => SetTotalResults();
+		}
+
+		private static void SetTotalResults()
+		{
+			Documents.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics) v).CountOfDocuments));
 		}
 
 		public AllDocumentsModel()
