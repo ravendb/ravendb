@@ -29,19 +29,11 @@ namespace Raven.Studio.Features.Documents
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
 
-			Observable.FromEventPattern<EventArgs>(DocumentsModel.DocumentSize, "SizeChanged")
+			Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentsModel.DocumentSize.SizeChanged += e, e => DocumentsModel.DocumentSize.SizeChanged -= e)
 				.Throttle(TimeSpan.FromSeconds(0.5))
-				.Subscribe(e =>
-				           	{
-				           		string d = null;
-				           		if (DocumentsModel.DocumentSize.Height >= DocumentsModel.ExpandedMinimumHeight)
-				           		{
-				           			var margin = Math.Sqrt(DocumentsModel.DocumentSize.Width) - 4;
-									d = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, (int)margin);
-				           		}
-				           		Execute.OnTheUI(() => Data = d);
-				           	});
+				.Subscribe(_ => CalculateData());
 
+			CalculateData();
 			ToolTipText = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, 10);
 		}
 
@@ -78,7 +70,16 @@ namespace Raven.Studio.Features.Documents
 			}
 		}
 
-		
+		private void CalculateData()
+		{
+			string d = null;
+			if (DocumentsModel.DocumentSize.Height >= DocumentsModel.ExpandedMinimumHeight)
+			{
+				var margin = Math.Sqrt(DocumentsModel.DocumentSize.Width) - 4;
+				d = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, (int)margin);
+			}
+			Execute.OnTheUI(() => Data = d);
+		}
 
 		public string DisplayId
 		{
