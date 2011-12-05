@@ -25,7 +25,18 @@ namespace Raven.Studio.Models
 			                                };
 		}
 
-		public int PageSize { get; set; }
+		private int pageSize;
+		public int PageSize
+		{
+			get { return pageSize; }
+			set
+			{
+				pageSize = value;
+				OnPropertyChanged();
+				OnPropertyChanged("CurrentPage");
+				OnPropertyChanged("TotalPages");
+			}
+		}
 
 		public int CurrentPage
 		{
