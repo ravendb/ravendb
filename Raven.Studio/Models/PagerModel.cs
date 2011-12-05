@@ -12,12 +12,12 @@ namespace Raven.Studio.Models
 		public PagerModel()
 		{
 			PageSize = 25;
-			SetTotalResults(new Observable<long?>());
+			SetTotalResults();
 		}
 
-		public void SetTotalResults(Observable<long?> observable)
+		public void SetTotalResults(Observable<long?> observable = null)
 		{
-			TotalResults = observable;
+			TotalResults = observable ?? new Observable<long?>();
 			TotalResults.PropertyChanged += (sender, args) =>
 			                                {
 			                                	OnPropertyChanged("TotalPages");
