@@ -7,7 +7,7 @@ namespace Raven.Studio.Models
 {
 	public class PagerModel : NotifyPropertyChangedBase
 	{
-		public event EventHandler Navigated;
+		public event EventHandler PagerChanged;
 
 		public PagerModel()
 		{
@@ -103,8 +103,13 @@ namespace Raven.Studio.Models
 			urlParser.SetQueryParam("skip", Skip);
 			UrlUtil.Navigate(urlParser.BuildUrl());
 
-			if (Navigated != null)
-				Navigated(this, EventArgs.Empty);
+			OnPagerChanged();
+		}
+
+		public void OnPagerChanged()
+		{
+			if (PagerChanged != null)
+				PagerChanged(this, EventArgs.Empty);
 		}
 
 		public ICommand NextPage

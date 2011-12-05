@@ -265,12 +265,12 @@
 
 			</StackPanel>
 
-			<Border Grid.Row="2"
-					Margin="{StaticResource Margin_ContentPage}"
-					Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
+			<Grid Grid.Row="2"
+				  Margin="{StaticResource Margin_ContentPage}"
+				  Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
 				<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
 										 DataContext="{Binding Path=DocumentsResult.Value}" />
-			</Border>
+			</Grid>
 		</Grid>
 	</toolkit:DockPanel>
 </Infrastructure:View>

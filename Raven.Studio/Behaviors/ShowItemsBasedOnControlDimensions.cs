@@ -50,8 +50,9 @@ namespace Raven.Studio.Behaviors
 
 			int row = (int) (AssociatedObject.ActualWidth / (DocumentsModel.DocumentSize.Width + 28));
 			int column = (int) (AssociatedObject.ActualHeight / (DocumentsModel.DocumentSize.Height + 24));
-			Model.Pager.PageSize = row * column;
-			var a = row;
+			int pageSize = row * column;
+			Model.Pager.PageSize = pageSize;
+			Model.Pager.OnPagerChanged();
 		}
 	}
 }
