@@ -39,7 +39,7 @@ namespace Raven.Client.MoreLikeThis
 		{
 			var cmd = advancedSession.DatabaseCommands as ServerClient;
 			if (cmd == null)
-				throw new NotImplementedException("Embedded client isn't supported");
+				throw new NotImplementedException("Embedded client isn't supported by the MoreLikeThis bundle");
 
 
 			var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
@@ -55,7 +55,6 @@ namespace Raven.Client.MoreLikeThis
 				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
-
 					var requestUri = GetRequestUri(index, parameters);
 
 					var result = cmd.ExecuteGetRequest(requestUri);
@@ -94,7 +93,7 @@ namespace Raven.Client.MoreLikeThis
 				uri.AppendFormat("maxNumTokens={0}&", parameters.MaximumNumberOfTokensParsed);
 			if (parameters.MaximumWordLength != null &&
 			    parameters.MaximumWordLength != MoreLikeThisQueryParameters.DefaultMaximumWordLength)
-				uri.AppendFormat("maxWordLen={0}", parameters.MaximumWordLength);
+				uri.AppendFormat("maxWordLen={0}&", parameters.MaximumWordLength);
 			if (parameters.MinimumDocumentFrequency != null &&
 			    parameters.MinimumDocumentFrequency != MoreLikeThisQueryParameters.DefaltMinimumDocumentFrequency)
 				uri.AppendFormat("minDocFreq={0}&", parameters.MinimumDocumentFrequency);

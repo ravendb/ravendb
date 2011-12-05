@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
+#if !CLIENT
 namespace Raven.Bundles.MoreLikeThis
+#else
+namespace Raven.Client.MoreLikeThis
+#endif
 {
-    class StopWordsSetup
+    public class StopWordsSetup
     {
         public string Id { get; set; }
         public List<string> StopWords { get; set; } 
