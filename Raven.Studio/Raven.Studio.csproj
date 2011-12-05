@@ -115,6 +115,7 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
+    <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
     <Compile Include="Behaviors\ShowItemsBasedOnControlDimensions.cs" />
     <Compile Include="Behaviors\UpdateTextBindingOnPropertyChanged.cs" />
     <Compile Include="Behaviors\DoubleClickBehavior.cs" />
@@ -261,6 +262,7 @@
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\KeysComparer.cs" />
     <Compile Include="Infrastructure\Execute.cs" />
+    <Compile Include="Infrastructure\RxExtensions.cs" />
     <Compile Include="Infrastructure\StringExtensions.cs" />
     <Compile Include="Infrastructure\UrlParser.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />

@@ -118,6 +118,11 @@
 					 Grid.ColumnSpan="3"
 					 Margin="10"
 					 ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
+				
+				<i:Interaction.Behaviors>
+					<Behaviors:SelectItemOnRightClick />
+					<Behaviors:ShowItemsBasedOnControlDimensions Model="{Binding}" />
+				</i:Interaction.Behaviors>
 
 				<Controls:ContextMenuService.ContextMenu>
 					<Controls:ContextMenu x:Name="DocumentsContextMenu">
@@ -129,10 +134,6 @@
 										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 					</Controls:ContextMenu>
 				</Controls:ContextMenuService.ContextMenu>
-				
-				<i:Interaction.Behaviors>
-					<Behaviors:ShowItemsBasedOnControlDimensions Model="{Binding}" />
-				</i:Interaction.Behaviors>
 			</ListBox>
 		</toolkit:HeaderedContentControl>
 

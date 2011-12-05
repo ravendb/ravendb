@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interactivity;
 using Raven.Studio.Models;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Behaviors
 {
@@ -22,10 +23,10 @@ namespace Raven.Studio.Behaviors
 
 		protected override void OnAttached()
 		{
-			var events = Observable.FromEventPattern<EventArgs>(AssociatedObject, "SizeChanged")
-				.Concat(Observable.FromEventPattern<EventArgs>(DocumentsModel.DocumentSize, "PropertyChanged"))
+			var events = Observable.FromEventPattern<SizeChangedEventHandler, SizeChangedEventArgs>(e => AssociatedObject.SizeChanged += e, e => AssociatedObject.SizeChanged -= e).NoSignature()
+				.Merge(Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentsModel.DocumentSize.SizeChanged += e, e => DocumentsModel.DocumentSize.SizeChanged -= e))
 				.Throttle(TimeSpan.FromSeconds(0.5))
-				.Concat(Observable.FromEventPattern<EventArgs>(AssociatedObject, "Loaded")) // Loaded should execute immediately.
+				.Merge(Observable.FromEventPattern<RoutedEventHandler, EventArgs>(e => AssociatedObject.Loaded += e, e => AssociatedObject.Loaded -= e))  // Loaded should execute immediately.
 				.ObserveOnDispatcher();
 
 			disposable = events.Subscribe(_ => CalculatePageSize());
@@ -42,9 +43,16 @@ namespace Raven.Studio.Behaviors
 			if (Model == null)
 				return;
 
-			var row = AssociatedObject.ActualWidth / DocumentsModel.DocumentSize.Width;
-			var column = AssociatedObject.ActualHeight / DocumentsModel.DocumentSize.Height;
-			Model.Pager.PageSize = (int)(row * column);
+			// ReSharper disable CompareOfFloatsByEqualityOperator
+			if (AssociatedObject.ActualWidth == 0)
+				return;
+			// ReSharper restore CompareOfFloatsByEqualityOperator
+
+			int row = (int) (AssociatedObject.ActualWidth / (DocumentsModel.DocumentSize.Width + 28));
+			int column = (int) (AssociatedObject.ActualHeight / (DocumentsModel.DocumentSize.Height + 24));
+			int pageSize = row * column;
+			Model.Pager.PageSize = pageSize;
+			Model.Pager.OnPagerChanged();
 		}
 	}
 }

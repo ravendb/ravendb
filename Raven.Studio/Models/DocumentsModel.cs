@@ -30,7 +30,7 @@ namespace Raven.Studio.Models
 			Documents.CollectionChanged += (sender, args) => DetermineDocumentViewStyle();
 
 			Pager = new PagerModel();
-			Pager.Navigated += (sender, args) => ForceTimerTicked();
+			Pager.PagerChanged += (sender, args) => ForceTimerTicked();
 
 			ShowEditControls = true;
 		}

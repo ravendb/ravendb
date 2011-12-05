@@ -7,17 +7,17 @@ namespace Raven.Studio.Models
 {
 	public class PagerModel : NotifyPropertyChangedBase
 	{
-		public event EventHandler Navigated;
+		public event EventHandler PagerChanged;
 
 		public PagerModel()
 		{
 			PageSize = 25;
-			SetTotalResults(new Observable<long?>());
+			SetTotalResults();
 		}
 
-		public void SetTotalResults(Observable<long?> observable)
+		public void SetTotalResults(Observable<long?> observable = null)
 		{
-			TotalResults = observable;
+			TotalResults = observable ?? new Observable<long?>();
 			TotalResults.PropertyChanged += (sender, args) =>
 			                                {
 			                                	OnPropertyChanged("TotalPages");
@@ -25,7 +25,18 @@ namespace Raven.Studio.Models
 			                                };
 		}
 
-		public int PageSize { get; set; }
+		private int pageSize;
+		public int PageSize
+		{
+			get { return pageSize; }
+			set
+			{
+				pageSize = value;
+				OnPropertyChanged();
+				OnPropertyChanged("CurrentPage");
+				OnPropertyChanged("TotalPages");
+			}
+		}
 
 		public int CurrentPage
 		{
@@ -92,8 +103,13 @@ namespace Raven.Studio.Models
 			urlParser.SetQueryParam("skip", Skip);
 			UrlUtil.Navigate(urlParser.BuildUrl());
 
-			if (Navigated != null)
-				Navigated(this, EventArgs.Empty);
+			OnPagerChanged();
+		}
+
+		public void OnPagerChanged()
+		{
+			if (PagerChanged != null)
+				PagerChanged(this, EventArgs.Empty);
 		}
 
 		public ICommand NextPage
