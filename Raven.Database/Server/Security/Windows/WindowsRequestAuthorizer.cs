@@ -9,8 +9,6 @@ namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsRequestAuthorizer : AbstractRequestAuthorizer
 	{
-	
-
 		private readonly List<string> requiredGroups = new List<string>();
 
 		protected override void Initialize()
