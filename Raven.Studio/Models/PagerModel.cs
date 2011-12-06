@@ -11,6 +11,7 @@ namespace Raven.Studio.Models
 
 		public PagerModel()
 		{
+			IsSkipBasedOnTheUrl = true;
 			PageSize = 25;
 			SetTotalResults();
 		}
@@ -56,17 +57,23 @@ namespace Raven.Studio.Models
 			{
 				if (skip == null)
 				{
-					SetSkip(new UrlParser(UrlUtil.Url));
+					if (IsSkipBasedOnTheUrl)
+						SetSkip(new UrlParser(UrlUtil.Url));
+					else
+						skip = 0;
 				}
 				return skip.Value;
 			}
 			set
 			{
 				skip = value;
+				OnPropertyChanged();
 				OnPropertyChanged("CurrentPage");
 				OnPropertyChanged("HasPrevPage");
 			}
 		}
+
+		public bool IsSkipBasedOnTheUrl { get; set; }
 
 		public void SetSkip(UrlParser urlParser)
 		{
@@ -99,9 +106,13 @@ namespace Raven.Studio.Models
 		{
 			var skip1 = Skip + pageOffset*PageSize;
 			Skip = (ushort) skip1;
-			var urlParser = new UrlParser(UrlUtil.Url);
-			urlParser.SetQueryParam("skip", Skip);
-			UrlUtil.Navigate(urlParser.BuildUrl());
+
+			if (IsSkipBasedOnTheUrl)
+			{
+				var urlParser = new UrlParser(UrlUtil.Url);
+				urlParser.SetQueryParam("skip", Skip);
+				UrlUtil.Navigate(urlParser.BuildUrl());
+			}
 
 			OnPagerChanged();
 		}
