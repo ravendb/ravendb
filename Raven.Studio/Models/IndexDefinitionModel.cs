@@ -24,8 +24,10 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/indexes/";
 			index = new IndexDefinition();
-			Maps = new BindableCollection<MapItem>(x => x.Text);
-			Maps.Add(new MapItem()); // We must have at least one map item in a new index.
+			Maps = new BindableCollection<MapItem>(x => x.Text)
+			{
+				new MapItem()
+			};
 			Fields = new BindableCollection<FieldProperties>(field => field.Name);
 
 			statistics = Database.Value.Statistics;
@@ -36,6 +38,9 @@ namespace Raven.Studio.Models
 		{
 			index = indexDefinition;
 			Maps.Set(index.Maps.Select(x => new MapItem {Text = x}));
+
+			ShowReduce = Reduce != null;
+			ShowTransformResults = TransformResults != null;
 
 			CreateOrEditField(index.Indexes, (f, i) => f.Indexing = i);
 			CreateOrEditField(index.Stores, (f, i) => f.Storage = i);
@@ -90,6 +95,10 @@ namespace Raven.Studio.Models
 			index.Map = Maps.Select(x => x.Text).FirstOrDefault();
 			index.Maps = new HashSet<string>(Maps.Select(x => x.Text));
 			UpdateFields();
+			if (string.IsNullOrWhiteSpace(index.Reduce))
+				index.Reduce = null;
+			if (string.IsNullOrWhiteSpace(index.TransformResults))
+				index.TransformResults = null;
 		}
 
 		private void UpdateFields()
@@ -158,6 +167,7 @@ namespace Raven.Studio.Models
 			{
 				index.Reduce = value;
 				OnPropertyChanged();
+				OnPropertyChanged("ShowReduce");
 			}
 		}
 
