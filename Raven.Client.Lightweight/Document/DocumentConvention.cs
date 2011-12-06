@@ -57,7 +57,7 @@ namespace Raven.Client.Document
 #else
 			FindClrTypeName = entityType => entityType.AssemblyQualifiedName;
 #endif
-
+			TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;
 			FindFullDocumentKeyFromNonStringIdentifier = DefaultFindFullDocumentKeyFromNonStringIdentifier;
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
 			FindTypeTagName = DefaultTypeTagName;
@@ -71,6 +71,17 @@ namespace Raven.Client.Document
 			MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] {IdentityPartsSeparator}, StringSplitOptions.RemoveEmptyEntries) .Last();
+		}
+
+		public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
+		{
+			var count = typeTagName.Count(char.IsUpper);
+			
+			if (count <= 1) // simple name, just lower case it
+				return typeTagName.ToLowerInvariant();
+
+			// multiple capital letters, so probably something that we want to preserve caps on.
+			return typeTagName;
 		}
 
 		///<summary>
@@ -384,6 +395,11 @@ namespace Raven.Client.Document
 		/// Saves Enums as integers and instruct the Linq provider to query enums as integer values.
 		/// </summary>
 		public bool SaveEnumsAsIntegers { get; set; }
+
+		/// <summary>
+		/// Translate the type tag name to the document key prefix
+		/// </summary>
+		public Func<string, string> TransformTypeTagNameToDocumentKeyPrefix { get; set; }
 	}
 
 
