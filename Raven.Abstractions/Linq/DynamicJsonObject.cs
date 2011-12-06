@@ -174,8 +174,13 @@ namespace Raven.Abstractions.Linq
 					if (s != null)
 					{
 						DateTime dateTime;
-						if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+						if (DateTime.TryParseExact(s, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
 							return dateTime;
+						DateTimeOffset dateTimeOffset;
+						if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
+						{
+							return dateTimeOffset;
+						}
 					}
 					return value ?? new DynamicNullObject { IsExplicitNull = true };
 			}

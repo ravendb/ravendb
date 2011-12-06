@@ -37,10 +37,11 @@ namespace Raven.Abstractions.Json
 					var dateTime = ((DateTime)key);
 					if (dateTime.Kind == DateTimeKind.Unspecified)
 						dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
-					writer.WritePropertyName(dateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+					var postFix = dateTime.Kind == DateTimeKind.Utc ? "Z" : "";
+					writer.WritePropertyName(dateTime.ToString(Default.DateTimeFormatsToWrite + postFix, CultureInfo.InvariantCulture));
 				}
 				else if (key is DateTimeOffset)
-					writer.WritePropertyName(((DateTimeOffset)key).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+					writer.WritePropertyName(((DateTimeOffset)key).ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
 				else
 					throw new ArgumentException(string.Format("Not idea how to process argument: '{0}'", value));
 

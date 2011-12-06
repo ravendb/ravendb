@@ -18,9 +18,10 @@ namespace Raven.Tests.MailingList
 			{
 				using(var session = store.OpenSession())
 				{
+					var notTheCurrentTimeZone = GetDifferentTimeZoneThanCurrentTimeZone();
 					session.Store(new Item
 					{
-						At = new DateTimeOffset(new DateTime(2011,11,11,11,0,0),TimeSpan.FromHours(3))
+						At = new DateTimeOffset(new DateTime(2011,11,11,11,0,0),notTheCurrentTimeZone)
 					});
 					session.SaveChanges();
 				}
@@ -37,6 +38,14 @@ namespace Raven.Tests.MailingList
 						.Where(x => x.At < new DateTimeOffset(new DateTime(2011, 11, 11, 10, 0, 0), TimeSpan.FromHours(-9)))); 
 				}
 			}
+		}
+
+		private static TimeSpan GetDifferentTimeZoneThanCurrentTimeZone()
+		{
+			var differentTimeZoneThanCurrentTimeZone = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now);
+			if (differentTimeZoneThanCurrentTimeZone.Hours > 10)
+				return differentTimeZoneThanCurrentTimeZone.Add(TimeSpan.FromHours(-1));
+			return differentTimeZoneThanCurrentTimeZone.Add(TimeSpan.FromHours(1));
 		}
 	}
 }
