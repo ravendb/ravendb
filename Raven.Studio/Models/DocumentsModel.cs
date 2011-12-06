@@ -82,6 +82,8 @@ namespace Raven.Studio.Models
 			get { return height; }
 			set
 			{
+				if (height == value)
+					return;
 				height = value;
 				OnPropertyChanged();
 				SetWidthBasedOnHeight();
