@@ -20,13 +20,13 @@ namespace Raven.Studio.Infrastructure
 
 		public void LoadModel(string state)
 		{
+			IsLoaded = true;
 			if (string.IsNullOrWhiteSpace(state) == false &&
 				state.StartsWith(ModelUrl, StringComparison.InvariantCultureIgnoreCase) &&
 				ModelUrlIgnoreList.Any(state.StartsWith) == false)
 			{
 				LoadModelParameters(state.Substring(ModelUrl.Length));
 			}
-			IsLoaded = true;
 		}
 
 		public virtual void LoadModelParameters(string parameters) { }

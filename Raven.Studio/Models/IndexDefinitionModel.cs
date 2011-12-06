@@ -19,7 +19,6 @@ namespace Raven.Studio.Models
 		private IndexDefinition index;
 		private string originalIndex;
 		private bool createNewIndexMode;
-		private bool isLoaded;
 
 		public IndexDefinitionModel()
 		{
@@ -35,7 +34,6 @@ namespace Raven.Studio.Models
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
 		{
-			isLoaded = true;
 			index = indexDefinition;
 			Maps.Set(index.Maps.Select(x => new MapItem {Text = x}));
 
@@ -142,25 +140,44 @@ namespace Raven.Studio.Models
 			get { return createNewIndexMode ? "Create an Index" : "Index: " + Name; }
 		}
 
+		private bool showReduce;
+		public bool ShowReduce
+		{
+			get { return showReduce; }
+			set
+			{
+				showReduce = value;
+				OnPropertyChanged();
+			}
+		}
+
 		public string Reduce
 		{
 			get { return index.Reduce; }
 			set
 			{
-				if (isLoaded == false)
-					return;
 				index.Reduce = value;
 				OnPropertyChanged();
 			}
 		}
+
+		private bool showTransformResults;
+		public bool ShowTransformResults
+		{
+			get { return showTransformResults; }
+			set
+			{
+				showTransformResults = value;
+				OnPropertyChanged();
+			}
+		}
+
 
 		public string TransformResults
 		{
 			get { return index.TransformResults; }
 			set
 			{
-				if (isLoaded == false)
-					return;
 				index.TransformResults = value;
 				OnPropertyChanged();
 			}
@@ -192,22 +209,22 @@ namespace Raven.Studio.Models
 
 		public ICommand AddReduce
 		{
-			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Reduce = string.Empty); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.ShowReduce = true); }
 		}
 
 		public ICommand RemoveReduce
 		{
-			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Reduce = null); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.ShowReduce = false); }
 		}
 
 		public ICommand AddTransformResults
 		{
-			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.TransformResults = string.Empty); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.ShowTransformResults = true); }
 		}
 
 		public ICommand RemoveTransformResults
 		{
-			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.TransformResults = null); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.ShowTransformResults = false); }
 		}
 
 		public ICommand AddField
