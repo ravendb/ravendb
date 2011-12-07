@@ -624,10 +624,11 @@ namespace Raven.Database.Indexing
 			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start, int pageSize)
 			{
 				var min = Math.Min(start, search.TotalHits);
+				
 
 				// we are paging, we need to check that we don't have duplicates in the previous page
 				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
-				if(fieldsToFetch.IsProjection == false && start - pageSize >= 0 && start < search.TotalHits) 
+				if (parent.IsMapReduce == false && fieldsToFetch.IsProjection == false && start - pageSize >= 0 && start < search.TotalHits) 
 				{
 					for (int i = start - pageSize; i < min; i++)
 					{
