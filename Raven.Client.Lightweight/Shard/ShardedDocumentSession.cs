@@ -232,36 +232,42 @@ namespace Raven.Client.Shard
 		/// <typeparam name="T"></typeparam>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		public T Load<T>(string id)
+        public T Load<T>(string id)
 		{
-			var shardsToUse = GetAppropriateShardedSessions<T>(id);
-
-			//if we can narrow down to single shard, explicitly call it
-			if (shardsToUse.Length == 1)
-			{
-				return shardsToUse[0].Load<T>(id);
-			}
-			var results = shardStrategy.ShardAccessStrategy.Apply(shardsToUse, x =>
-			{
-				try
-				{
-					return new[] { x.Load<T>(id) };
-				}
-				catch (WebException e)
-				{
-					var httpWebResponse = e.Response as HttpWebResponse; // we ignore 404, it is expected
-					if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-						throw;
-					return null;
-				}
-			});
-
-			return results
-				.Where(x => ReferenceEquals(null, x) == false)
-				.FirstOrDefault();
+		    Func<IDocumentSession, T> loadFrom = s => s.Load<T>(id);
+		    var shardsToUse = GetAppropriateShardedSessions<T>(id);
+		    return LoadFromShards(shardsToUse, loadFrom);
 		}
 
-		/// <summary>
+	    private T LoadFromShards<T>(IDocumentSession[] shardsToUse, Func<IDocumentSession, T> loadFrom)
+        {
+            //if we can narrow down to single shard, explicitly call it
+            if (shardsToUse.Length == 1)
+            {
+                return loadFrom(shardsToUse[0]);
+            }
+            var results = shardStrategy.ShardAccessStrategy
+                .Apply(shardsToUse, x =>
+                                        {
+                                            try
+                                            {
+                                                return new[] {loadFrom(x)};
+                                            }
+                                            catch (WebException e)
+                                            {
+                                                var httpWebResponse = e.Response as HttpWebResponse; // we ignore 404, it is expected
+                                                if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+                                                    throw;
+                                                return null;
+                                            }
+                                        });
+
+            return results
+                .Where(x => ReferenceEquals(null, x) == false)
+                .FirstOrDefault();
+        }
+
+	    /// <summary>
 		/// Loads the specified entities with the specified ids.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
@@ -314,9 +320,10 @@ namespace Raven.Client.Shard
 		/// </remarks>
 		public T Load<T>(ValueType id)
 		{
-			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-			return Load<T>(documentKey);
-		}
+            Func<IDocumentSession, T> loadFrom = s => s.Load<T>(id);
+            var shardsToUse = GetAppropriateShardedSessionsFromValueTypeId<T>(id);
+            return LoadFromShards(shardsToUse, loadFrom);
+        }
 
 		/// <summary>
 		/// Begin a load while including the specified path
@@ -523,19 +530,31 @@ namespace Raven.Client.Shard
 			return LuceneQuery<T>(index.IndexName);
 		}
 
-		private IDocumentSession[] GetAppropriateShardedSessions<T>(string key)
-		{
-			var sessionIds =
-				shardStrategy.ShardResolutionStrategy.SelectShardIds(ShardResolutionStrategyData.BuildFrom(typeof(T), key));
-			IDocumentSession[] documentSessions;
-			if (sessionIds != null)
-				documentSessions = shardSessions.Where(session => sessionIds.Contains(session.Advanced.StoreIdentifier)).ToArray();
-			else
-				documentSessions = shardSessions;
-			return documentSessions;
-		}
+        private IDocumentSession[] GetAppropriateShardedSessions<T>(string key)
+        {
+            var sessionIds =
+                shardStrategy.ShardResolutionStrategy.SelectShardIds(ShardResolutionStrategyData.BuildFrom(typeof(T), key));
+            return GetAppropriateShardedSessions(sessionIds);
+        }
 
-		/// <summary>
+        private IDocumentSession[] GetAppropriateShardedSessionsFromValueTypeId<T>(ValueType key)
+        {
+            var sessionIds =
+                shardStrategy.ShardResolutionStrategy.SelectShardIds(ShardResolutionStrategyData.BuildFrom(typeof(T), key));
+            return GetAppropriateShardedSessions(sessionIds);
+        }
+
+        private IDocumentSession[] GetAppropriateShardedSessions(IList<string> sessionIds)
+	    {
+	        IDocumentSession[] documentSessions;
+	        if (sessionIds != null)
+	            documentSessions = shardSessions.Where(session => sessionIds.Contains(session.Advanced.StoreIdentifier)).ToArray();
+	        else
+	            documentSessions = shardSessions;
+	        return documentSessions;
+	    }
+
+	    /// <summary>
 		/// Gets the store identifier for this session.
 		/// The store identifier is the identifier for the particular RavenDB instance.
 		/// This is mostly useful when using sharding.
