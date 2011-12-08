@@ -545,6 +545,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
 			authRequest.Credentials = Credentials;
+			authRequest.PreAuthenticate = true;
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			authRequest.PreAuthenticate = true;
 #else
