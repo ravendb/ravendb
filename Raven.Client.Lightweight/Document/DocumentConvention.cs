@@ -227,7 +227,7 @@ namespace Raven.Client.Document
 			if (currentIdPropertyCache.TryGetValue(type, out info))
 				return info;
 
-			var identityProperty = type.GetProperties().FirstOrDefault(FindIdentityProperty);
+			var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
 
 			if (identityProperty!= null && identityProperty.DeclaringType != type)
 			{
@@ -241,6 +241,22 @@ namespace Raven.Client.Document
 			};
 
 			return identityProperty;
+		}
+
+		private static IEnumerable<PropertyInfo> GetPropertiesForType(Type type)
+		{
+			foreach (var propertyInfo in type.GetProperties())
+			{
+				yield return propertyInfo;
+			}
+
+			foreach (var @interface in type.GetInterfaces())
+			{
+				foreach (var propertyInfo in GetPropertiesForType(@interface))
+				{
+					yield return propertyInfo;
+				}
+			}
 		}
 
 		/// <summary>
