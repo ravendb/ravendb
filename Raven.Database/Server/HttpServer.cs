@@ -487,9 +487,16 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				CurrentOperationContext.Headers.Value = new NameValueCollection();
-				currentDatabase.Value = DefaultResourceStore;
-				currentConfiguration.Value = DefaultConfiguration;
+				try
+				{
+					CurrentOperationContext.Headers.Value = new NameValueCollection();
+					currentDatabase.Value = DefaultResourceStore;
+					currentConfiguration.Value = DefaultConfiguration;
+				}
+				catch 
+				{
+					// this can happen during system shutdown
+				}
 			}
 			return false;
 		}
