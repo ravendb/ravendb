@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 
@@ -21,11 +22,16 @@ namespace Raven.Studio.Models
 			Server = new Observable<ServerModel>();
 		}
 
+		public static Observable<DatabaseModel> Database { get { return Current.Server.Value.SelectedDatabase; } }
+
+		public static IAsyncDatabaseCommands DatabaseCommands
+		{
+			get { return Database.Value.AsyncDatabaseCommands; }
+		}
+
 		private void Initialize()
 		{
-			var serverModel = new ServerModel();
-			Server.Value = serverModel;
-			serverModel.Initialize();
+			Server.Value = new ServerModel();
 		}
 
 		public Observable<ServerModel> Server { get; set; }
@@ -37,15 +43,15 @@ namespace Raven.Studio.Models
 
 		public void AddNotification(Notification notification)
 		{
-			Notifications.Execute(() =>
-								  {
-									  Notifications.Add(notification);
-									  if (Notifications.Count > 5)
-									  {
-										  Notifications.RemoveAt(0);
-									  }
-									  LastNotification.Value = notification.Message;
-								  });
+			Execute.OnTheUI(() =>
+			                	{
+			                		Notifications.Add(notification);
+			                		if (Notifications.Count > 5)
+			                		{
+			                			Notifications.RemoveAt(0);
+			                		}
+			                		LastNotification.Value = notification.Message;
+			                	});
 		}
 
 		public Observable<string> LastNotification { get; set; }

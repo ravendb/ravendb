@@ -23,8 +23,7 @@ namespace Raven.Studio.Infrastructure
 				Interval = TimeSpan.FromSeconds(1),
 			};
 			dispatcherTimer.Tick += DispatcherTimerOnTick;
-			dispatcherTimer.Start();
-
+			dispatcherTimer.Start();			
 		}
 
 		private static void DispatcherTimerOnTick(object sender, EventArgs eventArgs)
@@ -68,6 +67,7 @@ namespace Raven.Studio.Infrastructure
 					                              	InvokeOnModel(ctx, action);
 					                              };
 					observable.PropertyChanged += observableOnPropertyChanged;
+					return;
 				}
 			}
 			action(model);

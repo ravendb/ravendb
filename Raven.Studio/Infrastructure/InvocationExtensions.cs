@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using Raven.Client.Extensions;
 using System.Threading.Tasks;
@@ -8,28 +10,6 @@ namespace Raven.Studio.Infrastructure
 {
 	public static class InvocationExtensions
 	{
-		public static Action ViaCurrentDispatcher(this Action action)
-		{
-			var dispatcher = Deployment.Current.Dispatcher;
-			return () =>
-			{
-				if (dispatcher.CheckAccess())
-					action();
-				dispatcher.InvokeAsync(action);
-			};
-		}
-
-		public static Action<T> ViaCurrentDispatcher<T>(this Action<T> action)
-		{
-			var dispatcher = Deployment.Current.Dispatcher;
-			return t =>
-			{
-				if (dispatcher.CheckAccess())
-					action(t);
-				dispatcher.InvokeAsync(() => action(t));
-			};
-		}
-
 		public static Task ContinueOnSuccess<T>(this Task<T> parent, Action<T> action)
 		{
 			return parent.ContinueWith(task => action(task.Result));
@@ -49,13 +29,7 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task<bool> ContinueWhenTrueInTheUIThread(this Task<bool> parent, Action action)
 		{
-			return parent.ContinueWhenTrue(() =>
-			{
-				if (Deployment.Current.Dispatcher.CheckAccess())
-					action();
-				Deployment.Current.Dispatcher.InvokeAsync(action)
-					.Catch();
-			});
+			return parent.ContinueWhenTrue(() => Execute.OnTheUI(action));
 		}
 
 		public static Task<TResult> ContinueOnSuccess<T, TResult>(this Task<T> parent, Func<T, TResult> action)
@@ -76,24 +50,12 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task ContinueOnSuccessInTheUIThread(this Task parent, Action action)
 		{
-			return parent.ContinueOnSuccess(() =>
-			{
-				if (Deployment.Current.Dispatcher.CheckAccess())
-					action();
-				Deployment.Current.Dispatcher.InvokeAsync(action)
-					.Catch();
-			});
+			return parent.ContinueOnSuccess(() => Execute.OnTheUI(action));
 		}
 
 		public static Task ContinueOnSuccessInTheUIThread<T>(this Task<T> parent, Action<T> action)
 		{
-			return parent.ContinueOnSuccess(result =>
-			{
-				if (Deployment.Current.Dispatcher.CheckAccess())
-					action(result);
-				Deployment.Current.Dispatcher.InvokeAsync(() => action(result))
-					.Catch();
-			});
+			return parent.ContinueOnSuccess(result => Execute.OnTheUI(() => action(result)));
 		}
 
 		public static Task ContinueOnSuccess(this Task parent, Func<Task> action)
@@ -113,6 +75,27 @@ namespace Raven.Studio.Infrastructure
 			return task;
 		}
 
+		public static Task<TResult> Catch<TResult>(this Task<TResult> parent)
+		{
+			return parent.Catch(e => { });
+		}
+
+		public static Task<TResult> Catch<TResult>(this Task<TResult> parent, Action<AggregateException> action)
+		{
+			var stackTrace = new StackTrace();
+			return parent.ContinueWith(task =>
+			{
+				if (task.IsFaulted == false)
+					return task;
+
+				var ex = task.Exception.ExtractSingleInnerException();
+				if (ErrorHandler.Handle(ex) == false)
+					Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+						.ContinueWith(_ => action(task.Exception));
+				return task;
+			}).Unwrap();
+		}
+
 		public static Task Catch(this Task parent)
 		{
 			return parent.Catch(e => { });
@@ -120,38 +103,37 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task Catch(this Task parent, Action<AggregateException> action)
 		{
-			parent.ContinueWith(task =>
+			var stackTrace = new StackTrace();
+			return parent.ContinueWith(task =>
 			{
-				if (task.IsFaulted == false)
-					return;
+			    if (task.IsFaulted == false)
+			        return;
 
-				Deployment.Current.Dispatcher.InvokeAsync(() => ErrorPresenter.Show(task.Exception.ExtractSingleInnerException()))
-					.ContinueWith(_ => action(task.Exception));
+			    var ex = task.Exception.ExtractSingleInnerException();
+			    if (ErrorHandler.Handle(ex) == false)
+			        Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+			            .ContinueWith(_ => action(task.Exception));
 			});
 
-			return parent;
-		}
-
-		public static Task CatchIgnore<TException>(this Task parent) where TException : Exception
-		{
-			return parent.CatchIgnore<TException>(() => {});
 		}
 
 		public static Task CatchIgnore<TException>(this Task parent, Action action) where TException : Exception
 		{
-			parent.ContinueWith(task =>
-			{
-				if (task.IsFaulted == false)
-					return;
+			return parent.ContinueWith(task =>
+			                           	{
+			                           		if (task.IsFaulted == false)
+			                           			return task;
 
-				if (task.Exception.ExtractSingleInnerException() is TException == false)
-					return;
+			                           		if (task.Exception.ExtractSingleInnerException() is TException == false)
+			                           			return task;
 
-				task.Exception.Handle(exception => true);
-				action();
-			});
+			                           		action();
 
-			return parent;
+			                           		var asyncTaskMethodBuilder = AsyncTaskMethodBuilder.Create();
+			                           		asyncTaskMethodBuilder.SetResult();
+			                           		return asyncTaskMethodBuilder.Task;
+			                           	})
+				.Unwrap();
 		}
 
 		public static Task ProcessTasks(this IEnumerable<Task> tasks)

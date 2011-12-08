@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Reactive.Linq;
 using System.Windows.Input;
 using System.Windows.Media;
 using Newtonsoft.Json;
@@ -10,6 +10,7 @@ using Raven.Json.Linq;
 using Raven.Studio.Framework;
 using Raven.Studio.Infrastructure;
 using System.Linq;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -27,6 +28,13 @@ namespace Raven.Studio.Features.Documents
 				LastModified = LastModified.ToLocalTime();
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
+
+			Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentsModel.DocumentSize.SizeChanged += e, e => DocumentsModel.DocumentSize.SizeChanged -= e)
+				.Throttle(TimeSpan.FromSeconds(0.5))
+				.Subscribe(_ => CalculateData());
+
+			CalculateData();
+			ToolTipText = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, 10);
 		}
 
 		Brush fill;
@@ -40,18 +48,37 @@ namespace Raven.Studio.Features.Documents
 			get { return new EditDocumentCommand(this); }
 		}
 
-		private const int ToolTipTextLength = 250;
+		private string toolTipText;
 		public string ToolTipText
 		{
-			get
+			get { return toolTipText; }
+			set
 			{
-				var json = inner.DataAsJson.ToString();
-				json = (json.Length > ToolTipTextLength)
-						? json.Substring(0, ToolTipTextLength) + "..." + Environment.NewLine + "}"
-						: json;
-
-				return json;
+				toolTipText = value;
+				OnPropertyChanged();
 			}
+		}
+
+		private string data;
+		public string Data
+		{
+			get { return data; }
+			set
+			{
+				data = value;
+				OnPropertyChanged();
+			}
+		}
+
+		private void CalculateData()
+		{
+			string d = null;
+			if (DocumentsModel.DocumentSize.Height >= DocumentsModel.ExpandedMinimumHeight)
+			{
+				var margin = Math.Sqrt(DocumentsModel.DocumentSize.Width) - 4;
+				d = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, (int)margin);
+			}
+			Execute.OnTheUI(() => Data = d);
 		}
 
 		public string DisplayId
@@ -185,13 +212,13 @@ namespace Raven.Studio.Features.Documents
 			if (string.IsNullOrEmpty(id))
 				return "Projection"; // meaning that the document is a projection and not a 'real' document
 
+			if (id.StartsWith("Raven/"))
+				return "Sys Doc";
+
 			var entity = metadata.IfPresent<string>(Constants.RavenEntityName);
 			if (entity != null)
 				entity = entity.ToLower();
-			return entity ??
-				(id.StartsWith("Raven/")
-					? "Sys doc"
-					: "Doc");
+			return entity ?? "Doc";
 		}
 	}
 }

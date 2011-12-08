@@ -60,6 +60,7 @@
     <Compile Include="Data\AggregationOperationExtensions.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\BatchResult.cs" />
+    <Compile Include="Data\BuildNumber.cs" />
     <Compile Include="Data\ConnectionStringParser.cs" />
     <Compile Include="Data\Constants.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
@@ -76,6 +77,7 @@
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\JsonDocument.cs" />
     <Compile Include="Data\JsonDocumentMetadata.cs" />
+    <Compile Include="Data\LicensingStatus.cs" />
     <Compile Include="Data\LogItem.cs" />
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="Data\PatchCommandType.cs" />
@@ -97,6 +99,7 @@
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />
     <Compile Include="Default.cs" />
+    <Compile Include="Json\JsonDictionaryDateTimeKeysConverter.cs" />
     <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
     <Compile Include="Json\JsonFloatConverter.cs" />
     <Compile Include="Json\Linq\DictionaryWithParentSnapshot.cs" />

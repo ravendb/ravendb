@@ -9,9 +9,9 @@ using System.Windows.Input;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection.Async;
+using Raven.Client.Connection;
 using Raven.Json.Linq;
-using Raven.Studio.Features.Documents;
+using Raven.Studio.Commands;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -54,13 +54,13 @@ namespace Raven.Studio.Models
 			if (string.IsNullOrWhiteSpace(docId) == false)
 			{
 				Mode = DocumentMode.DocumentWithId;
-				documentKey = Key = docId;
+				SetCurrentDocumentKey(docId);
 				DatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccess(newdoc =>
 					                   {
 					                   	if (newdoc == null)
 					                   	{
-					                   		UrlUtil.Navigate("/DocumentNotFound?id=" + docId);
+					                   		HandleDocumentNotFound();
 					                   		return;
 					                   	}
 					                   	document.Value = newdoc;
@@ -76,15 +76,32 @@ namespace Raven.Studio.Models
 				Mode = DocumentMode.Projection;
 				try
 				{
-					// TODO: this throwing an exception. Please load the projection form the query-string parameter.
-					var newdoc = JsonConvert.DeserializeObject<JsonDocument>(Uri.UnescapeDataString(projection));
+					var unescapeDataString = Uri.UnescapeDataString(projection);
+					var newdoc = RavenJObject.Parse(unescapeDataString).ToJsonDocument();
 					document.Value = newdoc;
 				}
 				catch
 				{
-					UrlUtil.Navigate("/NotFound");
+					HandleDocumentNotFound();
+					throw; // Display why we couldn't parse the projection from the URL correctly
 				}
 			}
+		}
+
+		private void HandleDocumentNotFound()
+		{
+			Notification notification;
+			if (Mode == DocumentMode.Projection)
+				notification = new Notification("Could not parse projection correctly", NotificationLevel.Error);
+			else
+				notification = new Notification(string.Format("Could not find '{0}' document", Key), NotificationLevel.Warning);
+			ApplicationModel.Current.AddNotification(notification);
+			UrlUtil.Navigate("/documents");
+		}
+
+		public void SetCurrentDocumentKey(string docId)
+		{
+			documentKey = Key = docId;
 		}
 
 		private void UpdateFromDocument()
@@ -93,6 +110,7 @@ namespace Raven.Studio.Models
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			UpdateMetadata(newdoc.Metadata);
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
+			UpdateRelated();
 			OnEverythingChanged();
 		}
 
@@ -154,7 +172,6 @@ namespace Raven.Studio.Models
 			{
 				jsonData = value;
 				UpdateReferences();
-				UpdateRelated();
 				OnPropertyChanged();
 				OnPropertyChanged("DocumentSize");
 			}
@@ -235,7 +252,12 @@ namespace Raven.Studio.Models
 		public string Key
 		{
 			get { return document.Value.Key; }
-			set { document.Value.Key = value; OnPropertyChanged(); }
+			set
+			{
+				document.Value.Key = value;
+				OnPropertyChanged();
+				OnPropertyChanged("DisplayId");
+			}
 		}
 
 		public Guid? Etag
@@ -275,12 +297,12 @@ namespace Raven.Studio.Models
 
 		public ICommand Save
 		{
-			get { return new SaveDocumentCommand(this, DatabaseCommands); }
+			get { return new SaveDocumentCommand(this); }
 		}
 
 		public ICommand Delete
 		{
-			get { return new DeleteDocumentCommand(Key, DatabaseCommands, navigateToHome: true); }
+			get { return new DeleteDocumentCommand(Key, navigateToHome: true); }
 		}
 
 		public ICommand Prettify
@@ -302,38 +324,35 @@ namespace Raven.Studio.Models
 				this.parent = parent;
 			}
 
-			public override void Execute(object parameter)
+			public override void Execute(object _)
 			{
 				parent.DatabaseCommands.GetAsync(parent.Key)
 					.ContinueOnSuccess(doc =>
-									   {
-										   if (doc == null)
-										   {
-											   UrlUtil.Navigate("/DocumentNotFound?id=" + parent.Key);
-											   return;
-										   }
+					                   	{
+					                   		if (doc == null)
+					                   		{
+					                   			parent.HandleDocumentNotFound();
+												return;
+					                   		}
 
-										   parent.document.Value = doc;
-										   ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was refreshed", doc.Key)));
-									   })
-									   .Catch();
+					                   		parent.document.Value = doc;
+					                   	})
+					.Catch();
 			}
 		}
 
 		private class SaveDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel document;
-			private readonly IAsyncDatabaseCommands databaseCommands;
 
-			public SaveDocumentCommand(EditableDocumentModel document, IAsyncDatabaseCommands asyncDatabaseCommands)
+			public SaveDocumentCommand(EditableDocumentModel document)
 			{
 				this.document = document;
-				this.databaseCommands = asyncDatabaseCommands;
 			}
 
 			public override void Execute(object parameter)
 			{
-				if (document.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+				if (document.Key != null && document.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				{
 					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
 						.ContinueWhenTrue(SaveDocument);
@@ -355,8 +374,16 @@ namespace Raven.Studio.Models
 					if (document.Key != null && document.Key.Contains("/") && 
 						metadata.Value<string>(Constants.RavenEntityName) == null)
 					{
-						metadata[Constants.RavenEntityName] =
-							document.Key.Split(new[] {"/"}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+						var entityName = document.Key.Split(new[] {"/"}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+						if(entityName!=null && entityName.Length > 1)
+						{
+							metadata[Constants.RavenEntityName] = char.ToUpper(entityName[0]) + entityName.Substring(1);
+						}
+						else
+						{
+							metadata[Constants.RavenEntityName] = entityName;
+						}
+
 					}
 				}
 				catch (JsonReaderException ex)
@@ -367,14 +394,16 @@ namespace Raven.Studio.Models
 				
 				document.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
-				databaseCommands.PutAsync(document.Key, document.Etag,
+				DatabaseCommands.PutAsync(document.Key, document.Etag,
 										  doc,
 										  metadata)
 					.ContinueOnSuccess(result =>
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
 						document.Etag = result.ETag;
+						document.SetCurrentDocumentKey(result.Key);
 					})
+					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
 			}
 		}

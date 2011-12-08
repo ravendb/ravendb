@@ -481,6 +481,14 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException("Multiple databases are not supported in the embedded API currently");
 		}
 
+		/// <summary>
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+		/// with the default database
+		/// </summary>
+		public IDatabaseCommands ForDefaultDatabase()
+		{
+			return this;
+		}
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact

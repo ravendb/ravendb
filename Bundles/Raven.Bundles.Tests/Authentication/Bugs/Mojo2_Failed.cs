@@ -26,13 +26,13 @@ namespace Raven.Bundles.Tests.Authentication.Bugs
 			{
 				Id = "Administrators",
 				Permissions =
-                                      {
-                                          new client::Raven.Bundles.Authorization.Model.OperationPermission
-                                              {
-                                                  Allow = true,
-                                                  Operation = "Library/Manage"
-                                              }
-                                      }
+					{
+						new client::Raven.Bundles.Authorization.Model.OperationPermission
+						{
+							Allow = true,
+							Operation = "Library/Manage"
+						}
+					}
 			});
 			session.SaveChanges();
 		}
@@ -55,13 +55,13 @@ namespace Raven.Bundles.Tests.Authentication.Bugs
 			session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
 			{
 				Id = "paolo",
-				Roles = { "Users" },
+				Roles = {"Users"},
 				Permissions =
 					new List<client::Raven.Bundles.Authorization.Model.OperationPermission>
-                                          {
-                                              new client::Raven.Bundles.Authorization.Model.OperationPermission
-                                                  {Allow = true, Operation = "Library/View" }
-                                          }
+					{
+						new client::Raven.Bundles.Authorization.Model.OperationPermission
+						{Allow = true, Operation = "Library/View"}
+					}
 			});
 
 			session.SaveChanges();
@@ -80,30 +80,32 @@ namespace Raven.Bundles.Tests.Authentication.Bugs
 				var library = new Library {Id = "library/andrea-lib"};
 				session.Store(library);
 				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(session, library,
-				                                                                                     new client::Raven.Bundles.
-				                                                                                     	Authorization.Model.
-				                                                                                     	DocumentAuthorization
-				                                                                                     {
-				                                                                                     	Permissions =
-				                                                                                     	{
-				                                                                                     		new client::Raven.Bundles.
-				                                                                                     	Authorization.Model.
-				                                                                                     	DocumentPermission
-				                                                                                     		{
-				                                                                                     			Allow = true,
-				                                                                                     			Operation = "Library/View",
-				                                                                                     			User = "andrea"
-				                                                                                     		},
-				                                                                                     		new client::Raven.Bundles.
-				                                                                                     	Authorization.Model.
-				                                                                                     	DocumentPermission
-				                                                                                     		{
-				                                                                                     			Allow = true,
-				                                                                                     			Operation = "Library/Manage",
-				                                                                                     			Role = "Administrators"
-				                                                                                     		}
-				                                                                                     	}
-				                                                                                     });
+																										new client::Raven.Bundles.
+																										Authorization.Model.
+																										DocumentAuthorization
+																										{
+																										Permissions =
+																											{
+																												new client::Raven.Bundles.
+																													Authorization.Model.
+																													DocumentPermission
+																												{
+																													Allow = true,
+																													Operation = "Library/View",
+																													User = "andrea"
+																												},
+																												new client::Raven.Bundles.
+																													Authorization.Model.
+																													DocumentPermission
+																												{
+																													Allow = true,
+																													Operation =
+																														"Library/Manage",
+																													Role = "Administrators"
+																												}
+																											}
+																									 });
+				;
 				session.SaveChanges();
 			}
 

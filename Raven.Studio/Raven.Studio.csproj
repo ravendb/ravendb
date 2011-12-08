@@ -82,6 +82,12 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\SharedLibs\Newtonsoft.Json\Silverlight\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="System.Reactive">
+      <HintPath>..\packages\Rx-Main.1.0.10621\lib\SL4\System.Reactive.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Windows.Threading">
+      <HintPath>..\packages\Rx-Silverlight.1.0.10621\lib\SL4\System.Reactive.Windows.Threading.dll</HintPath>
+    </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows" />
     <Reference Include="system" />
@@ -109,6 +115,8 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
+    <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
+    <Compile Include="Behaviors\ShowItemsBasedOnControlDimensions.cs" />
     <Compile Include="Behaviors\UpdateTextBindingOnPropertyChanged.cs" />
     <Compile Include="Behaviors\DoubleClickBehavior.cs" />
     <Compile Include="Behaviors\GoToStateAction.cs" />
@@ -118,12 +126,24 @@
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ChangeFieldValueCommand.cs" />
+    <Compile Include="Commands\NavigateToDocumentByIdCommand.cs" />
     <Compile Include="Commands\ListBoxCommand.cs" />
     <Compile Include="Commands\NavigateToNextPageCommand.cs" />
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
+    <Compile Include="Commands\ShowLicensingStatusCommand.cs" />
     <Compile Include="Controls\Editors\EditorBase.cs" />
+    <Compile Include="Controls\ViewSizeControl.xaml.cs">
+      <DependentUpon>ViewSizeControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\DocumentView.xaml.cs">
+      <DependentUpon>DocumentView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Databases\LicenseView.xaml.cs">
+      <DependentUpon>LicenseView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\ShortViewOfJson.cs" />
     <Compile Include="Features\Query\FieldAndTerm.cs" />
     <Compile Include="Controls\Editors\QueryEditor.cs" />
     <Compile Include="Controls\Editors\JsonEditor.cs" />
@@ -143,7 +163,7 @@
     <Compile Include="Features\Collections\CollectionView.xaml.cs">
       <DependentUpon>CollectionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Databases\CreateDatabaseCommand.cs" />
+    <Compile Include="Commands\CreateDatabaseCommand.cs" />
     <Compile Include="Features\Databases\DatabaseSelectionView.xaml.cs">
       <DependentUpon>DatabaseSelectionView.xaml</DependentUpon>
     </Compile>
@@ -152,6 +172,23 @@
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Util\MessageBoxWindow.xaml.cs">
+      <DependentUpon>MessageBoxWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Impl\PopupPlacement\Popup.cs" />
+    <Compile Include="Impl\PopupPlacement\PopupHorizontalAlignment.cs" />
+    <Compile Include="Impl\PopupPlacement\PopupOrientation.cs" />
+    <Compile Include="Impl\PopupPlacement\PopupOrientationCollection.cs" />
+    <Compile Include="Impl\PopupPlacement\PopupPlacement.cs" />
+    <Compile Include="Impl\PopupPlacement\PopupVerticalAlignment.cs" />
+    <Compile Include="Impl\RelativeBinding\BindingHelper.cs" />
+    <Compile Include="Impl\RelativeBinding\BindingList.cs" />
+    <Compile Include="Impl\RelativeBinding\RelativeSourceBase.cs" />
+    <Compile Include="Impl\RelativeBinding\RelativeSourceBinding.cs" />
+    <Compile Include="Impl\RelativeBinding\RelativeSourceMode.cs" />
+    <Compile Include="Impl\RelativeBinding\TypeLoader.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThenOrEqualTo.cs" />
+    <Compile Include="Infrastructure\ErrorHandler.cs" />
     <Compile Include="Infrastructure\ErrorPresenter.cs" />
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
       <DependentUpon>IndexesListView.xaml</DependentUpon>
@@ -215,6 +252,7 @@
     <Compile Include="Infrastructure\Converters\SingleLineToAutoMultiLineToStarSizeConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\TargetedDataTemplate.cs" />
+    <Compile Include="Infrastructure\ColorExtensions.cs" />
     <Compile Include="Infrastructure\ModelAttacher.cs" />
     <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />
@@ -223,6 +261,8 @@
     <Compile Include="Infrastructure\Converters\NotNullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\KeysComparer.cs" />
+    <Compile Include="Infrastructure\Execute.cs" />
+    <Compile Include="Infrastructure\RxExtensions.cs" />
     <Compile Include="Infrastructure\StringExtensions.cs" />
     <Compile Include="Infrastructure\UrlParser.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />
@@ -322,16 +362,10 @@
     <Compile Include="Views\Tasks.xaml.cs">
       <DependentUpon>Tasks.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\NotFound.xaml.cs">
-      <DependentUpon>NotFound.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\DocumentNotFound.xaml.cs">
-      <DependentUpon>DocumentNotFound.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\Edit.xaml.cs">
       <DependentUpon>Edit.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Errors\ErrorWindow.xaml.cs">
+    <Compile Include="Features\Util\ErrorWindow.xaml.cs">
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Home.xaml.cs">
@@ -358,6 +392,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Commands\Commands.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Controls\Notification.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -365,6 +403,18 @@
     <Page Include="Controls\NotificationArea.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ViewSizeControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\DocumentView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Databases\LicenseView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Indexes\IndexesListView.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -389,6 +439,10 @@
     <Page Include="Features\Tasks\TasksView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Util\MessageBoxWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Databases.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -423,10 +477,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Indexes.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\NotFound.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -490,15 +540,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\DocumentNotFound.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Views\Edit.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Errors\ErrorWindow.xaml">
+    <Page Include="Features\Util\ErrorWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -516,6 +562,7 @@
     <EmbeddedResource Include="Controls\Editors\Definitions\JScript.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\RavenQuery.langdef" />
+    <None Include="packages.config" />
     <None Include="Properties\AppManifest.xml" />
     <EmbeddedResource Include="Settings.dat" />
   </ItemGroup>
@@ -547,6 +594,11 @@
     <Resource Include="Assets\Images\document_prepare.png" />
     <Resource Include="Assets\Images\Error.png" />
     <Resource Include="Assets\Images\document-new.png" />
+    <Resource Include="Assets\Images\edit_pencil_write_icon.png" />
+    <Resource Include="Assets\Images\ExecuteQuery.png" />
+    <Resource Include="Assets\Images\ChangeView.png" />
+    <Content Include="Impl\PopupPlacement\Credit.txt" />
+    <Content Include="Impl\RelativeBinding\Credits.txt" />
     <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup>

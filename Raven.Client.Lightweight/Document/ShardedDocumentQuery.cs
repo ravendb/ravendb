@@ -89,7 +89,7 @@ namespace Raven.Client.Document
 		{
 			var jsonSerializer =
 				// we assume the same json contract resolver across the entire shared sessions set
-				shardSessions.First().Advanced.Conventions.CreateSerializer();
+				shardSessions.First().Advanced.DocumentStore.Conventions.CreateSerializer();
 			return QueryResult.Results
 				.Select(j => (T)jsonSerializer.Deserialize(new RavenJTokenReader(j), typeof(T)))
 				.GetEnumerator();
@@ -539,7 +539,7 @@ namespace Raven.Client.Document
 		/// </summary>
 	    public DocumentConvention DocumentConvention
 	    {
-	        get { return shardSessions[0].Advanced.Conventions; }
+	        get { return shardSessions[0].Advanced.DocumentStore.Conventions; }
 	    }
 
 	    /// <summary>

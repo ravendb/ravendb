@@ -65,7 +65,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
-    <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL" />
+    <Reference Include="ICSharpCode.NRefactory">
+      <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net, Version=2.9.1.2, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
@@ -84,7 +86,9 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\SharedLibs\Newtonsoft.Json\Net\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="NLog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL" />
+    <Reference Include="NLog">
+      <HintPath>..\SharedLibs\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="Rhino.Mocks">
       <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
     </Reference>
@@ -172,6 +176,7 @@
     <Compile Include="Bugs\CreatingIndexes.cs" />
     <Compile Include="Bugs\CS1977.cs" />
     <Compile Include="Bugs\DeserializationAcrossTypes.cs" />
+    <Compile Include="Bugs\DictionaryOfDateTime.cs" />
     <Compile Include="Bugs\DynamicQuerySorting.cs" />
     <Compile Include="Bugs\EmbeddableDocumentStoreUsingUrlWithConnectionString.cs" />
     <Compile Include="Bugs\Everett.cs" />
@@ -558,6 +563,7 @@
     <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
     <Compile Include="MailingList\EnumAsInts.cs" />
+    <Compile Include="MailingList\Everett.cs" />
     <Compile Include="MailingList\GuidProjection.cs" />
     <Compile Include="MailingList\LazyStats.cs" />
     <Compile Include="MailingList\RavenDbPutTest.cs" />
@@ -568,11 +574,13 @@
     <Compile Include="MailingList\RobStats\StatisticsBug.cs" />
     <Compile Include="MailingList\RobStats\Summary.cs" />
     <Compile Include="MailingList\RobStats\TheIndex.cs" />
+    <Compile Include="MailingList\SetBased.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey2.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey3.cs" />
     <Compile Include="MailingList\Stacey.cs" />
     <Compile Include="MailingList\Stats.cs" />
+    <Compile Include="MailingList\TimeZoneQueries.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />
     <Compile Include="MailingList\Vlad.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">

@@ -76,6 +76,9 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Abstractions\Data\BuildNumber.cs">
+      <Link>Imports\Data\BuildNumber.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Constants.cs">
       <Link>Imports\Data\Constants.cs</Link>
     </Compile>
@@ -106,6 +109,9 @@
     <Compile Include="..\Raven.Abstractions\Data\JsonDocumentMetadata.cs">
       <Link>Imports\Data\JsonDocumentMetadata.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\LicensingStatus.cs">
+      <Link>Imports\Data\LicensingStatus.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\LogItem.cs">
       <Link>Imports\Data\LogItem.cs</Link>
     </Compile>
@@ -120,6 +126,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeOffsetConverter.cs">
       <Link>Imports\Json\JsonDateTimeOffsetConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\JsonDictionaryDateTimeKeysConverter.cs">
+      <Link>Imports\Json\JsonDictionaryDateTimeKeysConverter.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonFloatConverter.cs">
       <Link>Imports\Json\JsonFloatConverter.cs</Link>

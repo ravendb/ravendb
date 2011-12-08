@@ -244,17 +244,17 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Filters a sequence of values based on a predicate.
 		/// </summary>
-		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, bool>> prediate)
+		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, bool>> predicate)
 		{
-			return (IRavenQueryable<T>)Queryable.Where(source, prediate);
+			return (IRavenQueryable<T>)Queryable.Where(source, predicate);
 		}
 
 		/// <summary>
 		/// Filters a sequence of values based on a predicate.
 		/// </summary>
-		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, int, bool>> prediate)
+		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, int, bool>> predicate)
 		{
-			return (IRavenQueryable<T>)Queryable.Where(source, prediate);
+			return (IRavenQueryable<T>)Queryable.Where(source, predicate);
 		}
 
 		/// <summary>

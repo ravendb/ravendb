@@ -142,7 +142,8 @@ namespace Raven.Database.Server
 
 		public void Dispose()
 		{
-			databasesCleanupTimer.Dispose();
+			if (databasesCleanupTimer != null)
+				databasesCleanupTimer.Dispose();
 			if (listener != null && listener.IsListening)
 				listener.Stop();
 			currentConfiguration.Dispose();
@@ -156,7 +157,7 @@ namespace Raven.Database.Server
 
 		#endregion
 
-		public void Start()
+		public void StartListening()
 		{
 			listener = new HttpListener();
 			string virtualDirectory = DefaultConfiguration.VirtualDirectory;
@@ -169,9 +170,14 @@ namespace Raven.Database.Server
 				configureHttpListener.Value.Configure(listener, DefaultConfiguration);
 			}
 
-			databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+			Init();
 			listener.Start();
 			listener.BeginGetContext(GetContext, null);
+		}
+
+		public void Init()
+		{
+			databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 		}
 
 		private void CleanupDatabases(object state)
@@ -303,7 +309,8 @@ namespace Raven.Database.Server
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
-			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25)
+			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && 
+				logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25)
 				return;
 
 			var curReq = Interlocked.Increment(ref reqNum);
@@ -439,6 +446,7 @@ namespace Raven.Database.Server
 
 			CurrentOperationContext.Headers.Value = ctx.Request.Headers;
 
+			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
 			if (ctx.RequiresAuthentication &&
 				requestAuthorizer.Authorize(ctx) == false)
 				return false;
@@ -539,7 +547,9 @@ namespace Raven.Database.Server
 			using (DefaultResourceStore.DisableAllTriggersForCurrentThread())
 				jsonDocument = DefaultResourceStore.Get("Raven/Databases/" + tenantId, null);
 
-			if (jsonDocument == null)
+			if (jsonDocument == null || 
+				jsonDocument.Metadata == null || 
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists))
 				return false;
 
 			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();

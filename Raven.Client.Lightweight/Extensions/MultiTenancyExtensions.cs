@@ -37,6 +37,7 @@ namespace Raven.Client.Extensions
 		/// </remarks>
 		public static void EnsureDatabaseExists(this IDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
+			self = self.ForDefaultDatabase();
 			AssertValidName(name);
 			var doc = RavenJObject.FromObject(new DatabaseDocument
 			{
@@ -45,6 +46,7 @@ namespace Raven.Client.Extensions
 						{"Raven/DataDir", Path.Combine("~", Path.Combine("Tenants", name))}
 					}
 			});
+			doc.Remove("Id");
 			var docId = "Raven/Databases/" + name;
 			
 			using (new TransactionScope(TransactionScopeOption.Suppress))
@@ -72,6 +74,7 @@ namespace Raven.Client.Extensions
 		///</summary>
 		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
+			self = self.ForDefaultDatabase();
 			AssertValidName(name);
 			var doc = RavenJObject.FromObject(new DatabaseDocument
 			{
@@ -80,6 +83,7 @@ namespace Raven.Client.Extensions
 						{"Raven/DataDir", Path.Combine("~", Path.Combine("Tenants", name))}
 					}
 			});
+			doc.Remove("Id");
 			var docId = "Raven/Databases/" + name;
 
 			return self.GetAsync(docId)

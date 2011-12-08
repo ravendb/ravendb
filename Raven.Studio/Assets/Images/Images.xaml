@@ -14,6 +14,7 @@
     <BitmapImage x:Key="Image_Undo_Small" UriSource="Undo.png"/>
     <BitmapImage x:Key="Image_Query_Small" UriSource="Query.png"/>
     <BitmapImage x:Key="Image_Edit_Small" UriSource="Edit.png"/>
+    <BitmapImage x:Key="Image_OpenDocument_Small" UriSource="edit_pencil_write_icon.png"/>
     <BitmapImage x:Key="Image_Reformat_Small" UriSource="HtmlBalanceBracesHS.png"/>
     <BitmapImage x:Key="Image_Delete_Small" UriSource="DeleteHS.png"/>
     <BitmapImage x:Key="Image_Refresh_Small" UriSource="RefreshSmall.png"/>
@@ -27,5 +28,7 @@
     <BitmapImage x:Key="Image_Database_Tiny" UriSource="database.png"/>
     <BitmapImage x:Key="Image_AddDatabase_Tiny" UriSource="database_add.png"/>
     <BitmapImage x:Key="Image_AddIndex_Tiny" UriSource="document_prepare.png"/>
+    <BitmapImage x:Key="Image_ExecuteQuery_Small" UriSource="ExecuteQuery.png"/>
+    <BitmapImage x:Key="Image_ChangeView_Tiny" UriSource="ChangeView.png"/>
     
 </ResourceDictionary>

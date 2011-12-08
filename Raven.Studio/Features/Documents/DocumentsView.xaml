@@ -6,25 +6,41 @@
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors">
+					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+					 xmlns:Models="clr-namespace:Raven.Studio.Models"
+					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+					 xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
+					 mc:Ignorable="d"
+					 d:DataContext="{d:DesignInstance Models:DocumentsModel}">
 
 	<Grid>
-		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}">
+		<Grid.Resources>
+			<DataTemplate x:Key="DataTemplate_Document_CardView">
+				<Documents:DocumentView />
+			</DataTemplate>
+		</Grid.Resources>
+		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
 			<toolkit:HeaderedContentControl.Header>
-				<toolkit:DockPanel Margin="4"  LastChildFill="False">
+				<toolkit:DockPanel Margin="4"
+								   LastChildFill="False">
 					<StackPanel Orientation="Horizontal">
-						<Image Source="{StaticResource Image_Document_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+						<Image Source="{StaticResource Image_Document_Tiny}"
+							   Stretch="None"
+							   VerticalAlignment="Center"
+							   Margin="4,0,4,0" />
 						<TextBlock x:Name="HeaderText"
-						Style="{StaticResource Style_Text_Header}"
-						Text="{Binding ViewTitle}" 
-						toolkit:DockPanel.Dock="Left"
-						VerticalAlignment="Center"
-						 Margin="6,0"/>
+								   Style="{StaticResource Style_Text_Header}"
+								   Text="{Binding ViewTitle}"
+								   toolkit:DockPanel.Dock="Left"
+								   VerticalAlignment="Center"
+								   Margin="6,0" />
 					</StackPanel>
 
-					<StackPanel  toolkit:DockPanel.Dock="Right"
-								 Orientation="Horizontal"
-								 VerticalAlignment="Center">
+					<StackPanel toolkit:DockPanel.Dock="Right"
+								Orientation="Horizontal"
+								VerticalAlignment="Center">
 						<HyperlinkButton Command="{Binding Path=Pager.PrevPage}"
 										 Style="{StaticResource Style_Link_MouseOverChrome}"
 										 ToolTipService.ToolTip="Previous Page">
@@ -54,10 +70,30 @@
 					</StackPanel>
 
 					<StackPanel toolkit:DockPanel.Dock="Right"
-								Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
-						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
-										 CommandParameter="/edit?mode=new">
-							<HyperlinkButton.Content>
+								Orientation="Horizontal"
+								VerticalAlignment="Center"
+								Margin="0,0,10,0">
+
+						<Button Command="{StaticResource NavigateToDocumentByIdCommand}"
+								Style="{StaticResource Style_Button_MouseOverChrome}"
+								Visibility="{Binding ShowEditControls, Converter={StaticResource VisibleWhenTrue}}">
+							<Button.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_OpenDocument_Small}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="Edit Document By ID"
+											   VerticalAlignment="Center" />
+								</StackPanel>
+							</Button.Content>
+						</Button>
+
+						<Button Command="{StaticResource NavigateToCommand}"
+								CommandParameter="/edit?mode=new"
+								Style="{StaticResource Style_Button_MouseOverChrome}"
+								Visibility="{Binding ShowEditControls, Converter={StaticResource VisibleWhenTrue}}">
+							<Button.Content>
 								<StackPanel Orientation="Horizontal">
 									<Image Source="{StaticResource Image_AddDocument_Tiny}"
 										   Stretch="None"
@@ -66,21 +102,28 @@
 									<TextBlock Text="Create a Document"
 											   VerticalAlignment="Center" />
 								</StackPanel>
-							</HyperlinkButton.Content>
-						</HyperlinkButton>
+							</Button.Content>
+						</Button>
+
+						<Controls1:ViewSizeControl ViewSize="{Binding Path=DocumentSize.Height, Mode=TwoWay}" />
 					</StackPanel>
 				</toolkit:DockPanel>
-			   
+
 			</toolkit:HeaderedContentControl.Header>
 
 			<ListBox x:Name="DocumentsList"
 					 ItemsSource="{Binding Documents}"
 					 Style="{StaticResource DocumentList}"
-					 SelectionChanged="DocumentsList_SelectionChanged"
 					 Grid.Row="1"
 					 Grid.ColumnSpan="3"
-					 Margin="10">
+					 Margin="10"
+					 ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
 				
+				<i:Interaction.Behaviors>
+					<Behaviors:SelectItemOnRightClick />
+					<Behaviors:ShowItemsBasedOnControlDimensions Model="{Binding}" />
+				</i:Interaction.Behaviors>
+
 				<Controls:ContextMenuService.ContextMenu>
 					<Controls:ContextMenu x:Name="DocumentsContextMenu">
 						<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
@@ -91,62 +134,8 @@
 										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 					</Controls:ContextMenu>
 				</Controls:ContextMenuService.ContextMenu>
-				
-				<i:Interaction.Triggers>
-					<ei:KeyTrigger Key="Delete">
-						<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
-											   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-					</ei:KeyTrigger>
-				</i:Interaction.Triggers>
-
-				<ListBox.ItemTemplate>
-					<DataTemplate>
-						<Grid Width="100"
-							  Height="50"
-							  Margin="2"
-							  ToolTipService.ToolTip="{Binding ToolTipText}">
-
-							<i:Interaction.Behaviors>
-								<Behaviors:DoubleClickBehavior Command="{Binding Edit}" />
-							</i:Interaction.Behaviors>
-
-							<Rectangle Fill="#FFF4F4F5" />
-							<Rectangle HorizontalAlignment="Left"
-									   Width="10"
-									   x:Name="DocumentGrid"
-									   Fill="{Binding Path=Fill}" />
-
-							<Grid Margin="14,0,0,0">
-								<StackPanel Orientation="Vertical">
-									<TextBlock Text="{Binding CollectionType}"
-											   TextTrimming="WordEllipsis"
-											   HorizontalAlignment="Left" />
-									<TextBlock Text="{Binding DisplayId}"
-											   TextTrimming="WordEllipsis"
-											   HorizontalAlignment="Left" />
-								</StackPanel>
-							</Grid>
-
-							<StackPanel x:Name="overlay"
-										Orientation="Horizontal"
-										HorizontalAlignment="Right"
-										VerticalAlignment="Bottom">
-								<Button VerticalAlignment="Center"
-										Style="{StaticResource Style_Button_MouseOverChrome}"
-										Padding="4"
-										Command="{Binding Path=Edit}"
-										ToolTipService.ToolTip="click here to edit the document">
-									<Button.Content>
-										<Image Source="{StaticResource Image_Edit_Small}"
-											   Stretch="None" />
-									</Button.Content>
-								</Button>
-							</StackPanel>
-						</Grid>
-					</DataTemplate>
-				</ListBox.ItemTemplate>
 			</ListBox>
-</toolkit:HeaderedContentControl>
+		</toolkit:HeaderedContentControl>
 
 	</Grid>
 </Infrastructure:View>

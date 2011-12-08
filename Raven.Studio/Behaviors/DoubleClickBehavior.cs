@@ -9,7 +9,7 @@ namespace Raven.Studio.Behaviors
 	public class DoubleClickBehavior : Behavior<UIElement>
 	{
 		private const int dblclickDelay = 200;
-		private DispatcherTimer timer;
+		private readonly DispatcherTimer timer;
 
 		public ICommand Command
 		{

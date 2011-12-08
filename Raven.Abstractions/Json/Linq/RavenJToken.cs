@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -269,6 +270,18 @@ namespace Raven.Json.Linq
 							case JTokenType.Object:
 								otherStack.Push(token);
 								thisStack.Push(kvp.Value);
+								break;
+							case JTokenType.Bytes:
+								var bytes = kvp.Value.Value<byte[]>();
+								byte[] tokenBytes = token.Type == JTokenType.String ? Convert.FromBase64String(token.Value<string>()) : token.Value<byte[]>();
+								if (bytes.Length != tokenBytes.Length)
+									return false;
+
+								if (tokenBytes.Where((t, i) => t != bytes[i]).Any())
+								{
+									return false;
+								}
+
 								break;
 							default:
 								if (!kvp.Value.DeepEquals(token)) 

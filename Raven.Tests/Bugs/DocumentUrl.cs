@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
 			using (var store = NewDocumentStore())
 			using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
 			{
-				server.Start();
+				server.StartListening();
 				var documentStore = new DocumentStore
 				{
 					Url = "http://localhost:8080"
@@ -41,7 +41,7 @@ namespace Raven.Tests.Bugs
 			using (var store = NewDocumentStore())
 			using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
 			{
-				server.Start();
+				server.StartListening();
 				var documentStore = new DocumentStore
 				{
 					Url = "http://localhost:8080/"

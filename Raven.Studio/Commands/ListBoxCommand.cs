@@ -41,6 +41,11 @@ namespace Raven.Studio.Commands
 		{
 			if (parameter == null)
 				return null;
+
+			var listBox = parameter as ListBox;
+			if (listBox != null)
+				return listBox;
+
 			var attachedObject = parameter as IAttachedObject;
 			if (attachedObject != null)
 				return (ListBox)attachedObject.AssociatedObject;

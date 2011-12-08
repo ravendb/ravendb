@@ -21,11 +21,11 @@ namespace Raven.Studio.Features.Tasks
 {
     public class ImportTask : TaskModel
     {
-        private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+        private readonly IAsyncDatabaseCommands databaseCommands;
 
-        public ImportTask(IAsyncDatabaseCommands asyncDatabaseCommands)
+        public ImportTask(IAsyncDatabaseCommands databaseCommands)
         {
-            this.asyncDatabaseCommands = asyncDatabaseCommands;
+            this.databaseCommands = databaseCommands;
             Name = "Import Database";
             Description = "Import a database from a dump file.\nImporting will overwrite any existing indexes.";       
         }
@@ -238,7 +238,7 @@ namespace Raven.Studio.Features.Tasks
 
         public override ICommand Action
         {
-            get { return new ImportDatabaseCommand(asyncDatabaseCommands, line => Output.Execute(() => Output.Add(line))); }
+            get { return new ImportDatabaseCommand(databaseCommands, line => Execute.OnTheUI(() => Output.Add(line))); }
         }
     }
 }

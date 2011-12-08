@@ -42,6 +42,7 @@ namespace Raven.Web
 				database = new DocumentDatabase(ravenConfiguration);
 				database.SpinBackgroundWorkers();
 				server = new HttpServer(ravenConfiguration, database);
+				server.Init();
 			}
 		}
 

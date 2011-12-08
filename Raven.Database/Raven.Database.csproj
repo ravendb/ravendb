@@ -86,9 +86,6 @@
     <Reference Include="NLog">
       <HintPath>..\SharedLibs\NLog.dll</HintPath>
     </Reference>
-    <Reference Include="Rhino.Licensing">
-      <HintPath>..\SharedLibs\Rhino.Licensing.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.configuration" />
@@ -96,6 +93,8 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq">
@@ -116,8 +115,26 @@
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
-    <Compile Include="Commercial\WarningMessagesHolder.cs" />
     <Compile Include="Config\CertGenerator.cs" />
+    <Compile Include="Config\ConfigOptionDocs.cs" />
+    <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
+    <Compile Include="Rhino.Licensing\Discovery\DiscoveryClient.cs" />
+    <Compile Include="Rhino.Licensing\Discovery\DiscoveryHost.cs" />
+    <Compile Include="Rhino.Licensing\FloatingLicenseNotAvialableException.cs" />
+    <Compile Include="Rhino.Licensing\ILicensingService.cs" />
+    <Compile Include="Rhino.Licensing\InvalidationType.cs" />
+    <Compile Include="Rhino.Licensing\ISubscriptionLicensingService.cs" />
+    <Compile Include="Rhino.Licensing\LicenseExpiredException.cs" />
+    <Compile Include="Rhino.Licensing\LicenseFileNotFoundException.cs" />
+    <Compile Include="Rhino.Licensing\LicenseGenerator.cs" />
+    <Compile Include="Rhino.Licensing\LicenseNotFoundException.cs" />
+    <Compile Include="Rhino.Licensing\LicenseType.cs" />
+    <Compile Include="Rhino.Licensing\LicenseValidator.cs" />
+    <Compile Include="Rhino.Licensing\LicensingService.cs" />
+    <Compile Include="Rhino.Licensing\RhinoLicensingException.cs" />
+    <Compile Include="Rhino.Licensing\CorruptLicenseFileException.cs" />
+    <Compile Include="Rhino.Licensing\SntpClient.cs" />
+    <Compile Include="Rhino.Licensing\StringLicenseValidator.cs" />
     <Compile Include="Linq\Ast\DynamicExtensionMethodsTranslator.cs" />
     <Compile Include="Linq\PrivateExtensions\DynamicExtensionMethods.cs" />
     <Compile Include="Plugins\AbstractIndexQueryTrigger.cs" />
@@ -142,6 +159,7 @@
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
+    <Compile Include="Server\Responders\Licensing.cs" />
     <Compile Include="Server\Responders\Logs.cs" />
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
@@ -149,6 +167,7 @@
     <Compile Include="Server\Responders\SilverlightPlugins.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
     <Compile Include="Server\Security\OAuth\AccessTokenBody.cs" />
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />

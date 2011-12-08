@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -15,6 +16,7 @@ using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Raven.Abstractions.Indexing;
+using SpellChecker.Net.Search.Spell;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -24,6 +26,8 @@ namespace Raven.Database.Indexing
 	{
 		static readonly Regex rangeValue = new Regex(@"^[\w\d]x[-\w\d.]+$", RegexOptions.Compiled);
 
+		private Dictionary<string,HashSet<string>> untokenized = new Dictionary<string, HashSet<string>>();
+
 		public RangeQueryParser(Version matchVersion, string f, Analyzer a)
 			: base(matchVersion, f, a)
 		{
@@ -31,6 +35,13 @@ namespace Raven.Database.Indexing
 
 		public override Query GetFieldQuery(string field, string queryText)
 		{
+			HashSet<string> set;
+			if(untokenized.TryGetValue(field, out set))
+			{
+				if (set.Contains(queryText))
+					return new TermQuery(new Term(field, queryText));
+			}
+
 			var fieldQuery = base.GetFieldQuery(field, queryText);
 			if (fieldQuery is TermQuery
 				&& queryText.EndsWith("*")
@@ -108,6 +119,16 @@ namespace Raven.Database.Indexing
 					return NewRangeQuery(field, lower, upper, inclusive);
 				}
 			}
+		}
+
+		public void SetUntokenized(string field, string value)
+		{
+			HashSet<string> set;
+			if(untokenized.TryGetValue(field,out set) == false)
+			{
+				untokenized[field] = set = new HashSet<string>();
+			}
+			set.Add(value);
 		}
 	}
 }

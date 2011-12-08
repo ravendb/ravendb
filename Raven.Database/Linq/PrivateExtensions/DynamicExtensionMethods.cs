@@ -1,7 +1,10 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Linq;
 
 namespace Raven.Database.Linq.PrivateExtensions
 {
@@ -11,6 +14,13 @@ namespace Raven.Database.Linq.PrivateExtensions
 	/// </summary>
 	public class DynamicExtensionMethods
 	{
+		public static object IfEntityIs(dynamic o, string entityName)
+		{
+			if (string.Equals(o[Constants.Metadata][Constants.RavenEntityName], entityName, StringComparison.InvariantCultureIgnoreCase))
+				return o;
+			return new DynamicNullObject();
+		}
+
 		 public static string Reverse(string str)
 		 {
 		 	var stringBuilder = new StringBuilder(str.Length);

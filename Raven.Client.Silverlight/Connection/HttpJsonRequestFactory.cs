@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Threading.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
@@ -69,7 +70,7 @@ namespace Raven.Client.Silverlight.Connection
 		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
 		{
 			var request = new HttpJsonRequest(url, method, metadata, convention);
-			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
+			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest, JsonRequest = request });
 			return request;
 		}
 

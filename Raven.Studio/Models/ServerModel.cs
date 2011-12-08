@@ -2,17 +2,21 @@
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
+using Raven.Studio.Features.Util;
 using Raven.Studio.Infrastructure;
+using Raven.Client.Silverlight.Connection;
 
 namespace Raven.Studio.Models
 {
 	public class ServerModel : Model
 	{
+		private readonly string url;
 		public const string DefaultDatabaseName = "Default";
-		private readonly DocumentStore documentStore;
+		private DocumentStore documentStore;
 		private DatabaseModel[] defaultDatabase;
 
 		private string buildNumber;
@@ -30,16 +34,15 @@ namespace Raven.Studio.Models
 
 		private ServerModel(string url)
 		{
-			var changeDatabaseCommand = new ChangeDatabaseCommand();
+			this.url = url;
 			Databases = new BindableCollection<DatabaseModel>(model => model.Name);
 			SelectedDatabase = new Observable<DatabaseModel>();
-			SelectedDatabase.PropertyChanged += (sender, args) =>
-			                                    	{
-			                                    		var databaseName = SelectedDatabase.Value.Name;
-			                                    		if (changeDatabaseCommand.CanExecute(databaseName))
-			                                    			changeDatabaseCommand.Execute(databaseName);
-			                                    	};
+			License = new Observable<LicensingStatus>();
+			Initialize();
+		}
 
+		private void Initialize()
+		{
 			documentStore = new DocumentStore
 			{
 				Url = url
@@ -52,19 +55,34 @@ namespace Raven.Studio.Models
 			// this is sufficient warning and we don't require an additional step, so we can disable this check safely.
 			documentStore.JsonRequestFactory.
 				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
-				false;
+				true;
+			
+			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
+			{
+				if (onWebRequest != null)
+					onWebRequest(eventArgs.Request);
+			};
 
-			SetBuildNumber();
-		}
+			DisplayBuildNumber();
+			DisplyaLicenseStatus();
 
-		public void Initialize()
-		{
 			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
 			Databases.Set(defaultDatabase);
 			SelectedDatabase.Value = defaultDatabase[0];
+			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
+
+			var changeDatabaseCommand = new ChangeDatabaseCommand();
+			SelectedDatabase.PropertyChanged += (sender, args) =>
+			{
+				if (SelectedDatabase.Value == null)
+					return;
+				var databaseName = SelectedDatabase.Value.Name;
+				if (changeDatabaseCommand.CanExecute(databaseName))
+					changeDatabaseCommand.Execute(databaseName);
+			};
 		}
 
-		protected override Task TimerTickedAsync()
+		public override Task TimerTickedAsync()
 		{
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync()
 				.ContinueOnSuccess(names =>
@@ -90,20 +108,23 @@ namespace Raven.Studio.Models
 				return "http://localhost:8080";
 			}
 			var localPath = HtmlPage.Document.DocumentUri.LocalPath;
-			var lastIndexOfRaven = localPath.LastIndexOf("/raven/");
+			var lastIndexOfRaven = localPath.LastIndexOf("/raven/", StringComparison.Ordinal);
 			if (lastIndexOfRaven != -1)
 			{
 				localPath = localPath.Substring(0, lastIndexOfRaven);
 			}
 			return new UriBuilder(HtmlPage.Document.DocumentUri)
 			{
-				Path = localPath
+				Path = localPath,
+				Fragment = ""
 			}.Uri.ToString();
 		}
 
 		public void SetCurrentDatabase(UrlParser urlParser)
 		{
 			var databaseName = urlParser.GetQueryParam("database");
+			if (databaseName == null)
+				return;
 			if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
 				return;
 			var database = Databases.FirstOrDefault(x => x.Name == databaseName);
@@ -111,18 +132,34 @@ namespace Raven.Studio.Models
 			{
 				SelectedDatabase.Value = database;
 			}
+			else
+			{
+				var databaseModel = new DatabaseModel(databaseName, documentStore.AsyncDatabaseCommands.ForDatabase(databaseName));
+				Databases.Add(databaseModel);
+				SelectedDatabase.Value = databaseModel;
+			}
 		}
 
-		private void SetBuildNumber()
+		private void DisplayBuildNumber()
 		{
-			var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(this, documentStore.Url + "/build/version", "GET", null, documentStore.Conventions);
-			request.ReadResponseStringAsync()
-				.ContinueOnSuccess(result =>
-				                   {
-				                   	var parsedResult = RavenJObject.Parse(result);
-				                   	var ravenJToken = parsedResult["BuildVersion"];
-				                   	BuildNumber = ravenJToken.Value<string>();
-				                   });
+			documentStore.AsyncDatabaseCommands.GetBuildNumber()
+				.ContinueOnSuccessInTheUIThread(x => BuildNumber = x.BuildVersion)
+				.Catch();
 		}
+
+		private void DisplyaLicenseStatus()
+		{
+			documentStore.AsyncDatabaseCommands.GetLicenseStatus()
+				.ContinueOnSuccessInTheUIThread(x =>
+				{
+					License.Value = x;
+					if (x.Error == false)
+						return;
+					new ShowLicensingStatusCommand().Execute(x);
+				})
+				.Catch();
+		}
+
+		public Observable<LicensingStatus> License { get; private set; }
 	}
 }

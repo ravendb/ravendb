@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
+using Raven.Client.Silverlight.Connection;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -36,7 +40,8 @@ namespace Raven.Studio.Infrastructure
 				if (DateTime.Now - lastRefresh < GetRefreshRate())
 					return;
 
-				currentTask = TimerTickedAsync();
+				using(OnWebRequest(request => request.Headers["Raven-Timer-Request"] = "true"))
+					currentTask = TimerTickedAsync();
 
 				if (currentTask == null)
 					return;
@@ -59,9 +64,19 @@ namespace Raven.Studio.Infrastructure
 			return RefreshRate;
 		}
 
-		protected virtual Task TimerTickedAsync()
+		public virtual Task TimerTickedAsync()
 		{
 			return null;
 		}
+		
+		[ThreadStatic] 
+		protected static Action<WebRequest> onWebRequest;
+
+		public static IDisposable OnWebRequest(Action<WebRequest> action)
+		{
+			onWebRequest += action;
+			return new DisposableAction(() => onWebRequest = null);
+		}
+		
 	}
 }

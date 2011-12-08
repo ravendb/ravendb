@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
@@ -21,13 +20,11 @@ namespace Raven.Studio.Features.Query
 	public class ExecuteQueryCommand : Command
 	{
 		private readonly QueryModel model;
-		private readonly IAsyncDatabaseCommands databaseCommands;
 		private string query;
 
-		public ExecuteQueryCommand(QueryModel model, IAsyncDatabaseCommands databaseCommands)
+		public ExecuteQueryCommand(QueryModel model)
 		{
 			this.model = model;
-			this.databaseCommands = databaseCommands;
 		}
 
 		public override void Execute(object _)
@@ -35,10 +32,15 @@ namespace Raven.Studio.Features.Query
 			query = model.Query.Value;
 			ClearRecentQuery();
 			model.RememberHistory();
-			model.DocumentsResult.Value = new DocumentsModel(GetFetchDocumentsMethod)
-			                              {
-			                              	SkipAutoRefresh = true
-			                              };
+
+			model.DocumentsResult.Value = new DocumentsModel
+										  {
+											SkipAutoRefresh = true,
+											ShowEditControls = false,
+											ViewTitle = "Results",
+											CustomFetchingOfDocuments = GetFetchDocumentsMethod,
+										  };
+			model.DocumentsResult.Value.ForceTimerTicked();
 		}
 
 		private void ClearRecentQuery()
@@ -51,8 +53,8 @@ namespace Raven.Studio.Features.Query
 		{
 			var q = new IndexQuery
 			{
-				Start = (model.Pager.CurrentPage - 1) * model.Pager.PageSize,
-				PageSize = model.Pager.PageSize,
+				Start = model.DocumentsResult.Value.Pager.Skip,
+				PageSize = model.DocumentsResult.Value.Pager.PageSize,
 				Query = query,
 			};
 
@@ -64,7 +66,7 @@ namespace Raven.Studio.Features.Query
 					var sortBy = sortByRef.Value;
 					if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
 					{
-						var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length - 1);
+						var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length);
 						sortedFields.Add(new SortedField(field) {Descending = true});
 					}
 					else
@@ -76,14 +78,14 @@ namespace Raven.Studio.Features.Query
 			if (model.IsSpatialQuerySupported)
 			{
 				q = new SpatialIndexQuery(q)
-				    {
-				    	Latitude = model.Latitude.HasValue ? model.Latitude.Value : 0,
+					{
+						Latitude = model.Latitude.HasValue ? model.Latitude.Value : 0,
 						Longitude = model.Longitude.HasValue ? model.Longitude.Value : 0,
 						Radius = model.Radius.HasValue ? model.Radius.Value : 0,
-				    };
+					};
 			}
 
-			return databaseCommands.QueryAsync(model.IndexName, q, null)
+			return DatabaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueOnSuccessInTheUIThread(qr =>
 				{
 					var viewableDocuments = qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray();
@@ -100,7 +102,7 @@ namespace Raven.Studio.Features.Query
 		{
 			foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
 			{
-				databaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery {Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10})
+				DatabaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery {Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10})
 					.ContinueOnSuccessInTheUIThread(result => model.Suggestions.AddRange(
 						result.Suggestions.Select(term => new FieldAndTerm(fieldAndTerm.Field, fieldAndTerm.Term){SuggestedTerm = term})));
 			}

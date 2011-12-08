@@ -84,6 +84,8 @@ namespace Raven.Database.Server.Security.OAuth
 		static string Sign(string body, X509Certificate2 cert)
 		{
 			var csp = (RSACryptoServiceProvider)cert.PrivateKey;
+			if(csp == null)
+				throw new InvalidOperationException("Could not sign an access token with a certificate lacking a private key");
 
 			var data = Encoding.Unicode.GetBytes(body);
 			using (var hasher = new SHA1Managed())

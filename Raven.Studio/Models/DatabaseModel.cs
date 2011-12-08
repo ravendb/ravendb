@@ -50,9 +50,10 @@ namespace Raven.Studio.Models
 
 		public Observable<DatabaseStatistics> Statistics { get; set; }
 
-		protected override Task TimerTickedAsync()
+		public override Task TimerTickedAsync()
 		{
-			return asyncDatabaseCommands.GetStatisticsAsync()
+			return asyncDatabaseCommands
+				.GetStatisticsAsync()
 				.ContinueOnSuccess(stats => Statistics.Value = stats);
 		}
 

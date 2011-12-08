@@ -1,5 +1,7 @@
 using System;
 using System.Windows.Input;
+using Raven.Client.Connection.Async;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -18,6 +20,17 @@ namespace Raven.Studio.Infrastructure
 		{
 			EventHandler handler = CanExecuteChanged;
 			if (handler != null) handler(this, EventArgs.Empty);
+		}
+
+		public IAsyncDatabaseCommands DatabaseCommands
+		{
+			get { return ApplicationModel.DatabaseCommands; }
+		}
+
+		public static void ExecuteCommand(ICommand command, object param = null)
+		{
+			if (command.CanExecute(param))
+				command.Execute(param);
 		}
 	}
 }

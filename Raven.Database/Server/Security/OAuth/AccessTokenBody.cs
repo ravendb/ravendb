@@ -9,6 +9,7 @@ namespace Raven.Database.Server.Security.OAuth
 		public string UserId { get; set; }
 		public string[] AuthorizedDatabases { get; set; }
 		public double Issued { get; set; }
+		public bool ReadOnly { get; set; }
 
 		public bool IsExpired()
 		{

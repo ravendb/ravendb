@@ -9,22 +9,12 @@
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors">
-
-	<Infrastructure:View.Resources>
-		<Style x:Key="PanelTitle"
-			   TargetType="TextBlock">
-			<Setter Property="FontSize"
-					Value="10.667" />
-			<Setter Property="Foreground"
-					Value="#7F000000" />
-		</Style>
-	</Infrastructure:View.Resources>
+					 xmlns:Controls="clr-namespace:System.Windows.Controls">
 
 	<toolkit:DockPanel Margin="{StaticResource Margin_ContentPage}">
 		<Border Background="{StaticResource Brush_HeaderBackground}"
 				MinHeight="40"
-				Margin="0,0,0,20"
+				Margin="0,0,0,0"
 				CornerRadius="4,4,0,0"
 				toolkit:DockPanel.Dock="Top">
 			<toolkit:DockPanel Margin="4"
@@ -42,11 +32,27 @@
 					<TextBlock Text=">"
 							   VerticalAlignment="Center"
 							   Margin="4,0" />
-					<HyperlinkButton Content="{Binding IndexName}"
-									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
-									 VerticalAlignment="Center" />
+
+					<StackPanel Orientation="Horizontal"
+								Visibility="{Binding IsDynamicQuery, Converter={StaticResource VisibleWhenTrue}}">
+						<TextBlock Text="Dynamic/"
+								   Margin="0,0,0,0"
+								   VerticalAlignment="Center"
+								   Style="{StaticResource Style_TextBlock_Breadcrumb_Initial}" />
+						<ComboBox ItemsSource="{Binding DynamicOptions}"
+								  SelectedItem="{Binding DynamicSelectedOption, Mode=TwoWay}"
+								  Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
+					</StackPanel>
+
+					<StackPanel Orientation="Horizontal"
+								Visibility="{Binding IsDynamicQuery, Converter={StaticResource VisibleWhenFalse}}">
+						<HyperlinkButton Content="{Binding IndexName}"
+										 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+										 Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+										 VerticalAlignment="Center" />
+					</StackPanel>
+
 					<TextBlock Text=">"
 							   VerticalAlignment="Center"
 							   Margin="4,0" />
@@ -64,7 +70,7 @@
 							ToolTipService.ToolTip="Add sort by option for this query"
 							VerticalAlignment="Center"
 							HorizontalAlignment="Left"
-							Margin="0"
+							Margin="0,0,6,0"
 							Command="{Binding AddSortBy}"
 							Visibility="{Binding Path=SortByOptions.Count, Converter={StaticResource HiddenWhenEmpty}}"
 							VerticalContentAlignment="Center">
@@ -80,6 +86,26 @@
 							</StackPanel>
 						</Button.Content>
 					</Button>
+
+					<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"
+										VerticalAlignment="Center"
+										Height="20"
+										Margin="2,0,6,0" />
+					
+					<Button Grid.Column="1"
+							Command="{Binding Execute}"
+							HorizontalAlignment="Right"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Show the Results of the Query">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_ExecuteQuery_Small}"
+									   Width="16"
+									   Height="16" />
+								<TextBlock Text="Execute" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
 				</StackPanel>
 			</toolkit:DockPanel>
 		</Border>
@@ -89,9 +115,9 @@
 				<RowDefinition Height="*"
 							   MinHeight="100" />
 				<RowDefinition Height="Auto" />
-				<RowDefinition Height="4*" />
+				<RowDefinition Height="3.5*" />
 			</Grid.RowDefinitions>
-			
+
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />
@@ -100,10 +126,16 @@
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
-				<TextBlock Style="{StaticResource PanelTitle}"
-						   Text="Query" />
+				<Border Background="{StaticResource Brush_SubtleBackground2}"
+						Grid.Row="0"
+						Grid.RowSpan="2" />
+				<TextBlock Text="Query"
+						   Margin="0,5,5,0"
+						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+						   VerticalAlignment="Top" />
 
-				<Editors:QueryEditor x:Name="QueryEditor" Grid.Row="1"
+				<Editors:QueryEditor x:Name="QueryEditor"
+									 Grid.Row="1"
 									 Text="{Binding Path=Query.Value, Mode=TwoWay}"
 									 CompletionProvider="{Binding Path=CompletionProvider.Value}">
 					<i:Interaction.Triggers>
@@ -114,66 +146,82 @@
 					</i:Interaction.Triggers>
 				</Editors:QueryEditor>
 
+				<Border Background="{StaticResource Brush_SubtleBackground2}"
+						Grid.Row="2"
+						Grid.RowSpan="1" />
 				<Grid Grid.Row="2">
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="*" />
 						<ColumnDefinition Width="Auto" />
 					</Grid.ColumnDefinitions>
 
-					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
+					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Converter={StaticResource VisibleWhenTrue}}"
+								Margin="0,5">
 						<CheckBox Content="Make spatial queries"
+								  Foreground="{StaticResource Brush_ContrastColor}"
 								  IsChecked="{Binding IsSpatialQuery, Mode=TwoWay}" />
 
 						<StackPanel Orientation="Horizontal"
-									Visibility="{Binding IsSpatialQuery, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}">
-							<TextBlock Text="Longitude:" />
+									Visibility="{Binding IsSpatialQuery, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}"
+									Margin="0,3">
+							<TextBlock Text="Longitude:"
+									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Longitude}" />
+									 Text="{Binding Longitude}"
+									 VerticalAlignment="Center" />
 
-							<TextBlock Text="Latitude:" />
+							<TextBlock Text="Latitude:"
+									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Latitude}" />
+									 Text="{Binding Latitude}"
+									 VerticalAlignment="Center" />
 
-							<TextBlock Text="Radius:" />
+							<TextBlock Text="Radius:"
+									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Radius}"/>
+									 Text="{Binding Radius}"
+									 VerticalAlignment="Center" />
 						</StackPanel>
 					</StackPanel>
 
-					<HyperlinkButton Content="Execute"
-									 Grid.Column="1"
-									 Command="{Binding Execute}"
-									 HorizontalAlignment="Right" />
 				</Grid>
-				
+
+				<Border Background="{StaticResource Brush_SubtleBackground2}"
+						Grid.Row="3"
+						Grid.RowSpan="1" />
 				<StackPanel Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}"
-							Grid.Row="3">
-					<TextBlock Text="Sort By" />
+							Grid.Row="3"
+							Margin="0,5">
+					<TextBlock Text="Sort By"
+							   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 					<ItemsControl ItemsSource="{Binding SortBy}"
 								  Style="{StaticResource Style_ItemsControl_QuerySortyBy}">
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
 								<StackPanel Orientation="Horizontal"
 											Margin="0,4,12,4">
-									<ComboBox x:Name="SortByOptions" 
-											  ItemsSource="{Binding Path=DataContext.SortByOptions, ElementName=this}" 
+									<ComboBox x:Name="SortByOptions"
+											  ItemsSource="{Binding Path=DataContext.SortByOptions, ElementName=this}"
 											  MinWidth="200"
-											  SelectedItem="{Binding Path=Value}" />
-									<HyperlinkButton x:Name="RemoveSortBy" 
-													 ToolTipService.ToolTip="Remove this Sort By option"
-													 Margin="2,0,0,0"
-													 VerticalAlignment="Center"
-													 Command="{Binding Path=DataContext.RemoveSortBy, ElementName=this}"
-													 CommandParameter="{Binding ElementName=SortByOptions, Path=SelectedItem}">
-										<HyperlinkButton.Content>
+											  SelectedItem="{Binding Path=Value, Mode=TwoWay}" />
+									<Button x:Name="RemoveSortBy"
+											ToolTipService.ToolTip="Remove this Sort By option"
+											Margin="3,0,0,0"
+											VerticalAlignment="Center"
+											Command="{Binding Path=DataContext.RemoveSortBy, ElementName=this}"
+											CommandParameter="{Binding ElementName=SortByOptions, Path=SelectedItem}"
+											Style="{StaticResource Style_Button_MouseOverChrome}">
+										<Button.Content>
 											<Image Source="{StaticResource Image_Remove_Tiny}"
-												   Stretch="None"
-												   VerticalAlignment="Center" />
-										</HyperlinkButton.Content>
-									</HyperlinkButton>
+												   Stretch="Fill"
+												   VerticalAlignment="Center"
+												   Width="12"
+												   Height="12" />
+										</Button.Content>
+									</Button>
 								</StackPanel>
 							</DataTemplate>
 						</ItemsControl.ItemTemplate>
@@ -185,7 +233,14 @@
 							  Background="Transparent"
 							  HorizontalAlignment="Stretch" />
 
+			<Border Background="{StaticResource Brush_SubtleBackground2}"
+					Grid.Row="2"
+					Grid.RowSpan="1" />
 			<StackPanel Grid.Row="2">
+				<TextBlock Text="Error"
+						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
+
 				<TextBlock Text="{Binding Error}"
 						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
@@ -207,10 +262,15 @@
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>
 
-				<Documents:DocumentsView Margin="{StaticResource Margin_ContentPage}"
-										 Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
-										 DataContext="{Binding Path=DocumentsResult.Value}" />
+
 			</StackPanel>
+
+			<Grid Grid.Row="2"
+				  Margin="{StaticResource Margin_ContentPage}"
+				  Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
+				<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
+										 DataContext="{Binding Path=DocumentsResult.Value}" />
+			</Grid>
 		</Grid>
 	</toolkit:DockPanel>
 </Infrastructure:View>

@@ -64,6 +64,14 @@ namespace Raven.Client.Silverlight.Connection.Async
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
+
+			// required to ensure just a single auth dialog
+			Task task = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/docs?pageSize=0").NoCache(), "GET", credentials, convention)
+				.ReadResponseStringAsync();
+			jsonRequestFactory.ConfigureRequest += (sender, args) =>
+			{
+				args.JsonRequest.WaitForTask = task;
+			};
 		}
 
 		/// <summary>
@@ -84,17 +92,41 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// </summary>
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
-			var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
-			if (indexOfDatabases != -1)
-				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-			if (databaseUrl.EndsWith("/") == false)
-				databaseUrl += "/";
+			var databaseUrl = RootDatabaseUrl;
 			databaseUrl = databaseUrl + "databases/" + database + "/";
 			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
 			{
 				operationsHeaders = operationsHeaders
 			};
+		}
+
+		/// <summary>
+		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
+		/// with the default database
+		/// </summary>
+		public IAsyncDatabaseCommands ForDefaultDatabase()
+		{
+			var rootDatabaseUrl = RootDatabaseUrl;
+			if (rootDatabaseUrl == url)
+				return this;
+			return new AsyncServerClient(rootDatabaseUrl, convention, credentials, jsonRequestFactory, sessionId)
+			{
+				operationsHeaders = operationsHeaders
+			};
+		}
+
+		private string RootDatabaseUrl
+		{
+			get
+			{
+				var databaseUrl = url;
+				var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
+				if (indexOfDatabases != -1)
+					databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
+				if (databaseUrl.EndsWith("/") == false)
+					databaseUrl += "/";
+				return databaseUrl;
+			}
 		}
 
 		/// <summary>
@@ -142,6 +174,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			key = key.Replace("\\", @"/"); //NOTE: the present of \ causes the SL networking stack to barf, even though the Uri seemingly makes this translation itself
 
 			var request = url.Docs(key)
+				.NoCache()
 				.ToJsonRequest(this, credentials, convention);
 
 			return request
@@ -279,7 +312,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			if (errorsOnly)
 				requestUri += "?type=error";
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri.NoCache(), "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseStringAsync()
@@ -288,6 +321,36 @@ namespace Raven.Client.Silverlight.Connection.Async
 					using (var reader = new JsonTextReader(new StringReader(task.Result)))
 					{
 						return convention.CreateSerializer().Deserialize<LogItem[]>(reader);
+					}
+				});
+		}
+
+		public Task<LicensingStatus> GetLicenseStatus()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/license/status").NoCache(), "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						return convention.CreateSerializer().Deserialize<LicensingStatus>(reader);
+					}
+				});
+		}
+
+		public Task<BuildNumber> GetBuildNumber()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/build/version").NoCache(), "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						return convention.CreateSerializer().Deserialize<BuildNumber>(reader);
 					}
 				});
 		}
@@ -302,7 +365,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			Uri.EscapeDataString(facetSetupDoc),
 			Uri.EscapeDataString(query.Query));
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri.NoCache(), "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseStringAsync()
@@ -333,7 +396,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			if (keys.Length < 128)
 			{
 				path += "&" + string.Join("&", keys.Select(x => "id=" + x).ToArray());
-				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+				request = jsonRequestFactory.CreateHttpJsonRequest(this, path.NoCache(), "GET", credentials, convention);
 				return request.ReadResponseStringAsync()
 					.ContinueWith(task => CompleteMultiGet(task));
 			}
@@ -667,7 +730,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
 				Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri.NoCache(), "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseStringAsync()

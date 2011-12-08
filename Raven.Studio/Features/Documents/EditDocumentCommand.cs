@@ -17,7 +17,7 @@ namespace Raven.Studio.Features.Documents
 		{
 			if (string.IsNullOrEmpty(viewableDocument.Id))
 			{
-				var projection = JsonConvert.SerializeObject(viewableDocument.InnerDocument);
+				var projection = viewableDocument.InnerDocument.ToJson().ToString(Formatting.None);
 				UrlUtil.Navigate("/edit?projection=" + Uri.EscapeDataString(projection));
 			}
 			else

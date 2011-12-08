@@ -16,7 +16,6 @@ namespace Raven.Studio.Infrastructure
 		public ViewModel()
 		{
 			ModelUrlIgnoreList = new List<string>();
-			ApplicationModel.Current.Server.Value.SetCurrentDatabase(new UrlParser(UrlUtil.Url));
 		}
 
 		public void LoadModel(string state)
@@ -32,7 +31,7 @@ namespace Raven.Studio.Infrastructure
 
 		public virtual void LoadModelParameters(string parameters) { }
 
-		protected override Task TimerTickedAsync()
+		public override Task TimerTickedAsync()
 		{
 			return IsLoaded == false ? null : LoadedTimerTickedAsync();
 		}
