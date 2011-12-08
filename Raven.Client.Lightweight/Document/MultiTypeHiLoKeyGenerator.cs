@@ -38,8 +38,8 @@ namespace Raven.Client.Document
 		{
 		    var typeTagName = conventions.GetTypeTagName(entity.GetType());
 			if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
-				return null; 
-		    var tag = typeTagName.ToLowerInvariant();
+				return null;
+			var tag = conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
 			HiLoKeyGenerator value;
 			if (keyGeneratorsByTag.TryGetValue(tag, out value))
 				return value.GenerateDocumentKey(conventions, entity);

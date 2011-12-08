@@ -31,7 +31,7 @@ namespace Raven.Tests.Bugs
 			jsonSerializer.Serialize(stringWriter, item);
 
 			var s = stringWriter.GetStringBuilder().ToString();
-			Assert.Equal("{\"Items\":{\"2011-11-24T00:00:00.0000000+02:00\":1}}", s);
+			Assert.Equal("{\"Items\":{\"2011-11-24T00:00:00.0000000\":1}}", s);
 		}
 
 		[Fact]
