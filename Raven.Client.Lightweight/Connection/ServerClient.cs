@@ -46,6 +46,15 @@ namespace Raven.Client.Connection
 		private readonly ProfilingInformation profilingInformation;
 
 		/// <summary>
+		/// Notify when the failover status changed
+		/// </summary>
+		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
+		{
+			add { replicationInformer.FailoverStatusChanged += value; }
+			remove { replicationInformer.FailoverStatusChanged -= value; }
+		}
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
 		/// </summary>
 		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, ReplicationInformer replicationInformer, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId)

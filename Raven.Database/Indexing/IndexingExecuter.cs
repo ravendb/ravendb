@@ -49,7 +49,7 @@ namespace Raven.Database.Indexing
 			ExecuteIndexingInternal(indexesToWorkOn, documents => Parallel.ForEach(indexesToWorkOn, new ParallelOptions
 			{
 				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
-				TaskScheduler = scheduler
+				TaskScheduler = scheduler,
 			}, indexToWorkOn => transactionalStorage.Batch(actions => IndexDocuments(actions, indexToWorkOn.IndexName, documents))));
 		}
 

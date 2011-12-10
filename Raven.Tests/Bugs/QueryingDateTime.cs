@@ -12,7 +12,6 @@ namespace Raven.Tests.Bugs
 		{
 			using (var store = NewDocumentStore())
 			{
-
 				var dateTime1 = DateTime.ParseExact("2011-04-08T22:00:00.0000000+02:00", new[] { "r", "o" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 				var dateTime2 = dateTime1.AddHours(-2);
 				using (var s = store.OpenSession())

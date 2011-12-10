@@ -253,7 +253,7 @@ namespace Raven.Studio.Models
 
 		public void RestoreHistory()
 		{
-			if (IndexName == null || lastIndex != IndexName)
+			if (IndexName == null || lastIndex != IndexName || string.IsNullOrWhiteSpace(lastQuery))
 				return;
 
 			Query.Value = lastQuery;

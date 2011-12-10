@@ -599,7 +599,6 @@
     <Resource Include="Assets\Images\ChangeView.png" />
     <Content Include="Impl\PopupPlacement\Credit.txt" />
     <Content Include="Impl\RelativeBinding\Credits.txt" />
-    <Content Include="todo.txt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
