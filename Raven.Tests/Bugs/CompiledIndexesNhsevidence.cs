@@ -113,7 +113,7 @@ namespace Raven.Tests.Bugs
 			public TestClassView()
 			{
 
-				ForEntityNames.Add("TestClass");
+				ForEntityNames.Add("TestClasses");
 				MapDefinitions.Add(MapToPaths);
 				ReduceDefinition = Reduce;
 				GroupByExtraction = doc => doc.UserId;

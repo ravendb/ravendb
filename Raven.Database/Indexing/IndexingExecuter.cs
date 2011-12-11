@@ -90,6 +90,7 @@ namespace Raven.Database.Indexing
 				if (jsonDocs.Length > 0)
 				{
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
+					indexesToWorkOn = result.Select(x => x.Item1).ToList();
 					indexingOp(result);
 				}
 			}
@@ -137,15 +138,39 @@ namespace Raven.Database.Indexing
 			var lastModified = last.LastModified.Value;
 
 			var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
-
+			Action<IStorageActionsAccessor> action = null;
 			foreach (var indexToWorkOn in indexesToWorkOn)
 			{
 				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
 				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0) 
 					continue;
 
-				yield return Tuple.Create(indexToWorkOn, jsonDocs.Where(doc => indexLastInedexEtag.CompareTo(new ComparableByteArray(doc.Etag.Value.ToByteArray())) < 0));
-				//actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
+				var filteredDocs = jsonDocs.Where(doc => indexLastInedexEtag.CompareTo(new ComparableByteArray(doc.Etag.Value.ToByteArray())) < 0);
+
+				var indexName = indexToWorkOn.IndexName;
+				var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexName);
+				if(viewGenerator == null)
+					continue; // probably deleted
+
+				if (viewGenerator.ForEntityNames.Count != 0) // limit for the items that it care for
+				{
+					filteredDocs = filteredDocs.Where(x => viewGenerator.ForEntityNames.Contains(x.Metadata.Value<string>(Constants.RavenEntityName)));
+				}
+
+				List<JsonDocument> jsonDocuments = filteredDocs.ToList();
+				
+				if(jsonDocuments.Count == 0)
+				{
+					// we use it this way to batch all the updates together
+					action += accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
+				}
+
+				yield return Tuple.Create<IndexToWorkOn, IEnumerable<JsonDocument>>(indexToWorkOn, jsonDocuments);
+			}
+
+			if (action != null)
+			{
+				transactionalStorage.Batch(action);
 			}
 		}
 
