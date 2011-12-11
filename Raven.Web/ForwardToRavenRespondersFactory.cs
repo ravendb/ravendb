@@ -32,17 +32,35 @@ namespace Raven.Web
 		{
 			if (database != null)
 				return;
+
 			lock (locker)
 			{
 				if (database != null)
 					return;
 
-				var ravenConfiguration = new RavenConfiguration();
-				HttpServer.RegisterHttpEndpointTarget();
-				database = new DocumentDatabase(ravenConfiguration);
-				database.SpinBackgroundWorkers();
-				server = new HttpServer(ravenConfiguration, database);
-				server.Init();
+				try
+				{
+					var ravenConfiguration = new RavenConfiguration();
+					HttpServer.RegisterHttpEndpointTarget();
+					database = new DocumentDatabase(ravenConfiguration);
+					database.SpinBackgroundWorkers();
+					server = new HttpServer(ravenConfiguration, database);
+					server.Init();
+				}
+				catch
+				{
+					if (database != null)
+					{
+						database.Dispose();
+						database = null;
+					}
+					if (server != null)
+					{
+						server.Dispose();
+						server = null;
+					}
+					throw;
+				}
 			}
 		}
 
