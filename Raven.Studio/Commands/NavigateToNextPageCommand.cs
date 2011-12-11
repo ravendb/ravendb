@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -11,15 +10,7 @@ namespace Raven.Studio.Commands
 		public NavigateToNextPageCommand(PagerModel pager)
 		{
 			this.pager = pager;
-			this.pager.PropertyChanged += UpdateCanExecute;
-		}
-
-		private void UpdateCanExecute(object sender, PropertyChangedEventArgs e)
-		{
-			if (e.PropertyName == "HasNextPage")
-			{
-				RaiseCanExecuteChanged();
-			}
+			this.pager.PagerChanged += (sender, args) => RaiseCanExecuteChanged();
 		}
 
 		public override void Execute(object parameter)
@@ -29,7 +20,7 @@ namespace Raven.Studio.Commands
 
 		public override bool CanExecute(object parameter)
 		{
-			return pager.HasNextPage();
+			return pager.HasNextPage;
 		}
 	}
 }

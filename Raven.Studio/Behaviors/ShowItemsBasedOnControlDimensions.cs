@@ -48,8 +48,8 @@ namespace Raven.Studio.Behaviors
 				return;
 			// ReSharper restore CompareOfFloatsByEqualityOperator
 
-			int row = (int) (AssociatedObject.ActualWidth / (DocumentsModel.DocumentSize.Width + 28));
-			int column = (int) (AssociatedObject.ActualHeight / (DocumentsModel.DocumentSize.Height + 24));
+			int row = (int) Math.Max(1, (AssociatedObject.ActualWidth/(DocumentsModel.DocumentSize.Width + 28)));
+			int column = (int) Math.Max(1, AssociatedObject.ActualHeight/(DocumentsModel.DocumentSize.Height + 24));
 			int pageSize = row * column;
 			Model.Pager.PageSize = pageSize;
 			Model.Pager.OnPagerChanged();
