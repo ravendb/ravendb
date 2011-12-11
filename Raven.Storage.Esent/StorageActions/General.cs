@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using NLog;
@@ -16,6 +17,7 @@ using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -223,26 +225,36 @@ namespace Raven.Storage.Esent.StorageActions
 			do
 			{
 				// esent index ranges are approximate, and we need to check them ourselves as well
-				if (Api.RetrieveColumnAsGuid(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]) != txId)
+				if (
+					Api.RetrieveColumnAsGuid(session, DocumentsModifiedByTransactions,
+					                         tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]) != txId)
 					continue;
-				var data = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
-				var metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]);
-				var key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode);
+				var metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
+				                                  tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]);
+				var key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions,
+				                                     tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"],
+				                                     Encoding.Unicode);
 
-				if(data != null && metadata != null)
+				RavenJObject dataAsJson;
+				var metadataAsJson = metadata.ToJObject();
+				using (
+					Stream stream = new ColumnStream(session, DocumentsModifiedByTransactions,
+					                                 tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]))
 				{
-					var metadataAsJson = metadata.ToJObject();
-					data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadataAsJson, bytes));
+					using (var data = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadataAsJson, dataStream)))
+						dataAsJson = data.ToJObject();
 				}
+
 
 				documentsInTransaction.Add(new DocumentInTransactionData
 				{
-					Data = data.ToJObject(),
+					Data = dataAsJson,
 					Delete =
 						Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions,
 						                            tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
 					Etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
-						                            tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting(),
+					                          tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).
+						TransfromToGuidWithProperSorting(),
 					Key = key,
 					Metadata = metadata.ToJObject(),
 				});
