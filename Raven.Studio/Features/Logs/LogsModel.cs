@@ -32,11 +32,7 @@ namespace Raven.Studio.Features.Logs
 
 			return DatabaseCommands.GetLogsAsync(showErrorsOnly)
 				.ContinueOnSuccess(logs => Logs.Match(logs))
-				.CatchIgnore<WebException>(() =>
-				                           	{
-				                           		ApplicationModel.Current.AddNotification(new Notification("Logs end point is not enabled.", NotificationLevel.Info));
-				                           		LogsIsNotEnabled();
-				                           	});
+				.CatchIgnore<WebException>(LogsIsNotEnabled);
 		}
 		
 		private void LogsIsNotEnabled()
