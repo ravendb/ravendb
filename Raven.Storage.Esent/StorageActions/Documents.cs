@@ -133,7 +133,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return cachedDocument.Document;
 			}
 
-			using (Stream stream = new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]))
+			using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 			{
 				using(var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 				{
@@ -160,7 +160,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return existingCachedDocument.Document;
 
 
-			using (Stream stream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
 				using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
 				{
@@ -188,7 +188,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
 
 				RavenJObject dataAsJson;
-				using (Stream stream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 				{
 					using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 						dataAsJson = aggregate.ToJObject();
@@ -219,7 +219,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 
 				RavenJObject dataAsJson;
-				using (Stream stream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 				{
 					using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 						dataAsJson = aggregate.ToJObject();
@@ -260,7 +260,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 
 				RavenJObject dataAsJson;
-				using (Stream stream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 				{
 					using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 						dataAsJson = aggregate.ToJObject();
@@ -303,7 +303,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var modified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]);
 
 				RavenJObject dataAsJson;
-				using (Stream stream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 				{
 					using (var aggregate = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
 						dataAsJson = aggregate.ToJObject();
@@ -350,20 +350,20 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-				using(Stream stream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+				using(var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
 				{
-					using(var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
-					{
-						data.WriteTo(finalStream);
-					}
+					data.WriteTo(finalStream);
+					stream.Flush();
 				}
 
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], SystemTime.UtcNow);
 
-				using(Stream stream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"])))
 				{
 					metadata.WriteTo(stream);
+					stream.Flush();
 				}
 
 				update.Save();
@@ -407,20 +407,20 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
 
-				using (Stream stream = new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]))
+				using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions,tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
+				using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
 				{
-					using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
-					{
-						data.WriteTo(finalStream);
-					}
+					data.WriteTo(finalStream);
+					finalStream.Flush();
 				}
 				Api.SetColumn(session, DocumentsModifiedByTransactions,
 							  tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"],
 							  newEtag.TransformToValueForEsentSorting());
 
-				using (Stream stream = new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]))
+				using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"])))
 				{
 					metadata.WriteTo(stream);
+					stream.Flush();
 				}
 
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"], SystemTime.UtcNow);

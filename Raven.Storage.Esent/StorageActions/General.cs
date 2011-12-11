@@ -238,8 +238,8 @@ namespace Raven.Storage.Esent.StorageActions
 				RavenJObject dataAsJson;
 				var metadataAsJson = metadata.ToJObject();
 				using (
-					Stream stream = new ColumnStream(session, DocumentsModifiedByTransactions,
-					                                 tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]))
+					Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions,
+													 tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 				{
 					using (var data = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadataAsJson, dataStream)))
 						dataAsJson = data.ToJObject();
