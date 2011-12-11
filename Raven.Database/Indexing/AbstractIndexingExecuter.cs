@@ -94,9 +94,9 @@ namespace Raven.Database.Indexing
 
 		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
 
-		protected abstract void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn);
+		protected abstract void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn);
 
-		protected abstract void ExecuteIndexingWorkOnSingleThread(IEnumerable<IndexToWorkOn> indexesToWorkOn);
+		protected abstract void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn);
 
 
 		protected abstract bool IsValidIndex(IndexStats indexesStat);

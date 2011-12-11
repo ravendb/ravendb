@@ -44,29 +44,30 @@ namespace Raven.Database.Indexing
 		}
 
 
-		protected override void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			ExecuteIndexingInternal(indexesToWorkOn, documents => Parallel.ForEach(indexesToWorkOn, new ParallelOptions
+			ExecuteIndexingInternal(indexesToWorkOn, (results) => Parallel.ForEach(results, new ParallelOptions
 			{
 				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
 				TaskScheduler = scheduler,
-			}, indexToWorkOn => transactionalStorage.Batch(actions => IndexDocuments(actions, indexToWorkOn.IndexName, documents))));
+			}, result => transactionalStorage.Batch(actions => IndexDocuments(actions, result.Item1.IndexName, result.Item2))));
 		}
 
-		protected override void ExecuteIndexingWorkOnSingleThread(IEnumerable<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			ExecuteIndexingInternal(indexesToWorkOn, jsonDocs =>
+			ExecuteIndexingInternal(indexesToWorkOn, results =>
 			{
-				foreach (var indexToWorkOn in indexesToWorkOn)
+				foreach (var indexToWorkOn in results)
 				{
-					var copy = indexToWorkOn;
+					var index = indexToWorkOn.Item1;
+					var docs = indexToWorkOn.Item2;
 					transactionalStorage.Batch(
-						actions => IndexDocuments(actions, copy.IndexName, jsonDocs));
+						actions => IndexDocuments(actions, index.IndexName, docs));
 				}
 			});
 		}
 
-		private void ExecuteIndexingInternal(IEnumerable<IndexToWorkOn> indexesToWorkOn, Action<JsonDocument[]> indexingOp)
+		private void ExecuteIndexingInternal(IList<IndexToWorkOn> indexesToWorkOn, Action<IEnumerable<Tuple<IndexToWorkOn, IEnumerable<JsonDocument>>>> indexingOp)
 		{
 			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
 
@@ -87,7 +88,10 @@ namespace Raven.Database.Indexing
 				});
 
 				if (jsonDocs.Length > 0)
-					indexingOp(jsonDocs);
+				{
+					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
+					indexingOp(result);
+				}
 			}
 			finally
 			{
@@ -108,12 +112,40 @@ namespace Raven.Database.Indexing
 					{
 						foreach (var indexToWorkOn in indexesToWorkOn)
 						{
-							if (new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray()).CompareTo(lastIndexedEtag) > 0)
-								continue;
-							actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
+							MarkIndexes(indexToWorkOn, lastIndexedEtag, actions, lastEtag, lastModified);
 						}
 					});
 				}
+			}
+		}
+
+		private void MarkIndexes(IndexToWorkOn indexToWorkOn, ComparableByteArray lastIndexedEtag, IStorageActionsAccessor actions, Guid lastEtag, DateTime lastModified)
+		{
+			if (new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray()).CompareTo(lastIndexedEtag) > 0)
+				return;
+			actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
+		}
+
+		private IEnumerable<Tuple<IndexToWorkOn, IEnumerable<JsonDocument>>> FilterIndexes(IEnumerable<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
+		{
+			var last = jsonDocs.Last();
+
+			Debug.Assert(last.Etag != null);
+			Debug.Assert(last.LastModified != null);
+
+			var lastEtag = last.Etag.Value;
+			var lastModified = last.LastModified.Value;
+
+			var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
+
+			foreach (var indexToWorkOn in indexesToWorkOn)
+			{
+				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
+				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0) 
+					continue;
+
+				yield return Tuple.Create(indexToWorkOn, jsonDocs.Where(doc => indexLastInedexEtag.CompareTo(new ComparableByteArray(doc.Etag.Value.ToByteArray())) < 0));
+				//actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
 			}
 		}
 
@@ -123,20 +155,20 @@ namespace Raven.Database.Indexing
 		}
 
 
-		private void IndexDocuments(IStorageActionsAccessor actions, string index, JsonDocument[] jsonDocs)
+		private void IndexDocuments(IStorageActionsAccessor actions, string index, IEnumerable<JsonDocument> jsonDocs)
 		{
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
 			if (viewGenerator == null)
 				return; // index was deleted, probably
-
-			var dateTime = jsonDocs.Min(x => x.LastModified) ?? DateTime.MinValue;
+			var jsonDocsArray = jsonDocs.ToArray();
+			var dateTime = jsonDocsArray.Min(x => x.LastModified) ?? DateTime.MinValue;
 
 			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
 			try
 			{
-				log.Debug("Indexing {0} documents for index: {1}", jsonDocs.Length, index);
+				log.Debug("Indexing {0} documents for index: {1}", jsonDocsArray.Length, index);
 				context.IndexStorage.Index(index, viewGenerator,
-					jsonDocs
+					jsonDocsArray
 					.Select(doc => documentRetriever
 						.ExecuteReadTriggers(doc, null, ReadOperation.Index))
 					.Where(doc => doc != null)
