@@ -82,14 +82,14 @@ namespace Raven.Studio.Models
 			Skip = s;
 		}
 
-		public bool HasNextPage()
+		public bool HasNextPage
 		{
-			return CurrentPage < TotalPages;
+			get { return CurrentPage < TotalPages; }
 		}
 
-		public bool HasPrevPage()
+		public bool HasPrevPage
 		{
-			return Skip > 0;
+			get { return Skip > 0; }
 		}
 
 		public void NavigateToNextPage()
