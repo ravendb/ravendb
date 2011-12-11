@@ -55,8 +55,8 @@ namespace Raven.Studio.Features.Logs
 			}
 		}
 
-		private bool isLogsEnabled = true;
-		public bool IsLogsEnabled
+		private bool? isLogsEnabled;
+		public bool? IsLogsEnabled
 		{
 			get { return isLogsEnabled; }
 			set
