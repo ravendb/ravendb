@@ -58,21 +58,6 @@ namespace Raven.Abstractions.Extensions
 		/// <summary>
 		/// Convert a RavenJToken to a byte array
 		/// </summary>
-		public static byte[] ToBytes(this RavenJToken self)
-		{
-			using (var memoryStream = new MemoryStream())
-			{
-				self.WriteTo(new BsonWriter(memoryStream)
-				{
-					DateTimeKindHandling = DateTimeKind.Unspecified
-				});
-				return memoryStream.ToArray();
-			}
-		}
-
-		/// <summary>
-		/// Convert a RavenJToken to a byte array
-		/// </summary>
 		public static void WriteTo(this RavenJToken self, Stream stream)
 		{
 			self.WriteTo(new BsonWriter(stream)

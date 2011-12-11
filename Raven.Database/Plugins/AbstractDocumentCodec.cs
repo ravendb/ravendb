@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
+using System.IO;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
@@ -11,8 +12,8 @@ namespace Raven.Database.Plugins
 	[InheritedExport]
 	public abstract class AbstractDocumentCodec
 	{
-		public abstract byte[] Encode(string key, RavenJObject data, RavenJObject metadata, byte[] bytes);
+		public abstract Stream Encode(string key, RavenJObject data, RavenJObject metadata, Stream dataStream);
 
-		public abstract byte[] Decode(string key, RavenJObject metadata, byte[] bytes);
+		public abstract Stream Decode(string key, RavenJObject metadata, Stream dataStream);
 	}
 }

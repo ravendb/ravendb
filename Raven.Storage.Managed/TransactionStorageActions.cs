@@ -63,9 +63,11 @@ namespace Raven.Storage.Managed
 			var ms = new MemoryStream();
 
 			metadata.WriteTo(ms);
-			var dataBytes = documentCodecs.Aggregate(data.ToBytes(), (bytes, codec) => codec.Encode(key, data, metadata, bytes));
-			ms.Write(dataBytes, 0, dataBytes.Length);
-
+			using (var stream = documentCodecs.Aggregate<Lazy<AbstractDocumentCodec>, Stream>(ms, (memoryStream, codec) => codec.Value.Encode(key, data, metadata, memoryStream)))
+			{
+				data.WriteTo(stream);
+				stream.Flush();
+			}
 			var newEtag = generator.CreateSequentialUuid();
 			storage.DocumentsModifiedByTransactions.Put(new RavenJObject
 			                                            	{

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -132,12 +133,15 @@ namespace Raven.Bundles.Replication.Reponsders
 			
 			existingAttachment.Metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			actions.Attachments.AddAttachment(existingDocumentConflictId, null, existingAttachment.Data, existingAttachment.Metadata);
+			var conflictAttachment = new RavenJObject
+			{
+				{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)
+					}
+			};
+			var memoryStream = new MemoryStream();
+			conflictAttachment.WriteTo(memoryStream);
 			actions.Attachments.AddAttachment(id, null,
-								new RavenJObject
-								{
-									{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)
-									}
-								}.ToBytes(),
+								memoryStream.ToArray(),
 								new RavenJObject
 								{
 									{ReplicationConstants.RavenReplicationConflict, true},
