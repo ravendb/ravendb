@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -15,8 +17,6 @@ namespace Raven.Studio.Features.Logs
 {
 	public class LogsModel : ViewModel
 	{
-		private bool stopTicking;
-
 		public BindableCollection<LogItem> Logs { get; private set; }
 
 		public LogsModel()
@@ -27,7 +27,7 @@ namespace Raven.Studio.Features.Logs
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (stopTicking)
+			if (IsLogsEnabled == false)
 				return null;
 
 			return DatabaseCommands.GetLogsAsync(showErrorsOnly)
@@ -35,8 +35,46 @@ namespace Raven.Studio.Features.Logs
 				.CatchIgnore<WebException>(() =>
 				                           	{
 				                           		ApplicationModel.Current.AddNotification(new Notification("Logs end point is not enabled.", NotificationLevel.Info));
-				                           		stopTicking = true;
+				                           		LogsIsNotEnabled();
 				                           	});
+		}
+		
+		private void LogsIsNotEnabled()
+		{
+			IsLogsEnabled = false;
+			EnablingLogsInstructions = GetTextFromResource("Raven.Studio.Features.Logs.DefaultLogging.config");
+		}
+
+		private static string GetTextFromResource(string name)
+		{
+			using (var stream = typeof (LogsModel).Assembly.GetManifestResourceStream(name))
+			{
+				if (stream == null)
+					throw new InvalidOperationException("Could not find the following resource: " + name);
+				return new StreamReader(stream).ReadToEnd();
+			}
+		}
+
+		private bool isLogsEnabled = true;
+		public bool IsLogsEnabled
+		{
+			get { return isLogsEnabled; }
+			set
+			{
+				isLogsEnabled = value;
+				OnPropertyChanged();
+			}
+		}
+
+		private string enablingLogsInstructions;
+		public string EnablingLogsInstructions
+		{
+			get { return enablingLogsInstructions; }
+			set
+			{
+				enablingLogsInstructions = value;
+				OnPropertyChanged();
+			}
 		}
 
 		private bool showErrorsOnly;
