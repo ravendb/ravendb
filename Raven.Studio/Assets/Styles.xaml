@@ -1535,7 +1535,7 @@
 				<ControlTemplate TargetType="ComboBox">
 					<Grid>
 						<Grid.Resources>
-							<Style x:Name="comboToggleStyle" TargetType="ToggleButton">
+							<Style x:Name="comboToggleStyle1" TargetType="ToggleButton">
 								<Setter Property="Foreground" Value="Black"/>
 								<Setter Property="Background" Value="Transparent"/>
 								<Setter Property="BorderThickness" Value="1"/>
@@ -1638,7 +1638,7 @@
 						
 						<Border x:Name="ContentPresenterBorder">
 							<Grid>
-								<ToggleButton x:Name="DropDownToggle" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Right" Margin="0" Style="{StaticResource comboToggleStyle}" 
+								<ToggleButton x:Name="DropDownToggle" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Right" Margin="0" Style="{StaticResource comboToggleStyle1}" 
 											  VerticalAlignment="Stretch">
 									<Path x:Name="BtnArrow" Data="F1 M 301.14,-189.041L 311.57,-189.041L 306.355,-182.942L 301.14,-189.041 Z " HorizontalAlignment="Right" Height="4" Margin="0,0,6,0" Stretch="Uniform" Width="8">
 										<Path.Fill>
