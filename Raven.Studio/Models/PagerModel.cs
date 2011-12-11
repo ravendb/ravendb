@@ -41,7 +41,10 @@ namespace Raven.Studio.Models
 
 		public int CurrentPage
 		{
-			get { return Skip / PageSize + 1; }
+			get
+			{
+				return Skip / PageSize + 1 + (Skip != 0 && Skip < PageSize ? 1 : 0);
+			}
 		}
 
 		public Observable<long?> TotalResults { get; private set; }
@@ -50,8 +53,8 @@ namespace Raven.Studio.Models
 			get { return (TotalResults.Value ?? 0)/ PageSize + 1; }
 		}
 
-		private ushort? skip;
-		public ushort Skip
+		private short? skip;
+		public short Skip
 		{
 			get
 			{
@@ -66,7 +69,7 @@ namespace Raven.Studio.Models
 			}
 			set
 			{
-				skip = value;
+				skip = Math.Max((short) 0, value);
 				OnPropertyChanged();
 				OnPropertyChanged("CurrentPage");
 				OnPropertyChanged("HasPrevPage");
@@ -77,8 +80,8 @@ namespace Raven.Studio.Models
 
 		public void SetSkip(UrlParser urlParser)
 		{
-			ushort s;
-			ushort.TryParse(urlParser.GetQueryParam("skip"), out s);
+			short s;
+			short.TryParse(urlParser.GetQueryParam("skip"), out s);
 			Skip = s;
 		}
 
@@ -105,7 +108,7 @@ namespace Raven.Studio.Models
 		private void NavigateToPage(int pageOffset)
 		{
 			var skip1 = Skip + pageOffset*PageSize;
-			Skip = (ushort) skip1;
+			Skip = (short) skip1;
 
 			if (IsSkipBasedOnTheUrl)
 			{
