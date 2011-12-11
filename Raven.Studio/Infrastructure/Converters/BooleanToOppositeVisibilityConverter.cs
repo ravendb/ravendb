@@ -10,7 +10,7 @@ namespace Raven.Studio.Infrastructure.Converters
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value == null)
-				return null;
+				return Visibility.Collapsed;
 
 			var booleanValue = (bool)value;
 			return booleanValue ? Visibility.Collapsed : Visibility.Visible;
