@@ -17,7 +17,7 @@ namespace Raven.Abstractions
 			new JsonToJsonConverter(),
 			new JsonDateTimeISO8601Converter(),
 			new JsonDateTimeOffsetConverter(),
-			new JsonDictionaryDateTimeKeysConverter(typeof(DateTime), typeof(DateTime?), typeof(DateTimeOffset), typeof(DateTimeOffset?))
+			new JsonDictionaryDateTimeKeysConverter(typeof(DateTime), typeof(DateTime?), typeof(DateTimeOffset), typeof(DateTimeOffset?)),
 		};
 	}
 }

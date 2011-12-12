@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Net;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -72,7 +73,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata);
+		void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
 		/// Retrieves the attachment with the specified key

@@ -357,12 +357,12 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata)
+		public void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			ExecuteWithReplication("PUT", operationUrl => DirectPutAttachment(key, metadata, etag, data, operationUrl));
 		}
 
-		private void DirectPutAttachment(string key, RavenJObject metadata, Guid? etag, byte[] data, string operationUrl)
+		private void DirectPutAttachment(string key, RavenJObject metadata, Guid? etag, Stream data, string operationUrl)
 		{
 			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
 			webRequest.Method = "PUT";
@@ -396,7 +396,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			}
 			using (var stream = webRequest.GetRequestStream())
 			{
-				stream.Write(data, 0, data.Length);
+				data.CopyTo(stream);
 				stream.Flush();
 			}
 			try
@@ -446,9 +446,16 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				using (var response = webRequest.GetResponse())
 				using (var responseStream = response.GetResponseStream())
 				{
+					if (responseStream == null)
+						throw new InvalidOperationException("couldn't get response stream from attachment request");
+
+					var memoryStream = new MemoryStream();
+					responseStream.CopyTo(memoryStream);
+					memoryStream.Position = 0;
 					return new Attachment
 					{
-						Data = responseStream.ReadData(),
+						Data = ()=>memoryStream, 
+						Size = (int)memoryStream.Length,
 						Etag = new Guid(response.Headers["ETag"]),
 						Metadata = response.Headers.FilterHeaders(isServerDocument: false)
 					};

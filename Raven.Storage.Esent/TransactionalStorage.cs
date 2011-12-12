@@ -140,7 +140,7 @@ namespace Raven.Storage.Esent
 		{
 			long sizeInBytes = -1;
 
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
 			{
 				int sizeInPages, pageSize;
 				Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out sizeInPages, JET_DbInfo.Filesize);
@@ -372,7 +372,7 @@ namespace Raven.Storage.Esent
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
 				: CommitTransactionGrbit.None;
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
 			{
 				var storageActionsAccessor = new StorageActionsAccessor(pht);
 				current.Value = storageActionsAccessor;

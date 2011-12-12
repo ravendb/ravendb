@@ -470,7 +470,7 @@ namespace Raven.Database
 			}
 		}
 
-		private void AssertAttachmentPutOperationNotVetoed(string key, RavenJObject metadata, byte[] data)
+		private void AssertAttachmentPutOperationNotVetoed(string key, RavenJObject metadata, Stream data)
 		{
 			var vetoResult = AttachmentPutTriggers
 				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, data, metadata) })
@@ -856,14 +856,15 @@ namespace Raven.Database
 				if (foundResult)
 					break;
 				var attachmentReadTrigger = attachmentReadTriggerLazy.Value;
-				var readVetoResult = attachmentReadTrigger.AllowRead(name, attachment.Data, attachment.Metadata,
+				var readVetoResult = attachmentReadTrigger.AllowRead(name, attachment.Data(), attachment.Metadata,
 																	 ReadOperation.Load);
 				switch (readVetoResult.Veto)
 				{
 					case ReadVetoResult.ReadAllow.Allow:
 						break;
 					case ReadVetoResult.ReadAllow.Deny:
-						attachment.Data = new byte[0];
+						attachment.Data = () => new MemoryStream(new byte[0]);
+						attachment.Size = 0;
 						attachment.Metadata = new RavenJObject
 						                      	{
 						                      		{
@@ -895,11 +896,11 @@ namespace Raven.Database
 
 			foreach (var attachmentReadTrigger in AttachmentReadTriggers)
 			{
-				attachment.Data = attachmentReadTrigger.Value.OnRead(name, attachment.Data, attachment.Metadata, ReadOperation.Load);
+				attachmentReadTrigger.Value.OnRead(name, attachment);
 			}
 		}
 
-		public void PutStatic(string name, Guid? etag, byte[] data, RavenJObject metadata)
+		public void PutStatic(string name, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 			if (Encoding.Unicode.GetByteCount(name) >= 255)

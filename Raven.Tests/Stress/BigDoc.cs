@@ -1,9 +1,11 @@
-﻿using Raven.Client.Document;
+﻿using System;
+using Raven.Client.Document;
 using Xunit;
 using Xunit.Extensions;
 
 namespace Raven.Tests.Stress
 {
+	[CLSCompliant(false)]
 	public class BigDoc : RavenTest
 	{
 		[Theory]
