@@ -135,11 +135,11 @@ namespace Raven.Bundles.Replication.Reponsders
 			actions.Attachments.AddAttachment(existingDocumentConflictId, null, existingAttachment.Data(), existingAttachment.Metadata);
 			var conflictAttachment = new RavenJObject
 			{
-				{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)
-					}
+				{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)}
 			};
 			var memoryStream = new MemoryStream();
 			conflictAttachment.WriteTo(memoryStream);
+			memoryStream.Position = 0;
 			actions.Attachments.AddAttachment(id, null,
 								memoryStream,
 								new RavenJObject
