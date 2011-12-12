@@ -51,7 +51,7 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\SharedLibs\Newtonsoft.Json\Net\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
       <HintPath>..\SharedLibs\NLog.dll</HintPath>
@@ -87,6 +87,7 @@
     <Compile Include="Connection\Profiling\ProfilingInformation.cs" />
     <Compile Include="Connection\RavenQuery.cs" />
     <Compile Include="Connection\RavenTransactionAccessor.cs" />
+    <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
     <Compile Include="Connection\SerializationHelper.cs" />
     <Compile Include="Connection\ServerClient.cs" />

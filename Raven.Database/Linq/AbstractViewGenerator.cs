@@ -73,7 +73,7 @@ namespace Raven.Database.Linq
 			{
 				if(hasWhereClause == null)
 				{
-					hasWhereClause = ViewText.IndexOf("where", StringComparison.InvariantCultureIgnoreCase) > -1;
+					hasWhereClause = ViewText.IndexOf("where", StringComparison.OrdinalIgnoreCase) > -1;
 				}
 				return hasWhereClause.Value;
 			}
@@ -85,19 +85,6 @@ namespace Raven.Database.Linq
 			ForEntityNames = new HashSet<string>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<string, FieldIndexing>();
-		}
-
-		protected IEnumerable<dynamic> Project(object self, Func<dynamic, dynamic> func)
-		{
-			if (self == null)
-				yield break;
-			if (self is IEnumerable == false || self is string)
-				throw new InvalidOperationException("Attempted to enumerate over " + self.GetType().Name);
-
-			foreach (var item in ((IEnumerable)self))
-			{
-				yield return func(item);
-			}
 		}
 
 		protected IEnumerable<dynamic> Hierarchy(object source, string name)
@@ -131,7 +118,7 @@ namespace Raven.Database.Linq
 				item = func(item);
 			}
 
-			return new DynamicJsonObject.DynamicList(resultsOrdered.ToArray());
+			return new DynamicList(resultsOrdered.ToArray());
 		}
 
 		public void AddQueryParameterForMap(string field)
@@ -151,6 +138,8 @@ namespace Raven.Database.Linq
 
 		public virtual bool ContainsFieldOnMap(string field)
 		{
+			if (ReduceDefinition == null)
+				return fields.Contains(field);
 			return mapFields.Contains(field);
 		}
 

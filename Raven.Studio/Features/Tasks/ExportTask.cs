@@ -1,192 +1,159 @@
-﻿using Raven.Client.Silverlight.Connection;
-using Raven.Studio.Infrastructure.Navigation;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
+using System.Windows.Controls;
+using System.Windows.Input;
+using Ionic.Zlib;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Client.Connection.Async;
+using Raven.Client.Silverlight.Connection;
+using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	using System;
-	using System.Collections.Generic;
-	using System.ComponentModel.Composition;
-	using System.IO;
-	using System.Net;
-	using System.Threading.Tasks;
-	using System.Windows.Controls;
-	using Caliburn.Micro;
-	using Client.Document;
-	using Database;
-	using Ionic.Zlib;
-	using Framework.Extensions;
-	using Messages;
-	using Newtonsoft.Json;
-	using Newtonsoft.Json.Linq;
-	using Plugins;
-
-	[Plugins.Tasks.ExportTask("Export Database")]
-	public class ExportTask : ConsoleOutputTask
+	public class ExportTask : TaskModel
 	{
-		bool exportIndexesOnly;
+		private readonly IAsyncDatabaseCommands databaseCommands;
 
-		[ImportingConstructor]
-		public ExportTask()
+		public ExportTask(IAsyncDatabaseCommands databaseCommands)
 		{
-			DisplayName = "Export Database";
+			this.databaseCommands = databaseCommands;
+			Name = "Export Database";
+			Description = "Export your database to a dump file. By default, both indexes and documents are exported.\nYou can optionally choose to export just indexes.";
 		}
 
-		public bool ExportIndexesOnly
+		public class ExportDatabaseCommand : Command
 		{
-			get { return exportIndexesOnly; }
-			set
+			const int BatchSize = 512;
+
+			private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+			private readonly Action<string> output;
+			private Stream stream;
+			private GZipStream gZipStream;
+			private StreamWriter streamWriter;
+			private JsonTextWriter jsonWriter;
+
+			public ExportDatabaseCommand(IAsyncDatabaseCommands asyncDatabaseCommands, Action<string> output)
 			{
-				exportIndexesOnly = value;
-				NotifyOfPropertyChange(() => ExportIndexesOnly);
+				this.asyncDatabaseCommands = asyncDatabaseCommands;
+				this.output = output;
 			}
-		}
 
-		public void ExportData()
-		{
-			Status = string.Empty;
-
-			var saveFile = new SaveFileDialog();
-			var dialogResult = saveFile.ShowDialog();
-
-			if (!dialogResult.HasValue || !dialogResult.Value) return;
-
-			WorkStarted("exporting database");
-	
-			var tasks = (IEnumerable<Task>)ExportData(saveFile, ExportIndexesOnly).GetEnumerator();
-			tasks.ExecuteInSequence(OnTaskFinished, OnException);
-		}
-
-		void OnTaskFinished(bool success)
-		{
-			WorkCompleted("exporting database");
-
-			Status = success ? "Export Complete" : "Export Failed!";
-
-			if(success)
-				Events.Publish(new NotificationRaised("Export Completed", NotificationLevel.Info));
-		}
-
-		void OnException(Exception e)
-		{
-			if (e is AggregateException)
+			public override void Execute(object parameter)
 			{
-				Output("The export failed because:");
-				((AggregateException)e).Handle(exception =>
+				var saveFile = new SaveFileDialog
 				{
-					Output("\t{0}", exception.Message);
-					return true;
-				});
+					DefaultExt = ".raven.dump",
+					Filter = "Raven Dumps|*.raven.dump"
+				};
+				var dialogResult = saveFile.ShowDialog() ?? false;
+
+				if (!dialogResult)
+					return;
+
+				stream = saveFile.OpenFile();
+				gZipStream = new GZipStream(stream, CompressionMode.Compress);
+				streamWriter = new StreamWriter(gZipStream);
+				jsonWriter = new JsonTextWriter(streamWriter)
+				{
+					Formatting = Formatting.Indented
+				};
+
+				output(string.Format("Exporting to {0}", saveFile.SafeFileName));
+
+				output("Begin reading indexes");
+
+				jsonWriter.WriteStartObject();
+				jsonWriter.WritePropertyName("Indexes");
+				jsonWriter.WriteStartArray();
+
+				ReadIndexes(0).Catch(exception => Infrastructure.Execute.OnTheUI(() => Finish(exception)));
 			}
-			else
+
+			private Task ReadIndexes(int totalCount)
 			{
-				Output("The export failed with the following exception: {0}", e.Message);
-			}
-			NotifyError("Database Export Failed");
-		}
-
-		IEnumerable<Task> ExportData(SaveFileDialog saveFile, bool indexesOnly)
-		{
-			Output("Exporting to {0}", saveFile.SafeFileName);
-			Output("- Indexes only, documents will be excluded");
-
-			var stream = saveFile.OpenFile();
-			var jsonRequestFactory = new HttpJsonRequestFactory();
-			var baseUrl = Server.CurrentDatabaseAddress;
-			var credentials = new NetworkCredential();
-			var convention = new DocumentConvention();
-
-			var streamWriter = new StreamWriter(new GZipStream(stream, CompressionMode.Compress));
-			var jsonWriter = new JsonTextWriter(streamWriter)
-								{
-									Formatting = Formatting.Indented
-								};
-
-			Output("Begin reading indexes");
-
-			jsonWriter.WriteStartObject();
-			jsonWriter.WritePropertyName("Indexes");
-			jsonWriter.WriteStartArray();
-
-			int totalCount = 0;
-			const int batchSize = 128;
-			var completed = false;
-
-			while (!completed)
-			{
-				var url = (baseUrl + "/indexes/?start=" + totalCount + "&pageSize=" + batchSize).NoCache();
-				var request = jsonRequestFactory.CreateHttpJsonRequest(this, url, "GET", credentials, convention);
-				var response = request.ReadResponseStringAsync();
-				yield return response;
-
-				var documents = response.Result;
-				var array = JArray.Parse(documents);
-				if (array.Count == 0)
-				{
-					Output("Done with reading indexes, total: {0}", totalCount);
-					completed = true;
-				}
-				else
-				{
-					totalCount += array.Count;
-					Output("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Count, totalCount);
-					foreach (JToken item in array)
+				var url = ("/indexes/?start=" + totalCount + "&pageSize=" + BatchSize).NoCache();
+				var request = asyncDatabaseCommands.CreateRequest(url, "GET");
+				return request.ReadResponseStringAsync()
+					.ContinueOnSuccess(documents =>
 					{
-						item.WriteTo(jsonWriter);
-					}
-				}
-			}
-
-			jsonWriter.WriteEndArray();
-			jsonWriter.WritePropertyName("Docs");
-			jsonWriter.WriteStartArray();
-
-			if (indexesOnly)
-			{
-				Output("Skipping documents");
-			}
-			else
-			{
-				Output("Begin reading documents");
-
-				var lastEtag = Guid.Empty;
-				totalCount = 0;
-				completed = false;
-				while (!completed)
-				{
-					var url = (baseUrl + "/docs/?pageSize=" + batchSize + "&etag=" + lastEtag).NoCache();
-					var request = jsonRequestFactory.CreateHttpJsonRequest(this, url, "GET", credentials, convention);
-					var response = request.ReadResponseStringAsync();
-					yield return response;
-
-					var array = JArray.Parse(response.Result);
-					if (array.Count == 0)
-					{
-						Output("Done with reading documents, total: {0}", totalCount);
-						completed = true;
-					}
-					else
-					{
-						totalCount += array.Count;
-						Output("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
-									totalCount);
-						foreach (JToken item in array)
+						var array = JArray.Parse(documents);
+						if (array.Count == 0)
 						{
-							item.WriteTo(jsonWriter);
+							output(string.Format("Done with reading indexes, total: {0}", totalCount));
+
+							jsonWriter.WriteEndArray();
+							jsonWriter.WritePropertyName("Docs");
+							jsonWriter.WriteStartArray();
+
+							return ReadDocuments(Guid.Empty, 0);
 						}
-						lastEtag = new Guid(array.Last.Value<JObject>("@metadata").Value<string>("@etag"));
-					}
-				}
+						else
+						{
+							totalCount += array.Count;
+							output(string.Format("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Count,
+												 totalCount));
+							foreach (JToken item in array)
+							{
+								item.WriteTo(jsonWriter);
+							}
+
+							return ReadIndexes(totalCount);
+						}
+					});
 			}
 
-			Execute.OnUIThread(() =>
-								{
-									jsonWriter.WriteEndArray();
-									jsonWriter.WriteEndObject();
-									streamWriter.Flush();
-									streamWriter.Dispose();
-									stream.Dispose();
-								});
-			Output("Export complete");
+			private Task ReadDocuments(Guid lastEtag, int totalCount)
+			{
+				var url = ("/docs/?pageSize=" + BatchSize + "&etag=" + lastEtag).NoCache();
+				var request = asyncDatabaseCommands.CreateRequest(url, "GET");
+				return request.ReadResponseStringAsync()
+					.ContinueOnSuccess(docs =>
+					{
+						var array = JArray.Parse(docs);
+						if (array.Count == 0)
+						{
+							output(string.Format("Done with reading documents, total: {0}", totalCount));
+							jsonWriter.WriteEndArray();
+							jsonWriter.WriteEndObject();
+
+							return Infrastructure.Execute.OnTheUI(() => Finish(null));
+						}
+						else
+						{
+							totalCount += array.Count;
+							output(string.Format("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
+								   totalCount));
+							foreach (JToken item in array)
+							{
+								item.WriteTo(jsonWriter);
+							}
+							lastEtag = new Guid(array.Last.Value<JObject>("@metadata").Value<string>("@etag"));
+
+							return ReadDocuments(lastEtag, totalCount);
+						}
+					});
+
+
+			}
+
+			private void Finish(Exception exception)
+			{
+				streamWriter.Flush();
+				streamWriter.Dispose();
+				stream.Dispose();
+
+				output("Export complete");
+				if (exception != null)
+					output(exception.ToString());
+			}
+		}
+
+		public override ICommand Action
+		{
+			get { return new ExportDatabaseCommand(databaseCommands, line => Execute.OnTheUI(() => Output.Add(line))); }
 		}
 	}
 }

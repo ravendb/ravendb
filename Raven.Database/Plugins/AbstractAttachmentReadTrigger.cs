@@ -3,7 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
 using System.ComponentModel.Composition;
+using System.IO;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
@@ -29,7 +33,7 @@ namespace Raven.Database.Plugins
 		///    asking for a particular document, or skip including the result entirely 
 		///    in the query results.
 		///  </returns>
-		public virtual ReadVetoResult AllowRead(string key, byte[] data, RavenJObject metadata, ReadOperation operation)
+		public virtual ReadVetoResult AllowRead(string key, Stream data, RavenJObject metadata, ReadOperation operation)
 		{
 			return ReadVetoResult.Allowed;
 		}
@@ -39,13 +43,9 @@ namespace Raven.Database.Plugins
 		///  before the user can see them. 
 		///  </summary><remarks>
 		///  The modified values are transient, and are NOT saved to the database.
-		///  </remarks><param name="key">The key of the read document - can be null if reading a projection</param>
-		/// <param name="data">The attachment being read</param>
-		/// <param name="metadata">The document metadata</param>
-		/// <param name="operation">Whatever the operation is a load or a query</param>
-		public virtual byte[] OnRead(string key, byte[] data, RavenJObject metadata, ReadOperation operation)
+		/// </remarks>
+		public virtual void OnRead(string key, Attachment attachment)
 		{
-			return data;
 		}
 
 		public void Initialize(DocumentDatabase database)

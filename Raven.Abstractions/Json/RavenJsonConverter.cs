@@ -16,6 +16,5 @@ namespace Raven.Abstractions.Json
 				return anotherConverter.ReadJson(reader, objectType, existingValue, serializer);
 			return reader.Value;
 		}
-
 	}
 }

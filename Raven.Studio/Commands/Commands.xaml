@@ -1,0 +1,12 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:Commands="clr-namespace:Raven.Studio.Commands">
+
+	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
+	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />
+	<Commands:NavigateToCommand x:Name="NavigateToCommand" />
+	<Commands:ChangeDatabaseCommand x:Name="ChangeDatabaseCommand" />
+	<Commands:NavigateToDocumentByIdCommand x:Name="NavigateToDocumentByIdCommand" />
+	<Commands:ShowLicensingStatusCommand x:Name="ShowLicensingStatusCommand" />
+	<Commands:CreateDatabaseCommand x:Name="CreateDatabaseCommand" />
+</ResourceDictionary>

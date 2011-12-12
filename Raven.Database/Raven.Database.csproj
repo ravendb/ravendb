@@ -80,15 +80,11 @@
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
-    <Reference Include="Newtonsoft.Json, Version=4.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\SharedLibs\Newtonsoft.Json\Net\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
       <HintPath>..\SharedLibs\NLog.dll</HintPath>
-    </Reference>
-    <Reference Include="Rhino.Licensing">
-      <HintPath>..\SharedLibs\Rhino.Licensing.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -97,6 +93,8 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq">
@@ -117,8 +115,28 @@
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
-    <Compile Include="Commercial\WarningMessagesHolder.cs" />
     <Compile Include="Config\CertGenerator.cs" />
+    <Compile Include="Config\ConfigOptionDocs.cs" />
+    <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
+    <Compile Include="Rhino.Licensing\Discovery\DiscoveryClient.cs" />
+    <Compile Include="Rhino.Licensing\Discovery\DiscoveryHost.cs" />
+    <Compile Include="Rhino.Licensing\FloatingLicenseNotAvialableException.cs" />
+    <Compile Include="Rhino.Licensing\ILicensingService.cs" />
+    <Compile Include="Rhino.Licensing\InvalidationType.cs" />
+    <Compile Include="Rhino.Licensing\ISubscriptionLicensingService.cs" />
+    <Compile Include="Rhino.Licensing\LicenseExpiredException.cs" />
+    <Compile Include="Rhino.Licensing\LicenseFileNotFoundException.cs" />
+    <Compile Include="Rhino.Licensing\LicenseGenerator.cs" />
+    <Compile Include="Rhino.Licensing\LicenseNotFoundException.cs" />
+    <Compile Include="Rhino.Licensing\LicenseType.cs" />
+    <Compile Include="Rhino.Licensing\LicenseValidator.cs" />
+    <Compile Include="Rhino.Licensing\LicensingService.cs" />
+    <Compile Include="Rhino.Licensing\RhinoLicensingException.cs" />
+    <Compile Include="Rhino.Licensing\CorruptLicenseFileException.cs" />
+    <Compile Include="Rhino.Licensing\SntpClient.cs" />
+    <Compile Include="Rhino.Licensing\StringLicenseValidator.cs" />
+    <Compile Include="Linq\Ast\DynamicExtensionMethodsTranslator.cs" />
+    <Compile Include="Linq\PrivateExtensions\DynamicExtensionMethods.cs" />
     <Compile Include="Plugins\AbstractIndexQueryTrigger.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
     <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
@@ -135,12 +153,14 @@
     <Compile Include="Server\CurrentOperationContext.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />
+    <Compile Include="Server\HttpEndpointRegistration.cs" />
     <Compile Include="Server\HttpServer.cs" />
     <Compile Include="Server\IConfigureHttpListener.cs" />
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
+    <Compile Include="Server\Responders\Licensing.cs" />
     <Compile Include="Server\Responders\Logs.cs" />
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
@@ -148,6 +168,7 @@
     <Compile Include="Server\Responders\SilverlightPlugins.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
     <Compile Include="Server\Security\OAuth\AccessTokenBody.cs" />
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
@@ -459,6 +480,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Server\WebUI\css\smoothness\images\ui-anim_basic_16x16.gif" />
     <Content Include="Server\WebUI\studio_not_found.html" />
     <Content Include="Server\WebUI\studio.html" />
     <Content Include="Server\WebUI\raven-data.ico" />

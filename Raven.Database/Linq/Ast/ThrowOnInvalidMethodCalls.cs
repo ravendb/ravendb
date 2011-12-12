@@ -10,7 +10,7 @@ namespace Raven.Database.Linq.Ast
 		{
 			var text = QueryParsingUtils.ToText(queryExpressionOrderClause);
 			throw new InvalidOperationException(
-				@"OrderBy calls are not invalid during map or reduce phase, but the following was found:
+				@"OrderBy calls are not valid during map or reduce phase, but the following was found:
 " + text + @"
 OrderBy calls modify the indexing output, but doesn't actually impact the order of results returned from the database.
 You should be calling OrderBy on the QUERY, not on the index, if you want to specify ordering.");

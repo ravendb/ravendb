@@ -1,0 +1,75 @@
+﻿<UserControl
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+	xmlns:Models="clr-namespace:Raven.Studio.Models" xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+	xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions" mc:Ignorable="d"
+	x:Class="Raven.Studio.NotificationView"
+	d:DesignWidth="640" d:DesignHeight="480" Height="40" Width="Auto" d:DataContext="{d:DesignInstance Models:ApplicationModel}">
+	<UserControl.Resources>
+		<Storyboard x:Key="ScaleIn">
+			<DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(CompositeTransform.ScaleX)" Storyboard.TargetName="border">
+				<EasingDoubleKeyFrame KeyTime="0" Value="0"/>
+				<EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="1"/>
+			</DoubleAnimationUsingKeyFrames>
+			<DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(CompositeTransform.ScaleY)" Storyboard.TargetName="border">
+				<EasingDoubleKeyFrame KeyTime="0" Value="0"/>
+				<EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="1"/>
+			</DoubleAnimationUsingKeyFrames>
+			<DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="border">
+				<EasingDoubleKeyFrame KeyTime="0" Value="0"/>
+				<EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="1"/>
+			</DoubleAnimationUsingKeyFrames>
+		</Storyboard>
+		<Storyboard x:Key="FadeOut">
+			<DoubleAnimation Duration="0:0:0.2" To="0" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="border" d:IsOptimized="True"/>
+		</Storyboard>
+        <Storyboard x:Key="FadeIn">
+            <DoubleAnimation Duration="0:0:0.2" To="1" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="border" d:IsOptimized="True"/>
+        </Storyboard>
+    </UserControl.Resources>
+	<UserControl.CacheMode>
+		<BitmapCache/>
+	</UserControl.CacheMode>
+
+	<Grid x:Name="LayoutRoot">
+		<Border x:Name="border" BorderThickness="0" CornerRadius="8" RenderTransformOrigin="0.9,0.5" MinWidth="200" Opacity="0">
+            <Border.CacheMode>
+                <BitmapCache/>
+            </Border.CacheMode>
+			<Border.RenderTransform>
+				<CompositeTransform/>
+			</Border.RenderTransform>
+			<Border.Effect>
+				<DropShadowEffect Opacity="0.34" ShadowDepth="7" Color="#FF272727"/>
+			</Border.Effect>
+			<Border.Background>
+				<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+					<GradientStop Color="#FF9A1942" Offset="0.032"/>
+					<GradientStop Color="#FF791E3D" Offset="0.968"/>
+				</LinearGradientBrush>
+			</Border.Background>
+			<StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+				<Grid Margin="5,0,0,0">
+                    <Ellipse Fill="White" Width="24" Height="24" Stroke="#FF581129" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Image Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <i:Interaction.Triggers>
+                            <ei:DataTrigger Binding="{Binding Level}" Value="Error">
+                                <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Error_Tiny}"/>
+                            </ei:DataTrigger>
+                            <ei:DataTrigger Binding="{Binding Level}" Value="Info">
+                                <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Info_Tiny}"/>
+                            </ei:DataTrigger>
+                            <ei:DataTrigger Binding="{Binding Level}" Value="Warning">
+                                <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Warning_Tiny}"/>
+                            </ei:DataTrigger>
+                        </i:Interaction.Triggers>
+                    </Image>
+                </Grid>
+				<TextBlock TextWrapping="Wrap" Text="{Binding Message}" VerticalAlignment="Center" Foreground="White" HorizontalAlignment="Center" Margin="5,10,20,10"/>
+			</StackPanel>
+		</Border>
+	</Grid>
+</UserControl>

@@ -63,7 +63,7 @@ namespace Raven.Tests
 				IOExtensions.DeleteDirectory(path);
 			documentStore.Initialize();
 
-			new RavenDocumentsByEntityName().Execute(documentStore);
+			CreateDefaultIndexes(documentStore);
 
 			if (allocatedMemory != null && inMemory)
 			{
@@ -72,6 +72,11 @@ namespace Raven.Tests
 			}
 
 			return documentStore;
+		}
+
+		protected virtual void CreateDefaultIndexes(EmbeddableDocumentStore documentStore)
+		{
+			new RavenDocumentsByEntityName().Execute(documentStore);
 		}
 
 		protected virtual void ModifyStore(EmbeddableDocumentStore documentStore)
@@ -89,9 +94,10 @@ namespace Raven.Tests
 			                                   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
 			                                   new RavenJObject());
 
+			documentStore.Configuration.AnonymousUserAccessMode=AnonymousUserAccessMode.All;
 			using (var server = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
 			{
-				server.Start();
+				server.StartListening();
 				Process.Start(documentStore.Configuration.ServerUrl); // start the server
 
 				do
@@ -105,7 +111,7 @@ namespace Raven.Tests
 		{
 		}
 
-		public void WaitForIndexing(EmbeddableDocumentStore store)
+		public static void WaitForIndexing(EmbeddableDocumentStore store)
 		{
 			while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
 			{
@@ -226,6 +232,8 @@ namespace Raven.Tests
 			catch (Exception)
 			{
 			}
+
+			SystemTime.UtcDateTime = () => DateTime.UtcNow;
 
 			ClearDatabaseDirectory();
 

@@ -46,6 +46,15 @@ namespace Raven.Client.Connection
 		private readonly ProfilingInformation profilingInformation;
 
 		/// <summary>
+		/// Notify when the failover status changed
+		/// </summary>
+		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
+		{
+			add { replicationInformer.FailoverStatusChanged += value; }
+			remove { replicationInformer.FailoverStatusChanged -= value; }
+		}
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
 		/// </summary>
 		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, ReplicationInformer replicationInformer, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId)
@@ -136,6 +145,15 @@ namespace Raven.Client.Connection
 				operation(operationUrl);
 				return null;
 			});
+		}
+
+		/// <summary>
+		/// Allow to query whatever we are in failover mode or not
+		/// </summary>
+		/// <returns></returns>
+		public bool InFailoverMode()
+		{
+			return replicationInformer.GetFailureCount(url) > 0;
 		}
 
 		private T ExecuteWithReplication<T>(string method, Func<string, T> operation)
@@ -339,12 +357,12 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata)
+		public void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			ExecuteWithReplication("PUT", operationUrl => DirectPutAttachment(key, metadata, etag, data, operationUrl));
 		}
 
-		private void DirectPutAttachment(string key, RavenJObject metadata, Guid? etag, byte[] data, string operationUrl)
+		private void DirectPutAttachment(string key, RavenJObject metadata, Guid? etag, Stream data, string operationUrl)
 		{
 			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
 			webRequest.Method = "PUT";
@@ -378,7 +396,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			}
 			using (var stream = webRequest.GetRequestStream())
 			{
-				stream.Write(data, 0, data.Length);
+				data.CopyTo(stream);
 				stream.Flush();
 			}
 			try
@@ -428,9 +446,16 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				using (var response = webRequest.GetResponse())
 				using (var responseStream = response.GetResponseStream())
 				{
+					if (responseStream == null)
+						throw new InvalidOperationException("couldn't get response stream from attachment request");
+
+					var memoryStream = new MemoryStream();
+					responseStream.CopyTo(memoryStream);
+					memoryStream.Position = 0;
 					return new Attachment
 					{
-						Data = responseStream.ReadData(),
+						Data = ()=>memoryStream, 
+						Size = (int)memoryStream.Length,
 						Etag = new Guid(response.Headers["ETag"]),
 						Metadata = response.Headers.FilterHeaders(isServerDocument: false)
 					};
@@ -466,6 +491,17 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		public void DeleteAttachment(string key, Guid? etag)
 		{
 			ExecuteWithReplication("DELETE", operationUrl => DirectDeleteAttachment(key, etag, operationUrl));
+		}
+
+		public string[] GetDatabaseNames()
+		{
+			var result = ExecuteGetRequest(url.Databases().NoCache());
+
+			var json = (RavenJArray) RavenJToken.Parse(result);
+		
+			return json
+				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+				.ToArray();
 		}
 
 		private void DirectDeleteAttachment(string key, Guid? etag, string operationUrl)
@@ -768,9 +804,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
-			// we are fine with that, requests to load > 128 items are going to be rare
+			// we are fine with that, requests to load that many items are probably going to be rare
 			HttpJsonRequest request;
-			if (ids.Length < 128)
+			if (ids.Sum(x=>x.Length) < 1024)
 			{
 				path += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
@@ -939,14 +975,37 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// </summary>
 		public IDatabaseCommands ForDatabase(string database)
 		{
-			var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/");
-			if (indexOfDatabases != -1)
-				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-			if (databaseUrl.EndsWith("/") == false)
-				databaseUrl += "/";
+			var databaseUrl = RootDatabaseUrl;
 			databaseUrl = databaseUrl + "databases/" + database;
-			return new ServerClient(databaseUrl, convention, credentials, replicationInformer, jsonRequestFactory, currentSessionId);
+			return new ServerClient(databaseUrl, convention, credentials, replicationInformer, jsonRequestFactory, currentSessionId)
+			       {
+			       	OperationsHeaders = OperationsHeaders
+			       };
+		}
+
+		public IDatabaseCommands ForDefaultDatabase()
+		{
+			var databaseUrl = RootDatabaseUrl;
+			if (databaseUrl == url)
+				return this;
+			return new ServerClient(databaseUrl, convention, credentials, replicationInformer, jsonRequestFactory, currentSessionId)
+			{
+				OperationsHeaders = OperationsHeaders
+			};
+		}
+
+		private string RootDatabaseUrl
+		{
+			get
+			{
+				var databaseUrl = url;
+				var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
+				if (indexOfDatabases != -1)
+					databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
+				if (databaseUrl.EndsWith("/") == false)
+					databaseUrl += "/";
+				return databaseUrl;
+			}
 		}
 
 		/// <summary>
@@ -955,7 +1014,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// </summary>
 		public IDatabaseCommands GetRootDatabase()
 		{
-			var indexOfDatabases = url.IndexOf("/databases/");
+			var indexOfDatabases = url.IndexOf("/databases/", StringComparison.Ordinal);
 			if (indexOfDatabases == -1)
 				return this;
 
@@ -1112,6 +1171,18 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		}
 
 		/// <summary>
+		/// Retrieve the statistics for the database
+		/// </summary>
+		public DatabaseStatistics GetStatistics()
+		{
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,url +"/stats", "GET", credentials, convention);
+
+			var response = httpJsonRequest.ReadResponseString();
+			var jo = RavenJObject.Parse(response);
+			return jo.Deserialize<DatabaseStatistics>(convention);
+		}
+
+		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
@@ -1174,6 +1245,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
+		/// <param name="index"></param>
 		/// <param name="query"></param>
 		/// <param name="facetSetupDoc"></param>
 		/// <returns></returns>

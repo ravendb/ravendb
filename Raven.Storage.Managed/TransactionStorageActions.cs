@@ -63,9 +63,11 @@ namespace Raven.Storage.Managed
 			var ms = new MemoryStream();
 
 			metadata.WriteTo(ms);
-			var dataBytes = documentCodecs.Aggregate(data.ToBytes(), (bytes, codec) => codec.Encode(key, data, metadata, bytes));
-			ms.Write(dataBytes, 0, dataBytes.Length);
-
+			using (var stream = documentCodecs.Aggregate<Lazy<AbstractDocumentCodec>, Stream>(ms, (memoryStream, codec) => codec.Value.Encode(key, data, metadata, memoryStream)))
+			{
+				data.WriteTo(stream);
+				stream.Flush();
+			}
 			var newEtag = generator.CreateSequentialUuid();
 			storage.DocumentsModifiedByTransactions.Put(new RavenJObject
 			                                            	{
@@ -99,12 +101,12 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public void DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag)
+		public bool DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag)
 		{
 			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
 			if (readResult == null)
 			{
-				return;
+				return false;
 			}
 			readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
 			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
@@ -133,6 +135,8 @@ namespace Raven.Storage.Managed
 			                                                  		{"deleted", true},
 			                                                  		{"txId", transactionInformation.Id.ToByteArray()}
 			                                                  	});
+
+			return true;
 		}
 
 		public void RollbackTransaction(Guid txId)

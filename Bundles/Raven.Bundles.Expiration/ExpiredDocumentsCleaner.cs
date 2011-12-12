@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using NLog;
@@ -18,7 +17,7 @@ namespace Raven.Bundles.Expiration
 {
 	public class ExpiredDocumentsCleaner : IStartupTask, IDisposable
 	{
-		private const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
+		public const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
 		private Logger logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 		public DocumentDatabase Database { get; set; }
@@ -48,7 +47,7 @@ namespace Raven.Bundles.Expiration
 
 			var deleteFrequencyInSeconds = database.Configuration.GetConfigurationValue<int>("Raven/Expiration/DeleteFrequencySeconds") ?? 300;
 			logger.Info("Initialied expired document cleaner, will check for expired documents every {0} seconds",
-			            deleteFrequencyInSeconds);
+						deleteFrequencyInSeconds);
 			timer = new Timer(TimerCallback, null, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
 
 		}
@@ -61,11 +60,14 @@ namespace Raven.Bundles.Expiration
 			executing = true;
 			try
 			{
-				var currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
-				var nowAsStr = DateTools.DateToString(currentTime, DateTools.Resolution.SECOND);
 
+				string nowAsStr;
+				DateTime currentTime;
+				UpdateTimes(out nowAsStr, out currentTime);
+				
 				while (true)
 				{
+					
 					var queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
 					{
 						PageSize = 1024,
@@ -87,13 +89,16 @@ namespace Raven.Bundles.Expiration
 
 					logger.Debug(()=> string.Format("Deleting {0} expired documents: [{1}]", queryResult.Results.Count, string.Join(", ", docIds)));
 
+					var deleted = false;
 					Database.TransactionalStorage.Batch(accessor => // delete all expired items in a single tx
 					{
-						foreach (var docId in docIds)
-						{
-							Database.Delete(docId, null, null);
-						}
+						deleted = docIds.Aggregate(deleted, (current, docId) => current | Database.Delete(docId, null, null));
 					});
+
+					if (deleted == false)
+						return;
+
+					UpdateTimes(out nowAsStr, out currentTime); // update the staleness cutoff point for the index, to reflect the newly deleted documents
 				}
 			}
 			catch (Exception e)
@@ -105,6 +110,12 @@ namespace Raven.Bundles.Expiration
 				executing = false;
 			}
 
+		}
+
+		private static void UpdateTimes(out string nowAsStr, out DateTime currentTime)
+		{
+			currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
+			nowAsStr = DateTools.DateToString(currentTime, DateTools.Resolution.SECOND);
 		}
 
 		/// <summary>

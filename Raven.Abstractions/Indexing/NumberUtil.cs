@@ -77,7 +77,7 @@ namespace Raven.Abstractions.Indexing
 					return  double.Parse(num, CultureInfo.InvariantCulture);
 			}
 
-			throw new ArgumentException("Could not understand how to parse: " + number);
+			throw new ArgumentException(string.Format("Could not understand how to parse: '{0}'", number));
 
 		}
 	}

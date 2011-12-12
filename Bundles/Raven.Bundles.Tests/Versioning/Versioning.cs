@@ -212,7 +212,6 @@ namespace Raven.Bundles.Tests.Versioning
 	public class Company
 	{
 		public string Name { get; set; }
-
 		public string Id { get; set; }
 	}
 }

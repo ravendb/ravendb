@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Silverlight
+﻿using Raven.Abstractions.Extensions;
+
+namespace Raven.Tests.Silverlight
 {
 	using System;
 	using System.Collections.Generic;
@@ -33,7 +35,7 @@
 				.GetAttachmentAsync("123");
 			yield return get;
 			
-			var returnedBytes = get.Result.Data;
+			var returnedBytes = get.Result.Data().ReadData(); 
 			var returned = encoding.GetString(returnedBytes,0,returnedBytes.Length);
 
 			Assert.AreEqual(someData, returned);

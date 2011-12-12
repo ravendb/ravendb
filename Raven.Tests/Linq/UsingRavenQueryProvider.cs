@@ -25,7 +25,7 @@ using System.Diagnostics;
 
 namespace Raven.Tests.Linq
 {
-	public class UsingRavenQueryProvider
+	public class UsingRavenQueryProvider : RavenTest
 	{
 		[Fact]
 		public void Can_perform_Skip_Take_Query()
@@ -515,6 +515,7 @@ namespace Raven.Tests.Linq
 			public decimal Cost { get; set; }
 			public decimal Quantity { get; set; }
 			public Origin Country { get; set; }
+			public string Description { get; set; }
 		}
 
 		private class DateTimeInfo
@@ -580,6 +581,38 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
+		public void Can_Use_Strings_In_Array_In_Where_Clause()
+		{
+			using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+			{
+				store.Initialize();
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new OrderItem { Cost = 1.59m, Quantity = 5, Description = "First" });
+					s.Store(new OrderItem { Cost = 7.59m, Quantity = 3, Description = "Second" });
+					s.Store(new OrderItem { Cost = 1.59m, Quantity = 4, Description = "Third" });
+					s.Store(new OrderItem { Cost = 1.39m, Quantity = 3, Description = "Fourth" });
+					s.SaveChanges();
+				}
+
+				using (var s = store.OpenSession())
+				{
+					var ravenQueryable = (from item in s.Query<OrderItem>()
+										  .Customize(x => x.WaitForNonStaleResults())
+										  where item.Description.In(new[] { "", "First" })
+										  select item
+										 );
+					var items = ravenQueryable.ToArray();
+
+
+					Assert.Equal(items.Length, 1);
+				}
+			}
+		}
+
+
+		[Fact]
 		public void Can_Use_Enums_In_Array_In_Where_Clause()
 		{
 			using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
@@ -588,7 +621,7 @@ namespace Raven.Tests.Linq
 
 				using (var s = store.OpenSession())
 				{
-					s.Store(new OrderItem { Cost = 1.59m, Quantity = 5, Country=Origin.Africa });
+					s.Store(new OrderItem { Cost = 1.59m, Quantity = 5, Country = Origin.Africa });
 					s.Store(new OrderItem { Cost = 7.59m, Quantity = 3, Country = Origin.Africa });
 					s.Store(new OrderItem { Cost = 1.59m, Quantity = 4, Country = Origin.UnitedStates });
 					s.Store(new OrderItem { Cost = 1.39m, Quantity = 3, Country = Origin.Africa });
@@ -745,7 +778,7 @@ namespace Raven.Tests.Linq
 				using (var s = store.OpenSession())
 				{
 					var items = (from item in s.Query<OrderItem>()
-								 where item.Quantity > 4 && item.CustomerId == customerId 
+								 where item.Quantity > 4 && item.CustomerId == customerId
 														&& !item.Id.In(list)
 								 select item
 									 ).ToArray();

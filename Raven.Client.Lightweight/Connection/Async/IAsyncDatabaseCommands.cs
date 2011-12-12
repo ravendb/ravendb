@@ -26,14 +26,14 @@ namespace Raven.Client.Connection.Async
 		/// Gets or sets the operations headers.
 		/// </summary>
 		/// <value>The operations headers.</value>
-		IDictionary<string,string> OperationsHeaders { get;  }
+		IDictionary<string, string> OperationsHeaders { get; }
 
 		/// <summary>
 		/// Begins an async get operation
 		/// </summary>
 		/// <param name="key">The key.</param>
 		Task<JsonDocument> GetAsync(string key);
-		
+
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
@@ -137,10 +137,10 @@ namespace Raven.Client.Connection.Async
 		Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata);
 
 #if SILVERLIGHT
-        /// <summary>
-        /// Create a http request to the specified relative url on the current database
-        /// </summary>
-	    Silverlight.Connection.HttpJsonRequest CreateRequest(string relativeUrl, string method);
+		/// <summary>
+		/// Create a http request to the specified relative url on the current database
+		/// </summary>
+		Silverlight.Connection.HttpJsonRequest CreateRequest(string relativeUrl, string method);
 #endif
 
 		/// <summary>
@@ -148,6 +148,12 @@ namespace Raven.Client.Connection.Async
 		/// with the specified database
 		/// </summary>
 		IAsyncDatabaseCommands ForDatabase(string database);
+
+		/// <summary>
+		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
+		/// with the default database
+		/// </summary>
+		IAsyncDatabaseCommands ForDefaultDatabase();
 
 		/// <summary>
 		/// Returns a new <see cref="IAsyncDatabaseCommands"/> using the specified credentials
@@ -217,6 +223,10 @@ namespace Raven.Client.Connection.Async
 		Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
 
 		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
+
+		Task<LicensingStatus> GetLicenseStatus();
+
+		Task<BuildNumber> GetBuildNumber();
 	}
 }
 #endif

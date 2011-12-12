@@ -371,7 +371,6 @@ namespace Raven.Client.Indexes
 			var rightOp = node.Right;
 
 			FixupEnumBinaryExpression(ref leftOp, ref rightOp);
-
 			switch (node.NodeType)
 			{
 				case ExpressionType.Add:
@@ -626,7 +625,7 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
-		private static void FixupEnumBinaryExpression(ref Expression left, ref Expression right)
+		private void FixupEnumBinaryExpression(ref Expression left, ref Expression right)
 		{
 			switch (left.NodeType)
 			{
@@ -639,8 +638,23 @@ namespace Raven.Client.Indexes
 					if (constantExpression == null)
 						return;
 					left = expression;
-					right = Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
+					right = convention.SaveEnumsAsIntegers ? 
+						Expression.Constant((int)constantExpression.Value) : 
+						Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
 					break;
+			}
+
+			while (true)
+			{
+				switch (left.NodeType)
+				{
+					case ExpressionType.ConvertChecked:
+					case ExpressionType.Convert:
+						left = ((UnaryExpression)left).Operand;
+						break;
+					default:
+						return;
+				}
 			}
 		}
 
@@ -1207,6 +1221,7 @@ namespace Raven.Client.Indexes
 					case "Count":
 					case "Where":
 					case "Sum":
+					case "Any":
 					case "SingleOrDefault":
 						Out(")");
 						break;
@@ -1241,6 +1256,7 @@ namespace Raven.Client.Indexes
 					case "SelectMany":
 						Out("(Func<dynamic, IEnumerable<dynamic>>)(");
 						break;
+					case "Any":
 					case "First":
 					case "FirstOrDefault":
 					case "Single":
@@ -1265,7 +1281,7 @@ namespace Raven.Client.Indexes
 			if (expression.NodeType == ExpressionType.Call)
 			{
 				var name = ((MethodCallExpression)expression).Method.Name;
-				return name != "Select" && name != "SelectMany";
+				return name != "Select";
 			}
 
 			return true;

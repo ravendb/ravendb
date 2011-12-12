@@ -1,26 +1,34 @@
-﻿namespace Raven.Studio
-{
-	using System.Diagnostics;
-	using System.Windows;
-	using Controls;
+﻿using System.Windows;
+using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
+namespace Raven.Studio
+{
 	public partial class App : Application
 	{
 		public App()
 		{
-			UnhandledException += OnUnhandledException;
+			this.Startup += this.Application_Startup;
+			this.UnhandledException += this.Application_UnhandledException;
 
 			InitializeComponent();
 		}
 
-		static void OnUnhandledException(object sender, ApplicationUnhandledExceptionEventArgs e)
+		private void Application_Startup(object sender, StartupEventArgs e)
 		{
-			if (!Debugger.IsAttached)
-			{
-				e.Handled = true;
-				var errorWin = new ErrorWindow(e.ExceptionObject);
-				errorWin.Show();
-			}
+			var rootVisual = new MainPage();
+			ApplicationModel.Current.Setup(rootVisual);
+			this.RootVisual = rootVisual;
+		}
+
+		private void Application_UnhandledException(object sender, ApplicationUnhandledExceptionEventArgs e)
+		{
+			if (System.Diagnostics.Debugger.IsAttached) return;
+			
+			e.Handled = true;
+			var ex = e.ExceptionObject;
+			if (ErrorHandler.Handle(ex) == false)
+				ErrorPresenter.Show(ex);
 		}
 	}
 }

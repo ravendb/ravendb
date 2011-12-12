@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
@@ -79,6 +81,55 @@ namespace Raven.Tests.Bugs.Queries
 					Assert.Equal(1, results.Count);
 					Assert.Equal("Simple Company", results[0].Name);
 				}
+			}
+		}
+
+		[Fact]
+		public void Projections_to_anonym()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var entity = new Company {Name = "Simple Company", Id = "companies/1", Address1 = "Tel-Aviv"};
+				using (var session = store.OpenSession())
+				{
+					session.Store(entity);
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var results = session.Query<Company>().ToArray();
+					var a = results[0];
+
+					Assert.NotNull(a);
+					Assert.NotNull(a.Name);
+					Assert.NotNull(a.Address1);
+
+					var projectedResults = results.Select(x => new
+						                                     	{
+						                                     		CompanyName = x.Name,
+						                                     		Address = x.Address1
+						                                     	}).ToArray();
+
+					var b = projectedResults[0];
+
+					Assert.NotNull(b.CompanyName);
+					Assert.NotNull(b.Address);
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var results =
+						session.Query<Company>().Select(x => new
+						                                     	{
+						                                     		CompanyName = x.Name,
+						                                     		Address = x.Address1
+						                                     	}).ToArray();
+					var a = results[0];
+					Assert.NotNull(a.CompanyName);
+					Assert.NotNull(a.Address);
+				}
+
 			}
 		}
 

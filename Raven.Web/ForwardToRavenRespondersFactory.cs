@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Web;
 using Raven.Database;
 using Raven.Database.Config;
@@ -12,34 +13,72 @@ namespace Raven.Web
 {
 	public class ForwardToRavenRespondersFactory : IHttpHandlerFactory
 	{
+		internal static DocumentDatabase database;
+		internal static HttpServer server;
 		private static readonly object locker = new object();
-
-		static readonly RavenConfiguration ravenConfiguration = new RavenConfiguration();
-		static readonly DocumentDatabase database;
-		static readonly HttpServer server;
-
-		static ForwardToRavenRespondersFactory()
-		{
-			lock (locker)
-			{
-				if (database != null)
-					return;
-
-
-				HttpServer.RegisterHttpEndpointTarget();
-				database = new DocumentDatabase(ravenConfiguration);
-				database.SpinBackgroundWorkers();
-				server = new HttpServer(ravenConfiguration, database);
-			}
-		}
 
 		public IHttpHandler GetHandler(HttpContext context, string requestType, string url, string pathTranslated)
 		{
+			if (database == null)
+				throw new InvalidOperationException("Database has not been initialized properly");
 			return new ForwardToRavenResponders(server);
 		}
 
 		public void ReleaseHandler(IHttpHandler handler)
 		{
+		}
+
+		public static void Init()
+		{
+			if (database != null)
+				return;
+
+			lock (locker)
+			{
+				if (database != null)
+					return;
+
+				try
+				{
+					var ravenConfiguration = new RavenConfiguration();
+					HttpEndpointRegistration.RegisterHttpEndpointTarget();
+					database = new DocumentDatabase(ravenConfiguration);
+					database.SpinBackgroundWorkers();
+					server = new HttpServer(ravenConfiguration, database);
+					server.Init();
+				}
+				catch
+				{
+					if (database != null)
+					{
+						database.Dispose();
+						database = null;
+					}
+					if (server != null)
+					{
+						server.Dispose();
+						server = null;
+					}
+					throw;
+				}
+			}
+		}
+
+		public static void Shutdown()
+		{
+			if (database == null)
+				return;
+			lock (locker)
+			{
+				if (database == null)
+					return;
+
+				server.Dispose();
+				database.Dispose();
+
+				server = null;
+				database = null;
+			}
 		}
 	}
 }

@@ -129,6 +129,7 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter != null)
 				{
+					indexWriter.Optimize();
 					indexWriter.Commit();
 				}
 			}
@@ -495,15 +496,15 @@ namespace Raven.Database.Indexing
 					{
 						clonedNumericField.SetIntValue((int)numericValue);
 					}
-					if (numericValue is long)
+					else if (numericValue is long)
 					{
 						clonedNumericField.SetLongValue((long)numericValue);
 					}
-					if (numericValue is double)
+					else if (numericValue is double)
 					{
 						clonedNumericField.SetDoubleValue((double)numericValue);
 					}
-					if (numericValue is float)
+					else if (numericValue is float)
 					{
 						clonedNumericField.SetFloatValue((float)numericValue);
 					}
@@ -511,8 +512,18 @@ namespace Raven.Database.Indexing
 				}
 				else
 				{
-					var clonedField = new Field(field.Name(), field.BinaryValue(),
-												field.IsStored() ? Field.Store.YES : Field.Store.NO);
+					Field clonedField;
+					if (field.IsBinary())
+					{
+						clonedField = new Field(field.Name(), field.BinaryValue(),
+						                        field.IsStored() ? Field.Store.YES : Field.Store.NO);
+					}
+					else
+					{
+						clonedField = new Field(field.Name(), field.StringValue(),
+										field.IsStored() ? Field.Store.YES : Field.Store.NO,
+										field.IsIndexed()? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS);
+					}
 					clonedDocument.Add(clonedField);
 				}
 			}
@@ -527,8 +538,9 @@ namespace Raven.Database.Indexing
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
-			readonly HashSet<RavenJObject> alreadyReturned;
+			private readonly HashSet<RavenJObject> alreadyReturned;
 			private readonly FieldsToFetch fieldsToFetch;
+			private readonly HashSet<string> documentsAlreadySeenInPreviousPage = new HashSet<string>();
 			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
 
 			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
@@ -541,7 +553,6 @@ namespace Raven.Database.Indexing
 
 				if (fieldsToFetch.IsDistinctQuery)
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
-				
 			}
 
 			public IEnumerable<IndexQueryResult> Query()
@@ -576,7 +587,7 @@ namespace Raven.Database.Indexing
 							TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 							indexQuery.TotalSize.Value = search.TotalHits;
 
-							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start);
+							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
 
 							for (int i = start; i < search.TotalHits && (i - start) < pageSize; i++)
 							{
@@ -603,18 +614,33 @@ namespace Raven.Database.Indexing
 			{
 				if (shouldIncludeInResults(indexQueryResult) == false)
 					return false;
+				if (documentsAlreadySeenInPreviousPage.Contains(indexQueryResult.Key))
+					return false;
 				if (fieldsToFetch.IsDistinctQuery && alreadyReturned.Add(indexQueryResult.Projection) == false)
 						return false;
 				return true;
 			}
 
-			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start)
+			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start, int pageSize)
 			{
+				var min = Math.Min(start, search.TotalHits);
+				
+
+				// we are paging, we need to check that we don't have duplicates in the previous page
+				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
+				if (parent.IsMapReduce == false && fieldsToFetch.IsProjection == false && start - pageSize >= 0 && start < search.TotalHits) 
+				{
+					for (int i = start - pageSize; i < min; i++)
+					{
+						var document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+						documentsAlreadySeenInPreviousPage.Add(document.Get(Constants.DocumentIdFieldName));
+					}
+				}
+
 				if (fieldsToFetch.IsDistinctQuery == false) 
 					return;
 
 				// add results that were already there in previous pages
-				var min = Math.Min(start, search.TotalHits);
 				for (int i = 0; i < min; i++)
 				{
 					Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
@@ -633,7 +659,8 @@ namespace Raven.Database.Indexing
 					{
 						f = f.Substring(0, f.Length - "_Range".Length);
 					}
-					if (parent.viewGenerator.ContainsField(f) == false)
+					if (parent.viewGenerator.ContainsField(f) == false && 
+						parent.viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
 						throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
 				}
 
@@ -711,12 +738,14 @@ namespace Raven.Database.Indexing
 					indexSearcher.Search(luceneQuery, filter, gatherAllCollector);
 					return gatherAllCollector.ToTopDocs();
 				}
+				var minPageSize = Math.Max(pageSize + start, 1);
+
 				// NOTE: We get Start + Pagesize results back so we have something to page on
 				if (sort != null)
 				{
-					return indexSearcher.Search(luceneQuery, filter, pageSize + start, sort);
+					return indexSearcher.Search(luceneQuery, filter, minPageSize, sort);
 				}
-				return indexSearcher.Search(luceneQuery, filter, pageSize + start);
+				return indexSearcher.Search(luceneQuery, filter, minPageSize);
 			}
 		}
 

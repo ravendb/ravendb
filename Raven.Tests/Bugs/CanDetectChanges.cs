@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using Xunit;
+using Raven.Client.Document;
 
 namespace Raven.Tests.Bugs
 {
@@ -122,6 +123,42 @@ namespace Raven.Tests.Bugs
 					Assert.Equal(2, session.Advanced.LuceneQuery<ProjectingDates.Registration>().WaitForNonStaleResults().ToList().Count());
 				}
 			}
+		}
+
+		[Fact]
+		public void CanDetectChangesOnExistingItem_ByteArray()
+		{
+			using (var server = GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				var id = string.Empty;
+				using (var session = store.OpenSession())
+				{
+					var doc = new ByteArraySample
+					{
+						Bytes = Guid.NewGuid().ToByteArray(),
+					};
+					session.Store(doc);
+					session.SaveChanges();
+					id = doc.Id;
+				}
+
+				WaitForAllRequestsToComplete(server);
+				server.Server.ResetNumberOfRequests();
+
+				using (var session = store.OpenSession())
+				{
+					var sample = session.Load<ByteArraySample>(id);
+					Assert.False(session.Advanced.HasChanged(sample));
+					Assert.False(session.Advanced.HasChanges);
+				}
+			}
+		}
+
+		public class ByteArraySample
+		{
+			public string Id { get; set; }
+			public byte[] Bytes { get; set; }
 		}
 	}
 }

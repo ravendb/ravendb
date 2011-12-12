@@ -1,229 +1,244 @@
-﻿using Raven.Abstractions.Commands;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Controls;
+using System.Windows.Input;
+using Ionic.Zlib;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
-using Raven.Studio.Infrastructure.Navigation;
+using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	using System;
-	using System.Collections.Generic;
-	using System.ComponentModel.Composition;
-	using System.Diagnostics;
-	using System.IO;
-	using System.Linq;
-	using System.Text;
-	using System.Threading.Tasks;
-	using System.Windows.Controls;
-	using Caliburn.Micro;
-	using Ionic.Zlib;
-	using Framework.Extensions;
-	using Messages;
-	using Newtonsoft.Json;
-	using Newtonsoft.Json.Linq;
-	using Plugins;
+    public class ImportTask : TaskModel
+    {
+        private readonly IAsyncDatabaseCommands databaseCommands;
 
-	[Plugins.Tasks.ExportTask("Import Database")]
-	public class ImportTask : ConsoleOutputTask
-	{
-		[ImportingConstructor]
-		public ImportTask()
-		{
-			DisplayName = "Import Database";
-		}
+        public ImportTask(IAsyncDatabaseCommands databaseCommands)
+        {
+            this.databaseCommands = databaseCommands;
+            Name = "Import Database";
+            Description = "Import a database from a dump file.\nImporting will overwrite any existing indexes.";       
+        }
 
-		public void ImportData()
-		{
-			WorkStarted("importing database");
-			Status = string.Empty;
+        public class ImportDatabaseCommand : Command
+        {
+            const int BatchSize = 512;
 
-			var openFile = new OpenFileDialog();
-			var dialogResult = openFile.ShowDialog();
+            private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+            private readonly Action<string> output;
+            private int totalCount;
+            private int totalIndexes;
 
-			if (!dialogResult.HasValue || !dialogResult.Value) return;
+            public ImportDatabaseCommand(IAsyncDatabaseCommands asyncDatabaseCommands,  Action<string> output)
+            {
+                this.asyncDatabaseCommands = asyncDatabaseCommands;
+                this.output = output;
+            }
 
-			var tasks = (IEnumerable<Task>)ImportData(openFile).GetEnumerator();
-			tasks.ExecuteInSequence(OnTaskFinished, OnException);
-		}
+            public override void Execute(object parameter)
+            {
+                var openFile = new OpenFileDialog
+                {
+                    Filter = "Raven Dumps|*.raven.dump"
+                };
 
-		void OnTaskFinished(bool success)
-		{
-			WorkCompleted("importing database");
+                var dialogResult = openFile.ShowDialog() ?? false;
 
-			Status = success ? "Import Complete" : "Import Failed!";
+                if (!dialogResult)
+                    return;
 
-			if (!success) return;
+                totalCount = 0;
+                totalIndexes = 0;
+                
+                output(string.Format("Importing from {0}", openFile.File.Name));
 
-			Events.Publish(new NotificationRaised("Import Completed", NotificationLevel.Info));
-		}
+                var sw = Stopwatch.StartNew();
 
-		void OnException(Exception e)
-		{
-			if (e is InvalidDataException)
-			{
-				Output("The import file was not formatted correctly:\n\t{0}", e.Message);
-				Output("Import terminated.");
-			}
-			else if (e is AggregateException)
-			{
-				Output("The import failed because:");
-				((AggregateException)e).Handle(exception =>
-				{
-					Output("\t{0}", exception.Message);
-					return true;
-				});
-			}
-			else
-			{
-				Output("The import failed with the following exception: {0}", e.Message);
-			}
+                var stream = openFile.File.OpenRead();
+                JsonTextReader jsonReader;
+                if (TryGetJsonReader(stream, out jsonReader) == false)
+                {
+                    stream.Dispose();
+                    return;
+                }
 
-			NotifyError("Database Import Failed");
-		}
+                if (jsonReader.TokenType != JsonToken.StartObject)
+                    throw new InvalidOperationException("StartObject was expected");
 
-		IEnumerable<Task> ImportData(OpenFileDialog openFile)
-		{
-			Output("Importing from {0}", openFile.File.Name);
+                // should read indexes now
+                if (jsonReader.Read() == false)
+                {
+                    output("Invalid Json file specified!");
+                    stream.Dispose();
+                    return;
+                }
 
-			var sw = Stopwatch.StartNew();
+                output(string.Format("Begin reading indexes"));
 
-			var stream = openFile.File.OpenRead();
-			// Try to read the stream compressed, otherwise continue uncompressed.
-			JsonTextReader jsonReader;
+                if (jsonReader.TokenType != JsonToken.PropertyName)
+                    throw new InvalidOperationException("PropertyName was expected");
 
-			try
-			{
-				var streamReader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
+                if (Equals("Indexes", jsonReader.Value) == false)
+                    throw new InvalidOperationException("Indexes property was expected");
 
-				jsonReader = new JsonTextReader(streamReader);
+                if (jsonReader.Read() == false)
+                    return;
 
-				if (jsonReader.Read() == false) yield break;
-			}
-			catch (Exception)
-			{
-				Output("Import file did not use GZip compression, attempting to read as uncompressed.");
+                if (jsonReader.TokenType != JsonToken.StartArray)
+                    throw new InvalidOperationException("StartArray was expected");
 
-				stream.Seek(0, SeekOrigin.Begin);
+                // import Indexes
+                WriteIndexes(jsonReader)
+                    .ContinueOnSuccess(() =>
+                    {
+                        output(string.Format("Imported {0:#,#} indexes", totalIndexes));
 
-				var streamReader = new StreamReader(stream);
+                        output(string.Format("Begin reading documents"));
 
-				jsonReader = new JsonTextReader(streamReader);
+                        // should read documents now
+                        if (jsonReader.Read() == false)
+                        {
+                            output("There were no documents to load");
+                            stream.Dispose();
+                            return;
+                        }
 
-				if (jsonReader.Read() == false) yield break;
-			}
+                        if (jsonReader.TokenType != JsonToken.PropertyName)
+                            throw new InvalidOperationException("PropertyName was expected");
 
-			if (jsonReader.TokenType != JsonToken.StartObject)
-				throw new InvalidDataException("StartObject was expected");
+                        if (Equals("Docs", jsonReader.Value) == false)
+                            throw new InvalidOperationException("Docs property was expected");
 
-			// should read indexes now
-			if (jsonReader.Read() == false)
-				yield break;
+                        if (jsonReader.Read() == false)
+                        {
+                            output("There were no documents to load");
+                            stream.Dispose();
+                            return;
+                        }
 
-			Output("Begin reading indexes");
+                        if (jsonReader.TokenType != JsonToken.StartArray)
+                            throw new InvalidOperationException("StartArray was expected");
 
-			if (jsonReader.TokenType != JsonToken.PropertyName)
-				throw new InvalidDataException("PropertyName was expected");
+                        WriteDocuments(jsonReader)
+                            .ContinueOnSuccess(
+                                () => output(string.Format("Imported {0:#,#} documents in {1:#,#} ms", totalCount,
+                                                           sw.ElapsedMilliseconds)));
+                    });
+            }
 
-			if (Equals("Indexes", jsonReader.Value) == false)
-				throw new InvalidDataException("Indexes property was expected");
+            private Task WriteIndexes(JsonTextReader jsonReader)
+            {
 
-			if (jsonReader.Read() == false)
-				yield break;
+                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+                {
+                    var json = JToken.ReadFrom(jsonReader);
+                    var indexName = json.Value<string>("name");
+                    if (indexName.StartsWith("Temp/"))
+                    {
+                        continue;
+                    }
 
-			if (jsonReader.TokenType != JsonToken.StartArray)
-				throw new InvalidDataException("StartArray was expected");
+                    var index = JsonConvert.DeserializeObject<IndexDefinition>(json.Value<JObject>("definition").ToString());
 
-			// import Indexes
-			var totalIndexes = 0;
-			using (var session = Server.OpenSession())
-				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-				{
-					var json = JToken.ReadFrom(jsonReader);
-					var indexName = json.Value<string>("name");
-					if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
-						continue;
+                    totalIndexes++;
 
-					var index = JsonConvert.DeserializeObject<IndexDefinition>(json.Value<JObject>("definition").ToString());
+                    output(string.Format("Importing index: {0}", indexName));
 
-					totalIndexes++;
+                    return asyncDatabaseCommands.PutIndexAsync(indexName, index, overwrite: true)
+                        .ContinueOnSuccess(() => WriteIndexes(jsonReader));
+                }
 
-					Output("Importing index: {0}", indexName);
+                var tcs = new TaskCompletionSource<object>();
+                tcs.SetResult(null);
+                return tcs.Task;
+            }
 
-					yield return session.Advanced.AsyncDatabaseCommands
-						.PutIndexAsync(indexName, index, overwrite: true);
-				}
+            private Task WriteDocuments(JsonTextReader jsonReader)
+            {
+                var batch = new List<RavenJObject>();
+                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+                {
+                    var document = RavenJToken.ReadFrom(jsonReader);
+                    batch.Add((RavenJObject) document);
+                    if (batch.Count >= BatchSize)
+                    {
+                        return FlushBatch(batch)
+                            .ContinueOnSuccess(() => WriteDocuments(jsonReader));
+                    }
+                }
+                return FlushBatch(batch);
+            }
 
-			Output("Imported {0:#,#} indexes", totalIndexes);
+            Task FlushBatch(List<RavenJObject> batch)
+            {
+                totalCount += batch.Count;
+                var sw = Stopwatch.StartNew();
+                var commands = (from doc in batch
+                                let metadata = doc.Value<RavenJObject>("@metadata")
+                                let removal = doc.Remove("@metadata")
+                                select new PutCommandData
+                                {
+                                    Metadata = metadata,
+                                    Document = doc,
+                                    Key = metadata.Value<string>("@id"),
+                                }).ToArray();
 
-			Output("Begin reading documents");
+                
+                output(string.Format("Wrote {0} documents  in {1:#,#} ms",
+                            batch.Count, sw.ElapsedMilliseconds));
 
-			// should read documents now
-			if (jsonReader.Read() == false)
-				yield break;
+                return asyncDatabaseCommands
+                    .BatchAsync(commands);
+            }
 
-			if (jsonReader.TokenType != JsonToken.PropertyName)
-				throw new InvalidDataException("PropertyName was expected");
+            private bool TryGetJsonReader(FileStream stream, out JsonTextReader jsonReader)
+            {
+                // Try to read the stream compressed, otherwise continue uncompressed.
+                try
+                {
+                    var streamReader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
 
-			if (Equals("Docs", jsonReader.Value) == false)
-				throw new InvalidDataException("Docs property was expected");
+                    jsonReader = new JsonTextReader(streamReader);
 
-			if (jsonReader.Read() == false)
-				yield break;
+                    if (jsonReader.Read() == false)
+                    {
+                        output("Invalid json file found!");
+                        return false;
+                    }
+                }
+                catch (Exception)
+                {
+                    output(string.Format("Import file did not use GZip compression, attempting to read as uncompressed."));
 
-			if (jsonReader.TokenType != JsonToken.StartArray)
-				throw new InvalidDataException("StartArray was expected");
+                    stream.Seek(0, SeekOrigin.Begin);
 
-			var batch = new List<RavenJObject>();
-			int totalCount = 0;
-			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-			{
-				totalCount += 1;
-				var document = RavenJToken.ReadFrom(jsonReader);
-				batch.Add((RavenJObject)document);
-				if (batch.Count >= 128)
-					yield return FlushBatch(batch);
-			}
+                    var streamReader = new StreamReader(stream);
 
-			yield return FlushBatch(batch);
+                    jsonReader = new JsonTextReader(streamReader);
 
-			Output("Imported {0:#,#} documents in {1:#,#} ms", totalCount, sw.ElapsedMilliseconds);
-		}
+                    if (jsonReader.Read() == false)
+                    {
+                        output("Invalid json file found!");
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
 
-		Task FlushBatch(List<RavenJObject> batch)
-		{
-			var sw = Stopwatch.StartNew();
-			long size = 0;
-
-			var commands = (from doc in batch
-							let metadata = doc.Value<RavenJObject>("@metadata")
-							let removal = doc.Remove("@metadata")
-							select new PutCommandData
-									{
-										Metadata = metadata,
-										Document = doc,
-										Key = metadata.Value<string>("@id"),
-									}).ToArray();
-
-
-			//TODO: all of this is just to get the size; I suspect there is a Better Way
-			using (var stream = new MemoryStream())
-			{
-				using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
-				using (var jsonTextWriter = new JsonTextWriter(streamWriter))
-				{
-					commands.Apply(_ => _.ToJson().WriteTo(jsonTextWriter));
-					jsonTextWriter.Flush();
-					streamWriter.Flush();
-					stream.Flush();
-					size = stream.Length;
-				}
-			}
-
-			Output("Wrote {0} documents [{1:#,#} kb] in {2:#,#} ms",
-						batch.Count, Math.Round((double)size / 1024, 2), sw.ElapsedMilliseconds);
-			batch.Clear();
-
-			return Server.OpenSession().Advanced.AsyncDatabaseCommands
-				.BatchAsync(commands);
-		}
-	}
+        public override ICommand Action
+        {
+            get { return new ImportDatabaseCommand(databaseCommands, line => Execute.OnTheUI(() => Output.Add(line))); }
+        }
+    }
 }

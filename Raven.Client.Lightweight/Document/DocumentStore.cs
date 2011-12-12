@@ -451,7 +451,7 @@ namespace Raven.Client.Document
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 #if !SILVERLIGHT
-					var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
+					var generator = new MultiTypeHiLoKeyGenerator(this, 32);
 					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
 #else
 
@@ -476,7 +476,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			if (string.IsNullOrEmpty(DefaultDatabase) == false)
 			{
-				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase);
+				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 			}
 #endif
 
@@ -553,7 +553,7 @@ namespace Raven.Client.Document
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
 
-			if (string.IsNullOrEmpty(ApiKey))
+			if (string.IsNullOrEmpty(ApiKey) == false)
 				authRequest.Headers["Api-Key"] = ApiKey;
 
 			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
@@ -631,7 +631,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <remarks>
 		/// This is mainly useful for internal use inside RavenDB, when we are executing
-		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
+		/// queries that have been marked with WaitForNonStaleResults, we temporarily disable
 		/// aggressive caching.
 		/// </remarks>
 		public IDisposable DisableAggressiveCaching()

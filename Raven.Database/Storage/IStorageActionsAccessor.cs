@@ -20,5 +20,6 @@ namespace Raven.Database.Storage
 		IMappedResultsStorageAction MappedResults { get; }
 		event Action OnCommit;
 		bool IsWriteConflict(Exception exception);
+		T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Tasks.Task;
 	}
 }

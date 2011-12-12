@@ -34,7 +34,7 @@ namespace Raven.Database.Tasks
 
 		public override void Execute(WorkContext context)
 		{
-			var keysToRemove = new HashSet<string>();
+			var keysToRemove = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 			context.TransactionaStorage.Batch(accessor =>
 			{
 				keysToRemove = new HashSet<string>(Keys.Where(key=>accessor.Documents.DocumentMetadataByKey(key, null) == null));

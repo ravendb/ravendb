@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using NLog;
 using Raven.Abstractions;
@@ -71,6 +72,7 @@ namespace Raven.Database.Indexing
 					workerWorkCounter = currentWorkCounter;
 					return true;
 				}
+				log.Debug("Not work was found, workerWorkCounter: {0}, currentWorkCounter: {1}, will wait for additional work", workerWorkCounter, currentWorkCounter);
 				return Monitor.Wait(waitForWork, timeout);
 			}
 		}
@@ -90,11 +92,13 @@ namespace Raven.Database.Indexing
 
 		public void NotifyAboutWork()
 		{
-			Interlocked.Increment(ref workCounter);
+			int increment = Interlocked.Increment(ref workCounter);
+			log.Debug("Incremented work counter to {0} - step 1/2", increment);
 			lock (waitForWork)
 			{
+				increment= Interlocked.Increment(ref workCounter);
+				log.Debug("Incremented work counter to {0} - step 2/2", increment);
 				Monitor.PulseAll(waitForWork);
-				Interlocked.Increment(ref workCounter);
 			}
 		}
 
@@ -129,9 +133,26 @@ namespace Raven.Database.Indexing
 		}
 
 
-	    public void Dispose()
-	    {
-	        shouldNotifyOnWork.Dispose();
-	    }
+		public void Dispose()
+		{
+			shouldNotifyOnWork.Dispose();
+		}
+
+		public void ClearErrorsFor(string name)
+		{
+			var list = new List<ServerError>();
+
+			ServerError error;
+			while (serverErrors.TryDequeue(out error))
+			{
+				if (StringComparer.InvariantCultureIgnoreCase.Equals(error.Index, name) == false)
+					list.Add(error);
+			}
+
+			foreach (var serverError in list)
+			{
+				serverErrors.Enqueue(serverError);
+			}
+		}
 	}
 }

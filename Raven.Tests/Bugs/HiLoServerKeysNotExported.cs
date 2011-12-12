@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database;
@@ -67,7 +68,7 @@ namespace Raven.Tests.Bugs
 			using (var session = documentStore.OpenSession()) {
 				var hilo = session.Load<HiLoKey>("Raven/Hilo/foos");
 				Assert.NotNull(hilo);
-				Assert.Equal(1024, hilo.Max);
+				Assert.Equal(32, hilo.Max);
 			}
 
 			server.Dispose();
@@ -78,14 +79,14 @@ namespace Raven.Tests.Bugs
 			using (var session = documentStore.OpenSession()) {
 				var hilo = session.Load<HiLoKey>("Raven/Hilo/foos");
 				Assert.NotNull(hilo);
-				Assert.Equal(1024, hilo.Max);
+				Assert.Equal(32, hilo.Max);
 			}
 		}
 
 		[Fact]
 		public void Export_And_Import_Retains_Attachment_Metadata()
 		{
-			documentStore.DatabaseCommands.PutAttachment("test", null, new byte[]{1,2,3}, new RavenJObject{{"Test", true}});
+			documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Test", true } });
 
 			if (File.Exists("hilo-export.dump"))
 				File.Delete("hilo-export.dump");
@@ -98,7 +99,7 @@ namespace Raven.Tests.Bugs
 			Smuggler.Smuggler.ImportData("http://localhost:8080/", "hilo-export.dump");
 
 			var attachment = documentStore.DatabaseCommands.GetAttachment("test");
-			Assert.Equal(new byte[]{1,2,3}, attachment.Data);
+			Assert.Equal(new byte[]{1,2,3}, attachment.Data().ReadData());
 			Assert.True(attachment.Metadata.Value<bool>("Test"));
 		}
 

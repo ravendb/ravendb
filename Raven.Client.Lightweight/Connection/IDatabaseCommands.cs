@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Net;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -72,7 +73,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata);
+		void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
 		/// Retrieves the attachment with the specified key
@@ -87,6 +88,12 @@ namespace Raven.Client.Connection
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		void DeleteAttachment(string key, Guid? etag);
+
+		/// <summary>
+		/// Returns the names of all tenant databases on the RavenDB server
+		/// </summary>
+		/// <returns>List of tenant database names</returns>
+		string[] GetDatabaseNames();
 
 		/// <summary>
 		/// Returns the names of all indexes that exist on the server
@@ -247,6 +254,12 @@ namespace Raven.Client.Connection
 		IDatabaseCommands ForDatabase(string database);
 
 		/// <summary>
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+		/// with the default database
+		/// </summary>
+		IDatabaseCommands ForDefaultDatabase();
+
+		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
 		/// with the root database. Useful if the database has works against a tenant database
 		/// </summary>
@@ -296,6 +309,11 @@ namespace Raven.Client.Connection
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>
 		GetResponse[] MultiGet(GetRequest[] requests);
+
+		/// <summary>
+		/// Retrieve the statistics for the database
+		/// </summary>
+		DatabaseStatistics GetStatistics();
 	}
 }
 #endif

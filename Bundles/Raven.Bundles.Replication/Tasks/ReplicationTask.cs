@@ -45,7 +45,7 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			docDb = database;
 			replicationRequestTimeoutInMs =
-				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 500;
+				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 7500;
 			
 			new Thread(Execute)
 			{
@@ -420,7 +420,7 @@ namespace Raven.Bundles.Replication.Tasks
 							{"@metadata", x.Metadata},
 							{"@id", x.Key},
 							{"@etag", x.Etag.ToByteArray()},
-							{"data", actions.Attachments.GetAttachment(x.Key).Data}
+							{"data", actions.Attachments.GetAttachment(x.Key).Data().ReadData()}
 						}));
 				});
 			}

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -17,7 +18,13 @@ namespace Raven.Abstractions.Data
 		/// Gets or sets the data.
 		/// </summary>
 		/// <value>The data.</value>
-		public byte[] Data { get; set; }
+		public Func<Stream> Data { get; set; }
+
+		/// <summary>
+		/// The size of the attachment
+		/// </summary>
+		public int Size { get; set; }
+
 		/// <summary>
 		/// Gets or sets the metadata.
 		/// </summary>

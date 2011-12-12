@@ -3,11 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System.IO;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using Xunit;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Bundles.Tests.Replication
 {
@@ -21,7 +24,7 @@ namespace Raven.Bundles.Tests.Replication
 
 			TellFirstInstanceToReplicateToSecondInstance();
 
-			store1.DatabaseCommands.PutAttachment("ayende", null, new byte[] {1, 2, 3}, new RavenJObject());
+			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 
 
 			Attachment attachment = null;
@@ -32,7 +35,7 @@ namespace Raven.Bundles.Tests.Replication
 					Thread.Sleep(100);
 			}
 			Assert.NotNull(attachment);
-			Assert.Equal(new byte[]{1,2,3}, attachment.Data);
+			Assert.Equal(new byte[]{1,2,3}, attachment.Data().ReadData());
 
 		}
 
@@ -47,7 +50,7 @@ namespace Raven.Bundles.Tests.Replication
 			var databaseCommands = store1.DatabaseCommands;
 			for (int i = 0; i < 150; i++)
 			{
-				databaseCommands.PutAttachment(i.ToString(), null, new byte[] {(byte) i}, new RavenJObject());
+				databaseCommands.PutAttachment(i.ToString(), null, new MemoryStream(new byte[] { (byte)i }), new RavenJObject());
 			}
 
 			bool foundAll = false;
@@ -77,7 +80,7 @@ namespace Raven.Bundles.Tests.Replication
 
 			TellFirstInstanceToReplicateToSecondInstance();
 
-			store1.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 2 }, new RavenJObject());
+			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 		  
 
 			for (int i = 0; i < RetriesCount; i++)
@@ -106,10 +109,10 @@ namespace Raven.Bundles.Tests.Replication
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			store1.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 2 }, new RavenJObject());
+			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 
 
-			store2.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 3 }, new RavenJObject());
+			store2.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
 		  
 
 			TellFirstInstanceToReplicateToSecondInstance();
@@ -133,10 +136,10 @@ namespace Raven.Bundles.Tests.Replication
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			store1.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 2 }, new RavenJObject());
+			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 
 
-			store2.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 3 }, new RavenJObject());
+			store2.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
 
 
 			TellFirstInstanceToReplicateToSecondInstance();

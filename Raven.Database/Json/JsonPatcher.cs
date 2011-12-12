@@ -70,7 +70,7 @@ namespace Raven.Database.Json
 						RenameProperty(patchCmd, patchCmd.Name, token);
 						break;
 					default:
-						throw new ArgumentException("Cannot understand command: " + patchCmd.Type);
+						throw new ArgumentException(string.Format("Cannot understand command: '{0}'", patchCmd.Type));
 				}
 			}
 		}
@@ -166,11 +166,11 @@ namespace Raven.Database.Json
 
 			if (value != null && value.Type != JTokenType.Null)
 			{
-				var equalityComparer = new RavenJTokenEqualityComparer();
-				var singleOrDefault = array.FirstOrDefault(x => equalityComparer.Equals(x, value));
-				if (singleOrDefault == null)
-					return;
-				array.Remove(singleOrDefault);
+				foreach (var ravenJToken in array.Where(x => RavenJToken.DeepEquals(x, value)).ToList())
+				{
+					array.Remove(ravenJToken);
+				}
+
 				return;
 			}
 
@@ -288,8 +288,7 @@ namespace Raven.Database.Json
 				default:
 					if (property == null)
 						throw new ConcurrencyException();
-					var equalityComparer = new RavenJTokenEqualityComparer();
-					if (equalityComparer.Equals(property, prevVal) == false)
+					if (RavenJToken.DeepEquals(property, prevVal) == false)
 						throw new ConcurrencyException();
 					break;
 			}

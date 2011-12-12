@@ -17,8 +17,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
-using Raven.Database.Linq;
 using Raven.Json.Linq;
 using DateTools = Lucene.Net.Documents.DateTools;
 
@@ -26,8 +24,6 @@ namespace Raven.Database.Indexing
 {
 	public class AnonymousObjectToLuceneDocumentConverter
 	{
-		private const string NullValueMarker = "NULL_VALUE";
-
 		private readonly IndexDefinition indexDefinition;
 		private readonly List<int> multipleItemsSameFieldCount = new List<int>();
 		private readonly Dictionary<object, Field> fieldsCache = new Dictionary<object, Field>();
@@ -144,13 +140,14 @@ namespace Raven.Database.Indexing
 				if (value is DateTime)
 				{
 				    var val = (DateTime) value;
-					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
+					var postFix = val.Kind == DateTimeKind.Utc ? "Z" : "";
+					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeFormatsToWrite) + postFix, indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				else if(value is DateTimeOffset)
 				{
 					var val = (DateTimeOffset)value;
-					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
+					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeOffsetFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				else
@@ -177,7 +174,7 @@ namespace Raven.Database.Indexing
 			}
 			else if (value is DateTimeOffset)
 			{
-				yield return CreateFieldWithCaching(name, DateTools.DateToString(((DateTimeOffset)value).DateTime, DateTools.Resolution.MILLISECOND),
+				yield return CreateFieldWithCaching(name, DateTools.DateToString(((DateTimeOffset)value).UtcDateTime, DateTools.Resolution.MILLISECOND),
 					indexDefinition.GetStorage(name, defaultStorage),
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}

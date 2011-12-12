@@ -16,7 +16,6 @@ namespace Raven.Tests.Bugs
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Conventions.FindPropertyNameForIndex = (type, index, path, prop) => path.Replace(".", "");
 
 				using (var session = store.OpenSession())
 				{
@@ -69,7 +68,7 @@ namespace Raven.Tests.Bugs
 		{
 			public Accounts_FindPropertyNameForIndex()
 			{
-				Map = docs => docs.Select(x => new { DealerId = x.Dealer.Id });
+				Map = docs => docs.Select(x => new { Dealer_Id = x.Dealer.Id });
 			}
 		}
 	}

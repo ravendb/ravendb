@@ -87,15 +87,16 @@ namespace Raven.Sample.LiveProjections
 		{
 			Map = users => from user in users
 						   select new {user.Name};
-			TransformResults = (database, users) => from user in users
-													let manager = database.Load<User>(user.ManagerId)
-													select new
-													{
-														ManagerName = manager == null ? "No Manager" : manager.Name,
-														user.ManagerId,
-														user.Name,
-														user.Id
-													};
+			TransformResults = (database, users) =>
+			                   from user in users
+			                   let manager = database.Load<User>(user.ManagerId)
+			                   select new
+			                   {
+			                   	ManagerName = manager == null ? "No Manager" : manager.Name,
+			                   	user.ManagerId,
+			                   	user.Name,
+			                   	user.Id
+			                   };
 		}
 	}
 

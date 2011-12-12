@@ -273,7 +273,7 @@ namespace Raven.Database.Data
 				Items = fields.Select(x => new DynamicQueryMappingItem
 				{
 					From = x.Item1,
-					To = replaceInvalidCharacterForFields.Replace(x.Item2, "_"),
+					To = ReplaceIndavlidCharactersForFields(x.Item2),
 					QueryFrom = x.Item2
 				}).OrderByDescending(x=>x.QueryFrom.Length).ToArray();
 				if (GroupByItems != null && DynamicAggregation)
@@ -287,6 +287,11 @@ namespace Raven.Database.Data
 			}
 
 			
+		}
+
+		public static string ReplaceIndavlidCharactersForFields(string field)
+		{
+			return replaceInvalidCharacterForFields.Replace(field, "_");
 		}
 
 		public static DynamicSortInfo[] GetSortInfo(Action<string> addField)

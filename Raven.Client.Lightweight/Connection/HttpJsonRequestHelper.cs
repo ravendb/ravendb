@@ -70,7 +70,7 @@ namespace Raven.Client.Connection
 							dest.Proxy = src.Proxy;
 							break;
 						default:
-							throw new ArgumentException("No idea how to handle restircted header: " + header);
+							throw new ArgumentException(string.Format("No idea how to handle restricted header: '{0}'", header));
 					}
 				}
 				else

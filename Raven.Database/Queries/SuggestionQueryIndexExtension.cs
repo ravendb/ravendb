@@ -32,11 +32,30 @@ namespace Raven.Database.Queries
 
 		public SuggestionQueryResult Query(SuggestionQuery suggestionQuery)
 		{
-			var suggestions = spellChecker.SuggestSimilar(suggestionQuery.Term,
-			                                              suggestionQuery.MaxSuggestions,
-			                                              null,
-			                                              suggestionQuery.Field,
-			                                              true);
+			if(suggestionQuery.Term.StartsWith("<<") && suggestionQuery.Term.EndsWith(">>"))
+			{
+				var individualTerms = suggestionQuery.Term.Substring(2, suggestionQuery.Term.Length - 4).Split(new[] {' ', '\t', '\r','\n'}, StringSplitOptions.RemoveEmptyEntries);
+				var result = new List<string>();
+
+				foreach (var term in individualTerms)
+				{
+					result.AddRange(spellChecker.SuggestSimilar(term,
+					                                            suggestionQuery.MaxSuggestions,
+					                                            null,
+					                                            suggestionQuery.Field,
+					                                            true));
+				}
+
+				return new SuggestionQueryResult
+				{
+					Suggestions = result.ToArray()
+				};
+			}
+			string[] suggestions = spellChecker.SuggestSimilar(suggestionQuery.Term,
+			                                                   suggestionQuery.MaxSuggestions,
+			                                                   null,
+			                                                   suggestionQuery.Field,
+			                                                   true);
 
 			return new SuggestionQueryResult
 			{

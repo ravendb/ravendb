@@ -16,6 +16,20 @@ namespace Raven.Abstractions.Extensions
 	public static class StreamExtension
 	{
 
+#if NET_3_5
+		public static void CopyTo(this Stream stream, Stream other)
+		{
+			var buffer = new byte[0x1000];
+			while(true)
+			{
+				int read = stream.Read(buffer, 0, buffer.Length);
+				if(read == 0)
+					return;
+				other.Write(buffer, 0, read);
+			}
+		}
+#endif
+
 		/// <summary>
 		/// 	Reads the entire request buffer to memory and
 		/// 	return it as a byte array.

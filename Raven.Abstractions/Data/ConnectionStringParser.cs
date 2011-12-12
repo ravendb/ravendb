@@ -41,7 +41,7 @@ namespace Raven.Abstractions.Data
 		{
 			var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
 			if (connectionStringSettings == null)
-				throw new ArgumentException("Could not find connection string name: " + connectionStringName);
+				throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
 
 		
 			return new ConnectionStringParser<TConnectionString>(connectionStringName, connectionStringSettings.ConnectionString);
@@ -82,7 +82,7 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Parse the connection string option
 		/// </summary>
-		protected virtual void ProcessConnectionStringOption(NetworkCredential neworkCredentials, string key, string value)
+		protected virtual void ProcessConnectionStringOption(NetworkCredential networkCredentials, string key, string value)
 		{
 			var embeddedRavenConnectionStringOptions = ConnectionStringOptions as EmbeddedRavenConnectionStringOptions;
 			switch (key)
@@ -95,8 +95,7 @@ namespace Raven.Abstractions.Data
 						goto default;
 					bool result;
 					if (bool.TryParse(value, out result) == false)
-						throw new ConfigurationErrorsException("Could not understand memory setting: " +
-															   value);
+						throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
 					embeddedRavenConnectionStringOptions.RunInMemory = result;
 					break;
 				case "datadir":
@@ -119,17 +118,18 @@ namespace Raven.Abstractions.Data
 					ConnectionStringOptions.DefaultDatabase = value;
 					break;
 				case "user":
-					neworkCredentials.UserName = value;
+					networkCredentials.UserName = value;
 					setupUsernameInConnectionString = true;
 					break;
 				case "password":
-					neworkCredentials.Password = value;
+					networkCredentials.Password = value;
 					setupPasswordInConnectionString = true;
 					break;
-
+				case "domain":
+					networkCredentials.Domain = value;
+					break;
 				default:
-					throw new ArgumentException("Connection string name: " + connectionStringName +
-					                            " could not be parsed, unknown option: " + key);
+					throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed, unknown option: '{1}'", connectionStringName, key));
 			}
 		}
 
@@ -142,7 +142,7 @@ namespace Raven.Abstractions.Data
 				string arg = str.Trim(';');
 				Match match = connectionStringRegex.Match(arg);
 				if (match.Success == false)
-					throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
+					throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed", connectionStringName));
 				ProcessConnectionStringOption(networkCredential, match.Groups[1].Value.ToLower(), match.Groups[2].Value.Trim());
 			}
 
@@ -150,8 +150,7 @@ namespace Raven.Abstractions.Data
 				return;
 
 			if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
-				throw new ArgumentException("User and Password must both be specified in the connection string: " +
-				                            connectionStringName);
+				throw new ArgumentException(string.Format("User and Password must both be specified in the connection string: '{0}'", connectionStringName));
 			ConnectionStringOptions.Credentials = networkCredential;
 		}
 	}

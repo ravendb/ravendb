@@ -65,6 +65,11 @@ namespace Raven.Client.Linq
 		public HashSet<string> FieldsToFetch { get; private set; }
 
 		/// <summary>
+		/// Set the fields to rename
+		/// </summary>
+		public Dictionary<string, string> FieldsToRename { get; private set; }
+
+		/// <summary>
 		/// Change the result type for the query provider
 		/// </summary>
 		public IRavenQueryProvider For<S>()
@@ -100,6 +105,7 @@ namespace Raven.Client.Linq
 		)
 		{
 			FieldsToFetch = new HashSet<string>();
+			FieldsToRename = new Dictionary<string, string>();
 
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
@@ -229,6 +235,9 @@ namespace Raven.Client.Linq
 		{
 			var processor = GetQueryProviderProcessor<S>();
 			var query = processor.GetLuceneQueryFor(expression);
+			if (afterQueryExecuted != null)
+				query.AfterQueryExecuted(afterQueryExecuted);
+		
 			if (FieldsToFetch.Count > 0)
 				query = query.SelectFields<S>(FieldsToFetch.ToArray());
 			return query.Lazily(onEval);
@@ -237,7 +246,7 @@ namespace Raven.Client.Linq
 
 		RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
 		{
-			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch);
+			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch, FieldsToRename);
 		}
 	}
 }

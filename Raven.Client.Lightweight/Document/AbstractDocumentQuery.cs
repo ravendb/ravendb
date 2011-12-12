@@ -830,7 +830,10 @@ If you really want to do in memory filtering on the data returned from the query
 		public void WhereContains(string fieldName, params object [] values)
 		{
 			if (values == null || values.Length == 0)
+			{
+				WhereEquals(fieldName, "Empty_Contains_" + Guid.NewGuid());
 				return;
+			}
 
 			OpenSubclause();
 
@@ -1338,6 +1341,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void Search(string fieldName, string searchTerms)
 		{
+			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
 			theQueryText.Append(' ').Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">> ");
 		}
 
@@ -1359,12 +1363,12 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if (whereParams.Value is DateTime)
 			{
-				return DateTools.DateToString((DateTime)whereParams.Value, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTime)whereParams.Value), DateTools.Resolution.MILLISECOND);
 			}
 			
 			if (whereParams.Value is DateTimeOffset)
 			{
-				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).DateTime, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
 			}
 
 			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
@@ -1389,9 +1393,9 @@ If you really want to do in memory filtering on the data returned from the query
 				return Constants.EmptyStringNotAnalyzed;
 
 			if (whereParams.Value is DateTime)
-				return DateTools.DateToString((DateTime)whereParams.Value, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTime)whereParams.Value), DateTools.Resolution.MILLISECOND);
 			if (whereParams.Value is DateTimeOffset)
-				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).DateTime, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
 
 			if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{

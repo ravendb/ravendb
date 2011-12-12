@@ -57,11 +57,11 @@ namespace Raven.Client.Document
 #else
 			FindClrTypeName = entityType => entityType.AssemblyQualifiedName;
 #endif
-
+			TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;
 			FindFullDocumentKeyFromNonStringIdentifier = DefaultFindFullDocumentKeyFromNonStringIdentifier;
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
 			FindTypeTagName = DefaultTypeTagName;
-			FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => prop;
+			FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace(",", "_").Replace(".", "_");
 			FindPropertyNameForDynamicIndex = (indexedType, indexedName, path, prop) => path + prop;
 			IdentityPartsSeparator = "/";
 			JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)
@@ -71,6 +71,17 @@ namespace Raven.Client.Document
 			MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] {IdentityPartsSeparator}, StringSplitOptions.RemoveEmptyEntries) .Last();
+		}
+
+		public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
+		{
+			var count = typeTagName.Count(char.IsUpper);
+			
+			if (count <= 1) // simple name, just lower case it
+				return typeTagName.ToLowerInvariant();
+
+			// multiple capital letters, so probably something that we want to preserve caps on.
+			return typeTagName;
 		}
 
 		///<summary>
@@ -162,9 +173,9 @@ namespace Raven.Client.Document
 			if(t.IsGenericType)
 			{
 				var name = t.GetGenericTypeDefinition().Name;
-				if(name.Contains("`"))
+				if(name.Contains('`'))
 				{
-					name = name.Substring(0, name.IndexOf("`"));
+					name = name.Substring(0, name.IndexOf('`'));
 				}
 				var sb = new StringBuilder(Inflector.Pluralize(name));
 				foreach (var argument in t.GetGenericArguments())
@@ -216,7 +227,7 @@ namespace Raven.Client.Document
 			if (currentIdPropertyCache.TryGetValue(type, out info))
 				return info;
 
-			var identityProperty = type.GetProperties().FirstOrDefault(FindIdentityProperty);
+			var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
 
 			if (identityProperty!= null && identityProperty.DeclaringType != type)
 			{
@@ -230,6 +241,22 @@ namespace Raven.Client.Document
 			};
 
 			return identityProperty;
+		}
+
+		private static IEnumerable<PropertyInfo> GetPropertiesForType(Type type)
+		{
+			foreach (var propertyInfo in type.GetProperties())
+			{
+				yield return propertyInfo;
+			}
+
+			foreach (var @interface in type.GetInterfaces())
+			{
+				foreach (var propertyInfo in GetPropertiesForType(@interface))
+				{
+					yield return propertyInfo;
+				}
+			}
 		}
 
 		/// <summary>
@@ -334,6 +361,13 @@ namespace Raven.Client.Document
 				jsonSerializer.Converters.Insert(0, Default.Converters[i]);
 			}
 
+			if(SaveEnumsAsIntegers)
+			{
+				var converter = jsonSerializer.Converters.FirstOrDefault(x => x is JsonEnumConverter);
+				if (converter != null)
+					jsonSerializer.Converters.Remove(converter);
+			}
+
 			CustomizeJsonSerializer(jsonSerializer);
 			return jsonSerializer;
 		}
@@ -374,11 +408,14 @@ namespace Raven.Client.Document
 		public Func<object, string, string> FindIdValuePartForValueTypeConversion { get; set; }
 
 		/// <summary>
-		/// Instruct the Linq provider to query enums as integer values.
-		/// This is usually only useful if you customized the json serializer to serialize
-		/// enums as integers.
+		/// Saves Enums as integers and instruct the Linq provider to query enums as integer values.
 		/// </summary>
-		public bool QueryEnumsAsIntegers { get; set; }
+		public bool SaveEnumsAsIntegers { get; set; }
+
+		/// <summary>
+		/// Translate the type tag name to the document key prefix
+		/// </summary>
+		public Func<string, string> TransformTypeTagNameToDocumentKeyPrefix { get; set; }
 	}
 
 

@@ -32,6 +32,7 @@ namespace Raven.Abstractions.Extensions
 			"Raven-Server-Build",
 			"Non-Authoritive-Information",
 			"Raven-Timer-Request",
+			"Raven-Authenticated-User",
 
 			//proxy
 			"Reverse-Via",

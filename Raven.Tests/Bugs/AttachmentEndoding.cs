@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Net;
 using Raven.Database.Server;
 using Raven.Json.Linq;
@@ -42,7 +43,7 @@ namespace Raven.Tests.Bugs
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
 
-				documentStore.DatabaseCommands.PutAttachment("test/hello/world", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+				documentStore.DatabaseCommands.PutAttachment("test/hello/world", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 
 				using (var wc = new WebClient())
 				{

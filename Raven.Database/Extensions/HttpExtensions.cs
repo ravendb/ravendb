@@ -132,6 +132,12 @@ namespace Raven.Database.Extensions
 
 		public static void WriteData(this IHttpContext context, byte[] data, RavenJObject headers, Guid etag)
 		{
+			context.WriteHeaders(headers, etag);
+			context.Response.OutputStream.Write(data, 0, data.Length);
+		}
+
+		public static void WriteHeaders(this IHttpContext context, RavenJObject headers, Guid etag)
+		{
 			foreach (var header in headers)
 			{
 				if (header.Key.StartsWith("@"))
@@ -154,20 +160,19 @@ namespace Raven.Database.Extensions
 				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
 			}
 			context.Response.AddHeader("ETag", etag.ToString());
-			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
-	    private static string GetHeaderValue(RavenJToken header)
-	    {
-	    	if (header.Type == JTokenType.Date)
+		private static string GetHeaderValue(RavenJToken header)
+		{
+			if (header.Type == JTokenType.Date)
 			{
 				return header.Value<DateTime>().ToString("r");
 			}
 
-	        return StripQuotesIfNeeded(header.ToString(Formatting.None));
-	    }
+			return StripQuotesIfNeeded(header.ToString(Formatting.None));
+		}
 
-	    private static string StripQuotesIfNeeded(string str)
+		private static string StripQuotesIfNeeded(string str)
 		{
 			if (str.StartsWith("\"") && str.EndsWith("\""))
 				return str.Substring(1, str.Length - 2);
@@ -290,8 +295,7 @@ namespace Raven.Database.Extensions
 		public static int GetPageSize(this IHttpContext context, int maxPageSize)
 		{
 			int pageSize;
-			int.TryParse(context.Request.QueryString["pageSize"], out pageSize);
-			if (pageSize == 0)
+			if (int.TryParse(context.Request.QueryString["pageSize"], out pageSize) == false || pageSize < 0)
 				pageSize = 25;
 			if (pageSize > maxPageSize)
 				pageSize = maxPageSize;
@@ -342,13 +346,13 @@ namespace Raven.Database.Extensions
 
 		public static Guid? GetEtag(this IHttpContext context)
 		{
-			var etagAsString = context.Request.Headers["If-Match"];
+			var etagAsString = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
 			if (etagAsString != null)
 			{
 				Guid result;
 				if (Guid.TryParse(etagAsString, out result))
 					return result;
-				throw new BadRequestException("Could not parse If-Match header as Guid");
+				throw new BadRequestException("Could not parse If-None-Match or If-Match header as Guid");
 			}
 			return null;
 		}
@@ -356,21 +360,21 @@ namespace Raven.Database.Extensions
 		public static double GetLat(this IHttpContext context)
 		{
 			double lat;
-			double.TryParse(context.Request.QueryString["latitude"], out lat);
+			double.TryParse(context.Request.QueryString["latitude"], NumberStyles.Any, CultureInfo.InvariantCulture, out lat);
 			return lat;
 		}
 
 		public static double GetLng(this IHttpContext context)
 		{
 			double lng;
-			double.TryParse(context.Request.QueryString["longitude"], out lng);
+			double.TryParse(context.Request.QueryString["longitude"], NumberStyles.Any, CultureInfo.InvariantCulture, out lng);
 			return lng;
 		}
 
 		public static double GetRadius(this IHttpContext context)
 		{
 			double radius;
-			double.TryParse(context.Request.QueryString["radius"], out radius);
+			double.TryParse(context.Request.QueryString["radius"], NumberStyles.Any, CultureInfo.InvariantCulture, out radius);
 			return radius;
 		}
 
@@ -410,7 +414,7 @@ namespace Raven.Database.Extensions
 		private static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string docPath)
 		{
 			byte[] bytes;
-			var etagValue = context.Request.Headers["If-Match"];
+			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
 			if (etagValue == EmbeddedLastChangedDate)
 			{
 				context.SetStatusToNotModified();
@@ -432,7 +436,7 @@ namespace Raven.Database.Extensions
 
 		public static void WriteFile(this IHttpContext context, string filePath)
 		{
-			var etagValue = context.Request.Headers["If-Match"];
+			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-None-Match"];
 			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
 			if (etagValue == fileEtag)
 			{
