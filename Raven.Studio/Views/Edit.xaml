@@ -13,7 +13,7 @@
 
 	<Grid Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Value}">
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="1.5*" />
+			<ColumnDefinition Width="1.8*" />
 			<ColumnDefinition Width="1*" />
 		</Grid.ColumnDefinitions>
 
@@ -126,8 +126,7 @@
 
 		<Grid x:Name="details"
 			  Grid.Column="1"
-			  Grid.Row="1"
-			  Margin="0,0,0,0">
+			  Grid.Row="1">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
@@ -177,7 +176,7 @@
 
 					<ItemsControl x:Name="References"
 								  ItemsSource="{Binding References}"
-								  DataContext="{Binding}"
+								  Style="{StaticResource Style_ItemsControl_References}"
 								  Margin="10,0,5,12">
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
@@ -201,6 +200,7 @@
 							   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
 					<ItemsControl x:Name="Related"
+								  Style="{StaticResource Style_ItemsControl_References}"
 								  ItemsSource="{Binding Related}"
 								  Margin="10,0,5,10">
 						<ItemsControl.ItemTemplate>

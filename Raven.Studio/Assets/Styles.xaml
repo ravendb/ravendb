@@ -1138,6 +1138,16 @@
 				Value="0" />
 	</Style>
 
+	<Style x:Name="Style_ItemsControl_References"
+		   TargetType="ItemsControl">
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Auto" />
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Auto" />
+		<Setter Property="BorderThickness"
+				Value="0" />
+	</Style>
+
 	<Style x:Name="Collections_FluidList" BasedOn="{StaticResource Style_ListBox_Fluid}"
 		   TargetType="ListBox">
 		<Setter Property="MaxHeight"
