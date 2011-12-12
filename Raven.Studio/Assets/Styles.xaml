@@ -1146,6 +1146,15 @@
 				Value="Auto" />
 		<Setter Property="BorderThickness"
 				Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ItemsControl">
+                    <ScrollViewer BorderThickness="0" VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
+                        <ItemsPresenter Margin="{TemplateBinding Padding}"/>
+                    </ScrollViewer>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
 	</Style>
 
 	<Style x:Name="Collections_FluidList" BasedOn="{StaticResource Style_ListBox_Fluid}"

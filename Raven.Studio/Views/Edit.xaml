@@ -132,8 +132,8 @@
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
+                <RowDefinition Height="{Binding Path=References.Count, Converter={StaticResource HiddenWhenEmptyStarSizedWhenNonEmpty}}" />
+                <RowDefinition Height="{Binding Path=Related.Count, Converter={StaticResource HiddenWhenEmptyStarSizedWhenNonEmpty}}" />
 			</Grid.RowDefinitions>
 
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
@@ -169,9 +169,9 @@
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
 					Grid.Row="4"
 					Visibility="{Binding Path=References.Count, Converter={StaticResource HiddenWhenEmpty}}">
-				<StackPanel>
+                <toolkit:DockPanel>
 					<TextBlock Text="References"
-							   Margin="10,6,5,6"
+							   Margin="10,6,5,6" toolkit:DockPanel.Dock="Top"
 							   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
 					<ItemsControl x:Name="References"
@@ -188,14 +188,14 @@
 							</DataTemplate>
 						</ItemsControl.ItemTemplate>
 					</ItemsControl>
-				</StackPanel>
+                </toolkit:DockPanel>
 			</Border>
 
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
 					Grid.Row="5"
 					Visibility="{Binding Path=Related.Count, Converter={StaticResource HiddenWhenEmpty}}">
-				<StackPanel>
-					<TextBlock Text="Related"
+				<toolkit:DockPanel>
+					<TextBlock Text="Related" toolkit:DockPanel.Dock="Top"
 							   Margin="10,6,5,6"
 							   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
@@ -213,7 +213,7 @@
 							</DataTemplate>
 						</ItemsControl.ItemTemplate>
 					</ItemsControl>
-				</StackPanel>
+                </toolkit:DockPanel>
 			</Border>
 				
 		</Grid>
