@@ -209,7 +209,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(master);
-				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 				session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray{"Cascade-Delete-Me"};
 				session.SaveChanges();
 			}
@@ -246,8 +246,8 @@ namespace Raven.Bundles.Tests.CascadeDelete
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(master);
-				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-1", null, new byte[] { 1, 2, 3 }, new RavenJObject());
-				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-2", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 				session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray("Cascade-Delete-Me-1","Cascade-Delete-Me-2");
 				session.SaveChanges();
 			}
@@ -295,8 +295,8 @@ namespace Raven.Bundles.Tests.CascadeDelete
 				session.Store(child1);
 				session.Store(child2);
 				session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray(child1.Id, child2.Id);
-				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-1", null, new byte[] { 1, 2, 3 }, new RavenJObject());
-				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-2", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+				documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 				session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray("Cascade-Delete-Me-1", "Cascade-Delete-Me-2");
 				session.SaveChanges();
 			}

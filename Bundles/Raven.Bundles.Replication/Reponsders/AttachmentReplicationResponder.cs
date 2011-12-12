@@ -91,7 +91,7 @@ namespace Raven.Bundles.Replication.Reponsders
 			if (existingAttachment == null)
 			{
 				log.Debug("New attachment {0} replicated successfully from {1}", id, src);
-				actions.Attachments.AddAttachment(id, Guid.Empty, data, metadata);
+				actions.Attachments.AddAttachment(id, Guid.Empty, new MemoryStream(data), metadata);
 				return;
 			}
 			
@@ -100,13 +100,13 @@ namespace Raven.Bundles.Replication.Reponsders
 				(IsDirectChildOfCurrentAttachment(existingAttachment, metadata))) // this update is direct child of the existing doc, so we are fine with overwriting this
 			{
 				log.Debug("Existing document {0} replicated successfully from {1}", id, src);
-				actions.Attachments.AddAttachment(id, null, data, metadata);
+				actions.Attachments.AddAttachment(id, null, new MemoryStream(data), metadata);
 				return;
 			}
 
 			if (ReplicationConflictResolvers.Any(replicationConflictResolver => replicationConflictResolver.TryResolve(id, metadata, data, existingAttachment)))
 			{
-				actions.Attachments.AddAttachment(id, null, data, metadata);
+				actions.Attachments.AddAttachment(id, null, new MemoryStream(data), metadata);
 				return;
 			}
 
@@ -114,7 +114,7 @@ namespace Raven.Bundles.Replication.Reponsders
 				metadata.Value<string>(ReplicationConstants.RavenReplicationSource) + 
 				"/" + lastEtag;
 			metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
-			actions.Attachments.AddAttachment(newDocumentConflictId, null, data, metadata);
+			actions.Attachments.AddAttachment(newDocumentConflictId, null, new MemoryStream(data), metadata);
 
 			if (existingDocumentIsInConflict) // the existing document is in conflict
 			{
@@ -122,7 +122,7 @@ namespace Raven.Bundles.Replication.Reponsders
 				
 				// just update the current doc with the new conflict document
 				existingAttachment.Metadata.Value<RavenJArray>("Conflicts").Add(RavenJToken.FromObject(newDocumentConflictId));
-				actions.Attachments.AddAttachment(id, existingAttachment.Etag, existingAttachment.Data, existingAttachment.Metadata);
+				actions.Attachments.AddAttachment(id, existingAttachment.Etag, existingAttachment.Data(), existingAttachment.Metadata);
 				return;
 			}
 			log.Debug("Existing document {0} is in conflict with replicated version from {1}, marking document as conflicted", id, src);
@@ -132,7 +132,7 @@ namespace Raven.Bundles.Replication.Reponsders
 			var existingDocumentConflictId = id + "/conflicts/" + Database.TransactionalStorage.Id + "/" + existingAttachment.Etag;
 			
 			existingAttachment.Metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
-			actions.Attachments.AddAttachment(existingDocumentConflictId, null, existingAttachment.Data, existingAttachment.Metadata);
+			actions.Attachments.AddAttachment(existingDocumentConflictId, null, existingAttachment.Data(), existingAttachment.Metadata);
 			var conflictAttachment = new RavenJObject
 			{
 				{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)
@@ -141,7 +141,7 @@ namespace Raven.Bundles.Replication.Reponsders
 			var memoryStream = new MemoryStream();
 			conflictAttachment.WriteTo(memoryStream);
 			actions.Attachments.AddAttachment(id, null,
-								memoryStream.ToArray(),
+								memoryStream,
 								new RavenJObject
 								{
 									{ReplicationConstants.RavenReplicationConflict, true},

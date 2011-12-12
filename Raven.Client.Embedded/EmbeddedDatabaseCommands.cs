@@ -170,7 +170,18 @@ namespace Raven.Client.Embedded
 		public Attachment GetAttachment(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.GetStatic(key);
+			Attachment attachment = database.GetStatic(key);
+			if (attachment == null)
+				return null;
+			Func<Stream> data = attachment.Data;
+			attachment.Data = () =>
+			{
+				var memoryStream = new MemoryStream();
+				database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
+				memoryStream.Position = 0;
+				return memoryStream;
+			};
+			return attachment;
 		}
 
 		/// <summary>

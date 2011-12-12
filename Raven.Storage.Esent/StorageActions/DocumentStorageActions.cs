@@ -138,17 +138,21 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			var metadata = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode);
-			Stream attachmentStream = GetAttachmentStream(key);
 			return new Attachment
 			{
-				Data = () => attachmentStream, // TODO: re-create the session if it isn't there
-				Size = (int)attachmentStream.Length,
+				Data = () =>
+				{
+					StorageActionsAccessor storageActionsAccessor = transactionalStorage.GetCurrentBatch();
+					var documentStorageActions = ((DocumentStorageActions)storageActionsAccessor.Attachments);
+					return documentStorageActions.GetAttachmentStream(key);
+				}, 
+				Size = (int)GetAttachmentStream(key).Length,
 				Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
 				Metadata = RavenJObject.Parse(metadata)
 			};
 		}
 
-		public Stream GetAttachmentStream(string key)
+		private Stream GetAttachmentStream(string key)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);

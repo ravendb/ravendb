@@ -451,6 +451,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 					var memoryStream = new MemoryStream();
 					responseStream.CopyTo(memoryStream);
+					memoryStream.Position = 0;
 					return new Attachment
 					{
 						Data = ()=>memoryStream, 

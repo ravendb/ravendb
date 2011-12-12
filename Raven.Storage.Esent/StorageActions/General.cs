@@ -29,6 +29,7 @@ namespace Raven.Storage.Esent.StorageActions
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 	    private readonly IUuidGenerator uuidGenerator;
 		private readonly IDocumentCacher cacher;
+		private readonly TransactionalStorage transactionalStorage;
 		protected readonly JET_DBID dbid;
 
 		protected static readonly Logger logger = LogManager.GetCurrentClassLogger();
@@ -51,14 +52,16 @@ namespace Raven.Storage.Esent.StorageActions
 			JET_INSTANCE instance, 
 			string database, 
 			TableColumnsCache tableColumnsCache, 
-			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
-			IUuidGenerator uuidGenerator,
-			IDocumentCacher cacher)
+			OrderedPartCollection<AbstractDocumentCodec> documentCodecs, 
+			IUuidGenerator uuidGenerator, 
+			IDocumentCacher cacher, 
+			TransactionalStorage transactionalStorage)
 		{
 			this.tableColumnsCache = tableColumnsCache;
 			this.documentCodecs = documentCodecs;
 		    this.uuidGenerator = uuidGenerator;
 			this.cacher = cacher;
+			this.transactionalStorage = transactionalStorage;
 			try
 			{
 				session = new Session(instance);

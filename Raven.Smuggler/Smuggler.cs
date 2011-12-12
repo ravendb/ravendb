@@ -218,7 +218,7 @@ Usage:
 
 		private class AttachmentExportInfo
 		{
-			public Stream Data { get; set; }
+			public byte[] Data { get; set; }
 			public RavenJObject Metadata { get; set; }
 			public string Key { get; set; }
 		}
@@ -354,8 +354,7 @@ Usage:
 
 					using (var writer = client.OpenWrite(instanceUrl + "static/" + attachmentExportInfo.Key, "PUT"))
 					{
-						attachmentExportInfo.Data.CopyTo(writer);
-						//writer.Write(attachmentExportInfo.Data, 0, attachmentExportInfo.Data.Length); //TODO: to check
+						writer.Write(attachmentExportInfo.Data, 0, attachmentExportInfo.Data.Length);
 						writer.Flush();
 					}
 				}

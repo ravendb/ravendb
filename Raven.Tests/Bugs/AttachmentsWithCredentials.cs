@@ -50,6 +50,7 @@ namespace Raven.Tests.Bugs
 		public void CanPutAndGetAttachmentWithAccessModeNone()
 		{
 			store.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
+			var item = store.DatabaseCommands.GetAttachment("ayende");
 			Assert.Equal(new byte[] {1, 2, 3, 4}, store.DatabaseCommands.GetAttachment("ayende").Data().ReadData());
 		}
 

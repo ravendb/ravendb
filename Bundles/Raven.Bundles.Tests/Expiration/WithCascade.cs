@@ -57,7 +57,7 @@ namespace Raven.Bundles.Tests.Expiration
 		[Fact]
 		public void CanDeleteAndCascadeAtTheSameTime()
 		{
-			documentStore.DatabaseCommands.PutAttachment("item", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+			documentStore.DatabaseCommands.PutAttachment("item", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 			using (var session = documentStore.OpenSession())
 			{
 				var doc = new { Id = "doc/1" };

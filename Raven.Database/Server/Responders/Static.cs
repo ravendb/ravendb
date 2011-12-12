@@ -30,22 +30,25 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					var attachmentAndHeaders = Database.GetStatic(filename);
-					if (attachmentAndHeaders == null)
+					Database.TransactionalStorage.Batch(_=> // have to keep the session open for reading of the attachment stream
 					{
-						context.SetStatusToNotFound();
-						return;
-					}
-					if (context.MatchEtag(attachmentAndHeaders.Etag))
-					{
-						context.SetStatusToNotModified();
-						return;
-					}
-					context.WriteHeaders(attachmentAndHeaders.Metadata,attachmentAndHeaders.Etag);
-					using(var stream = attachmentAndHeaders.Data())
-					{
-						stream.CopyTo(context.Response.OutputStream);
-					}
+						var attachmentAndHeaders = Database.GetStatic(filename);
+						if (attachmentAndHeaders == null)
+						{
+							context.SetStatusToNotFound();
+							return;
+						}
+						if (context.MatchEtag(attachmentAndHeaders.Etag))
+						{
+							context.SetStatusToNotModified();
+							return;
+						}
+						context.WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag);
+						using (var stream = attachmentAndHeaders.Data())
+						{
+							stream.CopyTo(context.Response.OutputStream);
+						}
+					});
 					break;
 				case "PUT":
 					Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream,
