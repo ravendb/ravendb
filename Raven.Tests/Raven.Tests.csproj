@@ -562,6 +562,7 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\IisQueryLengthIssues.cs" />
     <Compile Include="MailingList\JohanNilsson.cs" />
     <Compile Include="MailingList\MapReduceIssue\CanPageThroughReduceResults.cs" />
     <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
