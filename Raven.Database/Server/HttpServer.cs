@@ -84,6 +84,9 @@ namespace Raven.Database.Server
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
 
+		private readonly static TimeSpan maxTimeDatabaseCanBeIdle = TimeSpan.FromMinutes(10);
+		private static readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+
 		public bool HasPendingRequests
 		{
 			get { return concurretRequestSemaphore.CurrentCount != MaxConcurrentRequests; }
@@ -167,13 +170,13 @@ namespace Raven.Database.Server
 
 		public void Init()
 		{
-			databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+			databasesCleanupTimer = new Timer(CleanupDatabases, null, frequnecyToCheckForIdleDatabases, frequnecyToCheckForIdleDatabases);
 		}
 
 		private void CleanupDatabases(object state)
 		{
 			var databasesToCleanup = databaseLastRecentlyUsed
-				.Where(x => (SystemTime.Now - x.Value).TotalMinutes > 10)
+				.Where(x => (SystemTime.Now - x.Value) > maxTimeDatabaseCanBeIdle)
 				.Select(x => x.Key)
 				.ToArray();
 
@@ -359,7 +362,6 @@ namespace Raven.Database.Server
 				Error = e.Message
 			});
 		}
-
 
 		private static void HandleIndexDisabledException(IHttpContext ctx, IndexDisabledException e)
 		{
