@@ -84,7 +84,7 @@ namespace Raven.Database.Server
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
 
-		private readonly static TimeSpan maxTimeDatabaseCanBeIdle = TimeSpan.FromMinutes(10);
+		private readonly static TimeSpan maxTimeDatabaseCanBeIdle = TimeSpan.FromMinutes(15);
 		private static readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
 		public bool HasPendingRequests
@@ -139,13 +139,19 @@ namespace Raven.Database.Server
 				databasesCleanupTimer.Dispose();
 			if (listener != null && listener.IsListening)
 				listener.Stop();
+
+			lock(ResourcesStoresCache)
+			{
+				foreach (var documentDatabase in ResourcesStoresCache)
+				{
+					documentDatabase.Value.Dispose();
+				}
+				ResourcesStoresCache.Clear();
+			}
+
 			currentConfiguration.Dispose();
 			currentDatabase.Dispose();
 			currentTenantId.Dispose();
-			foreach (var documentDatabase in ResourcesStoresCache)
-			{
-				documentDatabase.Value.Dispose();
-			}
 		}
 
 		#endregion
