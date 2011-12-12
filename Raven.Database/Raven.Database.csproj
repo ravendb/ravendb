@@ -153,6 +153,7 @@
     <Compile Include="Server\CurrentOperationContext.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />
+    <Compile Include="Server\HttpEndpointRegistration.cs" />
     <Compile Include="Server\HttpServer.cs" />
     <Compile Include="Server\IConfigureHttpListener.cs" />
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />

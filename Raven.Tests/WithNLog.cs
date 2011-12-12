@@ -11,7 +11,7 @@ namespace Raven.Tests
 			if (NLog.LogManager.Configuration != null)
 				return;
 
-			HttpServer.RegisterHttpEndpointTarget();
+			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
 			using (var stream = typeof(RemoteClientTest).Assembly.GetManifestResourceStream("Raven.Tests.DefaultLogging.config"))
 			using (var reader = XmlReader.Create(stream))
