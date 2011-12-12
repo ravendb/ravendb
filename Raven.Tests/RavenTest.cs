@@ -233,6 +233,8 @@ namespace Raven.Tests
 			{
 			}
 
+			SystemTime.UtcDateTime = () => DateTime.UtcNow;
+
 			ClearDatabaseDirectory();
 
 			Directory.CreateDirectory(DbDirectory);
