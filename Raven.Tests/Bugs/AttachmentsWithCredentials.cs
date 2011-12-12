@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Client;
 using Raven.Client.Document;
@@ -47,17 +49,16 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanPutAndGetAttachmentWithAccessModeNone()
 		{
-			store.DatabaseCommands.PutAttachment("ayende", null, new byte[] {1, 2, 3, 4}, new RavenJObject());
-
-			Assert.Equal(new byte[] {1, 2, 3, 4}, store.DatabaseCommands.GetAttachment("ayende").Data);
+			store.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
+			Assert.Equal(new byte[] {1, 2, 3, 4}, store.DatabaseCommands.GetAttachment("ayende").Data().ReadData());
 		}
 
 		[Fact]
 		public void CanDeleteAttachmentWithAccessModeNone()
 		{
-			store.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 1, 2, 3, 4 }, new RavenJObject());
+			store.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 
-			Assert.Equal(new byte[] { 1, 2, 3, 4 }, store.DatabaseCommands.GetAttachment("ayende").Data);
+			Assert.Equal(new byte[] { 1, 2, 3, 4 }, store.DatabaseCommands.GetAttachment("ayende").Data().ReadData());
 
 			store.DatabaseCommands.DeleteAttachment("ayende", null);
 

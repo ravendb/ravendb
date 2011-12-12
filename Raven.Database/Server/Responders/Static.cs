@@ -41,11 +41,14 @@ namespace Raven.Database.Server.Responders
 						context.SetStatusToNotModified();
 						return;
 					}
-					context.WriteData(attachmentAndHeaders.Data, attachmentAndHeaders.Metadata,
-					                  attachmentAndHeaders.Etag);
+					context.WriteHeaders(attachmentAndHeaders.Metadata,attachmentAndHeaders.Etag);
+					using(var stream = attachmentAndHeaders.Data())
+					{
+						stream.CopyTo(context.Response.OutputStream);
+					}
 					break;
 				case "PUT":
-					Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream.ReadData(),
+					Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream,
 					                   context.Request.Headers.FilterHeaders(isServerDocument:false));
 					context.SetStatusToCreated("/static/" + filename);
 					break;

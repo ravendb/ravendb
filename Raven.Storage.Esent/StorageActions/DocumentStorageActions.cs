@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
@@ -19,7 +20,7 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IAttachmentsStorageActions
 	{
-		public Guid AddAttachment(string key, Guid? etag, byte[] data, RavenJObject headers)
+		public Guid AddAttachment(string key, Guid? etag, Stream data, RavenJObject headers)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -47,7 +48,11 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
-				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["data"], data);
+				using (var stream = new BufferedStream(new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"])))
+				{
+					data.CopyTo(stream);
+					stream.Flush();
+				}
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers.ToString(Formatting.None), Encoding.Unicode);
 
@@ -133,12 +138,26 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			var metadata = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode);
+			Stream attachmentStream = GetAttachmentStream(key);
 			return new Attachment
 			{
-				Data = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["data"]),
+				Data = () => attachmentStream, // TODO: re-create the session if it isn't there
+				Size = (int)attachmentStream.Length,
 				Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
 				Metadata = RavenJObject.Parse(metadata)
 			};
+		}
+
+		public Stream GetAttachmentStream(string key)
+		{
+			Api.JetSetCurrentIndex(session, Files, "by_name");
+			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
+			{
+				throw new InvalidOperationException("Could not find attachment named: " + key);
+			}
+
+			return new BufferedStream(new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"]));
 		}
 	}
 }

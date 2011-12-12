@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
+using System.IO;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -38,7 +39,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanVetoDeletes()
 		{
-			db.PutStatic("ayende", null, new byte[]{1,2,3}, new RavenJObject());
+			db.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 			var operationVetoedException = Assert.Throws<OperationVetoedException>(()=>db.DeleteStatic("ayende", null));
 			Assert.Equal("DELETE vetoed by Raven.Tests.Triggers.AttachmentDeleteTrigger+RefuseAttachmentDeleteTrigger because: Can't delete attachments", operationVetoedException.Message);
 		}

@@ -125,35 +125,40 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-        [Fact]
-        public void CanDetectChangesOnExistingItem_ByteArray() {
-            using (var server = GetNewServer())
-            using(var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
-            {
-                var id = string.Empty;
-                using (var session = store.OpenSession()) {
-                    var doc = new ByteArraySample {
-                        Bytes = Guid.NewGuid().ToByteArray(),
-                    };
-                    session.Store(doc);
-                    session.SaveChanges();
-                    id = doc.Id;
-                }
+		[Fact]
+		public void CanDetectChangesOnExistingItem_ByteArray()
+		{
+			using (var server = GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			{
+				var id = string.Empty;
+				using (var session = store.OpenSession())
+				{
+					var doc = new ByteArraySample
+					{
+						Bytes = Guid.NewGuid().ToByteArray(),
+					};
+					session.Store(doc);
+					session.SaveChanges();
+					id = doc.Id;
+				}
 
-                WaitForAllRequestsToComplete(server);
-                server.Server.ResetNumberOfRequests();
+				WaitForAllRequestsToComplete(server);
+				server.Server.ResetNumberOfRequests();
 
-                using (var session = store.OpenSession()) {
-                    var sample = session.Load<ByteArraySample>(id);
-                    Assert.False(session.Advanced.HasChanged(sample));
-                    Assert.False(session.Advanced.HasChanges);
-                }
-            }
-        }
+				using (var session = store.OpenSession())
+				{
+					var sample = session.Load<ByteArraySample>(id);
+					Assert.False(session.Advanced.HasChanged(sample));
+					Assert.False(session.Advanced.HasChanges);
+				}
+			}
+		}
 
-        public class ByteArraySample {
-            public string Id { get; set; }
-            public byte[] Bytes { get; set; }
-        }
+		public class ByteArraySample
+		{
+			public string Id { get; set; }
+			public byte[] Bytes { get; set; }
+		}
 	}
 }
