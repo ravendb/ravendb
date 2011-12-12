@@ -31,7 +31,11 @@ namespace Raven.Studio.Features.Logs
 				return null;
 
 			return DatabaseCommands.GetLogsAsync(showErrorsOnly)
-				.ContinueOnSuccess(logs => Logs.Match(logs))
+				.ContinueOnSuccess(logs =>
+				                   	{
+				                   		Logs.Match(logs);
+				                   		IsLogsEnabled = true;
+				                   	})
 				.CatchIgnore<WebException>(LogsIsNotEnabled);
 		}
 		
