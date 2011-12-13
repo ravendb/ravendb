@@ -2355,6 +2355,15 @@
 	<Style x:Key="Style_Link_DrillDown" TargetType="HyperlinkButton" BasedOn="{StaticResource Style_Link_Command}">
 		<Setter Property="Foreground" Value="Black"/>
 	</Style>
+    
+    <Style x:Key="Style_ScrollViewer_Unintrusive" TargetType="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    
 	<Style x:Key="Style_ScrollViewer_SlimScrollbars" TargetType="ScrollViewer">
 		<Setter Property="HorizontalContentAlignment" Value="Left"/>
 		<Setter Property="VerticalContentAlignment" Value="Top"/>
