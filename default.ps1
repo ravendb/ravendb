@@ -543,8 +543,8 @@ task CreateNugetPackage {
   & "$tools_dir\nuget.exe" pack $build_dir\NuPack-Embedded\RavenDB-Embedded.nuspec
   
   # Push to nuget repository
-  & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB.$label.nupkg" $accessKey
-  & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB-Embedded.$label.nupkg" $accessKey
+  & "$tools_dir\nuget.exe" push "RavenDB.$label.nupkg" $accessKey
+  & "$tools_dir\nuget.exe" push "RavenDB-Embedded.$label.nupkg" $accessKey
   
   
   # This is prune to failure since the previous package may not exists
