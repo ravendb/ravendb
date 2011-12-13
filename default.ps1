@@ -526,7 +526,9 @@ task CreateNugetPackage {
   $nupack = [xml](get-content $base_dir\RavenDB-Embedded.nuspec)
 	
   $nupack.package.metadata.version = "$version.$env:buildlabel"
-
+  if ($global:uploadCategory.EndsWith("-Unstable")){
+    $nupack.package.metadata.version += "-Unstable"
+  }
   $writerSettings = new-object System.Xml.XmlWriterSettings
   $writerSettings.OmitXmlDeclaration = $true
   $writerSettings.NewLineOnAttributes = $true
