@@ -8,9 +8,6 @@
     d:DesignHeight="300" d:DesignWidth="400">
     
     <Grid x:Name="LayoutRoot" ToolTipService.ToolTip="Change Displayed Document Size">
-        <Silverlight:BindingHelper.Binding>
-            <Silverlight:RelativeSourceBinding AncestorType="Raven.Studio.Controls.ViewSizeControl" Path="" RelativeMode="FindAncestor" TargetProperty="DataContext"/>
-        </Silverlight:BindingHelper.Binding>
         <ToggleButton x:Name="ToggleButton" Style="{StaticResource Style_Button_MouseOverChrome}">
             <ToggleButton.Content>
                 <StackPanel Orientation="Horizontal">
