@@ -132,7 +132,7 @@ namespace Raven.Database.Indexing
 
 		#endregion
 
-		public void Flush()
+		public void Flush(bool optimize = false)
 		{
 			lock (writeLock)
 			{
@@ -140,7 +140,7 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter != null)
 				{
-					indexWriter.Optimize();
+					if (optimize) indexWriter.Optimize();
 					indexWriter.Commit();
 				}
 			}

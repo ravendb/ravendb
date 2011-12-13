@@ -40,18 +40,18 @@ namespace Raven.Database.Indexing
 				}
 				if (foundWork == false)
 				{
-					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes);
+					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexesOnIdle);
 				}
 			}
 		}
 
-		private void FlushIndexes()
+		private void FlushIndexesOnIdle()
 		{
 			if (lastFlushedWorkCounter == workCounter || context.DoWork == false)
 				return;
 			lastFlushedWorkCounter = workCounter;
-			context.IndexStorage.FlushMapIndexes();
-			context.IndexStorage.FlushReduceIndexes();
+			context.IndexStorage.FlushMapIndexes(true);
+			context.IndexStorage.FlushReduceIndexes(true);
 		}
 
 		private bool ExecuteTasks()

@@ -1181,8 +1181,8 @@ namespace Raven.Database
 				Started = SystemTime.UtcNow,
 				IsRunning = true,
 			}), new RavenJObject(), null);
-			IndexStorage.FlushMapIndexes();
-			IndexStorage.FlushReduceIndexes();
+			IndexStorage.FlushMapIndexes(true);
+			IndexStorage.FlushReduceIndexes(true);
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup);
 		}
 
