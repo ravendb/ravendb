@@ -500,7 +500,7 @@ task CreateNugetPackage {
 ########### First pass - RavenDB.nupkg
 
   $nupack = [xml](get-content $base_dir\RavenDB.nuspec)
-	$label = "$version.$env:buildlabel"
+  $label = "$version.$env:buildlabel"
   $nupack.package.metadata.version = "$version.$env:buildlabel"
   if ($global:uploadCategory.EndsWith("-Unstable")){
     $nupack.package.metadata.version += "-Unstable"
