@@ -216,8 +216,6 @@ namespace Raven.Studio.Features.Documents
 				return "Sys Doc";
 
 			var entity = metadata.IfPresent<string>(Constants.RavenEntityName);
-			if (entity != null)
-				entity = entity.ToLower();
 			return entity ?? "Doc";
 		}
 	}
