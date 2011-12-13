@@ -124,98 +124,101 @@
 
 		</Grid>
 
-		<Grid x:Name="details"
-			  Grid.Column="1"
-			  Grid.Row="1">
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-                <RowDefinition Height="{Binding Path=References.Count, Converter={StaticResource HiddenWhenEmptyStarSizedWhenNonEmpty}}" />
-                <RowDefinition Height="{Binding Path=Related.Count, Converter={StaticResource HiddenWhenEmptyStarSizedWhenNonEmpty}}" />
-			</Grid.RowDefinitions>
+        <ScrollViewer Grid.Column="1"
+			      Grid.Row="1" 
+                      Style="{StaticResource Style_ScrollViewer_Unintrusive}">
+		    <Grid x:Name="details"
+>
+			    <Grid.RowDefinitions>
+				    <RowDefinition Height="Auto" />
+				    <RowDefinition Height="Auto" />
+				    <RowDefinition Height="Auto" />
+				    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+			    </Grid.RowDefinitions>
 
-			<Border Background="{StaticResource Brush_SubtleBackground2}"
-					Grid.RowSpan="3" />
+			    <Border Background="{StaticResource Brush_SubtleBackground2}"
+					    Grid.RowSpan="3" />
 
-			<TextBlock Text="Metadata"
-					   Margin="10,10,5,6"
-					   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
+			    <TextBlock Text="Metadata"
+					       Margin="10,10,5,6"
+					       Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
-			<sdk:DataGrid x:Name="Metadata"
-						  Grid.Row="1"
-						  ItemsSource="{Binding Metadata}"
-						  Margin="10,0,5,12"
-						  Style="{StaticResource Style_DataGrid_NoChrome_NoHeader}"
-						  FrozenColumnCount="1">
-				<sdk:DataGrid.Columns>
-					<sdk:DataGridTextColumn FontStyle="Italic"
-											Binding="{Binding Key}"
-											Foreground="{StaticResource Brush_ContrastColor}" />
-					<sdk:DataGridTextColumn Binding="{Binding Value}" />
-				</sdk:DataGrid.Columns>
-			</sdk:DataGrid>
+			    <sdk:DataGrid x:Name="Metadata"
+						      Grid.Row="1"
+						      ItemsSource="{Binding Metadata}"
+						      Margin="10,0,5,12"
+						      Style="{StaticResource Style_DataGrid_NoChrome_NoHeader}"
+						      FrozenColumnCount="1">
+				    <sdk:DataGrid.Columns>
+					    <sdk:DataGridTextColumn FontStyle="Italic"
+											    Binding="{Binding Key}"
+											    Foreground="{StaticResource Brush_ContrastColor}" />
+					    <sdk:DataGridTextColumn Binding="{Binding Value}" />
+				    </sdk:DataGrid.Columns>
+			    </sdk:DataGrid>
 
-			<Border Background="{StaticResource Brush_SubtleBackground2}"
-					Grid.Row="3"
-					Grid.RowSpan="2" />
+			    <Border Background="{StaticResource Brush_SubtleBackground2}"
+					    Grid.Row="3"
+					    Grid.RowSpan="2" />
 
-			<TextBlock Text="{Binding DocumentSize}"
-					   Margin="10,6,5,6"
-					   Grid.Row="3"
-					   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
+			    <TextBlock Text="{Binding DocumentSize}"
+					       Margin="10,6,5,6"
+					       Grid.Row="3"
+					       Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
-			<Border Background="{StaticResource Brush_SubtleBackground2}"
-					Grid.Row="4"
-					Visibility="{Binding Path=References.Count, Converter={StaticResource HiddenWhenEmpty}}">
-                <toolkit:DockPanel>
-					<TextBlock Text="References"
-							   Margin="10,6,5,6" toolkit:DockPanel.Dock="Top"
-							   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
+			    <Border Background="{StaticResource Brush_SubtleBackground2}"
+					    Grid.Row="4"
+					    Visibility="{Binding Path=References.Count, Converter={StaticResource HiddenWhenEmpty}}">
+                    <StackPanel>
+					    <TextBlock Text="References"
+							       Margin="10,6,5,6"
+							       Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
-					<ItemsControl x:Name="References"
-								  ItemsSource="{Binding References}"
-								  Style="{StaticResource Style_ItemsControl_References}"
-								  Margin="10,0,5,12">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<HyperlinkButton Content="{Binding Title}"
-												 Command="{StaticResource NavigateToCommand}"
-												 CommandParameter="{Binding HRef}"
-												 Style="{StaticResource Style_Link_Shortcut}"
-												 HorizontalAlignment="Left" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-                </toolkit:DockPanel>
-			</Border>
+					    <ItemsControl x:Name="References"
+								      ItemsSource="{Binding References}"
+								      Style="{StaticResource Style_ItemsControl_References}"
+								      Margin="10,0,5,12">
+						    <ItemsControl.ItemTemplate>
+							    <DataTemplate>
+								    <HyperlinkButton Content="{Binding Title}"
+												     Command="{StaticResource NavigateToCommand}"
+												     CommandParameter="{Binding HRef}"
+												     Style="{StaticResource Style_Link_Shortcut}"
+												     HorizontalAlignment="Left" />
+							    </DataTemplate>
+						    </ItemsControl.ItemTemplate>
+					    </ItemsControl>
+                    </StackPanel>
+			    </Border>
 
-			<Border Background="{StaticResource Brush_SubtleBackground2}"
-					Grid.Row="5"
-					Visibility="{Binding Path=Related.Count, Converter={StaticResource HiddenWhenEmpty}}">
-				<toolkit:DockPanel>
-					<TextBlock Text="Related" toolkit:DockPanel.Dock="Top"
-							   Margin="10,6,5,6"
-							   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
+			    <Border Background="{StaticResource Brush_SubtleBackground2}"
+					    Grid.Row="5"
+					    Visibility="{Binding Path=Related.Count, Converter={StaticResource HiddenWhenEmpty}}">
+				    <StackPanel>
+					    <TextBlock Text="Related"
+							       Margin="10,6,5,6"
+							       Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
-					<ItemsControl x:Name="Related"
-								  Style="{StaticResource Style_ItemsControl_References}"
-								  ItemsSource="{Binding Related}"
-								  Margin="10,0,5,10">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<HyperlinkButton Content="{Binding Title}"
-												 Command="{StaticResource NavigateToCommand}"
-												 CommandParameter="{Binding HRef}"
-												 Style="{StaticResource Style_Link_Shortcut}"
-												 HorizontalAlignment="Left" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-                </toolkit:DockPanel>
-			</Border>
-				
-		</Grid>
-	</Grid>
+					    <ItemsControl x:Name="Related"
+								      Style="{StaticResource Style_ItemsControl_References}"
+								      ItemsSource="{Binding Related}"
+								      Margin="10,0,5,10">
+						    <ItemsControl.ItemTemplate>
+							    <DataTemplate>
+								    <HyperlinkButton Content="{Binding Title}"
+												     Command="{StaticResource NavigateToCommand}"
+												     CommandParameter="{Binding HRef}"
+												     Style="{StaticResource Style_Link_Shortcut}"
+												     HorizontalAlignment="Left" />
+							    </DataTemplate>
+						    </ItemsControl.ItemTemplate>
+					    </ItemsControl>
+                    </StackPanel>
+			    </Border>
+
+            </Grid>
+        </ScrollViewer>
+    </Grid>
 </Infrastructure:View>
