@@ -19,6 +19,7 @@
 												 ValueWhenEmpty="0"
 												 ValueWhenNonEmpty="*" />
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
-
+    <Converters:CollectionCountToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedWhenNonEmpty"/>
+    
 	<Models:DocumentsModel x:Key="DocumentsModel" />
 </ResourceDictionary>

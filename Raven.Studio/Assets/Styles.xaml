@@ -1138,6 +1138,25 @@
 				Value="0" />
 	</Style>
 
+	<Style x:Name="Style_ItemsControl_References"
+		   TargetType="ItemsControl">
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Auto" />
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Auto" />
+		<Setter Property="BorderThickness"
+				Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ItemsControl">
+                    <ScrollViewer BorderThickness="0" VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
+                        <ItemsPresenter Margin="{TemplateBinding Padding}"/>
+                    </ScrollViewer>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+	</Style>
+
 	<Style x:Name="Collections_FluidList" BasedOn="{StaticResource Style_ListBox_Fluid}"
 		   TargetType="ListBox">
 		<Setter Property="MaxHeight"
@@ -2336,6 +2355,15 @@
 	<Style x:Key="Style_Link_DrillDown" TargetType="HyperlinkButton" BasedOn="{StaticResource Style_Link_Command}">
 		<Setter Property="Foreground" Value="Black"/>
 	</Style>
+    
+    <Style x:Key="Style_ScrollViewer_Unintrusive" TargetType="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    
 	<Style x:Key="Style_ScrollViewer_SlimScrollbars" TargetType="ScrollViewer">
 		<Setter Property="HorizontalContentAlignment" Value="Left"/>
 		<Setter Property="VerticalContentAlignment" Value="Top"/>

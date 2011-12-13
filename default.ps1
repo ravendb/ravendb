@@ -85,7 +85,7 @@ task Init -depends Verify40, Clean {
 			-company "Hibernating Rhinos" `
 			-product "RavenDB $version.0.0" `
 			-version "$version.0" `
-			-fileversion "1.0.$env:buildlabel.0" `
+			-fileversion "$version.$env:buildlabel.0" `
 			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
 			-clsCompliant $clsComliant
 	}
@@ -508,6 +508,9 @@ task CreateNugetPackage {
   $nupack = [xml](get-content $base_dir\RavenDB.nuspec)
 	
   $nupack.package.metadata.version = "$version.$env:buildlabel"
+  if ($global:uploadCategory.EndsWith("-Unstable")){
+	$nupack.package.metadata.version += "-Unstable"
+  }
 
   $writerSettings = new-object System.Xml.XmlWriterSettings
   $writerSettings.OmitXmlDeclaration = $true

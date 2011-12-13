@@ -17,6 +17,7 @@ namespace Raven.Studio.Controls
         public ViewSizeControl()
         {
             InitializeComponent();
+            LayoutRoot.DataContext = this;
         }
     }
 }
