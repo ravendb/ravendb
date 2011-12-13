@@ -424,12 +424,6 @@ task UploadUnstable -depends Unstable, DoRelease, Upload {
 task CreateNugetPackage {
   $accessPath = "$base_dir\..\Nuget-Access-Key.txt"
   
-  if( $global:uploadCategory -ne "RavenDB") # we only publish the stable version out
-  {
-    Write-Host "Not a stable build, skipping nuget package creation"
-    return
-  }
-  
   if ( (Test-Path $accessPath) -eq $false )
   {
     return;
