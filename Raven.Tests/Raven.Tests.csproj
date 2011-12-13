@@ -565,6 +565,7 @@
     <Compile Include="MailingList\HierarchicalInheritanceIndexing.cs" />
     <Compile Include="MailingList\IisQueryLengthIssues.cs" />
     <Compile Include="MailingList\JohanNilsson.cs" />
+    <Compile Include="MailingList\ListCount.cs" />
     <Compile Include="MailingList\MapReduceIssue\CanPageThroughReduceResults.cs" />
     <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
     <Compile Include="MailingList\EnumAsInts.cs" />

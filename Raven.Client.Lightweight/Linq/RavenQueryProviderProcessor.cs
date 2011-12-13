@@ -860,8 +860,9 @@ namespace Raven.Client.Linq
 						var field = newExpression.Arguments[index] as MemberExpression;
 						if(field == null)
 							continue;
-
-						AddToFieldsToFetch(field.Member.Name, newExpression.Members[index].Name);
+						var expression = GetMemberExpression(newExpression.Arguments[index]);
+						var renamedField = GetSelectPath(expression);
+						AddToFieldsToFetch(renamedField, newExpression.Members[index].Name);
 					}
 					break;
 				//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
@@ -883,6 +884,19 @@ namespace Raven.Client.Linq
 				default:
 					throw new NotSupportedException("Node not supported: " + body.NodeType);
 			}
+		}
+
+		private string GetSelectPath(MemberExpression expression)
+		{
+			var sb = new StringBuilder(expression.Member.Name);
+			expression = expression.Expression as MemberExpression;
+			while (	expression != null)
+			{
+				sb.Insert(0, ".");
+				sb.Insert(0, expression.Member.Name);
+				expression = expression.Expression as MemberExpression;
+			}
+			return sb.ToString();
 		}
 
 		private void AddToFieldsToFetch(string docField, string renamedField)
