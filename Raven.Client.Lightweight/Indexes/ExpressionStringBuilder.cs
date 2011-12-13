@@ -1221,6 +1221,7 @@ namespace Raven.Client.Indexes
 					case "Count":
 					case "Where":
 					case "Sum":
+					case "Any":
 					case "SingleOrDefault":
 						Out(")");
 						break;
@@ -1255,6 +1256,7 @@ namespace Raven.Client.Indexes
 					case "SelectMany":
 						Out("(Func<dynamic, IEnumerable<dynamic>>)(");
 						break;
+					case "Any":
 					case "First":
 					case "FirstOrDefault":
 					case "Single":

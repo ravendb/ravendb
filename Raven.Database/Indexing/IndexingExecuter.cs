@@ -163,6 +163,7 @@ namespace Raven.Database.Indexing
 				{
 					// we use it this way to batch all the updates together
 					action += accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
+					continue;
 				}
 
 				yield return Tuple.Create<IndexToWorkOn, IEnumerable<JsonDocument>>(indexToWorkOn, jsonDocuments);

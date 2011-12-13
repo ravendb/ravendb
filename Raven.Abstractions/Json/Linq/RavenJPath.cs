@@ -129,6 +129,24 @@ namespace Raven.Json.Linq
 					}
 					else
 					{
+						var array = current as RavenJArray;
+						if(array != null)
+						{
+							switch (propertyName)
+							{
+								case "Count":
+								case "count":
+								case "Length":
+								case "length":
+									current = array.Length;
+									break;
+								default:
+									if (errorWhenNoMatch)
+										throw new Exception("Property '{0}' not valid on {1}.".FormatWith(CultureInfo.InvariantCulture, propertyName, current.GetType().Name));
+									break;
+							}
+							continue;
+						}
 						if (errorWhenNoMatch)
 							throw new Exception("Property '{0}' not valid on {1}.".FormatWith(CultureInfo.InvariantCulture, propertyName, current.GetType().Name));
 

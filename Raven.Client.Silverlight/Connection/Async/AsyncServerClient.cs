@@ -921,9 +921,10 @@ namespace Raven.Client.Silverlight.Connection.Async
 				{
 					try
 					{
+						var buffer = task.Result;
 						return new Attachment
 								{
-									Data = () => new MemoryStream(task.Result),
+									Data = () => new MemoryStream(buffer),
 									Etag = new Guid(request.ResponseHeaders["ETag"].First()),
 									Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 								};

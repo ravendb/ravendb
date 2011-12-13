@@ -41,7 +41,7 @@ namespace Raven.Web
 				try
 				{
 					var ravenConfiguration = new RavenConfiguration();
-					HttpServer.RegisterHttpEndpointTarget();
+					HttpEndpointRegistration.RegisterHttpEndpointTarget();
 					database = new DocumentDatabase(ravenConfiguration);
 					database.SpinBackgroundWorkers();
 					server = new HttpServer(ravenConfiguration, database);
