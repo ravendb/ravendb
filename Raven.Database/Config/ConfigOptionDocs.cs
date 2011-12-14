@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace Raven.Database.Config
 {
-	public class ConfigOptionDocs : IEnumerable<KeyValuePair<string, string>>
+	public class ConfigOptionDocs : IEnumerable<string>
 	{
-		public static ConfigOptionDocs OptionsDocs = new ConfigOptionDocs
+		public readonly static ConfigOptionDocs OptionsDocs = new ConfigOptionDocs
 		{
 			// Common
 			{"Raven/MaxPageSize", "int", null, "The maximum page size that can be specified on this server, default: 1,024."},
@@ -35,6 +35,10 @@ namespace Raven.Database.Config
 			{"Raven/AccessControlMaxAge", "int", null, "Configures the server to send Access-Control-Max-Age header with the specified value. Default: 1728000 (20 days)."},
 			{"Raven/AccessControlAllowMethods", "string", null, "Configures the server to send Access-Control-Allow-Methods header with the specified value. Default: PUT,PATCH,GET,DELETE,POST."},
 			{"Raven/AccessControlRequestHeaders", "string", null, "Configures the server to send Access-Control-Request-Headers header with the specified value. Default: none."},
+
+			// Tenants
+			{"Raven/Tenants/MaxIdleTimeForTenantDatabase", "int", null, "The time in seconds to allow a tenant database to be idle"},
+			{"Raven/Tenants/FrequnecyToCheckForIdleDatabases", "int", null, "The time in seconds to check for an idle tenant database"},
 
 			// Storage
 			{"Raven/StorageTypeName", "string", "esent,munin,Fully Qualifiied Type Name", "The storage engine to use for the database. Default: esent."},
@@ -81,10 +85,23 @@ namespace Raven.Database.Config
 
 		};
 
-		private List<KeyValuePair<string, string>> inner = new List<KeyValuePair<string, string>>();
-		public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
+		private readonly List<ConfigOption> inner = new List<ConfigOption>();
+
+		private ConfigOptionDocs()
 		{
-			return inner.GetEnumerator();
+			
+		}
+
+		public IEnumerator<string> GetEnumerator()
+		{
+			foreach (var configOptionDoc in inner)
+			{
+				yield return string.Format("{0} {1} {2}\r\n{3}",
+				                           configOptionDoc.Option,
+										   configOptionDoc.Type, 
+										   configOptionDoc.Range,
+				                           configOptionDoc.Doc);
+			}
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -94,6 +111,25 @@ namespace Raven.Database.Config
 
 		public void Add(string option, string type, string range,  string doc)
 		{
+			inner.Add( new ConfigOption
+			{
+				Doc = doc,
+				Option = option,
+				Range = range,
+				Type = type
+			});
 		}
+
+		public class ConfigOption
+		{
+			public string Option { get;  set; }
+
+			public string Type { get;  set; }
+
+			public string Range { get;  set; }
+
+			public string Doc { get;  set; }
+		}
+
 	}
 }
