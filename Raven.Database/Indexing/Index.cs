@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -168,7 +169,8 @@ namespace Raven.Database.Indexing
 					{
 						return g.First();
 					}
-					return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray(g.Select(x => x.Value)));
+					var ravenJTokens = g.Select(x => x.Value).ToArray();
+					return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray((IEnumerable)ravenJTokens));
 				});
 			foreach (var keyValuePair in q)
 			{
@@ -179,6 +181,8 @@ namespace Raven.Database.Indexing
 
 		private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
 		{
+			if(fld.IsBinary())
+				return new KeyValuePair<string, RavenJToken>(fld.Name(), fld.GetBinaryValue());
 			var stringValue = fld.StringValue();
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
 			{
