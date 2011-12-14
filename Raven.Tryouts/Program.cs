@@ -21,7 +21,7 @@ namespace etobi.EmbeddedTest
 		{
 			var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize();
 
 			var s = documentStore.OpenSession().Query<Item3>().Where(x=>x.Age > 100).ToString();

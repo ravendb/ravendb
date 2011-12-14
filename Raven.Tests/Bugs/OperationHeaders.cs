@@ -79,7 +79,7 @@ namespace Raven.Tests.Bugs
 			}))
 			using (var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 
 			}.Initialize())
 			{
@@ -109,7 +109,7 @@ namespace Raven.Tests.Bugs
 			}))
 			using (var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 
 			}.Initialize())
 			{

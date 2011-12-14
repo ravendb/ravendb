@@ -16,7 +16,7 @@ namespace Raven.Tests.MultiGet
 		public void CanUseMultiGetToBatchGetDocumentRequests()
 		{
 			using(GetNewServer())
-			using(var docStore = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
+			using(var docStore = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
 				using(var session = docStore.OpenSession())
 				{
@@ -25,7 +25,7 @@ namespace Raven.Tests.MultiGet
 					session.SaveChanges();
 				}
 
-				var request = (HttpWebRequest)WebRequest.Create("http://localhost:8080/multi_get");
+				var request = (HttpWebRequest)WebRequest.Create("http://localhost:8079/multi_get");
 				request.Method = "POST";
 				using(var stream = request.GetRequestStream())
 				{
@@ -59,7 +59,7 @@ namespace Raven.Tests.MultiGet
 		public void CanUseMultiQuery()
 		{
 			using (GetNewServer())
-			using (var docStore = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = docStore.OpenSession())
 				{
@@ -77,7 +77,7 @@ namespace Raven.Tests.MultiGet
 				}
 
 
-				var request = (HttpWebRequest)WebRequest.Create("http://localhost:8080/multi_get");
+				var request = (HttpWebRequest)WebRequest.Create("http://localhost:8079/multi_get");
 				request.Method = "POST";
 				using (var stream = request.GetRequestStream())
 				{
@@ -113,7 +113,7 @@ namespace Raven.Tests.MultiGet
 		public void CanHandleCaching()
 		{
 			using (GetNewServer())
-			using (var docStore = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = docStore.OpenSession())
 				{
@@ -122,7 +122,7 @@ namespace Raven.Tests.MultiGet
 					session.SaveChanges();
 				}
 
-				var request = (HttpWebRequest)WebRequest.Create("http://localhost:8080/multi_get");
+				var request = (HttpWebRequest)WebRequest.Create("http://localhost:8079/multi_get");
 				request.Method = "POST";
 				using (var stream = request.GetRequestStream())
 				{
@@ -152,7 +152,7 @@ namespace Raven.Tests.MultiGet
 					Assert.True(results[1].Headers.ContainsKey("ETag"));
 				}
 
-				request = (HttpWebRequest)WebRequest.Create("http://localhost:8080/multi_get");
+				request = (HttpWebRequest)WebRequest.Create("http://localhost:8079/multi_get");
 				request.Method = "POST";
 				using (var stream = request.GetRequestStream())
 				{

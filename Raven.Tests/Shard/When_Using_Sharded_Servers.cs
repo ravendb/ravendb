@@ -28,7 +28,7 @@ namespace Raven.Tests.Shard
 		{
 			server = "localhost";
 
-			port1 = 8080;
+			port1 = 8079;
 			port2 = 8081;
 
 			path1 = GetPath("TestShardedDb1");

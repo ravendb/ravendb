@@ -18,7 +18,7 @@ namespace Raven.Tests.MultiGet
 		public void CanProfileLazyRequests()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" })
+			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
 				store.Initialize();
 				using (var session = store.OpenSession())
@@ -53,7 +53,7 @@ namespace Raven.Tests.MultiGet
 		public void CanProfilePartiallyCachedLazyRequest()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" })
+			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
 				store.Initialize();
 				using (var session = store.OpenSession())
@@ -94,7 +94,7 @@ namespace Raven.Tests.MultiGet
 		public void CanProfileFullyCached()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" })
+			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
 				store.Initialize();
 				using (var session = store.OpenSession())
@@ -137,7 +137,7 @@ namespace Raven.Tests.MultiGet
 		public void CanProfilePartiallyAggressivelyCached()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" })
+			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
 				store.Initialize();
 				using (var session = store.OpenSession())
@@ -185,7 +185,7 @@ namespace Raven.Tests.MultiGet
 		public void CanProfileFullyAggressivelyCached()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" })
+			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
 				store.Initialize();
 				using (var session = store.OpenSession())
@@ -235,7 +235,7 @@ namespace Raven.Tests.MultiGet
 		public void CanProfileErrors()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" })
+			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
 				store.Initialize();
 				using (var session = store.OpenSession())

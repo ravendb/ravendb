@@ -129,7 +129,7 @@ namespace Raven.Tests
 		{
 			var ravenConfiguration = new RavenConfiguration
 			{
-				Port = 8080,
+				Port = 8079,
 				RunInMemory = true,
 				DataDirectory = "Data",
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
@@ -146,7 +146,7 @@ namespace Raven.Tests
 			{
 				using (var documentStore = new DocumentStore
 				{
-					Url = "http://localhost:8080"
+					Url = "http://localhost:8079"
 				}.Initialize())
 				{
 					new RavenDocumentsByEntityName().Execute(documentStore);
@@ -167,7 +167,7 @@ namespace Raven.Tests
 
 			using (var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			})
 			{
 				documentStore.Initialize();

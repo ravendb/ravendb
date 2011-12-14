@@ -35,9 +35,9 @@ namespace Raven.Tests.Document
 
 		public DocumentStoreServerTests()
 		{
-			port = 8080;
+			port = 8079;
 			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
 		#region IDisposable Members

@@ -34,10 +34,10 @@ namespace Raven.Tests.Bugs.MultiTenancy
 		[Fact]
 		public void Mulitenancy_Test()
 		{
-			using (GetNewServer(8080))
+			using (GetNewServer(8079))
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8080",
+				Url = "http://localhost:8079",
 				DefaultDatabase = "Test"
 			}.Initialize())
 			{
