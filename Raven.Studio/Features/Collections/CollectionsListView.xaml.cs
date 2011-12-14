@@ -1,14 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Windows;
+﻿using System.Linq;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Collections
@@ -18,6 +9,21 @@ namespace Raven.Studio.Features.Collections
 		public CollectionsListView()
 		{
 			InitializeComponent();
+
+			CollectionsList.SelectionChanged += CollectionsListOnSelectionChanged;
+		}
+
+		private void CollectionsListOnSelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			var commands = CollectionsContextMenu.Items
+				.Cast<MenuItem>()
+				.Select(item => item.Command)
+				.OfType<Command>();
+
+			foreach (var command in commands)
+			{
+				command.RaiseCanExecuteChanged();
+			}
 		}
 	}
 }
