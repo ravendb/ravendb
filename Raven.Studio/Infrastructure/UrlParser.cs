@@ -94,7 +94,7 @@ namespace Raven.Studio.Infrastructure
 			if (GetQueryParam("database") != null)
 				return;
 
-			SetQueryParam("database", ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
+			SetQueryParam("database", ApplicationModel.Database.Value.Name);
 		}
 	}
 }

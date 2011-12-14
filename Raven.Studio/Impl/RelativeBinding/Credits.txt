@@ -1,2 +1,0 @@
-﻿The code in this folder was written by Beat Kiener, and comes from 
-http://blog.thekieners.com/2010/09/08/relativesource-binding-with-findancestor-mode-in-silverlight/

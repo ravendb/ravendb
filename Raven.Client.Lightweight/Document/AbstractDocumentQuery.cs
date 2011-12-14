@@ -188,7 +188,7 @@ namespace Raven.Client.Document
 			get { return theQueryText; }
 		}
 
-		private Action<QueryResult> afterQueryExecuted;
+		protected Action<QueryResult> afterQueryExecutedCallback;
 		private Guid? cutoffEtag;
 
 		private TimeSpan DefaultTimeout
@@ -470,7 +470,7 @@ namespace Raven.Client.Document
 				InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecuted);
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
 
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
@@ -1277,7 +1277,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void AfterQueryExecuted(Action<QueryResult> afterQueryExecutedCallback)
 		{
-			this.afterQueryExecuted += afterQueryExecutedCallback;
+			this.afterQueryExecutedCallback += afterQueryExecutedCallback;
 		}
 
 		/// <summary>
@@ -1285,7 +1285,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void InvokeAfterQueryExecuted(QueryResult result)
 		{
-			var queryExecuted = afterQueryExecuted;
+			var queryExecuted = afterQueryExecutedCallback;
 			if (queryExecuted != null)
 				queryExecuted(result);
 		}

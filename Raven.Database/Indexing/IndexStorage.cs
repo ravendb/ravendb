@@ -301,23 +301,23 @@ namespace Raven.Database.Indexing
 			return result;
 		}
 
-		public void FlushMapIndexes()
+		public void FlushMapIndexes(bool optimize = false)
 		{
 			foreach (var value in indexes.Values)
 			{
 				if (value.IsMapReduce)
 					continue;
-				value.Flush();
+				value.Flush(optimize);
 			}
 		}
 
-		public void FlushReduceIndexes()
+		public void FlushReduceIndexes(bool optimize = false)
 		{
 			foreach (var value in indexes.Values)
 			{
 				if (value.IsMapReduce == false)
 					continue;
-				value.Flush();
+				value.Flush(optimize);
 			}
 		}
 

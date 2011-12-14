@@ -108,6 +108,9 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
+			AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
+			AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
+
 			ExternalState = new ConcurrentDictionary<string, object>();
 			Name = configuration.DatabaseName;
 			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
@@ -174,6 +177,11 @@ namespace Raven.Database
 				Dispose();
 				throw;
 			}
+		}
+
+		private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
+		{
+			Dispose();
 		}
 
 		private void InitializeTriggers()
@@ -298,6 +306,8 @@ namespace Raven.Database
 		{
 			if (disposed)
 				return;
+			AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
+			AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
 		    disposed = true;
 			workContext.StopWork();
 			foreach (var value in ExtensionsState.Values.OfType<IDisposable>())
@@ -1181,8 +1191,8 @@ namespace Raven.Database
 				Started = SystemTime.UtcNow,
 				IsRunning = true,
 			}), new RavenJObject(), null);
-			IndexStorage.FlushMapIndexes();
-			IndexStorage.FlushReduceIndexes();
+			IndexStorage.FlushMapIndexes(true);
+			IndexStorage.FlushReduceIndexes(true);
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup);
 		}
 

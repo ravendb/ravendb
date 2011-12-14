@@ -83,7 +83,7 @@ namespace Raven.Client.Document
 				aggregationOp = aggregationOp,
 				includes = new HashSet<string>(includes)
 			};
-			documentQuery.AfterQueryExecuted(queryStats.UpdateQueryStats);
+			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
 		}
 

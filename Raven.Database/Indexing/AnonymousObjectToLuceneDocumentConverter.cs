@@ -115,7 +115,11 @@ namespace Raven.Database.Indexing
 				yield return (AbstractField)value;
 				yield break;
 			}
-
+			if(value is byte[])
+			{
+				yield return CreateBinaryFieldWithCaching(name, (byte[])value, indexDefinition.GetStorage(name, defaultStorage));
+				yield break;
+			}
 
 			var itemsToIndex = value as IEnumerable;
 			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
@@ -277,6 +281,23 @@ namespace Raven.Database.Indexing
 
 	        return true;
 	    }
+
+		private Field CreateBinaryFieldWithCaching(string name, byte[] value, Field.Store store)
+		{
+			var cacheKey = new
+			{
+				name,
+				store,
+				multipleItemsSameFieldCountSum = multipleItemsSameFieldCount.Sum()
+			};
+			Field field;
+			if (fieldsCache.TryGetValue(cacheKey, out field) == false)
+			{
+				fieldsCache[cacheKey] = field = new Field(name, value, store);
+			}
+			field.SetValue(value);
+			return field;
+		}
 		private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index)
 		{
 			var cacheKey = new
