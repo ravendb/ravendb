@@ -23,37 +23,38 @@ namespace Raven.Studio.Commands
 				.ToList();
 
 			AskUser.ConfirmationAsync("Confirm Delete", documentsIds.Count > 1
-										? string.Format("Are you sure you want to delete these {0} documents?", documentsIds.Count)
-										: string.Format("Are you sure that you want to delete this document? ({0})", documentsIds.First()))
+			                                            	? string.Format("Are you sure you want to delete these {0} documents?", documentsIds.Count)
+			                                            	: string.Format("Are you sure that you want to delete this document? ({0})", documentsIds.First()))
 				.ContinueWhenTrue(() => DeleteDocuments(documentsIds))
 				.ContinueWhenTrueInTheUIThread(() =>
-									{
-										var model = (DocumentsModel)Context;
-										foreach (var document in Items)
-										{
-											model.Documents.Remove(document);
-										}
-									});
+				                               	{
+				                               		var model = (DocumentsModel) Context;
+				                               		foreach (var document in Items)
+				                               		{
+				                               			model.Documents.Remove(document);
+				                               		}
+				                               	});
 		}
 
 		private void DeleteDocuments(IList<string> documentIds)
 		{
-			var deleteCommandDatas = documentIds.Select(id => new DeleteCommandData
-			                                                  {
-			                                                  	Key = id
-			                                                  }).ToArray();
-			ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.BatchAsync(deleteCommandDatas)
-				.ContinueOnSuccessInTheUIThread(() =>
-				                   {
-				                   	View.UpdateAllFromServer();
-				                   	ApplicationModel.Current.AddNotification(new Notification(documentIds.Count > 1
-				                   	                                                          	? string.Format(
-				                   	                                                          		"{0} documents were deleted",
-				                   	                                                          		documentIds.Count)
-				                   	                                                          	: string.Format(
-				                   	                                                          		"Document {0} was deleted",
-				                   	                                                          		documentIds.First())));
-				                   });
+			var deleteCommandDatas = documentIds
+				.Select(id => new DeleteCommandData{Key = id})
+				.Cast<ICommandData>()
+				.ToArray();
+
+			DatabaseCommands.BatchAsync(deleteCommandDatas)
+				.ContinueOnSuccessInTheUIThread(() => DeleteDocumentSuccess(documentIds));
+		}
+
+		private void DeleteDocumentSuccess(IList<string> documentIds)
+		{
+			View.UpdateAllFromServer();
+
+			var notification = documentIds.Count > 1
+			                   	? string.Format("{0} documents were deleted", documentIds.Count)
+			                   	: string.Format("Document {0} was deleted", documentIds.First());
+			ApplicationModel.Current.AddNotification(new Notification(notification));
 		}
 	}
 }

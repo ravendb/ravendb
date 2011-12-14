@@ -10,8 +10,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Logs
 {
@@ -38,7 +36,7 @@ namespace Raven.Studio.Features.Logs
 				                   	})
 				.CatchIgnore<WebException>(LogsIsNotEnabled);
 		}
-		
+
 		private void LogsIsNotEnabled()
 		{
 			IsLogsEnabled = false;

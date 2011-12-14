@@ -41,7 +41,7 @@ namespace Raven.Studio.Infrastructure
 			return null;
 		}
 
-		public Observable<DatabaseModel> Database {get { return ApplicationModel.Current.Server.Value.SelectedDatabase; }}
+		public Observable<DatabaseModel> Database {get { return ApplicationModel.Database; }}
 
 		public IAsyncDatabaseCommands DatabaseCommands
 		{

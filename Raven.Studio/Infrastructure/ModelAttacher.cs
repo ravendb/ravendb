@@ -46,6 +46,7 @@ namespace Raven.Studio.Infrastructure
 					var viewModel = model as ViewModel;
 					if (viewModel == null) return;
 					viewModel.LoadModel(UrlUtil.Url);
+					modelModel.ForceTimerTicked();
 				};
 			}
 			catch (Exception ex)
