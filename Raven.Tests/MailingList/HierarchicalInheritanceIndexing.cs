@@ -4,10 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Indexes;
 using Newtonsoft.Json;
-using System.Linq;
 using Raven.Client.Linq;
 using Xunit;
-using Raven.Database.Linq.PrivateExtensions;
 
 namespace Raven.Tests.MailingList
 {
@@ -36,9 +34,9 @@ namespace Raven.Tests.MailingList
 										{
 											OwnerId = childId,
 											OverriddenValues = new Dictionary<string, object>
-                                                               {
-                                                                   {"Name", string.Format("Child_{0}", i)}
-                                                               }
+															   {
+																   {"Name", string.Format("Child_{0}", i)}
+															   }
 										};
 
 						ex.Overrides.Add(child);
@@ -47,9 +45,9 @@ namespace Raven.Tests.MailingList
 											 {
 												 OwnerId = grandChildId,
 												 OverriddenValues = new Dictionary<string, object>
-                                                                    {
-                                                                        {"Name", string.Format("GrandChild_{0}", i)}
-                                                                    }
+																	{
+																		{"Name", string.Format("GrandChild_{0}", i)}
+																	}
 											 };
 
 						child.Overrides.Add(grandChild);
