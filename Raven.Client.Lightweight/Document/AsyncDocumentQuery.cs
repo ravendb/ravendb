@@ -551,6 +551,19 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+	    /// <summary>
+        /// Statistics about the query, such as total count of matching records, after the query executed
+	    /// </summary>
+	    public RavenQueryStatistics QueryStatistics
+	    {
+	        get 
+            { 
+                RavenQueryStatistics queryStatistics;
+                Statistics(out queryStatistics);
+                return queryStatistics;
+            }
+	    }
+
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>

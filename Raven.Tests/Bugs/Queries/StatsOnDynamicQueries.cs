@@ -62,5 +62,58 @@ namespace Raven.Tests.Bugs.Queries
 				}
 			}
 		}
+
+        [Fact]
+        public void WillGiveStatsAfterExecution()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Age = 15,
+                        Email = "ayende"
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(x => x.Email == "ayende");
+                    var result = query.ToArray();
+
+                    Assert.NotEqual(0, query.QueryStatistics.TotalResults);
+                }
+            }
+        }
+
+        [Fact]
+        public void WillGiveStatsForLuceneQueryAfterExecution()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Age = 15,
+                        Email = "ayende"
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.LuceneQuery<User>()
+                        .Where("Email:ayende");
+                    var result = query.ToArray();
+
+                    Assert.NotEqual(0, query.QueryStatistics.TotalResults);
+                    Assert.Equal(query.QueryStatistics.TotalResults, query.QueryResult.TotalResults);
+                }
+            }
+        }
 	}
 }

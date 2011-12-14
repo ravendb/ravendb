@@ -180,6 +180,19 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+        /// <summary>
+        /// Statistics about the query, such as total count of matching records, after the query executed
+        /// </summary>
+        public RavenQueryStatistics QueryStatistics
+	    {
+	        get 
+            { 
+                RavenQueryStatistics queryStatistics;
+                Statistics(out queryStatistics);
+                return queryStatistics;
+            }
+	    }
+
 
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
