@@ -84,8 +84,8 @@ namespace Raven.Database.Server
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
 
-		private readonly static TimeSpan maxTimeDatabaseCanBeIdle = TimeSpan.FromMinutes(15);
-		private static readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+		private TimeSpan maxTimeDatabaseCanBeIdle;
+		private TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
 		public bool HasPendingRequests
 		{
@@ -98,6 +98,14 @@ namespace Raven.Database.Server
 
 			DefaultResourceStore = resourceStore;
 			DefaultConfiguration = configuration;
+
+			int val;
+			if(int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
+				val = 900;
+			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(val);
+			if (int.TryParse(configuration.Settings["Raven/Tenants/FrequnecyToCheckForIdleDatabases"], out val) == false)
+				val = 60;
+			frequnecyToCheckForIdleDatabases = TimeSpan.FromSeconds(val);
 
 			configuration.Container.SatisfyImportsOnce(this);
 
