@@ -85,7 +85,6 @@
 			</Grid.RowDefinitions>
 
 			<data:DataGrid x:Name="LogsList"
-						   Grid.Row="1"
 						   AutoGenerateColumns="False"
 						   FrozenColumnCount="1"
 						   IsReadOnly="True"
@@ -132,14 +131,14 @@
 				</data:DataGrid.Columns>
 			</data:DataGrid>
 
-			<sdk:GridSplitter Grid.Row="2"
+			<sdk:GridSplitter Grid.Row="1"
 							  HorizontalAlignment="Stretch"
 							  Style="{StaticResource Style_GridSplitter_Transparent}" />
 
 			<Border BorderBrush="#FFEAE7E4"
 					Background="{StaticResource Brush_SubtleBackground2}"
 					BorderThickness="1"
-					Grid.Row="3">
+					Grid.Row="2">
 				<Grid DataContext="{Binding ElementName=LogsList, Path=SelectedItem}"
 					  Visibility="{Binding ElementName=LogsList, Path=SelectedItem, Converter={StaticResource HiddenWhenNull}}">
 					<Grid.ColumnDefinitions>
