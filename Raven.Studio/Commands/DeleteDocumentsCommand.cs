@@ -38,10 +38,11 @@ namespace Raven.Studio.Commands
 
 		private void DeleteDocuments(IList<string> documentIds)
 		{
-			DeleteCommandData[] deleteCommandDatas = documentIds.Select(id => new DeleteCommandData
-															  {
-																  Key = id
-															  }).ToArray();
+			var deleteCommandDatas = documentIds
+				.Select(id => new DeleteCommandData{Key = id})
+				.Cast<ICommandData>()
+				.ToArray();
+
 			DatabaseCommands.BatchAsync(deleteCommandDatas)
 				.ContinueOnSuccessInTheUIThread(() => DeleteDocumentSuccess(documentIds));
 		}
