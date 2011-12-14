@@ -29,7 +29,7 @@ namespace Raven.Tests.Bugs.LiveProjections.Indexes
 														  PlaceName = place.Name
 													  };
 
-			SortOptions.Add(s => s.Start, Raven.Abstractions.Indexing.SortOptions.String);
+			IndexSortOptions.Add(s => s.Start, Raven.Abstractions.Indexing.SortOptions.String);
 		}
 	}
 }
