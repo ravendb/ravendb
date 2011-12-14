@@ -95,13 +95,23 @@ namespace Raven.Database.Indexing
 				{
 					currentIndexSearcherHolder.SetIndexSearcher(null);
 				}
+
 				if (indexWriter != null)
 				{
-					IndexWriter writer = indexWriter;
+					var writer = indexWriter;
 					indexWriter = null;
+
 					try
 					{
 						writer.GetAnalyzer().Close();
+					}
+					catch (Exception e)
+					{
+						logIndexing.ErrorException("Error while closing the index (closing the analyzer failed)", e);
+					}
+
+					try
+					{
 						writer.Close();
 					}
 					catch (Exception e)
@@ -109,6 +119,7 @@ namespace Raven.Database.Indexing
 						logIndexing.ErrorException("Error when closing the index", e);
 					}
 				}
+
 				try
 				{
 					directory.Close();
@@ -122,7 +133,7 @@ namespace Raven.Database.Indexing
 
 		#endregion
 
-		public void Flush()
+		public void Flush(bool optimize = false)
 		{
 			lock (writeLock)
 			{
@@ -130,7 +141,7 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter != null)
 				{
-					indexWriter.Optimize();
+					if (optimize) indexWriter.Optimize();
 					indexWriter.Commit();
 				}
 			}
