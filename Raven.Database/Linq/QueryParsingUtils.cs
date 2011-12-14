@@ -81,7 +81,7 @@ namespace Raven.Database.Linq
 
 			var declaration = block.Children[0] as LocalVariableDeclaration;
 			if (declaration == null)
-				throw new InvalidOperationException("Only local variable decleration are allowed");
+				throw new InvalidOperationException("Only local variable declaration are allowed");
 
 			if (declaration.Variables.Count != 1)
 				throw new InvalidOperationException("Only one variable declaration is allowed");
@@ -120,7 +120,7 @@ namespace Raven.Database.Linq
 
 			var declaration = block.Children[0] as LocalVariableDeclaration;
 			if (declaration == null)
-				throw new InvalidOperationException("Only local variable decleration are allowed");
+				throw new InvalidOperationException("Only local variable declaration are allowed");
 
 			if (declaration.Variables.Count != 1)
 				throw new InvalidOperationException("Only one variable declaration is allowed");
