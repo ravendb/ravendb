@@ -31,6 +31,8 @@ namespace Raven.Storage.Esent
 			{
 				logsPath = configuration.Settings["Raven/Esent/LogsPath"].ToFullPath();
 			}
+			var logFileSizeInMb = GetValueFromConfiguration("Raven/Esent/LogFileSize", 16);
+			logFileSizeInMb = Math.Max(1, logFileSizeInMb/4); // there are 4 log files that are getting created, so we split them that way
 			return new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,
@@ -44,7 +46,7 @@ namespace Raven.Storage.Esent
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 16)) / 2,
-				LogFileSize = GetValueFromConfiguration("Raven/Esent/LogFileSize", 16) * 1024,
+				LogFileSize = logFileSizeInMb * 1024,
 				MaxSessions = MaxSessions,
 				MaxCursors = GetValueFromConfiguration("Raven/Esent/MaxCursors", 2048),
 				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/DbExtensionSize", 16)),
