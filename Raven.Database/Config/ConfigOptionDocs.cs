@@ -61,7 +61,7 @@ namespace Raven.Database.Config
 			// Esent
 			{"Raven/Esent/CacheSizeMax", "int", null, "The size in MB of the Esent page cache, which is the default stroage engine. Default: 1,048 MB on 64 bits, 256 MB on 32 bits."},
 			{"Raven/Esent/MaxVerPages", "int", null, "The maximum size of version store (in memory modified data) available. The value is in megabytes. Default: 128."},
-			{"Raven/Esent/LogFileSize", "int", null, "The size of the database log file. The value is in megabytes. Default: 16."},
+			{"Raven/Esent/LogFileSize", "int", null, "The size of the database log file. The value is in kilobytes. Default: 8,192."},
 			{"Raven/Esent/LogBuffers", "int", null, "The size of the in memory buffer for transaction log. Default: 16."},
 			{"Raven/Esent/MaxCursors", "int", null, "The maximum number of cursors allowed concurrently. Default: 2048."},
 			{"Raven/Esent/DbExtensionSize", "int", null, "The size that the database file will be enlarged with when the file is full. The value is in megabytes. Lower values result in smaller file size, but slower performance when the database size grows. Default: 8."},
