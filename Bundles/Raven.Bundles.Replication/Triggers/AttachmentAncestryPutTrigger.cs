@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
+using System.IO;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -23,7 +24,7 @@ namespace Raven.Bundles.Replication.Triggers
 			};
 		}
 
-		public override void OnPut(string key, byte[] data, RavenJObject metadata)
+		public override void OnPut(string key, Stream data, RavenJObject metadata)
 		{
 			if (key.StartsWith("Raven/")) // we don't deal with system attachment
 				return;

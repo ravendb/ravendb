@@ -632,7 +632,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <remarks>
 		/// This is mainly useful for internal use inside RavenDB, when we are executing
-		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
+		/// queries that have been marked with WaitForNonStaleResults, we temporarily disable
 		/// aggressive caching.
 		/// </remarks>
 		public IDisposable DisableAggressiveCaching()

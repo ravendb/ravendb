@@ -181,12 +181,7 @@
     <Compile Include="Impl\PopupPlacement\PopupOrientationCollection.cs" />
     <Compile Include="Impl\PopupPlacement\PopupPlacement.cs" />
     <Compile Include="Impl\PopupPlacement\PopupVerticalAlignment.cs" />
-    <Compile Include="Impl\RelativeBinding\BindingHelper.cs" />
-    <Compile Include="Impl\RelativeBinding\BindingList.cs" />
-    <Compile Include="Impl\RelativeBinding\RelativeSourceBase.cs" />
-    <Compile Include="Impl\RelativeBinding\RelativeSourceBinding.cs" />
-    <Compile Include="Impl\RelativeBinding\RelativeSourceMode.cs" />
-    <Compile Include="Impl\RelativeBinding\TypeLoader.cs" />
+    <Compile Include="Infrastructure\Converters\CollectionCountToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThenOrEqualTo.cs" />
     <Compile Include="Infrastructure\ErrorHandler.cs" />
     <Compile Include="Infrastructure\ErrorPresenter.cs" />
@@ -562,6 +557,7 @@
     <EmbeddedResource Include="Controls\Editors\Definitions\JScript.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\RavenQuery.langdef" />
+    <EmbeddedResource Include="Features\Logs\DefaultLogging.config" />
     <None Include="packages.config" />
     <None Include="Properties\AppManifest.xml" />
     <EmbeddedResource Include="Settings.dat" />
@@ -598,7 +594,6 @@
     <Resource Include="Assets\Images\ExecuteQuery.png" />
     <Resource Include="Assets\Images\ChangeView.png" />
     <Content Include="Impl\PopupPlacement\Credit.txt" />
-    <Content Include="Impl\RelativeBinding\Credits.txt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">

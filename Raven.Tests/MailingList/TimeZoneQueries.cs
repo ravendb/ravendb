@@ -16,9 +16,9 @@ namespace Raven.Tests.MailingList
 		{
 			using(var store = NewDocumentStore())
 			{
-				using(var session = store.OpenSession())
+				var notTheCurrentTimeZone = GetDifferentTimeZoneThanCurrentTimeZone();
+				using (var session = store.OpenSession())
 				{
-					var notTheCurrentTimeZone = GetDifferentTimeZoneThanCurrentTimeZone();
 					session.Store(new Item
 					{
 						At = new DateTimeOffset(new DateTime(2011,11,11,11,0,0),notTheCurrentTimeZone)
@@ -28,14 +28,15 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
+					var dateTimeOffset = new DateTimeOffset(new DateTime(2011, 11, 11, 13, 0, 0), notTheCurrentTimeZone.Add(TimeSpan.FromHours(2)));
 					Assert.NotEmpty(session.Query<Item>()		// exact match, differnt timezone
-						.Where(x => x.At == new DateTimeOffset(new DateTime(2011, 11, 11, 10, 0, 0), TimeSpan.FromHours(2))));
+						.Where(x => x.At == dateTimeOffset));
 
 					Assert.NotEmpty(session.Query<Item>()		// greater than equal match, same timezone
-						.Where(x => x.At > new DateTimeOffset(new DateTime(2011, 11, 11, 10, 0, 0), TimeSpan.FromHours(3))));
+						.Where(x => x.At > new DateTimeOffset(new DateTime(2011, 11, 11, 10, 0, 0), notTheCurrentTimeZone)));
 
 					Assert.NotEmpty(session.Query<Item>()		// less than match, different timezone
-						.Where(x => x.At < new DateTimeOffset(new DateTime(2011, 11, 11, 10, 0, 0), TimeSpan.FromHours(-9)))); 
+						.Where(x => x.At < new DateTimeOffset(new DateTime(2011, 11, 11, 10, 0, 0), notTheCurrentTimeZone.Add(TimeSpan.FromHours(-9))))); 
 				}
 			}
 		}
@@ -43,9 +44,9 @@ namespace Raven.Tests.MailingList
 		private static TimeSpan GetDifferentTimeZoneThanCurrentTimeZone()
 		{
 			var differentTimeZoneThanCurrentTimeZone = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now);
-			if (differentTimeZoneThanCurrentTimeZone.Hours > 10)
-				return differentTimeZoneThanCurrentTimeZone.Add(TimeSpan.FromHours(-1));
-			return differentTimeZoneThanCurrentTimeZone.Add(TimeSpan.FromHours(1));
+			if(differentTimeZoneThanCurrentTimeZone.Hours == 3)
+				return TimeSpan.FromHours(1);
+			return TimeSpan.FromHours(3);
 		}
 	}
 }

@@ -10,6 +10,7 @@ namespace Raven.Studio.Commands
 		public NavigateToPrevPageCommand(PagerModel pager)
 		{
 			this.pager = pager;
+			this.pager.PagerChanged += (sender, args) => RaiseCanExecuteChanged();
 		}
 
 		public override void Execute(object parameter)
@@ -19,7 +20,7 @@ namespace Raven.Studio.Commands
 
 		public override bool CanExecute(object parameter)
 		{
-			return pager.HasPrevPage();
+			return pager.HasPrevPage;
 		}
 	}
 }

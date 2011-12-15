@@ -4,11 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Threading;
 using System.Transactions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
@@ -85,12 +87,13 @@ namespace Raven.Tests.Document
 				var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.Null(attachment);
 
-				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] {1, 2, 3}, new RavenJObject {{"Hello", "World"}});
+
+				documentStore.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
 
 				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.NotNull(attachment);
 
-				Assert.Equal(new byte[]{1,2,3}, attachment.Data);
+				Assert.Equal(new byte[]{1,2,3}, attachment.Data().ReadData());
 				Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
 
 				documentStore.DatabaseCommands.DeleteAttachment("ayende", null);

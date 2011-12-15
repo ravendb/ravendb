@@ -17,10 +17,17 @@ namespace Raven.Studio.Infrastructure
 			if (Deployment.Current.Dispatcher.CheckAccess())
 			{
 				action();
-				return null;
+				return EmptyResult<object>();
 			}
 			return Deployment.Current.Dispatcher.InvokeAsync(action)
 				.Catch();
+		}
+
+		private static Task<T> EmptyResult<T>()
+		{
+			var tcs = new TaskCompletionSource<T>();
+			tcs.SetResult(default(T));
+			return tcs.Task;
 		}
 
 		public static Task<TResult> OnTheUI<TResult>(Func<TResult> action)
@@ -28,7 +35,7 @@ namespace Raven.Studio.Infrastructure
 			if (Deployment.Current.Dispatcher.CheckAccess())
 			{
 				action();
-				return null;
+				return EmptyResult<TResult>();
 			}
 			return Deployment.Current.Dispatcher.InvokeAsync(action)
 				.Catch();

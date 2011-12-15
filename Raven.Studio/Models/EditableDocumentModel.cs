@@ -198,6 +198,8 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		private bool notifiedOnDelete;
+		private bool notifiedOnChange;
 		protected override Task LoadedTimerTickedAsync()
 		{
 			if (isLoaded == false ||
@@ -209,10 +211,16 @@ namespace Raven.Studio.Models
 				{
 					if (docOnServer == null)
 					{
+						if (notifiedOnDelete)
+							return;
+						notifiedOnDelete = true;
 						ApplicationModel.Current.AddNotification(new Notification("Document " + Key + " was deleted on the server"));
 					}
 					else if (docOnServer.Etag != Etag)
 					{
+						if (notifiedOnChange)
+							return;
+						notifiedOnChange = true;
 						ApplicationModel.Current.AddNotification(new Notification("Document " + Key + " was changed on the server"));
 					}
 				});

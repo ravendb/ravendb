@@ -54,7 +54,7 @@ namespace Raven.Munin
 		{
 			IComparable actualKey = transform(key);
 			Index = Index.AddOrUpdate(actualKey,
-				new EmptyAVLTree<RavenJToken, RavenJToken>(RavenJTokenComparer.Instance, RavenJTokenCloner.Clone, RavenJTokenCloner.Clone).Add(key, key),
+				new EmptyAVLTree<RavenJToken, RavenJToken>(RavenJTokenComparer.Instance, token => token.CloneToken(), token => token.CloneToken()).Add(key, key),
 				(comparable, tree) => tree.Add(key, key));
 		}
 

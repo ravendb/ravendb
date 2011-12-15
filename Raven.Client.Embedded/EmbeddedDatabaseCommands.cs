@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
 using System.Net;
 using Newtonsoft.Json.Linq;
@@ -150,7 +151,7 @@ namespace Raven.Client.Embedded
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata)
+		public void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			// we filter out content length, because getting it wrong will cause errors 
@@ -169,7 +170,18 @@ namespace Raven.Client.Embedded
 		public Attachment GetAttachment(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.GetStatic(key);
+			Attachment attachment = database.GetStatic(key);
+			if (attachment == null)
+				return null;
+			Func<Stream> data = attachment.Data;
+			attachment.Data = () =>
+			{
+				var memoryStream = new MemoryStream();
+				database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
+				memoryStream.Position = 0;
+				return memoryStream;
+			};
+			return attachment;
 		}
 
 		/// <summary>
@@ -400,7 +412,7 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var jObject = new RavenJObject {{"Resource-Manager-Id", resourceManagerId.ToString()}};
-			database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, jObject);
+			database.PutStatic("transactions/recoveryInformation/" + txId, null, new MemoryStream(recoveryInformation), jObject);
 		}
 
 		/// <summary>

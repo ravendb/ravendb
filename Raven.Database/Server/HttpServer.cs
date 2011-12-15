@@ -16,7 +16,6 @@ using System.Threading;
 using System.Linq;
 using Newtonsoft.Json;
 using NLog;
-using NLog.Config;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -30,7 +29,6 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
-using Raven.Database.Util;
 
 namespace Raven.Database.Server
 {
@@ -86,6 +84,9 @@ namespace Raven.Database.Server
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
 
+		private TimeSpan maxTimeDatabaseCanBeIdle;
+		private TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+
 		public bool HasPendingRequests
 		{
 			get { return concurretRequestSemaphore.CurrentCount != MaxConcurrentRequests; }
@@ -93,10 +94,18 @@ namespace Raven.Database.Server
 
 		public HttpServer(InMemoryRavenConfiguration configuration, DocumentDatabase resourceStore)
 		{
-			RegisterHttpEndpointTarget();
+			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
 			DefaultResourceStore = resourceStore;
 			DefaultConfiguration = configuration;
+
+			int val;
+			if(int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
+				val = 900;
+			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(val);
+			if (int.TryParse(configuration.Settings["Raven/Tenants/FrequnecyToCheckForIdleDatabases"], out val) == false)
+				val = 60;
+			frequnecyToCheckForIdleDatabases = TimeSpan.FromSeconds(val);
 
 			configuration.Container.SatisfyImportsOnce(this);
 
@@ -122,14 +131,6 @@ namespace Raven.Database.Server
 			RemoveTenantDatabase.Occured.Subscribe(TenantDatabaseRemoved);
 		}
 
-		public static void RegisterHttpEndpointTarget()
-		{
-			Type type;
-			if (ConfigurationItemFactory.Default.Targets.TryGetDefinition("HttpEndpoint", out type) == false)
-				ConfigurationItemFactory.Default.Targets.RegisterDefinition("HttpEndpoint", typeof(BoundedMemoryTarget));
-		}
-
-
 		private void TenantDatabaseRemoved(object sender, RemoveTenantDatabase.Event @event)
 		{
 			if (@event.Database != DefaultResourceStore)
@@ -146,13 +147,19 @@ namespace Raven.Database.Server
 				databasesCleanupTimer.Dispose();
 			if (listener != null && listener.IsListening)
 				listener.Stop();
+
+			lock(ResourcesStoresCache)
+			{
+				foreach (var documentDatabase in ResourcesStoresCache)
+				{
+					documentDatabase.Value.Dispose();
+				}
+				ResourcesStoresCache.Clear();
+			}
+
 			currentConfiguration.Dispose();
 			currentDatabase.Dispose();
 			currentTenantId.Dispose();
-			foreach (var documentDatabase in ResourcesStoresCache)
-			{
-				documentDatabase.Value.Dispose();
-			}
 		}
 
 		#endregion
@@ -177,13 +184,13 @@ namespace Raven.Database.Server
 
 		public void Init()
 		{
-			databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+			databasesCleanupTimer = new Timer(CleanupDatabases, null, frequnecyToCheckForIdleDatabases, frequnecyToCheckForIdleDatabases);
 		}
 
 		private void CleanupDatabases(object state)
 		{
 			var databasesToCleanup = databaseLastRecentlyUsed
-				.Where(x => (SystemTime.Now - x.Value).TotalMinutes > 10)
+				.Where(x => (SystemTime.Now - x.Value) > maxTimeDatabaseCanBeIdle)
 				.Select(x => x.Key)
 				.ToArray();
 
@@ -369,7 +376,6 @@ namespace Raven.Database.Server
 				Error = e.Message
 			});
 		}
-
 
 		private static void HandleIndexDisabledException(IHttpContext ctx, IndexDisabledException e)
 		{

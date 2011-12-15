@@ -314,7 +314,8 @@ namespace Raven.Client.Shard
 		/// </remarks>
 		public T Load<T>(ValueType id)
 		{
-			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+			// assuming all conventions are the same
+			var documentKey = shardSessions.First().Advanced.DocumentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
 			return Load<T>(documentKey);
 		}
 

@@ -98,6 +98,21 @@ namespace Raven.Tests.Shard
 		}
 
 		[Fact]
+		public void Can_query_using_int()
+		{
+			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
+			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
+			{
+				documentStore.Initialize();
+
+				using (var session = documentStore.OpenSession())
+				{
+					session.Load<Company>(1);
+				}
+			}
+		}
+
+		[Fact]
 		public void Can_insert_into_two_sharded_servers()
 		{
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))

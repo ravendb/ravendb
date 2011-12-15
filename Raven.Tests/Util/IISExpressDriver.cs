@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 
 namespace Raven.Tests.Util
 {
@@ -16,8 +17,16 @@ namespace Raven.Tests.Util
 				process.Kill();
 			}
 
-			StartProcess(@"c:\program files (x86)\IIS Express\IISExpress.exe",
-				@"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
+			if (File.Exists(@"c:\program files (x86)\IIS Express\IISExpress.exe"))
+			{
+				StartProcess(@"c:\program files (x86)\IIS Express\IISExpress.exe",
+				             @"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
+			}
+			else
+			{
+				StartProcess(@"c:\program files\IIS Express\IISExpress.exe",
+							 @"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
+			}
 
 			var match = WaitForConsoleOutputMatching(@"Successfully registered URL ""([^""]*)""");
 

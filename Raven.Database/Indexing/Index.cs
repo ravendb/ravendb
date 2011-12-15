@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -94,13 +95,23 @@ namespace Raven.Database.Indexing
 				{
 					currentIndexSearcherHolder.SetIndexSearcher(null);
 				}
+
 				if (indexWriter != null)
 				{
-					IndexWriter writer = indexWriter;
+					var writer = indexWriter;
 					indexWriter = null;
+
 					try
 					{
 						writer.GetAnalyzer().Close();
+					}
+					catch (Exception e)
+					{
+						logIndexing.ErrorException("Error while closing the index (closing the analyzer failed)", e);
+					}
+
+					try
+					{
 						writer.Close();
 					}
 					catch (Exception e)
@@ -108,6 +119,7 @@ namespace Raven.Database.Indexing
 						logIndexing.ErrorException("Error when closing the index", e);
 					}
 				}
+
 				try
 				{
 					directory.Close();
@@ -121,7 +133,7 @@ namespace Raven.Database.Indexing
 
 		#endregion
 
-		public void Flush()
+		public void Flush(bool optimize = false)
 		{
 			lock (writeLock)
 			{
@@ -129,7 +141,7 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter != null)
 				{
-					indexWriter.Optimize();
+					if (optimize) indexWriter.Optimize();
 					indexWriter.Commit();
 				}
 			}
@@ -168,7 +180,8 @@ namespace Raven.Database.Indexing
 					{
 						return g.First();
 					}
-					return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray(g.Select(x => x.Value)));
+					var ravenJTokens = g.Select(x => x.Value).ToArray();
+					return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray((IEnumerable)ravenJTokens));
 				});
 			foreach (var keyValuePair in q)
 			{
@@ -179,6 +192,8 @@ namespace Raven.Database.Indexing
 
 		private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
 		{
+			if(fld.IsBinary())
+				return new KeyValuePair<string, RavenJToken>(fld.Name(), fld.GetBinaryValue());
 			var stringValue = fld.StringValue();
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
 			{

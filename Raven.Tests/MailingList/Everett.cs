@@ -118,13 +118,11 @@ namespace Raven.Tests.MailingList
 
 		public class Customer : Account
 		{
-			public string Id { get; set; }
 			public string DealerId { get; set; }
 		}
 
 		public class Dealer : Account
 		{
-			public string Id { get; set; }
 		}
 
 		protected override void ModifyStore(Raven.Client.Embedded.EmbeddableDocumentStore documentStore)

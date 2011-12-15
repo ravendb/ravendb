@@ -4,12 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Net;
 using System.Transactions;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Server;
 using Raven.Json.Linq;
@@ -1222,12 +1224,12 @@ namespace Raven.Tests.Document
 				var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.Null(attachment);
 
-				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] {1, 2, 3}, new RavenJObject {{"Hello", "World"}});
+				documentStore.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
 
 				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.NotNull(attachment);
 
-				Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data);
+				Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
 				Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
 
 				documentStore.DatabaseCommands.DeleteAttachment("ayende", null);
@@ -1254,8 +1256,8 @@ namespace Raven.Tests.Document
 									{ "Content-Type", "text/plain" },
 									{ "filename", "test.txt" },
 									{ "Content-Length", 100 },
-								};                
-				Assert.DoesNotThrow(() => documentStore.DatabaseCommands.PutAttachment(key, null, new byte[] { 0, 1, 2 }, metadata));
+								};
+				Assert.DoesNotThrow(() => documentStore.DatabaseCommands.PutAttachment(key, null, new MemoryStream(new byte[] { 0, 1, 2 }), metadata));
 			}
 		}
 	}    

@@ -100,7 +100,7 @@ namespace Raven.Database.Indexing
 		}
 
 
-		protected override void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn)
 		{
 			Parallel.ForEach(indexesToWorkOn, new ParallelOptions
 			{
@@ -109,7 +109,7 @@ namespace Raven.Database.Indexing
 			}, HandleReduceForIndex);
 		}
 
-		protected override void ExecuteIndexingWorkOnSingleThread(IEnumerable<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn)
 		{
 			foreach (var indexToWorkOn in indexesToWorkOn)
 			{

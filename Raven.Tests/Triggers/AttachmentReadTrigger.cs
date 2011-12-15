@@ -3,7 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
 using System.ComponentModel.Composition.Hosting;
+using System.IO;
+using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
@@ -38,7 +42,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAttachment()
 		{
-			db.PutStatic("ayendE", null, new byte[] { 1, 2 }, new RavenJObject());
+			db.PutStatic("ayendE", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
 
 			var attachment = db.GetStatic("ayendE");
 
@@ -49,7 +53,7 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanHideAttachment()
 		{
-			db.PutStatic("AYENDE", null, new byte[] { 1, 2 }, new RavenJObject());
+			db.PutStatic("AYENDE", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
 
 			var attachment = db.GetStatic("AYENDE");
 
@@ -59,17 +63,17 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanModifyAttachment()
 		{
-			db.PutStatic("ayende", null, new byte[] { 1, 2 }, new RavenJObject());
+			db.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
 
 
 			var attachment = db.GetStatic("ayende");
 
-			Assert.Equal(attachment.Data.Length, 4);
+			Assert.Equal(attachment.Data().Length, 4);
 		}
 
 		public class HideAttachmentByCaseReadTrigger : AbstractAttachmentReadTrigger
 		{
-			public override ReadVetoResult AllowRead(string key, byte[] data, RavenJObject metadata, ReadOperation operation)
+			public override ReadVetoResult AllowRead(string key, Stream data, RavenJObject metadata, ReadOperation operation)
 			{
 				if (key.All(char.IsUpper))
 					return ReadVetoResult.Ignore;
@@ -78,9 +82,10 @@ namespace Raven.Tests.Triggers
 				return ReadVetoResult.Allowed;
 			}
 
-			public override byte[] OnRead(string key, byte[] data, RavenJObject metadata, ReadOperation operation)
+			public override void OnRead(string key, Attachment attachment)
 			{
-				return new byte[] { 1, 2, 3, 4 };
+				attachment.Data = () => new MemoryStream(new byte[] { 1, 2, 3, 4 });
+				attachment.Size = 4;
 			}
 		}
 	}

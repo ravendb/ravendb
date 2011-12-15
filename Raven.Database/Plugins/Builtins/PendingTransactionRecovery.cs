@@ -5,9 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Transactions;
 using NLog;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Plugins.Builtins
 {
@@ -38,7 +40,7 @@ namespace Raven.Database.Plugins.Builtins
 						{
 							try
 							{
-								TransactionManager.Reenlist(resourceManagerId, attachment.Data, new InternalEnlistment(database, txId));
+								TransactionManager.Reenlist(resourceManagerId, attachment.Data().ReadData(), new InternalEnlistment(database, txId));
 								resourceManagersRequiringRecovery.Add(resourceManagerId);
 							}
 							catch (Exception e)
@@ -71,7 +73,8 @@ namespace Raven.Database.Plugins.Builtins
 
 			public void Prepare(PreparingEnlistment preparingEnlistment)
 			{
-				database.PutStatic("transactions/recoveryInformation/" + txId, null, preparingEnlistment.RecoveryInformation(), new RavenJObject());
+				byte[] recoveryInformation = preparingEnlistment.RecoveryInformation();
+				database.PutStatic("transactions/recoveryInformation/" + txId, null, new MemoryStream(recoveryInformation), new RavenJObject());
 				preparingEnlistment.Prepared();
 			}
 

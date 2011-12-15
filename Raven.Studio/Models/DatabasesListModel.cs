@@ -23,7 +23,7 @@ namespace Raven.Studio.Models
 		private DatabaseModel selectedDatabase;
 		public DatabaseModel SelectedDatabase
 		{
-			get { return selectedDatabase ?? (selectedDatabase = ApplicationModel.Current.Server.Value.SelectedDatabase.Value); }
+			get { return selectedDatabase ?? (selectedDatabase = ApplicationModel.Database.Value); }
 			set
 			{
 				selectedDatabase = value;

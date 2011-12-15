@@ -85,7 +85,7 @@ task Init -depends Verify40, Clean {
 			-company "Hibernating Rhinos" `
 			-product "RavenDB $version.0.0" `
 			-version "$version.0" `
-			-fileversion "1.0.$env:buildlabel.0" `
+			-fileversion "$version.$env:buildlabel.0" `
 			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
 			-clsCompliant $clsComliant
 	}
@@ -424,12 +424,6 @@ task UploadUnstable -depends Unstable, DoRelease, Upload {
 task CreateNugetPackage {
   $accessPath = "$base_dir\..\Nuget-Access-Key.txt"
   
-  if( $global:uploadCategory -ne "RavenDB") # we only publish the stable version out
-  {
-    Write-Host "Not a stable build, skipping nuget package creation"
-    return
-  }
-  
   if ( (Test-Path $accessPath) -eq $false )
   {
     return;
@@ -506,8 +500,12 @@ task CreateNugetPackage {
 ########### First pass - RavenDB.nupkg
 
   $nupack = [xml](get-content $base_dir\RavenDB.nuspec)
-	
+  $label = "$version.$env:buildlabel"
   $nupack.package.metadata.version = "$version.$env:buildlabel"
+  if ($global:uploadCategory.EndsWith("-Unstable")){
+    $nupack.package.metadata.version += "-Unstable"
+    $label += "-Unstable"
+  }
 
   $writerSettings = new-object System.Xml.XmlWriterSettings
   $writerSettings.OmitXmlDeclaration = $true
@@ -528,7 +526,9 @@ task CreateNugetPackage {
   $nupack = [xml](get-content $base_dir\RavenDB-Embedded.nuspec)
 	
   $nupack.package.metadata.version = "$version.$env:buildlabel"
-
+  if ($global:uploadCategory.EndsWith("-Unstable")){
+    $nupack.package.metadata.version += "-Unstable"
+  }
   $writerSettings = new-object System.Xml.XmlWriterSettings
   $writerSettings.OmitXmlDeclaration = $true
   $writerSettings.NewLineOnAttributes = $true
@@ -543,8 +543,8 @@ task CreateNugetPackage {
   & "$tools_dir\nuget.exe" pack $build_dir\NuPack-Embedded\RavenDB-Embedded.nuspec
   
   # Push to nuget repository
-  & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB.$version.$env:buildlabel.nupkg" $accessKey
-  & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB-Embedded.$version.$env:buildlabel.nupkg" $accessKey
+  & "$tools_dir\nuget.exe" push "RavenDB.$label.nupkg" $accessKey
+  & "$tools_dir\nuget.exe" push "RavenDB-Embedded.$label.nupkg" $accessKey
   
   
   # This is prune to failure since the previous package may not exists

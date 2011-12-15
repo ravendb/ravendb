@@ -108,6 +108,9 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
+			AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
+			AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
+
 			ExternalState = new ConcurrentDictionary<string, object>();
 			Name = configuration.DatabaseName;
 			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
@@ -174,6 +177,11 @@ namespace Raven.Database
 				Dispose();
 				throw;
 			}
+		}
+
+		private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
+		{
+			Dispose();
 		}
 
 		private void InitializeTriggers()
@@ -298,6 +306,8 @@ namespace Raven.Database
 		{
 			if (disposed)
 				return;
+			AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
+			AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
 		    disposed = true;
 			workContext.StopWork();
 			foreach (var value in ExtensionsState.Values.OfType<IDisposable>())
@@ -470,7 +480,7 @@ namespace Raven.Database
 			}
 		}
 
-		private void AssertAttachmentPutOperationNotVetoed(string key, RavenJObject metadata, byte[] data)
+		private void AssertAttachmentPutOperationNotVetoed(string key, RavenJObject metadata, Stream data)
 		{
 			var vetoResult = AttachmentPutTriggers
 				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, data, metadata) })
@@ -856,14 +866,15 @@ namespace Raven.Database
 				if (foundResult)
 					break;
 				var attachmentReadTrigger = attachmentReadTriggerLazy.Value;
-				var readVetoResult = attachmentReadTrigger.AllowRead(name, attachment.Data, attachment.Metadata,
+				var readVetoResult = attachmentReadTrigger.AllowRead(name, attachment.Data(), attachment.Metadata,
 																	 ReadOperation.Load);
 				switch (readVetoResult.Veto)
 				{
 					case ReadVetoResult.ReadAllow.Allow:
 						break;
 					case ReadVetoResult.ReadAllow.Deny:
-						attachment.Data = new byte[0];
+						attachment.Data = () => new MemoryStream(new byte[0]);
+						attachment.Size = 0;
 						attachment.Metadata = new RavenJObject
 						                      	{
 						                      		{
@@ -895,11 +906,11 @@ namespace Raven.Database
 
 			foreach (var attachmentReadTrigger in AttachmentReadTriggers)
 			{
-				attachment.Data = attachmentReadTrigger.Value.OnRead(name, attachment.Data, attachment.Metadata, ReadOperation.Load);
+				attachmentReadTrigger.Value.OnRead(name, attachment);
 			}
 		}
 
-		public void PutStatic(string name, Guid? etag, byte[] data, RavenJObject metadata)
+		public void PutStatic(string name, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 			if (Encoding.Unicode.GetByteCount(name) >= 255)
@@ -1180,8 +1191,8 @@ namespace Raven.Database
 				Started = SystemTime.UtcNow,
 				IsRunning = true,
 			}), new RavenJObject(), null);
-			IndexStorage.FlushMapIndexes();
-			IndexStorage.FlushReduceIndexes();
+			IndexStorage.FlushMapIndexes(true);
+			IndexStorage.FlushReduceIndexes(true);
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup);
 		}
 

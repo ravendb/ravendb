@@ -10,7 +10,7 @@ namespace Raven.Studio.Models
 			Documents = new Observable<DocumentsModel>();
 			Documents.Value = new DocumentsModel();
 			SetTotalResults();
-			ApplicationModel.Current.Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => SetTotalResults();
+			ApplicationModel.Database.PropertyChanged += (sender, args) => SetTotalResults();
 		}
 
 		private static void SetTotalResults()
