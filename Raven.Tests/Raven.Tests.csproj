@@ -225,6 +225,7 @@
     <Compile Include="Bugs\RacielrodTest.cs" />
     <Compile Include="Bugs\RecursiveQueries.cs" />
     <Compile Include="Bugs\Reindexing.cs" />
+    <Compile Include="Bugs\ReservedWords.cs" />
     <Compile Include="Bugs\RoundCrisis.cs" />
     <Compile Include="Bugs\SelfReference.cs" />
     <Compile Include="Bugs\SerializingAndDeserializingWithRaven.cs" />
