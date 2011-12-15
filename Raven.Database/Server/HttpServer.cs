@@ -565,12 +565,17 @@ namespace Raven.Database.Server
 			{
 				var config = new InMemoryRavenConfiguration
 				{
-					Settings = DefaultConfiguration.Settings,
+					Settings = new NameValueCollection(DefaultConfiguration.Settings),
 				};
+				
+				config.CustomizeValuesForTenant(tenantId);
+
 				foreach (var setting in document.Settings)
 				{
 					config.Settings[setting.Key] = setting.Value;
 				}
+
+
 				var dataDir = config.Settings["Raven/DataDir"];
 				if (dataDir == null)
 					throw new InvalidOperationException("Could not find Raven/DataDir");
