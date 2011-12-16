@@ -307,7 +307,7 @@ namespace Raven.Database
 			if (disposed)
 				return;
 
-			var exceptionAggregator = new ExceptionAggregator();
+			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");
 
 			exceptionAggregator.Execute(() =>
 			{

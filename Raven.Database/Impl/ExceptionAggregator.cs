@@ -1,11 +1,20 @@
 using System;
 using System.Collections.Generic;
+using NLog;
 
 namespace Raven.Database.Impl
 {
 	public class ExceptionAggregator
 	{
-		List<Exception> list = new List<Exception>();
+		private readonly Logger log;
+		private readonly string errorMsg;
+		readonly List<Exception> list = new List<Exception>();
+
+		public ExceptionAggregator(Logger log, string errorMsg)
+		{
+			this.log = log;
+			this.errorMsg = errorMsg;
+		}
 
 		public void Execute(Action action)
 		{
@@ -24,7 +33,9 @@ namespace Raven.Database.Impl
 			if (list.Count == 0)
 				return;
 
-			throw new AggregateException(list);
+			var aggregateException = new AggregateException(list);
+			log.ErrorException(errorMsg, aggregateException);
+			throw aggregateException;
 		}
 	}
 }
