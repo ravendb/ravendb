@@ -141,19 +141,26 @@ namespace Raven.Tests
 				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
 
 			var ravenDbServer = new RavenDbServer(ravenConfiguration);
-
-			if (initializeDocumentsByEntitiyName)
+			try
 			{
-				using (var documentStore = new DocumentStore
+				if (initializeDocumentsByEntitiyName)
 				{
-					Url = "http://localhost:8080"
-				}.Initialize())
-				{
-					new RavenDocumentsByEntityName().Execute(documentStore);
+					using (var documentStore = new DocumentStore
+					{
+						Url = "http://localhost:8080"
+					}.Initialize())
+					{
+						new RavenDocumentsByEntityName().Execute(documentStore);
+					}
 				}
-			}
 
-			return ravenDbServer;
+				return ravenDbServer;
+			}
+			catch 
+			{
+				ravenDbServer.Dispose();
+				throw;
+			}
 		}
 
 		protected virtual void ConfigureServer(RavenConfiguration ravenConfiguration)
