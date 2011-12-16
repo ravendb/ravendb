@@ -223,11 +223,23 @@ namespace Raven.Database.Server
 			lock (ResourcesStoresCache)
 			{
 				DateTime time;
-				databaseLastRecentlyUsed.TryRemove(db, out time);
-
 				DocumentDatabase database;
-				if (ResourcesStoresCache.TryRemove(db, out database))
-					database.Dispose();
+				if(ResourcesStoresCache.TryGetValue(db, out database) == false)
+				{
+					databaseLastRecentlyUsed.TryRemove(db, out time);
+					return;
+				}
+				try
+				{
+					database.Dispose(); 
+				}
+				catch (Exception e)
+				{
+					logger.ErrorException("Could not cleanup tenant database: " + db, e);
+					return;
+				}
+				databaseLastRecentlyUsed.TryRemove(db, out time);
+				ResourcesStoresCache.TryRemove(db, out database);
 			}
 		}
 
