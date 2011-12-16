@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
@@ -141,25 +142,63 @@ namespace Raven.Database.Server
 
 		#region IDisposable Members
 
-		public void Dispose()
+		public class ExceptionAggregator
 		{
-			if (databasesCleanupTimer != null)
-				databasesCleanupTimer.Dispose();
-			if (listener != null && listener.IsListening)
-				listener.Stop();
+			List<Exception> list = new List<Exception>();
 
-			lock(ResourcesStoresCache)
+			public void Execute(Action action)
 			{
-				foreach (var documentDatabase in ResourcesStoresCache)
+				try
 				{
-					documentDatabase.Value.Dispose();
+					action();
 				}
-				ResourcesStoresCache.Clear();
+				catch (Exception e)
+				{
+					list.Add(e);
+				}
 			}
 
-			currentConfiguration.Dispose();
-			currentDatabase.Dispose();
-			currentTenantId.Dispose();
+			public void ThrowIfNeeded()
+			{
+				if (list.Count == 0)
+					return;
+
+				throw new AggregateException(list);
+			}
+		}
+
+		public void Dispose()
+		{
+			var exceptionAggregator = new ExceptionAggregator();
+			exceptionAggregator.Execute(() =>
+			{
+				if (databasesCleanupTimer != null)
+					databasesCleanupTimer.Dispose();
+			});
+			exceptionAggregator.Execute(() =>
+			{
+				if (listener != null && listener.IsListening)
+					listener.Stop();
+			});
+
+			exceptionAggregator.Execute(() =>
+			{
+				lock (ResourcesStoresCache)
+				{
+					foreach (var documentDatabase in ResourcesStoresCache)
+					{
+						var database = documentDatabase.Value;
+						exceptionAggregator.Execute(database.Dispose);
+					}
+					ResourcesStoresCache.Clear();
+				}
+			});
+
+			exceptionAggregator.Execute(currentConfiguration.Dispose);
+			exceptionAggregator.Execute(currentDatabase.Dispose);
+			exceptionAggregator.Execute(currentTenantId.Dispose);
+
+			exceptionAggregator.ThrowIfNeeded();
 		}
 
 		#endregion
@@ -213,8 +252,6 @@ namespace Raven.Database.Server
 				DocumentDatabase database;
 				if (ResourcesStoresCache.TryRemove(db, out database))
 					database.Dispose();
-
-
 			}
 		}
 
