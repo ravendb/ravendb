@@ -25,6 +25,7 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
@@ -141,31 +142,6 @@ namespace Raven.Database.Server
 		}
 
 		#region IDisposable Members
-
-		public class ExceptionAggregator
-		{
-			List<Exception> list = new List<Exception>();
-
-			public void Execute(Action action)
-			{
-				try
-				{
-					action();
-				}
-				catch (Exception e)
-				{
-					list.Add(e);
-				}
-			}
-
-			public void ThrowIfNeeded()
-			{
-				if (list.Count == 0)
-					return;
-
-				throw new AggregateException(list);
-			}
-		}
 
 		public void Dispose()
 		{
