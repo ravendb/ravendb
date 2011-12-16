@@ -184,6 +184,7 @@
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
     <Compile Include="Bugs\Identifiers\WithBase64Characters.cs" />
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
+    <Compile Include="Bugs\IndexesSortHint.cs" />
     <Compile Include="Bugs\IndexesWithDateTimeMin.cs" />
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
     <Compile Include="Bugs\Indexing\WithStringReverse.cs" />
@@ -588,6 +589,7 @@
     <Compile Include="MailingList\spokeypokey\spokeypokey.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey2.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey3.cs" />
+    <Compile Include="MailingList\spokeypokey\spokeypokey4.cs" />
     <Compile Include="MailingList\Stacey.cs" />
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\TimeZoneQueries.cs" />
