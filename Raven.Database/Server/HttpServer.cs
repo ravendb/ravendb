@@ -145,7 +145,7 @@ namespace Raven.Database.Server
 
 		public void Dispose()
 		{
-			var exceptionAggregator = new ExceptionAggregator();
+			var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
 			exceptionAggregator.Execute(() =>
 			{
 				if (databasesCleanupTimer != null)
