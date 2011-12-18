@@ -149,8 +149,17 @@ namespace Raven.Database.Config
 		private void SetVirtualDirectory()
 		{
 			var defaultVirtualDirectory = "/";
-			if (HttpContext.Current != null)
-				defaultVirtualDirectory = HttpContext.Current.Request.ApplicationPath;
+			try
+			{
+				if (HttpContext.Current != null)
+					defaultVirtualDirectory = HttpContext.Current.Request.ApplicationPath;
+			}
+			catch (HttpException)
+			{
+				// explicitly ignoring this because we might be running in embedded mode
+				// inside IIS during init stages, in which case we can't access the HttpContext
+				// nor do we actually care
+			}
 
 			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
 
@@ -656,6 +665,15 @@ namespace Raven.Database.Config
 		public IEnumerable<ExtensionsLog> ReportExtensions(params Type[] types)
 		{
 			return types.Select(GetExtensionsFor).Where(extensionsLog => extensionsLog != null);
+		}
+
+		public void CustomizeValuesForTenant(string tenantId)
+		{
+			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
+				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
+
+			if (string.IsNullOrEmpty(Settings["Esent/LogsPath"]) == false)
+				Settings["Esent/LogsPath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
 		}
 	}
 }

@@ -126,7 +126,7 @@ namespace Raven.Client.Connection.Async
 			AddOperationHeaders(webRequest);
 			webRequest.Method = "HEAD";
 			webRequest.Credentials = credentials;
-
+			webRequest.PreAuthenticate = true;
 			return webRequest.GetResponseAsync()
 				.ContinueWith(task =>
 				{

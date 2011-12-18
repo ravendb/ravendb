@@ -41,7 +41,7 @@ namespace Raven.Tests.Bugs.TransformResults
 					UserDisplayName = user.DisplayName,
 					VoteTotal = result.VoteTotal
 				};
-			this.SortOptions.Add(x => x.VoteTotal, Raven.Abstractions.Indexing.SortOptions.Int);
+			this.IndexSortOptions.Add(x => x.VoteTotal, Raven.Abstractions.Indexing.SortOptions.Int);
 		}
 	}
 }

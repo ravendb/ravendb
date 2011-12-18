@@ -121,7 +121,7 @@ namespace Raven.Client.Indexes
 			return new IndexDefinitionBuilder<TDocument, TReduceResult>
 			{
 				Indexes = Indexes,
-				SortOptions = SortOptions,
+				SortOptions = IndexSortOptions,
 				Analyzers = Analyzers,
 				Map = Map,
 				Reduce = Reduce,

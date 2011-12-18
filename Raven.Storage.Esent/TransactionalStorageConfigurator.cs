@@ -40,14 +40,14 @@ namespace Raven.Storage.Esent
 				TempDirectory = Path.Combine(logsPath, "temp"),
 				SystemDirectory = Path.Combine(logsPath, "system"),
 				LogFileDirectory = Path.Combine(logsPath, "logs"),
-				MaxVerPages = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 128)),
+				MaxVerPages = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 128), 1024 * 1024),
 				BaseName = "RVN",
 				EventSource = "Raven",
-				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 16)) / 2,
-				LogFileSize = GetValueFromConfiguration("Raven/Esent/LogFileSize", 16) * 1024,
+				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 8192), 1024),
+				LogFileSize = (GetValueFromConfiguration("Raven/Esent/LogFileSize", 16) * 1024),
 				MaxSessions = MaxSessions,
 				MaxCursors = GetValueFromConfiguration("Raven/Esent/MaxCursors", 2048),
-				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/DbExtensionSize", 16)),
+				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/DbExtensionSize", 8), 1024 * 1024),
 				AlternateDatabaseRecoveryDirectory = path
 			};
 		}
@@ -56,16 +56,17 @@ namespace Raven.Storage.Esent
 		{
 			var defaultCacheSize = Environment.Is64BitProcess ? 1024 : 256;
 			int cacheSizeMaxInMegabytes = GetValueFromConfiguration("Raven/Esent/CacheSizeMax",defaultCacheSize);
-			int cacheSizeMax = TranslateToSizeInDatabasePages(cacheSizeMaxInMegabytes);
+			int cacheSizeMax = TranslateToSizeInDatabasePages(cacheSizeMaxInMegabytes, 1024 * 1024);
 			if (SystemParameters.CacheSizeMax > cacheSizeMax)
 			{
 				SystemParameters.CacheSizeMax = cacheSizeMax;
 			}
 		}
 
-		private static int TranslateToSizeInDatabasePages(int sizeInMegabytes)
+		private static int TranslateToSizeInDatabasePages(int sizeInMegabytes, int multiply)
 		{
-			return ((sizeInMegabytes * 1024) / SystemParameters.DatabasePageSize) * 1024;
+			var sizeInBytes = sizeInMegabytes * multiply;
+			return sizeInBytes / SystemParameters.DatabasePageSize;
 		}
 
 		private int GetValueFromConfiguration(string name, int defaultValue)

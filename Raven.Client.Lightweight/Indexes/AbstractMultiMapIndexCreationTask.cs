@@ -32,7 +32,7 @@ namespace Raven.Client.Indexes
 			var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>
 			{
 				Indexes = Indexes,
-				SortOptions = SortOptions,
+				SortOptions = IndexSortOptions,
 				Analyzers = Analyzers,
 				Reduce = Reduce,
 				TransformResults = TransformResults,

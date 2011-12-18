@@ -118,6 +118,10 @@ namespace Raven.Server
 				{
 					actionToTake = () => PrintUsage(optionSet);
 				}},
+				{"config-help", "Help about configuration options", key=>
+				{
+					actionToTake = () => PrintConfig();
+				}},
 				{"restore", 
 					"Restores a RavenDB database from backup",
 					key => actionToTake = () =>
@@ -152,6 +156,26 @@ namespace Raven.Server
 
 			actionToTake();
 
+		}
+
+		private static void PrintConfig()
+		{
+			Console.WriteLine(
+				@"
+Raven DB
+Document Database for the .Net Platform
+----------------------------------------
+Copyright (C) 2008 - {0} - Hibernating Rhinos
+----------------------------------------
+Configuration options:
+",
+				SystemTime.Now.Year);
+
+			foreach (var configOptionDoc in ConfigOptionDocs.OptionsDocs)
+			{
+				Console.WriteLine(configOptionDoc);
+				Console.WriteLine();
+			}
 		}
 
 		private static void RunRestoreOperation(string backupLocation, string databaseLocation)

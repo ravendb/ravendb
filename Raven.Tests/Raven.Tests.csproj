@@ -562,6 +562,7 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\Build570.cs" />
     <Compile Include="MailingList\HierarchicalInheritanceIndexing.cs" />
     <Compile Include="MailingList\IisQueryLengthIssues.cs" />
     <Compile Include="MailingList\JohanNilsson.cs" />
@@ -590,6 +591,7 @@
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\TimeZoneQueries.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />
+    <Compile Include="MailingList\Vitaly.cs" />
     <Compile Include="MailingList\Vlad.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>

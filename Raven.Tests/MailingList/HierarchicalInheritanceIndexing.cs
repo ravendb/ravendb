@@ -31,24 +31,24 @@ namespace Raven.Tests.MailingList
 									 };
 
 						var child = new ExampleOverride
-										{
-											OwnerId = childId,
-											OverriddenValues = new Dictionary<string, object>
-															   {
-																   {"Name", string.Format("Child_{0}", i)}
-															   }
-										};
+						{
+							OwnerId = childId,
+							OverriddenValues = new Dictionary<string, object>
+							{
+								{"Name", string.Format("Child_{0}", i)}
+							}
+						};
 
 						ex.Overrides.Add(child);
 
 						var grandChild = new ExampleOverride
-											 {
-												 OwnerId = grandChildId,
-												 OverriddenValues = new Dictionary<string, object>
-																	{
-																		{"Name", string.Format("GrandChild_{0}", i)}
-																	}
-											 };
+						{
+							OwnerId = grandChildId,
+							OverriddenValues = new Dictionary<string, object>
+							{
+								{"Name", string.Format("GrandChild_{0}", i)}
+							}
+						};
 
 						child.Overrides.Add(grandChild);
 
@@ -63,7 +63,7 @@ namespace Raven.Tests.MailingList
 				{
 					var examples =
 						session.Query<ExampleProjection, ExampleIndexCreationTask>()
-						.Customize(x=>x.WaitForNonStaleResults())
+						.Customize(x => x.WaitForNonStaleResults())
 						.AsProjection<ExampleProjection>().ToList();
 
 					Assert.NotEmpty(examples);
