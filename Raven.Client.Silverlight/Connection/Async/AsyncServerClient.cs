@@ -496,6 +496,27 @@ namespace Raven.Client.Silverlight.Connection.Async
 				}));
 		}
 
+		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
+		{
+			string path = queryToDelete.GetIndexQueryUrl(url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "DELETE", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var aggregateException = task.Exception;
+					if (aggregateException == null)
+						return task;
+					var e = aggregateException.ExtractSingleInnerException() as WebException;
+					if (e == null)
+						return task;
+					var httpWebResponse = e.Response as HttpWebResponse;
+					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						throw new InvalidOperationException("There is no index named: " + indexName, e);
+					return task;
+				}).Unwrap();
+		}
+
 		/// <summary>
 		/// Deletes the document for the specified id asynchronously
 		/// </summary>
