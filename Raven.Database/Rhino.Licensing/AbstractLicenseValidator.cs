@@ -82,7 +82,12 @@ namespace Rhino.Licensing
 			/// <summary>
 			/// Only allow if it is running for the same user
 			/// </summary>
-			AllowForSameUser
+			AllowForSameUser,
+			/// <summary>
+			/// Allow multiple copies of the same license to exist
+			/// Usually valid for OEM scenarios
+			/// </summary>
+			AllowSameLicense
 		}
 
 		/// <summary>
@@ -182,15 +187,6 @@ namespace Rhino.Licensing
 			nextLeaseTimer = new Timer(LeaseLicenseAgain);
 			this.publicKey = publicKey;
 			discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
-			try
-			{
-				discoveryHost.Start();
-			}
-			catch (Exception e)
-			{
-				// we explicitly don't want bad things to happen if we can't do that
-				Logger.ErrorException("Could not setup node discovery", e);
-			}
 		}
 
 		private void DiscoveryHostOnClientDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
@@ -203,6 +199,8 @@ namespace Rhino.Licensing
 			// same user id, different senders
 			switch (MultipleLicenseUsageBehavior)
 			{
+				case MultipleLicenseUsage.AllowSameLicense:
+					return;
 				case MultipleLicenseUsage.AllowForSameUser:
 					if (Environment.UserName == clientDiscoveredEventArgs.UserName)
 						return;
@@ -239,9 +237,32 @@ namespace Rhino.Licensing
 		/// </summary>
 		public virtual void AssertValidLicense()
 		{
+			AssertValidLicense(() => { });
+		}
+
+		/// <summary>
+		/// Validates loaded license
+		/// </summary>
+		public virtual void AssertValidLicense(Action onValidLicense)
+		{
 			LicenseAttributes.Clear();
 			if (HasExistingLicense())
 			{
+				onValidLicense();
+				
+				if (MultipleLicenseUsageBehavior == MultipleLicenseUsage.AllowSameLicense)
+					return; 
+
+				try
+				{
+					discoveryHost.Start();
+				}
+				catch (Exception e)
+				{
+					// we explicitly don't want bad things to happen if we can't do that
+					Logger.ErrorException("Could not setup node discovery", e);
+				}
+
 				discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
 				discoveryClient.PublishMyPresence();
 				return;

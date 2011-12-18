@@ -83,6 +83,10 @@ namespace Raven.Database.Config
 			{"Raven/Quotas/Size/HardLimitInKB", "int", null, "The hard limit after which we refuse any additional writes. Default: none."},
 			{"Raven/Quotas/Size/SoftMarginInKB", "int", null, "The soft limit before which we will warn about the quota. Default: 1 mb."},
 
+			//Licensing
+			{"Raven/License", "string", null, "The full license string for RavenDB. If Raven/License is specified, it overrides the Raven/LicensePath configuration."},
+			{"Raven/LicensePath", "string", null, "The path to the license file for RavenDB, default for ~\\license.xml."},
+
 		};
 
 		private readonly List<ConfigOption> inner = new List<ConfigOption>();
