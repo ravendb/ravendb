@@ -13,8 +13,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Browser;
-using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -499,7 +497,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Deletes the document for the specified id asyncronously
+		/// Deletes the document for the specified id asynchronously
 		/// </summary>
 		/// <param name="id">The id.</param>
 		public Task DeleteDocumentAsync(string id)
@@ -564,7 +562,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Gets the index definition for the specified name asyncronously
+		/// Gets the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		public Task<IndexDefinition> GetIndexAsync(string name)
@@ -581,7 +579,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Puts the index definition for the specified name asyncronously
+		/// Puts the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
@@ -639,7 +637,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Deletes the index definition for the specified name asyncronously
+		/// Deletes the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		public Task DeleteIndexAsync(string name)
@@ -658,7 +656,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 
 		/// <summary>
-		/// Gets the index names from the server asyncronously
+		/// Gets the index names from the server asynchronously
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
@@ -676,7 +674,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Gets the indexes from the server asyncronously
+		/// Gets the indexes from the server asynchronously
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
@@ -697,7 +695,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Resets the specified index asyncronously
+		/// Resets the specified index asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		public Task ResetIndexAsync(string name)
@@ -857,7 +855,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Gets the list of databases from the server asyncronously
+		/// Gets the list of databases from the server asynchronously
 		/// </summary>
 		public Task<string[]> GetDatabaseNamesAsync()
 		{
@@ -875,7 +873,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Puts the attachment with the specified key asyncronously
+		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
@@ -904,7 +902,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Gets the attachment by the specified key asyncronously
+		/// Gets the attachment by the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
@@ -949,7 +947,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Deletes the attachment with the specified key asyncronously
+		/// Deletes the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
