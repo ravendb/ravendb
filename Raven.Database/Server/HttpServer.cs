@@ -450,7 +450,7 @@ namespace Raven.Database.Server
 		{
 			SetupRequestToProperDatabase(ctx);
 
-			CurrentOperationContext.Headers.Value = ctx.Request.Headers;
+			CurrentOperationContext.Headers.Value = new NameValueCollection(ctx.Request.Headers);
 
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
 			if (ctx.RequiresAuthentication &&
