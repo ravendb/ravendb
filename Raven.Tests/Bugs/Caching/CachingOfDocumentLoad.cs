@@ -14,7 +14,7 @@ namespace Raven.Tests.Bugs.Caching
 		public void Can_cache_document_load()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var s = store.OpenSession())
 				{
@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs.Caching
 		public void After_modification_will_get_value_from_server()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var s = store.OpenSession())
 				{

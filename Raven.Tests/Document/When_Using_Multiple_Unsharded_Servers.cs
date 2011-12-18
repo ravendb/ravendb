@@ -22,7 +22,7 @@ namespace Raven.Tests.Document
 
 		public When_Using_Multiple_Unsharded_Servers()
 		{
-			port1 = 8080;
+			port1 = 8079;
 			port2 = 8081;
 
 			path1 = GetPath("TestUnshardedDb1");

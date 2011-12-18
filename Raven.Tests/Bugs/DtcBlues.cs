@@ -44,7 +44,7 @@ namespace Raven.Tests.Bugs
 		public void CanQueryDtcForUncommittedItem()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				for (int i = 0; i < 150; i++)
 				{
@@ -89,7 +89,7 @@ namespace Raven.Tests.Bugs
 		public void CanQueryDtcForUncommittedItem()
 		{
 			using(GetNewServer())
-			using (var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
+			using (var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
 				for (int i = 0; i < 150; i++)
 				{

@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs
 		{
 			using(GetNewServer())
 			{
-				using (var documentStore = new DocumentStore { Url = "http://localhost:8080" })
+				using (var documentStore = new DocumentStore { Url = "http://localhost:8079" })
 				{
 					documentStore.Initialize();
 
@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs
 					}
 				}
 
-				using (var documentStore = new DocumentStore { Url = "http://localhost:8080" })
+				using (var documentStore = new DocumentStore { Url = "http://localhost:8079" })
 				{
 					documentStore.Initialize();
 					new UsersIndexTask().Execute(documentStore);

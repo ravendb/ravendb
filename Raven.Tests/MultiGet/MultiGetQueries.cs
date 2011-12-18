@@ -18,7 +18,7 @@ namespace Raven.Tests.MultiGet
 		public void UnlessAccessedLazyQueriesAreNoOp()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -34,7 +34,7 @@ namespace Raven.Tests.MultiGet
 		public void WithPaging()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -59,7 +59,7 @@ namespace Raven.Tests.MultiGet
 		public void CanGetQueryStats()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -99,7 +99,7 @@ namespace Raven.Tests.MultiGet
 		public void WithQueuedActions()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -125,7 +125,7 @@ namespace Raven.Tests.MultiGet
 		public void WithQueuedActions_Load()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -148,7 +148,7 @@ namespace Raven.Tests.MultiGet
 		public void write_then_read_from_complex_entity_types_lazily()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				new Answers_ByAnswerEntity().Execute(store);
 
@@ -170,7 +170,7 @@ namespace Raven.Tests.MultiGet
 		public void LazyOperationsAreBatched()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -189,7 +189,7 @@ namespace Raven.Tests.MultiGet
 		public void LazyMultiLoadOperationWouldBeInTheSession()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -226,7 +226,7 @@ namespace Raven.Tests.MultiGet
 		public void LazyWithProjection()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -259,7 +259,7 @@ namespace Raven.Tests.MultiGet
 		public void LazyWithProjection2()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -291,7 +291,7 @@ namespace Raven.Tests.MultiGet
 		public void LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -323,7 +323,7 @@ namespace Raven.Tests.MultiGet
 		public void CanGetStatisticsWithLazyQueryResults()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{

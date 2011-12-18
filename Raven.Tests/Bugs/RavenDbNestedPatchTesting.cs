@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs
 		public void RavenTestArrayPatchingRemove()
 		{
 			using(GetNewServer())
-			using (var docStore = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
+			using (var docStore = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
 				const string trackId = "tracks/3";
 				var artist295 = new ArtistInfo {Id = "artists/295", Name = "Bob Dylan"};

@@ -13,7 +13,7 @@ namespace Raven.Tests.MailingList
 		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				new UserByFirstName().Execute(store);
 				using (var session = store.OpenSession())
@@ -47,7 +47,7 @@ namespace Raven.Tests.MailingList
 		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_NonLazy()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				new UserByFirstName().Execute(store);
 				using (var session = store.OpenSession())
@@ -81,7 +81,7 @@ namespace Raven.Tests.MailingList
 		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				new UserByFirstName().Execute(store);
 				using (var session = store.OpenSession())
@@ -116,7 +116,7 @@ namespace Raven.Tests.MailingList
 		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex_NonLazy()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				new UserByFirstName().Execute(store);
 				using (var session = store.OpenSession())

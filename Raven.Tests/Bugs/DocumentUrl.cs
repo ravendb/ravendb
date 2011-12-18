@@ -21,7 +21,7 @@ namespace Raven.Tests.Bugs
 				server.StartListening();
 				var documentStore = new DocumentStore
 				{
-					Url = "http://localhost:8080"
+					Url = "http://localhost:8079"
 				}.Initialize();
 
 				var session = documentStore.OpenSession();
@@ -29,7 +29,7 @@ namespace Raven.Tests.Bugs
 				var entity = new LinqIndexesFromClient.User();
 				session.Store(entity);
 
-				Assert.Equal("http://localhost:8080/docs/users/1",
+				Assert.Equal("http://localhost:8079/docs/users/1",
 					session.Advanced.GetDocumentUrl(entity));
 
 			}
@@ -44,7 +44,7 @@ namespace Raven.Tests.Bugs
 				server.StartListening();
 				var documentStore = new DocumentStore
 				{
-					Url = "http://localhost:8080/"
+					Url = "http://localhost:8079/"
 				}.Initialize();
 
 				var session = documentStore.OpenSession();
@@ -52,7 +52,7 @@ namespace Raven.Tests.Bugs
 				var entity = new LinqIndexesFromClient.User();
 				session.Store(entity);
 
-				Assert.Equal("http://localhost:8080/docs/users/1",
+				Assert.Equal("http://localhost:8079/docs/users/1",
 					session.Advanced.GetDocumentUrl(entity));
 
 			}

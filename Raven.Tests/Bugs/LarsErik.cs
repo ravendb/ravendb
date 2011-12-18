@@ -54,7 +54,7 @@ namespace Raven.Tests.Bugs
 
 		private static DocumentStore CreateAndInitializeStore()
 		{
-			const string server = "http://localhost:8080";
+			const string server = "http://localhost:8079";
 
 			DocumentStore store = new DocumentStore { Url = server };
 

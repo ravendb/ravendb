@@ -10,7 +10,7 @@ namespace Raven.Tests.Bugs.Embedded
 		{
 			var embeddableDocumentStore = new EmbeddableDocumentStore() 
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			};
 			embeddableDocumentStore.Initialize();
 			Assert.Null(embeddableDocumentStore.DocumentDatabase);
@@ -25,7 +25,7 @@ namespace Raven.Tests.Bugs.Embedded
 					{
 						DefaultStorageTypeName = "munin"
 					},
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			};
 			embeddableDocumentStore.Initialize();
 			Assert.Null(embeddableDocumentStore.DocumentDatabase);

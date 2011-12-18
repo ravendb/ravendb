@@ -288,6 +288,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				var request = (HttpWebRequest)WebRequest.Create(destination.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl());
 				request.UseDefaultCredentials = true;
+				request.PreAuthenticate = true;
 				request.Credentials = destination.Credentials ?? CredentialCache.DefaultNetworkCredentials;
 				request.Method = "POST";
 				using (var stream = request.GetRequestStream())
@@ -332,6 +333,7 @@ namespace Raven.Bundles.Replication.Tasks
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
 				var request = (HttpWebRequest)WebRequest.Create(destination.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl());
 				request.UseDefaultCredentials = true;
+				request.PreAuthenticate = true;
 				request.ContentType = "application/json; charset=utf-8";
 				request.Credentials = destination.Credentials ?? CredentialCache.DefaultNetworkCredentials;
 				request.Method = "POST";
@@ -437,6 +439,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				var request = (HttpWebRequest)WebRequest.Create(destination.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl());
 				request.Credentials = destination.Credentials ?? CredentialCache.DefaultNetworkCredentials;
+				request.PreAuthenticate = true;
 				request.UseDefaultCredentials = true;
 				request.Timeout = replicationRequestTimeoutInMs;
 				using (var response = request.GetResponse())

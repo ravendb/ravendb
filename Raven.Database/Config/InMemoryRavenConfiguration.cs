@@ -341,7 +341,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// The port to use when creating the http listener. 
-		/// Default: 8080
+		/// Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.
 		/// </summary>
 		public int Port { get; set; }
 
@@ -665,6 +665,15 @@ namespace Raven.Database.Config
 		public IEnumerable<ExtensionsLog> ReportExtensions(params Type[] types)
 		{
 			return types.Select(GetExtensionsFor).Where(extensionsLog => extensionsLog != null);
+		}
+
+		public void CustomizeValuesForTenant(string tenantId)
+		{
+			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
+				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
+
+			if (string.IsNullOrEmpty(Settings["Esent/LogsPath"]) == false)
+				Settings["Esent/LogsPath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
 		}
 	}
 }

@@ -25,9 +25,9 @@ namespace Raven.Tests.Document
 			var process = Process.Start(GetRavenServerPath(), "/ram");
 			try
 			{
-				WaitForNetwork("http://localhost:8080");
+				WaitForNetwork("http://localhost:8079");
 
-				var documentStore = new DocumentStore { Url = "http://localhost:8080" };
+				var documentStore = new DocumentStore { Url = "http://localhost:8079" };
 				documentStore.Initialize();
 
 				var company = new Company { Name = "Company Name" };

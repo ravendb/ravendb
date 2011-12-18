@@ -12,7 +12,7 @@ namespace etobi.EmbeddedTest
 		{
 			var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize();
 
 			var list = new List<User>();
