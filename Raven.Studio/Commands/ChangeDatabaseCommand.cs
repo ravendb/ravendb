@@ -30,6 +30,10 @@ namespace Raven.Studio.Commands
 				.Catch();
 
 			View.UpdateAllFromServer();
+			new HomeModel().ForceTimerTicked();
+			new CollectionsModel().ForceTimerTicked();
+			new IndexesModel().ForceTimerTicked();
+			new AllDocumentsModel().ForceTimerTicked();
 
 			if (shouldRedirect)
 			{
