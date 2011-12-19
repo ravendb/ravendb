@@ -68,7 +68,6 @@ namespace Raven.Client.Connection
 			this.Method = method;
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
-			webRequest.PreAuthenticate = true;
 			WriteMetadata(metadata);
 			webRequest.Method = method;
 			webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
@@ -211,7 +210,6 @@ namespace Raven.Client.Connection
 
 			var newWebRequest = (HttpWebRequest) WebRequest.Create(Url);
 			newWebRequest.Method = webRequest.Method;
-			newWebRequest.PreAuthenticate = true;
 			HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
 			newWebRequest.Credentials = webRequest.Credentials;
 			action(newWebRequest);

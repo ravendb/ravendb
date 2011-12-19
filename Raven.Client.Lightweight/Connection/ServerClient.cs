@@ -367,7 +367,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
 			webRequest.Method = "PUT";
 			webRequest.Credentials = credentials;
-			webRequest.PreAuthenticate = true;
 			foreach (var header in metadata)
 			{
 				if (header.Key.StartsWith("@"))
@@ -442,7 +441,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
 			webRequest.Credentials = credentials;
-			webRequest.PreAuthenticate = true;
 			try
 			{
 				using (var response = webRequest.GetResponse())
@@ -511,7 +509,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
 			webRequest.Method = "DELETE";
 			webRequest.Credentials = credentials;
-			webRequest.PreAuthenticate = true;
 			if (etag != null)
 			{
 				webRequest.Headers["If-None-Match"] = etag.Value.ToString();
@@ -923,7 +920,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				webRequest.Method = "PUT";
 				webRequest.Headers["Resource-Manager-Id"] = resourceManagerId.ToString();
 				webRequest.Credentials = credentials;
-				webRequest.PreAuthenticate = true;
 				webRequest.UseDefaultCredentials = true;
 
 				using (var stream = webRequest.GetRequestStream())
@@ -946,7 +942,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			webRequest.ContentLength = 0;
 			webRequest.Credentials = credentials;
 			webRequest.UseDefaultCredentials = true;
-			webRequest.PreAuthenticate = true;
+
 			using (var response = webRequest.GetResponse())
 			{
 				using (var stream = response.GetResponseStreamWithHttpDecompression())
