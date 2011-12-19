@@ -16,22 +16,25 @@ namespace Raven.Tests.Bugs
 		public void CanGetFullUrl()
 		{
 			using (var store = NewDocumentStore())
-			using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
 			{
-				server.StartListening();
-				var documentStore = new DocumentStore
+				store.Configuration.Port = 8079;
+				using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
 				{
-					Url = "http://localhost:8079"
-				}.Initialize();
+					server.StartListening();
+					var documentStore = new DocumentStore
+					{
+						Url = "http://localhost:8079"
+					}.Initialize();
 
-				var session = documentStore.OpenSession();
+					var session = documentStore.OpenSession();
 
-				var entity = new LinqIndexesFromClient.User();
-				session.Store(entity);
+					var entity = new LinqIndexesFromClient.User();
+					session.Store(entity);
 
-				Assert.Equal("http://localhost:8079/docs/users/1",
-					session.Advanced.GetDocumentUrl(entity));
+					Assert.Equal("http://localhost:8079/docs/users/1",
+						session.Advanced.GetDocumentUrl(entity));
 
+				}
 			}
 		}
 
@@ -39,22 +42,25 @@ namespace Raven.Tests.Bugs
 		public void CanGetFullUrlWithSlashOnTheEnd()
 		{
 			using (var store = NewDocumentStore())
-			using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
 			{
-				server.StartListening();
-				var documentStore = new DocumentStore
+				store.Configuration.Port = 8079;
+				using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
 				{
-					Url = "http://localhost:8079/"
-				}.Initialize();
+					server.StartListening();
+					var documentStore = new DocumentStore
+					{
+						Url = "http://localhost:8079/"
+					}.Initialize();
 
-				var session = documentStore.OpenSession();
+					var session = documentStore.OpenSession();
 
-				var entity = new LinqIndexesFromClient.User();
-				session.Store(entity);
+					var entity = new LinqIndexesFromClient.User();
+					session.Store(entity);
 
-				Assert.Equal("http://localhost:8079/docs/users/1",
-					session.Advanced.GetDocumentUrl(entity));
+					Assert.Equal("http://localhost:8079/docs/users/1",
+						session.Advanced.GetDocumentUrl(entity));
 
+				}
 			}
 		}
 	}
