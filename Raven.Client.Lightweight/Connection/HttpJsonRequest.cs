@@ -421,7 +421,7 @@ namespace Raven.Client.Connection
 		public IAsyncResult BeginWrite(string dataToWrite, AsyncCallback callback, object state)
 		{
 			postedData = dataToWrite;
-			webRequest.ContentLength = Encoding.UTF8.GetByteCount(dataToWrite);
+			webRequest.ContentLength = Encoding.UTF8.GetByteCount(dataToWrite) + Encoding.UTF8.GetPreamble().Length;
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 

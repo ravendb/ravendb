@@ -9,13 +9,14 @@ namespace Raven.Client.Connection
 	{
 		public static void WriteDataToRequest(HttpWebRequest req, string data)
 		{
-			req.ContentLength = Encoding.UTF8.GetByteCount(data);
+			req.ContentLength = Encoding.UTF8.GetByteCount(data) + Encoding.UTF8.GetPreamble().Length;
 
 			using (var dataStream = req.GetRequestStream())
-			using(var writer = new StreamWriter(dataStream, Encoding.UTF8))
+			using (var writer = new StreamWriter(dataStream, Encoding.UTF8))
 			{
 				writer.Write(data);
 				writer.Flush();
+				dataStream.Flush();
 			}
 		}
 
