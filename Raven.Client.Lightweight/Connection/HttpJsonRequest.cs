@@ -32,9 +32,6 @@ namespace Raven.Client.Connection
 		internal readonly string Url;
 		internal readonly string Method;
 
-		private byte[] bytesForNextWrite;
-
-
 		internal volatile HttpWebRequest webRequest;
 		// temporary create a strong reference to the cached data for this request
 		// avoid the potential for clearing the cache from a cached item
@@ -424,9 +421,7 @@ namespace Raven.Client.Connection
 		public IAsyncResult BeginWrite(string dataToWrite, AsyncCallback callback, object state)
 		{
 			postedData = dataToWrite;
-			var byteArray = Encoding.UTF8.GetBytes(dataToWrite);
-			bytesForNextWrite = byteArray;
-			webRequest.ContentLength = byteArray.Length;
+			webRequest.ContentLength = Encoding.UTF8.GetByteCount(dataToWrite);
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 
@@ -437,11 +432,12 @@ namespace Raven.Client.Connection
 		public void EndWrite(IAsyncResult result)
 		{
 			using (var dataStream = webRequest.EndGetRequestStream(result))
+			using (var writer = new StreamWriter(dataStream, Encoding.UTF8))
 			{
-				dataStream.Write(bytesForNextWrite, 0, bytesForNextWrite.Length);
-				dataStream.Close();
+				writer.Write(postedData);
+				writer.Flush();
+				dataStream.Flush();
 			}
-			bytesForNextWrite = null;
 		}
 
 		/// <summary>
