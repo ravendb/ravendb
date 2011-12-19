@@ -76,8 +76,7 @@ namespace Raven.Studio.Models
 				Mode = DocumentMode.Projection;
 				try
 				{
-					var unescapeDataString = Uri.UnescapeDataString(projection);
-					var newdoc = RavenJObject.Parse(unescapeDataString).ToJsonDocument();
+					var newdoc = RavenJObject.Parse(projection).ToJsonDocument();
 					document.Value = newdoc;
 				}
 				catch
