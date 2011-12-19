@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanReadDataProperly()
 		{
-			using(new RavenDbServer(new RavenConfiguration {DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true}))
+			using(new RavenDbServer(new RavenConfiguration {DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true, Port = 8079}))
 			{
 				using (var webClient = new WebClient())
 				{

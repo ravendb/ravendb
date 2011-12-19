@@ -22,7 +22,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_promote_transactions()
 		{
-			var process = Process.Start(GetRavenServerPath(), "/ram");
+			var process = Process.Start(GetRavenServerPath(), "--ram --set=Raven/Port==8079");
 			try
 			{
 				WaitForNetwork("http://localhost:8079");
