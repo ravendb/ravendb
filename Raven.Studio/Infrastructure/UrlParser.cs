@@ -58,15 +58,15 @@ namespace Raven.Studio.Infrastructure
 
 		public string GetQueryParam(string name)
 		{
-			if (QueryParams.ContainsKey(name))
-				return QueryParams[name];
-			return null;
+			if (QueryParams.ContainsKey(name) == false)
+				return null;
+			return Uri.UnescapeDataString(QueryParams[name]);
 		}
 
 		public void SetQueryParam(string name, object value)
 		{
 			if (value == null) return;
-			QueryParams[name] = value.ToString();
+			QueryParams[name] = Uri.EscapeDataString(value.ToString());
 		}
 
 		public bool RemoveQueryParam(string name)

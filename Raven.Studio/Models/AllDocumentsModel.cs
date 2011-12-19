@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Studio.Infrastructure;
 
@@ -24,5 +25,10 @@ namespace Raven.Studio.Models
 		}
 
 		public static Observable<DocumentsModel> Documents { get; private set; }
+
+		public override Task TimerTickedAsync()
+		{
+			return Documents.Value.TimerTickedAsync();
+		}
 	}
 }

@@ -4,15 +4,12 @@ using System.Threading.Tasks;
 using System.Windows.Browser;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Json.Linq;
 using Raven.Studio.Commands;
-using Raven.Studio.Features.Util;
 using Raven.Studio.Infrastructure;
-using Raven.Client.Silverlight.Connection;
 
 namespace Raven.Studio.Models
 {
-	public class ServerModel : Model
+	public class ServerModel : Model, IDisposable
 	{
 		private readonly string url;
 		public const string DefaultDatabaseName = "Default";
