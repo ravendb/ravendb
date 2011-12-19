@@ -919,6 +919,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				AddOperationHeaders(webRequest);
 				webRequest.Method = "PUT";
 				webRequest.Headers["Resource-Manager-Id"] = resourceManagerId.ToString();
+				webRequest.Headers[Constants.NotForReplication] = "true";
 				webRequest.Credentials = credentials;
 				webRequest.UseDefaultCredentials = true;
 

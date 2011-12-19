@@ -385,6 +385,7 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					jsonDocuments = new RavenJArray(actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag)
 						.Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
+						.Where(x => x.Metadata.ContainsKey(Constants.NotForReplication) == false || x.Metadata.Value<bool>(Constants.NotForReplication) == false) // not explicitly marked to skip
 						.Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationId) // prevent replicating back to source
 						.Where(x=> x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
 						.Select(x=>
@@ -413,7 +414,9 @@ namespace Raven.Bundles.Replication.Tasks
 				docDb.TransactionalStorage.Batch(actions =>
 				{
 					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(destinationsReplicationInformationForSource.LastAttachmentEtag)
-						.Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
+						.Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system attachments
+						.Where(x => x.Key.StartsWith("transactions/recoveryInformation") == false) // don't replicate transaction recovery information
+						.Where(x => x.Metadata.ContainsKey(Constants.NotForReplication) == false || x.Metadata.Value<bool>(Constants.NotForReplication) == false) // not explicitly marked to skip
 						.Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationInstanceId) // prevent replicating back to source
 						.Where(x => x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
 						.Take(100)
