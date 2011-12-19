@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -96,7 +97,7 @@ namespace Raven.Studio.Features.Query
 					if (qr.TotalResults == 0)
 						SuggestResults();
 				})
-				.Catch(ex => model.Error = ex.ExtractSingleInnerException().SimplifyError());
+				.CatchIgnore<WebException>(ex => model.Error = ex.SimplifyError());
 		}
 
 		private void SuggestResults()
