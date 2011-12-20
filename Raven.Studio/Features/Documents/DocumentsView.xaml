@@ -111,7 +111,7 @@
 
 			</toolkit:HeaderedContentControl.Header>
 
-			<toolkit:BusyIndicator IsBusy="{Binding IsLoadingDocuments}">
+			<toolkit:BusyIndicator IsBusy="{Binding IsLoadingDocuments}" BusyContent="Querying documents...">
 				<ListBox x:Name="DocumentsList"
 						 ItemsSource="{Binding Documents}"
 						 Style="{StaticResource DocumentList}"
