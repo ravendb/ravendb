@@ -8,8 +8,7 @@ namespace Raven.Studio.Models
 	{
 		static AllDocumentsModel()
 		{
-			Documents = new Observable<DocumentsModel>();
-			Documents.Value = new DocumentsModel();
+			Documents = new Observable<DocumentsModel> {Value = new DocumentsModel()};
 			SetTotalResults();
 			ApplicationModel.Database.PropertyChanged += (sender, args) => SetTotalResults();
 		}
@@ -25,6 +24,11 @@ namespace Raven.Studio.Models
 		}
 
 		public static Observable<DocumentsModel> Documents { get; private set; }
+
+		public override void LoadModelParameters(string parameters)
+		{
+			Documents.Value.Pager.SetSkip(new UrlParser(parameters));
+		}
 
 		public override Task TimerTickedAsync()
 		{
