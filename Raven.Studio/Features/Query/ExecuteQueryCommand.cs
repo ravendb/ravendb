@@ -35,13 +35,13 @@ namespace Raven.Studio.Features.Query
 			model.RememberHistory();
 
 			model.DocumentsResult.Value = new DocumentsModel
-										  {
-											SkipAutoRefresh = true,
-											ShowEditControls = false,
-											ViewTitle = "Results",
-											CustomFetchingOfDocuments = GetFetchDocumentsMethod,
-										  };
-			model.DocumentsResult.Value.Pager.IsSkipBasedOnTheUrl = false;
+			                              {
+			                              	SkipAutoRefresh = true,
+			                              	ShowEditControls = false,
+			                              	ViewTitle = "Results",
+			                              	CustomFetchingOfDocuments = GetFetchDocumentsMethod, 
+											Pager = {IsSkipBasedOnTheUrl = false},
+			                              };
 			model.DocumentsResult.Value.ForceTimerTicked();
 		}
 
