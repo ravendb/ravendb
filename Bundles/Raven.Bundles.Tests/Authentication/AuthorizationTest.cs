@@ -38,7 +38,7 @@ namespace Raven.Bundles.Tests.Authentication
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
 			embeddedStore = new EmbeddableDocumentStore()
 			{
-				Configuration =
+				Configuration = 
 					{
 						AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.Get,
 						Catalog = {Catalogs = {new AssemblyCatalog(typeof (AuthenticationUser).Assembly)}},
@@ -51,6 +51,7 @@ namespace Raven.Bundles.Tests.Authentication
 				UseEmbeddedHttpServer = true,
 			};
 
+			embeddedStore.Configuration.Initialize();
 			embeddedStore.Initialize();
 			store = new DocumentStore
 			{
