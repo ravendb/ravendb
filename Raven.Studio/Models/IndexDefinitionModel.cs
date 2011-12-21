@@ -32,6 +32,7 @@ namespace Raven.Studio.Models
 
 			statistics = Database.Value.Statistics;
 			statistics.PropertyChanged += (sender, args) => OnPropertyChanged("ErrorsCount");
+			ViewTitle = "Edit Index";
 		}
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
@@ -56,14 +57,15 @@ namespace Raven.Studio.Models
 			if (urlParser.GetQueryParam("mode") == "new")
 			{
 				createNewIndexMode = true;
-				OnPropertyChanged("ViewTitle");
+				ViewTitle = "Create an Index";
 				return;
 			}
 
 			var name = urlParser.Path;
 			if (string.IsNullOrWhiteSpace(name))
-				UrlUtil.Navigate("/indexes");
+				HandleIndexNotFound(null);
 
+			ViewTitle = "Edit Index: " + Name;
 			DatabaseCommands.GetIndexAsync(name)
 				.ContinueOnSuccessInTheUIThread(index1 =>
 				                   {
@@ -79,9 +81,12 @@ namespace Raven.Studio.Models
 
 		public static void HandleIndexNotFound(string name)
 		{
-			var notification = new Notification(string.Format("Could not find '{0}' index", name), NotificationLevel.Warning);
-			ApplicationModel.Current.AddNotification(notification);
-			UrlUtil.Navigate("/documents");
+			if (string.IsNullOrWhiteSpace(name) == false)
+			{
+				var notification = new Notification(string.Format("Could not find '{0}' index", name), NotificationLevel.Warning);
+				ApplicationModel.Current.AddNotification(notification);
+			}
+			UrlUtil.Navigate("/indexes");
 		}
 
 		private void ResetToOriginal()
@@ -144,9 +149,15 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		private string viewTitle;
 		public string ViewTitle
 		{
-			get { return createNewIndexMode ? "Create an Index" : "Index: " + Name; }
+			get { return viewTitle; }
+			set
+			{
+				viewTitle = value;
+				OnPropertyChanged();
+			}
 		}
 
 		private bool showReduce;
