@@ -24,6 +24,7 @@ namespace Raven.Studio.Models
 		private string jsonData;
 		private bool isLoaded;
 		private string documentKey;
+		private readonly string currentDatabase;
 
 		public EditableDocumentModel()
 		{
@@ -38,6 +39,8 @@ namespace Raven.Studio.Models
 			{
 				{"Name", "..."}
 			}, Metadata = new RavenJObject() };
+
+			currentDatabase = Database.Value.Name;
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -202,7 +205,8 @@ namespace Raven.Studio.Models
 		protected override Task LoadedTimerTickedAsync()
 		{
 			if (isLoaded == false ||
-				Mode != DocumentMode.DocumentWithId)
+				Mode != DocumentMode.DocumentWithId || 
+				currentDatabase != Database.Value.Name)
 				return null;
 
 			return DatabaseCommands.GetAsync(documentKey)

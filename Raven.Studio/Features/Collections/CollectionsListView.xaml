@@ -2,7 +2,9 @@
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 xmlns:Controls="clr-namespace:System.Windows.Controls">
+					 xmlns:Controls="clr-namespace:System.Windows.Controls"
+					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors">
 
 	<StackPanel Margin="{StaticResource Margin_ContentPage}">
 		<TextBlock Text="Collections"
@@ -13,6 +15,10 @@
 				 ItemsSource="{Binding Collections}"
 				 SelectedItem="{Binding Path=SelectedCollection.Value, Mode=TwoWay}">
 
+			<i:Interaction.Behaviors>
+				<Behaviors:SelectItemOnRightClick />
+			</i:Interaction.Behaviors>
+			
 			<Controls:ContextMenuService.ContextMenu>
 				<Controls:ContextMenu x:Name="CollectionsContextMenu">
 					<Controls:MenuItem Header="Delete"
