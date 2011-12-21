@@ -1,17 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Client;
+using System.IO;
+using Newtonsoft.Json;
 using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Database.Extensions;
-using NLog;
-using Raven.Tests.Bugs;
-using Raven.Tests.Bugs.Indexing;
 
 namespace etobi.EmbeddedTest
 {
@@ -24,13 +15,29 @@ namespace etobi.EmbeddedTest
 				Url = "http://localhost:8079"
 			}.Initialize();
 
-			var s = documentStore.OpenSession().Query<Item3>().Where(x=>x.Age > 100).ToString();
-			Console.WriteLine(s);
+			var list = new List<User>();
+			using (var session = documentStore.OpenSession())
+			{
+				for (int i = 0; i < 4098; i++)
+				{
+					var entity = new User
+					{
+						Email = "ayende@ayende.com",
+						Name = "Ayende Rahien",
+						WindowsAccountId = Guid.NewGuid()
+					};
+					list.Add(entity);
+				}
+			}
+			var serializeObject = JsonConvert.SerializeObject(list);
+			File.WriteAllText("test.json",serializeObject);
 		}
 	}
-
-	public class Item3
+	public class User
 	{
-		public long Age { get; set; }
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public Guid WindowsAccountId { get; set; }
+		public string Email { get; set; }
 	}
 }

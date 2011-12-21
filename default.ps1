@@ -150,7 +150,7 @@ task Test -depends Compile{
 task TestSilverlight {
 	
 	try{
-    start "$build_dir\Raven.Server.exe" "/ram"
+    start "$build_dir\Raven.Server.exe" "--ram --set=Raven/Port==8079"
     exec { 
       & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
     }

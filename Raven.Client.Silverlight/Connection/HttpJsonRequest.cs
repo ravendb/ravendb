@@ -263,8 +263,21 @@ namespace Raven.Client.Silverlight.Connection
 		/// </summary>
 		public Task WriteAsync(string data)
 		{
-			var byteArray = Encoding.UTF8.GetBytes(data);
-			return WriteAsync(byteArray);
+			return WaitForTask.ContinueWith(_ =>
+			                                webRequest.GetRequestStreamAsync()
+			                                	.ContinueWith(task =>
+			                                	{
+			                                		var dataStream = task.Result;
+			                                		var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
+			                                		return streamWriter.WriteAsync(data)
+			                                			.ContinueWith(writeTask =>
+			                                			{
+			                                				streamWriter.Dispose();
+			                                				dataStream.Dispose();
+			                                				return writeTask;
+			                                			}).Unwrap();
+			                                	}).Unwrap())
+				.Unwrap();
 		}
 
 		/// <summary>

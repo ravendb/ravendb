@@ -144,12 +144,20 @@ namespace Raven.Tests
 
 			if (initializeDocumentsByEntitiyName)
 			{
-				using (var documentStore = new DocumentStore
+				try
 				{
-					Url = "http://localhost:8079"
-				}.Initialize())
+					using (var documentStore = new DocumentStore
+					{
+						Url = "http://localhost:8079"
+					}.Initialize())
+					{
+						new RavenDocumentsByEntityName().Execute(documentStore);
+					}
+				}
+				catch
 				{
-					new RavenDocumentsByEntityName().Execute(documentStore);
+					ravenDbServer.Dispose();
+					throw;
 				}
 			}
 
@@ -194,12 +202,20 @@ namespace Raven.Tests
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			});
 
-			using (var documentStore = new DocumentStore
+			try
 			{
-				Url = "http://localhost:" + port
-			}.Initialize())
+				using (var documentStore = new DocumentStore
+				{
+					Url = "http://localhost:" + port
+				}.Initialize())
+				{
+					new RavenDocumentsByEntityName().Execute(documentStore);
+				}
+			}
+			catch 
 			{
-				new RavenDocumentsByEntityName().Execute(documentStore);
+				ravenDbServer.Dispose();
+				throw;
 			}
 			return ravenDbServer;
 		}

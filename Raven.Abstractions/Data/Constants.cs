@@ -18,5 +18,6 @@ namespace Raven.Abstractions.Data
 		public const string RavenReadOnly = "Raven-Read-Only";
 		public const string RavenDocumentDoesNotExists = "Raven-Document-Does-Not-Exists";
 		public const string Metadata = "@metadata";
+		public const string NotForReplication = "Raven-Not-For-Replication";
 	}
 }

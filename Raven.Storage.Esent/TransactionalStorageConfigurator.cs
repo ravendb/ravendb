@@ -31,6 +31,8 @@ namespace Raven.Storage.Esent
 			{
 				logsPath = configuration.Settings["Raven/Esent/LogsPath"].ToFullPath();
 			}
+			var logFileSizeInMb = GetValueFromConfiguration("Raven/Esent/LogFileSize", 16);
+			logFileSizeInMb = Math.Max(1, logFileSizeInMb / 4);
 			return new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,
