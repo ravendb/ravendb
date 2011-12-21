@@ -155,9 +155,6 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		protected override void AssertValidConfiguration()
 		{
-			if(configuration!=null)
-				configuration.Initialize();
-
 			if (RunInMemory)
 				return;
 			if(string.IsNullOrEmpty(DataDirectory))  // if we don't have a data dir...
