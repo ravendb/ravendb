@@ -39,10 +39,12 @@ namespace Raven.Studio.Commands
 				.EnsureSilverlightStartUpAsync()
 				.Catch();
 
+			var updateAllFromServer = View.UpdateAllFromServer();
 			refreshStaticModels
+				.Except(updateAllFromServer.Select(x=>x.GetType()))
 				.Select(model => (Model) Activator.CreateInstance(model))
 				.ForEach(model => model.ForceTimerTicked());
-			View.UpdateAllFromServer();
+			
 			
 			if (shouldRedirect)
 			{
