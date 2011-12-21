@@ -136,7 +136,7 @@ namespace Raven.Tests.MailingList.spokeypokey
 		public void Can_search_by_Zip()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				CreateTestData(store);
 

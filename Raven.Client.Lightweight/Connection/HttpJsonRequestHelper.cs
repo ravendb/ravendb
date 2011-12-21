@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net;
 using System.Text;
 
@@ -8,13 +9,13 @@ namespace Raven.Client.Connection
 	{
 		public static void WriteDataToRequest(HttpWebRequest req, string data)
 		{
-			var byteArray = Encoding.UTF8.GetBytes(data);
-
-			req.ContentLength = byteArray.Length;
+			req.ContentLength = Encoding.UTF8.GetByteCount(data) + Encoding.UTF8.GetPreamble().Length;
 
 			using (var dataStream = req.GetRequestStream())
+			using (var writer = new StreamWriter(dataStream, Encoding.UTF8))
 			{
-				dataStream.Write(byteArray, 0, byteArray.Length);
+				writer.Write(data);
+				writer.Flush();
 				dataStream.Flush();
 			}
 		}

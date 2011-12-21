@@ -29,7 +29,7 @@ namespace Raven.Tests.MailingList
 			using (GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize())
 			{
 				using (var session = store.OpenSession())

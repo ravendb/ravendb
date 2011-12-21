@@ -38,18 +38,20 @@ namespace Raven.Bundles.Tests.Authentication
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
 			embeddedStore = new EmbeddableDocumentStore()
 			{
-				UseEmbeddedHttpServer = true,
-				Configuration =
+				Configuration = 
 					{
 						AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.Get,
 						Catalog = {Catalogs = {new AssemblyCatalog(typeof (AuthenticationUser).Assembly)}},
 						DataDirectory = "Data",
 						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 						AuthenticationMode = "oauth",
+						Port = 8079,
 						OAuthTokenCertificate = database::Raven.Database.Config.CertGenerator.GenerateNewCertificate("RavenDB.Test")
-					}
+					},
+				UseEmbeddedHttpServer = true,
 			};
 
+			embeddedStore.Configuration.Initialize();
 			embeddedStore.Initialize();
 			store = new DocumentStore
 			{

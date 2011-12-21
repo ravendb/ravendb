@@ -221,13 +221,16 @@ namespace Raven.Client.Indexes
 			var name = member.Name;
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
-				instance.NodeType == ExpressionType.Parameter &&
 				// only translate from the root type
 				(queryRoot == null || (member.DeclaringType == queryRoot)) &&
 				// only translate from the root alias
-				(queryRootName == null || ((ParameterExpression)instance).Name == queryRootName)
-				)
+				(queryRootName == null || ( 
+					instance.NodeType == ExpressionType.Parameter  &&	
+					((ParameterExpression)instance).Name == queryRootName)))
+
+			{
 				name = Constants.DocumentIdFieldName;
+			}
 			if (instance != null)
 			{
 				Visit(instance);

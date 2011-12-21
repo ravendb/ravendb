@@ -17,12 +17,12 @@ namespace Raven.Tests.Security.OAuth
 		readonly string path;
 		const string relativeUrl = "/docs";
 		const string baseUrl = "http://localhost";
-		const int port = 8080;
+		const int port = 8079;
 
 		public AccessTokenAuthentication()
 		{
 			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
 		protected override void ConfigureServer(RavenConfiguration ravenConfiguration)

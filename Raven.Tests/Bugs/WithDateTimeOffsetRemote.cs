@@ -10,7 +10,7 @@ namespace Raven.Tests.Bugs
 		public void CanStoreAndGetValues()
 		{
 			using(GetNewServer())
-			using (var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
+			using (var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
 				var expected = new DateTimeOffset(2010, 11, 10, 19, 00, 00, 00, TimeSpan.FromHours(2));
 				using (var s = store.OpenSession())

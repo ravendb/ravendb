@@ -16,7 +16,7 @@ namespace Raven.Tests.Bugs
 		public void CanWriteInTransactionScopeAndReadFromAnotherTransactionScope()
 		{
 			using(GetNewServer())
-			using(var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
+			using(var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
 				var testEntity = new MyTestClass() { SomeText = "Foo" };
 
@@ -46,7 +46,7 @@ namespace Raven.Tests.Bugs
 		public void CanWriteInTransactionScopeAndReadOutsideOfTransactionScope()
 		{
 			using(GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				var testEntity = new MyTestClass() {SomeText = "Foo"};
 

@@ -99,7 +99,7 @@ namespace Raven.Bundles.Tests.Replication
 			RunReplication(stores[src], stores[dest]);
 		}
 
-		protected void RunReplication(IDocumentStore source, IDocumentStore destination)
+		protected void RunReplication(IDocumentStore source, IDocumentStore destination, TransitiveReplicationOptions  transitiveReplicationBehavior = TransitiveReplicationOptions.None)
 		{
 			Console.WriteLine("Replicating from {0} to {1}.", source.Url, destination.Url);
 			using (var session = source.OpenSession())
@@ -108,7 +108,8 @@ namespace Raven.Bundles.Tests.Replication
 				{
 					Destinations = {new ReplicationDestination
 					{
-						Url = destination.Url
+						Url = destination.Url,
+						TransitiveReplicationBehavior = transitiveReplicationBehavior
 						// servers[dest].Database.Configuration.ServerUrl
 					}}
 				});

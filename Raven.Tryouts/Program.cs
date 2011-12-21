@@ -1,17 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Client;
+using System.IO;
+using Newtonsoft.Json;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Database.Extensions;
-using NLog;
-using Raven.Tests.Bugs;
-using Raven.Tests.Bugs.Indexing;
 
 namespace etobi.EmbeddedTest
 {
@@ -19,18 +11,21 @@ namespace etobi.EmbeddedTest
 	{
 		static void Main(string[] args)
 		{
-			var documentStore = new DocumentStore
+			var docStore = new EmbeddableDocumentStore
 			{
-				Url = "http://localhost:8080"
+				UseEmbeddedHttpServer = true,
+				DataDirectory = "~\\Data",
+
 			}.Initialize();
 
-			var s = documentStore.OpenSession().Query<Item3>().Where(x=>x.Age > 100).ToString();
-			Console.WriteLine(s);
+			Console.ReadLine();
 		}
 	}
-
-	public class Item3
+	public class User
 	{
-		public long Age { get; set; }
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public Guid WindowsAccountId { get; set; }
+		public string Email { get; set; }
 	}
 }

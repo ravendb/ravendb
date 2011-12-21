@@ -129,7 +129,7 @@ namespace Raven.Tests
 		{
 			var ravenConfiguration = new RavenConfiguration
 			{
-				Port = 8080,
+				Port = 8079,
 				RunInMemory = true,
 				DataDirectory = "Data",
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
@@ -141,26 +141,27 @@ namespace Raven.Tests
 				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
 
 			var ravenDbServer = new RavenDbServer(ravenConfiguration);
-			try
+
+			if (initializeDocumentsByEntitiyName)
 			{
-				if (initializeDocumentsByEntitiyName)
+				try
 				{
 					using (var documentStore = new DocumentStore
 					{
-						Url = "http://localhost:8080"
+						Url = "http://localhost:8079"
 					}.Initialize())
 					{
 						new RavenDocumentsByEntityName().Execute(documentStore);
 					}
 				}
+				catch
+				{
+					ravenDbServer.Dispose();
+					throw;
+				}
+			}
 
-				return ravenDbServer;
-			}
-			catch 
-			{
-				ravenDbServer.Dispose();
-				throw;
-			}
+			return ravenDbServer;
 		}
 
 		protected virtual void ConfigureServer(RavenConfiguration ravenConfiguration)
@@ -174,7 +175,7 @@ namespace Raven.Tests
 
 			using (var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			})
 			{
 				documentStore.Initialize();
@@ -201,12 +202,20 @@ namespace Raven.Tests
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			});
 
-			using (var documentStore = new DocumentStore
+			try
 			{
-				Url = "http://localhost:" + port
-			}.Initialize())
+				using (var documentStore = new DocumentStore
+				{
+					Url = "http://localhost:" + port
+				}.Initialize())
+				{
+					new RavenDocumentsByEntityName().Execute(documentStore);
+				}
+			}
+			catch 
 			{
-				new RavenDocumentsByEntityName().Execute(documentStore);
+				ravenDbServer.Dispose();
+				throw;
 			}
 			return ravenDbServer;
 		}

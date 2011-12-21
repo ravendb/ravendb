@@ -17,11 +17,11 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanReadDataProperly()
 		{
-			using(new RavenDbServer(new RavenConfiguration {DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true}))
+			using(new RavenDbServer(new RavenConfiguration {DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true, Port = 8079}))
 			{
 				using (var webClient = new WebClient())
 				{
-					var downloadData = webClient.DownloadData("http://localhost:8080/" +
+					var downloadData = webClient.DownloadData("http://localhost:8079/" +
 						"indexes?pageSize=128&start=" + "0");
 					var documents = Smuggler.Smuggler.GetString(downloadData);
 					RavenJArray.Parse(documents);

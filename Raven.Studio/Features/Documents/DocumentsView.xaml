@@ -111,31 +111,31 @@
 
 			</toolkit:HeaderedContentControl.Header>
 
-			<ListBox x:Name="DocumentsList"
-					 ItemsSource="{Binding Documents}"
-					 Style="{StaticResource DocumentList}"
-					 Grid.Row="1"
-					 Grid.ColumnSpan="3"
-					 Margin="10"
-					 ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
+			<toolkit:BusyIndicator IsBusy="{Binding IsLoadingDocuments}" BusyContent="Querying documents...">
+				<ListBox x:Name="DocumentsList"
+						 ItemsSource="{Binding Documents}"
+						 Style="{StaticResource DocumentList}"
+						 Margin="10"
+						 ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
 				
-				<i:Interaction.Behaviors>
-					<Behaviors:SelectItemOnRightClick />
-					<Behaviors:ShowItemsBasedOnControlDimensions Model="{Binding}" />
-				</i:Interaction.Behaviors>
+					<i:Interaction.Behaviors>
+						<Behaviors:SelectItemOnRightClick />
+						<Behaviors:ShowItemsBasedOnControlDimensions Model="{Binding}" />
+					</i:Interaction.Behaviors>
 
-				<Controls:ContextMenuService.ContextMenu>
-					<Controls:ContextMenu x:Name="DocumentsContextMenu">
-						<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
-										   Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
-										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-						<Controls:MenuItem Header="Delete"
-										   Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
-										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-					</Controls:ContextMenu>
-				</Controls:ContextMenuService.ContextMenu>
-			</ListBox>
+					<Controls:ContextMenuService.ContextMenu>
+						<Controls:ContextMenu x:Name="DocumentsContextMenu">
+							<Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
+											   Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
+											   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+							<Controls:MenuItem Header="Delete"
+											   Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
+											   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+						</Controls:ContextMenu>
+					</Controls:ContextMenuService.ContextMenu>
+				</ListBox>
+			</toolkit:BusyIndicator>
+			
 		</toolkit:HeaderedContentControl>
-
 	</Grid>
 </Infrastructure:View>

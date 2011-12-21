@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs.Caching
 		public void Can_cache_document_with_includes()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var s = store.OpenSession())
 				{
@@ -48,7 +48,7 @@ namespace Raven.Tests.Bugs.Caching
 		public void Will_referesh_result_when_main_document_changes()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var s = store.OpenSession())
 				{
@@ -87,7 +87,7 @@ namespace Raven.Tests.Bugs.Caching
 		public void New_query_returns_correct_value_when_cache_is_enabled_and_data_changes ()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var s = store.OpenSession())
 				{
@@ -143,7 +143,7 @@ namespace Raven.Tests.Bugs.Caching
 		public void Will_referesh_result_when_included_document_changes()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var s = store.OpenSession())
 				{

@@ -40,7 +40,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			ravenDbServer = new RavenDbServer(
 				new database::Raven.Database.Config.RavenConfiguration
 				{
-					Port = 8080,
+					Port = 8079,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					DataDirectory = path,
 					Catalog = { Catalogs = { new AssemblyCatalog(typeof(MoreLikeThisResponder).Assembly) } },
@@ -48,7 +48,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 			documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			};
 			documentStore.Initialize();
 		}

@@ -141,8 +141,9 @@ namespace Raven.Database.Config
 				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
 
 			// OAuth
-			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? "windows";
-
+			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";
+			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
+				SetupOAuth();
 
 		}
 
@@ -341,7 +342,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// The port to use when creating the http listener. 
-		/// Default: 8080
+		/// Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.
 		/// </summary>
 		public int Port { get; set; }
 
@@ -396,23 +397,12 @@ namespace Raven.Database.Config
 		/// </summary>
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
-		private string authenticationMode;
-
 		/// <summary>
 		/// Defines which mode to use to authenticate requests
 		/// Allowed values: Windows, OAuth
 		/// Default: Windows
 		/// </summary>
-		public string AuthenticationMode
-		{
-			get { return authenticationMode; }
-			set
-			{
-				authenticationMode = value;
-				if (string.Equals(authenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
-					SetupOAuth();
-			}
-		}
+		public string AuthenticationMode { get; set; }
 
 		/// <summary>
 		/// The certificate to use when verifying access token signatures for OAuth

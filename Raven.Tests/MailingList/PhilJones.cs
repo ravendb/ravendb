@@ -73,10 +73,10 @@ namespace Raven.Tests.MailingList
 							FirstName = "Bob",
 							LastName = "Smith",
 							Reminders = new List<Bar> 
-                        { 
-                            new Bar { AdminUserId = "users/2", Note = "Ring Bob", ReminderDue = new DateTime(year: 2011, month: 12, day: 12)},
-                            new Bar { AdminUserId = "users/3", Note ="Ring failed", ReminderDue = new DateTime(year:2011, month:12, day:11)}
-                        }
+						{ 
+							new Bar { AdminUserId = "users/2", Note = "Ring Bob", ReminderDue = new DateTime(year: 2011, month: 12, day: 12)},
+							new Bar { AdminUserId = "users/3", Note ="Ring failed", ReminderDue = new DateTime(year:2011, month:12, day:11)}
+						}
 						};
 
 						session.Store(newReminder);

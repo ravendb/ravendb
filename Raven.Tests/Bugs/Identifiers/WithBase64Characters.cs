@@ -24,7 +24,7 @@ namespace Raven.Tests.Bugs.Identifiers
 			{
 				IDocumentStore documentStore = new DocumentStore
 				{
-					Url = "http://localhost:8080"
+					Url = "http://localhost:8079"
 				}.Initialize();
 
 				using(var store = documentStore)

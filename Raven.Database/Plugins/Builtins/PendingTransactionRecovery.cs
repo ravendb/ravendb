@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Transactions;
 using NLog;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 
@@ -74,7 +75,11 @@ namespace Raven.Database.Plugins.Builtins
 			public void Prepare(PreparingEnlistment preparingEnlistment)
 			{
 				byte[] recoveryInformation = preparingEnlistment.RecoveryInformation();
-				database.PutStatic("transactions/recoveryInformation/" + txId, null, new MemoryStream(recoveryInformation), new RavenJObject());
+				var ravenJObject = new RavenJObject
+				{
+					{Constants.NotForReplication, true}
+				};
+				database.PutStatic("transactions/recoveryInformation/" + txId, null, new MemoryStream(recoveryInformation), ravenJObject);
 				preparingEnlistment.Prepared();
 			}
 

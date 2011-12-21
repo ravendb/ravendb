@@ -12,7 +12,7 @@ namespace Raven.Tests.MultiGet
 		public void CanUseStats()
 		{
 			using (GetNewServer())
-			using (var docStore = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var session = docStore.OpenSession())
 				{

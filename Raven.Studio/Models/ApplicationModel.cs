@@ -12,14 +12,13 @@ namespace Raven.Studio.Models
 		static ApplicationModel()
 		{
 			Current = new ApplicationModel();
-			Current.Initialize();
 		}
 
 		private ApplicationModel()
 		{
 			Notifications = new BindableCollection<Notification>(x=>x.Message);
 			LastNotification = new Observable<string>();
-			Server = new Observable<ServerModel>();
+			Server = new Observable<ServerModel> {Value = new ServerModel()};
 		}
 
 		public static Observable<DatabaseModel> Database { get { return Current.Server.Value.SelectedDatabase; } }
@@ -27,11 +26,6 @@ namespace Raven.Studio.Models
 		public static IAsyncDatabaseCommands DatabaseCommands
 		{
 			get { return Database.Value.AsyncDatabaseCommands; }
-		}
-
-		private void Initialize()
-		{
-			Server.Value = new ServerModel();
 		}
 
 		public Observable<ServerModel> Server { get; set; }

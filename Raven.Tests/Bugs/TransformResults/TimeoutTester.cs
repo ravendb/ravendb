@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		public void will_timeout_query_after_some_time()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				new Answers_ByAnswerEntity().Execute(store);
 				var answerId = "";

@@ -21,9 +21,9 @@ namespace Raven.Tests.Bugs
 
 		public QueryWithPercentageSignp()
 		{
-			port = 8080;
+			port = 8079;
 			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
 		#region IDisposable Members
@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var store = new DocumentStore {Url = "http://localhost:8080"}.Initialize();
+				var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize();
 
 				store.DatabaseCommands.PutIndex("Tags/Count",
 												new IndexDefinition

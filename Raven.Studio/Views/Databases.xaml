@@ -77,7 +77,12 @@
 					 SelectedItem="{Binding SelectedDatabase, Mode=TwoWay}"
 					 ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
 					 ItemTemplate="{StaticResource DatabaseItemTemplate}"
-					 Margin="10" />
+					 Margin="10">
+
+				<i:Interaction.Behaviors>
+					<Behaviors:SelectItemOnRightClick />
+				</i:Interaction.Behaviors>
+			</ListBox>
 		</toolkit:HeaderedContentControl>
 	</Grid>
 </Infrastructure:View>

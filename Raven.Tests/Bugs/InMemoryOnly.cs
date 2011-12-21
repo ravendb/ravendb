@@ -18,14 +18,14 @@ namespace Raven.Tests.Bugs
 		{
 			IOExtensions.DeleteDirectory("Data");
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 			using (var store = new EmbeddableDocumentStore
 			{
 				RunInMemory = true,
 				UseEmbeddedHttpServer = true,
 				Configuration = 
 				{
-					Port = 8080,
+					Port = 8079,
 					RunInMemory = true
 				}
 			})

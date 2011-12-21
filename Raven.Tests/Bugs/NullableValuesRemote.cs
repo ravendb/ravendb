@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs
 		public void CanGetNullableDoubleAndInt()
 		{
 			using (GetNewServer())
-			using (var documentStore = new DocumentStore {Url = "http://localhost:8080/"}.Initialize())
+			using (var documentStore = new DocumentStore {Url = "http://localhost:8079/"}.Initialize())
 			{
 				using(var s = documentStore.OpenSession())
 				{

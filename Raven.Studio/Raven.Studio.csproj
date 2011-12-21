@@ -126,6 +126,7 @@
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ChangeFieldValueCommand.cs" />
+    <Compile Include="Commands\DeleteAllDocumentsOfCollectionCommand.cs" />
     <Compile Include="Commands\NavigateToDocumentByIdCommand.cs" />
     <Compile Include="Commands\ListBoxCommand.cs" />
     <Compile Include="Commands\NavigateToNextPageCommand.cs" />
@@ -182,7 +183,7 @@
     <Compile Include="Impl\PopupPlacement\PopupPlacement.cs" />
     <Compile Include="Impl\PopupPlacement\PopupVerticalAlignment.cs" />
     <Compile Include="Infrastructure\Converters\CollectionCountToGridLengthConverter.cs" />
-    <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThenOrEqualTo.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThen.cs" />
     <Compile Include="Infrastructure\ErrorHandler.cs" />
     <Compile Include="Infrastructure\ErrorPresenter.cs" />
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
@@ -248,6 +249,7 @@
     <Compile Include="Infrastructure\Converters\StringEmptyToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\TargetedDataTemplate.cs" />
     <Compile Include="Infrastructure\ColorExtensions.cs" />
+    <Compile Include="Infrastructure\ListExtensions.cs" />
     <Compile Include="Infrastructure\ModelAttacher.cs" />
     <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />
