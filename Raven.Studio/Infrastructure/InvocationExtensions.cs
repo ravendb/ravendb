@@ -117,23 +117,26 @@ namespace Raven.Studio.Infrastructure
 
 		}
 
-		public static Task CatchIgnore<TException>(this Task parent, Action action) where TException : Exception
+		public static Task CatchIgnore<TException>(this Task parent, Action<TException> action) where TException : Exception
 		{
 			return parent.ContinueWith(task =>
 			                           	{
 			                           		if (task.IsFaulted == false)
 			                           			return task;
 
-			                           		if (task.Exception.ExtractSingleInnerException() is TException == false)
+											var ex = task.Exception.ExtractSingleInnerException() as TException;
+											if (ex == null)
 			                           			return task;
 
-			                           		action();
-
-			                           		var asyncTaskMethodBuilder = AsyncTaskMethodBuilder.Create();
-			                           		asyncTaskMethodBuilder.SetResult();
-			                           		return asyncTaskMethodBuilder.Task;
+											Execute.OnTheUI(() => action(ex));
+			                           		return Execute.EmptyResult<object>();
 			                           	})
 				.Unwrap();
+		}
+
+		public static Task CatchIgnore<TException>(this Task parent, Action action) where TException : Exception
+		{
+			return parent.CatchIgnore<TException>(ex => action());
 		}
 
 		public static Task ProcessTasks(this IEnumerable<Task> tasks)

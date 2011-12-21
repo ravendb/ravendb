@@ -23,7 +23,7 @@ namespace Raven.Studio.Infrastructure
 				.Catch();
 		}
 
-		private static Task<T> EmptyResult<T>()
+		public static Task<T> EmptyResult<T>()
 		{
 			var tcs = new TaskCompletionSource<T>();
 			tcs.SetResult(default(T));

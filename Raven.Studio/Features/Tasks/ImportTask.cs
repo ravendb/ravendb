@@ -138,7 +138,6 @@ namespace Raven.Studio.Features.Tasks
 
             private Task WriteIndexes(JsonTextReader jsonReader)
             {
-
                 while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
                 {
                     var json = JToken.ReadFrom(jsonReader);
@@ -158,9 +157,7 @@ namespace Raven.Studio.Features.Tasks
                         .ContinueOnSuccess(() => WriteIndexes(jsonReader));
                 }
 
-                var tcs = new TaskCompletionSource<object>();
-                tcs.SetResult(null);
-                return tcs.Task;
+				return Infrastructure.Execute.EmptyResult<object>();
             }
 
             private Task WriteDocuments(JsonTextReader jsonReader)
