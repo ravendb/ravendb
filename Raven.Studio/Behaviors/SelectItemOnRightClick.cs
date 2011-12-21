@@ -32,10 +32,12 @@ namespace Raven.Studio.Behaviors
 				.OfType<ListBoxItem>()
 				.FirstOrDefault();
 
-			if (item == null || AssociatedObject.SelectedItems.Contains(item.DataContext)) 
+			if (item == null) 
 				return;
 
-			AssociatedObject.SelectedItems.Clear();
+			if (AssociatedObject.SelectionMode != SelectionMode.Single && AssociatedObject.SelectedItems.Contains(item.DataContext) == false)
+				AssociatedObject.SelectedItems.Clear();
+
 			item.IsSelected = true;
 		}
 	}
