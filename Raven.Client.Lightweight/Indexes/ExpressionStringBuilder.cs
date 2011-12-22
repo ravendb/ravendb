@@ -1142,10 +1142,15 @@ namespace Raven.Client.Indexes
 			}
 			if (expression != null)
 			{
-				if (node.Method.Name == "Hierarchy")
+				switch (node.Method.Name)
 				{
-					VisitHierarchy(node, expression);
-					return node;
+					case "MetadataFor":
+						Visit(node.Arguments[0]);
+						Out("[\"@metadata\"]");
+						return node;
+					case "Hierarchy":
+						VisitHierarchy(node, expression);
+						return node;
 				}
 				if (expression.Type == typeof(IClientSideDatabase))
 				{

@@ -19,6 +19,5 @@ namespace Raven.Client.Indexes
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
-
 	}
 }
