@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs.DTC
   ""Raven-Entity-Name"": ""MySagaDatas"",
   ""Raven-Clr-Type"": ""TestNServiceBusSagaWithRavenDb.MySagaData, TestNServiceBusSagaWithRavenDb"",
   ""Last-Modified"": ""Mon, 21 Mar 2011 19:59:58 GMT"",
-  ""Non-Authoritive-Information"": false
+  ""Non-Authoritative-Information"": false
 }"), transactionInformation);
 				store.DatabaseCommands.Commit(transactionInformation.Id);
 

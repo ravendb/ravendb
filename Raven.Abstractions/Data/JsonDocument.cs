@@ -74,7 +74,7 @@ namespace Raven.Abstractions.Data
 			if(Etag != null)
 				metadata["@etag"] = Etag.Value.ToString();
 			if (NonAuthoritiveInformation != null)
-				metadata["Non-Authoritive-Information"] = NonAuthoritiveInformation.Value;
+				metadata["Non-Authoritative-Information"] = NonAuthoritiveInformation.Value;
 
 			doc["@metadata"] = metadata;
 

@@ -348,7 +348,7 @@ more responsive application.
 				return (T) entity;
 			}
 			var etag = metadata.Value<string>("@etag");
-			if(metadata.Value<bool>("Non-Authoritive-Information") && 
+			if(metadata.Value<bool>("Non-Authoritative-Information") && 
 				AllowNonAuthoritiveInformation == false)
 			{
 				throw new NonAuthoritiveInformationException("Document " + key +

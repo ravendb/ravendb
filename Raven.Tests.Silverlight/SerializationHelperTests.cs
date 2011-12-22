@@ -108,7 +108,7 @@ namespace Raven.Tests.Silverlight
 		{
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
-			((RavenJObject)doc["@metadata"])["Non-Authoritive-Information"] = true;
+			((RavenJObject)doc["@metadata"])["Non-Authoritative-Information"] = true;
 
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
