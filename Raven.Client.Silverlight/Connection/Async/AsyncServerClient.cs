@@ -185,7 +185,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 						return new JsonDocument
 						{
 							DataAsJson = RavenJObject.Parse(responseString),
-							NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
+							NonAuthoritativeInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 							Key = key,
 							LastModified = DateTime.ParseExact(request.ResponseHeaders[Constants.LastModified].First(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
 							Etag = new Guid(request.ResponseHeaders["ETag"].First()),

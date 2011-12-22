@@ -80,7 +80,7 @@ namespace Raven.Tests.Bugs.DTC
 				// 3. Confirm that the update is working !
 				using (var session = documentStore.OpenSession())
 				{
-					session.Advanced.AllowNonAuthoritiveInformation = false;
+					session.Advanced.AllowNonAuthoritativeInformation = false;
 
 					var stored = session.Load<Foo>(id1.ToString());
 

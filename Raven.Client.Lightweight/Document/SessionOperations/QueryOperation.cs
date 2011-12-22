@@ -91,10 +91,10 @@ namespace Raven.Client.Document.SessionOperations
 
 		public bool ShouldQueryAgain(Exception e)
 		{
-			if (e is NonAuthoritiveInformationException == false)
+			if (e is NonAuthoritativeInformationException == false)
 				return false;
 
-			return sp.Elapsed <= sessionOperations.NonAuthoritiveInformationTimeout;
+			return sp.Elapsed <= sessionOperations.NonAuthoritativeInformationTimeout;
 		}
 
 		public IList<T> Complete<T>()

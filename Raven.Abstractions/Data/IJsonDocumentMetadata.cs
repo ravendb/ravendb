@@ -21,9 +21,9 @@ namespace Raven.Abstractions.Data
 		string Key { get; set; }
 
 		/// <summary>
-		/// 	Gets or sets a value indicating whether this document is non authoritive (modified by uncommitted transaction).
+		/// 	Gets or sets a value indicating whether this document is non authoritative (modified by uncommitted transaction).
 		/// </summary>
-		bool? NonAuthoritiveInformation { get; set; }
+		bool? NonAuthoritativeInformation { get; set; }
 
 		/// <summary>
 		/// Gets or sets the etag.

@@ -27,7 +27,7 @@ namespace Raven.Tests.Bugs.DTC
 
 					using (var s3 = store.OpenSession())
 					{
-						s3.Advanced.AllowNonAuthoritiveInformation = false;
+						s3.Advanced.AllowNonAuthoritativeInformation = false;
 						happy = s3.Load<User>(u2.Id) != null;
 					}
 

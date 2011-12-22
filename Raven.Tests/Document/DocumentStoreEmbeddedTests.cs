@@ -106,7 +106,7 @@ namespace Raven.Tests.Document
 
 
 		[Fact]
-		public void Will_get_notification_when_reading_non_authoritive_information()
+		public void Will_get_notification_when_reading_non_authoritative_information()
 		{
 			using (var documentStore = NewDocumentStore())
 			{
@@ -127,9 +127,9 @@ namespace Raven.Tests.Document
 					{
 						using (var session2 = documentStore.OpenSession())
 						{
-							session2.Advanced.AllowNonAuthoritiveInformation = false;
-							session2.Advanced.NonAuthoritiveInformationTimeout = TimeSpan.Zero;
-							Assert.Throws<NonAuthoritiveInformationException>(()=>session2.Load<Company>(company.Id));
+							session2.Advanced.AllowNonAuthoritativeInformation = false;
+							session2.Advanced.NonAuthoritativeInformationTimeout = TimeSpan.Zero;
+							Assert.Throws<NonAuthoritativeInformationException>(()=>session2.Load<Company>(company.Id));
 						}
 					}
 				}

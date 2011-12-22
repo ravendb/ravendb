@@ -39,7 +39,7 @@ namespace Raven.Client.Connection
 						Key = key,
 						LastModified = lastModified,
 						Etag = etag,
-						NonAuthoritiveInformation = nai,
+						NonAuthoritativeInformation = nai,
 						Metadata = metadata.FilterHeaders(isServerDocument: false),
 						DataAsJson = doc,
 					}).ToList();
@@ -134,7 +134,7 @@ namespace Raven.Client.Connection
 			return new JsonDocument
 			{
 				DataAsJson = jsonData,
-				NonAuthoritiveInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
 				Etag = new Guid(etag),
 				LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),
