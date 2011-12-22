@@ -1378,6 +1378,90 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
+
+		private static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
+		{
+			"abstract",
+			"as",
+			"base",
+			"bool",
+			"break",
+			"byte",
+			"case",
+			"catch",
+			"char",
+			"checked",
+			"class",
+			"const",
+			"continue",
+			"decimal",
+			"default",
+			"delegate",
+			"do",
+			"double",
+			"else",
+			"enum",
+			"event",
+			"explicit",
+			"extern",
+			"false",
+			"finally",
+			"fixed",
+			"float",
+			"for",
+			"foreach",
+			"goto",
+			"if",
+			"implicit",
+			"in",
+			"in (generic modifier)",
+			"int",
+			"interface",
+			"internal",
+			"is",
+			"lock",
+			"long",
+			"namespace",
+			"new",
+			"null",
+			"object",
+			"operator",
+			"out",
+			"out (generic modifier)",
+			"override",
+			"params",
+			"private",
+			"protected",
+			"public",
+			"readonly",
+			"ref",
+			"return",
+			"sbyte",
+			"sealed",
+			"short",
+			"sizeof",
+			"stackalloc",
+			"static",
+			"string",
+			"struct",
+			"switch",
+			"this",
+			"throw",
+			"true",
+			"try",
+			"typeof",
+			"uint",
+			"ulong",
+			"unchecked",
+			"unsafe",
+			"ushort",
+			"using",
+			"virtual",
+			"void",
+			"volatile",
+			"while"
+		});
+
 		/// <summary>
 		///   Visits the <see cref = "T:System.Linq.Expressions.ParameterExpression" />.
 		/// </summary>
@@ -1396,7 +1480,10 @@ namespace Raven.Client.Indexes
 				Out("Param_" + GetParamId(node));
 				return node;
 			}
-			Out(node.Name.StartsWith("$VB$") ? node.Name.Substring(4) : node.Name);
+			var name = node.Name.StartsWith("$VB$") ? node.Name.Substring(4) : node.Name;
+			if (keywordsInCSharp.Contains(name))
+				Out('@');
+			Out(name);
 			return node;
 		}
 

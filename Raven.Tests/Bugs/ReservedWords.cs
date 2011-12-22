@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Tests.Spatial;
 using Xunit;
@@ -18,6 +19,17 @@ namespace Raven.Tests.Bugs
 
 	public class ReservedWords : LocalClientTest
 	{
+		[Fact]
+		public void WillOutputCorrectly()
+		{
+			var indexDefinition = new Events_ByDate_Count
+			{
+				Conventions = new DocumentConvention()
+			}.CreateIndexDefinition();
+
+			Assert.Equal("docs.Events\r\n\t.Select(@event => new {Year = @event.Date.Year, Month = @event.Date.Month, Count = 1})", indexDefinition.Map);
+		}
+
 		[Fact]
 		public void can_parse_escaped_reserved_words_correctly()
 		{
