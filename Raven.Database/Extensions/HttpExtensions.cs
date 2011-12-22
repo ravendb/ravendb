@@ -205,18 +205,11 @@ namespace Raven.Database.Extensions
 			context.Response.StatusDescription = "Not Found";
 		}
 
-		public static void SetStatusToNonAuthoritativeInformation(this IHttpContext context)
-		{
-			context.Response.StatusCode = 203;
-			context.Response.StatusDescription = "Non-Authoritative Information";
-		}
-
 		public static void SetStatusToNotModified(this IHttpContext context)
 		{
 			context.Response.StatusCode = 304;
 			context.Response.StatusDescription = "Not Modified";
 		}
-
 
 		public static void SetStatusToNonAuthoritativeInformation(this IHttpContext context)
 		{
