@@ -42,12 +42,12 @@ namespace Raven.Database.Server.Responders
 			const double KB = 1024;
 
 			if (absSize > GB) // GB
-				return string.Format("{0:#,#.##} GBytes", size / GB);
+				return string.Format("{0:#,#.##;;0} GBytes", size / GB);
 			if (absSize > MB)
-				return string.Format("{0:#,#.##} MBytes", size / MB);
+				return string.Format("{0:#,#.##;;0} MBytes", size / MB);
 			if (absSize > MB)
-				return string.Format("{0:#,#.##} KBytes", size / KB);
-			return string.Format("{0:#,#} Bytes", size);
+				return string.Format("{0:#,#.##;;0} KBytes", size / KB);
+			return string.Format("{0:#,#;;0} Bytes", size);
 
 		}
 	}

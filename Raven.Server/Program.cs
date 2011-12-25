@@ -271,7 +271,7 @@ Configuration options:
 				}
 
 				Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
-				Console.WriteLine("Server started in {0:#,#} ms", sp.ElapsedMilliseconds);
+				Console.WriteLine("Server started in {0:#,#;;0} ms", sp.ElapsedMilliseconds);
 				Console.WriteLine("Data directory: {0}", ravenConfiguration.DataDirectory);
 				Console.WriteLine("HostName: {0} Port: {1}, Storage: {2}", ravenConfiguration.HostName ?? "<any>",
 					ravenConfiguration.Port,
@@ -310,10 +310,10 @@ Configuration options:
 					"gc", () =>
 					{
 						long before = Process.GetCurrentProcess().WorkingSet64;
-						Console.WriteLine("Starting garbage collection, current memory is: {0:#,#.##} mb", before / 1024d / 1024d);
+						Console.WriteLine("Starting garbage collection, current memory is: {0:#,#.##;;0} mb", before / 1024d / 1024d);
 						GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
 						var after = Process.GetCurrentProcess().WorkingSet64;
-						Console.WriteLine("Done garbage collection, current memory is: {0:#,#.##} mb, saved: {1:#,#.##} mb", after / 1024d / 1024d,
+						Console.WriteLine("Done garbage collection, current memory is: {0:#,#.##;;0} mb, saved: {1:#,#.##;;0} mb", after / 1024d / 1024d,
 										  (before - after) / 1024d / 1024d);
 					}
 					},

@@ -77,7 +77,7 @@ namespace Raven.Studio.Commands
 				                   		else
 				                   		{
 				                   			totalCount += array.Count;
-				                   			output(String.Format("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Count,
+				                   			output(String.Format("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", array.Count,
 				                   			                     totalCount));
 				                   			foreach (JToken item in array)
 				                   			{
@@ -108,7 +108,7 @@ namespace Raven.Studio.Commands
 				                   		else
 				                   		{
 				                   			totalCount += array.Count;
-				                   			output(String.Format("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
+				                   			output(String.Format("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", array.Count,
 				                   			                     totalCount));
 				                   			foreach (JToken item in array)
 				                   			{

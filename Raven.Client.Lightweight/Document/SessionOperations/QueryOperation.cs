@@ -224,7 +224,7 @@ namespace Raven.Client.Document.SessionOperations
 				{
 					sp.Stop();
 					throw new TimeoutException(
-						string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
+						string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.",
 									  sp.ElapsedMilliseconds));
 				}
 				log.Debug(

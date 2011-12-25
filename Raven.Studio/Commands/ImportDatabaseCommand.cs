@@ -82,7 +82,7 @@ namespace Raven.Studio.Commands
 			WriteIndexes(jsonReader)
 				.ContinueOnSuccess(() =>
 				                   	{
-				                   		output(String.Format("Imported {0:#,#} indexes", totalIndexes));
+				                   		output(String.Format("Imported {0:#,#;;0} indexes", totalIndexes));
 
 				                   		output(String.Format("Begin reading documents"));
 
@@ -112,7 +112,7 @@ namespace Raven.Studio.Commands
 
 				                   		WriteDocuments(jsonReader)
 				                   			.ContinueOnSuccess(
-				                   				() => output(String.Format("Imported {0:#,#} documents in {1:#,#} ms", totalCount,
+												() => output(String.Format("Imported {0:#,#;;0} documents in {1:#,#;;0} ms", totalCount,
 				                   				                           sw.ElapsedMilliseconds)));
 				                   	});
 		}
@@ -171,8 +171,8 @@ namespace Raven.Studio.Commands
 			                       	Key = metadata.Value<string>("@id"),
 			                       }).ToArray();
 
-				
-			output(String.Format("Wrote {0} documents  in {1:#,#} ms",
+
+			output(String.Format("Wrote {0} documents  in {1:#,#;;0} ms",
 			                     batch.Count, sw.ElapsedMilliseconds));
 
 			return DatabaseCommands
