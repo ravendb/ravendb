@@ -310,10 +310,10 @@ Configuration options:
 					"gc", () =>
 					{
 						long before = Process.GetCurrentProcess().WorkingSet64;
-						Console.WriteLine("Starting garbage collection, current memory is: {0:#,#.##;;0} mb", before / 1024d / 1024d);
+						Console.WriteLine("Starting garbage collection, current memory is: {0:#,#.##;;0} MB", before / 1024d / 1024d);
 						GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
 						var after = Process.GetCurrentProcess().WorkingSet64;
-						Console.WriteLine("Done garbage collection, current memory is: {0:#,#.##;;0} mb, saved: {1:#,#.##;;0} mb", after / 1024d / 1024d,
+						Console.WriteLine("Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB", after / 1024d / 1024d,
 										  (before - after) / 1024d / 1024d);
 					}
 					},
