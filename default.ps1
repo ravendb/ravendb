@@ -393,8 +393,10 @@ task Upload -depends DoRelease {
 		  $log = git log -n 1 --oneline		
 		}
 		
+		$log = $log.Replace('"','''') # avoid problems because of " escaping the output
+		
 		$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
-		write-host "Executing: $uploader '$global:uploadCategory' $file '$log'"
+		write-host "Executing: $uploader '$global:uploadCategory' $file ""$log"""
 		&$uploader "$uploadCategory" $file "$log"
 			
 		if ($lastExitCode -ne 0) {
