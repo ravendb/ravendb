@@ -35,9 +35,7 @@ namespace Raven.Studio.Commands
 			               	Filter = "Raven Dumps|*.raven.dump"
 			               };
 
-			var dialogResult = openFile.ShowDialog() ?? false;
-
-			if (!dialogResult)
+			if (openFile.ShowDialog() != true)
 				return;
 
 			totalCount = 0;
