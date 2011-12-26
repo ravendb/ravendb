@@ -48,6 +48,7 @@ namespace Raven.Database.Server
 
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 
+		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
 		public int NumberOfRequests
 		{
@@ -86,6 +87,7 @@ namespace Raven.Database.Server
 
 		private TimeSpan maxTimeDatabaseCanBeIdle;
 		private TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+		private bool disposed;
 
 		public bool HasPendingRequests
 		{
@@ -143,23 +145,33 @@ namespace Raven.Database.Server
 
 		public void Dispose()
 		{
-			if (databasesCleanupTimer != null)
-				databasesCleanupTimer.Dispose();
-			if (listener != null && listener.IsListening)
-				listener.Stop();
-
-			lock(ResourcesStoresCache)
+			disposerLock.EnterWriteLock();
+			try
 			{
-				foreach (var documentDatabase in ResourcesStoresCache)
-				{
-					documentDatabase.Value.Dispose();
-				}
-				ResourcesStoresCache.Clear();
-			}
+				if (databasesCleanupTimer != null)
+					databasesCleanupTimer.Dispose();
+				if (listener != null && listener.IsListening)
+					listener.Stop();
 
-			currentConfiguration.Dispose();
-			currentDatabase.Dispose();
-			currentTenantId.Dispose();
+				disposed = true;
+
+				lock (ResourcesStoresCache)
+				{
+					foreach (var documentDatabase in ResourcesStoresCache)
+					{
+						documentDatabase.Value.Dispose();
+					}
+					ResourcesStoresCache.Clear();
+				}
+
+				currentConfiguration.Dispose();
+				currentDatabase.Dispose();
+				currentTenantId.Dispose();
+			}
+			finally
+			{
+				disposerLock.ExitWriteLock();
+			}
 		}
 
 		#endregion
@@ -252,28 +264,42 @@ namespace Raven.Database.Server
 
 		public void HandleActualRequest(IHttpContext ctx)
 		{
-			var sw = Stopwatch.StartNew();
-			bool ravenUiRequest = false;
+			var isReadLockHeld = disposerLock.IsReadLockHeld;
+			if (isReadLockHeld == false)
+				disposerLock.EnterReadLock();
 			try
 			{
-				ravenUiRequest = DispatchRequest(ctx);
-			}
-			catch (Exception e)
-			{
-				HandleException(ctx, e);
-				if (ShouldLogException(e))
-					logger.WarnException("Error on request", e);
-			}
-			finally
-			{
+				if (disposed)
+					return;
+
+				var sw = Stopwatch.StartNew();
+				bool ravenUiRequest = false;
 				try
 				{
-					FinalizeRequestProcessing(ctx, sw, ravenUiRequest);
+					ravenUiRequest = DispatchRequest(ctx);
 				}
 				catch (Exception e)
 				{
-					logger.ErrorException("Could not finalize request properly", e);
+					HandleException(ctx, e);
+					if (ShouldLogException(e))
+						logger.WarnException("Error on request", e);
 				}
+				finally
+				{
+					try
+					{
+						FinalizeRequestProcessing(ctx, sw, ravenUiRequest);
+					}
+					catch (Exception e)
+					{
+						logger.ErrorException("Could not finalize request properly", e);
+					}
+				}
+			}
+			finally
+			{
+				if (isReadLockHeld == false)
+					disposerLock.ExitReadLock();
 			}
 		}
 

@@ -33,7 +33,7 @@ namespace Raven.Tests.MultiGet
 
 					using (var session = docStore.OpenSession())
 					{
-						session.Advanced.AllowNonAuthoritiveInformation = false;
+						session.Advanced.AllowNonAuthoritativeInformation = false;
 						var user = session.Advanced.Lazily.Load<User>(id);
 						Assert.NotNull(user.Value);
 					}

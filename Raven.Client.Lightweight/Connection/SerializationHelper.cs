@@ -33,13 +33,13 @@ namespace Raven.Client.Connection
 					let key = Extract(metadata, "@id", string.Empty)
 					let lastModified = Extract(metadata, Constants.LastModified, SystemTime.Now, (string d) => ConvertToUtcDate(d))
 					let etag = Extract(metadata, "@etag", Guid.Empty, (string g) => new Guid(g))
-					let nai = Extract(metadata, "Non-Authoritive-Information", false, (string b) => Convert.ToBoolean(b))
+					let nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b))
 					select new JsonDocument
 					{
 						Key = key,
 						LastModified = lastModified,
 						Etag = etag,
-						NonAuthoritiveInformation = nai,
+						NonAuthoritativeInformation = nai,
 						Metadata = metadata.FilterHeaders(isServerDocument: false),
 						DataAsJson = doc,
 					}).ToList();
@@ -134,7 +134,7 @@ namespace Raven.Client.Connection
 			return new JsonDocument
 			{
 				DataAsJson = jsonData,
-				NonAuthoritiveInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
 				Etag = new Guid(etag),
 				LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),

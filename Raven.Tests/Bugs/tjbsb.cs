@@ -49,7 +49,7 @@ namespace Raven.Tests.Bugs
 
 				using (IDocumentSession session = store.OpenSession())
 				{
-					session.Advanced.AllowNonAuthoritiveInformation = false;
+					session.Advanced.AllowNonAuthoritativeInformation = false;
 					var user = session.Load<User>("users/user@anywhere.com");
 					Assert.NotNull(user);
 				}

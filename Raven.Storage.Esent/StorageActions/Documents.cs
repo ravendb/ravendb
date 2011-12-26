@@ -40,7 +40,7 @@ namespace Raven.Storage.Esent.StorageActions
 					Key = metadata.Key,
 					LastModified = metadata.LastModified,
 					Metadata = metadata.Metadata,
-					NonAuthoritiveInformation = metadata.NonAuthoritiveInformation,
+					NonAuthoritativeInformation = metadata.NonAuthoritativeInformation,
 				};
 			});
 		}
@@ -73,7 +73,7 @@ namespace Raven.Storage.Esent.StorageActions
 					logger.Debug("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
 					return createResult(new JsonDocumentMetadata()
 					{
-						NonAuthoritiveInformation = false,// we are the transaction, therefor we are Authoritive
+						NonAuthoritativeInformation = false,// we are the transaction, therefor we are Authoritative
 						Etag = etag,
 						LastModified = Api.RetrieveColumnAsDateTime(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"]).Value,
 						Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
@@ -94,7 +94,7 @@ namespace Raven.Storage.Esent.StorageActions
 						Etag = Guid.Empty,
 						Key = key,
 						Metadata = new RavenJObject{{Constants.RavenDocumentDoesNotExists, true}},
-						NonAuthoritiveInformation = true,
+						NonAuthoritativeInformation = true,
 						LastModified = DateTime.MinValue,
 					}, (docKey, etag, metadata) => new RavenJObject());
 				}
@@ -106,7 +106,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return createResult(new JsonDocumentMetadata()
 			{
 				Etag = existingEtag,
-				NonAuthoritiveInformation = existsInTx,
+				NonAuthoritativeInformation = existsInTx,
 				LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
 				Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
 				Metadata = ReadDocumentMetadata(key, existingEtag)
@@ -198,7 +198,7 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					Key = key,
 					DataAsJson = dataAsJson,
-					NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
+					NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
 					LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
 					Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
 					Metadata = metadata
@@ -228,7 +228,7 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					Key = key,
 					DataAsJson = dataAsJson,
-					NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
+					NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
 					LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
 					Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
 					Metadata = metadata
@@ -270,7 +270,7 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					Key = key,
 					DataAsJson = dataAsJson,
-					NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
+					NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
 					LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
 					Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
 					Metadata = metadata
@@ -313,7 +313,7 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					Key = key,
 					DataAsJson = dataAsJson,
-					NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
+					NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
 					Etag = etag,
 					LastModified = modified.Value,
 					Metadata = metadata

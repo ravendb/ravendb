@@ -18,10 +18,10 @@ namespace Raven.Database.Config
 
 			// Authentication
 			{"Raven/AnonymousAccess", "string", "Get,All,None", "Determines what actions an anonymous user can do. Get - read only, All - read & write, None - allows access to only authenticated users. Default: Get."},
-			{"Raven/AuthenticationMode", "string", "windows,oauth", "What authentication mode to use, Windows authentication or OAuth athentication. Default: windows."},
+			{"Raven/AuthenticationMode", "string", "windows,oauth", "What authentication mode to use, Windows authentication or OAuth authentication. Default: windows."},
 			{"Raven/OAuthTokenServer", "string", null, "The url clients should use for authenticating when using OAuth mode. Default: http://RavenDB-Server-Url/OAuth/AccessToken - the internal OAuth server"},
-			{"Raven/OAuthTokenCertificatePath", "string", null, "The path to the OAuth certificate. Default: none. If no certificate is specified, one will be authomatically created."},
-			{"Raven/OAuthTokenCertificatePassword", "string", null, "The password for the OAuth cetificate. Default: none."},
+			{"Raven/OAuthTokenCertificatePath", "string", null, "The path to the OAuth certificate. Default: none. If no certificate is specified, one will be automatically created."},
+			{"Raven/OAuthTokenCertificatePassword", "string", null, "The password for the OAuth certificate. Default: none."},
 			{"/Authorization/Windows/RequiredGroups", "string", null, "Limit the users that can authenticate to RavenDB to only users in the specified groups. Multiple groups can be specified, separated by a semi column (;)."},
 
 			// Network
@@ -41,13 +41,13 @@ namespace Raven.Database.Config
 			{"Raven/Tenants/FrequnecyToCheckForIdleDatabases", "int", null, "The time in seconds to check for an idle tenant database"},
 
 			// Storage
-			{"Raven/StorageTypeName", "string", "esent,munin,Fully Qualifiied Type Name", "The storage engine to use for the database. Default: esent."},
+			{"Raven/StorageTypeName", "string", "esent,munin,Fully Qualified Type Name", "The storage engine to use for the database. Default: esent."},
 
 			// Indexing
 			{"Raven/MaxNumberOfItemsToIndexInSingleBatch", "int", null, "The number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage. Default: 2,500."},
 			// Temp Indexing
 			{"Raven/TempIndexPromotionMinimumQueryCount", "int", "1 or higher","The number of times a temporary index has to be queries during the promotion threshold to become a permanent auto index. Default: 100."},
-			{"Raven/TempIndexPromotionThreshold", "int", null, "The promotion threshold for promoting a temporary dynamic index into a permenant auto index. The value is in second and refer to the length of time that the index have to get to the minimum query count value. Default: 10 minutes."},
+			{"Raven/TempIndexPromotionThreshold", "int", null, "The promotion threshold for promoting a temporary dynamic index into a permanent auto index. The value is in second and refer to the length of time that the index have to get to the minimum query count value. Default: 10 minutes."},
 			{"Raven/TempIndexCleanupPeriod","int", null, "How often will temp dynamic indexes be purged from the system. The value is in seconds. Default: 10 minutes."},
 			{"Raven/TempIndexCleanupThreshold","int",null, "How long does a temporary index hang around if there are no queries made to it. The value is in seconds. Default: 20 minutes."},
 			{"Raven/TempIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a temporary index held in memory. When a temporary dynamic index exceeds that value, it will be using on disk indexing, rather then RAM indexing. Default: 25 MB."},
@@ -55,11 +55,11 @@ namespace Raven.Database.Config
 
 			// Memory
 			{"Raven/MemoryCacheLimitMegabytes", "int", null, "The max size in MB for the internal document cache inside RavenDB server, default is half of the machine available RAM minus the size of the esent cache."},
-			{"Raven/MemoryCacheLimitPercentage","int", "0-99", "The orecentage of memory that the internal document cache inside RavenDB server will use, default: auto."},
+			{"Raven/MemoryCacheLimitPercentage","int", "0-99", "The percentage of memory that the internal document cache inside RavenDB server will use, default: auto."},
 			{"Raven/MemoryCacheLimitCheckInterval", "TimeSpan", "HH:MM:SS", "The internal for checking that the internal document cache inside RavenDB server will be cleaned, default: 2 minutes."},
 
 			// Esent
-			{"Raven/Esent/CacheSizeMax", "int", null, "The size in MB of the Esent page cache, which is the default stroage engine. Default: 1,048 MB on 64 bits, 256 MB on 32 bits."},
+			{"Raven/Esent/CacheSizeMax", "int", null, "The size in MB of the Esent page cache, which is the default storage engine. Default: 1,048 MB on 64 bits, 256 MB on 32 bits."},
 			{"Raven/Esent/MaxVerPages", "int", null, "The maximum size of version store (in memory modified data) available. The value is in megabytes. Default: 128."},
 			{"Raven/Esent/LogFileSize", "int", null, "The size of the database log file. The value is in kilobytes. Default: 8,192."},
 			{"Raven/Esent/LogBuffers", "int", null, "The size of the in memory buffer for transaction log. Default: 16."},
@@ -81,7 +81,7 @@ namespace Raven.Database.Config
 
 			// Bundles
 			{"Raven/Quotas/Size/HardLimitInKB", "int", null, "The hard limit after which we refuse any additional writes. Default: none."},
-			{"Raven/Quotas/Size/SoftMarginInKB", "int", null, "The soft limit before which we will warn about the quota. Default: 1 mb."},
+			{"Raven/Quotas/Size/SoftMarginInKB", "int", null, "The soft limit before which we will warn about the quota. Default: 1 MB."},
 
 			//Licensing
 			{"Raven/License", "string", null, "The full license string for RavenDB. If Raven/License is specified, it overrides the Raven/LicensePath configuration."},

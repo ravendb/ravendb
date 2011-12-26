@@ -109,7 +109,7 @@ Usage:
 							break;
 						}
 						totalCount += array.Length;
-						Console.WriteLine("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Length,
+						Console.WriteLine("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", array.Length,
 										  totalCount);
 						foreach (RavenJToken item in array)
 						{
@@ -163,7 +163,7 @@ Usage:
 						break;
 					}
 					totalCount += array.Length;
-					Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Length,
+					Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", array.Length,
 									  totalCount);
 					foreach (RavenJToken item in array)
 					{
@@ -195,7 +195,7 @@ Usage:
 					}
 
 					totalCount += array.Length;
-					Console.WriteLine("Reading batch of {0,3} attachments, read so far: {1,10:#,#}", array.Length,
+					Console.WriteLine("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", array.Length,
 									  totalCount);
 					foreach (var item in array)
 					{
@@ -359,7 +359,7 @@ Usage:
 					}
 				}
 			}
-			Console.WriteLine("Imported {0:#,#} documents and {1:#,#} attachments in {2:#,#} ms", totalCount, attachmentCount, sw.ElapsedMilliseconds);
+			Console.WriteLine("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", totalCount, attachmentCount, sw.ElapsedMilliseconds);
 		}
 
 		public class TrivialJsonToJsonJsonConverter : JsonConverter
@@ -430,7 +430,7 @@ Usage:
 				}
 
 			}
-			Console.WriteLine("Wrote {0} documents [{1:#,#} kb] in {2:#,#} ms",
+			Console.WriteLine("Wrote {0} documents [{1:#,#;;0} kb] in {2:#,#;;0} ms",
 							  batch.Count, Math.Round((double)size / 1024, 2), sw.ElapsedMilliseconds);
 			batch.Clear();
 		}

@@ -29,7 +29,7 @@ namespace Raven.Bundles.Tests.Expiration
 			ravenDbServer = new RavenDbServer(
 				new database::Raven.Database.Config.RavenConfiguration
 				{
-					Port = 8080,
+					Port = 8079,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					DataDirectory = path,
 					Catalog =
@@ -48,7 +48,7 @@ namespace Raven.Bundles.Tests.Expiration
 			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
 			documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			};
 			documentStore.Initialize();
 		}

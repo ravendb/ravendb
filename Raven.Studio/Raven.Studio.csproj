@@ -127,6 +127,8 @@
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ChangeFieldValueCommand.cs" />
     <Compile Include="Commands\DeleteAllDocumentsOfCollectionCommand.cs" />
+    <Compile Include="Commands\ExportDatabaseCommand.cs" />
+    <Compile Include="Commands\ImportDatabaseCommand.cs" />
     <Compile Include="Commands\NavigateToDocumentByIdCommand.cs" />
     <Compile Include="Commands\ListBoxCommand.cs" />
     <Compile Include="Commands\NavigateToNextPageCommand.cs" />

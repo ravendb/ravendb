@@ -39,7 +39,7 @@ namespace Raven.Tests.Bugs.DTC
 
 				using (var s = store.OpenSession())
 				{
-					s.Advanced.AllowNonAuthoritiveInformation = false;
+					s.Advanced.AllowNonAuthoritativeInformation = false;
 					Assert.NotNull(s.Load<Tester>("tester1234"));
 					Assert.NotNull(s.Load<Tester>("tester123"));
 				}
