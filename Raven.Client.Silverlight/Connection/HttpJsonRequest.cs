@@ -82,9 +82,6 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
-		/// <param name="callback">The callback.</param>
-		/// <param name="state">The state.</param>
-		/// <returns></returns>
 		public Task<string> ReadResponseStringAsync()
 		{
 			return WaitForTask.ContinueWith(_ => webRequest
