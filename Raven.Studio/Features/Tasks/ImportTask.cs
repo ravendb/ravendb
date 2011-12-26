@@ -10,7 +10,7 @@ namespace Raven.Studio.Features.Tasks
 		public ImportTask()
 		{
 			Name = "Import Database";
-			Description = "Import a database from a dump file.\nImporting will overwrite any existing indexes.";       
+			Description = "Import data to the current database.\nImporting will overwrite any existing indexes.";       
 		}
 
 		public override ICommand Action
