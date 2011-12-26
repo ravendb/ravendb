@@ -27,7 +27,7 @@ namespace Raven.Studio.Features.Tasks
 		{
 			this.databaseCommands = databaseCommands;
 			Name = "Import Database";
-			Description = "Import a database from a dump file.\nImporting will overwrite any existing indexes.";       
+			Description = "Import data to the current database.\nImporting will overwrite any existing indexes.";       
 		}
 
 		public class ImportDatabaseCommand : Command
