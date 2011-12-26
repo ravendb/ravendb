@@ -284,7 +284,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Perform a single POST requst containing multiple nested GET requests
+		/// Perform a single POST request containing multiple nested GET requests
 		/// </summary>
 		public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests)
 		{
@@ -641,7 +641,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 							.ReadResponseStringAsync()
 							.ContinueWith(readStrTask => AttemptToProcessResponse(() =>
 								{
-									//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctr is private!
+									//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctor is private!
 									var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result, new JsonToJsonConverter());
 									return obj.Index;
 								})))
@@ -1024,7 +1024,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// </summary>
 		public IDisposable DisableAllCaching()
 		{
-			return null; // we dont implement this
+			return null; // we don't implement this
 		}
 
 		/// <summary>
