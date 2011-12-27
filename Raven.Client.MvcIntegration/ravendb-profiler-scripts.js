@@ -1,8 +1,8 @@
 var RavenDBProfiler = (function ($) {
 	var options,
-    container,
-    popupButton,
-    resultDialog;
+	container,
+	popupButton,
+	resultDialog;
 
 	var templates = ['totals', 'ravendb-profiler', 'session-template', 'request-details'];
 
@@ -93,10 +93,10 @@ var RavenDBProfiler = (function ($) {
 
 
 		popupButton = $('<span class="rdbprofilerbutton">RavenDB Profiler</span>')
-        .appendTo('body')
-        .click(function () {
-        	container.toggle();
-        });
+		.appendTo('body')
+		.click(function () {
+			container.toggle();
+		});
 
 
 		$(document).keyup(function (e) {
@@ -109,43 +109,43 @@ var RavenDBProfiler = (function ($) {
 			container.toggle(false);
 		});
 		$("#ravendb-session-container")
-        .delegate('.show-full-url', 'click', function () {
-        	var item = $.tmplItem(this);
-        	var req = item.data.Requests[parseInt($(this).attr('request-index'))];
-        	alert(req.Url);
-        })
-        .delegate('.show-request-details', 'click', function () {
-        	var item = $.tmplItem(this);
-        	var req = item.data.Requests[parseInt($(this).attr('request-index'))];
-        	$.tmpl('request-details', req, templateOptions).appendTo($('#ravendb-session-container'));
+		.delegate('.show-full-url', 'click', function () {
+			var item = $.tmplItem(this);
+			var req = item.data.Requests[parseInt($(this).attr('request-index'))];
+			alert(req.Url);
+		})
+		.delegate('.show-request-details', 'click', function () {
+			var item = $.tmplItem(this);
+			var req = item.data.Requests[parseInt($(this).attr('request-index'))];
+			$.tmpl('request-details', req, templateOptions).appendTo($('#ravendb-session-container'));
 
-        })
-        .delegate('.ravendb-close', 'click', function () {
-        	$(this).parent().remove();
-        })
-        .delegate(".toggle-request", "click", function () {
+		})
+		.delegate('.ravendb-close', 'click', function () {
+			$(this).parent().remove();
+		})
+		.delegate(".toggle-request", "click", function () {
 
-        	if (this.collapse) {
-        		$('.session-information', $(this).parent()).remove();
-        		this.collapse = false;
-        		fixupTableColumnsWidth();
-        		return;
-        	}
+			if (this.collapse) {
+				$('.session-information', $(this).parent()).remove();
+				this.collapse = false;
+				fixupTableColumnsWidth();
+				return;
+			}
 
-        	this.collapse = true;
-        	var item = $.tmplItem(this);
+			this.collapse = true;
+			var item = $.tmplItem(this);
 
-        	$.tmpl('session-template', item.data, templateOptions).appendTo($(this).parent());
+			$.tmpl('session-template', item.data, templateOptions).appendTo($(this).parent());
 
-        	fixupTableColumnsWidth();
-        });
+			fixupTableColumnsWidth();
+		});
 	};
 
 	return {
 		initalize: function (opt) {
 			options = $.extend({}, opt, {});
 			container = $('<div class="ravendb-profiler-results"><div id="ravendb-session-container"/><p/> <a href="#" class="ravendb-toggle ravendb-close">Close</a></div>')
-            .appendTo('body');
+			.appendTo('body');
 
 			$('body').ajaxComplete(function (event, xhrRequest, ajaxOptions) {
 				var id = xhrRequest.getResponseHeader('X-RavenDb-Profiling-Id');
