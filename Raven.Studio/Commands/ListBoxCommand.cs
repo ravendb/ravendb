@@ -34,7 +34,7 @@ namespace Raven.Studio.Commands
 		{
 			items = null;
 			ListBox = GetList(parameter);
-			return ListBox != null && ListBox.SelectedItems.Count > 0;
+			return ListBox != null && ListBox.SelectedItems.Count > 0 && ListBox.SelectedItems[0] is T;
 		}
 
 		private static ListBox GetList(object parameter)
