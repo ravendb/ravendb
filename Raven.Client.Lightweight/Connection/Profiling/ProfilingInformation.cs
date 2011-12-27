@@ -13,7 +13,7 @@ namespace Raven.Client.Connection.Profiling
 	public class ProfilingInformation
 	{
 		///<summary>
-		/// A hook that allows extension to provide additional infomration about the created context
+		/// A hook that allows extensions to provide additional information about the created context
 		///</summary>
 		public static event Action<ProfilingInformation> OnContextCreated = delegate { }; 
 
