@@ -875,7 +875,10 @@ namespace Raven.Client.Linq
 						if (field == null)
 							continue;
 
-						AddToFieldsToFetch(field.Member.Name, field.Member.Name);
+						var expression = GetMemberExpression(field.Expression);
+						var renamedField = GetSelectPath(expression);
+
+						AddToFieldsToFetch(renamedField, field.Member.Name);
 					}
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.

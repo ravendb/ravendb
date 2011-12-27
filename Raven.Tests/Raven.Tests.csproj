@@ -498,6 +498,7 @@
     <Compile Include="Bugs\MapRedue\VersionedDocuments.cs" />
     <Compile Include="Bugs\VeryBigResultSet.cs" />
     <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
+    <Compile Include="Bugs\Vlad.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
     <Compile Include="Bugs\WaitForNonStaleResultsAsOfLastWrite.cs" />
