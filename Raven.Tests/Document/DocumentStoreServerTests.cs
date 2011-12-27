@@ -553,6 +553,37 @@ namespace Raven.Tests.Document
 			}
 		}
 
+		[Fact]
+		public void Can_get_document_metadata()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+				documentStore .DatabaseCommands
+					.Put("rhino1", null, RavenJObject.FromObject(new Company { Name = "Hibernating Rhinos" }), new RavenJObject());
+
+				JsonDocument doc = documentStore.DatabaseCommands.Get("rhino1");
+				JsonDocumentMetadata meta = documentStore.DatabaseCommands.Head("rhino1");
+
+				Assert.NotNull(meta);
+				Assert.Equal(doc.Key, meta.Key);
+				Assert.Equal(doc.Etag, meta.Etag);
+				Assert.Equal(doc.LastModified, meta.LastModified);
+			}
+		}
+
+		[Fact]
+		public void When_document_does_not_exist_Then_metadata_should_be_null()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+
+				Assert.Null(documentStore.DatabaseCommands.Head("rhino1"));
+			}
+		}
 
 		[Fact]
 		public void Can_get_two_documents_in_one_call()

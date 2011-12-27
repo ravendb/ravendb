@@ -484,6 +484,33 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
+		public void Can_get_document_metadata()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				documentStore.DatabaseCommands
+					.Put("rhino1", null, RavenJObject.FromObject(new Company { Name = "Hibernating Rhinos" }), new RavenJObject());
+
+				JsonDocument doc = documentStore.DatabaseCommands.Get("rhino1");
+				JsonDocumentMetadata meta = documentStore.DatabaseCommands.Head("rhino1");
+
+				Assert.NotNull(meta);
+				Assert.Equal(doc.Key, meta.Key);
+				Assert.Equal(doc.Etag, meta.Etag);
+				Assert.Equal(doc.LastModified, meta.LastModified);
+			}
+		}
+
+		[Fact]
+		public void When_document_does_not_exist_Then_metadata_should_be_null()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				Assert.Null(documentStore.DatabaseCommands.Head("rhino1"));
+			}
+		}
+
+		[Fact]
 		public void Should_map_Entity_Id_to_document_after_save_changes()
 		{
 			using (var documentStore = NewDocumentStore())
