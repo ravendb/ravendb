@@ -142,18 +142,17 @@ var RavenDBProfiler = (function ($) {
 	};
 
 	return {
-		initalize: function (opt) {
-			options = $.extend({}, opt, {});
+		initalize: function(opt) {
+			options = $.extend({ }, opt, { });
 			container = $('<div class="ravendb-profiler-results"><div id="ravendb-session-container"/><p/> <a href="#" class="ravendb-toggle ravendb-close">Close</a></div>')
-			.appendTo('body');
+				.appendTo('body');
 
-			$('body').ajaxComplete(function (event, xhrRequest, ajaxOptions) {
+			$('body').ajaxComplete(function(event, xhrRequest, ajaxOptions) {
 				var id = xhrRequest.getResponseHeader('X-RavenDb-Profiling-Id');
 				if (id)
 					fetchResults(id.split(', '));
 			});
 			load();
 		}
-	}
+	};
 })(jQuery);
-
