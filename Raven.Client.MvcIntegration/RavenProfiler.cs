@@ -17,21 +17,19 @@ namespace Raven.Client.MvcIntegration
 		/// </summary>
 		public static void InitializeFor(IDocumentStore store, params string[] fieldsToFilter)
 		{
-			var existing = RouteTable.Routes.Select(x =>
-			{
-				var route = x as Route;
-				if (route == null)
-				{
-					return null;
-				}
-				return route.RouteHandler;
-			})
+			var existing = RouteTable.Routes
+				.Select(x =>
+				        	{
+				        		var route = x as Route;
+				        		if (route == null)
+				        			return null;
+				        		return route.RouteHandler;
+				        	})
 				.OfType<RavenProfilingHandler>()
 				.FirstOrDefault();
 
 			if (existing != null)
 			{
-
 				existing.AddStore(store);
 				return;
 			}
