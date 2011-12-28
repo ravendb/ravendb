@@ -215,6 +215,7 @@
     <Compile Include="Bugs\NestedProjection.cs" />
     <Compile Include="Bugs\NestedTransactions.cs" />
     <Compile Include="Bugs\OfflineConcurrency.cs" />
+    <Compile Include="Bugs\Orders.cs" />
     <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
     <Compile Include="Bugs\Queries\Boolean.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
@@ -497,6 +498,7 @@
     <Compile Include="Bugs\MapRedue\VersionedDocuments.cs" />
     <Compile Include="Bugs\VeryBigResultSet.cs" />
     <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
+    <Compile Include="Bugs\Vlad.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
     <Compile Include="Bugs\WaitForNonStaleResultsAsOfLastWrite.cs" />
