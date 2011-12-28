@@ -10,7 +10,7 @@ namespace Raven.Studio.Commands
 	{
 		public override void Execute(object parameter)
 		{
-			var index = Items
+			var index = SelectedItems
 				.Select(x => x.IndexName)
 				.FirstOrDefault();
 
@@ -26,7 +26,7 @@ namespace Raven.Studio.Commands
 				{
 					ApplicationModel.Current.AddNotification(new Notification("Index " + indexName + " successfully deleted"));
 					UrlUtil.Navigate("/indexes");
-					IndexesModel.GroupedIndexes.Remove(Items.First());
+					IndexesModel.GroupedIndexes.Remove(SelectedItems.First());
 				})
 				.Catch();
 		}

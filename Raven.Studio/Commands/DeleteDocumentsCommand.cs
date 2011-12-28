@@ -18,7 +18,7 @@ namespace Raven.Studio.Commands
 	{
 		public override void Execute(object parameter)
 		{
-			var documentsIds = Items
+			var documentsIds = SelectedItems
 				.Select(x => x.Id)
 				.ToList();
 
@@ -29,7 +29,7 @@ namespace Raven.Studio.Commands
 				.ContinueWhenTrueInTheUIThread(() =>
 				                               	{
 				                               		var model = (DocumentsModel) Context;
-				                               		foreach (var document in Items)
+				                               		foreach (var document in SelectedItems)
 				                               		{
 				                               			model.Documents.Remove(document);
 				                               		}

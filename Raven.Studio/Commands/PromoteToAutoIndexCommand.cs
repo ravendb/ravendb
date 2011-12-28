@@ -13,7 +13,7 @@ namespace Raven.Studio.Commands
 			if (base.CanExecute(parameter) == false)
 				return false;
 
-			var index = Items
+			var index = SelectedItems
 				.Select(x => x.IndexName)
 				.First();
 
@@ -22,7 +22,7 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			var index = Items
+			var index = SelectedItems
 				.Select(x => x.IndexName)
 				.First();
 

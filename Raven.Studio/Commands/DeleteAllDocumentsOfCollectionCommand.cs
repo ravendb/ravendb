@@ -11,7 +11,7 @@ namespace Raven.Studio.Commands
 	{
 		public override void Execute(object parameter)
 		{
-			var collectionNames = Items
+			var collectionNames = SelectedItems
 				.Select(x => x.Name)
 				.ToList();
 

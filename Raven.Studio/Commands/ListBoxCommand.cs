@@ -20,7 +20,7 @@ namespace Raven.Studio.Commands
 		}
 
 		private List<T> items;
-		protected List<T> Items
+		protected List<T> SelectedItems
 		{
 			get { return items ?? (items = ListBox.SelectedItems.Cast<T>().ToList()); }
 		}
