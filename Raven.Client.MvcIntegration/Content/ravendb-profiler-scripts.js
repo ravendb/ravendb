@@ -7,7 +7,7 @@ var RavenDBProfiler = (function ($) {
 	var templates = ['totals', 'ravendb-profiler', 'session-template', 'request-details'];
 
 	var load = function () {
-		if (options.id.length == 0)
+		if (options.ids.length == 0)
 			return;
 
 		templates.forEach(function (name) {
@@ -16,7 +16,7 @@ var RavenDBProfiler = (function ($) {
 			});
 		});
 
-		fetchResults(options.id);
+		fetchResults(options.ids);
 	};
 
 	var fetchResults = function (ids) {

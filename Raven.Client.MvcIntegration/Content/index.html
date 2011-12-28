@@ -2,5 +2,5 @@
 <script type="text/javascript">
 	yepnope([{ test: window.jQuery, nope: '{|rootUrl|}?path=jquery-1.6.1.min.js' }, 
 			{ test: window.jQuery && window.jQuery.fn.tmpl, nope: '{|rootUrl|}?path=jquery.tmpl.min.js' }, 
-			{load: '{|rootUrl|}?path=ravendb-profiler-scripts.js', complete: jQuery(function() { RavenDBProfiler.initalize({ id:[{|ids|}], url: '{|rootUrl|}' }); }) }]);
+			{load: '{|rootUrl|}?path=ravendb-profiler-scripts.js', complete: jQuery(function() { RavenDBProfiler.initalize({ ids:[{|ids|}], url: '{|rootUrl|}' }); }) }]);
 </script>
