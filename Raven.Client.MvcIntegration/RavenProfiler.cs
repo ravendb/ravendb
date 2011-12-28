@@ -70,7 +70,7 @@ namespace Raven.Client.MvcIntegration
 			using (var stream = typeof(RavenProfiler).Assembly.GetManifestResourceStream("Raven.Client.MvcIntegration.Content.index.html"))
 			{
 				return new StreamReader(stream).ReadToEnd()
-					.Replace("{|ids|}", string.Join(",", sessionList.Select(guid => "'" + guid + "'")))
+					.Replace("{|id|}", string.Join(",", sessionList.Select(guid => "'" + guid + "'")))
 					.Replace("{|rootUrl|}", rootUrl)
 					;
 			}

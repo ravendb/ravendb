@@ -7,7 +7,7 @@ var RavenDBProfiler = (function ($) {
 	var templates = ['totals', 'ravendb-profiler', 'session-template', 'request-details'];
 
 	var load = function () {
-		if (options.ids.length == 0)
+		if (options.id.length == 0)
 			return;
 
 		templates.forEach(function (name) {
@@ -16,11 +16,11 @@ var RavenDBProfiler = (function ($) {
 			});
 		});
 
-		fetchResults(options.ids);
+		fetchResults(options.id);
 	};
 
-	var fetchResults = function (ids) {
-		$.get(options.url, { id: ids }, function (obj) {
+	var fetchResults = function (id) {
+		$.get(options.url, { id: id }, function (obj) {
 			if (obj)
 				addResult(obj);
 		}, 'json');
@@ -142,12 +142,14 @@ var RavenDBProfiler = (function ($) {
 	};
 
 	return {
-		initalize: function(opt) {
-			options = $.extend({ }, opt, { });
+		initalize: function (opt) {
+			options = $.extend({}, opt, {});
 			container = $('<div class="ravendb-profiler-results"><div id="ravendb-session-container"/><p/> <a href="#" class="ravendb-toggle ravendb-close">Close</a></div>')
 				.appendTo('body');
 
-			$('body').ajaxComplete(function(event, xhrRequest, ajaxOptions) {
+			$('body').ajaxComplete(function (event, xhrRequest, ajaxOptions) {
+				if (ajaxOptions.url.indexOf(options.url) != -1)
+					return;
 				var id = xhrRequest.getResponseHeader('X-RavenDb-Profiling-Id');
 				if (id)
 					fetchResults(id.split(', '));
