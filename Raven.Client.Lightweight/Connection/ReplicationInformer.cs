@@ -108,7 +108,7 @@ namespace Raven.Client.Connection
 				}
 				catch (System.Exception e)
 				{
-  					log.ErrorException("Failed to refresh replication information", e);
+					log.ErrorException("Failed to refresh replication information", e);
 				}
 #endif
 			}

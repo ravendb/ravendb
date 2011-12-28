@@ -53,8 +53,8 @@ namespace Raven.Database.Queries
 			foreach (var range in facet.Ranges)
 			{
 				var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery, database.IndexQueryTriggers);
-				///TODO the built-in parser can't handle [NULL TO 100.0}, i.e. a mix of [ and }
-				///so we need to handle this ourselves (greater and less-than-or-equal)
+				//TODO the built-in parser can't handle [NULL TO 100.0}, i.e. a mix of [ and }
+				//so we need to handle this ourselves (greater and less-than-or-equal)
 				var rangeQuery = database.IndexStorage.GetLuceneQuery(index, new IndexQuery
 				{
 					Query = facet.Name + ":" + range
