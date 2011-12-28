@@ -100,7 +100,7 @@
     <EmbeddedResource Include="Content\Templates\totals.tmpl.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\index.html" />
+    <EmbeddedResource Include="Content\index.html" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
