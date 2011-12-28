@@ -73,31 +73,34 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="ravendb-profiler-scripts.js" />
+    <EmbeddedResource Include="Content\ravendb-profiler-scripts.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Templates\session-template.tmpl.html" />
+    <EmbeddedResource Include="Content\Templates\session-template.tmpl.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Templates\ravendb-profiler.tmpl.html" />
+    <EmbeddedResource Include="Content\Templates\ravendb-profiler.tmpl.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="styles.css" />
+    <EmbeddedResource Include="Content\styles.css" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Templates\request-details.tmpl.html" />
+    <EmbeddedResource Include="Content\Templates\request-details.tmpl.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="yepnope.js" />
+    <EmbeddedResource Include="Content\yepnope.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="jquery-1.6.1.min.js" />
+    <EmbeddedResource Include="Content\jquery-1.6.1.min.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="jquery.tmpl.min.js" />
+    <EmbeddedResource Include="Content\jquery.tmpl.min.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Templates\totals.tmpl.html" />
+    <EmbeddedResource Include="Content\Templates\totals.tmpl.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\Templates\index.html" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />

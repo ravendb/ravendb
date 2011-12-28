@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
@@ -59,20 +60,20 @@ namespace Raven.Client.MvcIntegration
 
 		public static HtmlString CurrentRequestSessions()
 		{
-			var httpContextWrapper = new HttpContextWrapper(HttpContext.Current);
-			var root = UrlHelper.GenerateContentUrl("~/ravendb/profiling", httpContextWrapper);
-			var script = UrlHelper.GenerateContentUrl("~/ravendb/profiling?path=ravendb-profiler-scripts.js", httpContextWrapper);
-			var yepnope = UrlHelper.GenerateContentUrl("~/ravendb/profiling?path=yepnope.js", httpContextWrapper);
-			var jquery = UrlHelper.GenerateContentUrl("~/ravendb/profiling?path=jquery-1.6.1.min.js", httpContextWrapper);
-			var jquerytmpl = UrlHelper.GenerateContentUrl("~/ravendb/profiling?path=jquery.tmpl.min.js", httpContextWrapper);
-			const string template =
-				@"
-<script type=""text/javascript"" src=""{3}""></script>
-<script type=""text/javascript""> yepnope([{{ test: window.jQuery, nope: '{4}' }}, {{ test: window.jQuery && window.jQuery.fn.tmpl, nope: '{5}' }}, {{load: '{1}', complete: function() {{ jQuery(function() {{ RavenDBProfiler.initalize({{ id:[{0}], url: '{2}' }}); }} ); }}  }}]); </script>";
+			var rootUrl = UrlHelper.GenerateContentUrl(@"~/ravendb/profiling", new HttpContextWrapper(HttpContext.Current));
+			var script = GetScript(rootUrl, ContextualSessionList);
+			return new HtmlString(script);
+		}
 
-			var ids = string.Join(",", ContextualSessionList.Select(guid => "'" + guid + "'"));
-
-			return new HtmlString(string.Format(template, ids, script, root, yepnope, jquery, jquerytmpl));
+		private static string GetScript(string rootUrl, IEnumerable<Guid> sessionList)
+		{
+			using (var stream = typeof(RavenProfiler).Assembly.GetManifestResourceStream("Raven.Client.MvcIntegration.Content.index.html"))
+			{
+				return new StreamReader(stream).ReadToEnd()
+					.Replace("{|ids|}", string.Join(",", sessionList.Select(guid => "'" + guid + "'")))
+					.Replace("{|rootUrl|}", rootUrl)
+					;
+			}
 		}
 
 		internal static List<Guid> ContextualSessionList
