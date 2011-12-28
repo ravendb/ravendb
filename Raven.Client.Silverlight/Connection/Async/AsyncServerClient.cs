@@ -607,15 +607,16 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
-			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name);
+			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name) +"?definition=yes";
 			var webRequest = requestUri
-				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "HEAD");
+				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "GET");
 
 			return webRequest.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					try
 					{
+						task.Wait(); // should throw if it is bad
 						if (overwrite == false)
 							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 					}
