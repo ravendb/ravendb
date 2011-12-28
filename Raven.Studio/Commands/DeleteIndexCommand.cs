@@ -27,7 +27,8 @@ namespace Raven.Studio.Commands
 					ApplicationModel.Current.AddNotification(new Notification("Index " + indexName + " successfully deleted"));
 					UrlUtil.Navigate("/indexes");
 					IndexesModel.GroupedIndexes.Remove(Items.First());
-				});
+				})
+				.Catch();
 		}
 	}
 }
