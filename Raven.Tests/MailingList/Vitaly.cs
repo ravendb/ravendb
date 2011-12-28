@@ -52,41 +52,41 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-        public void Test()
-        {
-            var activityShot1 = new ActivityShot
-                                    {
-                                        Edited = new DateTime(2011, 1, 1),
-                                        Thumbnail = new byte[] { 1 }
-                                    };
+		public void Test()
+		{
+			var activityShot1 = new ActivityShot
+									{
+										Edited = new DateTime(2011, 1, 1),
+										Thumbnail = new byte[] { 1 }
+									};
 
-            var activityShot2 = new ActivityShot
-                                    {
-                                        Edited = new DateTime(2011, 10, 10),
-                                        Thumbnail = new byte[] { 2 }
-                                    };
+			var activityShot2 = new ActivityShot
+									{
+										Edited = new DateTime(2011, 10, 10),
+										Thumbnail = new byte[] { 2 }
+									};
 
 			using (var documentStore = new EmbeddableDocumentStore
-                                           {
-                                               RunInMemory = true
-                                           }.Initialize())
-            {
-                new DailyActivityIndex().Execute(documentStore);	
+										   {
+											   RunInMemory = true
+										   }.Initialize())
+			{
+				new DailyActivityIndex().Execute(documentStore);	
 
-                using (var session = documentStore.OpenSession())
-                {
-                    session.Store(activityShot1);
-                    session.Store(activityShot2);
+				using (var session = documentStore.OpenSession())
+				{
+					session.Store(activityShot1);
+					session.Store(activityShot2);
 
-                    session.SaveChanges();
-                }
+					session.SaveChanges();
+				}
 
-                using (var session = documentStore.OpenSession())
-                {
-                    session.Query<DailyActivity, DailyActivityIndex>().Customize(x => x.WaitForNonStaleResults()).ToArray();
-                }
-            }
+				using (var session = documentStore.OpenSession())
+				{
+					session.Query<DailyActivity, DailyActivityIndex>().Customize(x => x.WaitForNonStaleResults()).ToArray();
+				}
+			}
 
-        }
+		}
 	}
 }
