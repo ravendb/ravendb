@@ -662,9 +662,10 @@ namespace Raven.Client.Document
 			if (cacheDuration.TotalSeconds < 1)
 				throw new ArgumentException("cacheDuration must be longer than a single second");
 
+			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
 
-			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = null);
+			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);
 #else
 			// TODO: with silverlight, we don't currently support aggressive caching
 			return new DisposableAction(() => { });
