@@ -12,7 +12,7 @@ namespace Raven.Client.MvcIntegration
 	public class RavenProfiler
 	{
 		/// <summary>
-		/// Initializes the RavenProfiler for MVC
+		/// Initializes the RavenProfiler for MVC.
 		/// IMPORTANT! This method may only be called from the Application_Start method, otherwise
 		/// it might lead to problems, since it modify the Routes table.
 		/// </summary>
