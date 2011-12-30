@@ -314,6 +314,13 @@ namespace Raven.Client.Connection
 		/// Retrieve the statistics for the database
 		/// </summary>
 		DatabaseStatistics GetStatistics();
+
+		/// <summary>
+		/// Retrieves the document metadata for the specified document key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns>The document metadata for the specifed document, or null if the document does not exist</returns>
+		JsonDocumentMetadata Head(string key);
 	}
 }
 #endif

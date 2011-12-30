@@ -124,7 +124,7 @@ namespace Raven.Database.Server.Responders
 			{
 				context.SetStatusToNonAuthoritativeInformation();
 			}
-
+			documentMetadata.Metadata[Constants.LastModified] = documentMetadata.LastModified; //HACK ? to get the document's last modified value into the response headers
 			context.WriteHeaders(documentMetadata.Metadata, documentMetadata.Etag.Value);
 		}
 
