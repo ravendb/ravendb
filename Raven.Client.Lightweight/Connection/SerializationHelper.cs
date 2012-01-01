@@ -171,7 +171,7 @@ namespace Raven.Client.Connection
 #endif
 			return new JsonDocumentMetadata
 			{
-				NonAuthoritiveInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
 				Etag = new Guid(etag),
 				LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),
