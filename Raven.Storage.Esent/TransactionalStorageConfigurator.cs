@@ -31,11 +31,12 @@ namespace Raven.Storage.Esent
 			{
 				logsPath = configuration.Settings["Raven/Esent/LogsPath"].ToFullPath();
 			}
+			var circularLog = GetValueFromConfiguration("Raven/Esent/CircularLog", true);
 			var logFileSizeInMb = GetValueFromConfiguration("Raven/Esent/LogFileSize", 16);
 			logFileSizeInMb = Math.Max(1, logFileSizeInMb / 4);
 			return new InstanceParameters(jetInstance)
 			{
-				CircularLog = true,
+				CircularLog = circularLog,
 				Recovery = true,
 				NoInformationEvent = false,
 				CreatePathIfNotExist = true,
@@ -46,7 +47,7 @@ namespace Raven.Storage.Esent
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 8192), 1024),
-				LogFileSize = (GetValueFromConfiguration("Raven/Esent/LogFileSize", 16) * 1024),
+				LogFileSize = (logFileSizeInMb * 1024),
 				MaxSessions = MaxSessions,
 				MaxCursors = GetValueFromConfiguration("Raven/Esent/MaxCursors", 2048),
 				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/DbExtensionSize", 8), 1024 * 1024),
@@ -76,6 +77,17 @@ namespace Raven.Storage.Esent
 			int value;
 			if (string.IsNullOrEmpty(configuration.Settings[name]) == false &&
 				int.TryParse(configuration.Settings[name], out value))
+			{
+				return value;
+			}
+			return defaultValue;
+		}
+
+		private bool GetValueFromConfiguration(string name, bool defaultValue)
+		{
+			bool value;
+			if (string.IsNullOrEmpty(configuration.Settings[name]) == false &&
+				bool.TryParse(configuration.Settings[name], out value))
 			{
 				return value;
 			}
