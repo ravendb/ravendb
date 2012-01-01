@@ -591,6 +591,7 @@
     <Compile Include="MailingList\SetBased.cs" />
     <Compile Include="MailingList\SkippedResults.cs" />
     <Compile Include="MailingList\spokeypokey\Spokey.cs" />
+    <Compile Include="MailingList\spokeypokey\Spokey5.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey2.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey3.cs" />
