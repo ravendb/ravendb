@@ -45,7 +45,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void CanPerformSpatialSearch()
 		{
-			var indexDefinition = new IndexDefinition 
+			var indexDefinition = new IndexDefinition
 			{
 				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
 				Indexes = {
@@ -58,7 +58,7 @@ namespace Raven.Tests.Spatial
 			var events = SpatialIndexTestHelper.GetEvents();
 
 			for (int i = 0; i < events.Length; i++)
-			{				
+			{
 				db.Put("Events/" + (i + 1), null,
 					RavenJObject.FromObject(events[i]),
 					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
@@ -75,7 +75,7 @@ namespace Raven.Tests.Spatial
 					Latitude = lat,
 					Longitude = lng,
 					Radius = radius,
-					SortedFields = new[]{new SortedField("__distance"), }
+					SortedFields = new[] { new SortedField("__distance"), }
 				});
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
@@ -96,6 +96,42 @@ namespace Raven.Tests.Spatial
 				Assert.True(distance >= previous);
 				previous = distance;
 			}
+		}
+
+		[Fact]
+		public void CanPerformSpatialSearchWithNulls()
+		{
+			var indexDefinition = new IndexDefinition
+			{
+				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Indexes = {
+					{ "Tag", FieldIndexing.NotAnalyzed }
+				}
+			};
+
+			db.PutIndex("eventsByLatLng", indexDefinition);
+
+			db.Put("Events/1", null,
+				RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
+				RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+
+			const double radius = 6.0;
+			QueryResult queryResult;
+			do
+			{
+				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
+				{
+					Query = "Tag:[[Event]]",
+					Latitude = 0,
+					Longitude = 0,
+					Radius = radius,
+					SortedFields = new[] { new SortedField("__distance"), }
+				});
+				if (queryResult.IsStale)
+					Thread.Sleep(100);
+			} while (queryResult.IsStale);
+
+			Assert.Equal(1, queryResult.Results.Count);
 		}
 
 		[Fact]
@@ -153,7 +189,7 @@ namespace Raven.Tests.Spatial
 
 			Assert.Equal(9, queryResult.Results.Count);
 
-			var expectedOrder = new[] {"a/2", "b/2", "c/2", "a/1", "b/1", "c/1", "a/3", "b/3", "c/3"};
+			var expectedOrder = new[] { "a/2", "b/2", "c/2", "a/1", "b/1", "c/1", "a/3", "b/3", "c/3" };
 
 			for (int i = 0; i < queryResult.Results.Count; i++)
 			{
@@ -222,5 +258,7 @@ namespace Raven.Tests.Spatial
 				Assert.Equal(expectedOrder[i], queryResult.Results[i].Value<RavenJObject>("@metadata").Value<string>("@id"));
 			}
 		}
+
+
 	}
 }
