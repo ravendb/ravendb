@@ -223,9 +223,17 @@ namespace Raven.Json.Linq
 		/// <returns>A <see cref="RavenJObject"/> populated from the string that contains JSON.</returns>
 		public static new RavenJObject Parse(string json)
 		{
-			JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+			try
+			{
+				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
 
-			return Load(jsonReader);
+			
+				return Load(jsonReader);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Could not parse json:" + Environment.NewLine + json, e);
+			}
 		}
 
 		/// <summary>
