@@ -1,5 +1,6 @@
 using System.Web;
 using Microsoft.Web.Infrastructure.DynamicModuleHelper;
+using Raven.Database.Server;
 using Raven.Web;
 
 [assembly: PreApplicationStartMethod(typeof(BootStrapper), "Init")]
@@ -22,6 +23,7 @@ namespace Raven.Web
 	{
 		public static void Init()
 		{
+			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 			DynamicModuleUtility.RegisterModule(typeof(RavenDbStartupAndShutdownModule));
 		}
 	}
