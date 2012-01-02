@@ -51,6 +51,15 @@ namespace Raven.Database.Indexing
 				queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
 				foreach (var term in terms.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
 				{
+					switch (term) // ignore invalid options
+					{
+						case "OR":
+						case "AND":
+						case "||":
+						case "&&":
+							continue;
+					}
+
 					queryStringBuilder.Insert(searchMatch.Index, new StringBuilder().Append(field).Append(':').Append(term).Append(' '));
 				}
 			}
