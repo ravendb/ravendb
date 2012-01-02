@@ -61,11 +61,11 @@ namespace Raven.Database.Config
 			// Esent
 			{"Raven/Esent/CacheSizeMax", "int", null, "The size in MB of the Esent page cache, which is the default storage engine. Default: 1,048 MB on 64 bits, 256 MB on 32 bits."},
 			{"Raven/Esent/MaxVerPages", "int", null, "The maximum size of version store (in memory modified data) available. The value is in megabytes. Default: 128."},
-			{"Raven/Esent/LogFileSize", "int", null, "The size of the database log file. The value is in kilobytes. Default: 8,192."},
+			{"Raven/Esent/LogFileSize", "int", null, "The size of the database log file. The value is in megabytes. Default: 64."},
 			{"Raven/Esent/LogBuffers", "int", null, "The size of the in memory buffer for transaction log. Default: 16."},
 			{"Raven/Esent/MaxCursors", "int", null, "The maximum number of cursors allowed concurrently. Default: 2048."},
 			{"Raven/Esent/DbExtensionSize", "int", null, "The size that the database file will be enlarged with when the file is full. The value is in megabytes. Lower values result in smaller file size, but slower performance when the database size grows. Default: 8."},
-
+			{"Raven/Esent/CircularLog", "boo", "true / false", "Whatever circular logs will be used, defaults to true. If you want to use incremental backups, you need to turn this off, but logs will only be trucated on backup."},
 
 			// Advanced
 			{"Raven/TransactionMode", "string", "lazy,safe", "What transaction mode to use. Safe transaction mode ensures data consistency, but is slower. Lazy is faster, but may result in a data loss if the server crashes. Default: Safe."},

@@ -565,6 +565,7 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\BrainV.cs" />
     <Compile Include="MailingList\BAM.cs" />
     <Compile Include="MailingList\Build570.cs" />
     <Compile Include="MailingList\HierarchicalInheritanceIndexing.cs" />
@@ -591,6 +592,7 @@
     <Compile Include="MailingList\SetBased.cs" />
     <Compile Include="MailingList\SkippedResults.cs" />
     <Compile Include="MailingList\spokeypokey\Spokey.cs" />
+    <Compile Include="MailingList\spokeypokey\Spokey5.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey2.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey3.cs" />

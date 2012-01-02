@@ -221,8 +221,8 @@ namespace Raven.Client.Indexes
 			var name = member.Name;
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
-				// only translate from the root type
-				(queryRoot == null || (member.DeclaringType == queryRoot)) &&
+				// only translate from the root type or deriatives
+				(queryRoot == null || (member.DeclaringType.IsAssignableFrom(queryRoot))) &&
 				// only translate from the root alias
 				(queryRootName == null || ( 
 					instance.NodeType == ExpressionType.Parameter  &&	

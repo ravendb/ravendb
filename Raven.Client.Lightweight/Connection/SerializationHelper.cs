@@ -142,5 +142,41 @@ namespace Raven.Client.Connection
 			};
 		}
 
+		/// <summary>
+		/// Deserialize a request to a JsonDocument
+		/// </summary>
+		public static JsonDocumentMetadata DeserializeJsonDocumentMetadata(string key,
+#if !SILVERLIGHT
+			NameValueCollection headers,
+#else 
+			IDictionary<string, IList<string>> headers,
+#endif
+			HttpStatusCode statusCode)
+		{
+			RavenJObject meta = null;
+			try
+			{
+				meta = headers.FilterHeaders(isServerDocument: false);
+			}
+			catch (JsonReaderException jre)
+			{
+				throw new JsonReaderException("Invalid Json Response", jre);
+			}
+#if !SILVERLIGHT
+			var etag = headers["ETag"];
+			var lastModified = headers[Constants.LastModified];
+#else
+			var etag = headers["ETag"].First();
+			var lastModified = headers[Constants.LastModified].First();
+#endif
+			return new JsonDocumentMetadata
+			{
+				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				Key = key,
+				Etag = new Guid(etag),
+				LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),
+				Metadata = meta
+			};
+		}
 	}
 }

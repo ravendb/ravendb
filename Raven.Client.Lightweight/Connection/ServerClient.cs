@@ -1184,6 +1184,51 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		}
 
 		/// <summary>
+		/// Check if the document exists for the specified key
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		public JsonDocumentMetadata Head(string key)
+		{
+			EnsureIsNotNullOrEmpty(key, "key");
+			return ExecuteWithReplication("HEAD", u => DirectHead(u, key));
+		}
+
+		public JsonDocumentMetadata DirectHead(string serverUrl, string key)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+			try
+			{
+				request.ReadResponseString();
+				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null)
+					throw;
+				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+					return null;
+				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+				{
+					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
+					var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
+					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+					throw new ConflictException("Conflict detected on " + key +
+												", conflict must be resolved before the document will be accessible")
+					{
+						ConflictedVersionIds = conflictIds
+					};
+				}
+				throw;
+			}
+		}
+
+		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
