@@ -495,7 +495,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		public string[] GetDatabaseNames()
 		{
-			var result = ExecuteGetRequest(url.Databases().NoCache());
+			var result = ExecuteGetRequest("".Databases().NoCache());
 
 			var json = (RavenJArray) RavenJToken.Parse(result);
 		
