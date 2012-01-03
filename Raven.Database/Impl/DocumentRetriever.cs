@@ -176,7 +176,7 @@ namespace Raven.Database.Impl
 						       	{
 									Etag = Guid.Empty,
 									LastModified = DateTime.MinValue,
-						       		NonAuthoritiveInformation = false,
+						       		NonAuthoritativeInformation = false,
 									Metadata = new RavenJObject
 						       		           	{
 						       		           		{

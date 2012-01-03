@@ -34,7 +34,7 @@ namespace Raven.Tests.Bugs
 				{
 					using (var session = store.OpenSession())
 					{
-						session.Advanced.AllowNonAuthoritiveInformation = false;
+						session.Advanced.AllowNonAuthoritativeInformation = false;
 						var testEntityRetrieved = session.Load<MyTestClass>(testEntity.Id);
 						Assert.Equal(testEntityRetrieved.SomeText, testEntity.SomeText);
 					}
@@ -62,7 +62,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					session.Advanced.AllowNonAuthoritiveInformation = false;
+					session.Advanced.AllowNonAuthoritativeInformation = false;
 					var testEntityRetrieved = session.Load<MyTestClass>(testEntity.Id);
 					Assert.Equal(testEntityRetrieved.SomeText, testEntity.SomeText);
 				}

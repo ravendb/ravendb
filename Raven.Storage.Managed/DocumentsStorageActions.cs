@@ -105,7 +105,7 @@ namespace Raven.Storage.Managed
 				Etag = metadata.Etag,
 				Key = metadata.Key,
 				LastModified = metadata.LastModified,
-				NonAuthoritiveInformation = metadata.NonAuthoritiveInformation,
+				NonAuthoritativeInformation = metadata.NonAuthoritativeInformation,
 				DataAsJson = ReadDocument(stream, metadata)
 			});
 		}
@@ -156,7 +156,7 @@ namespace Raven.Storage.Managed
 						Key = key,
 						Etag = Guid.Empty,
 						Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
-						NonAuthoritiveInformation = true,
+						NonAuthoritativeInformation = true,
 						LastModified = DateTime.MinValue
 					});
 				}
@@ -171,7 +171,7 @@ namespace Raven.Storage.Managed
 				Etag = etag,
 				Metadata = metadata,
 				LastModified = readResult.Key.Value<DateTime>("modified"),
-				NonAuthoritiveInformation = resultInTx != null
+				NonAuthoritativeInformation = resultInTx != null
 			});
 		}
 

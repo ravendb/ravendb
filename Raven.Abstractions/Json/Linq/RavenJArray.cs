@@ -28,7 +28,7 @@ namespace Raven.Json.Linq
 		{
 			Items = new List<RavenJToken>();
 			var ravenJToken = content as RavenJToken;
-			if(ravenJToken != null)
+			if (ravenJToken != null)
 			{
 				Items.Add(ravenJToken);
 			}
@@ -46,9 +46,10 @@ namespace Raven.Json.Linq
 		/// Initializes a new instance of the <see cref="RavenJArray"/> class with the specified content.
 		/// </summary>
 		/// <param name="content">The contents of the array.</param>
-		public RavenJArray(params object[] content) : this((IEnumerable)content)
+		public RavenJArray(params object[] content)
+			: this((IEnumerable)content)
 		{
-			
+
 		}
 
 		public RavenJArray(IEnumerable<RavenJToken> content)
@@ -135,9 +136,16 @@ namespace Raven.Json.Linq
 		/// <returns>A <see cref="RavenJArray"/> populated from the string that contains JSON.</returns>
 		public static new RavenJArray Parse(string json)
 		{
-			JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+			try
+			{
+				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
 
-			return Load(jsonReader);
+				return Load(jsonReader);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Could not parse json:" + Environment.NewLine + json, e);
+			}
 		}
 
 		/// <summary>

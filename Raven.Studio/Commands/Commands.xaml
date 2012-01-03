@@ -11,4 +11,6 @@
 	<Commands:NavigateToDocumentByIdCommand x:Name="NavigateToDocumentByIdCommand" />
 	<Commands:ShowLicensingStatusCommand x:Name="ShowLicensingStatusCommand" />
 	<Commands:CreateDatabaseCommand x:Name="CreateDatabaseCommand" />
+	<Commands:DeleteIndexCommand x:Name="DeleteIndexCommand" />
+	<Commands:PromoteToAutoIndexCommand x:Name="PromoteToAutoIndexCommand" />
 </ResourceDictionary>

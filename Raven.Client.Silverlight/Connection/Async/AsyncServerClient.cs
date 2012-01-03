@@ -185,7 +185,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 						return new JsonDocument
 						{
 							DataAsJson = RavenJObject.Parse(responseString),
-							NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
+							NonAuthoritativeInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 							Key = key,
 							LastModified = DateTime.ParseExact(request.ResponseHeaders[Constants.LastModified].First(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
 							Etag = new Guid(request.ResponseHeaders["ETag"].First()),
@@ -284,7 +284,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 
 		/// <summary>
-		/// Perform a single POST requst containing multiple nested GET requests
+		/// Perform a single POST request containing multiple nested GET requests
 		/// </summary>
 		public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests)
 		{
@@ -607,15 +607,16 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
-			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name);
+			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name) +"?definition=yes";
 			var webRequest = requestUri
-				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "HEAD");
+				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "GET");
 
 			return webRequest.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					try
 					{
+						task.Wait(); // should throw if it is bad
 						if (overwrite == false)
 							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 					}
@@ -641,7 +642,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 							.ReadResponseStringAsync()
 							.ContinueWith(readStrTask => AttemptToProcessResponse(() =>
 								{
-									//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctr is private!
+									//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctor is private!
 									var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result, new JsonToJsonConverter());
 									return obj.Index;
 								})))
@@ -1024,7 +1025,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// </summary>
 		public IDisposable DisableAllCaching()
 		{
-			return null; // we dont implement this
+			return null; // we don't implement this
 		}
 
 		/// <summary>

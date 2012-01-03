@@ -215,6 +215,7 @@
     <Compile Include="Bugs\NestedProjection.cs" />
     <Compile Include="Bugs\NestedTransactions.cs" />
     <Compile Include="Bugs\OfflineConcurrency.cs" />
+    <Compile Include="Bugs\Orders.cs" />
     <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
     <Compile Include="Bugs\Queries\Boolean.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
@@ -225,6 +226,7 @@
     <Compile Include="Bugs\RacielrodTest.cs" />
     <Compile Include="Bugs\RecursiveQueries.cs" />
     <Compile Include="Bugs\Reindexing.cs" />
+    <Compile Include="Bugs\ReservedWords.cs" />
     <Compile Include="Bugs\RoundCrisis.cs" />
     <Compile Include="Bugs\SelfReference.cs" />
     <Compile Include="Bugs\SerializingAndDeserializingWithRaven.cs" />
@@ -496,6 +498,7 @@
     <Compile Include="Bugs\MapRedue\VersionedDocuments.cs" />
     <Compile Include="Bugs\VeryBigResultSet.cs" />
     <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
+    <Compile Include="Bugs\Vlad.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
     <Compile Include="Bugs\WaitForNonStaleResultsAsOfLastWrite.cs" />
@@ -562,9 +565,11 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\BrainV.cs" />
     <Compile Include="MailingList\Build570.cs" />
     <Compile Include="MailingList\HierarchicalInheritanceIndexing.cs" />
     <Compile Include="MailingList\IisQueryLengthIssues.cs" />
+    <Compile Include="MailingList\IndexMetadata.cs" />
     <Compile Include="MailingList\JBA.cs" />
     <Compile Include="MailingList\JohanNilsson.cs" />
     <Compile Include="MailingList\ListCount.cs" />
@@ -586,9 +591,11 @@
     <Compile Include="MailingList\SetBased.cs" />
     <Compile Include="MailingList\SkippedResults.cs" />
     <Compile Include="MailingList\spokeypokey\Spokey.cs" />
+    <Compile Include="MailingList\spokeypokey\Spokey5.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey2.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey3.cs" />
+    <Compile Include="MailingList\spokeypokey\spokeypokey4.cs" />
     <Compile Include="MailingList\Stacey.cs" />
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\TimeZoneQueries.cs" />

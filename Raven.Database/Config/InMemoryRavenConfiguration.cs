@@ -136,9 +136,7 @@ namespace Raven.Database.Config
 			// Misc settings
 			WebDir = Settings["Raven/WebDir"] ?? GetDefaultWebDir();
 
-			PluginsDirectory = Settings["Raven/PluginsDirectory"] ?? @"~\Plugins";
-			if (PluginsDirectory.StartsWith(@"~\"))
-				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
+			PluginsDirectory = (Settings["Raven/PluginsDirectory"] ?? @"~\Plugins").ToFullPath();
 
 			// OAuth
 			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";

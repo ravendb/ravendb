@@ -104,26 +104,26 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[TestMethod]
-		public void Extracts_Non_Authoritive_flag_from_metadata()
+		public void Extracts_Non_Authoritative_flag_from_metadata()
 		{
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
-			((RavenJObject)doc["@metadata"])["Non-Authoritive-Information"] = true;
+			((RavenJObject)doc["@metadata"])["Non-Authoritative-Information"] = true;
 
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
-			Assert.AreEqual(true, output.First().NonAuthoritiveInformation);
+			Assert.AreEqual(true, output.First().NonAuthoritativeInformation);
 		}
 
 		[TestMethod]
-		public void Assumes_false_if_Non_Authoritive_flag_is_not_in_metadata()
+		public void Assumes_false_if_Non_Authoritative_flag_is_not_in_metadata()
 		{
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
 
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
-			Assert.AreEqual(false, output.First().NonAuthoritiveInformation);
+			Assert.AreEqual(false, output.First().NonAuthoritativeInformation);
 		}
 	}
 }

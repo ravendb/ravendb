@@ -196,7 +196,7 @@ namespace Raven.Studio.Models
 					byteCount = byteCount / 1024;
 			
 				}
-				return string.Format("Content-Length: {0:#,#.##} {1}", byteCount,sizeTerm);
+				return string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount,sizeTerm);
 			}
 		}
 

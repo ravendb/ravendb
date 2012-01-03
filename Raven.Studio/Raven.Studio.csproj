@@ -127,14 +127,19 @@
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ChangeFieldValueCommand.cs" />
     <Compile Include="Commands\DeleteAllDocumentsOfCollectionCommand.cs" />
+    <Compile Include="Commands\DeleteIndexCommand.cs" />
+    <Compile Include="Commands\ExportDatabaseCommand.cs" />
+    <Compile Include="Commands\ImportDatabaseCommand.cs" />
     <Compile Include="Commands\NavigateToDocumentByIdCommand.cs" />
     <Compile Include="Commands\ListBoxCommand.cs" />
     <Compile Include="Commands\NavigateToNextPageCommand.cs" />
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
+    <Compile Include="Commands\PromoteToAutoIndexCommand.cs" />
     <Compile Include="Commands\ShowLicensingStatusCommand.cs" />
     <Compile Include="Controls\Editors\EditorBase.cs" />
+    <Compile Include="Controls\ListBoxMenu.cs" />
     <Compile Include="Controls\ViewSizeControl.xaml.cs">
       <DependentUpon>ViewSizeControl.xaml</DependentUpon>
     </Compile>
@@ -280,9 +285,7 @@
     <Compile Include="Models\CollectionsModel.cs" />
     <Compile Include="Models\IndexesErrorsModel.cs" />
     <Compile Include="Models\IndexesModel.cs" />
-    <Compile Include="Models\IndexListItemModel.cs" />
-    <Compile Include="Models\IndexModel.cs" />
-    <Compile Include="Models\IndexGroupHeader.cs" />
+    <Compile Include="Models\IndexListItem.cs" />
     <Compile Include="Models\LinkModel.cs" />
     <Compile Include="Models\NotificationLevel.cs" />
     <Compile Include="Models\Notification.cs" />
@@ -603,7 +606,6 @@
       <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

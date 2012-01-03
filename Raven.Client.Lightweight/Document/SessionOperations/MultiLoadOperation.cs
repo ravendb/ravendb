@@ -60,9 +60,9 @@ namespace Raven.Client.Document.SessionOperations
 			includeResults = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
 			results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
 
-			return	sessionOperations.AllowNonAuthoritiveInformation == false &&
-					results.Any(x => x.NonAuthoritiveInformation ?? false) &&
-					sp.Elapsed < sessionOperations.NonAuthoritiveInformationTimeout
+			return	sessionOperations.AllowNonAuthoritativeInformation == false &&
+					results.Any(x => x.NonAuthoritativeInformation ?? false) &&
+					sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout
 				;
 		}
 
