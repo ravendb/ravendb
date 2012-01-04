@@ -589,6 +589,7 @@
     <Compile Include="MailingList\RobStats\StatisticsBug.cs" />
     <Compile Include="MailingList\RobStats\Summary.cs" />
     <Compile Include="MailingList\RobStats\TheIndex.cs" />
+    <Compile Include="MailingList\Samina.cs" />
     <Compile Include="MailingList\SetBased.cs" />
     <Compile Include="MailingList\SkippedResults.cs" />
     <Compile Include="MailingList\spokeypokey\Spokey.cs" />
