@@ -181,9 +181,6 @@
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Util\SearchWindow.xaml.cs">
-      <DependentUpon>SearchWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Features\Util\MessageBoxWindow.xaml.cs">
       <DependentUpon>MessageBoxWindow.xaml</DependentUpon>
     </Compile>
@@ -447,10 +444,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Features\Tasks\TasksView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Features\Util\SearchWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
