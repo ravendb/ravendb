@@ -37,6 +37,35 @@ namespace Raven.Tests.Bugs.Caching
 		}
 
 		[Fact]
+		public void Can_NOT_cache_document_load()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			{
+				store.Conventions.ShouldCacheRequest = s => false;
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new User { Name = "Ayende" });
+					s.SaveChanges();
+				}
+
+				using (var s = store.OpenSession())
+				{
+					s.Load<User>("users/1");
+					s.SaveChanges();
+				}
+
+				using (var s = store.OpenSession())
+				{
+					s.Load<User>("users/1");
+					Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+				}
+			}
+		}
+
+
+		[Fact]
 		public void After_modification_will_get_value_from_server()
 		{
 			using (GetNewServer())
