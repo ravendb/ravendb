@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 
 namespace etobi.EmbeddedTest
 {
@@ -10,27 +11,14 @@ namespace etobi.EmbeddedTest
 	{
 		static void Main(string[] args)
 		{
-			var documentStore = new DocumentStore
+			var docStore = new EmbeddableDocumentStore
 			{
-				Url = "http://localhost:8079"
+				UseEmbeddedHttpServer = true,
+				DataDirectory = "~\\Data",
+
 			}.Initialize();
 
-			var list = new List<User>();
-			using (var session = documentStore.OpenSession())
-			{
-				for (int i = 0; i < 4098; i++)
-				{
-					var entity = new User
-					{
-						Email = "ayende@ayende.com",
-						Name = "Ayende Rahien",
-						WindowsAccountId = Guid.NewGuid()
-					};
-					list.Add(entity);
-				}
-			}
-			var serializeObject = JsonConvert.SerializeObject(list);
-			File.WriteAllText("test.json",serializeObject);
+			Console.ReadLine();
 		}
 	}
 	public class User

@@ -66,15 +66,13 @@ namespace Raven.Web
 
 		public static void Shutdown()
 		{
-			if (database == null)
-				return;
 			lock (locker)
 			{
-				if (database == null)
-					return;
+				if (server != null)
+					server.Dispose();
 
-				server.Dispose();
-				database.Dispose();
+				if (database != null)
+					database.Dispose();
 
 				server = null;
 				database = null;
