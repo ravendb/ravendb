@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Raven.Client.Document;
+﻿using Raven.Client.Document;
 using Xunit;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.MailingList
 {
@@ -17,7 +14,14 @@ namespace Raven.Tests.MailingList
 			{
 				var dbNames = docStore.DatabaseCommands.GetDatabaseNames();
 
+				Assert.Empty(dbNames);
+
+				docStore.DatabaseCommands.EnsureDatabaseExists("test");
+
+				dbNames = docStore.DatabaseCommands.GetDatabaseNames();
+
 				Assert.NotEmpty(dbNames);
+
 			}
 		}
 	}
