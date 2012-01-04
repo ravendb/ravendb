@@ -29,7 +29,7 @@
 
 			<StackPanel Orientation="Horizontal" Visibility="{Binding Path=ShowCreateSampleData.Value, Converter={StaticResource VisibleWhenTrue}}">
 				<TextBlock>
-					<Run Text="There is no any documents in this database yet." />
+					<Run Text="There are no documents in this database yet." />
 					<LineBreak />
 					<Run Text="Would you like to generate some sample data?" />
 				</TextBlock>
