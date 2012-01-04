@@ -126,6 +126,7 @@
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ChangeFieldValueCommand.cs" />
+    <Compile Include="Commands\CopyLogsInstructionsCommand.cs" />
     <Compile Include="Commands\DeleteAllDocumentsOfCollectionCommand.cs" />
     <Compile Include="Commands\DeleteIndexCommand.cs" />
     <Compile Include="Commands\ExportDatabaseCommand.cs" />
