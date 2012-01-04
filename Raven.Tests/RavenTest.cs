@@ -140,6 +140,7 @@ namespace Raven.Tests
 			if(ravenConfiguration.RunInMemory == false)
 				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
 
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
 			var ravenDbServer = new RavenDbServer(ravenConfiguration);
 
 			if (initializeDocumentsByEntitiyName)
