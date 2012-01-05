@@ -143,38 +143,6 @@ namespace Raven.Client.Linq
 			return (IRavenQueryable<T>)queryable;
 		}
 
-		/// <summary>
-		/// Marker method for allowing complex (multi entity) queries on the server.
-		/// </summary>
-		public static IEnumerable<TResult> WhereEntityIs<TResult>(this IEnumerable<object> queryable, params string[] names)
-		{
-			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-		}
-
-		/// <summary>
-		/// Marker method for allowing complex (multi entity) queries on the server.
-		/// </summary>
-		public static TResult IfEntityIs<TResult>(this object queryable, string name)
-		{
-			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-		}
-
-		/// <summary>
-		/// Marker method for allowing hierarchical queries on the server.
-		/// </summary>
-		public static IEnumerable<TResult> Hierarchy<TResult>(this TResult item, string path)
-		{
-			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-		}
-
-		/// <summary>
-		/// Marker method for allowing hierarchical queries on the server.
-		/// </summary>
-		public static IEnumerable<TResult> Hierarchy<TResult>(this TResult item, Func<TResult, IEnumerable<TResult>> path)
-		{
-			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-		}
-
 #if !NET_3_5
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
