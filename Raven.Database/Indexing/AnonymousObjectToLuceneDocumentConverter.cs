@@ -109,6 +109,16 @@ namespace Raven.Database.Indexing
 				}
 				yield break;
 			}
+			if(value is BoostedValue)
+			{
+				var boostedValue = (BoostedValue)value;
+				foreach (var field in CreateFields(name, boostedValue.Value, indexDefinition, defaultStorage))
+				{
+					field.SetBoost(boostedValue.Boost);
+					field.SetOmitNorms(false);
+				}
+				yield break;
+			}
 
 			if(value is AbstractField)
 			{
@@ -296,6 +306,8 @@ namespace Raven.Database.Indexing
 				fieldsCache[cacheKey] = field = new Field(name, value, store);
 			}
 			field.SetValue(value);
+			field.SetBoost(1);
+			field.SetOmitNorms(true);
 			return field;
 		}
 		private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index)
@@ -313,6 +325,8 @@ namespace Raven.Database.Indexing
 				fieldsCache[cacheKey] = field = new Field(name, value, store, index);
 			}
 			field.SetValue(value);
+			field.SetBoost(1);
+			field.SetOmitNorms(true);
 			return field;
 		}
 
