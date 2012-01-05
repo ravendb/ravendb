@@ -16,6 +16,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Newtonsoft.Json;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -277,17 +278,19 @@ namespace Raven.Database.Indexing
 				PropertyDescriptorCollection properties = null;
 				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 				var luceneDoc = new Document();
-				var reduceKeyField = new Field(Abstractions.Data.Constants.ReduceKeyFieldName, "dummy",
+				var reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
 				                      Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
 				foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
-					var fields = GetFields(anonymousObjectToLuceneDocumentConverter, doc, ref properties).ToList();
+					float boost;
+					var fields = GetFields(anonymousObjectToLuceneDocumentConverter, doc, ref properties, out boost).ToList();
 
 					string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
 					reduceKeyField.SetValue(reduceKeyAsString.ToLowerInvariant());
 
 					luceneDoc.GetFields().Clear();
+					luceneDoc.SetBoost(boost);
 					luceneDoc.Add(reduceKeyField);
 					foreach (var field in fields)
 					{
@@ -342,8 +345,15 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private IEnumerable<AbstractField> GetFields(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc, ref PropertyDescriptorCollection properties)
+		private IEnumerable<AbstractField> GetFields(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc, ref PropertyDescriptorCollection properties, out float boost)
 		{
+			boost = 1;
+			var boostedValue = doc as BoostedValue;
+			if (boostedValue != null)
+			{
+				doc = boostedValue.Value;
+				boost = boostedValue.Boost;
+			}
 			IEnumerable<AbstractField> fields;
 			if (doc is IDynamicJsonObject)
 			{
@@ -354,6 +364,15 @@ namespace Raven.Database.Indexing
 			{
 				properties = properties ?? TypeDescriptor.GetProperties(doc);
 				fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.YES);
+			}
+			if (Math.Abs(boost - 1) > float.Epsilon)
+			{
+				var abstractFields = fields.ToList();
+				foreach (var abstractField in abstractFields)
+				{
+					abstractField.SetOmitNorms(false);
+				}
+				return abstractFields;
 			}
 			return fields;
 		}

@@ -353,10 +353,10 @@ Reduce only fields: {2}
 
 			private void AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
 			{
-				if (lambdaExpression.ExpressionBody is ObjectCreateExpression == false)
-					return;
-				var objectCreateExpression = ((ObjectCreateExpression)lambdaExpression.ExpressionBody);
-				if (objectCreateExpression.IsAnonymousType == false)
+
+				var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(lambdaExpression.ExpressionBody) as ObjectCreateExpression;
+
+				if (objectCreateExpression == null || objectCreateExpression.IsAnonymousType == false)
 					return;
 
 				var objectInitializer = objectCreateExpression.ObjectInitializer;
