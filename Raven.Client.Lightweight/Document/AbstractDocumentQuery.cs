@@ -1342,7 +1342,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void Search(string fieldName, string searchTerms)
 		{
 			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
-			theQueryText.Append(' ').Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">> ");
+			theQueryText.Append(' ').Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">>");
 		}
 
 		private string TransformToEqualValue(WhereParams whereParams)
@@ -1430,7 +1430,7 @@ If you really want to do in memory filtering on the data returned from the query
 					string.Format("A clause was not closed correctly within this query, current clause depth = {0}",
 								  currentClauseDepth));
 			}
-			return theQueryText.ToString();
+			return theQueryText.ToString().Trim();
 		}
 
 		/// <summary>

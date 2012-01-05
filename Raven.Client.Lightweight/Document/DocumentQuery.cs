@@ -603,7 +603,7 @@ namespace Raven.Client.Document
 		/// </returns>
 		public override string ToString()
 		{
-			return QueryText.ToString();
+			return QueryText.ToString().Trim();
 		}
 	}
 }
