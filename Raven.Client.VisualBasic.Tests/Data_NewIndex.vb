@@ -1,4 +1,5 @@
 ﻿Imports System
+Imports Raven.Client.Linq.Indexing
 Imports Raven.Abstractions.Indexing
 Imports Raven.Client.Linq
 Imports Raven.Client.Indexes

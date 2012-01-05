@@ -152,7 +152,7 @@ namespace Raven.Tests.Bugs
 						.Search(x => x.Tags, "i love cats")
 						.Search(x=>x.Users, "oren")
 						.ToString();
-					Assert.Equal("Tags:<<i love cats>>  Users:<<oren>>", query.Trim());
+					Assert.Equal("Tags:<<i love cats>> Users:<<oren>>", query.Trim());
 				}
 			}
 		}
