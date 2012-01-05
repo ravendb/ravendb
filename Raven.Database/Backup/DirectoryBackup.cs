@@ -25,7 +25,7 @@ namespace Raven.Database.Backup
 
 		public event Action<string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
-		private Dictionary<string, long> fileToSize = new Dictionary<string, long>();
+		private readonly Dictionary<string, long> fileToSize = new Dictionary<string, long>();
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
 		private readonly string source;

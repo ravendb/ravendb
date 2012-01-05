@@ -35,8 +35,6 @@ namespace Raven.Storage.Esent.Backup
 			this.to = to;
 			this.incrementalBackup = incrementalBackup;
 			this.database = database;
-			this.src = src;
-			this.to = to;
 		}
 
 		public void Execute(object ignored)
@@ -45,7 +43,7 @@ namespace Raven.Storage.Esent.Backup
 			{
 				to = to.ToFullPath();
 				src = src.ToFullPath();
-		
+
 				log.Info("Starting backup of '{0}' to '{1}'", src, to);
 				var directoryBackups = new List<DirectoryBackup>
 				{
