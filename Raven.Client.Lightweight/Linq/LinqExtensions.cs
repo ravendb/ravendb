@@ -135,11 +135,11 @@ namespace Raven.Client.Linq
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms)
+		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms, decimal boost = 1)
 		{
 			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), self.Expression,
-			                                                          fieldSelector, Expression.Constant(searchTerms)));
+			                                                          fieldSelector, Expression.Constant(searchTerms), Expression.Constant(boost)));
 			return (IRavenQueryable<T>)queryable;
 		}
 
@@ -234,7 +234,6 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
-		/// <param name="path">The path.</param>
 		public static IRavenQueryable<T> Include<T>(this IRavenQueryable<T> source, Expression<Func<T, object>> path)
 		{
 			source.Customize(x => x.Include(path));
