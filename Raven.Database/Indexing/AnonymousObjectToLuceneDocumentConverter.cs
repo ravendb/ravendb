@@ -116,6 +116,7 @@ namespace Raven.Database.Indexing
 				{
 					field.SetBoost(boostedValue.Boost);
 					field.SetOmitNorms(false);
+					yield return field;
 				}
 				yield break;
 			}
