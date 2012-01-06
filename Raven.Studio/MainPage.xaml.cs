@@ -24,7 +24,7 @@ namespace Raven.Studio
 			switch (e.Key)
 			{
 				case Key.Ctrl:
-					isCtrlDown = true;
+					isCtrlDown = false;
 					break;
 			}
 		}
