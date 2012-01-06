@@ -31,15 +31,21 @@ namespace Raven.Database.Backup
 		private readonly string source;
 		private readonly string destination;
 		private readonly string tempPath;
+		private readonly bool allowOverwrite;
 
-		public DirectoryBackup(string source, string destination, string tempPath)
+		public DirectoryBackup(string source, string destination, string tempPath, bool allowOverwrite)
 		{
 			this.source = source;
 			this.destination = destination;
 			this.tempPath = tempPath;
+			this.allowOverwrite = allowOverwrite;
 
 			if (Directory.Exists(tempPath) == false)
 				Directory.CreateDirectory(tempPath);
+			
+			if (!allowOverwrite && Directory.Exists(destination))
+				throw new InvalidOperationException("Directory exists and overwrite was not explicitly requested by user: " + destination);
+
 			if (Directory.Exists(destination) == false)
 				Directory.CreateDirectory(destination);
 		}
@@ -54,6 +60,12 @@ namespace Raven.Database.Backup
 		/// </summary>
 		public void Execute()
 		{
+			if (allowOverwrite) // clean destination folder; we want to do this as close as possible to the actual backup operation
+			{
+				IOExtensions.DeleteDirectory(destination);
+				Directory.CreateDirectory(destination);
+			}
+
 			foreach (var file in Directory.EnumerateFiles(tempPath))
 			{
 				Notify("Copying " + Path.GetFileName(file), BackupStatus.BackupMessageSeverity.Informational);
@@ -109,7 +121,6 @@ namespace Raven.Database.Backup
 			{
 				if (Path.GetFileName(sourceFile) == "write.lock")
 					continue; // skip the Lucene lock file
-
 			   
 				var destFileName = Path.Combine(tempPath, Path.GetFileName(sourceFile));
 				CreateHardLink(
@@ -129,7 +140,6 @@ namespace Raven.Database.Backup
 			{
 				Notify("Hard linked " + sourceFile, BackupStatus.BackupMessageSeverity.Informational);
 			}
-
 		}
 	}
 }
