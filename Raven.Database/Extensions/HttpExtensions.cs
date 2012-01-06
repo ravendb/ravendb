@@ -389,14 +389,14 @@ namespace Raven.Database.Extensions
 			return context.Request.Headers["If-None-Match"] == etag.ToString();
 		}
 
-		public static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string ravenPath, string docPath)
+		public static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string ravenPath, string docPath, bool sendEtag = true)
 		{
 			var filePath = Path.Combine(ravenPath, docPath);
 			context.Response.ContentType = GetContentType(docPath);
 			switch (File.Exists(filePath))
 			{
 				case false:
-					WriteEmbeddedFile(context, asm, docPath);
+					WriteEmbeddedFile(context, asm, docPath, sendEtag);
 					break;
 				default:
 					WriteFile(context, filePath);
@@ -404,7 +404,7 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		private static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string docPath)
+		private static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string docPath, bool sendEtag)
 		{
 			byte[] bytes;
 			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
@@ -423,7 +423,10 @@ namespace Raven.Database.Extensions
 				}
 				bytes = resource.ReadData();
 			}
-			context.Response.AddHeader("ETag", EmbeddedLastChangedDate);
+			if(sendEtag)
+			{
+				context.Response.AddHeader("ETag", EmbeddedLastChangedDate);
+			}
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
 		}
 
