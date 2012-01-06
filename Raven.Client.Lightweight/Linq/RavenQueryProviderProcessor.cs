@@ -628,6 +628,11 @@ namespace Raven.Client.Linq
 						throw new InvalidOperationException("Could not extract value from " + expression);
 					}
 					luceneQuery.Search(expressionInfo.Path, (string)value);
+					if(GetValueFromExpressionWithoutConversion(expression.Arguments[3], out value) == false)
+					{
+						throw new InvalidOperationException("Could not extract value from " + expression);
+					}
+					luceneQuery.Boost((decimal)value);
 					break;
 				case "In":
 					var memberInfo = GetMember(expression.Arguments[0]);

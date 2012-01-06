@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Client.Linq.Indexing;
 using Xunit;
 
 namespace Raven.Tests.MailingList

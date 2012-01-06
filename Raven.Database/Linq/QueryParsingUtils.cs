@@ -144,7 +144,9 @@ namespace Raven.Database.Linq
 			variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
 			variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
 
-			var objectCreateExpression = lambdaExpression.ExpressionBody as ObjectCreateExpression;
+			var expressionBody = GetAnonymousCreateExpression(lambdaExpression.ExpressionBody);
+
+			var objectCreateExpression = expressionBody as ObjectCreateExpression;
 			if (objectCreateExpression == null && requiresSelectNewAnonymousType)
 				throw new InvalidOperationException("Variable initializer select must have a lambda expression with an object create expression");
 
@@ -152,6 +154,30 @@ namespace Raven.Database.Linq
 				throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type but returning " + objectCreateExpression.CreateType.Type);
 
 			return variable;
+		}
+
+		public static Expression GetAnonymousCreateExpression(Expression expression)
+		{
+			var invocationExpression = expression as InvocationExpression;
+			
+			if (invocationExpression == null)
+				return expression;
+			var memberReferenceExpression = invocationExpression.TargetObject as MemberReferenceExpression;
+			if (memberReferenceExpression == null)
+				return expression;
+			var typeReference = memberReferenceExpression.TargetObject as TypeReferenceExpression;
+			if (typeReference == null)
+				return expression;
+
+			if (typeReference.TypeReference.Type != "Raven.Database.Linq.PrivateExtensions.DynamicExtensionMethods")
+				return expression;
+
+			switch (memberReferenceExpression.MemberName)
+			{
+				case "Boost":
+					return invocationExpression.Arguments[0];
+			}
+			return expression;
 		}
 
 		public static LambdaExpression AsLambdaExpression(this Expression expression)

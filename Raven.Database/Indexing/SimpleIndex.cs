@@ -76,16 +76,14 @@ namespace Raven.Database.Indexing
 				{
 					count++;
 
-					IndexingResult indexingResult;
-					if (doc is DynamicJsonObject)
-						indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, (DynamicJsonObject)doc);
-					else
-						indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, properties, doc);
+					float boost;
+					var indexingResult = GetIndexingResult(ref properties, doc, anonymousObjectToLuceneDocumentConverter, out boost);
 
 					if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
 					{
 						madeChanges = true;
 						luceneDoc.GetFields().Clear();
+						luceneDoc.SetBoost(boost);
 						documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
 						luceneDoc.Add(documentIdField);
 						foreach (var field in indexingResult.Fields)
@@ -123,6 +121,34 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
 		}
 
+		private IndexingResult GetIndexingResult(ref PropertyDescriptorCollection properties, object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)
+		{
+			boost = 1;
+
+			var boostedValue = doc as BoostedValue;
+			if (boostedValue != null)
+			{
+				doc = boostedValue.Value;
+				boost = boostedValue.Boost;
+			}
+
+			IndexingResult indexingResult;
+			if (doc is DynamicJsonObject)
+				indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, (DynamicJsonObject) doc);
+			else
+				indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, ref properties, doc);
+
+			if (Math.Abs(boost - 1) > float.Epsilon)
+			{
+				foreach (var abstractField in indexingResult.Fields)
+				{
+					abstractField.SetOmitNorms(false);
+				}
+			}
+
+			return indexingResult;
+		}
+
 		private class IndexingResult
 		{
 			public string NewDocId;
@@ -142,7 +168,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, PropertyDescriptorCollection properties, object doc)
+		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, ref PropertyDescriptorCollection properties, object doc)
 		{
 			if (properties == null)
 			{

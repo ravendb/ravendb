@@ -22,7 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-	<NoWarn>1591</NoWarn>
+    <NoWarn>1591</NoWarn>
     <DocumentationFile>bin\Debug\Raven.Abstractions.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -62,6 +62,7 @@
     <Compile Include="Data\AggregationOperationExtensions.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\BatchResult.cs" />
+    <Compile Include="Data\BoostedValue.cs" />
     <Compile Include="Data\BuildNumber.cs" />
     <Compile Include="Data\ConnectionStringParser.cs" />
     <Compile Include="Data\Constants.cs" />

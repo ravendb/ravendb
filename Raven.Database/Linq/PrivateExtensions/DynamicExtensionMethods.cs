@@ -14,6 +14,15 @@ namespace Raven.Database.Linq.PrivateExtensions
 	/// </summary>
 	public class DynamicExtensionMethods
 	{
+		public static BoostedValue Boost(dynamic o, float value)
+		{
+			return new BoostedValue
+			{
+				Value = o,
+				Boost = value
+			};
+		}
+
 		public static object IfEntityIs(dynamic o, string entityName)
 		{
 			if (string.Equals(o[Constants.Metadata][Constants.RavenEntityName], entityName, StringComparison.InvariantCultureIgnoreCase))
