@@ -116,7 +116,7 @@
             <sdk:TabControl Grid.Row="1"
                             Margin="5,8,10,10">
                 <sdk:TabItem Header="Data">
-                    <Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}" />
+                    <Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}" x:Name="EditorCtrl" />
                 </sdk:TabItem>
                 <sdk:TabItem Header="Metadata">
                     <Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay}" />

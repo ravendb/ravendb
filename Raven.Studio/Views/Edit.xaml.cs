@@ -49,24 +49,6 @@ namespace Raven.Studio.Views
 					if (isCtrlHold)
 					{
 						SearchTool.IsActive = true;
-						//var searchWindow = new SearchWindow();
-						//searchWindow.Show();
-
-						//searchWindow.Closed += (s, e) =>
-						//{
-						//    if (searchWindow.DialogResult == true)
-						//    {
-						//        string result = searchWindow.Result.ToLower();
-
-
-						//        var item = document.DataContext as EditableDocumentModel;
-						//        if (item != null)
-						//        {
-						//            var data = item.JsonData.ToLower();
-
-						//            var index = data.IndexOf(result, System.StringComparison.Ordinal);
-						//        }
-						//    }
 					}
 					break;
 				case Key.Escape:
