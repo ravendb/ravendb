@@ -16,7 +16,7 @@ namespace Raven.Tests.Bugs
 		public void CanWriteInTransactionScopeAndReadFromAnotherTransactionScope()
 		{
 			using(GetNewServer())
-			using(var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
+			using(var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
 				var testEntity = new MyTestClass() { SomeText = "Foo" };
 
@@ -34,7 +34,7 @@ namespace Raven.Tests.Bugs
 				{
 					using (var session = store.OpenSession())
 					{
-						session.Advanced.AllowNonAuthoritiveInformation = false;
+						session.Advanced.AllowNonAuthoritativeInformation = false;
 						var testEntityRetrieved = session.Load<MyTestClass>(testEntity.Id);
 						Assert.Equal(testEntityRetrieved.SomeText, testEntity.SomeText);
 					}
@@ -46,7 +46,7 @@ namespace Raven.Tests.Bugs
 		public void CanWriteInTransactionScopeAndReadOutsideOfTransactionScope()
 		{
 			using(GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				var testEntity = new MyTestClass() {SomeText = "Foo"};
 
@@ -62,7 +62,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					session.Advanced.AllowNonAuthoritiveInformation = false;
+					session.Advanced.AllowNonAuthoritativeInformation = false;
 					var testEntityRetrieved = session.Load<MyTestClass>(testEntity.Id);
 					Assert.Equal(testEntityRetrieved.SomeText, testEntity.SomeText);
 				}

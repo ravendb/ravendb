@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 			{
 				using (var documentStore = new DocumentStore
 				{
-					Url = "http://localhost:8080"
+					Url = "http://localhost:8079"
 				})
 				{
 					documentStore.Initialize();

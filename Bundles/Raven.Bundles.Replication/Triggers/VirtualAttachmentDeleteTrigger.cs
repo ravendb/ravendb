@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
@@ -48,7 +49,7 @@ namespace Raven.Bundles.Replication.Triggers
 				}
 			};
 			deletedHistory.Value = null;
-			Database.PutStatic(key, null, new byte[0], metadata);
+			Database.PutStatic(key, null, new MemoryStream(new byte[0]), metadata);
 		}
 	}
 }

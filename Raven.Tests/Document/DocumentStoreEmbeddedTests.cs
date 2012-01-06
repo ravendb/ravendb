@@ -4,11 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Threading;
 using System.Transactions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
@@ -85,12 +87,13 @@ namespace Raven.Tests.Document
 				var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.Null(attachment);
 
-				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] {1, 2, 3}, new RavenJObject {{"Hello", "World"}});
+
+				documentStore.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
 
 				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 				Assert.NotNull(attachment);
 
-				Assert.Equal(new byte[]{1,2,3}, attachment.Data);
+				Assert.Equal(new byte[]{1,2,3}, attachment.Data().ReadData());
 				Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
 
 				documentStore.DatabaseCommands.DeleteAttachment("ayende", null);
@@ -103,7 +106,7 @@ namespace Raven.Tests.Document
 
 
 		[Fact]
-		public void Will_get_notification_when_reading_non_authoritive_information()
+		public void Will_get_notification_when_reading_non_authoritative_information()
 		{
 			using (var documentStore = NewDocumentStore())
 			{
@@ -124,9 +127,9 @@ namespace Raven.Tests.Document
 					{
 						using (var session2 = documentStore.OpenSession())
 						{
-							session2.Advanced.AllowNonAuthoritiveInformation = false;
-							session2.Advanced.NonAuthoritiveInformationTimeout = TimeSpan.Zero;
-							Assert.Throws<NonAuthoritiveInformationException>(()=>session2.Load<Company>(company.Id));
+							session2.Advanced.AllowNonAuthoritativeInformation = false;
+							session2.Advanced.NonAuthoritativeInformationTimeout = TimeSpan.Zero;
+							Assert.Throws<NonAuthoritativeInformationException>(()=>session2.Load<Company>(company.Id));
 						}
 					}
 				}
@@ -477,6 +480,33 @@ namespace Raven.Tests.Document
 
 				Assert.Null(documentStore.DatabaseCommands.Get("rhino2"));
 				Assert.NotNull(documentStore.DatabaseCommands.Get("rhino1"));
+			}
+		}
+
+		[Fact]
+		public void Can_get_document_metadata()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				documentStore.DatabaseCommands
+					.Put("rhino1", null, RavenJObject.FromObject(new Company { Name = "Hibernating Rhinos" }), new RavenJObject());
+
+				JsonDocument doc = documentStore.DatabaseCommands.Get("rhino1");
+				JsonDocumentMetadata meta = documentStore.DatabaseCommands.Head("rhino1");
+
+				Assert.NotNull(meta);
+				Assert.Equal(doc.Key, meta.Key);
+				Assert.Equal(doc.Etag, meta.Etag);
+				Assert.Equal(doc.LastModified, meta.LastModified);
+			}
+		}
+
+		[Fact]
+		public void When_document_does_not_exist_Then_metadata_should_be_null()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				Assert.Null(documentStore.DatabaseCommands.Head("rhino1"));
 			}
 		}
 

@@ -19,6 +19,7 @@ namespace Raven.Client.Connection
 		{
 			return Escape(term, false);
 		}
+
 		/// <summary>
 		/// Escapes Lucene operators and quotes phrases
 		/// </summary>

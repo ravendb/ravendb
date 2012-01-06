@@ -21,9 +21,9 @@ namespace Raven.Tests.Shard
 
 		public When_Using_Parallel_Access_Strategy()
 		{
-			port = 8080;
+			port = 8079;
 			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
 		#region IDisposable Members
@@ -40,7 +40,7 @@ namespace Raven.Tests.Shard
 		{
 			using(GetNewServer(port, path))
 			{
-				var shard1 = new DocumentStore { Url = "http://localhost:8080" }.Initialize().OpenSession();
+				var shard1 = new DocumentStore { Url = "http://localhost:8079" }.Initialize().OpenSession();
 
 				var results = new ParallelShardAccessStrategy().Apply(new[] { shard1.Advanced.DatabaseCommands }, (x,i) => (IList<Company>)null);
 
@@ -53,7 +53,7 @@ namespace Raven.Tests.Shard
 		{
 			using (GetNewServer(port, path))
 			{
-				var shard1 = new DocumentStore {Url = "http://localhost:8080"}.Initialize().OpenSession();
+				var shard1 = new DocumentStore {Url = "http://localhost:8079"}.Initialize().OpenSession();
 
 
 				Assert.Throws(typeof (ApplicationException), () =>

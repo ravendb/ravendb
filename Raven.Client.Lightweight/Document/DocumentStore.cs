@@ -156,6 +156,12 @@ namespace Raven.Client.Document
 			set { identifier = value; }
 		}
 
+		/// <summary>
+		/// The API Key to use when authenticating against a RavenDB server that
+		/// supports API Key authentication
+		/// </summary>
+		public string ApiKey { get; set; }
+
 #if !SILVERLIGHT
 		private string connectionStringName;
 
@@ -372,7 +378,7 @@ namespace Raven.Client.Document
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 #if !SILVERLIGHT
-					var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
+					var generator = new MultiTypeHiLoKeyGenerator(this, 32);
 					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
 #else
 
@@ -397,7 +403,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			if (string.IsNullOrEmpty(DefaultDatabase) == false)
 			{
-				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase);
+				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 			}
 #endif
 
@@ -467,13 +473,14 @@ namespace Raven.Client.Document
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
 			authRequest.Credentials = Credentials;
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
-			authRequest.PreAuthenticate = true;
 #else
 			var authRequest = (HttpWebRequest) WebRequestCreator.ClientHttp.Create(new Uri(oauthSource.NoCache()));
 #endif
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
 
+			if (string.IsNullOrEmpty(ApiKey) == false)
+				authRequest.Headers["Api-Key"] = ApiKey;
 
 			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
 			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
@@ -521,7 +528,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <remarks>
 		/// This is mainly useful for internal use inside RavenDB, when we are executing
-		/// queries that has been marked with WaitForNonStaleResults, we temporarily disable
+		/// queries that have been marked with WaitForNonStaleResults, we temporarily disable
 		/// aggressive caching.
 		/// </remarks>
 		public override IDisposable DisableAggressiveCaching()
@@ -553,9 +560,10 @@ namespace Raven.Client.Document
 			if (cacheDuration.TotalSeconds < 1)
 				throw new ArgumentException("cacheDuration must be longer than a single second");
 
+			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
 
-			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = null);
+			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);
 #else
 			// TODO: with silverlight, we don't currently support aggressive caching
 			return new DisposableAction(() => { });

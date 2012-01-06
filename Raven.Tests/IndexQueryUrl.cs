@@ -150,7 +150,7 @@ namespace Raven.Tests
 
 			// indexQueryUrl is in the form "/path?querystring#anchor"
 
-			string indexQueryQuerystring = indexQueryUrl.Substring(indexQueryUrl.IndexOf("?")+1);
+			string indexQueryQuerystring = indexQueryUrl.Substring(indexQueryUrl.IndexOf('?') + 1);
 
 			int indexOfPoint = indexQueryQuerystring.IndexOf('#');
 			if (indexOfPoint != -1)

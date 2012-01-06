@@ -79,7 +79,7 @@ namespace Raven.Munin
 					return x.Value<DateTime>().CompareTo(y.Value<DateTime>());
 				case JTokenType.Bytes:
 					var xBytes = x.Value<byte[]>();
-					var yBytes = y.Value<byte[]>();
+					byte[] yBytes = y.Type == JTokenType.String ? Convert.FromBase64String(y.Value<string>()) : y.Value<byte[]>();
 					for (int i = 0; i < xBytes.Length && i < yBytes.Length; i++)
 					{
 						if (xBytes[i] != yBytes[i])

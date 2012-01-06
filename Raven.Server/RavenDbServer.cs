@@ -33,7 +33,7 @@ namespace Raven.Server
 			{
 				database.SpinBackgroundWorkers();
 				server = new HttpServer(settings, database);
-				server.Start();
+				server.StartListening();
 			}
 			catch (Exception)
 			{

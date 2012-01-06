@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+Actipro Syntax Language Definition (.langdef)
+  For use with Actipro SyntaxEditor and related products.
+  http://www.actiprosoftware.com
+
+'Raven Query Syntax' language created by Hibernating Rhinos LTD.
+  Hibernating Rhinos LTD 2011
+
+-->
+<LanguageDefinition LanguageKey="RavenQuery" LanguageDescription="Raven Query Syntax" Creator="Hibernating Rhinos LTD" Copyright="Hibernating Rhinos LTD 2011" xmlns="http://schemas.actiprosoftware.com/langdef/1.0">
+	<!-- Classification types -->
+	<LanguageDefinition.ClassificationTypes>
+		<ClassificationType Key="Field" Description="Field Name" DefaultStyle="#FF0000CD" />
+		<ClassificationType Key="Keyword" DefaultStyle="#FFC0C0C0" />
+		<ClassificationType Key="KeywordValue" DefaultStyle="#FF6B8E23" />
+		<ClassificationType Key="SearchValue" DefaultStyle="#FF008080" />
+		<ClassificationType Key="StringValue" Description="String Value" DefaultStyle="#FFFF0000" />
+		<ClassificationType Key="Value" Description="General Value" DefaultStyle="#FF808080" />
+	</LanguageDefinition.ClassificationTypes>
+	<!-- Lexer -->
+	<LanguageDefinition.Lexer>
+		<DynamicLexer>
+			<!-- Default state -->
+			<State Id="1" Key="Default">
+				<RegexPatternGroup ClassificationTypeKey="Keyword" CaseSensitivity="Sensitive">
+					<RegexPattern Value="AND" />
+					<RegexPattern Value="OR" />
+				</RegexPatternGroup>
+				<RegexPatternGroup Key="Field" ClassificationTypeKey="Field" Pattern="([^\s\r\n:]+)\s*:" CaseSensitivity="Sensitive" />
+				<RegexPatternGroup ClassificationTypeKey="SearchValue" Pattern="&lt;&lt;[^&gt;]+&gt;&gt;" />
+				<RegexPatternGroup ClassificationTypeKey="KeywordValue" Pattern="\[\[[^\]]+\]\]" />
+				<RegexPatternGroup ClassificationTypeKey="StringValue" Pattern="\&quot;[^\&quot;]*\&quot;" CaseSensitivity="Insensitive" />
+				<RegexPatternGroup Key="String" ClassificationTypeKey="Value" Pattern="[^\s\r\n:]*" CaseSensitivity="Insensitive" />
+			</State>
+		</DynamicLexer>
+	</LanguageDefinition.Lexer>
+	<!-- Example text -->
+	<LanguageDefinition.ExampleText><![CDATA[Users,Name:Ayende
+Title:<<dsl in boo>>
+UserId:authors/123
+Name:"Ayende Rahien"
+Inner.Prop:123 EmailAddress: "ayende@ayende.com" blog: "www.ayende.com/blog"
+__document_id:[[AUTHORs/123]]]]></LanguageDefinition.ExampleText>
+</LanguageDefinition>

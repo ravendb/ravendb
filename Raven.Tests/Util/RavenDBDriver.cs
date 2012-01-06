@@ -99,7 +99,7 @@ namespace Raven.Tests.Util
 
 		public void Should_finish_without_error()
 		{
-			_process.StandardInput.Write("\r\n");
+			_process.StandardInput.Write("q\r\n");
 
 			if (!_process.WaitForExit(10000))
 				throw new Exception("RavenDB command-line server did not halt within 10 seconds of pressing enter.");

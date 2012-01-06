@@ -43,9 +43,9 @@ namespace Raven.Abstractions.Data
 		public string Key { get; set; }
 
 		/// <summary>
-		/// 	Gets or sets a value indicating whether this document is non authoritive (modified by uncommitted transaction).
+		/// 	Gets or sets a value indicating whether this document is non authoritative (modified by uncommitted transaction).
 		/// </summary>
-		public bool? NonAuthoritiveInformation { get; set; }
+		public bool? NonAuthoritativeInformation { get; set; }
 
 		/// <summary>
 		/// Gets or sets the etag.
@@ -73,8 +73,8 @@ namespace Raven.Abstractions.Data
 				metadata[Constants.LastModified] = LastModified.Value;
 			if(Etag != null)
 				metadata["@etag"] = Etag.Value.ToString();
-			if (NonAuthoritiveInformation != null)
-				metadata["Non-Authoritive-Information"] = NonAuthoritiveInformation.Value;
+			if (NonAuthoritativeInformation != null)
+				metadata["Non-Authoritative-Information"] = NonAuthoritativeInformation.Value;
 
 			doc["@metadata"] = metadata;
 

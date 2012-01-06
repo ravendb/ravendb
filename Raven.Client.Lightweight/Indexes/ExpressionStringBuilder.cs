@@ -221,13 +221,16 @@ namespace Raven.Client.Indexes
 			var name = member.Name;
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
-				instance.NodeType == ExpressionType.Parameter &&
-				// only translate from the root type
-				(queryRoot == null || (member.DeclaringType == queryRoot)) &&
+				// only translate from the root type or deriatives
+				(queryRoot == null || (member.DeclaringType.IsAssignableFrom(queryRoot))) &&
 				// only translate from the root alias
-				(queryRootName == null || ((ParameterExpression)instance).Name == queryRootName)
-				)
+				(queryRootName == null || ( 
+					instance.NodeType == ExpressionType.Parameter  &&	
+					((ParameterExpression)instance).Name == queryRootName)))
+
+			{
 				name = Constants.DocumentIdFieldName;
+			}
 			if (instance != null)
 			{
 				Visit(instance);
@@ -371,7 +374,6 @@ namespace Raven.Client.Indexes
 			var rightOp = node.Right;
 
 			FixupEnumBinaryExpression(ref leftOp, ref rightOp);
-
 			switch (node.NodeType)
 			{
 				case ExpressionType.Add:
@@ -626,7 +628,7 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
-		private static void FixupEnumBinaryExpression(ref Expression left, ref Expression right)
+		private void FixupEnumBinaryExpression(ref Expression left, ref Expression right)
 		{
 			switch (left.NodeType)
 			{
@@ -639,8 +641,23 @@ namespace Raven.Client.Indexes
 					if (constantExpression == null)
 						return;
 					left = expression;
-					right = Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
+					right = convention.SaveEnumsAsIntegers ? 
+						Expression.Constant((int)constantExpression.Value) : 
+						Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
 					break;
+			}
+
+			while (true)
+			{
+				switch (left.NodeType)
+				{
+					case ExpressionType.ConvertChecked:
+					case ExpressionType.Convert:
+						left = ((UnaryExpression)left).Operand;
+						break;
+					default:
+						return;
+				}
 			}
 		}
 
@@ -1125,10 +1142,15 @@ namespace Raven.Client.Indexes
 			}
 			if (expression != null)
 			{
-				if (node.Method.Name == "Hierarchy")
+				switch (node.Method.Name)
 				{
-					VisitHierarchy(node, expression);
-					return node;
+					case "MetadataFor":
+						Visit(node.Arguments[0]);
+						Out("[\"@metadata\"]");
+						return node;
+					case "Hierarchy":
+						VisitHierarchy(node, expression);
+						return node;
 				}
 				if (expression.Type == typeof(IClientSideDatabase))
 				{
@@ -1207,6 +1229,7 @@ namespace Raven.Client.Indexes
 					case "Count":
 					case "Where":
 					case "Sum":
+					case "Any":
 					case "SingleOrDefault":
 						Out(")");
 						break;
@@ -1241,6 +1264,7 @@ namespace Raven.Client.Indexes
 					case "SelectMany":
 						Out("(Func<dynamic, IEnumerable<dynamic>>)(");
 						break;
+					case "Any":
 					case "First":
 					case "FirstOrDefault":
 					case "Single":
@@ -1265,7 +1289,7 @@ namespace Raven.Client.Indexes
 			if (expression.NodeType == ExpressionType.Call)
 			{
 				var name = ((MethodCallExpression)expression).Method.Name;
-				return name != "Select" && name != "SelectMany";
+				return name != "Select";
 			}
 
 			return true;
@@ -1354,6 +1378,90 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
+
+		private static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
+		{
+			"abstract",
+			"as",
+			"base",
+			"bool",
+			"break",
+			"byte",
+			"case",
+			"catch",
+			"char",
+			"checked",
+			"class",
+			"const",
+			"continue",
+			"decimal",
+			"default",
+			"delegate",
+			"do",
+			"double",
+			"else",
+			"enum",
+			"event",
+			"explicit",
+			"extern",
+			"false",
+			"finally",
+			"fixed",
+			"float",
+			"for",
+			"foreach",
+			"goto",
+			"if",
+			"implicit",
+			"in",
+			"in (generic modifier)",
+			"int",
+			"interface",
+			"internal",
+			"is",
+			"lock",
+			"long",
+			"namespace",
+			"new",
+			"null",
+			"object",
+			"operator",
+			"out",
+			"out (generic modifier)",
+			"override",
+			"params",
+			"private",
+			"protected",
+			"public",
+			"readonly",
+			"ref",
+			"return",
+			"sbyte",
+			"sealed",
+			"short",
+			"sizeof",
+			"stackalloc",
+			"static",
+			"string",
+			"struct",
+			"switch",
+			"this",
+			"throw",
+			"true",
+			"try",
+			"typeof",
+			"uint",
+			"ulong",
+			"unchecked",
+			"unsafe",
+			"ushort",
+			"using",
+			"virtual",
+			"void",
+			"volatile",
+			"while"
+		});
+
 		/// <summary>
 		///   Visits the <see cref = "T:System.Linq.Expressions.ParameterExpression" />.
 		/// </summary>
@@ -1372,7 +1480,10 @@ namespace Raven.Client.Indexes
 				Out("Param_" + GetParamId(node));
 				return node;
 			}
-			Out(node.Name.StartsWith("$VB$") ? node.Name.Substring(4) : node.Name);
+			var name = node.Name.StartsWith("$VB$") ? node.Name.Substring(4) : node.Name;
+			if (keywordsInCSharp.Contains(name))
+				Out('@');
+			Out(name);
 			return node;
 		}
 

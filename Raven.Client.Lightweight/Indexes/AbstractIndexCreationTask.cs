@@ -15,6 +15,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -58,11 +59,11 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-		/// Allows to use lambdas over dynamic
+		/// Allow to get to the metadata of the document
 		/// </summary>
-		protected IEnumerable<dynamic> Project<T>(IEnumerable<T> self, Func<T, object> projection)
+		protected RavenJObject MetadataFor(object doc)
 		{
-			throw new NotSupportedException("This can only be run on the server side");
+			throw new NotSupportedException("This is here as a marker only");
 		}
 #endif
 
@@ -129,7 +130,7 @@ namespace Raven.Client.Indexes
 			return new IndexDefinitionBuilder<TDocument, TReduceResult>
 			{
 				Indexes = Indexes,
-				SortOptions = SortOptions,
+				SortOptions = IndexSortOptions,
 				Analyzers = Analyzers,
 				Map = Map,
 				Reduce = Reduce,

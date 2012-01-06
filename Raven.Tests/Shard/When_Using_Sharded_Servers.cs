@@ -28,7 +28,7 @@ namespace Raven.Tests.Shard
 		{
 			server = "localhost";
 
-			port1 = 8080;
+			port1 = 8079;
 			port2 = 8081;
 
 			path1 = GetPath("TestShardedDb1");
@@ -93,6 +93,21 @@ namespace Raven.Tests.Shard
 
 					Assert.Equal("Company1", company1.Id);
 					Assert.Equal("Company2", company2.Id);
+				}
+			}
+		}
+
+		[Fact]
+		public void Can_query_using_int()
+		{
+			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
+			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
+			{
+				documentStore.Initialize();
+
+				using (var session = documentStore.OpenSession())
+				{
+					session.Load<Company>(1);
 				}
 			}
 		}

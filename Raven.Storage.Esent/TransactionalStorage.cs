@@ -125,9 +125,9 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory)
+		public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup)
 		{
-			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory);
+			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		}
 
@@ -140,7 +140,7 @@ namespace Raven.Storage.Esent
 		{
 			long sizeInBytes = -1;
 
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
 			{
 				int sizeInPages, pageSize;
 				Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out sizeInPages, JET_DbInfo.Filesize);
@@ -372,10 +372,12 @@ namespace Raven.Storage.Esent
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
 				: CommitTransactionGrbit.None;
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
 			{
-				current.Value = new StorageActionsAccessor(pht);
+				var storageActionsAccessor = new StorageActionsAccessor(pht);
+				current.Value = storageActionsAccessor;
 				action(current.Value);
+				storageActionsAccessor.SaveAllTasks();
 				pht.Commit(txMode);
 			}
 		}

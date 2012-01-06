@@ -17,8 +17,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
-using Raven.Database.Linq;
 using Raven.Json.Linq;
 using DateTools = Lucene.Net.Documents.DateTools;
 
@@ -26,8 +24,6 @@ namespace Raven.Database.Indexing
 {
 	public class AnonymousObjectToLuceneDocumentConverter
 	{
-		private const string NullValueMarker = "NULL_VALUE";
-
 		private readonly IndexDefinition indexDefinition;
 		private readonly List<int> multipleItemsSameFieldCount = new List<int>();
 		private readonly Dictionary<object, Field> fieldsCache = new Dictionary<object, Field>();
@@ -113,13 +109,28 @@ namespace Raven.Database.Indexing
 				}
 				yield break;
 			}
+			if(value is BoostedValue)
+			{
+				var boostedValue = (BoostedValue)value;
+				foreach (var field in CreateFields(name, boostedValue.Value, indexDefinition, defaultStorage))
+				{
+					field.SetBoost(boostedValue.Boost);
+					field.SetOmitNorms(false);
+					yield return field;
+				}
+				yield break;
+			}
 
 			if(value is AbstractField)
 			{
 				yield return (AbstractField)value;
 				yield break;
 			}
-
+			if(value is byte[])
+			{
+				yield return CreateBinaryFieldWithCaching(name, (byte[])value, indexDefinition.GetStorage(name, defaultStorage));
+				yield break;
+			}
 
 			var itemsToIndex = value as IEnumerable;
 			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
@@ -144,13 +155,14 @@ namespace Raven.Database.Indexing
 				if (value is DateTime)
 				{
 				    var val = (DateTime) value;
-					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
+					var postFix = val.Kind == DateTimeKind.Utc ? "Z" : "";
+					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeFormatsToWrite) + postFix, indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				else if(value is DateTimeOffset)
 				{
 					var val = (DateTimeOffset)value;
-					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
+					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeOffsetFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				else
@@ -177,7 +189,7 @@ namespace Raven.Database.Indexing
 			}
 			else if (value is DateTimeOffset)
 			{
-				yield return CreateFieldWithCaching(name, DateTools.DateToString(((DateTimeOffset)value).DateTime, DateTools.Resolution.MILLISECOND),
+				yield return CreateFieldWithCaching(name, DateTools.DateToString(((DateTimeOffset)value).UtcDateTime, DateTools.Resolution.MILLISECOND),
 					indexDefinition.GetStorage(name, defaultStorage),
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
@@ -193,9 +205,9 @@ namespace Raven.Database.Indexing
 				yield return CreateFieldWithCaching(name, convert.ToString(CultureInfo.InvariantCulture), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
-			else if (value is DynamicJsonObject)
+			else if (value is IDynamicJsonObject)
 			{
-				var inner = ((DynamicJsonObject)value).Inner;
+				var inner = ((IDynamicJsonObject)value).Inner;
 				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield return CreateFieldWithCaching(name, inner.ToString(), indexDefinition.GetStorage(name, defaultStorage),
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
@@ -280,6 +292,25 @@ namespace Raven.Database.Indexing
 
 	        return true;
 	    }
+
+		private Field CreateBinaryFieldWithCaching(string name, byte[] value, Field.Store store)
+		{
+			var cacheKey = new
+			{
+				name,
+				store,
+				multipleItemsSameFieldCountSum = multipleItemsSameFieldCount.Sum()
+			};
+			Field field;
+			if (fieldsCache.TryGetValue(cacheKey, out field) == false)
+			{
+				fieldsCache[cacheKey] = field = new Field(name, value, store);
+			}
+			field.SetValue(value);
+			field.SetBoost(1);
+			field.SetOmitNorms(true);
+			return field;
+		}
 		private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index)
 		{
 			var cacheKey = new
@@ -295,6 +326,8 @@ namespace Raven.Database.Indexing
 				fieldsCache[cacheKey] = field = new Field(name, value, store, index);
 			}
 			field.SetValue(value);
+			field.SetBoost(1);
+			field.SetOmitNorms(true);
 			return field;
 		}
 

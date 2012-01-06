@@ -20,7 +20,7 @@ namespace Raven.Tests.Bugs
 			using (var documentStore = NewDocumentStore())
 			using (var httpServer = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
 			{
-				httpServer.Start();
+				httpServer.StartListening();
 				documentStore.DatabaseCommands.PutIndex("ImagesByTag",
 														new IndexDefinitionBuilder<Image, ImageByTagSearchModel>
 														{

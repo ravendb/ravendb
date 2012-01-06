@@ -57,7 +57,7 @@ namespace Raven.Database.Linq.Ast
 
 		private void ProcessQuery(Expression queryExpressionSelectClause)
 		{
-			var objectCreateExpression = queryExpressionSelectClause as ObjectCreateExpression;
+			var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(queryExpressionSelectClause) as ObjectCreateExpression;
 			if (objectCreateExpression == null ||
 				objectCreateExpression.IsAnonymousType == false)
 				return;

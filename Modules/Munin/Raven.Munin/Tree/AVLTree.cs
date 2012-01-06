@@ -318,6 +318,12 @@ namespace Raven.Munin.Tree
 			get { return from t in EnumerateInOrder() select t.Key; }
 		}
 
+
+		public IEnumerable<TKey> KeysInReverseOrder
+		{
+			get { return from t in EnumerateInReverseOrder() select t.Key; }
+		}
+
 		public IEnumerable<TValue> ValuesInOrder
 		{
 			get { return from t in EnumerateInOrder() select t.Value; }

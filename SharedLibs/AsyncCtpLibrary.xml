@@ -1,0 +1,2341 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>AsyncCtpLibrary</name>
+    </assembly>
+    <members>
+        <member name="T:System.IProgress`1">
+            <summary>Defines a provider for progress updates.</summary>
+            <typeparam name="T">The type of progress update value.</typeparam>
+        </member>
+        <member name="M:System.IProgress`1.Report(`0)">
+            <summary>Reports a progress update.</summary>
+            <param name="value">The value of the updated progress.</param>
+        </member>
+        <member name="T:AsyncCtpExtensions">
+            <summary>Asynchronous wrappers for .NET Framework operations.</summary>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadStringTaskAsync(System.Net.WebClient,System.String)">
+            <summary>Downloads the resource with the specified URI as a string, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <returns>A Task that contains the downloaded string.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadStringTaskAsync(System.Net.WebClient,System.Uri)">
+            <summary>Downloads the resource with the specified URI as a string, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <returns>A Task that contains the downloaded string.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadStringTaskAsync(System.Net.WebClient,System.Uri,System.Threading.CancellationToken)">
+            <summary>Downloads the resource with the specified URI as a string, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <param name="cancellationToken">A token used to signal cancellation.</param>
+            <returns>A Task that contains the downloaded string.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadStringTaskAsync(System.Net.WebClient,System.Uri,System.Threading.CancellationToken,System.IProgress{System.Net.DownloadProgressChangedEventArgs})">
+            <summary>Downloads the resource with the specified URI as a string, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <param name="cancellationToken">A token used to signal cancellation.</param>
+            <param name="progress">An object into which progress is stored.</param>
+            <returns>A Task that contains the downloaded string.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.OpenReadTaskAsync(System.Net.WebClient,System.String)">
+            <summary>Opens a readable stream for the data downloaded from a resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI for which the stream should be opened.</param>
+            <returns>A Task that contains the opened stream.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.OpenReadTaskAsync(System.Net.WebClient,System.Uri)">
+            <summary>Opens a readable stream for the data downloaded from a resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI for which the stream should be opened.</param>
+            <returns>A Task that contains the opened stream.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.OpenWriteTaskAsync(System.Net.WebClient,System.String)">
+            <summary>Opens a writeable stream for uploading data to a resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI for which the stream should be opened.</param>
+            <returns>A Task that contains the opened stream.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.OpenWriteTaskAsync(System.Net.WebClient,System.Uri)">
+            <summary>Opens a writeable stream for uploading data to a resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI for which the stream should be opened.</param>
+            <returns>A Task that contains the opened stream.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.OpenWriteTaskAsync(System.Net.WebClient,System.String,System.String)">
+            <summary>Opens a writeable stream for uploading data to a resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI for which the stream should be opened.</param>
+            <param name="method">The HTTP method that should be used to open the stream.</param>
+            <returns>A Task that contains the opened stream.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.OpenWriteTaskAsync(System.Net.WebClient,System.Uri,System.String)">
+            <summary>Opens a writeable stream for uploading data to a resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI for which the stream should be opened.</param>
+            <param name="method">The HTTP method that should be used to open the stream.</param>
+            <returns>A Task that contains the opened stream.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadStringTaskAsync(System.Net.WebClient,System.String,System.String)">
+            <summary>Uploads data in a string to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the data should be uploaded.</param>
+            <param name="data">The data to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadStringTaskAsync(System.Net.WebClient,System.Uri,System.String)">
+            <summary>Uploads data in a string to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the data should be uploaded.</param>
+            <param name="data">The data to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadStringTaskAsync(System.Net.WebClient,System.String,System.String,System.String)">
+            <summary>Uploads data in a string to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the data should be uploaded.</param>
+            <param name="method">The HTTP method that should be used to upload the data.</param>
+            <param name="data">The data to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadDataTaskAsync(System.Net.WebClient,System.String)">
+            <summary>Downloads the resource with the specified URI as a byte array, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <returns>A Task that contains the downloaded data.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadDataTaskAsync(System.Net.WebClient,System.Uri)">
+            <summary>Downloads the resource with the specified URI as a byte array, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <returns>A Task that contains the downloaded data.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadDataTaskAsync(System.Net.WebClient,System.Uri,System.Threading.CancellationToken)">
+            <summary>Downloads the resource with the specified URI as a byte array, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <param name="cancellationToken">The cancellation token to observe for cancellation requests.</param>
+            <returns>A Task that contains the downloaded data.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadDataTaskAsync(System.Net.WebClient,System.Uri,System.Threading.CancellationToken,System.IProgress{System.Net.DownloadProgressChangedEventArgs})">
+            <summary>Downloads the resource with the specified URI as a byte array, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <param name="cancellationToken">The cancellation token to observe for cancellation requests.</param>
+            <param name="progress">An object into which progress is stored.</param>
+            <returns>A Task that contains the downloaded data.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadFileTaskAsync(System.Net.WebClient,System.String,System.String)">
+            <summary>Downloads the resource with the specified URI to a local file, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <param name="fileName">The name of the local file that is to receive the data.</param>
+            <returns>A Task that contains the downloaded data.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadFileTaskAsync(System.Net.WebClient,System.Uri,System.String)">
+            <summary>Downloads the resource with the specified URI to a local file, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <param name="fileName">The name of the local file that is to receive the data.</param>
+            <returns>A Task that contains the downloaded data.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadFileTaskAsync(System.Net.WebClient,System.Uri,System.String,System.Threading.CancellationToken)">
+            <summary>Downloads the resource with the specified URI to a local file, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <param name="fileName">The name of the local file that is to receive the data.</param>
+            <param name="cancellationToken">The cancellation token to observe for cancellation requests.</param>
+            <returns>A Task that contains the downloaded data.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.DownloadFileTaskAsync(System.Net.WebClient,System.Uri,System.String,System.Threading.CancellationToken,System.IProgress{System.Net.DownloadProgressChangedEventArgs})">
+            <summary>Downloads the resource with the specified URI to a local file, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI from which to download data.</param>
+            <param name="fileName">The name of the local file that is to receive the data.</param>
+            <param name="cancellationToken">The cancellation token to observe for cancellation requests.</param>
+            <param name="progress">An object into which progress is stored.</param>
+            <returns>A Task that contains the downloaded data.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadDataTaskAsync(System.Net.WebClient,System.String,System.Byte[])">
+            <summary>Uploads data to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the data should be uploaded.</param>
+            <param name="data">The data to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadDataTaskAsync(System.Net.WebClient,System.Uri,System.Byte[])">
+            <summary>Uploads data to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the data should be uploaded.</param>
+            <param name="data">The data to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadDataTaskAsync(System.Net.WebClient,System.String,System.String,System.Byte[])">
+            <summary>Uploads data to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the data should be uploaded.</param>
+            <param name="method">The HTTP method that should be used to upload the data.</param>
+            <param name="data">The data to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadDataTaskAsync(System.Net.WebClient,System.Uri,System.String,System.Byte[])">
+            <summary>Uploads data to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the data should be uploaded.</param>
+            <param name="method">The HTTP method that should be used to upload the data.</param>
+            <param name="data">The data to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadFileTaskAsync(System.Net.WebClient,System.String,System.String)">
+            <summary>Uploads a file to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the file should be uploaded.</param>
+            <param name="fileName">A path to the file to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadFileTaskAsync(System.Net.WebClient,System.Uri,System.String)">
+            <summary>Uploads a file to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the file should be uploaded.</param>
+            <param name="fileName">A path to the file to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadFileTaskAsync(System.Net.WebClient,System.String,System.String,System.String)">
+            <summary>Uploads a file to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the file should be uploaded.</param>
+            <param name="method">The HTTP method that should be used to upload the file.</param>
+            <param name="fileName">A path to the file to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadFileTaskAsync(System.Net.WebClient,System.Uri,System.String,System.String)">
+            <summary>Uploads a file to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the file should be uploaded.</param>
+            <param name="method">The HTTP method that should be used to upload the file.</param>
+            <param name="fileName">A path to the file to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.UploadStringTaskAsync(System.Net.WebClient,System.Uri,System.String,System.String)">
+            <summary>Uploads data in a string to the specified resource, asynchronously.</summary>
+            <param name="webClient">The WebClient.</param>
+            <param name="address">The URI to which the data should be uploaded.</param>
+            <param name="method">The HTTP method that should be used to upload the data.</param>
+            <param name="data">The data to upload.</param>
+            <returns>A Task containing the data in the response from the upload.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetUri(System.Net.WebClient,System.String)">
+            <summary>Converts a path to a Uri using the WebClient's logic.</summary>
+            <remarks>Based on WebClient's private GetUri method.</remarks>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetUri(System.Net.WebClient,System.Uri)">
+            <summary>Converts a path to a Uri using the WebClient's logic.</summary>
+            <remarks>Based on WebClient's private GetUri method.</remarks>
+        </member>
+        <member name="M:AsyncCtpExtensions.ReadAsync(System.IO.Stream,System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Reads a sequence of bytes from the current stream and advances the position within the stream by the number of bytes read.
+            </summary>
+            <returns>A Task that represents the asynchronous read.</returns>
+            <param name="source">The source.</param>
+            <param name="buffer">The buffer to read data into. </param>
+            <param name="offset">The byte offset in  at which to begin reading. </param>
+            <param name="count">The maximum number of bytes to read. </param>
+            <exception cref="T:System.ArgumentException">The array length minus  is less than <paramref name="count" />. </exception>
+            <exception cref="T:System.ArgumentNullException"> is null. </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"> or <paramref name="count" /> is negative. </exception>
+            <exception cref="T:System.IO.IOException">An asynchronous read was attempted past the end of the file. </exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.WriteAsync(System.IO.Stream,System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Writes asynchronously a sequence of bytes to the current stream and advances the current position within this stream by the number of bytes written.
+            </summary>
+            <returns>A Task that represents the asynchronous write.</returns>
+            <param name="source">The source.</param>
+            <param name="buffer">The buffer containing data to write to the current stream.</param>
+            <param name="offset">The zero-based byte offset in  at which to begin copying bytes to the current stream.</param>
+            <param name="count">The maximum number of bytes to write. </param>
+            <exception cref="T:System.ArgumentException"> length minus <paramref name="offset" /> is less than <paramref name="count" />. </exception>
+            <exception cref="T:System.ArgumentNullException"> is null. </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"> or <paramref name="count" /> is negative. </exception>
+            <exception cref="T:System.NotSupportedException">The stream does not support writing. </exception>
+            <exception cref="T:System.ObjectDisposedException">The stream is closed. </exception>
+            <exception cref="T:System.IO.IOException">An I/O error occurred. </exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetResponseAsync(System.Net.WebRequest)">
+            <summary>Starts an asynchronous request for a web resource.</summary>
+            <returns>Task that represents the asynchronous request.</returns>
+            <exception cref="T:System.InvalidOperationException">The stream is already in use by a previous call to . </exception>
+            <PermissionSet>    <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />  </PermissionSet>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetRequestStreamAsync(System.Net.WebRequest)">
+            <summary>Starts an asynchronous request for a  object to use to write data.</summary>
+            <returns>Task that represents the asynchronous request.</returns>
+            <exception cref="T:System.Net.ProtocolViolationException">The  property is GET and the application writes to the stream. </exception>
+            <exception cref="T:System.InvalidOperationException">The stream is being used by a previous call to . </exception>
+            <exception cref="T:System.ApplicationException">No write stream is available. </exception>
+            <PermissionSet>    <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />  </PermissionSet>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CloseAsync(System.ServiceModel.ICommunicationObject)">
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CloseAsync(System.ServiceModel.ICommunicationObject,System.TimeSpan)">
+            <summary>Starts an asynchronous operation invoked when the workflow service host is closed.</summary>
+            <returns>A reference to the asynchronous close operation.</returns>
+            <param name="timeout">The period of time the asynchronous close operation has to complete before timing out.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.OpenAsync(System.ServiceModel.ICommunicationObject)">
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.OpenAsync(System.ServiceModel.ICommunicationObject,System.TimeSpan)">
+            <summary>Starts an asynchronous operation invoked when the workflow service host is opened.</summary>
+            <returns>A reference to the asynchronous operation.</returns>
+            <param name="timeout">The period of time the asynchronous open operation has to complete before timing out.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.WaitForMessageAsync(System.ServiceModel.Channels.IInputChannel,System.TimeSpan)">
+            <summary>Starts an asynchronous wait-for-a-message-to-arrive operation that has a specified time out and state object associated with it. </summary>
+            <returns>The Task that represents the asynchronous operation to wait for a message to arrive.</returns>
+            <param name="timeout">The  that specifies the interval of time to wait for a message to become available.</param>
+            <exception cref="T:System.TimeoutException">The specified  is exceeded before the operation is completed.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">The timeout specified is less than zero.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendAsync(System.ServiceModel.Channels.IOutputChannel,System.ServiceModel.Channels.Message)">
+            <summary>Starts an asynchronous operation to transmit a message to the destination of the output channel. </summary>
+            <returns>The Task that represents the asynchronous message transmission. </returns>
+            <param name="message">The  being sent on the output channel. </param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendAsync(System.ServiceModel.Channels.IOutputChannel,System.ServiceModel.Channels.Message,System.TimeSpan)">
+            <summary>Starts an asynchronous operation to transmit a message to the destination of the output channel within a specified interval of time.</summary>
+            <returns>The Task that represents the asynchronous send operation.</returns>
+            <param name="message">The  being sent on the output channel.</param>
+            <param name="timeout">The  that specifies how long the send operation has to complete before timing out.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CloseOutputSessionAsync(System.ServiceModel.Channels.IDuplexSession)">
+            <summary>Starts an asynchronous operation to terminate the outbound session.</summary>
+            <returns>The Task that represents the asynchronous outbound session termination. </returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CloseOutputSessionAsync(System.ServiceModel.Channels.IDuplexSession,System.TimeSpan)">
+            <summary>Starts an asynchronous operation to close an output session on the client that has a specified time out and state object associated with it. </summary>
+            <returns>The Task that represents the asynchronous close operation.</returns>
+            <param name="timeout">The  that specifies how long the close operation has to complete before timing out.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.RequestAsync(System.ServiceModel.Channels.IRequestChannel,System.ServiceModel.Channels.Message)">
+            <summary>Initiates the asynchronous processing of the message.</summary>
+            <returns>An asynchronous result that can be used to poll or wait for results, or both; this value is also required when invoking Task.</returns>
+            <param name="message">The message to be processed.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.RequestAsync(System.ServiceModel.Channels.IRequestChannel,System.ServiceModel.Channels.Message,System.TimeSpan)">
+            <summary>Starts an asynchronous operation to transmit a request message to the reply side of a request-reply message exchange within a specified interval of time.</summary>
+            <returns>The Task that represents the asynchronous message transmission. </returns>
+            <param name="message">The request  to be transmitted.</param>
+            <param name="timeout">The  that specifies the interval of time within which a response must be received. (For defaults, see the Remarks section.)</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ReplyAsync(System.ServiceModel.Channels.RequestContext,System.ServiceModel.Channels.Message)">
+            <summary>When overridden in a derived class, begins an asynchronous operation to reply to the request associated with the current context.</summary>
+            <returns>The Task that represents the asynchronous reply operation.</returns>
+            <param name="message">The incoming  that contains the request.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ReplyAsync(System.ServiceModel.Channels.RequestContext,System.ServiceModel.Channels.Message,System.TimeSpan)">
+            <summary>When overridden in a derived class, begins an asynchronous operation to reply to the request associated with the current context within a specified interval of time.</summary>
+            <returns>The Task that represents the asynchronous reply operation.</returns>
+            <param name="message">The incoming  that contains the request.</param>
+            <param name="timeout">The  that specifies the interval of time to wait for the reply to an available request.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.TerminateAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid,System.String)">
+            <summary>Starts an asynchronous operation to terminate the specified workflow instance.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to terminate.</param>
+            <param name="reason">The reason to terminate the workflow instance.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.UnsuspendAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid)">
+            <summary>Starts an asynchronous operation that resumes the specified workflow instance within a transaction.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to unsuspend.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.TransactedCancelAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid)">
+            <summary>Starts an asynchronous cancel operation in a transaction.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to cancel.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.TransactedRunAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid)">
+            <summary>Starts an asynchronous operation that runs a workflow instance within a transaction.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to run.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.TransactedSuspendAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid,System.String)">
+            <summary>Starts an asynchronous operation that suspends the specified workflow instance.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to suspend.</param>
+            <param name="reason">The reason to suspend the workflow instance.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.TransactedTerminateAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid,System.String)">
+            <summary>Starts an asynchronous operation that terminates a workflow instance within a transaction.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to terminate.</param>
+            <param name="reason">The reason to terminate the workflow instance.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.TransactedUnsuspendAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid)">
+            <summary>Starts an asynchronous operation that resumes the specified workflow instance within a transaction.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to unsuspend.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AbandonAsync(System.ServiceModel.Activities.WorkflowControlClient,System.Guid)">
+            <summary>Starts an asynchronous operation that abandons the specified workflow instance.</summary>
+            <returns>The asynchronous abandon operation.</returns>
+            <param name="instanceId">The workflow instance to abandon.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AbandonAsync(System.ServiceModel.Activities.WorkflowControlClient,System.Guid,System.String)">
+            <summary>Starts an asynchronous operation to abandon the specified workflow instance.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to abandon.</param>
+            <param name="reason">The reason for abandoning the workflow instance.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CancelAsync(System.ServiceModel.Activities.WorkflowControlClient,System.Guid)">
+            <summary>Starts an asynchronous operation to cancel the specified workflow instance.</summary>
+            <returns>Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to cancel.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.RunAsync(System.ServiceModel.Activities.WorkflowControlClient,System.Guid)">
+            <summary>Starts an asynchronous operation to run the specified workflow instance.</summary>
+            <returns>Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to run.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.SuspendAsync(System.ServiceModel.Activities.WorkflowControlClient,System.Guid)">
+            <summary>Starts an asynchronous operation that suspends the specified operation.</summary>
+            <returns>The asynchronous suspend operation.</returns>
+            <param name="instanceId">The workflow instance to suspend.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.SuspendAsync(System.ServiceModel.Activities.WorkflowControlClient,System.Guid,System.String)">
+            <summary>Starts an asynchronous operation to suspend the specified workflow instance.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to suspend.</param>
+            <param name="reason">The reason to suspend the workflow instance.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.UnsuspendAsync(System.ServiceModel.Activities.WorkflowControlClient,System.Guid)">
+            <summary>Starts an asynchronous operation that resumes the specified workflow instance within a transaction.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to unsuspend.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.TerminateAsync(System.ServiceModel.Activities.WorkflowControlClient,System.Guid)">
+            <summary>Starts an asynchronous operation that terminates a workflow instance.</summary>
+            <returns>The asynchronous terminate operation.</returns>
+            <param name="instanceId">The workflow instance to terminate.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.TerminateAsync(System.ServiceModel.Activities.WorkflowControlClient,System.Guid,System.String)">
+            <summary>Starts an asynchronous operation to terminate the specified workflow instance.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to terminate.</param>
+            <param name="reason">The reason to terminate the workflow instance.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AnnounceOnlineAsync(System.ServiceModel.Discovery.AnnouncementClient,System.ServiceModel.Discovery.EndpointDiscoveryMetadata)">
+            <summary>Causes an online announcement (Hello) message to be sent asynchronously with the specified endpoint discovery metadata and user-defined state. The specified  is called when the operation completes.</summary>
+            <returns>Task instance.</returns>
+            <param name="discoveryMetadata">The endpoint discovery metadata.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AnnounceOfflineAsync(System.ServiceModel.Discovery.AnnouncementClient,System.ServiceModel.Discovery.EndpointDiscoveryMetadata)">
+            <summary>Causes an offline announcement (Bye) message to be sent asynchronously with the specified endpoint discovery metadata and user-defined state. The specified  is called when the operation completes.</summary>
+            <returns>Task instance.</returns>
+            <param name="discoveryMetadata">The endpoint discovery metadata.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetContextAsync(System.Net.HttpListener)">
+            <summary>Begins asynchronously retrieving an incoming request.</summary>
+            <returns>Task object that indicates the status of the asynchronous operation.</returns>
+            <exception cref="T:System.Net.HttpListenerException">A Win32 function call failed. Check the exception's  property to determine the cause of the exception.</exception>
+            <exception cref="T:System.InvalidOperationException">This object has not been started or is currently stopped.</exception>
+            <exception cref="T:System.ObjectDisposedException">This object is closed.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetClientCertificateAsync(System.Net.HttpListenerRequest)">
+            <summary>Starts an asynchronous request for the client's X.509 v.3 certificate.</summary>
+            <returns>Task that indicates the status of the operation.</returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AuthenticateAsClientAsync(System.Net.Security.NegotiateStream)">
+            <summary>Called by clients to begin an asynchronous operation to authenticate the client, and optionally the server, in a client-server connection. This method does not block.</summary>
+            <returns>Task object indicating the status of the asynchronous operation. </returns>
+            <exception cref="T:System.Security.Authentication.AuthenticationException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.Security.Authentication.InvalidCredentialException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.ObjectDisposedException">This object has been closed.</exception>
+            <exception cref="T:System.InvalidOperationException">Authentication has already occurred.- or -This stream was used previously to attempt authentication as the server. You cannot use the stream to retry authentication as the client.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AuthenticateAsClientAsync(System.Net.Security.NegotiateStream,System.Net.NetworkCredential,System.String)">
+            <summary>Called by clients to begin an asynchronous operation to authenticate the client, and optionally the server, in a client-server connection. The authentication process uses the specified credentials. This method does not block.</summary>
+            <returns>Task object indicating the status of the asynchronous operation. </returns>
+            <param name="credential">The  that is used to establish the identity of the client.</param>
+            <param name="targetName">The Service Principal Name (SPN) that uniquely identifies the server to authenticate.</param>
+            <exception cref="T:System.ArgumentNullException"> is null.- or -<paramref name="targetName" /> is null.</exception>
+            <exception cref="T:System.Security.Authentication.AuthenticationException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.Security.Authentication.InvalidCredentialException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.ObjectDisposedException">This object has been closed.</exception>
+            <exception cref="T:System.InvalidOperationException">Authentication has already occurred.- or -This stream was used previously to attempt authentication as the server. You cannot use the stream to retry authentication as the client.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AuthenticateAsClientAsync(System.Net.Security.NegotiateStream,System.Net.NetworkCredential,System.Security.Authentication.ExtendedProtection.ChannelBinding,System.String)">
+            <summary>Called by clients to begin an asynchronous operation to authenticate the client, and optionally the server, in a client-server connection. The authentication process uses the specified credentials and channel binding. This method does not block.</summary>
+            <returns>Task object indicating the status of the asynchronous operation.</returns>
+            <param name="credential">The  that is used to establish the identity of the client.</param>
+            <param name="binding">The  that is used for extended protection.</param>
+            <param name="targetName">The Service Principal Name (SPN) that uniquely identifies the server to authenticate.</param>
+            <exception cref="T:System.ArgumentNullException"> is null.- or -<paramref name="targetName" /> is null.</exception>
+            <exception cref="T:System.Security.Authentication.AuthenticationException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.Security.Authentication.InvalidCredentialException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.InvalidOperationException">Authentication has already occurred.- or -This stream was used previously to attempt authentication as the server. You cannot use the stream to retry authentication as the client.</exception>
+            <exception cref="T:System.ObjectDisposedException">This object has been closed.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AuthenticateAsServerAsync(System.Net.Security.NegotiateStream)">
+            <summary>Called by servers to begin an asynchronous operation to authenticate the client, and optionally the server, in a client-server connection. This method does not block.</summary>
+            <returns>Task object indicating the status of the asynchronous operation. </returns>
+            <exception cref="T:System.Security.Authentication.AuthenticationException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.Security.Authentication.InvalidCredentialException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.ObjectDisposedException">This object has been closed.</exception>
+            <exception cref="T:System.NotSupportedException">Windows 95 and Windows 98 are not supported.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AuthenticateAsServerAsync(System.Net.Security.NegotiateStream,System.Security.Authentication.ExtendedProtection.ExtendedProtectionPolicy)">
+            <summary>Called by servers to begin an asynchronous operation to authenticate the client, and optionally the server, in a client-server connection. The authentication process uses the specified extended protection policy. This method does not block.</summary>
+            <returns>Task object indicating the status of the asynchronous operation.</returns>
+            <param name="policy">The  that is used for extended protection.</param>
+            <exception cref="T:System.ArgumentException">The  and <see cref="P:System.Security.Authentication.ExtendedProtection.ExtendedProtectionPolicy.CustomServiceNames" /> on the extended protection policy passed in the  parameter are both null.</exception>
+            <exception cref="T:System.Security.Authentication.AuthenticationException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.Security.Authentication.InvalidCredentialException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.NotSupportedException">Windows 95 and Windows 98 are not supported.</exception>
+            <exception cref="T:System.ObjectDisposedException">This object has been closed.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AuthenticateAsServerAsync(System.Net.Security.NegotiateStream,System.Net.NetworkCredential,System.Net.Security.ProtectionLevel,System.Security.Principal.TokenImpersonationLevel)">
+            <summary>Called by servers to begin an asynchronous operation to authenticate the client, and optionally the server, in a client-server connection. The authentication process uses the specified server credentials and authentication options. This method does not block.</summary>
+            <returns>Task object indicating the status of the asynchronous operation. </returns>
+            <param name="credential">The  that is used to establish the identity of the client.</param>
+            <param name="requiredProtectionLevel">One of the  values, indicating the security services for the stream.</param>
+            <param name="requiredImpersonationLevel">One of the  values, indicating how the server can use the client's credentials to access resources.</param>
+            <exception cref="T:System.ArgumentNullException"> is null.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"> must be , <see cref="F:System.Security.Principal.TokenImpersonationLevel.Impersonation" />, or <see cref="F:System.Security.Principal.TokenImpersonationLevel.Delegation" />,</exception>
+            <exception cref="T:System.Security.Authentication.AuthenticationException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.Security.Authentication.InvalidCredentialException">The authentication failed. You can use this object to retry the authentication.</exception>
+            <exception cref="T:System.ObjectDisposedException">This object has been closed.</exception>
+            <exception cref="T:System.InvalidOperationException">Authentication has already occurred.- or -This stream was used previously to attempt authentication as the client. You cannot use the stream to retry authentication as the server.</exception>
+            <exception cref="T:System.NotSupportedException">Windows 95 and Windows 98 are not supported.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AuthenticateAsClientAsync(System.Net.Security.SslStream,System.String)">
+            <summary>Called by clients to begin an asynchronous operation to authenticate the server and optionally the client.</summary>
+            <returns>Task object that indicates the status of the asynchronous operation. </returns>
+            <param name="targetHost">The name of the server that shares this .</param>
+            <exception cref="T:System.ArgumentNullException"> is null.</exception>
+            <exception cref="T:System.Security.Authentication.AuthenticationException">The authentication failed and left this object in an unusable state.</exception>
+            <exception cref="T:System.InvalidOperationException">Authentication has already occurred.-or-Server authentication using this  was tried previously.-or- Authentication is already in progress.</exception>
+            <exception cref="T:System.ObjectDisposedException">This object has been closed.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AuthenticateAsServerAsync(System.Net.Security.SslStream,System.Security.Cryptography.X509Certificates.X509Certificate)">
+            <summary>Called by servers to begin an asynchronous operation to authenticate the client and optionally the server in a client-server connection.</summary>
+            <returns>Task object indicating the status of the asynchronous operation. </returns>
+            <param name="serverCertificate">The X509Certificate used to authenticate the server.</param>
+            <exception cref="T:System.ArgumentNullException"> is null.</exception>
+            <exception cref="T:System.Security.Authentication.AuthenticationException">The authentication failed and left this object in an unusable state.</exception>
+            <exception cref="T:System.InvalidOperationException">Authentication has already occurred.-or-Client authentication using this  was tried previously.-or- Authentication is already in progress.</exception>
+            <exception cref="T:System.ObjectDisposedException">This object has been closed.</exception>
+            <exception cref="T:System.PlatformNotSupportedException">The  method is not supported on Windows 95, Windows 98, or Windows Millennium.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ConnectAsync(System.Net.Sockets.TcpClient,System.String,System.Int32)">
+            <summary>Starts an asynchronous request for a remote host connection. The host is specified by a host name and a port number.</summary>
+            <returns>Task that represents the asynchronous connection.</returns>
+            <param name="hostname">The name of the remote host.</param>
+            <param name="port">The port number of the remote host.</param>
+            <exception cref="T:System.ArgumentNullException"> is null. </exception>
+            <exception cref="T:System.ObjectDisposedException">The  has been closed. </exception>
+            <exception cref="T:System.NotSupportedException">This method is valid for sockets in the  or  families.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">The port number is not valid.</exception>
+            <exception cref="T:System.InvalidOperationException">The  is ing.</exception>
+            <PermissionSet>    <IPermission class="System.Security.Permissions.EnvironmentPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Security.Permissions.SecurityPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Diagnostics.PerformanceCounterPermission, System, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Net.SocketPermission, System, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />  </PermissionSet>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ConnectAsync(System.Net.Sockets.TcpClient,System.Net.IPAddress,System.Int32)">
+            <summary>Starts an asynchronous request for a remote host connection. The host is specified by an  and a port number.</summary>
+            <returns>Task that represents the asynchronous connection.</returns>
+            <param name="address">The  of the remote host.</param>
+            <param name="port">The port number of the remote host.</param>
+            <exception cref="T:System.ArgumentNullException"> is null. </exception>
+            <exception cref="T:System.Net.Sockets.SocketException">An error occurred when attempting to access the socket. See the Remarks section for more information. </exception>
+            <exception cref="T:System.ObjectDisposedException">The  has been closed. </exception>
+            <exception cref="T:System.NotSupportedException">The  is not in the socket family.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">The port number is not valid.</exception>
+            <exception cref="T:System.ArgumentException">The length of  is zero.</exception>
+            <exception cref="T:System.InvalidOperationException">The  is ing.</exception>
+            <PermissionSet>    <IPermission class="System.Security.Permissions.EnvironmentPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Security.Permissions.SecurityPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Diagnostics.PerformanceCounterPermission, System, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Net.SocketPermission, System, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />  </PermissionSet>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ConnectAsync(System.Net.Sockets.TcpClient,System.Net.IPAddress[],System.Int32)">
+            <summary>Starts an asynchronous request for a remote host connection. The host is specified by an  array and a port number.</summary>
+            <returns>Task that represents the asynchronous connections.</returns>
+            <param name="ipAddresses">At least one , designating the remote host.</param>
+            <param name="port">The port number of the remote host.</param>
+            <exception cref="T:System.ArgumentNullException"> is null. </exception>
+            <exception cref="T:System.Net.Sockets.SocketException">An error occurred when attempting to access the socket. See the Remarks section for more information. </exception>
+            <exception cref="T:System.ObjectDisposedException">The  has been closed. </exception>
+            <exception cref="T:System.NotSupportedException">This method is valid for sockets that use  or .</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">The port number is not valid.</exception>
+            <exception cref="T:System.ArgumentException">The length of  is zero.</exception>
+            <exception cref="T:System.InvalidOperationException">The  is ing.</exception>
+            <PermissionSet>    <IPermission class="System.Security.Permissions.EnvironmentPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Security.Permissions.SecurityPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Diagnostics.PerformanceCounterPermission, System, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Net.SocketPermission, System, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />  </PermissionSet>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AcceptSocketAsync(System.Net.Sockets.TcpListener)">
+            <summary>Starts an asynchronous operation to accept an incoming connection attempt.</summary>
+            <returns>Task that represents the asynchronous creation of the <see cref="T:System.Net.Sockets.Socket" />.</returns>
+            <exception cref="T:System.Net.Sockets.SocketException">An error occurred while attempting to access the socket. See the Remarks section for more information. </exception>
+            <exception cref="T:System.ObjectDisposedException">The  has been closed. </exception>
+            <PermissionSet>    <IPermission class="System.Security.Permissions.EnvironmentPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Security.Permissions.SecurityPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Flags="UnmanagedCode, ControlEvidence" />    <IPermission class="System.Diagnostics.PerformanceCounterPermission, System, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />  </PermissionSet>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AcceptTcpClientAsync(System.Net.Sockets.TcpListener)">
+            <summary>Starts an asynchronous operation to accept an incoming connection attempt.</summary>
+            <returns>Task that represents the asynchronous creation of the <see cref="T:System.Net.Sockets.TcpClient" />.</returns>
+            <exception cref="T:System.Net.Sockets.SocketException">An error occurred while attempting to access the socket. See the Remarks section for more information. </exception>
+            <exception cref="T:System.ObjectDisposedException">The  has been closed. </exception>
+            <PermissionSet>    <IPermission class="System.Security.Permissions.EnvironmentPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Security.Permissions.FileIOPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />    <IPermission class="System.Security.Permissions.SecurityPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Flags="UnmanagedCode, ControlEvidence" />    <IPermission class="System.Diagnostics.PerformanceCounterPermission, System, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Unrestricted="true" />  </PermissionSet>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendAsync(System.Net.Sockets.UdpClient,System.Byte[],System.Int32,System.Net.IPEndPoint)">
+            <summary>Sends a datagram to a destination asynchronously. The destination is specified by a .</summary>
+            <returns>Task object that represents the asynchronous send.</returns>
+            <param name="dgram">A  array that contains the data to be sent.</param>
+            <param name="bytes">The number of bytes to send.</param>
+            <param name="endPoint">The  that represents the destination for the data.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendAsync(System.Net.Sockets.UdpClient,System.Byte[],System.Int32)">
+            <summary>Sends a datagram to a remote host asynchronously. The destination was specified previously by a call to .</summary>
+            <returns>Task object that represents the asynchronous send.</returns>
+            <param name="dgram">A  array that contains the data to be sent.</param>
+            <param name="bytes">The number of bytes to send.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetUnicastAddressesAsync(System.Net.NetworkInformation.IPGlobalProperties)">
+            <summary>Starts an asynchronous request to retrieve the stable unicast IP address table on the local computer.</summary>
+            <returns>Task that represents the asynchronous request.</returns>
+            <exception cref="T:System.NotImplementedException">This method is not implemented on the platform. This method uses the native NotifyStableUnicastIpAddressTable function that is supported on Windows Vista and later. </exception>
+            <exception cref="T:System.ComponentModel.Win32Exception">The call to the native NotifyStableUnicastIpAddressTable function failed.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetTokenAsync(System.IdentityModel.Selectors.SecurityTokenProvider,System.TimeSpan)">
+            <summary>Starts an asynchronous operation to get a security token.</summary>
+            <returns>The Task that represents the asynchronous close operation.</returns>
+            <param name="timeout">A  that specifies the timeout value for the message that gets the security token.</param>
+            <filterpriority>2</filterpriority>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.RenewTokenAsync(System.IdentityModel.Selectors.SecurityTokenProvider,System.TimeSpan,System.IdentityModel.Tokens.SecurityToken)">
+            <summary>Starts an asynchronous operation that renews a security token.</summary>
+            <returns>The Task that represents the asynchronous operation.</returns>
+            <param name="timeout">A  that specifies the timeout value for the message that renews the security token.</param>
+            <param name="tokenToBeRenewed">The   to renew.</param>
+            <filterpriority>2</filterpriority>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CancelTokenAsync(System.IdentityModel.Selectors.SecurityTokenProvider,System.TimeSpan,System.IdentityModel.Tokens.SecurityToken)">
+            <summary>Starts an asynchronous operation to cancel a security token.</summary>
+            <returns>The Task that represents the asynchronous cancel operation.</returns>
+            <param name="timeout">A  that specifies the timeout value for the message that cancels the security token.</param>
+            <param name="token">The   to cancel.</param>
+            <filterpriority>2</filterpriority>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.FlushAsync(System.IO.Log.IRecordSequence,System.IO.Log.SequenceNumber)">
+            <summary>Starts an asynchronous flush operation, using space previously reserved in the sequence. This method cannot be inherited.</summary>
+            <returns>Task that represents the asynchronous flush operation, which could still be pending. </returns>
+            <param name="sequenceNumber">The sequence number of the latest record that must be written. If  is invalid, then all records must be written. </param>
+            <exception cref="T:System.ArgumentException">One or more of the arguments is invalid. is not valid for this sequence. </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"> is not between the base and last sequence numbers of this sequence.</exception>
+            <exception cref="T:System.IO.IOException">An I/O error occurred while flushing the data. </exception>
+            <exception cref="T:System.ObjectDisposedException">The method was called after the sequence has been disposed of. </exception>
+            <exception cref="T:System.OutOfMemoryException">There is not enough memory to continue the execution of the program.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.WriteRestartAreaAsync(System.IO.Log.IRecordSequence,System.ArraySegment{System.Byte},System.IO.Log.SequenceNumber,System.IO.Log.ReservationCollection)">
+            <summary>
+            Begins an asynchronous restart area write operation, using space previously reserved in the sequence.
+            </summary>
+            <param name="source"></param>
+            <param name="data">A list of byte array segments that will be concatenated and appended as the record.</param>
+            <param name="newBaseSequenceNumber">
+            The new base sequence number. The specified sequence number must be greater than or equal to the current base sequence number.</param>
+            <param name="reservation">
+            A  System.IO.Log.ReservationCollection that contains the reservation that should be used for this restart area.
+            </param>
+            <returns></returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.WriteRestartAreaAsync(System.IO.Log.IRecordSequence,System.Collections.Generic.IList{System.ArraySegment{System.Byte}},System.IO.Log.SequenceNumber,System.IO.Log.ReservationCollection)">
+            <summary>
+            begins an asynchronous restart area write operation, using space previously reserved in the sequence.
+            </summary>
+            <param name="source">The source.</param>
+            <param name="data">A list of byte array segments that will be concatenated and appended as the record.</param>
+            <param name="newBaseSequenceNumber">
+            The new base sequence number. The specified sequence number must be greater
+            than or equal to the current base sequence number.</param>
+            <param name="reservation">
+            A System.IO.Log.ReservationCollection that contains the reservation that should be used for this restart area.
+            </param>
+            <returns>An System.IAsyncResult that represents the asynchronous restart area write operation, which could still be pending.</returns>
+            <exception cref="T:System.ArgumentException">One or more of the arguments is invalid.</exception>
+            <exception cref="T:System.IO.IOException">An I/O error occurred while writing the restart area.</exception>
+            <exception cref="T:System.IO.Log.SequenceFullException">The record sequence could not make enough free space to contain the new record.</exception>
+            <exception cref="T:System.ObjectDisposedException">The method was called after the sequence has been disposed of.</exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.BindReclaimedLockAsync(System.Runtime.DurableInstancing.InstancePersistenceContext,System.Int64,System.TimeSpan)">
+            <summary>Begin an asynchronous operation to bind a reclaimed lock to the instance view.</summary>
+            <returns>The status of an asynchronous operation.</returns>
+            <param name="instanceVersion">The version of the instance.</param>
+            <param name="timeout">The time period after which the asynchronous operation is aborted.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ExecuteAsync(System.Runtime.DurableInstancing.InstancePersistenceContext,System.Runtime.DurableInstancing.InstancePersistenceCommand,System.TimeSpan)">
+            <summary>
+            Executes a persistence command asynchronously.
+            </summary>
+            <param name="source">The source.</param>
+            <param name="command">The persistence command to be executed.</param>
+            <param name="timeout">The time-out value for the operation.</param>
+            <returns>A Task that represents the asynchronous execution.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.ExecuteAsync(System.Runtime.DurableInstancing.InstanceStore,System.Runtime.DurableInstancing.InstanceHandle,System.Runtime.DurableInstancing.InstancePersistenceCommand,System.TimeSpan)">
+            <summary>
+            Executes a persistence command asynchronously.
+            </summary>
+            <param name="source">The source.</param>
+            <param name="handle">The handle.</param>
+            <param name="command">The persistence command to be executed.</param>
+            <param name="timeout">The time-out value for the operation.</param>
+            <returns>A Task that represents the asynchronous execution.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.WaitForEventsAsync(System.Runtime.DurableInstancing.InstanceStore,System.Runtime.DurableInstancing.InstanceHandle,System.TimeSpan)">
+            <summary>
+            Begins an asynchronous operation to listen for any events raised by the instance store for a specific instance handle.
+            </summary>
+            <param name="source">The source.</param>
+            <param name="handle">The handle.</param>
+            <param name="timeout">The time-out value for the operation.</param>
+            <returns>A Task that represents the asynchronous waiting.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.AbandonAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid,System.String)">
+            <summary>Starts an asynchronous operation to abandon the specified workflow instance.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to abandon.</param>
+            <param name="reason">The reason for abandoning the workflow instance.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CancelAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid)">
+            <summary>Starts an asynchronous operation to cancel the specified workflow instance.</summary>
+            <returns>Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to cancel.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.RunAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid)">
+            <summary>Starts an asynchronous operation to run the specified workflow instance.</summary>
+            <returns>Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to run.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.SuspendAsync(System.ServiceModel.Activities.IWorkflowInstanceManagement,System.Guid,System.String)">
+            <summary>Starts an asynchronous operation to suspend the specified workflow instance.</summary>
+            <returns>The Task.</returns>
+            <param name="instanceId">The GUID identifier of the workflow instance to suspend.</param>
+            <param name="reason">The reason to suspend the workflow instance.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ReceiveRequestAsync(System.ServiceModel.Channels.IReplyChannel)">
+            <summary>Starts an asynchronous operation to receive an available request with a default timeout.</summary>
+            <returns>The Task that represents the asynchronous reception of the request. </returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ReceiveRequestAsync(System.ServiceModel.Channels.IReplyChannel,System.TimeSpan)">
+            <summary>Starts an asynchronous operation to receive an available request with a specified timeout.</summary>
+            <returns>The Task that represents the asynchronous reception of the request. </returns>
+            <param name="timeout">The  that specifies the interval of time to wait for the reception of an available request.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.WaitForRequestAsync(System.ServiceModel.Channels.IReplyChannel,System.TimeSpan)">
+            <summary>Starts an asynchronous request operation that has a specified time out and state object associated with it. </summary>
+            <returns>The Task that represents the asynchronous operation to wait for a request message to arrive.</returns>
+            <param name="timeout">The  that specifies the interval of time to wait for the reception of an available request.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AbandonAsync(System.ServiceModel.Channels.ReceiveContext,System.TimeSpan)">
+            <summary>Starts an asynchronous abandon operation with the specified  timeout, asynchronous callback, and user-defined state data.</summary>
+            <returns>A Task that represents the asynchronous abandon operation.</returns>
+            <param name="timeout">The timeout for the abandon operation to complete.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AbandonAsync(System.ServiceModel.Channels.ReceiveContext,System.Exception,System.TimeSpan)">
+            <summary>Starts an asynchronous abandon operation with the specified exception, timeout, asynchronous callback, and user-defined state data.</summary>
+            <returns>Task that represents the asynchronous abandon operation.</returns>
+            <param name="exception">An exception that contains the reason for the abandon operation.</param>
+            <param name="timeout">The timeout for the abandon operation to complete.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CompleteAsync(System.ServiceModel.Channels.ReceiveContext,System.TimeSpan)">
+            <summary>Starts an asynchronous complete operation with the specified  timeout, asynchronous callback, and user-defined state data.</summary>
+            <returns>A Task that represents the asynchronous complete operation.</returns>
+            <param name="timeout">The timeout for the complete operation to complete.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.TerminateAsync(System.Activities.WorkflowApplication,System.String)">
+            <summary>Terminates a workflow instance asynchronously using the specified error message, callback method, and user-provided state.</summary>
+            <param name="source">The source.</param>
+            <param name="reason">The reason for terminating the workflow instance.</param>
+            <returns>A Task that represents the asynchronous termination.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.TerminateAsync(System.Activities.WorkflowApplication,System.Exception)">
+            <summary>Terminates a workflow instance asynchronously using the specified exception, callback method, and user-provided state.</summary>
+            <param name="source">The source.</param>
+            <param name="reason">The reason the workflow instance is terminated.</param>
+            <returns>A Task that represents the asynchronous termination.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.TerminateAsync(System.Activities.WorkflowApplication,System.String,System.TimeSpan)">
+            <summary>Terminates a workflow instance asynchronously using the specified error message, time-out interval, callback method, and user-provided state.</summary>
+            <param name="source">The source.</param>
+            <param name="reason">The reason the workflow instance is terminated.</param>
+            <param name="timeout">The interval in which the  operation must complete before the operation is canceled and a <see cref="T:System.TimeoutException" /> is thrown.</param>
+            <returns>A Task that represents the asynchronous termination.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.TerminateAsync(System.Activities.WorkflowApplication,System.Exception,System.TimeSpan)">
+            <summary>Terminates a workflow instance asynchronously using the specified exception, time-out interval, callback method, and user-provided state.</summary>
+            <param name="source">The source.</param>
+            <param name="reason">The reason the workflow instance is terminated.</param>
+            <param name="timeout">The interval in which the  operation must complete before the operation is canceled and a <see cref="T:System.TimeoutException" /> is thrown.</param>
+            <returns>A Task that represents the asynchronous termination.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.CancelAsync(System.Activities.WorkflowApplication)">
+            <summary>Cancels a workflow instance asynchronously using the specified  and user-provided state.</summary>
+            <param name="source">The source.</param>
+            <returns>A Task that represents the asynchronous cancellation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.CancelAsync(System.Activities.WorkflowApplication,System.TimeSpan)">
+            <summary>Cancels a workflow instance asynchronously using the specified time-out interval, , and user-provided state.</summary>
+            <param name="source">The source.</param>
+            <param name="timeout">The interval in which the cancel operation must complete before the operation is canceled and a  is thrown.</param>
+            <returns>A Task that represents the asynchronous cancellation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.RunAsync(System.Activities.WorkflowApplication)">
+            <summary>Starts or resumes a workflow instance asynchronously using the specified callback method and user-provided state.</summary>
+            <param name="source">The source.</param>
+            <returns>A Task that represents the asynchronous run.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.RunAsync(System.Activities.WorkflowApplication,System.TimeSpan)">
+            <summary>Starts or resumes a workflow instance asynchronously using the specified time-out interval, callback method, and user-provided state.</summary>
+            <param name="source">The source.</param>
+            <param name="timeout">The interval in which the resume operation must complete before the operation is canceled and a  is thrown.</param>
+            <returns>A Task that represents the asynchronous run.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.LoadRunnableInstanceAsync(System.Activities.WorkflowApplication)">
+            <summary>Initiates an operation to load a runnable workflow instance from the .</summary>
+            <returns>A reference to the asynchronous operation</returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.LoadRunnableInstanceAsync(System.Activities.WorkflowApplication,System.TimeSpan)">
+            <summary>Initiates an operation to load a runnable workflow instance from the  using the specified time-out interval.</summary>
+            <returns>A reference to the asynchronous operation</returns>
+            <param name="timeout">The interval in which the load operation must complete before the operation is canceled and a  is thrown.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.LoadAsync(System.Activities.WorkflowApplication,System.Guid)">
+            <summary>Loads a workflow asynchronously from an instance store using the specified instance identifier, callback method, and user-provided state.</summary>
+            <returns>The status of an asynchronous operation.</returns>
+            <param name="instanceId">A globally unique 128-bit identifier for the workflow instance.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.LoadAsync(System.Activities.WorkflowApplication,System.Guid,System.TimeSpan)">
+            <summary>Loads a workflow asynchronously from an instance store using the specified instance identifier, timeout period, callback method, and user-provided state.</summary>
+            <returns>The status of an asynchronous operation.</returns>
+            <param name="instanceId">A globally unique 128-bit identifier for the workflow instance.</param>
+            <param name="timeout">The interval in which the begin load operation must complete before the operation is canceled and a  is thrown.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.PersistAsync(System.Activities.WorkflowApplication)">
+            <summary>Persists a workflow instance to an instance store asynchronously using the specified callback method and user-provided state.</summary>
+            <returns>A reference to the asynchronous persist operation.</returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.PersistAsync(System.Activities.WorkflowApplication,System.TimeSpan)">
+            <summary>Persists a workflow instance to an instance store asynchronously using the specified time-out interval, callback method, and user-provided state.</summary>
+            <returns>A reference to the asynchronous persist operation.</returns>
+            <param name="timeout">The interval in which the persist operation must complete before the operation is canceled and a  is thrown.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResumeBookmarkAsync(System.Activities.WorkflowApplication,System.String,System.Object)">
+            <summary>Initiates an asynchronous operation to resume the bookmark with the specified name, using the specified value, callback method, and state. The bookmark to be resumed is previously created by an activity within the workflow instance.</summary>
+            <returns>The result of the bookmark resumption operation.</returns>
+            <param name="bookmarkName">The name of the bookmark to be resumed.</param>
+            <param name="value">An object passed as a parameter to the method that is invoked when the bookmark resumes.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResumeBookmarkAsync(System.Activities.WorkflowApplication,System.String,System.Object,System.TimeSpan)">
+            <summary>Initiates an asynchronous operation to resume the bookmark with the specified name, using the specified value, time-out interval, callback method, and state. The bookmark to be resumed is previously created by an activity within the workflow instance.</summary>
+            <returns>The result of the bookmark resumption operation.</returns>
+            <param name="bookmarkName">The name of the bookmark to be resumed.</param>
+            <param name="value">An object passed as a parameter to the method that is invoked when the bookmark resumes.</param>
+            <param name="timeout">The time interval during which the bookmark must be resumed.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResumeBookmarkAsync(System.Activities.WorkflowApplication,System.Activities.Bookmark,System.Object)">
+            <summary>Initiates an operation to resume a bookmark using the specified value, callback method, and state.</summary>
+            <returns>A reference to the asynchronous bookmark resume operation.</returns>
+            <param name="bookmark">The bookmark to resume.</param>
+            <param name="value">An object passed as a parameter to the method that is invoked when the bookmark resumes.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResumeBookmarkAsync(System.Activities.WorkflowApplication,System.Activities.Bookmark,System.Object,System.TimeSpan)">
+            <summary>Initiates an operation to resume a bookmark using the specified value, time-out interval, callback method, and state.</summary>
+            <returns>A reference to the asynchronous bookmark resume operation.</returns>
+            <param name="bookmark">The bookmark to resume.</param>
+            <param name="value">An object passed as a parameter to the method that is invoked when the bookmark resumes.</param>
+            <param name="timeout">The interval in which the resume operation must complete before the operation is canceled and a  is thrown.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.UnloadAsync(System.Activities.WorkflowApplication)">
+            <summary>Persists and disposes a workflow instance asynchronously using the specified callback method and user-provided state.</summary>
+            <returns>A reference to the asynchronous Task operation.</returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.UnloadAsync(System.Activities.WorkflowApplication,System.TimeSpan)">
+            <summary>Persists and disposes a workflow instance asynchronously using the specified time-out interval, callback method, and user-provided state.</summary>
+            <returns>A reference to the asynchronous Task operation.</returns>
+            <param name="timeout">The interval in which the  operation must complete before the operation is canceled and a <see cref="T:System.TimeoutException" /> is thrown.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.WaitForConnectionAsync(System.IO.Pipes.NamedPipeServerStream)">
+            <summary>Starts an asynchronous operation to wait for a client to connect.</summary>
+            <returns>An object that represents the asynchronous request.</returns>
+            <exception cref="T:System.InvalidOperationException">The pipe was not opened asynchronously.-or-A pipe connection has already been established.-or-The pipe handle has not been set.</exception>
+            <exception cref="T:System.IO.IOException">The pipe connection has been broken.</exception>
+            <exception cref="T:System.ObjectDisposedException">The pipe is closed.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ExecuteNonQueryAsync(System.Data.SqlClient.SqlCommand)">
+            <summary>Initiates the asynchronous execution of the Transact-SQL statement or stored procedure that is described by this , given a callback procedure and state information.</summary>
+            <returns>Task that can be used to poll or wait for results, or both; this value is also needed when invoking <see cref="M:System.Data.SqlClient.SqlCommand.EndExecuteNonQuery(System.IAsyncResult)" />, which returns the number of affected rows.</returns>
+            <exception cref="T:System.Data.SqlClient.SqlException">Any error that occurred while executing the command text.</exception>
+            <exception cref="T:System.InvalidOperationException">The name/value pair "Asynchronous Processing=true" was not included within the connection string defining the connection for this .</exception>
+            <filterpriority>2</filterpriority>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ExecuteXmlReaderAsync(System.Data.SqlClient.SqlCommand)">
+            <summary>Initiates the asynchronous execution of the Transact-SQL statement or stored procedure that is described by this  and returns results as an <see cref="T:System.Xml.XmlReader" /> object, using a callback procedure.</summary>
+            <returns>Task that can be used to poll, wait for results, or both; this value is also needed when the <see cref="M:System.Data.SqlClient.SqlCommand.EndExecuteXmlReader(System.IAsyncResult)" /> is called, which returns the results of the command as XML.</returns>
+            <exception cref="T:System.Data.SqlClient.SqlException">Any error that occurred while executing the command text.</exception>
+            <exception cref="T:System.InvalidOperationException">The name/value pair "Asynchronous Processing=true" was not included within the connection string defining the connection for this .</exception>
+            <filterpriority>2</filterpriority>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ExecuteReaderAsync(System.Data.SqlClient.SqlCommand)">
+            <summary>Initiates the asynchronous execution of the Transact-SQL statement or stored procedure that is described by this  and retrieves one or more result sets from the server, given a callback procedure and state information.</summary>
+            <returns>Task that can be used to poll, wait for results, or both; this value is also needed when invoking <see cref="M:System.Data.SqlClient.SqlCommand.EndExecuteReader(System.IAsyncResult)" />, which returns a <see cref="T:System.Data.SqlClient.SqlDataReader" /> instance which can be used to retrieve the returned rows.</returns>
+            <exception cref="T:System.Data.SqlClient.SqlException">Any error that occurred while executing the command text.</exception>
+            <exception cref="T:System.InvalidOperationException">The name/value pair "Asynchronous Processing=true" was not included within the connection string defining the connection for this .</exception>
+            <filterpriority>2</filterpriority>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ExecuteAsync(System.Data.Services.Client.DataServiceQuery)">
+            <summary>Asynchronously sends a request to execute the data service query.</summary>
+            <returns>Task object that is used to track the status of the asynchronous operation.</returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.LoadPropertyAsync(System.Data.Services.Client.DataServiceContext,System.Object,System.String)">
+            <summary>Asynchronously loads the value of the specified property from the data service.</summary>
+            <returns>An IAsyncResult that represents the status of the asynchronous operation.</returns>
+            <param name="entity">The entity that contains the property to load.</param>
+            <param name="propertyName">The name of the property on the specified entity to load.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.LoadPropertyAsync(System.Data.Services.Client.DataServiceContext,System.Object,System.String,System.Uri)">
+            <summary>Asynchronously loads a page of related entities from the data service by using the supplied next link URI.</summary>
+            <returns>Task object that is used to track the status of the asynchronous operation. </returns>
+            <param name="entity">The entity that contains the property to load.</param>
+            <param name="propertyName">The name of the property of the specified entity to load.</param>
+            <param name="nextLinkUri">The URI used to load the next results page.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.LoadPropertyAsync(System.Data.Services.Client.DataServiceContext,System.Object,System.String,System.Data.Services.Client.DataServiceQueryContinuation)">
+            <summary>Asynchronously loads the next page of related entities from the data service by using the supplied query continuation object.</summary>
+            <returns>Task that represents the status of the operation.</returns>
+            <param name="entity">The entity that contains the property to load.</param>
+            <param name="propertyName">The name of the property of the specified entity to load.</param>
+            <param name="continuation">A  object that represents the next page of related entity data to return from the data service.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetReadStreamAsync(System.Data.Services.Client.DataServiceContext,System.Object,System.Data.Services.Client.DataServiceRequestArgs)">
+            <summary>Asynchronously gets binary property data for the specified entity as a data stream along with the specified message headers.</summary>
+            <returns>Task object that is used to track the status of the asynchronous operation. </returns>
+            <param name="entity">The entity that has the binary property to retrieve. </param>
+            <param name="args">Instance of the  class that contains settings for the HTTP request message.</param>
+            <exception cref="T:System.ArgumentNullException">Any of the parameters supplied to the method is null.</exception>
+            <exception cref="T:System.ArgumentException">The  is not tracked by this .-or-The <paramref name="entity" /> is in the <see cref="F:System.Data.Services.Client.EntityStates.Added" /> state.-or-The <paramref name="entity" /> is not a Media Link Entry and does not have a binary property.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.ExecuteAsync``1(System.Data.Services.Client.DataServiceContext,System.Uri)">
+            <summary>
+            Asynchronously sends the request so that this call does not block processing while waiting for the results from the service.
+            </summary>
+            <typeparam name="T">The type returned by the query.</typeparam>
+            <param name="source">The source.</param>
+            <param name="requestUri">
+            The URI to which the query request will be sent. The URI may be any valid data service URI; it can contain $ query parameters.
+            </param>
+            <returns>A Task that is used to track the status of the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SaveChangesAsync(System.Data.Services.Client.DataServiceContext)">
+            <summary>Asynchronously submits the pending changes to the data service collected by the  since the last time changes were saved.</summary>
+            <returns>An IAsyncResult that represents the status of the asynchronous operation.</returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.SaveChangesAsync(System.Data.Services.Client.DataServiceContext,System.Data.Services.Client.SaveChangesOptions)">
+            <summary>Asynchronously submits the pending changes to the data service collected by the  since the last time changes were saved.</summary>
+            <returns>Task that represents the status of the asynchronous operation.</returns>
+            <param name="options">The options for how the client can save the pending set of changes.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendRequestAsync(System.DirectoryServices.Protocols.DsmlSoapHttpConnection,System.DirectoryServices.Protocols.DsmlRequestDocument)">
+            <summary>The  method begins asynchronously sending the specified <see cref="T:System.DirectoryServices.Protocols.DsmlRequestDocument" /> object to the server.</summary>
+            <returns>An object derived from Task that represents the asynchronous send.</returns>
+            <param name="request">The  object to send.</param>
+            <exception cref="T:System.ArgumentNullException"> is null (Nothing in Visual Basic).</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.WaitForChannelAsync(System.ServiceModel.Channels.IChannelListener,System.TimeSpan)">
+            <summary>When implemented in a derived class, begins an asynchronous operation to wait for a channel to arrive.</summary>
+            <returns>The Task that represents the asynchronous wait for a channel operation. </returns>
+            <param name="timeout">The  that specifies how long the wait for a channel operation has to complete before timing out.</param>
+            <exception cref="T:System.InvalidOperationException">The channel listener has not been opened and so cannot be used.</exception>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.AcceptUpgradeAsync(System.ServiceModel.Channels.StreamUpgradeAcceptor,System.IO.Stream)">
+            <summary>Asynchronous version of .</summary>
+            <returns>Returns a result code that is passed into EndAcceptUpgrade to access the upgraded stream.</returns>
+            <param name="stream">The stream to be upgraded.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.InitiateUpgradeAsync(System.ServiceModel.Channels.StreamUpgradeInitiator,System.IO.Stream)">
+            <summary>This abstract method can be implemented to do asynchronous processing that initiates an upgrade.</summary>
+            <returns>Returns an Task to be passed into the <see cref="M:System.ServiceModel.Channels.StreamUpgradeInitiator.EndInitiateUpgrade(System.IAsyncResult)" /> method.</returns>
+            <param name="stream">The stream to be upgraded.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.FinalizeCorrelationAsync(System.ServiceModel.Channels.CorrelationCallbackMessageProperty,System.ServiceModel.Channels.Message,System.TimeSpan)">
+            <summary>Called by a correlation protocol when all of the correlation information is available to asynchronously construct the correlation.</summary>
+            <returns>A reference to the current asynchronous operation.</returns>
+            <param name="message">The message to be correlated.</param>
+            <param name="timeout">The interval in which correlation must be finalized or else a  is thrown.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CloseAsync(System.ServiceModel.Security.Tokens.IssuedSecurityTokenProvider)">
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CloseAsync(System.ServiceModel.Security.Tokens.IssuedSecurityTokenProvider,System.TimeSpan)">
+            <summary>Starts an asynchronous operation invoked when the workflow service host is closed.</summary>
+            <returns>A reference to the asynchronous close operation.</returns>
+            <param name="timeout">The period of time the asynchronous close operation has to complete before timing out.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.OpenAsync(System.ServiceModel.Security.Tokens.IssuedSecurityTokenProvider)">
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.OpenAsync(System.ServiceModel.Security.Tokens.IssuedSecurityTokenProvider,System.TimeSpan)">
+            <summary>Starts an asynchronous operation invoked when the workflow service host is opened.</summary>
+            <returns>A reference to the asynchronous operation.</returns>
+            <param name="timeout">The period of time the asynchronous open operation has to complete before timing out.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CloseOutputSessionAsync(System.ServiceModel.IDuplexContextChannel,System.TimeSpan)">
+            <summary>Starts an asynchronous operation to close an output session on the client that has a specified time out and state object associated with it. </summary>
+            <returns>The Task that represents the asynchronous close operation.</returns>
+            <param name="timeout">The  that specifies how long the close operation has to complete before timing out.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.DisplayInitializationUIAsync(System.ServiceModel.IClientChannel)">
+            <summary>An asynchronous call to begin using a user interface to obtain credential information.</summary>
+            <returns>The Task to use to call back when processing has completed.</returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetMetadataAsync(System.ServiceModel.Description.MetadataExchangeClient)">
+            <summary>Starts an asynchronous method call that returns a .</summary>
+            <returns>The metadata.</returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetMetadataAsync(System.ServiceModel.Description.MetadataExchangeClient,System.Uri,System.ServiceModel.Description.MetadataExchangeClientMode)">
+            <summary>Starts an asynchronous method call that returns a  using the specified address, callback, asynchronous state, and download mechanism.</summary>
+            <returns>The metadata obtained from the specified .</returns>
+            <param name="address">The address of the metadata.</param>
+            <param name="mode">The  value to use when downloading the metadata.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetMetadataAsync(System.ServiceModel.Description.MetadataExchangeClient,System.ServiceModel.EndpointAddress)">
+            <summary>Starts an asynchronous method call that returns a  using the specified address, callback, and asynchronous state.</summary>
+            <returns>The metadata obtained from the specified .</returns>
+            <param name="address">The address of the metadata.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.GetAsync(System.ServiceModel.Description.IMetadataExchange,System.ServiceModel.Channels.Message)">
+            <summary>Starts an asynchronous retrieval of metadata.</summary>
+            <returns>Task that can be passed to the <see cref="M:System.ServiceModel.Description.IMetadataExchange.EndGet(System.IAsyncResult)" /> method.</returns>
+            <param name="request">A  that should be processed to determine the metadata to return.</param>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.CommitAsync(System.Transactions.CommittableTransaction)">
+            <summary> attempt to commit the transaction asynchronously.</summary>
+            <returns>Task interface that can be used by the caller to check the status of the asynchronous operation, or to wait for the operation to complete.</returns>
+            <param name="source">The source.</param>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsync(System.Net.Mail.SmtpClient,System.String,System.String,System.String,System.String)">
+            <summary>Sends an e-mail message asynchronously.</summary>
+            <param name="smtpClient">The client.</param>
+            <param name="from">A String that contains the address information of the message sender.</param>
+            <param name="recipients">A String that contains the address that the message is sent to.</param>
+            <param name="subject">A String that contains the subject line for the message.</param>
+            <param name="body">A String that contains the message body.</param>
+            <returns>A Task that represents the asynchronous send.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsync(System.Net.Mail.SmtpClient,System.Net.Mail.MailMessage)">
+            <summary>Sends an e-mail message asynchronously.</summary>
+            <param name="smtpClient">The client.</param>
+            <param name="message">A MailMessage that contains the message to send.</param>
+            <returns>A Task that represents the asynchronous send.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsyncCore(System.Net.Mail.SmtpClient,System.Object,System.Action{System.Threading.Tasks.TaskCompletionSource{System.Object}})">
+            <summary>The core implementation of SendTaskAsync.</summary>
+            <param name="smtpClient">The client.</param>
+            <param name="userToken">The user-supplied state.</param>
+            <param name="sendAsync">
+            A delegate that initiates the asynchronous send.
+            The provided TaskCompletionSource must be passed as the user-supplied state to the actual SmtpClient.SendAsync method.
+            </param>
+            <returns></returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.FindTaskAsync(System.ServiceModel.Discovery.DiscoveryClient,System.ServiceModel.Discovery.FindCriteria)">
+            <summary>
+            Begins an asynchronous find operation with the specified criteria.
+            </summary>
+            <param name="discoveryClient">The discovery client.</param>
+            <param name="criteria">The criteria for finding services.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.FindTaskAsync(System.ServiceModel.Discovery.DiscoveryClient,System.ServiceModel.Discovery.FindCriteria,System.IProgress{System.ServiceModel.Discovery.FindProgressChangedEventArgs})">
+            <summary>
+            Begins an asynchronous find operation with the specified criteria.
+            </summary>
+            <param name="discoveryClient">The discovery client.</param>
+            <param name="criteria">The criteria for finding services.</param>
+            <param name="progress">An object into which to store progress.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResolveTaskAsync(System.ServiceModel.Discovery.DiscoveryClient,System.ServiceModel.Discovery.ResolveCriteria)">
+            <summary>
+            Begins an asynchronous resolve operation with the specified criteria.
+            </summary>
+            <param name="discoveryClient">The discovery client.</param>
+            <param name="criteria">The criteria for matching a service endpoint.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.CopyToAsync(System.IO.Stream,System.IO.Stream)">
+            <summary>
+            Reads all the bytes from the current stream and writes them to the destination stream.
+            </summary>
+            <param name="source">The source stream.</param>
+            <param name="destination">The stream that will contain the contents of the current stream.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.CopyToAsync(System.IO.Stream,System.IO.Stream,System.Int32)">
+            <summary>
+            Reads all the bytes from the current stream and writes them to the destination stream.
+            </summary>
+            <param name="source">The source stream.</param>
+            <param name="destination">The stream that will contain the contents of the current stream.</param>
+            <param name="bufferSize">The size of the buffer. This value must be greater than zero. The default size is 4096.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.CopyToAsync(System.IO.Stream,System.IO.Stream,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Reads all the bytes from the current stream and writes them to the destination stream.
+            </summary>
+            <param name="source">The source stream.</param>
+            <param name="destination">The stream that will contain the contents of the current stream.</param>
+            <param name="bufferSize">The size of the buffer. This value must be greater than zero. The default size is 4096.</param>
+            <param name="cancellationToken">The cancellation token to use to cancel the asynchronous operation.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.ReadAsync(System.IO.TextReader,System.Char[],System.Int32,System.Int32)">
+            <summary>
+            Reads a maximum of count characters from the reader asynchronously and writes
+            the data to buffer, beginning at index.
+            </summary>
+            <param name="buffer">
+            When the operation completes, contains the specified character array with the
+            values between index and (index + count - 1) replaced by the characters read
+            from the current source.
+            </param>
+            <param name="count">
+            The maximum number of characters to read. If the end of the stream is reached
+            before count of characters is read into buffer, the current method returns.
+            </param>
+            <param name="index">The place in buffer at which to begin writing.</param>
+            <param name="source">the source reader.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <remarks>This method is not currently implemented using asynchronous I/O.</remarks>
+        </member>
+        <member name="M:AsyncCtpExtensions.ReadLineAsync(System.IO.TextReader)">
+            <summary>
+            Reads a line of characters from the reader and returns the string asynchronously.
+            </summary>
+            <param name="source">the source reader.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <remarks>This method is not currently implemented using asynchronous I/O.</remarks>
+        </member>
+        <member name="M:AsyncCtpExtensions.ReadToEndAsync(System.IO.TextReader)">
+            <summary>
+            Reads all characters from the current position to the end of the TextReader
+            and returns them as one string asynchronously.
+            </summary>
+            <param name="source">the source reader.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <remarks>This method is not currently implemented using asynchronous I/O.</remarks>
+        </member>
+        <member name="M:AsyncCtpExtensions.WriteAsync(System.IO.TextWriter,System.String)">
+            <summary>Writes a string asynchronously to a text stream.</summary>
+            <param name="target">The writer.</param>
+            <param name="value">The string to write.</param>
+            <returns>A Task representing the asynchronous write.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsync(System.Net.NetworkInformation.Ping,System.Net.IPAddress)">
+            <summary>
+            Asynchronously attempts to send an Internet Control Message Protocol (ICMP) echo message.
+            </summary>
+            <param name="ping">The Ping.</param>
+            <param name="address">An IPAddress that identifies the computer that is the destination for the ICMP echo message.</param>
+            <returns>A task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsync(System.Net.NetworkInformation.Ping,System.String)">
+            <summary>
+            Asynchronously attempts to send an Internet Control Message Protocol (ICMP) echo message.
+            </summary>
+            <param name="ping">The Ping.</param>
+            <param name="hostNameOrAddress">
+            A String that identifies the computer that is the destination for the ICMP echo message. 
+            The value specified for this parameter can be a host name or a string representation of an IP address.
+            </param>
+            <returns>A task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsync(System.Net.NetworkInformation.Ping,System.Net.IPAddress,System.Int32)">
+            <summary>
+            Asynchronously attempts to send an Internet Control Message Protocol (ICMP) echo message.
+            </summary>
+            <param name="ping">The Ping.</param>
+            <param name="address">An IPAddress that identifies the computer that is the destination for the ICMP echo message.</param>
+            <param name="timeout">
+            An Int32 value that specifies the maximum number of milliseconds (after sending the echo message) 
+            to wait for the ICMP echo reply message.
+            </param>
+            <returns>A task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsync(System.Net.NetworkInformation.Ping,System.String,System.Int32)">
+            <summary>
+            Asynchronously attempts to send an Internet Control Message Protocol (ICMP) echo message.
+            </summary>
+            <param name="ping">The Ping.</param>
+            <param name="hostNameOrAddress">
+            A String that identifies the computer that is the destination for the ICMP echo message. 
+            The value specified for this parameter can be a host name or a string representation of an IP address.
+            </param>
+            <param name="timeout">
+            An Int32 value that specifies the maximum number of milliseconds (after sending the echo message) 
+            to wait for the ICMP echo reply message.
+            </param>
+            <returns>A task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsync(System.Net.NetworkInformation.Ping,System.Net.IPAddress,System.Int32,System.Byte[])">
+            <summary>
+            Asynchronously attempts to send an Internet Control Message Protocol (ICMP) echo message.
+            </summary>
+            <param name="ping">The Ping.</param>
+            <param name="address">An IPAddress that identifies the computer that is the destination for the ICMP echo message.</param>
+            <param name="timeout">
+            An Int32 value that specifies the maximum number of milliseconds (after sending the echo message) 
+            to wait for the ICMP echo reply message.
+            </param>
+            <param name="buffer">
+            A Byte array that contains data to be sent with the ICMP echo message and returned 
+            in the ICMP echo reply message. The array cannot contain more than 65,500 bytes.
+            </param>
+            <returns>A task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsync(System.Net.NetworkInformation.Ping,System.String,System.Int32,System.Byte[])">
+            <summary>
+            Asynchronously attempts to send an Internet Control Message Protocol (ICMP) echo message.
+            </summary>
+            <param name="ping">The Ping.</param>
+            <param name="hostNameOrAddress">
+            A String that identifies the computer that is the destination for the ICMP echo message. 
+            The value specified for this parameter can be a host name or a string representation of an IP address.
+            </param>
+            <param name="timeout">
+            An Int32 value that specifies the maximum number of milliseconds (after sending the echo message) 
+            to wait for the ICMP echo reply message.
+            </param>
+            <param name="buffer">
+            A Byte array that contains data to be sent with the ICMP echo message and returned 
+            in the ICMP echo reply message. The array cannot contain more than 65,500 bytes.
+            </param>
+            <returns>A task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsync(System.Net.NetworkInformation.Ping,System.Net.IPAddress,System.Int32,System.Byte[],System.Net.NetworkInformation.PingOptions)">
+            <summary>
+            Asynchronously attempts to send an Internet Control Message Protocol (ICMP) echo message.
+            </summary>
+            <param name="ping">The Ping.</param>
+            <param name="address">An IPAddress that identifies the computer that is the destination for the ICMP echo message.</param>
+            <param name="timeout">
+            An Int32 value that specifies the maximum number of milliseconds (after sending the echo message) 
+            to wait for the ICMP echo reply message.
+            </param>
+            <param name="buffer">
+            A Byte array that contains data to be sent with the ICMP echo message and returned 
+            in the ICMP echo reply message. The array cannot contain more than 65,500 bytes.
+            </param>
+            <param name="options">A PingOptions object used to control fragmentation and Time-to-Live values for the ICMP echo message packet.</param>
+            <returns>A task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsync(System.Net.NetworkInformation.Ping,System.String,System.Int32,System.Byte[],System.Net.NetworkInformation.PingOptions)">
+            <summary>
+            Asynchronously attempts to send an Internet Control Message Protocol (ICMP) echo message.
+            </summary>
+            <param name="ping">The Ping.</param>
+            <param name="hostNameOrAddress">
+            A String that identifies the computer that is the destination for the ICMP echo message. 
+            The value specified for this parameter can be a host name or a string representation of an IP address.
+            </param>
+            <param name="timeout">
+            An Int32 value that specifies the maximum number of milliseconds (after sending the echo message) 
+            to wait for the ICMP echo reply message.
+            </param>
+            <param name="buffer">
+            A Byte array that contains data to be sent with the ICMP echo message and returned 
+            in the ICMP echo reply message. The array cannot contain more than 65,500 bytes.
+            </param>
+            <param name="options">A PingOptions object used to control fragmentation and Time-to-Live values for the ICMP echo message packet.</param>
+            <returns>A task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.SendTaskAsyncCore(System.Net.NetworkInformation.Ping,System.Object,System.Action{System.Threading.Tasks.TaskCompletionSource{System.Net.NetworkInformation.PingReply}})">
+            <summary>The core implementation of SendTaskAsync.</summary>
+            <param name="ping">The Ping.</param>
+            <param name="userToken">A user-defined object stored in the resulting Task.</param>
+            <param name="sendAsync">
+            A delegate that initiates the asynchronous send.
+            The provided TaskCompletionSource must be passed as the user-supplied state to the actual Ping.SendAsync method.
+            </param>
+            <returns></returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResolveAddressTaskAsync(System.Device.Location.ICivicAddressResolver,System.Device.Location.GeoCoordinate)">
+            <summary>Initiates an asynchronous request to resolve a latitude/longitude location to an address.</summary>
+            <param name="civicAddressResolver">The resolver.</param>
+            <param name="coordinate">The latitude/longitude location to resolve to an address.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResolveTaskAsync(System.Net.PeerToPeer.PeerNameResolver,System.Net.PeerToPeer.PeerName)">
+            <summary>
+            Begins an asynchronous peer name resolution operation for the specified System.Net.PeerToPeer.PeerName
+            in the specified System.Net.PeerToPeer.Cloud. The resolution operation will
+            resolve no more than maxRecords entries for the specified peer name.
+            </summary>
+            <param name="peerNameResolver">The peer name resolver.</param>
+            <param name="peerName">The peerName to resolve.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentNullException">One or both of the peerName and userState parameters are set to null.</exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResolveTaskAsync(System.Net.PeerToPeer.PeerNameResolver,System.Net.PeerToPeer.PeerName,System.Int32)">
+            <summary>
+            Begins an asynchronous peer name resolution operation for the specified System.Net.PeerToPeer.PeerName
+            in the specified System.Net.PeerToPeer.Cloud. The resolution operation will
+            resolve no more than maxRecords entries for the specified peer name.
+            </summary>
+            <param name="peerNameResolver">The peer name resolver.</param>
+            <param name="peerName">The peerName to resolve.</param>
+            <param name="maxRecords">The maximum number of records to obtain from cloud for peerName.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentNullException">One or both of the peerName and userState parameters are set to null.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">The maxRecords parameter is less than or equal to zero.</exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResolveTaskAsync(System.Net.PeerToPeer.PeerNameResolver,System.Net.PeerToPeer.PeerName,System.Net.PeerToPeer.Cloud)">
+            <summary>
+            Begins an asynchronous peer name resolution operation for the specified System.Net.PeerToPeer.PeerName
+            in the specified System.Net.PeerToPeer.Cloud. The resolution operation will
+            resolve no more than maxRecords entries for the specified peer name.
+            </summary>
+            <param name="peerNameResolver">The peer name resolver.</param>
+            <param name="peerName">The peerName to resolve.</param>
+            <param name="cloud">The cloud in which to resolve peerName.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentNullException">One or both of the peerName and userState parameters are set to null.</exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResolveTaskAsync(System.Net.PeerToPeer.PeerNameResolver,System.Net.PeerToPeer.PeerName,System.Net.PeerToPeer.Cloud,System.Int32)">
+            <summary>
+            Begins an asynchronous peer name resolution operation for the specified System.Net.PeerToPeer.PeerName
+            in the specified System.Net.PeerToPeer.Cloud. The resolution operation will
+            resolve no more than maxRecords entries for the specified peer name.
+            </summary>
+            <param name="peerNameResolver">The peer name resolver.</param>
+            <param name="peerName">The peerName to resolve.</param>
+            <param name="cloud">The cloud in which to resolve peerName.</param>
+            <param name="maxRecords">The maximum number of records to obtain from cloud for peerName.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentNullException">One or both of the peerName and userState parameters are set to null.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">The maxRecords parameter is less than or equal to zero.</exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.ResolveTaskAsync(System.Net.PeerToPeer.PeerNameResolver,System.Net.PeerToPeer.PeerName,System.Net.PeerToPeer.Cloud,System.Int32,System.IProgress{System.Int32})">
+            <summary>
+            Begins an asynchronous peer name resolution operation for the specified System.Net.PeerToPeer.PeerName
+            in the specified System.Net.PeerToPeer.Cloud. The resolution operation will
+            resolve no more than maxRecords entries for the specified peer name.
+            </summary>
+            <param name="peerNameResolver">The peer name resolver.</param>
+            <param name="peerName">The peerName to resolve.</param>
+            <param name="cloud">The cloud in which to resolve peerName.</param>
+            <param name="maxRecords">The maximum number of records to obtain from cloud for peerName.</param>
+            <param name="progress">An object into which to store progress.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentNullException">One or both of the peerName and userState parameters are set to null.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">The maxRecords parameter is less than or equal to zero.</exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.InviteTaskAsync(System.Net.PeerToPeer.Collaboration.Peer)">
+            <summary>
+            Begins an asynchronous invitation operation which sends an invitation to
+            a System.Net.PeerToPeer.Collaboration.Peer to start a specific System.Net.PeerToPeer.Collaboration.PeerApplication.
+            </summary>
+            <param name="peer">The peer.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentException">The application is not registered with the collaboration infrastructure.</exception>
+            <exception cref="T:System.Net.PeerToPeer.PeerToPeerException">
+            An error occurred during the invitation process.The currently executing application
+            is not registered with the collaboration infrastructure.
+            </exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.InviteTaskAsync(System.Net.PeerToPeer.Collaboration.Peer,System.Net.PeerToPeer.Collaboration.PeerApplication,System.String,System.Byte[])">
+            <summary>
+            Begins an asynchronous invitation operation which sends an invitation to
+            a System.Net.PeerToPeer.Collaboration.Peer to start a specific System.Net.PeerToPeer.Collaboration.PeerApplication.
+            </summary>
+            <param name="peer">The peer.</param>
+            <param name="applicationToInvite">The System.Net.PeerToPeer.Collaboration.PeerApplication for which the invitation is sent</param>
+            <param name="message">
+            A message to send to the remote peer along with the application invitation.
+            The maximum size of this message is 255 Unicode characters.
+            </param>
+            <param name="invitationData">
+            A user defined data blob to associate with the invitation. Its size can be no more than 16,384 bytes.
+            </param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentException">The application is not registered with the collaboration infrastructure.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">invitationData is larger than 16,384 bytes.</exception>
+            <exception cref="T:System.Net.PeerToPeer.PeerToPeerException">
+            An error occurred during the invitation process.The currently executing application
+            is not registered with the collaboration infrastructure.
+            </exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.SubscribeTaskAsync(System.Net.PeerToPeer.Collaboration.PeerContact)">
+            <summary>
+            Asynchronously subscribes the calling peer to the System.Net.PeerToPeer.Collaboration.PeerContact,
+            and as a result, the peer will receive any future System.Net.PeerToPeer.Collaboration.PeerCollaboration
+            events associated with the System.Net.PeerToPeer.Collaboration.PeerContact.
+            </summary>
+            <param name="peerContact">The peer contact.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <exception cref="T:System.InvalidOperationException">The calling peer is not signed in to People Near Me.</exception>
+            <exception cref="T:System.ObjectDisposedException">The System.Net.PeerToPeer.Collaboration.PeerContact object has been disposed.</exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.RefreshDataTaskAsync(System.Net.PeerToPeer.Collaboration.PeerNearMe)">
+            <summary>
+            Initiates a network operation to retrieve the application, object and presence
+            data specific to a System.Net.PeerToPeer.Collaboration.PeerNearMe instance.
+            </summary>
+            <param name="peerNearMe">The peer near me.</param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ObjectDisposedException">The System.Net.PeerToPeer.Collaboration.PeerNearMe object has been disposed.</exception>
+            <exception cref="T:System.Net.PeerToPeer.PeerToPeerException">
+            The prior System.Net.PeerToPeer.Collaboration.PeerNearMe.RefreshDataAsync(System.Object)
+            call has not yet completed.
+            </exception>
+        </member>
+        <member name="M:AsyncCtpExtensions.CreateContactTaskAsync(System.Net.PeerToPeer.Collaboration.ContactManager,System.Net.PeerToPeer.Collaboration.PeerNearMe)">
+            <summary>
+            Creates a contact instance for the specified System.Net.PeerToPeer.Collaboration.PeerNearMe object.
+            </summary>
+            <param name="contactManager"></param>
+            <param name="peerNearMe">
+            The System.Net.PeerToPeer.Collaboration.PeerNearMe to associate with the new System.Net.PeerToPeer.Collaboration.PeerContact instance.
+            </param>
+            <returns>A Task that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentNullException">peerNearMe is null.</exception>
+            <exception cref="T:System.ObjectDisposedException">The System.Net.PeerToPeer.Collaboration.PeerNearMe object has been disposed.</exception>
+            <exception cref="T:System.Net.PeerToPeer.PeerToPeerException">The specified System.Net.PeerToPeer.Collaboration.PeerNearMe instance has no endpoints set on it.</exception>
+        </member>
+        <member name="T:System.Threading.Tasks.EAPCommon">
+            <summary>
+            Internal helpers for wrapping the event-based asynchronous pattern.
+            </summary>
+        </member>
+        <member name="M:System.Threading.Tasks.EAPCommon.HandleProgress``2(System.Threading.Tasks.TaskCompletionSource{``0},System.ComponentModel.ProgressChangedEventArgs,System.Func{``1},System.IProgress{``1})">
+            <summary>
+            Raises progress callbacks.
+            </summary>
+            <typeparam name="T">Specifies the type of data returned by the Task.</typeparam>
+            <typeparam name="E">Specifies the type of data provided to progress callbacks.</typeparam>
+            <param name="tcs">The TaskCompletionsource.</param>
+            <param name="eventArgs">The progress event arguments.</param>
+            <param name="getProgress">A function to retrieve the progress data to publish.</param>
+            <param name="callback">The progress callback.</param>
+        </member>
+        <member name="M:System.Threading.Tasks.EAPCommon.HandleCompletion``1(System.Threading.Tasks.TaskCompletionSource{``0},System.Boolean,System.ComponentModel.AsyncCompletedEventArgs,System.Func{``0},System.Action)">
+            <summary>
+            Completes the Task if the user state matches the TaskCompletionSource.
+            </summary>
+            <typeparam name="T">Specifies the type of data returned by the Task.</typeparam>
+            <param name="tcs">The TaskCompletionSource.</param>
+            <param name="e">The completion event arguments.</param>
+            <param name="requireMatch">Whether we require the tcs to match the e.UserState.</param>
+            <param name="getResult">A function that gets the result with which to complete the task.</param>
+            <param name="unregisterHandler">An action used to unregister work when the operaiton completes.</param>
+        </member>
+        <member name="T:System.Net.DnsEx">
+            <summary>Asynchronous wrappers for .NET Framework operations.</summary>
+        </member>
+        <member name="M:System.Net.DnsEx.GetHostAddressesAsync(System.String)">
+            <summary>Asynchronously returns the Internet Protocol (IP) addresses for the specified host.</summary>
+            <param name="hostNameOrAddress">The host name or IP address to resolve.</param>
+            <returns>An array of type System.Net.IPAddress that holds the IP addresses for the host specified.</returns>
+        </member>
+        <member name="M:System.Net.DnsEx.GetHostEntryAsync(System.Net.IPAddress)">
+            <summary>Asynchronously resolves an IP address to an System.Net.IPHostEntry instance.</summary>
+            <param name="address">The IP address to resolve.</param>
+            <returns>An System.Net.IPHostEntry instance that contains address information about the host.</returns>
+        </member>
+        <member name="M:System.Net.DnsEx.GetHostEntryAsync(System.String)">
+            <summary>Asynchronously resolves an IP address to an System.Net.IPHostEntry instance.</summary>
+            <param name="hostNameOrAddress">The host name or IP address to resolve.</param>
+            <returns>An System.Net.IPHostEntry instance that contains address information about the host.</returns>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.TaskAwaiter">
+            <summary>Provides an awaiter for awaiting a <see cref="T:System.Threading.Tasks.Task"/>.</summary>
+            <remarks>This type is intended for compiler use only.</remarks>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.TaskAwaiter.CONTINUE_ON_CAPTURED_CONTEXT_DEFAULT">
+            <summary>The default value to use for continueOnCapturedContext.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.TaskAwaiter.m_task">
+            <summary>The task being awaited.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter.#ctor(System.Threading.Tasks.Task)">
+            <summary>Initializes the <see cref="T:System.Runtime.CompilerServices.TaskAwaiter"/>.</summary>
+            <param name="task">The <see cref="T:System.Threading.Tasks.Task"/> to be awaited.</param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter.OnCompleted(System.Action)">
+            <summary>Schedules the continuation onto the <see cref="T:System.Threading.Tasks.Task"/> associated with this <see cref="T:System.Runtime.CompilerServices.TaskAwaiter"/>.</summary>
+            <param name="continuation">The action to invoke when the await operation completes.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="continuation"/> argument is null (Nothing in Visual Basic).</exception>
+            <exception cref="T:System.InvalidOperationException">The awaiter was not properly initialized.</exception>
+            <remarks>This method is intended for compiler user rather than use directly in code.</remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter.GetResult">
+            <summary>Ends the await on the completed <see cref="T:System.Threading.Tasks.Task"/>.</summary>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+            <exception cref="T:System.InvalidOperationException">The task was not yet completed.</exception>
+            <exception cref="T:System.Threading.Tasks.TaskCanceledException">The task was canceled.</exception>
+            <exception cref="T:System.Exception">The task completed in a Faulted state.</exception>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter.ValidateEnd(System.Threading.Tasks.Task)">
+            <summary>
+            Fast checks for the end of an await operation to determine whether more needs to be done
+            prior to completing the await.
+            </summary>
+            <param name="task">The awaited task.</param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(System.Threading.Tasks.Task)">
+            <summary>Throws an exception to handle a task that completed in a state other than RanToCompletion.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter.OnCompletedInternal(System.Threading.Tasks.Task,System.Action,System.Boolean)">
+            <summary>Schedules the continuation onto the <see cref="T:System.Threading.Tasks.Task"/> associated with this <see cref="T:System.Runtime.CompilerServices.TaskAwaiter"/>.</summary>
+            <param name="task">The awaited task.</param>
+            <param name="continuation">The action to invoke when the await operation completes.</param>
+            <param name="continueOnCapturedContext">Whether to capture and marshal back to the current context.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="continuation"/> argument is null (Nothing in Visual Basic).</exception>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+            <remarks>This method is intended for compiler user rather than use directly in code.</remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter.PrepareExceptionForRethrow(System.Exception)">
+            <summary>Copies the exception's stack trace so its stack trace isn't overwritten.</summary>
+            <param name="exc">The exception to prepare.</param>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.TaskAwaiter.s_prepForRemoting">
+            <summary>A MethodInfo for the Exception.PrepForRemoting method.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.TaskAwaiter.s_emptyParams">
+            <summary>An empty array to use with MethodInfo.Invoke.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter.GetPrepForRemotingMethodInfo">
+            <summary>Gets the MethodInfo for the internal PrepForRemoting method on Exception.</summary>
+            <returns>The MethodInfo if it could be retrieved, or else null.</returns>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.TaskAwaiter.IsCompleted">
+            <summary>Gets whether the task being awaited is completed.</summary>
+            <remarks>This property is intended for compiler user rather than use directly in code.</remarks>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.TaskAwaiter`1">
+            <summary>Provides an awaiter for awaiting a <see cref="T:System.Threading.Tasks.Task`1"/>.</summary>
+            <remarks>This type is intended for compiler use only.</remarks>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.TaskAwaiter`1.m_task">
+            <summary>The task being awaited.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter`1.#ctor(System.Threading.Tasks.Task{`0})">
+            <summary>Initializes the <see cref="T:System.Runtime.CompilerServices.TaskAwaiter`1"/>.</summary>
+            <param name="task">The <see cref="T:System.Threading.Tasks.Task`1"/> to be awaited.</param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter`1.OnCompleted(System.Action)">
+            <summary>Schedules the continuation onto the <see cref="T:System.Threading.Tasks.Task"/> associated with this <see cref="T:System.Runtime.CompilerServices.TaskAwaiter"/>.</summary>
+            <param name="continuation">The action to invoke when the await operation completes.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="continuation"/> argument is null (Nothing in Visual Basic).</exception>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+            <remarks>This method is intended for compiler user rather than use directly in code.</remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.TaskAwaiter`1.GetResult">
+            <summary>Ends the await on the completed <see cref="T:System.Threading.Tasks.Task`1"/>.</summary>
+            <returns>The result of the completed <see cref="T:System.Threading.Tasks.Task`1"/>.</returns>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+            <exception cref="T:System.InvalidOperationException">The task was not yet completed.</exception>
+            <exception cref="T:System.Threading.Tasks.TaskCanceledException">The task was canceled.</exception>
+            <exception cref="T:System.Exception">The task completed in a Faulted state.</exception>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.TaskAwaiter`1.IsCompleted">
+            <summary>Gets whether the task being awaited is completed.</summary>
+            <remarks>This property is intended for compiler user rather than use directly in code.</remarks>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.ConfiguredTaskAwaitable">
+            <summary>Provides an awaitable object that allows for configured awaits on <see cref="T:System.Threading.Tasks.Task"/>.</summary>
+            <remarks>This type is intended for compiler use only.</remarks>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.m_configuredTaskAwaiter">
+            <summary>The task being awaited.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.#ctor(System.Threading.Tasks.Task,System.Boolean)">
+            <summary>Initializes the <see cref="T:System.Runtime.CompilerServices.ConfiguredTaskAwaitable"/>.</summary>
+            <param name="task">The awaitable <see cref="T:System.Threading.Tasks.Task"/>.</param>
+            <param name="continueOnCapturedContext">
+            true to attempt to marshal the continuation back to the original context captured; otherwise, false.
+            </param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.GetAwaiter">
+            <summary>Gets an awaiter for this awaitable.</summary>
+            <returns>The awaiter.</returns>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.ConfiguredTaskAwaiter">
+            <summary>Provides an awaiter for a <see cref="T:System.Runtime.CompilerServices.ConfiguredTaskAwaitable"/>.</summary>
+            <remarks>This type is intended for compiler use only.</remarks>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.ConfiguredTaskAwaiter.m_task">
+            <summary>The task being awaited.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.ConfiguredTaskAwaiter.m_continueOnCapturedContext">
+            <summary>Whether to attempt marshaling back to the original context.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.ConfiguredTaskAwaiter.#ctor(System.Threading.Tasks.Task,System.Boolean)">
+            <summary>Initializes the <see cref="T:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.ConfiguredTaskAwaiter"/>.</summary>
+            <param name="task">The <see cref="T:System.Threading.Tasks.Task"/> to await.</param>
+            <param name="continueOnCapturedContext">
+            true to attempt to marshal the continuation back to the original context captured
+            when BeginAwait is called; otherwise, false.
+            </param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.ConfiguredTaskAwaiter.OnCompleted(System.Action)">
+            <summary>Schedules the continuation onto the <see cref="T:System.Threading.Tasks.Task"/> associated with this <see cref="T:System.Runtime.CompilerServices.TaskAwaiter"/>.</summary>
+            <param name="continuation">The action to invoke when the await operation completes.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="continuation"/> argument is null (Nothing in Visual Basic).</exception>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+            <remarks>This method is intended for compiler user rather than use directly in code.</remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.ConfiguredTaskAwaiter.GetResult">
+            <summary>Ends the await on the completed <see cref="T:System.Threading.Tasks.Task"/>.</summary>
+            <returns>The result of the completed <see cref="T:System.Threading.Tasks.Task`1"/>.</returns>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+            <exception cref="T:System.InvalidOperationException">The task was not yet completed.</exception>
+            <exception cref="T:System.Threading.Tasks.TaskCanceledException">The task was canceled.</exception>
+            <exception cref="T:System.Exception">The task completed in a Faulted state.</exception>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.ConfiguredTaskAwaitable.ConfiguredTaskAwaiter.IsCompleted">
+            <summary>Gets whether the task being awaited is completed.</summary>
+            <remarks>This property is intended for compiler user rather than use directly in code.</remarks>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1">
+            <summary>Provides an awaitable object that allows for configured awaits on <see cref="T:System.Threading.Tasks.Task`1"/>.</summary>
+            <remarks>This type is intended for compiler use only.</remarks>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.m_configuredTaskAwaiter">
+            <summary>The underlying awaitable on whose logic this awaitable relies.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.#ctor(System.Threading.Tasks.Task{`0},System.Boolean)">
+            <summary>Initializes the <see cref="T:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1"/>.</summary>
+            <param name="task">The awaitable <see cref="T:System.Threading.Tasks.Task`1"/>.</param>
+            <param name="continueOnCapturedContext">
+            true to attempt to marshal the continuation back to the original context captured; otherwise, false.
+            </param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.GetAwaiter">
+            <summary>Gets an awaiter for this awaitable.</summary>
+            <returns>The awaiter.</returns>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.ConfiguredTaskAwaiter">
+            <summary>Provides an awaiter for a <see cref="T:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1"/>.</summary>
+            <remarks>This type is intended for compiler use only.</remarks>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.ConfiguredTaskAwaiter.m_task">
+            <summary>The task being awaited.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.ConfiguredTaskAwaiter.m_continueOnCapturedContext">
+            <summary>Whether to attempt marshaling back to the original context.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.ConfiguredTaskAwaiter.#ctor(System.Threading.Tasks.Task{`0},System.Boolean)">
+            <summary>Initializes the <see cref="T:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.ConfiguredTaskAwaiter"/>.</summary>
+            <param name="task">The awaitable <see cref="T:System.Threading.Tasks.Task`1"/>.</param>
+            <param name="continueOnCapturedContext">
+            true to attempt to marshal the continuation back to the original context captured; otherwise, false.
+            </param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.ConfiguredTaskAwaiter.OnCompleted(System.Action)">
+            <summary>Schedules the continuation onto the <see cref="T:System.Threading.Tasks.Task"/> associated with this <see cref="T:System.Runtime.CompilerServices.TaskAwaiter"/>.</summary>
+            <param name="continuation">The action to invoke when the await operation completes.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="continuation"/> argument is null (Nothing in Visual Basic).</exception>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+            <remarks>This method is intended for compiler user rather than use directly in code.</remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.ConfiguredTaskAwaiter.GetResult">
+            <summary>Ends the await on the completed <see cref="T:System.Threading.Tasks.Task`1"/>.</summary>
+            <returns>The result of the completed <see cref="T:System.Threading.Tasks.Task`1"/>.</returns>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+            <exception cref="T:System.InvalidOperationException">The task was not yet completed.</exception>
+            <exception cref="T:System.Threading.Tasks.TaskCanceledException">The task was canceled.</exception>
+            <exception cref="T:System.Exception">The task completed in a Faulted state.</exception>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.ConfiguredTaskAwaitable`1.ConfiguredTaskAwaiter.IsCompleted">
+            <summary>Gets whether the task being awaited is completed.</summary>
+            <remarks>This property is intended for compiler user rather than use directly in code.</remarks>
+            <exception cref="T:System.NullReferenceException">The awaiter was not properly initialized.</exception>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.AsyncVoidMethodBuilder">
+            <summary>
+            Provides a builder for asynchronous methods that return void.
+            This type is intended for compiler use only.
+            </summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncVoidMethodBuilder.s_noContextCaptured">
+            <summary>A marker to indicate that no instance was captured.</summary>
+            <remarks>
+            This allows the default value of null to mean that builder was improperly initialized.
+            The instance is used only for its object equality.
+            </remarks>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncVoidMethodBuilder.m_synchronizationContext">
+            <summary>The synchronization context associated with this operation.</summary>
+            <remarks>This should never be null for a properly initialized builder.</remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncVoidMethodBuilder.Create">
+            <summary>Initializes a new <see cref="T:System.Runtime.CompilerServices.AsyncVoidMethodBuilder"/>.</summary>
+            <returns>The initialized <see cref="T:System.Runtime.CompilerServices.AsyncVoidMethodBuilder"/>.</returns>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncVoidMethodBuilder.#ctor(System.Threading.SynchronizationContext)">
+            <summary>Initializes the <see cref="T:System.Runtime.CompilerServices.AsyncVoidMethodBuilder"/>.</summary>
+            <param name="synchronizationContext">The synchronizationContext associated with this operation. This may be null.</param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncVoidMethodBuilder.SetCompleted">
+            <summary>TODO: Remove</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncVoidMethodBuilder.SetResult">
+            <summary>Completes the method builder successfully.</summary>
+            <exception cref="T:System.InvalidOperationException">The builder is not initialized.</exception>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncVoidMethodBuilder.SetException(System.Exception)">
+            <summary>Faults the method builder with an exception.</summary>
+            <param name="exception">The exception that is the cause of this fault.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="exception"/> argument is null (Nothing in Visual Basic).</exception>
+            <exception cref="T:System.InvalidOperationException">The builder is not initialized.</exception>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.VoidType">
+            <summary>Void type placeholder.</summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.AsyncTaskMethodBuilder">
+            <summary>
+            Provides a builder for asynchronous methods that return <see cref="T:System.Threading.Tasks.Task"/>.
+            This type is intended for compiler use only.
+            </summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.m_builder">
+            <summary>The generic builder object to which this non-generic instance delegates.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.Create">
+            <summary>Initializes a new <see cref="T:System.Runtime.CompilerServices.AsyncTaskMethodBuilder"/>.</summary>
+            <returns>The initialized <see cref="T:System.Runtime.CompilerServices.AsyncTaskMethodBuilder"/>.</returns>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.#ctor(System.Runtime.CompilerServices.AsyncTaskMethodBuilder{System.Runtime.CompilerServices.VoidType})">
+            <summary>Initializes the <see cref="T:System.Runtime.CompilerServices.AsyncTaskMethodBuilder"/>.</summary>
+            <param name="underlyingBuilder">The underlying builder used for this builder.</param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.SetResult">
+            <summary>
+            Completes the <see cref="T:System.Threading.Tasks.Task"/> in the 
+            <see cref="T:System.Threading.Tasks.TaskStatus">RanToCompletion</see> state.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">The builder is not initialized.</exception>
+            <exception cref="T:System.InvalidOperationException">The task has already completed.</exception>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.SetException(System.Exception)">
+            <summary>
+            Completes the <see cref="T:System.Threading.Tasks.Task"/> in the 
+            <see cref="T:System.Threading.Tasks.TaskStatus">Faulted</see> state with the specified exception.
+            </summary>
+            <param name="exception">The <see cref="T:System.Exception"/> to use to fault the task.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="exception"/> argument is null (Nothing in Visual Basic).</exception>
+            <exception cref="T:System.InvalidOperationException">The builder is not initialized.</exception>
+            <exception cref="T:System.InvalidOperationException">The task has already completed.</exception>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.Task">
+            <summary>Gets the <see cref="T:System.Threading.Tasks.Task"/> for this builder.</summary>
+            <returns>The <see cref="T:System.Threading.Tasks.Task"/> representing the builder's asynchronous operation.</returns>
+            <exception cref="T:System.InvalidOperationException">The builder is not initialized.</exception>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo">
+            <summary>
+            For debugging purposes, provides a snapshot of environment information when
+            a task is created to represent an asynchronous method invocation.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.#ctor(System.Threading.Tasks.Task)">
+            <summary>Initializes the debugging information.</summary>
+            <param name="task">The task representing the async method.</param>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.Task">
+            <summary>The task being tracked.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.StartingDateTimeOffset">
+            <summary>The date and time at which this instance was created.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.StartingThread">
+            <summary>The thread from which this instance was created.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.StartingStackTrace">
+            <summary>A stack trace from when this instance was created.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.StartingExecutionContext">
+            <summary>The execution context from when this instance was created.</summary>
+            <remarks>
+            While most code in mscorlib uses a special overload of Capture, this code
+            chooses to use the public overload to provide a better debugging experience,
+            e.g. capturing the current SynchronizationContext.
+            </remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.Dispose">
+            <summary>Disposes of resources used by the instance.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.s_debuggingEnabled">
+            <summary>Whether debug tracking of active asynchronous methods is enabled.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.s_activeMethods">
+            <summary>For debugging, a collection of information about currently active asynchronous methods.</summary>
+            <remarks>We assume that there's a 1:1 correspondence between a task object and an async method invocation.</remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.AddMethod(System.Threading.Tasks.Task)">
+            <summary>If debugging is enabled, adds the specified task to the active methods collection.</summary>
+            <param name="task">The task to add.</param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.RemoveMethod(System.Threading.Tasks.Task)">
+            <summary>If debugging is enabled, removes the specified task from the active methods collection.</summary>
+            <param name="task">The task to remove.</param>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.LocationForDebuggerDisplay">
+            <summary>Gets a string representing the stack frame from which this method was instantiated.</summary>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.IsEnabled">
+            <summary>
+            Enables or disables whether asynchronous method debugging information is
+            tracked from builder creation to completion.
+            </summary>
+            <remarks>
+            This is meant to be consumed from a debugger watch window with code like:
+                System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.IsEnabled = true
+            </remarks>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.ActiveMethods">
+            <summary>Gets the currently active asynchronous methods being tracked.</summary>
+            <remarks>
+            This is meant to be consumed from a debugger watch window by watching:
+                System.Runtime.CompilerServices.AsyncTaskMethodBuilder.DebugInfo.ActiveMethods
+            </remarks>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1">
+            <summary>
+            Provides a builder for asynchronous methods that return <see cref="T:System.Threading.Tasks.Task`1"/>.
+            This type is intended for compiler use only.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.#cctor">
+            <summary>Temporary support for disabling crashing if tasks go unobserved.</summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.m_tcs">
+            <summary>The built task.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.Create">
+            <summary>Initializes a new <see cref="T:System.Runtime.CompilerServices.AsyncTaskMethodBuilder"/>.</summary>
+            <returns>The initialized <see cref="T:System.Runtime.CompilerServices.AsyncTaskMethodBuilder"/>.</returns>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.#ctor(System.Threading.Tasks.TaskCompletionSource{`0})">
+            <summary>Initializes the AsyncTaskMethodBuilder.</summary>
+            <param name="tcs">The task being built by the builder.</param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetResult(`0)">
+            <summary>
+            Completes the <see cref="T:System.Threading.Tasks.Task`1"/> in the 
+            <see cref="T:System.Threading.Tasks.TaskStatus">RanToCompletion</see> state with the specified result.
+            </summary>
+            <param name="result">The result to use to complete the task.</param>
+            <exception cref="T:System.InvalidOperationException">The builder is not initialized.</exception>
+            <exception cref="T:System.InvalidOperationException">The task has already completed.</exception>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetException(System.Exception)">
+            <summary>
+            Completes the <see cref="T:System.Threading.Tasks.Task`1"/> in the 
+            <see cref="T:System.Threading.Tasks.TaskStatus">Faulted</see> state with the specified exception.
+            </summary>
+            <param name="exception">The <see cref="T:System.Exception"/> to use to fault the task.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="exception"/> argument is null (Nothing in Visual Basic).</exception>
+            <exception cref="T:System.InvalidOperationException">The builder is not initialized.</exception>
+            <exception cref="T:System.InvalidOperationException">The task has already completed.</exception>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.Task">
+            <summary>Gets the <see cref="T:System.Threading.Tasks.Task`1"/> for this builder.</summary>
+            <returns>The <see cref="T:System.Threading.Tasks.Task`1"/> representing the builder's asynchronous operation.</returns>
+            <exception cref="T:System.InvalidOperationException">The builder is not initialized.</exception>
+        </member>
+        <member name="T:System.Threading.Tasks.TaskEx">
+            <summary>Provides methods for creating and manipulating tasks.</summary>
+            <remarks>TaskEx is a placeholder.</remarks>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.Run(System.Action)">
+            <summary>Creates a task that runs the specified action.</summary>
+            <param name="action">The action to execute asynchronously.</param>
+            <returns>A task that represents the completion of the action.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="action"/> argument is null.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.Run(System.Action,System.Threading.CancellationToken)">
+            <summary>Creates a task that runs the specified action.</summary>
+            <param name="action">The action to execute.</param>
+            <param name="cancellationToken">The CancellationToken to use to request cancellation of this task.</param>
+            <returns>A task that represents the completion of the action.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="action"/> argument is null.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.Run``1(System.Func{``0})">
+            <summary>Creates a task that runs the specified function.</summary>
+            <param name="function">The function to execute asynchronously.</param>
+            <returns>A task that represents the completion of the action.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="function"/> argument is null.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.Run``1(System.Func{``0},System.Threading.CancellationToken)">
+            <summary>Creates a task that runs the specified function.</summary>
+            <param name="function">The action to execute.</param>
+            <param name="cancellationToken">The CancellationToken to use to cancel the task.</param>
+            <returns>A task that represents the completion of the action.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="function"/> argument is null.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.RunEx(System.Func{System.Threading.Tasks.Task})">
+            <summary>Creates a task that runs the specified function.</summary>
+            <param name="function">The action to execute asynchronously.</param>
+            <returns>A task that represents the completion of the action.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="function"/> argument is null.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.RunEx(System.Func{System.Threading.Tasks.Task},System.Threading.CancellationToken)">
+            <summary>Creates a task that runs the specified function.</summary>
+            <param name="function">The function to execute.</param>
+            <param name="cancellationToken">The CancellationToken to use to request cancellation of this task.</param>
+            <returns>A task that represents the completion of the function.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="function"/> argument is null.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.RunEx``1(System.Func{System.Threading.Tasks.Task{``0}})">
+            <summary>Creates a task that runs the specified function.</summary>
+            <param name="function">The function to execute asynchronously.</param>
+            <returns>A task that represents the completion of the action.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="function"/> argument is null.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.RunEx``1(System.Func{System.Threading.Tasks.Task{``0}},System.Threading.CancellationToken)">
+            <summary>Creates a task that runs the specified function.</summary>
+            <param name="function">The action to execute.</param>
+            <param name="cancellationToken">The CancellationToken to use to cancel the task.</param>
+            <returns>A task that represents the completion of the action.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="function"/> argument is null.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.Delay(System.Int32)">
+            <summary>Starts a Task that will complete after the specified due time.</summary>
+            <param name="dueTime">The delay in milliseconds before the returned task completes.</param>
+            <returns>The timed Task.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+            The <paramref name="dueTime"/> argument must be non-negative or -1 and less than or equal to Int32.MaxValue.
+            </exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.Delay(System.TimeSpan)">
+            <summary>Starts a Task that will complete after the specified due time.</summary>
+            <param name="dueTime">The delay before the returned task completes.</param>
+            <returns>The timed Task.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+            The <paramref name="dueTime"/> argument must be non-negative or -1 and less than or equal to Int32.MaxValue.
+            </exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.Delay(System.TimeSpan,System.Threading.CancellationToken)">
+            <summary>Starts a Task that will complete after the specified due time.</summary>
+            <param name="dueTime">The delay before the returned task completes.</param>
+            <param name="cancellationToken">A CancellationToken that may be used to cancel the task before the due time occurs.</param>
+            <returns>The timed Task.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+            The <paramref name="dueTime"/> argument must be non-negative or -1 and less than or equal to Int32.MaxValue.
+            </exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.Delay(System.Int32,System.Threading.CancellationToken)">
+            <summary>Starts a Task that will complete after the specified due time.</summary>
+            <param name="dueTime">The delay in milliseconds before the returned task completes.</param>
+            <param name="cancellationToken">A CancellationToken that may be used to cancel the task before the due time occurs.</param>
+            <returns>The timed Task.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+            The <paramref name="dueTime"/> argument must be non-negative or -1 and less than or equal to Int32.MaxValue.
+            </exception>
+        </member>
+        <member name="F:System.Threading.Tasks.TaskEx.s_preCompletedTask">
+            <summary>An already completed task.</summary>
+        </member>
+        <member name="F:System.Threading.Tasks.TaskEx.s_preCanceledTask">
+            <summary>An already canceled task.</summary>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.WhenAll(System.Threading.Tasks.Task[])">
+            <summary>Creates a Task that will complete only when all of the provided collection of Tasks has completed.</summary>
+            <param name="tasks">The Tasks to monitor for completion.</param>
+            <returns>A Task that represents the completion of all of the provided tasks.</returns>
+            <remarks>
+            If any of the provided Tasks faults, the returned Task will also fault, and its Exception will contain information
+            about all of the faulted tasks.  If no Tasks fault but one or more Tasks is canceled, the returned
+            Task will also be canceled.
+            </remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="tasks"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="tasks"/> argument contains a null reference.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.WhenAll``1(System.Threading.Tasks.Task{``0}[])">
+            <summary>Creates a Task that will complete only when all of the provided collection of Tasks has completed.</summary>
+            <param name="tasks">The Tasks to monitor for completion.</param>
+            <returns>A Task that represents the completion of all of the provided tasks.</returns>
+            <remarks>
+            If any of the provided Tasks faults, the returned Task will also fault, and its Exception will contain information
+            about all of the faulted tasks.  If no Tasks fault but one or more Tasks is canceled, the returned
+            Task will also be canceled.
+            </remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="tasks"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="tasks"/> argument contains a null reference.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.WhenAll(System.Collections.Generic.IEnumerable{System.Threading.Tasks.Task})">
+            <summary>Creates a Task that will complete only when all of the provided collection of Tasks has completed.</summary>
+            <param name="tasks">The Tasks to monitor for completion.</param>
+            <returns>A Task that represents the completion of all of the provided tasks.</returns>
+            <remarks>
+            If any of the provided Tasks faults, the returned Task will also fault, and its Exception will contain information
+            about all of the faulted tasks.  If no Tasks fault but one or more Tasks is canceled, the returned
+            Task will also be canceled.
+            </remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="tasks"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="tasks"/> argument contains a null reference.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.WhenAll``1(System.Collections.Generic.IEnumerable{System.Threading.Tasks.Task{``0}})">
+            <summary>Creates a Task that will complete only when all of the provided collection of Tasks has completed.</summary>
+            <param name="tasks">The Tasks to monitor for completion.</param>
+            <returns>A Task that represents the completion of all of the provided tasks.</returns>
+            <remarks>
+            If any of the provided Tasks faults, the returned Task will also fault, and its Exception will contain information
+            about all of the faulted tasks.  If no Tasks fault but one or more Tasks is canceled, the returned
+            Task will also be canceled.
+            </remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="tasks"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="tasks"/> argument contains a null reference.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.WhenAllCore``1(System.Collections.Generic.IEnumerable{System.Threading.Tasks.Task},System.Action{System.Threading.Tasks.Task[],System.Threading.Tasks.TaskCompletionSource{``0}})">
+            <summary>Creates a Task that will complete only when all of the provided collection of Tasks has completed.</summary>
+            <param name="tasks">The Tasks to monitor for completion.</param>
+            <param name="setResultAction">
+            A callback invoked when all of the tasks complete successfully in the RanToCompletion state.
+            This callback is responsible for storing the results into the TaskCompletionSource.
+            </param>
+            <returns>A Task that represents the completion of all of the provided tasks.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="tasks"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="tasks"/> argument contains a null reference.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.WhenAny(System.Threading.Tasks.Task[])">
+            <summary>Creates a Task that will complete when any of the tasks in the provided collection completes.</summary>
+            <param name="tasks">The Tasks to be monitored.</param>
+            <returns>
+            A Task that represents the completion of any of the provided Tasks.  The completed Task is this Task's result.
+            </returns>
+            <remarks>Any Tasks that fault will need to have their exceptions observed elsewhere.</remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="tasks"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="tasks"/> argument contains a null reference.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.WhenAny(System.Collections.Generic.IEnumerable{System.Threading.Tasks.Task})">
+            <summary>Creates a Task that will complete when any of the tasks in the provided collection completes.</summary>
+            <param name="tasks">The Tasks to be monitored.</param>
+            <returns>
+            A Task that represents the completion of any of the provided Tasks.  The completed Task is this Task's result.
+            </returns>
+            <remarks>Any Tasks that fault will need to have their exceptions observed elsewhere.</remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="tasks"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="tasks"/> argument contains a null reference.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.WhenAny``1(System.Threading.Tasks.Task{``0}[])">
+            <summary>Creates a Task that will complete when any of the tasks in the provided collection completes.</summary>
+            <param name="tasks">The Tasks to be monitored.</param>
+            <returns>
+            A Task that represents the completion of any of the provided Tasks.  The completed Task is this Task's result.
+            </returns>
+            <remarks>Any Tasks that fault will need to have their exceptions observed elsewhere.</remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="tasks"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="tasks"/> argument contains a null reference.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.WhenAny``1(System.Collections.Generic.IEnumerable{System.Threading.Tasks.Task{``0}})">
+            <summary>Creates a Task that will complete when any of the tasks in the provided collection completes.</summary>
+            <param name="tasks">The Tasks to be monitored.</param>
+            <returns>
+            A Task that represents the completion of any of the provided Tasks.  The completed Task is this Task's result.
+            </returns>
+            <remarks>Any Tasks that fault will need to have their exceptions observed elsewhere.</remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="tasks"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="tasks"/> argument contains a null reference.</exception>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.Yield">
+            <summary>Creates an awaitable that asynchronously yields back to the current context when awaited.</summary>
+            <returns>
+            A context that, when awaited, will asynchronously transition back into the current context.
+            If SynchronizationContext.Current is non-null, that is treated as the current context.
+            Otherwise, TaskScheduler.Current is treated as the current context.
+            </returns>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.FromResult``1(``0)">
+            <summary>Creates an already completed <see cref="T:System.Threading.Tasks.Task`1"/> from the specified result.</summary>
+            <param name="result">The result from which to create the completed task.</param>
+            <returns>The completed task.</returns>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.ConfigureAwait(System.Threading.Tasks.Task,System.Boolean)">
+            <summary>Creates and configures an awaitable object for awaiting the specified task.</summary>
+            <param name="task">The task to be awaited.</param>
+            <param name="continueOnCapturedContext">
+            true to automatic marshag back to the original call site's current SynchronizationContext
+            or TaskScheduler; otherwise, false.
+            </param>
+            <returns>The instance to be awaited.</returns>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.ConfigureAwait``1(System.Threading.Tasks.Task{``0},System.Boolean)">
+            <summary>Creates and configures an awaitable object for awaiting the specified task.</summary>
+            <param name="task">The task to be awaited.</param>
+            <param name="continueOnCapturedContext">
+            true to automatic marshag back to the original call site's current SynchronizationContext
+            or TaskScheduler; otherwise, false.
+            </param>
+            <returns>The instance to be awaited.</returns>
+        </member>
+        <member name="M:System.Threading.Tasks.TaskEx.AddPotentiallyUnwrappedExceptions(System.Collections.Generic.List{System.Exception}@,System.Exception)">
+            <summary>Adds the target exception to the list, initializing the list if it's null.</summary>
+            <param name="targetList">The list to which to add the exception and initialize if the list is null.</param>
+            <param name="exception">The exception to add, and unwrap if it's an aggregate.</param>
+        </member>
+        <member name="T:AsyncCtpThreadingExtensions">
+            <summary>Provides extension methods for threading-related types.</summary>
+            <remarks>AsyncCtpThreadingExtensions is a placeholder.</remarks>
+        </member>
+        <member name="M:AsyncCtpThreadingExtensions.GetAwaiter(System.Threading.Tasks.Task)">
+            <summary>Gets an awaiter used to await this <see cref="T:System.Threading.Tasks.Task"/>.</summary>
+            <param name="task">The task to await.</param>
+            <returns>An awaiter instance.</returns>
+            <remarks>This method is intended for compiler user rather than use directly in code.</remarks>
+        </member>
+        <member name="M:AsyncCtpThreadingExtensions.GetAwaiter``1(System.Threading.Tasks.Task{``0})">
+            <summary>Gets an awaiter used to await this <see cref="T:System.Threading.Tasks.Task"/>.</summary>
+            <typeparam name="TResult">Specifies the type of data returned by the task.</typeparam>
+            <param name="task">The task to await.</param>
+            <returns>An awaiter instance.</returns>
+            <remarks>This method is intended for compiler user rather than use directly in code.</remarks>
+        </member>
+        <member name="M:AsyncCtpThreadingExtensions.CancelAfter(System.Threading.CancellationTokenSource,System.Int32)">
+            <summary>Cancels the <see cref="T:System.Threading.CancellationTokenSource"/> after the specified duration.</summary>
+            <param name="source">The CancellationTokenSource.</param>
+            <param name="dueTime">The due time in milliseconds for the source to be canceled.</param>
+        </member>
+        <member name="M:AsyncCtpThreadingExtensions.CancelAfter(System.Threading.CancellationTokenSource,System.TimeSpan)">
+            <summary>Cancels the <see cref="T:System.Threading.CancellationTokenSource"/> after the specified duration.</summary>
+            <param name="source">The CancellationTokenSource.</param>
+            <param name="dueTime">The due time for the source to be canceled.</param>
+        </member>
+        <member name="M:AsyncCtpThreadingExtensions.InvokeAsync(System.Windows.Threading.Dispatcher,System.Action)">
+            <summary>Asynchronously invokes an action on the Dispatcher.</summary>
+            <param name="dispatcher">The Dispatcher.</param>
+            <param name="action">The action to invoke.</param>
+            <returns>A Task that represents the execution of the action.</returns>
+        </member>
+        <member name="M:AsyncCtpThreadingExtensions.InvokeAsync``1(System.Windows.Threading.Dispatcher,System.Func{``0})">
+            <summary>Asynchronously invokes a function on the Dispatcher.</summary>
+            <param name="dispatcher">The Dispatcher.</param>
+            <param name="function">The function to invoke.</param>
+            <returns>A Task that represents the execution of the function.</returns>
+        </member>
+        <member name="T:System.ProgressEventHandler`1">
+            <summary>Event handler for progress reports.</summary>
+            <typeparam name="T">Specifies the type of data for the progress report.</typeparam>
+            <param name="sender">The sender of the report.</param>
+            <param name="value">The reported value.</param>
+        </member>
+        <member name="T:System.Progress`1">
+            <summary>
+            Provides an IProgress{T} that invokes callbacks for each reported progress value.
+            </summary>
+            <typeparam name="T">Specifies the type of the progress report value.</typeparam>
+            <remarks>
+            Any handler provided to the constructor or event handlers registered with
+            the <see cref="E:System.Progress`1.ProgressChanged"/> event are invoked through a 
+            <see cref="T:System.Threading.SynchronizationContext"/> instance captured
+            when the instance is constructed.  If there is no current SynchronizationContext
+            at the time of construction, the callbacks will be invoked on the ThreadPool.
+            </remarks>
+        </member>
+        <member name="F:System.Progress`1.m_synchronizationContext">
+            <summary>The synchronization context captured upon construction.  This will never be null.</summary>
+        </member>
+        <member name="F:System.Progress`1.m_handler">
+            <summary>The handler specified to the constructor.  This may be null.</summary>
+        </member>
+        <member name="F:System.Progress`1.m_invokeHandlers">
+            <summary>A cached delegate used to post invocation to the synchronization context.</summary>
+        </member>
+        <member name="M:System.Progress`1.#ctor">
+            <summary>Initializes the <see cref="T:System.Progress`1"/>.</summary>
+        </member>
+        <member name="M:System.Progress`1.#ctor(System.Action{`0})">
+            <summary>Initializes the <see cref="T:System.Progress`1"/> with the specified callback.</summary>
+            <param name="handler">
+            A handler to invoke for each reported progress value.  This handler will be invoked
+            in addition to any delegates registered with the <see cref="E:System.Progress`1.ProgressChanged"/> event.
+            </param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="handler"/> is null (Nothing in Visual Basic).</exception>
+        </member>
+        <member name="M:System.Progress`1.OnReport(`0)">
+            <summary>Reports a progress change.</summary>
+            <param name="value">The value of the updated progress.</param>
+        </member>
+        <member name="M:System.Progress`1.System#IProgress{T}#Report(`0)">
+            <summary>Reports a progress change.</summary>
+            <param name="value">The value of the updated progress.</param>
+        </member>
+        <member name="M:System.Progress`1.InvokeHandlers(System.Object)">
+            <summary>Invokes the action and event callbacks.</summary>
+            <param name="state">The progress value.</param>
+        </member>
+        <member name="E:System.Progress`1.ProgressChanged">
+            <summary>Raised for each reported progress value.</summary>
+            <remarks>
+            Handlers registered with this event will be invoked on the 
+            <see cref="T:System.Threading.SynchronizationContext"/> captured when the instance was constructed.
+            </remarks>
+        </member>
+        <member name="T:System.ProgressStatics">
+            <summary>Holds static values for <see cref="T:System.Progress`1"/>.</summary>
+            <remarks>This avoids one static instance per type T.</remarks>
+        </member>
+        <member name="F:System.ProgressStatics.DefaultContext">
+            <summary>A default synchronization context that targets the ThreadPool.</summary>
+        </member>
+        <member name="T:System.Threading.Tasks.SR">
+            <summary>String resources for the assembly.</summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.YieldAwaitable">
+            <summary>Provides an awaitable context for switching into a target environment.</summary>
+            <remarks>This type is intended for compiler use only.</remarks>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.YieldAwaitable.m_target">
+            <summary>The target environment to which to switch.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.YieldAwaitable.#ctor(System.Object)">
+            <summary>Initializes the awaitable context.</summary>
+            <param name="target">The target environment into which to switch.</param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.YieldAwaitable.GetAwaiter">
+            <summary>Gets an awaiter for this <see cref="T:System.Runtime.CompilerServices.YieldAwaitable"/>.</summary>
+            <returns>An awaiter for this awaitable.</returns>
+            <remarks>This method is intended for compiler user rather than use directly in code.</remarks>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.YieldAwaitable.YieldAwaiter">
+            <summary>Provides an awaiter that switches into a target environment.</summary>
+            <remarks>This type is intended for compiler use only.</remarks>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.YieldAwaitable.YieldAwaiter.m_target">
+            <summary>The target environment to which to switch.</summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.YieldAwaitable.YieldAwaiter.#ctor(System.Object)">
+            <summary>Initializes the awaiter.</summary>
+            <param name="target">The target environment into which to switch.</param>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.YieldAwaitable.YieldAwaiter.OnCompleted(System.Action)">
+            <summary>Posts the <paramref name="continuation"/> back to the current context.</summary>
+            <param name="continuation">The action to invoke asynchronously.</param>
+            <exception cref="T:System.InvalidOperationException">The awaiter was not properly initialized.</exception>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.YieldAwaitable.YieldAwaiter.GetResult">
+            <summary>Ends the await operation.</summary>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.YieldAwaitable.YieldAwaiter.IsCompleted">
+            <summary>Gets whether a yield is not required.</summary>
+            <remarks>This property is intended for compiler user rather than use directly in code.</remarks>
+        </member>
+    </members>
+</doc>

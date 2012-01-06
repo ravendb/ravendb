@@ -176,7 +176,7 @@ namespace Raven.Database.Impl
 						       	{
 									Etag = Guid.Empty,
 									LastModified = DateTime.MinValue,
-						       		NonAuthoritiveInformation = false,
+						       		NonAuthoritativeInformation = false,
 									Metadata = new RavenJObject
 						       		           	{
 						       		           		{
@@ -222,7 +222,7 @@ namespace Raven.Database.Impl
 			{
 				items.Add(Load(itemId));
 			}
-			return new DynamicJsonObject.DynamicList(items.Select(x => (object) x).ToArray());
+			return new DynamicList(items.Select(x => (object) x).ToArray());
 		}
 	}
 }

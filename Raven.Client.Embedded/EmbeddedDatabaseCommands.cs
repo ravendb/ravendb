@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
 using System.Net;
 using Newtonsoft.Json.Linq;
@@ -111,11 +112,20 @@ namespace Raven.Client.Embedded
 
 		private JsonDocument EnsureLocalDate(JsonDocument jsonDocument)
 		{
-	  if(jsonDocument == null)
-		return null;
+			if(jsonDocument == null)
+				return null;
 			if (jsonDocument.LastModified != null)
 				jsonDocument.LastModified = jsonDocument.LastModified.Value.ToLocalTime();
 			return jsonDocument;
+		}
+
+		private JsonDocumentMetadata EnsureLocalDate(JsonDocumentMetadata jsonDocumentMetadata)
+		{
+			if (jsonDocumentMetadata == null)
+				return null;
+			if (jsonDocumentMetadata.LastModified != null)
+				jsonDocumentMetadata.LastModified = jsonDocumentMetadata.LastModified.Value.ToLocalTime();
+			return jsonDocumentMetadata;
 		}
 
 		/// <summary>
@@ -150,7 +160,7 @@ namespace Raven.Client.Embedded
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void PutAttachment(string key, Guid? etag, byte[] data, RavenJObject metadata)
+		public void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			// we filter out content length, because getting it wrong will cause errors 
@@ -169,7 +179,18 @@ namespace Raven.Client.Embedded
 		public Attachment GetAttachment(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.GetStatic(key);
+			Attachment attachment = database.GetStatic(key);
+			if (attachment == null)
+				return null;
+			Func<Stream> data = attachment.Data;
+			attachment.Data = () =>
+			{
+				var memoryStream = new MemoryStream();
+				database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
+				memoryStream.Position = 0;
+				return memoryStream;
+			};
+			return attachment;
 		}
 
 		/// <summary>
@@ -181,6 +202,15 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.DeleteStatic(key, etag);
+		}
+
+		/// <summary>
+		/// Get tenant database names (Server/Client mode only)
+		/// </summary>
+		/// <returns></returns>
+		public string[] GetDatabaseNames()
+		{
+			throw new InvalidOperationException("Embedded mode does not support multi-tenancy");
 		}
 
 		/// <summary>
@@ -279,7 +309,7 @@ namespace Raven.Client.Embedded
 			query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
-			if (index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase))
+			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase))
 			{
 				string entityName = null;
 				if (index.StartsWith("dynamic/"))
@@ -390,8 +420,12 @@ namespace Raven.Client.Embedded
 		public void StoreRecoveryInformation(Guid resourceManagerId,Guid txId, byte[] recoveryInformation)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var jObject = new RavenJObject {{"Resource-Manager-Id", resourceManagerId.ToString()}};
-			database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, jObject);
+			var jObject = new RavenJObject
+			{
+				{"Resource-Manager-Id", resourceManagerId.ToString()},
+				{Constants.NotForReplication, true}
+			};
+			database.PutStatic("transactions/recoveryInformation/" + txId, null, new MemoryStream(recoveryInformation), jObject);
 		}
 
 		/// <summary>
@@ -472,6 +506,14 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException("Multiple databases are not supported in the embedded API currently");
 		}
 
+		/// <summary>
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+		/// with the default database
+		/// </summary>
+		public IDatabaseCommands ForDefaultDatabase()
+		{
+			return this;
+		}
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
@@ -555,6 +597,28 @@ namespace Raven.Client.Embedded
 		{
 			// nothing to do here, embedded doesn't support caching
 			return new DisposableAction(() => { });
+		}
+
+		/// <summary>
+		/// Retrieve the statistics for the database
+		/// </summary>
+		public DatabaseStatistics GetStatistics()
+		{
+			return database.Statistics;
+		}
+
+		/// <summary>
+		/// Retrieves the document metadata for the specified document key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns>
+		/// The document metadata for the specifed document, or null if the document does not exist
+		/// </returns>
+		public JsonDocumentMetadata Head(string key)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			var jsonDocumentMetadata = database.GetDocumentMetadata(key, RavenTransactionAccessor.GetTransactionInformation());
+			return EnsureLocalDate(jsonDocumentMetadata);
 		}
 
 		/// <summary>

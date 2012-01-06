@@ -19,6 +19,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		public LoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string id)
 		{
+			if (id == null) throw new ArgumentNullException("id","The document id cannot be null");
 			this.sessionOperations = sessionOperations;
 			this.disableAllCaching = disableAllCaching;
 			this.id = id;
@@ -44,10 +45,10 @@ namespace Raven.Client.Document.SessionOperations
 			if (documentFound == null)
 				return false;
 			return
-				documentFound.NonAuthoritiveInformation.HasValue &&
-				documentFound.NonAuthoritiveInformation.Value &&
-				sessionOperations.AllowNonAuthoritiveInformation == false &&
-				sp.Elapsed < sessionOperations.NonAuthoritiveInformationTimeout
+				documentFound.NonAuthoritativeInformation.HasValue &&
+				documentFound.NonAuthoritativeInformation.Value &&
+				sessionOperations.AllowNonAuthoritativeInformation == false &&
+				sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout
 				;
 		}
 

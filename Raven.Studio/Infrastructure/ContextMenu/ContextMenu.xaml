@@ -1,0 +1,63 @@
+﻿<!--
+// (c) Copyright Microsoft Corporation.
+// This source is subject to the Microsoft Public License (Ms-PL).
+// Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
+// All other rights reserved.
+-->
+
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:System.Windows.Controls">
+
+    <Style TargetType="controls:ContextMenu">
+        <Setter Property="Background" Value="#FFF5F5F5"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="#FF959595"/>
+        <Setter Property="Padding" Value="2"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:ContextMenu">
+                    <Border
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="2">
+                        <Border.Effect>
+                            <DropShadowEffect
+                                Color="LightGray"
+                                ShadowDepth="3"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Rectangle
+                                RadiusX="2"
+                                RadiusY="2"
+                                Fill="#FFF1F1F1"
+                                Width="28"
+                                Margin="2"
+                                HorizontalAlignment="Left"/>
+                            <Rectangle
+                                Fill="#FFE2E3E3"
+                                Width="1"
+                                Margin="30,2,0,2"
+                                HorizontalAlignment="Left"/>
+                            <Rectangle
+                                Fill="#FFFFFFFF"
+                                Width="1"
+                                Margin="31,2,0,2"
+                                HorizontalAlignment="Left"/>
+                            <!--<ScrollViewer
+                                Margin="1,0,1,0"
+                                Grid.ColumnSpan="2"
+                                BorderThickness="0"
+                                VerticalScrollBarVisibility="Auto">-->
+                                <ItemsPresenter
+                                    Margin="{TemplateBinding Padding}"/>
+                            <!--</ScrollViewer>-->
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

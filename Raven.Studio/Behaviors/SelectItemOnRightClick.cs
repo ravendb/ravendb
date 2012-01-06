@@ -1,4 +1,10 @@
-﻿using System.Linq;
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SelectItemOnRightClick.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+
+using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interactivity;
@@ -10,29 +16,28 @@ namespace Raven.Studio.Behaviors
 	{
 		protected override void OnAttached()
 		{
-			AssociatedObject.MouseRightButtonDown += AssociatedObject_MouseRightButtonDown;
+			AssociatedObject.MouseRightButtonDown += AssociatedObjectOnMouseRightButtonDown;
 			base.OnAttached();
 		}
 
 		protected override void OnDetaching()
 		{
-			AssociatedObject.MouseRightButtonDown -= AssociatedObject_MouseRightButtonDown;
+			AssociatedObject.MouseRightButtonDown -= AssociatedObjectOnMouseRightButtonDown;
 			base.OnDetaching();
 		}
 
-		private void AssociatedObject_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+		void AssociatedObjectOnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
 		{
-			var item = VisualTreeHelper.FindElementsInHostCoordinates(e.GetPosition(null), AssociatedObject)
+			var item = VisualTreeHelper.FindElementsInHostCoordinates(e.GetPosition(null),AssociatedObject)
 				.OfType<ListBoxItem>()
 				.FirstOrDefault();
 
-			if (item == null)
+			if (item == null) 
 				return;
 
-			if (AssociatedObject.SelectedItems.Contains(item.DataContext))
-				return;
+			if (AssociatedObject.SelectionMode != SelectionMode.Single && AssociatedObject.SelectedItems.Contains(item.DataContext) == false)
+				AssociatedObject.SelectedItems.Clear();
 
-			AssociatedObject.SelectedItems.Clear();
 			item.IsSelected = true;
 		}
 	}

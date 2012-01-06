@@ -75,11 +75,12 @@ namespace Raven.Tests.Bugs
 					Catalogs = { new TypeCatalog(typeof(RecordOperationHeaders)) }
 				},
 				DataDirectory = path,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				Port = 8079
 			}))
 			using (var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 
 			}.Initialize())
 			{
@@ -105,11 +106,12 @@ namespace Raven.Tests.Bugs
 					Catalogs = { new TypeCatalog(typeof(RecordOperationHeaders)) }
 				},
 				DataDirectory = path,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				Port = 8079
 			}))
 			using (var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 
 			}.Initialize())
 			{

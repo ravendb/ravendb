@@ -58,8 +58,7 @@ namespace Raven.ProjectRewriter
 					element.Remove();
 				if (element.Attribute("Include").Value == "Newtonsoft.Json")
 				{
-					element.Attribute("Include").Value = "Newtonsoft.Json.Net35";
-					element.Element(xmlns + "HintPath").Value = @"..\SharedLibs\Newtonsoft.Json.Net35.dll";
+					element.Element(xmlns + "HintPath").Value = @"..\SharedLibs\NewtonSoft.Json\Net35\Newtonsoft.Json.dll";
 				}
 			}
 

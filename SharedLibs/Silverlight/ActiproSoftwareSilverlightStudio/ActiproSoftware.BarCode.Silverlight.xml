@@ -1,0 +1,826 @@
+<?xml version="1.0"?><doc><assembly><name>ActiproSoftware.BarCode.Silverlight</name></assembly><members><member name="T:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology"><summary>
+            Provides the base class for a bar code symbology.
+            </summary><remarks>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Default.html">Bar Code Symbology</a>-related series of documentation topics. 
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.MeasureDesiredSize(System.Windows.Size)"><summary>
+            Measures the desired size of the symbology, based on the specified available size.
+            </summary><param name="availableSize">
+            The available size that this element can give to child elements. 
+            Infinity can be specified as a value to indicate that the element will size to whatever content is available.
+            </param><returns>The size that this element determines it needs during layout, based on its calculations of child element sizes.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.MeasureOverride(System.Windows.Size)"><summary>
+            When overridden in a derived class, measures the size in layout required for child elements and 
+            determines a size for the <see cref="T:System.Windows.FrameworkElement" />-derived class.
+            </summary><param name="availableSize">
+            The available size that this element can give to child elements. 
+            Infinity can be specified as a value to indicate that the element will size to whatever content is available.
+            </param><returns>The size that this element determines it needs during layout, based on its calculations of child element sizes.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.OnRender(ActiproSoftware.Compatibility.DrawingContextWrapper)"><summary>
+            When overridden in a derived class, participates in rendering operations that are directed by the layout system.
+            </summary><param name="wrapper">The drawing instructions for a specific element.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Render(ActiproSoftware.Compatibility.DrawingContextWrapper,System.Windows.Point,System.Windows.Size)"><summary>
+            Renders the symbology to the specified <see cref="T:ActiproSoftware.Compatibility.DrawingContextWrapper" />.
+            </summary><param name="wrapper">The <see cref="T:ActiproSoftware.Compatibility.DrawingContextWrapper" /> upon which to render the symbology.</param><param name="location">The location at which to draw the bar code.</param><param name="size">The size of the bar code to draw.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.ToBitmap(System.Double,System.Double)"><summary>
+            Creates a <see cref="T:System.Windows.Media.Imaging.BitmapSource" /> based on the contents of the symbology.
+            </summary><param name="dpiX">The x DPI.</param><param name="dpiY">The y DPI.</param><returns>The <see cref="T:System.Windows.Media.Imaging.BitmapSource" /> that was created.</returns><remarks>
+            It is recommended that this symbology not have a visual parent when calling this method.
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.#ctor"><summary>
+            Initializes a new instance of the <c>BarCodeSymbology</c> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.DisplayName"><summary>
+            Gets the display name of the symbology.
+            </summary><value>The display name of the symbology.</value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value"><summary>
+            Gets or sets the value to encode in the bar code.
+            </summary><value>The value to encode in the bar code.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.ValueProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology"><summary>
+            Provides the base class for a one-dimensional bar code symbology.
+            </summary><remarks>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Default.html">Bar Code Symbology</a>-related series of documentation topics. 
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.MeasureOverride(System.Windows.Size)"><summary>
+            When overridden in a derived class, measures the size in layout required for child elements and 
+            determines a size for the <see cref="T:System.Windows.FrameworkElement" />-derived class.
+            </summary><param name="availableSize">
+            The available size that this element can give to child elements. 
+            Infinity can be specified as a value to indicate that the element will size to whatever content is available.
+            </param><returns>The size that this element determines it needs during layout, based on its calculations of child element sizes.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.Render(ActiproSoftware.Compatibility.DrawingContextWrapper,System.Windows.Point,System.Windows.Size)"><summary>
+            Renders the symbology to the specified <see cref="T:ActiproSoftware.Compatibility.DrawingContextWrapper" />.
+            </summary><param name="wrapper">The <see cref="T:ActiproSoftware.Compatibility.DrawingContextWrapper" /> upon which to render the symbology.</param><param name="location">The location at which to draw the bar code.</param><param name="size">The size of the bar code to draw.</param></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarData"><summary>
+            Gets or sets the string that specifies the data used to draw the bar code.
+            </summary><value>The string that specifies the data used to draw the bar code.</value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarHeight"><summary>
+            Gets or sets the desired height of the bars.
+            </summary><value>
+            The desired height of the bars.
+            The default value is <c>35</c>.
+            </value><remarks>
+            When calculating the desired height of the bar code, the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarHeight" /> property will be used unless
+            its height is less than the percentage of the desired width specified by <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.MinBarHeightWidthRatio" />.
+            In that case the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.MinBarHeightWidthRatio" /> percentage of the desired width is used for height.
+            This ensures that the bar code is always sized to be read properly.
+            </remarks></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarWidthRatio"><summary>
+            Gets or sets the width ratio of wide lines to narrow lines.
+            </summary><value>
+            The width ratio of wide lines to narrow lines.
+            The default value is <c>2</c>, meaning that wide lines are twice as thick as narrow lines.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.DisplayValue"><summary>
+            Gets or sets the value that is displayed if <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueDisplayStyle" /> is not <c>None</c>.
+            </summary><value>The value that is displayed if <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueDisplayStyle" /> is not <c>None</c>.</value><remarks>
+            This property must be set by each symbology implementation.
+            </remarks></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.Instructions"><summary>
+            Gets or sets the dictionary of <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarData" /> characters and their related instructions.
+            </summary><value>The dictionary of <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarData" /> characters and their related instructions.</value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.MinBarHeightWidthRatio"><summary>
+            Gets or sets the minimum ratio that the height of the bar code must be in relation to its width.
+            </summary><value>
+            The minimum ratio that the height of the bar code must be in relation to its width.
+            The default value is <c>0.15</c> (<c>15%</c>).
+            </value><remarks>
+            Many symbologies indicate that the bar code's height must be at least x% of its width.
+            For instance, <c>Code 39</c> specifies that the height must be at least 15% of the width.
+            <para>
+            When calculating the desired height of the bar code, the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarHeight" /> property will be used unless
+            its height is less than the percentage of the desired width specified by <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.MinBarHeightWidthRatio" />.
+            In that case the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.MinBarHeightWidthRatio" /> percentage of the desired width is used for height.
+            This ensures that the bar code is always sized to be read properly.
+            </para></remarks></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.QuietZoneThickness"><summary>
+            Gets or sets the <see cref="T:System.Windows.Thickness" /> of the quiet zone.
+            </summary><value>
+            The <see cref="T:System.Windows.Thickness" /> of the quiet zone.
+            The default value is <c>10,0,10,0</c>.
+            </value><remarks>
+            The quiet zone is the margin whitespace area that appears around the bar code.
+            </remarks></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueDisplayStyle"><summary>
+            Gets or sets a <see cref="T:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeValueDisplayStyle" /> that indicates how the value should rendered.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeValueDisplayStyle" /> that indicates how the value should rendered.
+            The default value is <c>Centered</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueIntrusionOffset"><summary>
+            Gets or sets the distance that the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> text intrudes into the bar code
+            when <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueDisplayStyle" /> is not <c>None</c>.
+            </summary><value>
+            The distance that the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> text intrudes into the bar code
+            when <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueDisplayStyle" /> is not <c>None</c>.
+            The default value is <c>0</c>.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarDataProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarData" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarData" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarHeightProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarHeight" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarHeight" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarWidthRatioProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarWidthRatio" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.BarWidthRatio" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.DisplayValueProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.DisplayValue" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.DisplayValue" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.InstructionsProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.Instructions" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.Instructions" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.MinBarHeightWidthRatioProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.MinBarHeightWidthRatio" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.MinBarHeightWidthRatio" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.QuietZoneThicknessProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.QuietZoneThickness" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.QuietZoneThickness" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueDisplayStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueDisplayStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueDisplayStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueIntrusionOffsetProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueIntrusionOffset" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.ValueIntrusionOffset" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.CodabarSymbology"><summary>
+            Represents a bar code symbology implementation for <c>Codabar</c>.
+            <para>
+            This symbology is also known as Ames Code, ANSI/AIM Codabar, Code 2 of 7, Monarch, NW-7, Rationalized Codabar, and USD-4.
+            </para></summary><remarks>
+            Codabar is a linear symbology, developed in 1972 by Pitney Bowes, Inc. 
+            It is most commonly used by libraries, blood banks, and on FedEx airbills.
+            <para>
+            This symbology can encode 16 characters (<c>0</c> through <c>9</c>, and <c>-$:/.+</c>), along with 4 start/stop characters.
+            </para><para>
+            Each encoded value must start and stop with <c>A</c>, <c>B</c>, <c>C</c>, or <c>D</c>.
+            The <see cref="P:ActiproSoftware.Windows.Controls.BarCode.CodabarSymbology.AreStartStopCharactersVisible" /> property determines whether these start/stop characters are included 
+            in the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.DisplayValue" />.
+            </para><para>
+            This symbology is self-checking, so no checksum or check digit is required.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Codabar.html">Codabar</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.CodabarSymbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.CodabarSymbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.CodabarSymbology.#ctor"><summary>
+            Initializes an instance of the <c>CodabarSymbology</c> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.CodabarSymbology.AreStartStopCharactersVisible"><summary>
+            Gets or sets whether the start/stop characters are visible in the displayed value.
+            </summary><value><c>true</c> if the start/stop characters are visible in the displayed value; otherwise, <c>false</c>.
+            The default value is <c>false</c>.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.CodabarSymbology.AreStartStopCharactersVisibleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.CodabarSymbology.AreStartStopCharactersVisible" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.CodabarSymbology.AreStartStopCharactersVisible" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.Automation.Peers.BarCodeAutomationPeer"><summary>
+            Exposes the <see cref="T:ActiproSoftware.Windows.Controls.BarCode.BarCode" /> control to UI Automation.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Automation.Peers.BarCodeAutomationPeer.GetAutomationControlTypeCore"><summary>
+            Gets the <see cref="T:System.Windows.Automation.Peers.AutomationControlType" /> for the element that is associated with the UI Automation peer.
+            </summary><returns>A <see cref="T:System.Windows.Automation.Peers.AutomationControlType" /> indicating the control type.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Automation.Peers.BarCodeAutomationPeer.GetClassNameCore"><summary>
+            Gets a human readable name that, in addition to <see cref="T:System.Windows.Automation.Peers.AutomationControlType" />, differentiates the control represented by this <see cref="T:System.Windows.Automation.Peers.AutomationPeer" />. 
+            </summary><returns>The string that contains the name.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Automation.Peers.BarCodeAutomationPeer.GetNameCore"><summary>
+            Gets the text string describing the element that is associated with this automation peer. 
+            </summary><returns>The string that contains the name.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Automation.Peers.BarCodeAutomationPeer.#ctor(System.Windows.FrameworkElement)"><summary>
+            Initializes an instance of the <c>BarCodeAutomationPeer</c> class.
+            </summary><param name="owner">The owner of the automation peer.</param></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.UpcAValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>UPC-A</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.UpcAValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology"><summary>
+            Represents a bar code symbology implementation for <c>Code 39</c>.
+            <para>
+            This symbology is also known as Alpha39, Code 39 mod 43, Code 3 of 9, Code 3/9, USD-3, and USS Code 39.
+            </para></summary><remarks>
+            Code 39 is a linear symbology, and is one of the first alphanumeric bar codes.
+            Each character encoded is made up of 5 bars and 4 spaces for a total of 9 elements.  3 out of the 9 element are always wide. 
+            Although it is not as dense of a symbology such as Code 128, it is one of the most widely supported symbologies by devices.
+            <para>
+            This symbology can encode numbers, uppercase letters, and <c>-$% ./+</c> characters.
+            </para><para>
+            Each encoded value must start and stop with <c>*</c>, which is automatically inserted.
+            The <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.AreStartStopCharactersVisible" /> property determines whether these start/stop characters are included 
+            in the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.DisplayValue" />.
+            </para><para>
+            This symbology is self-checking, so no checksum or check digit is required.
+            However if the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.IsChecksumEnabled" /> property is <c>true</c>, the symbology's implementation auto-calculates and inserts
+            a check digit.  This is referred to as Code 39 mod 43.
+            </para><para>
+            An extended implementation of Code 39 is available in <see cref="T:ActiproSoftware.Windows.Controls.BarCode.Code39ExtendedSymbology" />.
+            That implementation allows for all lower 128 ASCII characters to be encoded based on the core Code 39 concepts.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Code39.html">Code 39</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.PreprocessCharacter(System.Char)"><summary>
+            Pre-processes the specified character and expands it if necessary.
+            </summary><param name="ch">The character to examine.</param><returns>The pre-processing result.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.#ctor"><summary>
+            Initializes an instance of the <c>Code39Symbology</c> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.AreStartStopCharactersVisible"><summary>
+            Gets or sets whether the start/stop characters (*) are visible in the displayed value.
+            </summary><value><c>true</c> if the start/stop characters (*) are visible in the displayed value; otherwise, <c>false</c>.
+            The default value is <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.IsChecksumEnabled"><summary>
+            Gets or sets whether the optional checksum should be added.
+            </summary><value><c>true</c> if the optional checksum should be added; otherwise, <c>false</c>.
+            The default value is <c>false</c>.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.AreStartStopCharactersVisibleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.AreStartStopCharactersVisible" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.AreStartStopCharactersVisible" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.IsChecksumEnabledProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.IsChecksumEnabled" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.IsChecksumEnabled" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Code93ValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>Code 93</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Code93ValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.QrEncodingMode"><summary>
+            Specifies the various encoding modes supported by <see cref="T:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrEncodingMode.Alphanumeric"><summary>
+            Indicates that the data to be encoded will contain letters, numbers, and a limited set of symbols.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrEncodingMode.Binary"><summary>
+            Indicates that the data to be encoded will be 8-bit bytes.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrEncodingMode.Kanji"><summary>
+            Indicates that the data to be encoded will contain 8-bit bytes which represent Kanji characters.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrEncodingMode.Numeric"><summary>
+            Indicates that the data to be encoded will contain only decimal numbers (0 through 9).
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.UpcESymbology"><summary>
+            Represents a bar code symbology implementation for <c>UPC-E</c>.
+            </summary><remarks>
+            UPC-E is a linear symbology, used on smaller retail packages where UPC-A bar codes don't fit.
+            <para>
+            This symbology can encode 8 numeric characters, divided into three parts: system code, product code, and check digit.
+            </para><para>
+            This symbology uses a check digit, but it is not currently calculated automatically.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/UpcE.html">UPC-E</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.UpcESymbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.UpcESymbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.UpcESymbology.#ctor"><summary>
+            Initializes an instance of the <c>UpcESymbology</c> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology"><summary>
+            Provides the base class for a two dimensional grid bar code symbology.
+            </summary><remarks>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Default.html">Bar Code Symbology</a>-related series of documentation topics. 
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.MeasureOverride(System.Windows.Size)"><summary>
+            When overridden in a derived class, measures the size in layout required for child elements and
+            determines a size for the <see cref="T:System.Windows.FrameworkElement" />-derived class.
+            </summary><param name="availableSize">The available size that this element can give to child elements.
+            Infinity can be specified as a value to indicate that the element will size to whatever content is available.</param><returns>
+            The size that this element determines it needs during layout, based on its calculations of child element sizes.
+            </returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.Render(ActiproSoftware.Compatibility.DrawingContextWrapper,System.Windows.Point,System.Windows.Size)"><summary>
+            Renders the symbology to the specified <see cref="T:ActiproSoftware.Compatibility.DrawingContextWrapper" />.
+            </summary><param name="wrapper">The <see cref="T:ActiproSoftware.Compatibility.DrawingContextWrapper" /> upon which to render the symbology.</param><param name="location">The location at which to draw the bar code.</param><param name="size">The size of the bar code to draw.</param></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.CellSize"><summary>
+            Gets or sets the number of pixels wide and high that each cell of the symbol grid should be when rendered.
+            This is a dependency property.
+            </summary><value>The size of the cell.</value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.GridData"><summary>
+            Gets or sets an two dimensional array of boolean values that specifies how the symbol is to be rendered.
+            </summary><value>The grid data.</value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.QuietZoneThickness"><summary>
+            Gets or sets the thickness of the margin on each side of the rendered symbol.
+            This is a dependency property.
+            </summary><value>The quiet zone.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.CellSizeProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.CellSize" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.CellSize" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.GridDataProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.GridData" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.GridData" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.QuietZoneThicknessProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.QuietZoneThickness" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Grid2DBarCodeSymbology.QuietZoneThickness" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology"><summary>
+            Represents a bar code symbology implementation for <c>QrCode</c>.
+            </summary><remarks>
+            QR Code is a two dimensional grid symbology, developed in 1994 by Denso. 
+            It was initially intended for use in production control of automotive parts, but it has become widespread in 
+            other fields.
+            <para>
+            This symbology can encode a maximum of 7089 numerical characters, 4296 alphanumeric characters, 2953 binary
+            characters, or 1817 Kanji characters.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/QrCode.html">QrCode</a> documentation topic. 
+            </para></remarks><summary>
+            Data tables that are used in the creation of a symbol.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>
+            A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.
+            </returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology" /> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.AllowLowercase"><summary>
+            Gets or sets a value indicating whether lowercase characters are allowed.
+            This is a dependency property.
+            </summary><value><c>true</c> if lowercase characters are allowed; otherwise, <c>false</c> will force all lowercase characters to be uppercase.
+            The default value is <c>false</c>.
+            </value><remarks>
+            The QR code specification does not allow lowercase characters when using the alphanumeric encoding mode. Therefore, when allowing lowercase characters the binary encoding mode must be used.
+            </remarks></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.EncodingMode"><summary>
+            Gets or sets the mode used to encode the specified value.
+            This is a dependency property.
+            </summary><value>
+            The QR encoding mode.
+            The default value is <see langword="null" />, which indicates the encoding mode will be auto-selected based on the specified value.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.ErrorCorrectionLevel"><summary>
+            Gets or sets the percentage of data loss that can occur on a symbol before it becomes unreadable.
+            As the error correction level increases, the amount of data that can be encoded decreases.
+            This is a dependency property.
+            </summary><value>The error correction level.</value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.MaskIndex"><summary>
+            Gets or sets the QR mask applied to the code.
+            This is a dependency property.
+            </summary><value>
+            The QR mask applied to the code.
+            The default value is <see langword="null" />, which indicates the mask will be auto-selected based on the specified value.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.Version"><summary>
+            Gets or sets the version of the QR symbol. This value determines the number of modules that compose the symbol,
+            thus contributing to the maximum amount of data that can be encoded.
+            This is a dependency property.
+            </summary><value>
+            The version of the QR symbol.
+            The default value is <see langword="null" />, which indicates the version will be auto-selected based on the specified value.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.AllowLowercaseProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.AllowLowercase" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.AllowLowercase" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.EncodingModeProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.EncodingMode" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.EncodingMode" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.ErrorCorrectionLevelProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.ErrorCorrectionLevel" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.ErrorCorrectionLevel" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.MaskIndexProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.MaskIndex" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.MaskIndex" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.VersionProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.Version" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology.Version" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.BarCode"><summary>
+            Represents a control that can display a bar code.
+            </summary><remarks>
+            For detailed documentation on this control's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Default.html">Bar Code</a>-related series of documentation topics. 
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.BarCode.OnCreateAutomationPeer"><summary>
+            Creates and returns an <see cref="T:System.Windows.Automation.Peers.AutomationPeer" /> object for this type. 
+            </summary><returns>The <see cref="T:System.Windows.Automation.Peers.AutomationPeer" /> that was created.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.BarCode.#ctor"><summary>
+            Initializes a new instance of the <c>BarCode</c> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.Caption"><summary>
+            Gets or sets the caption to display above the bar code.
+            </summary><value>The caption to display above the bar code.</value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.CornerRadius"><summary>
+            Gets or sets the corner radius of the border.
+            </summary><value>The corner radius of the border.</value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.HasCaption"><summary>
+            Gets a value indicating whether <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.Caption" /> has a non-null/empty value.
+            This is a dependency property.
+            </summary><value><c>true</c> if <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.Caption" /> has a non-null/empty value; otherwise, <c>false</c>.
+            The default value is <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.HasSymbology"><summary>
+            Gets a value indicating whether <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.Symbology" /> has a non-null value.
+            This is a dependency property.
+            </summary><value><c>true</c> if <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.Symbology" /> has a non-null value; otherwise, <c>false</c>.
+            The default value is <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.Symbology"><summary>
+            Gets or sets the <see cref="T:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology" /> used to render the core bar code.
+            </summary><value>The <see cref="T:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology" /> used to render the core bar code.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.BarCode.CaptionProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.Caption" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.Caption" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.BarCode.CornerRadiusProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.CornerRadius" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.CornerRadius" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.BarCode.HasCaptionProperty"><summary>
+            Identifies the read-only <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.HasCaption" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.HasCaption" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.BarCode.HasSymbologyProperty"><summary>
+            Identifies the read-only <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.HasSymbology" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.HasSymbology" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.BarCode.SymbologyProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.Symbology" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCode.Symbology" /> dependency property.</value></member><member name="T:ActiproSoftware.Products.BarCode.AssemblyInfo"><summary>
+            Provides a class for retrieving information about the <c>ActiproSoftware.BarCode</c> assembly.
+            </summary></member><member name="P:ActiproSoftware.Products.BarCode.AssemblyInfo.Instance"><summary>
+            Gets the instance of the <see cref="T:ActiproSoftware.Products.AssemblyInfo" /> class for this assembly.
+            </summary><value>The instance of the <see cref="T:ActiproSoftware.Products.AssemblyInfo" /> class for this assembly.</value></member><member name="P:ActiproSoftware.Products.BarCode.AssemblyInfo.LicenseType"><summary>
+            Gets the type of license that is available for the assembly.
+            </summary><value>A <see cref="T:ActiproSoftware.Products.AssemblyLicenseType" /> specifying the type of license that is available for the assembly.</value></member><member name="P:ActiproSoftware.Products.BarCode.AssemblyInfo.Platform"><summary>
+            Gets the target platform for the assembly.
+            </summary><value>A <see cref="T:ActiproSoftware.Products.AssemblyPlatform" /> specifying the target platform for the assembly.</value></member><member name="P:ActiproSoftware.Products.BarCode.AssemblyInfo.ProductCode"><summary>
+            Gets the product code of the assembly.
+            </summary><value>A three-letter product code of the assembly.</value></member><member name="P:ActiproSoftware.Products.BarCode.AssemblyInfo.ProductId"><summary>
+            Gets the product ID of the assembly.
+            </summary><value>The product ID of the assembly.</value></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeValueDisplayStyle"><summary>
+            Specifies the display style for the value of a <see cref="T:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeValueDisplayStyle.None"><summary>
+            The value is not displayed.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeValueDisplayStyle.Centered"><summary>
+            The value is centered horizontally.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeValueDisplayStyle.LeftAligned"><summary>
+            The value is left-aligned.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeValueDisplayStyle.RightAligned"><summary>
+            The value is right-aligned.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeValueDisplayStyle.CharactersAlignedWithBars"><summary>
+            The characters in the value are centered under the bars that represent each character.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeValueDisplayStyle.QuietZoneExtension"><summary>
+            The first and last characters are drawn in the lead/tail quiet zones
+            and the remaining characters are centered under the encoded character runs.
+            This is used for symbologies such as <c>UPC-A</c>.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeValueDisplayStyle.QuietZoneExtensionLeft"><summary>
+            The first character is drawn in the lead quiet zones
+            and the remaining characters are centered under the encoded character runs.
+            This is used for symbologies such as <c>EIN-13</c>.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.Interleaved2of5Symbology"><summary>
+            Represents a bar code symbology implementation for <c>Interleaved 2 of 5</c>.
+            </summary><remarks>
+            Interleaved 2 of 5 is a linear symbology, that provides higher density than the Industrial 2 of 5 symbology that it is based on.
+            It is most commonly used by the distribution and warehouse industry.
+            <para>
+            This symbology can encode numeric digits, and requires that an even number of digits (including the optional check digit) are encoded.
+            This symbology implementation will automatically add a <c>0</c> at the start of the encoded value to ensure that an even number of digits are encoded.
+            </para><para>
+            The symbology's implementation auto-calculates and inserts an optional check digit if the 
+            <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Interleaved2of5Symbology.IsChecksumEnabled" /> property is <c>true</c>.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Interleaved2of5.html">Interleaved 2 of 5</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Interleaved2of5Symbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Interleaved2of5Symbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Interleaved2of5Symbology.#ctor"><summary>
+            Initializes an instance of the <c>Interleaved2of5Symbology</c> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.Interleaved2of5Symbology.IsChecksumEnabled"><summary>
+            Gets or sets whether the optional checksum should be added.
+            </summary><value><c>true</c> if the optional checksum should be added; otherwise, <c>false</c>.
+            The default value is <c>false</c>.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Interleaved2of5Symbology.IsChecksumEnabledProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Interleaved2of5Symbology.IsChecksumEnabled" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Interleaved2of5Symbology.IsChecksumEnabled" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.Code128Symbology"><summary>
+            Represents a bar code symbology implementation for <c>Code 128</c>.
+            </summary><remarks>
+            Code 128 is a high-density barcode symbology, used extensively worldwide in shipping and packaging industries. 
+            <para>
+            This symbology can encode all of the lower 128 ASCII characters.
+            It is especially efficient when encoding sequential numbers since they are merged into a single output character width.
+            </para><para>
+            This symbology implementation auto-calculates and inserts a check character.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Code128.html">Code 128</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code128Symbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code128Symbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code128Symbology.#ctor"><summary>
+            Initializes an instance of the <c>Code128Symbology</c> class.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Code128Symbology.Fnc1Char"><summary>
+            The character that can be used to encode <c>FNC1</c>.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Code128Symbology.Fnc2Char"><summary>
+            The character that can be used to encode <c>FNC2</c>.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Code128Symbology.Fnc3Char"><summary>
+            The character that can be used to encode <c>FNC3</c>.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Code128Symbology.Fnc4Char"><summary>
+            The character that can be used to encode <c>FNC4</c>.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.PostnetValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>Postnet</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.PostnetValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Code39ExtendedValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>Code 39 Extended</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Code39ExtendedValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology"><summary>
+            Represents a bar code symbology implementation for <c>Code 93</c>.
+            </summary><remarks>
+            Code 93 is a linear symbology, designed in 1982 by Intermec to provide a higher density and data security enhancement to Code 39.
+            Each Code 93 character is divided into nine modules and always has three bars and three spaces.
+            This symbology is primarily used by the Canadian postal office.
+            <para>
+            This symbology can encode numbers, uppercase letters, and <c>-. $/+%</c> characters.
+            </para><para>
+            Each encoded value must start and stop with <c>*</c>, which is automatically inserted.
+            The <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology.AreStartStopCharactersVisible" /> property determines whether these start/stop characters are included 
+            in the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.DisplayValue" />.
+            </para><para>
+            This symbology implementation auto-calculates and inserts two check characters.
+            </para><para>
+            An extended implementation of Code 93 is available in <see cref="T:ActiproSoftware.Windows.Controls.BarCode.Code93ExtendedSymbology" />.
+            That implementation allows for all lower 128 ASCII characters to be encoded based on the core Code 93 concepts.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Code93.html">Code 93</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology.PreprocessCharacter(System.Char)"><summary>
+            Pre-processes the specified character and expands it if necessary.
+            </summary><param name="ch">The character to examine.</param><returns>The pre-processing result.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology.#ctor"><summary>
+            Initializes an instance of the <c>Code93Symbology</c> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology.AreStartStopCharactersVisible"><summary>
+            Gets or sets whether the start/stop characters (*) are visible in the displayed value.
+            </summary><value><c>true</c> if the start/stop characters (*) are visible in the displayed value; otherwise, <c>false</c>.
+            The default value is <c>false</c>.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology.AreStartStopCharactersVisibleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology.AreStartStopCharactersVisible" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology.AreStartStopCharactersVisible" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Ean8ValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>EAN-8</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Ean8ValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Ean13ValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>EAN-13</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Ean13ValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.CodabarValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>Codabar</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.CodabarValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.QrVersion"><summary>
+            Specifies the various versions supported by <see cref="T:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology" />. 
+            The size of the symbol for Micro QR Code symbols is always 9 + (2 * microVersion). For the 40 versions of 
+            regular QR Code symbols, the size is 17 + (4 * version). 
+            All versions are square.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version1"><summary>
+            Indicates that the version should be 1.
+            The symbol size is 21.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version2"><summary>
+            Indicates that the version should be 2.
+            The symbol size is 25.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version3"><summary>
+            Indicates that the version should be 3.
+            The symbol size is 29.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version4"><summary>
+            Indicates that the version should be 4.
+            The symbol size is 33.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version5"><summary>
+            Indicates that the version should be 5.
+            The symbol size is 37.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version6"><summary>
+            Indicates that the version should be 6.
+            The symbol size is 41.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version7"><summary>
+            Indicates that the version should be 7.
+            The symbol size is 45.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version8"><summary>
+            Indicates that the version should be 8.
+            The symbol size is 49.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version9"><summary>
+            Indicates that the version should be 9.
+            The symbol size is 53.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version10"><summary>
+            Indicates that the version should be 10.
+            The symbol size is 57.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version11"><summary>
+            Indicates that the version should be 11.
+            The symbol size is 61.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version12"><summary>
+            Indicates that the version should be 12.
+            The symbol size is 65.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version13"><summary>
+            Indicates that the version should be 13.
+            The symbol size is 69.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version14"><summary>
+            Indicates that the version should be 14.
+            The symbol size is 73.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version15"><summary>
+            Indicates that the version should be 15.
+            The symbol size is 77.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version16"><summary>
+            Indicates that the version should be 16.
+            The symbol size is 81.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version17"><summary>
+            Indicates that the version should be 17.
+            The symbol size is 85.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version18"><summary>
+            Indicates that the version should be 18.
+            The symbol size is 89.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version19"><summary>
+            Indicates that the version should be 19.
+            The symbol size is 93.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version20"><summary>
+            Indicates that the version should be 20.
+            The symbol size is 97.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version21"><summary>
+            Indicates that the version should be 21.
+            The symbol size is 101.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version22"><summary>
+            Indicates that the version should be 22.
+            The symbol size is 105.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version23"><summary>
+            Indicates that the version should be 23.
+            The symbol size is 109.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version24"><summary>
+            Indicates that the version should be 24.
+            The symbol size is 113.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version25"><summary>
+            Indicates that the version should be 25.
+            The symbol size is 117.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version26"><summary>
+            Indicates that the version should be 26.
+            The symbol size is 121.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version27"><summary>
+            Indicates that the version should be 27.
+            The symbol size is 125.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version28"><summary>
+            Indicates that the version should be 28.
+            The symbol size is 129.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version29"><summary>
+            Indicates that the version should be 29.
+            The symbol size is 133.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version30"><summary>
+            Indicates that the version should be 30.
+            The symbol size is 137.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version31"><summary>
+            Indicates that the version should be 31.
+            The symbol size is 141.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version32"><summary>
+            Indicates that the version should be 32.
+            The symbol size is 145.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version33"><summary>
+            Indicates that the version should be 33.
+            The symbol size is 149.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version34"><summary>
+            Indicates that the version should be 34.
+            The symbol size is 153.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version35"><summary>
+            Indicates that the version should be 35.
+            The symbol size is 157.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version36"><summary>
+            Indicates that the version should be 36.
+            The symbol size is 161.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version37"><summary>
+            Indicates that the version should be 37.
+            The symbol size is 165.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version38"><summary>
+            Indicates that the version should be 38.
+            The symbol size is 169.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version39"><summary>
+            Indicates that the version should be 39.
+            The symbol size is 173.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrVersion.Version40"><summary>
+            Indicates that the version should be 40.
+            The symbol size is 177.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.Ean13Symbology"><summary>
+            Represents a bar code symbology implementation for <c>EAN-13</c>.
+            <para>
+            This symbology is also known as European Article Number 13, and Japanese Article Number (JAN) in Japan.
+            </para></summary><remarks>
+            EAN-13 is a linear symbology, based on the original 12-digit Universal Product Code (UPC) system developed in North America.
+            EAN-13 bar codes are used worldwide for marking retail goods.
+            <para>
+            This symbology can encode 13 numeric characters, divided into four parts: system code, manufacturer code, product code, and check digit.
+            </para><para>
+            This symbology implementation auto-calculates and inserts a check digit.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Ean13.html">EAN-13</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Ean13Symbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Ean13Symbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Ean13Symbology.#ctor"><summary>
+            Initializes an instance of the <c>Ean13Symbology</c> class.
+            </summary></member><member name="T:ActiproSoftware.Products.BarCode.BarCodeLogo"><summary>
+            Represents the logo for this product.
+            </summary></member><member name="M:ActiproSoftware.Products.BarCode.BarCodeLogo.InitializeComponent"><summary>
+            InitializeComponent
+            </summary></member><member name="M:ActiproSoftware.Products.BarCode.BarCodeLogo.#ctor"><summary>
+            Initializes a new instance of the <c>BarCodeLogo</c> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Code93ExtendedValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>Code 39 Extended</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Code93ExtendedValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Code39ValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>Code 39</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Code39ValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction"><summary>
+            Specifies an instruction for a <see cref="T:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.Black1"><summary>
+            A narrow black line.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.Black2"><summary>
+            A wide black line (2x narrow).
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.Black3"><summary>
+            A wide black line (3x narrow).
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.Black4"><summary>
+            A wide black line (4x narrow).
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.BlackAscender2"><summary>
+            A wide black line (2x narrow) that only covers the top two-thirds of a normal size line.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.BlackDescender2"><summary>
+            A wide black line (2x narrow) that only covers the bottom two-thirds of a normal size line.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.BlackHalfDescender2"><summary>
+            A wide black line (2x narrow) that only covers the bottom third of a normal size line.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.BlackHalfTracker2"><summary>
+            A wide black line (2x narrow) that only covers the middle third of a normal size line.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.White1"><summary>
+            A narrow white line.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.White2"><summary>
+            A wide white line (2x narrow).
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.White3"><summary>
+            A wide white line (3x narrow).
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.White4"><summary>
+            A wide white line (4x narrow).
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.ControlCharacterStart"><summary>
+            The start of a control character.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.EncodedCharacterStart"><summary>
+            The start of an encoded character.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbologyInstruction.CharacterEnd"><summary>
+            The end of a character.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Code128ValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>Code 128</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Code128ValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.Ean8Symbology"><summary>
+            Represents a bar code symbology implementation for <c>EAN-8</c>.
+            </summary><remarks>
+            EAN-8 is a linear symbology, used on smaller retail packages where EAN-13 bar codes don't fit.
+            <para>
+            This symbology can encode 8 numeric characters, divided into three parts: system code, product code, and check digit.
+            </para><para>
+            This symbology implementation auto-calculates and inserts a check digit.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Ean8.html">EAN-8</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Ean8Symbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Ean8Symbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Ean8Symbology.#ctor"><summary>
+            Initializes an instance of the <c>Ean8Symbology</c> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.Code39ExtendedSymbology"><summary>
+            Represents a bar code symbology implementation for <c>Code 39 Extended</c>.
+            <para>
+            This symbology is also known as Code 39 Full ASCII.
+            </para></summary><remarks>
+            Code 39 Extended is a linear symbology, and supports the encoding of many more characters than standard Code 39.
+            <para>
+            This symbology can encode all of the lower 128 ASCII characters.
+            </para><para>
+            Each encoded value must start and stop with <c>*</c>, which is automatically inserted.
+            The <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.AreStartStopCharactersVisible" /> property determines whether these start/stop characters are included 
+            in the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.DisplayValue" />.
+            </para><para>
+            This symbology is self-checking, so no checksum or check digit is required.
+            However if the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology.IsChecksumEnabled" /> property is <c>true</c>, the symbology's implementation auto-calculates and inserts
+            a check digit.  This is referred to as Code 39 mod 43.
+            </para><para>
+            The standard implementation of Code 39 is available in <see cref="T:ActiproSoftware.Windows.Controls.BarCode.Code39Symbology" />.
+            That implementation allows for encoding a subset of the characters able to be encoded by this symbology.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Code39Extended.html">Code 39 Extended</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code39ExtendedSymbology.PreprocessCharacter(System.Char)"><summary>
+            Pre-processes the specified character and expands it if necessary.
+            </summary><param name="ch">The character to examine.</param><returns>The pre-processing result.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code39ExtendedSymbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code39ExtendedSymbology.#ctor"><summary>
+            Initializes an instance of the <c>Code39ExtendedSymbology</c> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.UpcEValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>UPC-E</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.UpcEValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.PostnetSymbology"><summary>
+            Represents a bar code symbology implementation for <c>Postnet</c>.
+            </summary><remarks>
+            Postnet is used by the United States Postal Service to assist in directing mail.
+            <para>
+            This symbology can encode 5, 9, or 11 numbers (all plus a check digit) where the required 5 characters
+            are the 5-digit zip code, the optional next 4 characters are the zip+4 code, and the optional last
+            two digits represent the last two numbers of the numeric address number.
+            </para><para>
+            This symbology implementation auto-calculates and inserts a check character.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Postnet.html">Postnet</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.PostnetSymbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.PostnetSymbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.PostnetSymbology.#ctor"><summary>
+            Initializes an instance of the <c>PostnetSymbology</c> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.Code93ExtendedSymbology"><summary>
+            Represents a bar code symbology implementation for <c>Code 93 Extended</c>.
+            <para>
+            This symbology is also known as Code 93 Full ASCII.
+            </para></summary><remarks>
+            Code 93 Extended is a linear symbology, and supports the encoding of many more characters than standard Code 93.
+            <para>
+            This symbology can encode all of the lower 128 ASCII characters.
+            </para><para>
+            Each encoded value must start and stop with <c>*</c>, which is automatically inserted.
+            The <see cref="P:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology.AreStartStopCharactersVisible" /> property determines whether these start/stop characters are included 
+            in the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.LinearBarCodeSymbology.DisplayValue" />.
+            </para><para>
+            This symbology implementation auto-calculates and inserts two check characters.
+            </para><para>
+            The standard implementation of Code 93 is available in <see cref="T:ActiproSoftware.Windows.Controls.BarCode.Code93Symbology" />.
+            That implementation allows for encoding a subset of the characters able to be encoded by this symbology.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/Code93Extended.html">Code 93 Extended</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code93ExtendedSymbology.PreprocessCharacter(System.Char)"><summary>
+            Pre-processes the specified character and expands it if necessary.
+            </summary><param name="ch">The character to examine.</param><returns>The pre-processing result.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code93ExtendedSymbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.Code93ExtendedSymbology.#ctor"><summary>
+            Initializes an instance of the <c>Code93ExtendedSymbology</c> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.UpcASymbology"><summary>
+            Represents a bar code symbology implementation for <c>UPC-A</c>.
+            <para>
+            This symbology is also known as Universal Product Code version A.
+            </para></summary><remarks>
+            UPC-A is a linear symbology, widely used in the United States and Canada for tracking trade items in stores.
+            <para>
+            This symbology can encode 12 numeric characters, divided into four parts: system code, manufacturer code, product code, and check digit.
+            </para><para>
+            This symbology implementation auto-calculates and inserts a check digit.
+            </para><para>
+            For detailed documentation on this symbology's features and how to use them, please see the 
+            <a href="../Topics/BarCode/Symbologies/UpcA.html">UPC-A</a> documentation topic. 
+            </para></remarks></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.UpcASymbology.OnValueChanged(System.String,System.String)"><summary>
+            Occurs when the value of the <see cref="P:ActiproSoftware.Windows.Controls.BarCode.BarCodeSymbology.Value" /> property is changed.
+            </summary><param name="oldValue">The old value.</param><param name="newValue">The new value.</param></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.UpcASymbology.ValidateValue(System.String)"><summary>
+            Validates that the symbology can parse the specified value.
+            </summary><param name="value">The value to validate.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> containing the result of the validation.</returns></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.UpcASymbology.#ctor"><summary>
+            Initializes an instance of the <c>UpcASymbology</c> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.QrErrorCorrectionLevel"><summary>
+            Specifies the various error correction levels supported by <see cref="T:ActiproSoftware.Windows.Controls.BarCode.QrCodeSymbology" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrErrorCorrectionLevel.L"><summary>
+            Indicates that the error correction level should be 7%.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrErrorCorrectionLevel.M"><summary>
+            Indicates that the error correction level should be 15%.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrErrorCorrectionLevel.Q"><summary>
+            Indicates that the error correction level should be 25%.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.BarCode.QrErrorCorrectionLevel.H"><summary>
+            Indicates that the error correction level should be 30%.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Interleaved2of5ValidationRule"><summary>
+            A validation rule that determines whether a value is valid for the <c>Interleaved 2 of 5</c> symbology.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.BarCode.ValidationRules.Interleaved2of5ValidationRule.Validate(System.Object,System.Globalization.CultureInfo)"><summary>
+            Performs validation checks on a value.
+            </summary><param name="value">The value from the binding target to check.</param><param name="cultureInfo">The culture to use in this rule.</param><returns>A <see cref="T:ActiproSoftware.Compatibility.ValidationResult" /> that specifies the result.</returns></member></members></doc>

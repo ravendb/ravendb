@@ -13,13 +13,18 @@ namespace Raven.Backup
 		public string BackupPath { get; set; }
 		public bool NoWait { get; set; }
 
+		public bool Incremental { get; set; }
+
 		public bool InitBackup()
 		{
 			ServerUrl = ServerUrl.TrimEnd('/');
 
 			var json = @"{ ""BackupLocation"": """ + BackupPath.Replace("\\", "\\\\") + @""" }";
 
-			var req = WebRequest.Create(ServerUrl + "/admin/backup");
+			var uriString = ServerUrl + "/admin/backup";
+			if (Incremental)
+				uriString += "?incremental=true";
+			var req = WebRequest.Create(uriString);
 			req.Method = "POST";
 			req.UseDefaultCredentials = true;
 			req.PreAuthenticate = true;

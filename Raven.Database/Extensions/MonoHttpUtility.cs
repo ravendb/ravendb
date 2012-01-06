@@ -62,7 +62,7 @@ namespace Raven.Database.Extensions
 				{
 					if (s[i + 1] == 'u' && i + 5 < len)
 					{
-						// unicode hex sequence
+						// Unicode hex sequence
 						xchar = GetChar(s, i + 2, 4);
 						if (xchar != -1)
 						{

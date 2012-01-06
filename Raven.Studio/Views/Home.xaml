@@ -1,0 +1,45 @@
+﻿<Infrastructure:View x:Class="Raven.Studio.Views.Home"
+					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+					 Title="Home"
+					 Style="{StaticResource PageStyle}"
+					 Infrastructure:ModelAttacher.AttachObservableModel="HomeModel">
+
+	<Grid DataContext="{Binding Value}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="250" />
+			<RowDefinition Height="8" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
+		
+		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments.Value}"
+								 Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
+								 Margin="{StaticResource Margin_ContentPage}" />
+		
+		<StackPanel Grid.Row="2" HorizontalAlignment="Left">
+			<StackPanel Orientation="Horizontal"
+						Visibility="{Binding IsGeneratingSampleData, Converter={StaticResource VisibleWhenTrue}}">
+				<ProgressBar IsIndeterminate="True"
+							 Width="24" />
+				<TextBlock Text="Generating Sample Data"
+						   Margin="4 0 0 0" />
+			</StackPanel>
+
+			<StackPanel Orientation="Horizontal" Visibility="{Binding Path=ShowCreateSampleData.Value, Converter={StaticResource VisibleWhenTrue}}">
+				<TextBlock>
+					<Run Text="There are no documents in this database yet." />
+					<LineBreak />
+					<Run Text="Would you like to generate some sample data?" />
+				</TextBlock>
+				<Button x:Name="CreateSampleData"
+						Padding="12,0,12,0"
+						Margin="8,0,0,0"
+						HorizontalAlignment="Left"
+						Command="{Binding CreateSampleData}"
+						Content="Create sample data" />
+			</StackPanel>
+		</StackPanel>
+	</Grid>
+</Infrastructure:View>

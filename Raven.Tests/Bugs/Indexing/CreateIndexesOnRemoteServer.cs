@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs.Indexing
 			{
 				var documentStore = new DocumentStore
 				{
-					Url = "http://localhost:8080"
+					Url = "http://localhost:8079"
 				}.Initialize();
 				IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(SimpleIndex))), documentStore);
 				IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(SimpleIndex))), documentStore);

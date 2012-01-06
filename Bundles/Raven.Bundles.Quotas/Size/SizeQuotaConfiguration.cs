@@ -3,6 +3,7 @@ using Raven.Database;
 using Raven.Database.Commercial;
 using Raven.Database.Plugins;
 using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Quotas
 {
@@ -14,8 +15,6 @@ namespace Raven.Bundles.Quotas
 		private DateTime lastCheck;
 		private VetoResult skipCheck = VetoResult.Allowed;
 		private bool recheckOnDelete;
-
-		public const string WarningPrefixName = "Size Quota";
 
 		public static SizeQuotaConfiguration GetConfiguration(DocumentDatabase database)
 		{
@@ -71,7 +70,7 @@ namespace Raven.Bundles.Quotas
 			var totalSizeOnDisk = database.GetTotalSizeOnDisk();
 			if (totalSizeOnDisk <= softLimit)
 			{
-				WarningMessagesHolder.RemoveWarnings(database, WarningPrefixName);
+				database.Delete("Raven/Quotas/Size", null, null);
 				skipCheck = VetoResult.Allowed;
 				recheckOnDelete = false;
 				return;
@@ -85,7 +84,11 @@ namespace Raven.Bundles.Quotas
 				msg = string.Format("Database size is {0:#,#} KB, which is over the allowed quota of {1:#,#} KB. No more documents are allowed in.",
 					totalSizeOnDisk / 1024, hardLimit / 1024);
 
-				WarningMessagesHolder.AddWarning(database, WarningPrefixName, msg);
+				database.Put("Raven/Quotas/Size", null, new RavenJObject
+				{
+					{"Message", msg}
+				}, new RavenJObject(), null);
+
 				skipCheck = VetoResult.Deny(msg);
 			}
 			else // still before the hard limit, warn, but allow
@@ -93,7 +96,10 @@ namespace Raven.Bundles.Quotas
 				msg = string.Format("Database size is {0:#,#} KB, which is close to the allowed quota of {1:#,#} KB",
 					totalSizeOnDisk / 1024, softLimit / 1024);
 
-				WarningMessagesHolder.AddWarning(database, WarningPrefixName, msg);
+				database.Put("Raven/Quotas/Size", null, new RavenJObject
+				{
+					{"Message", msg}
+				}, new RavenJObject(), null);
 				skipCheck = VetoResult.Allowed;
 			}
 		}

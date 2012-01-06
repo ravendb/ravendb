@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 
 namespace Raven.Tests.Util
 {
@@ -9,8 +11,22 @@ namespace Raven.Tests.Util
 		public void Start(string physicalPath, int port)
 		{
 			var sitePhysicalDirectory = physicalPath;
-			StartProcess(@"c:\program files (x86)\IIS Express\IISExpress.exe",
-				@"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
+
+			foreach (var process in Process.GetProcessesByName("iisexpress.exd"))
+			{
+				process.Kill();
+			}
+
+			if (File.Exists(@"c:\program files (x86)\IIS Express\IISExpress.exe"))
+			{
+				StartProcess(@"c:\program files (x86)\IIS Express\IISExpress.exe",
+				             @"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
+			}
+			else
+			{
+				StartProcess(@"c:\program files\IIS Express\IISExpress.exe",
+							 @"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
+			}
 
 			var match = WaitForConsoleOutputMatching(@"Successfully registered URL ""([^""]*)""");
 
@@ -19,7 +35,13 @@ namespace Raven.Tests.Util
 
 		protected override void Shutdown()
 		{
-			_process.Kill();
+			try
+			{
+				_process.Kill();
+			}
+			catch (Exception)
+			{
+			}
 
 			if (!_process.WaitForExit(10000))
 				throw new Exception("IISExpress did not halt within 10 seconds.");

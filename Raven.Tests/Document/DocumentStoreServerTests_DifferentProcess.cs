@@ -22,12 +22,12 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_promote_transactions()
 		{
-			var process = Process.Start(GetRavenServerPath(), "/ram");
+			var process = Process.Start(GetRavenServerPath(), "--ram --set=Raven/Port==8079");
 			try
 			{
-				WaitForNetwork("http://localhost:8080");
+				WaitForNetwork("http://localhost:8079");
 
-				var documentStore = new DocumentStore { Url = "http://localhost:8080" };
+				var documentStore = new DocumentStore { Url = "http://localhost:8079" };
 				documentStore.Initialize();
 
 				var company = new Company { Name = "Company Name" };

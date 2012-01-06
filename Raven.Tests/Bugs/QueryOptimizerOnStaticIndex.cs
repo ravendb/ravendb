@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
 		public void WillSelectTheStaticField()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(GameServers_ByName))), store);
 

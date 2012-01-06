@@ -24,8 +24,8 @@ namespace Raven.Client.Linq
 			Action<IDocumentQueryCustomization> customizeQuery, 
 			Action<QueryResult> afterQueryExecuted,
 			string indexName,
-			HashSet<string> fieldsToFetch) 
-			: base(queryGenerator, customizeQuery, afterQueryExecuted, indexName, fieldsToFetch)
+			HashSet<string> fieldsToFetch, Dictionary<string, string> fieldsTRename) 
+			: base(queryGenerator, customizeQuery, afterQueryExecuted, indexName, fieldsToFetch, fieldsTRename)
 		{
 
 		}
@@ -40,7 +40,10 @@ namespace Raven.Client.Linq
 			var parameterExpression = expression as ParameterExpression;
 			if (parameterExpression != null)
 			{
-				return new ExpressionInfo(CurrentPath, parameterExpression.Type, false);
+				var currentPath = CurrentPath;
+				if (currentPath.EndsWith(","))
+					currentPath = currentPath.Substring(0, currentPath.Length - 1);
+				return new ExpressionInfo(currentPath, parameterExpression.Type, false);
 			}
 
 			string path;

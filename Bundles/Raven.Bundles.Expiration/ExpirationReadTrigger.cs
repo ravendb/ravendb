@@ -17,6 +17,8 @@ namespace Raven.Bundles.Expiration
 		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation,
 												 TransactionInformation transactionInformation)
 		{
+			if (operation == ReadOperation.Index)
+				return ReadVetoResult.Allowed; // we have to allow indexing, because we are deleting using the index
 			if(metadata == null)
 				return ReadVetoResult.Allowed;
 			var property = metadata[RavenExpirationDate];

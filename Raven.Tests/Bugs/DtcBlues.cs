@@ -29,7 +29,7 @@ namespace Raven.Tests.Bugs
 				}
 				using (var session = store.OpenSession())
 				{
-					session.Advanced.AllowNonAuthoritiveInformation = false;
+					session.Advanced.AllowNonAuthoritativeInformation = false;
 					var user = session.Load<User>("users/1");
 					Assert.NotNull(user);
 				}
@@ -44,7 +44,7 @@ namespace Raven.Tests.Bugs
 		public void CanQueryDtcForUncommittedItem()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				for (int i = 0; i < 150; i++)
 				{
@@ -68,7 +68,7 @@ namespace Raven.Tests.Bugs
 					}
 					using (var session = store.OpenSession())
 					{
-						session.Advanced.AllowNonAuthoritiveInformation = false;
+						session.Advanced.AllowNonAuthoritativeInformation = false;
 						var user = session.Load<User>(id);
 						Assert.NotNull(user);
 					}
@@ -89,7 +89,7 @@ namespace Raven.Tests.Bugs
 		public void CanQueryDtcForUncommittedItem()
 		{
 			using(GetNewServer())
-			using (var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
+			using (var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
 				for (int i = 0; i < 150; i++)
 				{
@@ -113,7 +113,7 @@ namespace Raven.Tests.Bugs
 					}
 					using (var session = store.OpenSession())
 					{
-						session.Advanced.AllowNonAuthoritiveInformation = false;
+						session.Advanced.AllowNonAuthoritativeInformation = false;
 						var user = session.Load<User>(id);
 						Assert.NotNull(user);
 					}

@@ -31,6 +31,12 @@ namespace Raven.Storage.Managed
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly Action onCommit;
 		private TableStorage tableStroage;
+
+		public TableStorage TableStroage
+		{
+			get { return tableStroage; }
+		}
+
 		private IPersistentSource persistenceSource;
 		private volatile bool disposed;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
@@ -110,6 +116,7 @@ namespace Raven.Storage.Managed
 					var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
 					current.Value = storageActionsAccessor;
 					action(current.Value);
+					storageActionsAccessor.SaveAllTasks();
 					tableStroage.Commit();
 					storageActionsAccessor.InvokeOnCommit();
 				}
@@ -163,7 +170,7 @@ namespace Raven.Storage.Managed
 			return persistenceSource.CreatedNew;
 		}
 
-		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory)
+		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup)
 		{
 			var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);

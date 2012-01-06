@@ -31,13 +31,13 @@ namespace Raven.Storage.Managed
 			this.generator = generator;
 		}
 
-		public Guid AddAttachment(string key, Guid? etag, byte[] data, RavenJObject headers)
+		public Guid AddAttachment(string key, Guid? etag, Stream data, RavenJObject headers)
 		{
 			AssertValidEtag(key, etag, "PUT");
 
 			var ms = new MemoryStream();
 			headers.WriteTo(ms);
-			ms.Write(data,0,data.Length);
+			data.CopyTo(ms);
 			var newEtag = generator.CreateSequentialUuid();
 			var result = storage.Attachments.Put(new RavenJObject
 			{
@@ -88,13 +88,12 @@ namespace Raven.Storage.Managed
 			var attachmentDAta = readResult.Data();
 			var memoryStream = new MemoryStream(attachmentDAta);
 			var metadata = memoryStream.ToJObject();
-			var data = new byte[readResult.Size - memoryStream.Position];
-			Buffer.BlockCopy(attachmentDAta,(int)memoryStream.Position, data, 0, data.Length);
 			return new Attachment
 			{
 				Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
 				Metadata = metadata,
-				Data = data
+				Data = () => memoryStream,
+				Size = (int)(memoryStream.Length - memoryStream.Position)
 			};
 		}
 
@@ -107,7 +106,7 @@ namespace Raven.Storage.Managed
 					   Key = key.Value<string>("key"),
 					   Etag = new Guid(key.Value<byte[]>("etag")),
 					   Metadata = attachment.Metadata,
-					   Size = attachment.Data.Length
+					   Size = attachment.Size
 				   };
 		}
 
@@ -121,7 +120,7 @@ namespace Raven.Storage.Managed
 					   Key = key.Value<string>("key"),
 					   Etag = new Guid(key.Value<byte[]>("etag")),
 					   Metadata = attachment.Metadata,
-					   Size = attachment.Data.Length
+					   Size = attachment.Size
 				   };
 		}
 	}

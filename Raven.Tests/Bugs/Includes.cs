@@ -22,11 +22,11 @@ namespace Raven.Tests.Bugs
 
 		public Includes()
 		{
-			server = GetNewServer(8080, GetPath(DbName));
+			server = GetNewServer(8079, GetPath(DbName));
 
 			store = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize();
 
 			store.DatabaseCommands.PutIndex("Orders/ByName",

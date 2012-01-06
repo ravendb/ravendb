@@ -201,6 +201,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public T Load<T>(string id)
 		{
+			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
 			object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
 			{

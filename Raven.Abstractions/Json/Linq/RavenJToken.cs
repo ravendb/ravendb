@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -212,6 +213,11 @@ namespace Raven.Json.Linq
 			return (t1 == t2 || (t1 != null && t2 != null && t1.DeepEquals(t2)));
 		}
 
+		public static int GetDeepHashCode(RavenJToken t)
+		{
+			return t == null ? 0 : t.GetDeepHashCode();
+		}
+
 		internal virtual bool DeepEquals(RavenJToken other)
 		{
 			if (other == null)
@@ -258,8 +264,31 @@ namespace Raven.Json.Linq
 						RavenJToken token;
 						if (otherObj.TryGetValue(kvp.Key, out token) == false)
 							return false;
-						otherStack.Push(token);
-						thisStack.Push(kvp.Value);
+						switch (kvp.Value.Type)
+						{
+							case JTokenType.Array:
+							case JTokenType.Object:
+								otherStack.Push(token);
+								thisStack.Push(kvp.Value);
+								break;
+							case JTokenType.Bytes:
+								var bytes = kvp.Value.Value<byte[]>();
+								byte[] tokenBytes = token.Type == JTokenType.String ? Convert.FromBase64String(token.Value<string>()) : token.Value<byte[]>();
+								if (bytes.Length != tokenBytes.Length)
+									return false;
+
+								if (tokenBytes.Where((t, i) => t != bytes[i]).Any())
+								{
+									return false;
+								}
+
+								break;
+							default:
+								if (!kvp.Value.DeepEquals(token)) 
+									return false;
+								break;
+						}
+					
 					}
 				}
 				else // value

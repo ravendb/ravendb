@@ -26,14 +26,14 @@ namespace Raven.Client.Connection.Async
 		/// Gets or sets the operations headers.
 		/// </summary>
 		/// <value>The operations headers.</value>
-		IDictionary<string,string> OperationsHeaders { get;  }
+		IDictionary<string, string> OperationsHeaders { get; }
 
 		/// <summary>
 		/// Begins an async get operation
 		/// </summary>
 		/// <param name="key">The key.</param>
 		Task<JsonDocument> GetAsync(string key);
-		
+
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
@@ -82,33 +82,33 @@ namespace Raven.Client.Connection.Async
 		Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery suggestionQuery);
 
 		/// <summary>
-		/// Gets the index names from the server asyncronously
+		/// Gets the index names from the server asynchronously
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
 		Task<string[]> GetIndexNamesAsync(int start, int pageSize);
 
 		/// <summary>
-		/// Gets the indexes from the server asyncronously
+		/// Gets the indexes from the server asynchronously
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
 		Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize);
 
 		/// <summary>
-		/// Resets the specified index asyncronously
+		/// Resets the specified index asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		Task ResetIndexAsync(string name);
 
 		/// <summary>
-		/// Gets the index definition for the specified name asyncronously
+		/// Gets the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		Task<IndexDefinition> GetIndexAsync(string name);
 
 		/// <summary>
-		/// Puts the index definition for the specified name asyncronously
+		/// Puts the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
@@ -116,13 +116,21 @@ namespace Raven.Client.Connection.Async
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
 
 		/// <summary>
-		/// Deletes the index definition for the specified name asyncronously
+		/// Deletes the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		Task DeleteIndexAsync(string name);
 
 		/// <summary>
-		/// Deletes the document for the specified id asyncronously
+		/// Perform a set based deletes using the specified index.
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToDelete">The query to delete.</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
+		Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale);
+
+		/// <summary>
+		/// Deletes the document for the specified id asynchronously
 		/// </summary>
 		/// <param name="id">The id.</param>
 		Task DeleteDocumentAsync(string id);
@@ -137,10 +145,10 @@ namespace Raven.Client.Connection.Async
 		Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata);
 
 #if SILVERLIGHT
-        /// <summary>
-        /// Create a http request to the specified relative url on the current database
-        /// </summary>
-	    Silverlight.Connection.HttpJsonRequest CreateRequest(string relativeUrl, string method);
+		/// <summary>
+		/// Create a http request to the specified relative url on the current database
+		/// </summary>
+		Silverlight.Connection.HttpJsonRequest CreateRequest(string relativeUrl, string method);
 #endif
 
 		/// <summary>
@@ -148,6 +156,12 @@ namespace Raven.Client.Connection.Async
 		/// with the specified database
 		/// </summary>
 		IAsyncDatabaseCommands ForDatabase(string database);
+
+		/// <summary>
+		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
+		/// with the default database
+		/// </summary>
+		IAsyncDatabaseCommands ForDefaultDatabase();
 
 		/// <summary>
 		/// Returns a new <see cref="IAsyncDatabaseCommands"/> using the specified credentials
@@ -161,12 +175,12 @@ namespace Raven.Client.Connection.Async
 		Task<DatabaseStatistics> GetStatisticsAsync();
 
 		/// <summary>
-		/// Gets the list of databases from the server asyncronously
+		/// Gets the list of databases from the server asynchronously
 		/// </summary>
 		Task<string[]> GetDatabaseNamesAsync();
 
 		/// <summary>
-		/// Puts the attachment with the specified key asyncronously
+		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
@@ -175,14 +189,14 @@ namespace Raven.Client.Connection.Async
 		Task PutAttachmentAsync(string key, Guid? etag, byte[] data, RavenJObject metadata);
 
 		/// <summary>
-		/// Gets the attachment by the specified key asyncronously
+		/// Gets the attachment by the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
 		Task<Attachment> GetAttachmentAsync(string key);
 
 		/// <summary>
-		/// Deletes the attachment with the specified key asyncronously
+		/// Deletes the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
@@ -217,6 +231,10 @@ namespace Raven.Client.Connection.Async
 		Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
 
 		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
+
+		Task<LicensingStatus> GetLicenseStatus();
+
+		Task<BuildNumber> GetBuildNumber();
 	}
 }
 #endif

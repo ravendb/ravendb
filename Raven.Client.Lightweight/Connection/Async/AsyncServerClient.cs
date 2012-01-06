@@ -25,6 +25,7 @@ using Raven.Abstractions.Json;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
@@ -38,8 +39,8 @@ namespace Raven.Client.Connection.Async
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
-		private readonly IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
-		private readonly HttpJsonRequestFactory jsonRequestFactory;
+		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
+		internal readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? sessionId;
 
 		/// <summary>
@@ -64,6 +65,7 @@ namespace Raven.Client.Connection.Async
 		{
 		}
 
+
 		/// <summary>
 		/// Returns a new <see cref="IAsyncDatabaseCommands"/> using the specified credentials
 		/// </summary>
@@ -74,7 +76,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Gets the index names from the server asyncronously
+		/// Gets the index names from the server asynchronously
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
@@ -84,7 +86,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Gets the indexes from the server asyncronously
+		/// Gets the indexes from the server asynchronously
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
@@ -94,7 +96,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Resets the specified index asyncronously
+		/// Resets the specified index asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		public Task ResetIndexAsync(string name)
@@ -103,7 +105,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Gets the index definition for the specified name asyncronously
+		/// Gets the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		public Task<IndexDefinition> GetIndexAsync(string name)
@@ -112,7 +114,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Puts the index definition for the specified name asyncronously
+		/// Puts the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
@@ -157,7 +159,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Deletes the index definition for the specified name asyncronously
+		/// Deletes the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		public Task DeleteIndexAsync(string name)
@@ -165,8 +167,29 @@ namespace Raven.Client.Connection.Async
 			throw new NotImplementedException();
 		}
 
+		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
+		{
+			string path = queryToDelete.GetIndexQueryUrl(url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "DELETE", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var aggregateException = task.Exception;
+					if (aggregateException == null)
+						return task;
+					var e = aggregateException.ExtractSingleInnerException() as WebException;
+					if (e == null)
+						return task;
+					var httpWebResponse = e.Response as HttpWebResponse;
+					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						throw new InvalidOperationException("There is no index named: " + indexName, e);
+					return task;
+				}).Unwrap();
+		}
+
 		/// <summary>
-		/// Deletes the document for the specified id asyncronously
+		/// Deletes the document for the specified id asynchronously
 		/// </summary>
 		/// <param name="id">The id.</param>
 		public Task DeleteDocumentAsync(string id)
@@ -232,27 +255,42 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
-			var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/");
-			if (indexOfDatabases != -1)
-				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-			if (databaseUrl.EndsWith("/") == false)
-				databaseUrl += "/";
+			var databaseUrl = RootDatabaseUrl;
 			databaseUrl = databaseUrl + "databases/" + database + "/";
-			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId);
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
+			{
+				operationsHeaders = operationsHeaders
+			};
+		}
+
+		private string RootDatabaseUrl
+		{
+			get
+			{
+				var databaseUrl = url;
+				var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
+				if (indexOfDatabases != -1)
+					databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
+				if (databaseUrl.EndsWith("/") == false)
+					databaseUrl += "/";
+				return databaseUrl;
+			}
 		}
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
 		/// with the root database. Useful if the database has works against a tenant database.
 		/// </summary>
-		public IAsyncDatabaseCommands GetRootDatabase()
+		public IAsyncDatabaseCommands ForDefaultDatabase()
 		{
-			var indexOfDatabases = url.IndexOf("/databases/");
-			if (indexOfDatabases == -1)
+			var databaseUrl = RootDatabaseUrl;
+			if (databaseUrl == url)
 				return this;
 
-			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials, jsonRequestFactory, sessionId);
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
+			       {
+			       	operationsHeaders = operationsHeaders
+			       };
 		}
 
 		/// <summary>
@@ -366,7 +404,13 @@ namespace Raven.Client.Connection.Async
 		/// </remarks>
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
 		{
-			throw new NotImplementedException();
+			var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+			return jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention)
+						.ReadResponseStringAsync()
+						.ContinueWith(task => RavenJArray.Parse(task.Result)
+												.Cast<RavenJObject>()
+												.ToJsonDocuments()
+												.ToArray());
 		}
 
 		/// <summary>
@@ -395,6 +439,16 @@ namespace Raven.Client.Connection.Async
 		}
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
+		{
+			throw new NotImplementedException();
+		}
+
+		public Task<LicensingStatus> GetLicenseStatus()
+		{
+			throw new NotImplementedException();
+		}
+
+		public Task<BuildNumber> GetBuildNumber()
 		{
 			throw new NotImplementedException();
 		}
@@ -605,15 +659,25 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Gets the list of databases from the server asyncronously
+		/// Gets the list of databases from the server asynchronously
 		/// </summary>
 		public Task<string[]> GetDatabaseNamesAsync()
 		{
-			throw new NotImplementedException();
+			return url.Databases()
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var json = (RavenJArray)RavenJToken.Parse(task.Result);
+					return json
+						.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+						.ToArray();
+				});
 		}
 		
 		/// <summary>
-		/// Puts the attachment with the specified key asyncronously
+		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
@@ -625,7 +689,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Gets the attachment by the specified key asyncronously
+		/// Gets the attachment by the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
@@ -635,7 +699,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Deletes the attachment with the specified key asyncronously
+		/// Deletes the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>

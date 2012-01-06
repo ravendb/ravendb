@@ -18,6 +18,13 @@ namespace Raven.Munin
 
 		public int CompareTo(ComparableByteArray other)
 		{
+			if (inner == null && other.inner == null)
+				return 0;
+			if (inner == null)
+				return 1;
+			if (other.inner == null)
+				return -1;
+
 			if (inner.Length != other.inner.Length)
 				return inner.Length - other.inner.Length;
 			for (int i = 0; i < inner.Length; i++)

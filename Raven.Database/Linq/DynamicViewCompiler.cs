@@ -132,14 +132,17 @@ namespace Raven.Database.Linq
 			VariableDeclaration mapDefinition = map.Trim().StartsWith("from") ? 
 				TransformMapDefinitionFromLinqQuerySyntax(map, out entityName) : 
 				TransformMapDefinitionFromLinqMethodSyntax(map, out entityName);
-	
-			
-			//this.ForEntityNames.Add(entityName);
-			ctor.Body.AddChild(new ExpressionStatement(
-			                   	new InvocationExpression(
-			                   		new MemberReferenceExpression(new MemberReferenceExpression(new ThisReferenceExpression(), "ForEntityNames"), "Add"),
-			                   		new List<Expression> { new PrimitiveExpression(entityName, entityName) })
-			                   	));
+
+			if (string.IsNullOrEmpty(entityName) == false)
+			{
+				//this.ForEntityNames.Add(entityName);
+				ctor.Body.AddChild(new ExpressionStatement(
+				                   	new InvocationExpression(
+				                   		new MemberReferenceExpression(
+				                   			new MemberReferenceExpression(new ThisReferenceExpression(), "ForEntityNames"), "Add"),
+				                   		new List<Expression> {new PrimitiveExpression(entityName, entityName)})
+				                   	));
+			}
 			// this.AddMapDefinition(from doc in docs ...);
 			ctor.Body.AddChild(new ExpressionStatement(
 			                   	new InvocationExpression(new MemberReferenceExpression(new ThisReferenceExpression(), "AddMapDefinition"),
@@ -347,6 +350,30 @@ Reduce only fields: {2}
 				AddDocumentIdFieldToLambdaIfCreatingNewObject(lambdaExpression);
 				return base.VisitLambdaExpression(lambdaExpression, data);
 			}
+
+			private void AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
+			{
+
+				var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(lambdaExpression.ExpressionBody) as ObjectCreateExpression;
+
+				if (objectCreateExpression == null || objectCreateExpression.IsAnonymousType == false)
+					return;
+
+				var objectInitializer = objectCreateExpression.ObjectInitializer;
+
+				var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
+
+				if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
+					return;
+
+				objectInitializer.CreateExpressions.Add(
+					new NamedArgumentExpression
+					{
+						Name = Constants.DocumentIdFieldName,
+						Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
+					});
+			}
+
 		}
 
 		private void AddEntityNameFilteringIfNeeded(VariableDeclaration variableDeclaration, out string entityName)
@@ -390,24 +417,6 @@ Reduce only fields: {2}
 			}
 		}
 
-		private static void AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
-		{
-			if (lambdaExpression.ExpressionBody is ObjectCreateExpression == false)
-				return;
-			var objectInitializer = ((ObjectCreateExpression)lambdaExpression.ExpressionBody).ObjectInitializer;
-
-			var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
-
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
-				return;
-
-			objectInitializer.CreateExpressions.Add(
-				new NamedArgumentExpression
-				{
-					Name = Constants.DocumentIdFieldName,
-					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
-				});
-		}
 
 		private VariableDeclaration TransformMapDefinitionFromLinqQuerySyntax(string query, out string entityName)
 		{

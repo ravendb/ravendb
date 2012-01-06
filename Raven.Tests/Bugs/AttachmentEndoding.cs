@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Net;
 using Raven.Database.Server;
 using Raven.Json.Linq;
@@ -20,9 +21,9 @@ namespace Raven.Tests.Bugs
 
 		public AttachmentEndoding()
 		{
-			port = 8080;
+			port = 8079;
 			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
 		#region IDisposable Members
@@ -42,11 +43,11 @@ namespace Raven.Tests.Bugs
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
 
-				documentStore.DatabaseCommands.PutAttachment("test/hello/world", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+				documentStore.DatabaseCommands.PutAttachment("test/hello/world", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 
 				using (var wc = new WebClient())
 				{
-					var staticJson = wc.DownloadString("http://localhost:8080/static");
+					var staticJson = wc.DownloadString("http://localhost:8079/static");
 					var value = RavenJArray.Parse(staticJson)[0].Value<string>("Key");
 					Assert.Equal("test/hello/world", value);
 				}

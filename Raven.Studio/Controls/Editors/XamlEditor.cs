@@ -1,9 +1,8 @@
-﻿namespace Raven.Studio.Controls.Editors
-{
-	using ActiproSoftware.Text;
-	using ActiproSoftware.Windows.Controls.SyntaxEditor;
+﻿using ActiproSoftware.Text;
 
-	public class XamlEditor : SyntaxEditor
+namespace Raven.Studio.Controls.Editors
+{
+	public class XamlEditor : EditorBase
 	{
 		private static readonly ISyntaxLanguage DefaultLanguage;
 
@@ -15,7 +14,6 @@
 		public XamlEditor()
 		{
 			Document.Language = DefaultLanguage;
-			IsTextDataBindingEnabled = true;
 		}
 	}
 }

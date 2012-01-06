@@ -12,7 +12,7 @@ namespace Raven.Tests.MultiGet
 		public void CanUseMultiGetToBatchGetDocumentRequests()
 		{
 			using (GetNewServer())
-			using (var docStore = new DocumentStore {Url = "http://localhost:8080"}.Initialize())
+			using (var docStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
 				for (int i = 0; i < 10; i++)
 				{
@@ -33,7 +33,7 @@ namespace Raven.Tests.MultiGet
 
 					using (var session = docStore.OpenSession())
 					{
-						session.Advanced.AllowNonAuthoritiveInformation = false;
+						session.Advanced.AllowNonAuthoritativeInformation = false;
 						var user = session.Advanced.Lazily.Load<User>(id);
 						Assert.NotNull(user.Value);
 					}

@@ -23,7 +23,7 @@ namespace Raven.Abstractions.Extensions
 	    public static RavenJObject ToJObject(object result)
 		{
 #if !NET_3_5
-			var dynamicJsonObject = result as Linq.DynamicJsonObject;
+			var dynamicJsonObject = result as Linq.IDynamicJsonObject;
 			if (dynamicJsonObject != null)
 				return dynamicJsonObject.Inner;
 #endif
@@ -53,21 +53,6 @@ namespace Raven.Abstractions.Extensions
 			{
 				DateTimeKindHandling = DateTimeKind.Utc,
 			});
-		}
-
-		/// <summary>
-		/// Convert a RavenJToken to a byte array
-		/// </summary>
-		public static byte[] ToBytes(this RavenJToken self)
-		{
-			using (var memoryStream = new MemoryStream())
-			{
-				self.WriteTo(new BsonWriter(memoryStream)
-				{
-					DateTimeKindHandling = DateTimeKind.Unspecified
-				});
-				return memoryStream.ToArray();
-			}
 		}
 
 		/// <summary>

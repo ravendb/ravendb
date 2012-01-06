@@ -1,143 +1,66 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Threading;
-using Raven.Client;
+using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Documents;
+using Lucene.Net.Index;
+using Lucene.Net.QueryParsers;
+using Lucene.Net.Search;
+using Lucene.Net.Store;
+using Newtonsoft.Json;
+using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Database.Extensions;
-using NLog;
 
 namespace etobi.EmbeddedTest
 {
-	class Program
+	internal class Program
 	{
-		private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-		private static bool _stop;
-		private static readonly Random Random = new Random();
-		private static readonly ConcurrentBag<Exception> Exceptions = new ConcurrentBag<Exception>();
-
-		static void Main()
+		static void Main(string[] args)
 		{
-			try
+			var ramDirectory = FSDirectory.Open(new DirectoryInfo("index"));
+			var indexWriter = new IndexWriter(ramDirectory, new StandardAnalyzer());
+			var document = new Document();
+			document.Add(new Field("id", "1", Field.Store.YES, Field.Index.ANALYZED));
+			var field = new Field("First", "Oren", Field.Store.YES, Field.Index.NOT_ANALYZED);
+			field.SetBoost(2);
+			document.Add(field);
+
+			field = new Field("First", "Eini", Field.Store.YES, Field.Index.NOT_ANALYZED);
+			document.Add(field);
+
+			indexWriter.AddDocument(document);
+
+			document = new Document();
+			document.Add(new Field("id", "2", Field.Store.YES, Field.Index.ANALYZED));
+			field = new Field("First", "Oren", Field.Store.YES, Field.Index.NOT_ANALYZED);
+			document.Add(field);
+
+			field = new Field("First", "Eini", Field.Store.YES, Field.Index.NOT_ANALYZED);
+			field.SetBoost(2);
+			document.Add(field);
+
+			indexWriter.AddDocument(document);
+			indexWriter.Flush();
+			indexWriter.Close();
+
+			var indexSearcher = new IndexSearcher(ramDirectory);
+			var query = new QueryParser("", new WhitespaceAnalyzer()).Parse("Last:Eini");
+			var search = indexSearcher.Search(query);
+			for (int i = 0; i < search.Length(); i++)
 			{
-				IOExtensions.DeleteDirectory("Data");
-				using (var documentStore = new EmbeddableDocumentStore())
-				{
-					documentStore.Configuration.MemoryCacheLimitPercentage = 5;
-					documentStore.Configuration.MemoryCacheLimitCheckInterval = TimeSpan.FromSeconds(10);
-					documentStore.Configuration.MemoryCacheLimitMegabytes = 32;
-					documentStore.Configuration.Settings["Raven/Esent/CacheSizeMax"] = "32";
-					documentStore.Configuration.Settings["Raven/Esent/MaxVerPages"] = "64";
-					documentStore.Configuration.MaxNumberOfItemsToIndexInSingleBatch = 128;
-
-					var threads = new List<Thread>();
-
-					InitDatabase(documentStore);
-					for (var i = 0; i < 10; i++)
-					{
-						var thread = new Thread(x => InsertAndQueryLoop(documentStore));
-						thread.Start();
-						threads.Add(thread);
-					}
-
-					while (!_stop)
-					{
-						Thread.Sleep(5000);
-						GC.Collect(2);
-						GC.WaitForPendingFinalizers();
-						
-						Console.WriteLine("NumberOfDocs={0}, StaleIndexes={1}, Memory={2:#,#} kb",
-							documentStore.DocumentDatabase.Statistics.CountOfDocuments,
-							documentStore.DocumentDatabase.Statistics.StaleIndexes.Count(),
-							GC.GetTotalMemory(false) / 1024);
-					}
-
-					foreach (var thread in threads)
-					{
-						thread.Join();
-					}
-
-					foreach (var exception in Exceptions)
-					{
-						Console.WriteLine(exception);
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				Log.ErrorException("Bad things have happened!", ex);
-				throw;
-			}
-			Console.WriteLine("Program stopped");
-			Console.ReadLine();
-		}
-
-		private static void InsertAndQueryLoop(IDocumentStore documentStore)
-		{
-			try
-			{
-				while (!_stop)
-				{
-					var dataToQueryFor = new List<string>();
-
-					for (var i = 0; i < 10; i++)
-					{
-						using (var session = documentStore.OpenSession())
-						{
-							session.Query<Foo>("index" + Random.Next(0, 5))
-								.Where(x => x.Data == "dont care")
-								.FirstOrDefault();
-
-							var foo = new Foo { Id = Guid.NewGuid().ToString(), Data = Guid.NewGuid().ToString() };
-							dataToQueryFor.Add(foo.Data);
-							session.Store(foo);
-							session.SaveChanges();
-						}
-					}
-
-					using (var session = documentStore.OpenSession())
-					{
-						session.Query<Foo>("index" + Random.Next(0, 5))
-							.Customize(x => x.WaitForNonStaleResults(TimeSpan.MaxValue))
-							.Where(x => x.Data == dataToQueryFor[Random.Next(0, 10)])
-							.FirstOrDefault();
-					}
-					Thread.Sleep(Random.Next(50, 200));
-				}
-			}
-			catch (Exception ex)
-			{
-				Exceptions.Add(ex);
-				Log.ErrorException("Houston, we have a problem", ex);
-				_stop = true;
-			}
-		}
-
-		private static void InitDatabase(EmbeddableDocumentStore documentStore)
-		{
-			documentStore.Configuration.DataDirectory = "Data";
-			documentStore.Configuration.DefaultStorageTypeName = "esent";
-			documentStore.Initialize();
-
-			new RavenDocumentsByEntityName().Execute(documentStore);
-
-			for (var i = 0; i < 5; i++)
-			{
-				documentStore.DatabaseCommands.PutIndex("index" + i,
-					new IndexDefinitionBuilder<Foo>
-					{
-						Map = docs => from doc in docs select new { doc.Data }
-					});
+				var explanation = indexSearcher.Explain(query, i);
+				var doc = search.Doc(i);
+				Console.WriteLine("{0} {1} {2}", doc.GetField("id").StringValue(), search.Score(i), explanation.ToString());
 			}
 		}
 	}
-
-	public class Foo
+	public class User
 	{
 		public string Id { get; set; }
-		public string Data { get; set; }
+		public string Name { get; set; }
+		public Guid WindowsAccountId { get; set; }
+		public string Email { get; set; }
 	}
-	
 }

@@ -135,44 +135,12 @@ namespace Raven.Client.Linq
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms)
+		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms, decimal boost = 1)
 		{
 			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), self.Expression,
-			                                                          fieldSelector, Expression.Constant(searchTerms)));
+			                                                          fieldSelector, Expression.Constant(searchTerms), Expression.Constant(boost)));
 			return (IRavenQueryable<T>)queryable;
-		}
-
-		/// <summary>
-		/// Marker method for allowing complex (multi entity) queries on the server.
-		/// </summary>
-		public static IEnumerable<TResult> WhereEntityIs<TResult>(this IEnumerable<object> queryable, params string[] names)
-		{
-			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-		}
-
-		/// <summary>
-		/// Marker method for allowing complex (multi entity) queries on the server.
-		/// </summary>
-		public static TResult IfEntityIs<TResult>(this object queryable, string name)
-		{
-			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-		}
-
-		/// <summary>
-		/// Marker method for allowing hierarchical queries on the server.
-		/// </summary>
-		public static IEnumerable<TResult> Hierarchy<TResult>(this TResult item, string path)
-		{
-			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-		}
-
-		/// <summary>
-		/// Marker method for allowing hierarchical queries on the server.
-		/// </summary>
-		public static IEnumerable<TResult> Hierarchy<TResult>(this TResult item, Func<TResult, IEnumerable<TResult>> path)
-		{
-			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
 #if !NET_3_5
@@ -234,7 +202,6 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
-		/// <param name="path">The path.</param>
 		public static IRavenQueryable<T> Include<T>(this IRavenQueryable<T> source, Expression<Func<T, object>> path)
 		{
 			source.Customize(x => x.Include(path));
@@ -244,17 +211,17 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Filters a sequence of values based on a predicate.
 		/// </summary>
-		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, bool>> prediate)
+		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, bool>> predicate)
 		{
-			return (IRavenQueryable<T>)Queryable.Where(source, prediate);
+			return (IRavenQueryable<T>)Queryable.Where(source, predicate);
 		}
 
 		/// <summary>
 		/// Filters a sequence of values based on a predicate.
 		/// </summary>
-		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, int, bool>> prediate)
+		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, int, bool>> predicate)
 		{
-			return (IRavenQueryable<T>)Queryable.Where(source, prediate);
+			return (IRavenQueryable<T>)Queryable.Where(source, predicate);
 		}
 
 		/// <summary>

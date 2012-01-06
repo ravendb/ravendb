@@ -18,7 +18,7 @@ namespace Raven.Client.Indexes
 		{
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
-			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
+			IndexSortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 		}
 
@@ -44,7 +44,7 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Index sort options
 		/// </summary>
-		protected IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions
+		protected IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> IndexSortOptions
 		{
 			get;
 			set;
@@ -89,7 +89,7 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		protected void Sort(Expression<Func<TReduceResult, object>> field, SortOptions sort)
 		{
-			SortOptions.Add(field, sort);
+			IndexSortOptions.Add(field, sort);
 		}
 	}
 }

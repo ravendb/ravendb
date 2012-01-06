@@ -20,14 +20,14 @@ namespace Raven.Tests.Security.OAuth
 		readonly string path;
 		const string baseUrl = "http://localhost";
 		const string tokenUrl = "/OAuth/AccessToken";
-		const int port = 8080;
+		const int port = 8079;
 		const string validClientUsername = "client1";
 		const string validClientPassword = "password";
 
 		public GrantAccessTokenClientCredentialsFlow()
 		{
 			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 
 		}
 

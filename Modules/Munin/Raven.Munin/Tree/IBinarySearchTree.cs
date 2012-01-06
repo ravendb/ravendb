@@ -27,6 +27,7 @@ namespace Raven.Munin.Tree
 		IBinarySearchTree<TKey, TValue> Right { get; }
 		TKey Key { get; }
 		IEnumerable<TKey> KeysInOrder { get; }
+		IEnumerable<TKey> KeysInReverseOrder { get; }
 		IEnumerable<TValue> ValuesInOrder { get; }
 		IEnumerable<TValue> ValuesInReverseOrder { get; }
 		IEnumerable<KeyValuePair<TKey, TValue>> Pairs { get; }

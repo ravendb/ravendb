@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET", "DELETE", "PUT", "PATCH"}; }
+			get { return new[] {"GET", "DELETE", "PUT", "PATCH", "HEAD"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -35,6 +35,9 @@ namespace Raven.Database.Server.Responders
 			var docId = match.Groups[1].Value;
 			switch (context.Request.HttpMethod)
 			{
+				case "HEAD":
+					Head(context, docId);
+					break;
 				case "GET":
 					Get(context, docId);
 					break;
@@ -90,13 +93,39 @@ namespace Raven.Database.Server.Responders
 						context.SetStatusToNotModified();
 						return;
 					}
-					if (documentMetadata.NonAuthoritiveInformation != null && documentMetadata.NonAuthoritiveInformation.Value)
+					if (documentMetadata.NonAuthoritativeInformation != null && documentMetadata.NonAuthoritativeInformation.Value)
 					{
-						context.SetStatusToNonAuthoritiveInformation();
+						context.SetStatusToNonAuthoritativeInformation();
 					}
 					
 					GetDocumentDirectly(context, docId);
 				});
+		}
+
+		private void Head(IHttpContext context, string docId)
+		{
+			context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
+
+			var transactionInformation = GetRequestTransaction(context);
+			var documentMetadata = Database.GetDocumentMetadata(docId, transactionInformation);
+			if (documentMetadata == null)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
+			Debug.Assert(documentMetadata.Etag != null);
+			if (context.MatchEtag(documentMetadata.Etag.Value))
+			{
+				context.SetStatusToNotModified();
+				return;
+			}
+
+			if (documentMetadata.NonAuthoritativeInformation != null && documentMetadata.NonAuthoritativeInformation.Value)
+			{
+				context.SetStatusToNonAuthoritativeInformation();
+			}
+			documentMetadata.Metadata[Constants.LastModified] = documentMetadata.LastModified; //HACK ? to get the document's last modified value into the response headers
+			context.WriteHeaders(documentMetadata.Metadata, documentMetadata.Etag.Value);
 		}
 
 		private void GetDocumentDirectly(IHttpContext context, string docId)
@@ -107,9 +136,9 @@ namespace Raven.Database.Server.Responders
 				context.SetStatusToNotFound();
 				return;
 			}
-			if (doc.NonAuthoritiveInformation != null && doc.NonAuthoritiveInformation.Value)
+			if (doc.NonAuthoritativeInformation != null && doc.NonAuthoritativeInformation.Value)
 			{
-				context.SetStatusToNonAuthoritiveInformation();
+				context.SetStatusToNonAuthoritativeInformation();
 			}
 			Debug.Assert(doc.Etag != null);
 			doc.Metadata[Constants.LastModified] = doc.LastModified;

@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
@@ -12,7 +14,9 @@ using Raven.Abstractions.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
+using Raven.Database.Tasks;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -28,7 +32,13 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"], docId, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key_and_view_hashed"], viewAndReduceKeyHashed);
-				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"], data.ToBytes());
+
+				using (var stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
+				{
+					data.WriteTo(stream);
+					stream.Flush();
+				}
+
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"], SystemTime.Now);
 
@@ -38,6 +48,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
 		{
+			// optimized according to this: http://managedesent.codeplex.com/discussions/274843#post680337
+			var primaryKeyIndexes = new List<Tuple<byte[], GetMappedResultsParams>>();
+
 			Api.JetSetCurrentIndex(session, MappedResults, "by_reduce_key_and_view_hashed");
 			foreach (var item in getMappedResultsParams)
 			{
@@ -45,21 +58,56 @@ namespace Raven.Storage.Esent.StorageActions
 				if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
 					continue;
 
+				var bookmarkBuffer = new byte[SystemParameters.BookmarkMost];
+				var ignoredBuffer = new byte[SystemParameters.BookmarkMost];
 				Api.MakeKey(session, MappedResults, item.ViewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
 				Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 				do
 				{
-					// we need to check that we don't have hash collisions
-					var currentReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
-					if (currentReduceKey != item.ReduceKey)
-						continue;
-			
-					var currentView = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
-					if (currentView != item.View)
-						continue;
-					
-					yield return Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).ToJObject();
+					int actualBookmarkSize;
+					int ignored;
+					Api.JetGetSecondaryIndexBookmark(session, MappedResults, ignoredBuffer, ignoredBuffer.Length, out ignored, bookmarkBuffer,
+					                                 bookmarkBuffer.Length, out actualBookmarkSize, GetSecondaryIndexBookmarkGrbit.None);
+
+					primaryKeyIndexes.Add(Tuple.Create(bookmarkBuffer.Take(actualBookmarkSize).ToArray(), item));
 				} while (Api.TryMoveNext(session, MappedResults));
+			}
+
+			primaryKeyIndexes.Sort((x, y) =>
+			{
+				var bytes1 = x.Item1;
+				var bytes2 = y.Item1;
+				for (int i = 0; i < Math.Min(bytes1.Length, bytes2.Length); i++)
+				{
+					if (bytes1[i] != bytes2[i])
+						return bytes1[i] - bytes2[i];
+				}
+				return bytes1.Length - bytes2.Length;
+			});
+
+			foreach (var primaryKeyIndexTuple in primaryKeyIndexes)
+			{
+				var bookmark = primaryKeyIndexTuple.Item1;
+				var item = primaryKeyIndexTuple.Item2;
+				Api.JetGotoBookmark(session, MappedResults, bookmark, bookmark.Length);
+
+				// we need to check that we don't have hash collisions
+				var currentReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
+				if (currentReduceKey != item.ReduceKey)
+					continue;
+
+				var currentView = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
+				if (currentView != item.View)
+					continue;
+
+				RavenJObject obj;
+				using(var stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
+				{
+					obj = stream.ToJObject();
+				}
+
+				yield return obj;
+
 			}
 		}
 

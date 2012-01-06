@@ -47,7 +47,7 @@ namespace Raven.Database.Indexing
 				var documentsWrapped = documents.Select((dynamic doc) =>
 				{
 					if(doc.__document_id == null)
-						throw new ArgumentException("Cannot index something which doesn't have a document id, but got: " + doc);
+						throw new ArgumentException(string.Format("Cannot index something which doesn't have a document id, but got: '{0}'", doc));
 
 					string documentId = doc.__document_id.ToString();
 					if (processedKeys.Add(documentId) == false)
@@ -76,16 +76,14 @@ namespace Raven.Database.Indexing
 				{
 					count++;
 
-					IndexingResult indexingResult;
-					if (doc is DynamicJsonObject)
-						indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, (DynamicJsonObject)doc);
-					else
-						indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, properties, doc);
+					float boost;
+					var indexingResult = GetIndexingResult(ref properties, doc, anonymousObjectToLuceneDocumentConverter, out boost);
 
 					if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
 					{
 						madeChanges = true;
 						luceneDoc.GetFields().Clear();
+						luceneDoc.SetBoost(boost);
 						documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
 						luceneDoc.Add(documentIdField);
 						foreach (var field in indexingResult.Fields)
@@ -123,6 +121,34 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
 		}
 
+		private IndexingResult GetIndexingResult(ref PropertyDescriptorCollection properties, object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)
+		{
+			boost = 1;
+
+			var boostedValue = doc as BoostedValue;
+			if (boostedValue != null)
+			{
+				doc = boostedValue.Value;
+				boost = boostedValue.Boost;
+			}
+
+			IndexingResult indexingResult;
+			if (doc is DynamicJsonObject)
+				indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, (DynamicJsonObject) doc);
+			else
+				indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, ref properties, doc);
+
+			if (Math.Abs(boost - 1) > float.Epsilon)
+			{
+				foreach (var abstractField in indexingResult.Fields)
+				{
+					abstractField.SetOmitNorms(false);
+				}
+			}
+
+			return indexingResult;
+		}
+
 		private class IndexingResult
 		{
 			public string NewDocId;
@@ -135,14 +161,14 @@ namespace Raven.Database.Indexing
 			var newDocId = dynamicJsonObject.GetDocumentId();
 			return new IndexingResult
 			{
-				Fields = anonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, indexDefinition,
+				Fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, indexDefinition,
 																  Field.Store.NO).ToList(),
 				NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
 				ShouldSkip = false
 			};
 		}
 
-		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, PropertyDescriptorCollection properties, object doc)
+		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, ref PropertyDescriptorCollection properties, object doc)
 		{
 			if (properties == null)
 			{

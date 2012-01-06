@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition;
+using System.IO;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
@@ -22,7 +23,7 @@ namespace Raven.Database.Plugins
 		/// <param name="data">The new attachment data about to be put into Raven</param>
 		/// <param name="metadata">The new document metadata</param>
 		/// <returns>Whatever the put was vetoed or not</returns>
-		public virtual VetoResult AllowPut(string key, byte[] data, RavenJObject metadata)
+		public virtual VetoResult AllowPut(string key, Stream data, RavenJObject metadata)
 		{
 			return VetoResult.Allowed;
 		}
@@ -41,7 +42,7 @@ namespace Raven.Database.Plugins
 		///  </remarks><param name="key">The document key</param>
 		/// <param name="data">The new attachment data about to be put into Raven</param>
 		/// <param name="metadata">The new document metadata</param>
-		public virtual void OnPut(string key, byte[] data, RavenJObject metadata)
+		public virtual void OnPut(string key, Stream data, RavenJObject metadata)
 		{
 
 		}
@@ -56,7 +57,7 @@ namespace Raven.Database.Plugins
 		/// <param name="data">The new attachment data about to be put into Raven</param>
 		/// <param name="metadata">The new document metadata</param>
 		/// <param name="etag">The etag of the just put document</param>
-		public virtual void AfterPut(string key, byte[] data, RavenJObject metadata, Guid etag)
+		public virtual void AfterPut(string key, Stream data, RavenJObject metadata, Guid etag)
 		{
 
 		}
@@ -70,7 +71,7 @@ namespace Raven.Database.Plugins
 		/// <param name="data">The attachment data that was put into Raven</param>
 		/// <param name="metadata">The document metadata</param>
 		/// <param name="etag">The etag of the just put document</param>
-		public virtual void AfterCommit(string key, byte[] data, RavenJObject metadata, Guid etag)
+		public virtual void AfterCommit(string key, Stream data, RavenJObject metadata, Guid etag)
 		{
 
 		}

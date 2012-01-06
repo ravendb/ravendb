@@ -49,6 +49,7 @@ namespace Raven.Client.Document
 		public DocumentQuery(DocumentQuery<T> other)
 			: base(other)
 		{
+			
 		}
 
 
@@ -57,23 +58,24 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		/// <param name="fields">The fields.</param>
-		public IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields)
+		public virtual IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields)
 		{
-			return new DocumentQuery<TProjection>(theSession,
+			var documentQuery = new DocumentQuery<TProjection>(theSession,
 #if !SILVERLIGHT
-				theDatabaseCommands,
+			                                                   theDatabaseCommands,
 #endif
 #if !NET_3_5
-				theAsyncDatabaseCommands,
+			                                                   theAsyncDatabaseCommands,
 #endif
-				indexName, fields,
-				queryListeners)
+			                                                   indexName, fields,
+			                                                   queryListeners)
 			{
 				pageSize = pageSize,
 				theQueryText = new StringBuilder(theQueryText.ToString()),
 				start = start,
 				timeout = timeout,
 				cutoff = cutoff,
+				queryStats = queryStats,
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
@@ -81,6 +83,8 @@ namespace Raven.Client.Document
 				aggregationOp = aggregationOp,
 				includes = new HashSet<string>(includes)
 			};
+			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
+			return documentQuery;
 		}
 
 		/// <summary>
@@ -599,7 +603,7 @@ namespace Raven.Client.Document
 		/// </returns>
 		public override string ToString()
 		{
-			return QueryText.ToString();
+			return QueryText.ToString().Trim();
 		}
 	}
 }

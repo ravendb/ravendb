@@ -1,0 +1,260 @@
+﻿<UserControl x:Class="Raven.Studio.MainPage"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
+			 xmlns:uriMapper="clr-namespace:System.Windows.Navigation;assembly=System.Windows.Controls.Navigation"
+			 xmlns:Controls="clr-namespace:System.Windows.Controls"
+			 xmlns:TiledBG="clr-namespace:TiledBG;assembly=TiledBG"
+			 xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases"
+			 xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats"
+			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+			 xmlns:System="clr-namespace:System;assembly=mscorlib"
+			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
+			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit">
+
+	<Grid x:Name="LayoutRoot"
+		  Style="{StaticResource LayoutRootGridStyle}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="35" />
+		</Grid.RowDefinitions>
+
+		<Grid x:Name="HeaderGrid"
+			  Grid.Row="0"
+			  Grid.ColumnSpan="2">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="Auto" />
+			</Grid.ColumnDefinitions>
+
+			<Border Grid.ColumnSpan="2">
+				<Border.Background>
+					<LinearGradientBrush EndPoint="0.5,1"
+										 StartPoint="0.5,0">
+						<GradientStop Color="White"
+									  Offset="0.174" />
+						<GradientStop Color="#FFDEDEDE"
+									  Offset="0.993" />
+						<GradientStop Color="#FF78223D"
+									  Offset="1" />
+					</LinearGradientBrush>
+				</Border.Background>
+			</Border>
+			<Border Height="5"
+					Grid.Row="1"
+					Grid.ColumnSpan="2">
+				<Border.Background>
+					<LinearGradientBrush EndPoint="0.5,1"
+										 StartPoint="0.5,0">
+						<GradientStop Color="#FF78223D"
+									  Offset="0.13" />
+						<GradientStop Color="#FF8B2241"
+									  Offset="0.174" />
+						<GradientStop Color="#FF8B2241"
+									  Offset="0.348" />
+						<GradientStop Color="#FF9F2145"
+									  Offset="0.391" />
+						<GradientStop Color="#FF9F2145"
+									  Offset="0.565" />
+						<GradientStop Color="#FFB22148"
+									  Offset="0.609" />
+					</LinearGradientBrush>
+				</Border.Background>
+			</Border>
+
+			<Grid Grid.Column="1"
+				  x:Name="Logo">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+
+				<HyperlinkButton Grid.Column="1"
+								 HorizontalAlignment="Left"
+								 Margin="0,5,5,1"
+								 NavigateUri="http://beta.ravendb.net/"
+								 TargetName="_blank">
+					<Image Source="{StaticResource Image_RavenDBLogo}"
+						   Stretch="Uniform"
+						   Height="25" />
+				</HyperlinkButton>
+
+				<Databases:DatabaseSelectionView VerticalAlignment="Bottom"
+												 HorizontalAlignment="Right" />
+			</Grid>
+
+			<StackPanel x:Name="MainLinks"
+						Orientation="Horizontal"
+						VerticalAlignment="Stretch"
+						Margin="{StaticResource Margin_MainPageLeftRight}">
+
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton x:Name="SummaryLink"
+								 Content="Summary"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/home"
+								 Style="{StaticResource Style_Text_HeaderLink}">
+					<Behaviors:LinkHighlighter.AlternativeUris>
+						<Behaviors:StringCollection>
+							<System:String>/statistics</System:String>
+						</Behaviors:StringCollection>
+					</Behaviors:LinkHighlighter.AlternativeUris>
+				</HyperlinkButton>
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton Content="Collections"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/collections"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton Content="Indexes"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/indexes"
+								 Style="{StaticResource Style_Text_HeaderLink}">
+					<Behaviors:LinkHighlighter.AlternativeUris>
+						<Behaviors:StringCollection>
+							<System:String>/query</System:String>
+						</Behaviors:StringCollection>
+					</Behaviors:LinkHighlighter.AlternativeUris>
+				</HyperlinkButton>
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+
+				<HyperlinkButton Content="Documents"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/documents"
+								 Style="{StaticResource Style_Text_HeaderLink}">
+					<Behaviors:LinkHighlighter.AlternativeUris>
+						<Behaviors:StringCollection>
+							<System:String>/Edit</System:String>
+						</Behaviors:StringCollection>
+					</Behaviors:LinkHighlighter.AlternativeUris>
+				</HyperlinkButton>
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton Content="Tasks"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/tasks"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<HyperlinkButton Content="Logs"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/logs"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+			</StackPanel>
+		</Grid>
+
+		<Grid x:Name="ContentGrid"
+			  Grid.Row="1">
+			<Grid>
+				<Grid.CacheMode>
+					<BitmapCache />
+				</Grid.CacheMode>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="*" />
+					<RowDefinition Height="*" />
+				</Grid.RowDefinitions>
+				<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}"
+										BorderThickness="0"
+										Height="400"
+										VerticalAlignment="Top"
+										Grid.Row="0">
+					<TiledBG:TiledBGControl.OpacityMask>
+						<LinearGradientBrush StartPoint="0.5,0"
+											 EndPoint="0.5,1">
+							<GradientStop Color="Transparent"
+										  Offset="1" />
+							<GradientStop Color="#AA000000"
+										  Offset="0.75" />
+							<GradientStop Color="#FF000000" />
+						</LinearGradientBrush>
+					</TiledBG:TiledBGControl.OpacityMask>
+				</TiledBG:TiledBGControl>
+				<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTextureBottom}"
+										BorderThickness="0"
+										Height="400"
+										VerticalAlignment="Bottom"
+										Grid.Row="1">
+					<TiledBG:TiledBGControl.OpacityMask>
+						<LinearGradientBrush EndPoint="0.5,1"
+											 StartPoint="0.5,0">
+							<GradientStop Color="Black"
+										  Offset="1" />
+							<GradientStop Color="#AA000000"
+										  Offset="0.75" />
+							<GradientStop Color="Transparent" />
+						</LinearGradientBrush>
+					</TiledBG:TiledBGControl.OpacityMask>
+				</TiledBG:TiledBGControl>
+			</Grid>
+
+			<navigation:Frame x:Name="ContentFrame"
+							  Style="{StaticResource ContentFrameStyle}"
+							  Source=""
+							  Navigated="ContentFrame_Navigated"
+							  NavigationFailed="ContentFrame_NavigationFailed"
+							  Margin="15,0">
+				<navigation:Frame.UriMapper>
+					<uriMapper:UriMapper>
+						<uriMapper:UriMapping Uri=""
+											  MappedUri="/Views/Home.xaml" />
+						<uriMapper:UriMapping Uri="/indexes-errors/{indexName}"
+											  MappedUri="/Views/IndexesErrors.xaml" />
+						<uriMapper:UriMapping Uri="/indexes-errors"
+											  MappedUri="/Views/IndexesErrors.xaml" />
+						<uriMapper:UriMapping Uri="/indexes/{indexName}"
+											  MappedUri="/Views/Index.xaml" />
+						<uriMapper:UriMapping Uri="/query/{indexName}"
+											  MappedUri="/Views/Query.xaml" />
+						<uriMapper:UriMapping Uri="/logs/{errors}"
+											  MappedUri="/Views/Logs.xaml" />
+						<uriMapper:UriMapping Uri="/{pageName}"
+											  MappedUri="/Views/{pageName}.xaml" />
+					</uriMapper:UriMapper>
+				</navigation:Frame.UriMapper>
+			</navigation:Frame>
+		</Grid>
+
+		<RavenControls:NotificationArea Grid.RowSpan="999"
+										Grid.ColumnSpan="999"
+										Notifications="{Binding Notifications}"
+										VerticalAlignment="Top"
+										HorizontalAlignment="Right"
+										Margin="0,10,10,0"
+										Height="40" />
+
+		<Grid Grid.Row="2">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="8" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
+
+			<TiledBG:TiledBGControl Grid.RowSpan="3"
+									TiledImageSource="{StaticResource Image_FooterTexture}"
+									BorderThickness="0" />
+			<Rectangle VerticalAlignment="Top"
+					   Height="5"
+					   Fill="Black"
+					   toolkit:DockPanel.Dock="Top"
+					   Opacity="0.4" />
+
+			<toolkit:DockPanel Grid.Row="2"
+							   Margin="15,0,15,0"
+							   LastChildFill="False">
+				<Stats:DatabaseStatisticsView toolkit:DockPanel.Dock="Left" />
+
+				<StackPanel toolkit:DockPanel.Dock="Right"
+							Orientation="Horizontal">
+					<Databases:LicenseView Margin="0,0,15,0"
+										   DataContext="{Binding Path=Server.Value.License}" />
+					<TextBlock Text="{Binding Path=Server.Value.BuildNumber, StringFormat='Build #\{0\}'}" />
+				</StackPanel>
+			</toolkit:DockPanel>
+		</Grid>
+	</Grid>
+
+</UserControl>

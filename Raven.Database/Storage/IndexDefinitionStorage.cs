@@ -125,7 +125,7 @@ namespace Raven.Database.Storage
 
 		public string AddIndex(IndexDefinition indexDefinition)
 		{
-			DynamicViewCompiler transformer = AddAndCompileIndex(indexDefinition);
+			var transformer = AddAndCompileIndex(indexDefinition);
 			if (configuration.RunInMemory == false)
 			{
 				var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
@@ -177,8 +177,6 @@ namespace Raven.Database.Storage
 			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
 		}
 
-
-
 		public IndexDefinition GetIndexDefinition(string name)
 		{
 			IndexDefinition value;
@@ -224,8 +222,9 @@ namespace Raven.Database.Storage
 			{
 				prefix = index.Substring(0, 5);
 			}
-			if (path.Length + index.Length > 230 ||
-				Encoding.Unicode.GetByteCount(index) >= 255)
+			var fixupIndexName = MonoHttpUtility.UrlEncode(index);
+			if (path.Length + fixupIndexName.Length > 230 ||
+				Encoding.Unicode.GetByteCount(fixupIndexName) >= 255)
 			{
 				using (var md5 = MD5.Create())
 				{
@@ -240,7 +239,7 @@ namespace Raven.Database.Storage
 		{
 			// Stick Lucene.Net's namespace to all analyzer aliases that are missing a namespace
 			var analyzerNames = (from analyzer in indexDefinition.Analyzers
-								 where analyzer.Value.IndexOf(".") == -1
+								 where analyzer.Value.IndexOf('.') == -1
 								 select analyzer).ToArray();
 
 			// Only do this for analyzer that actually exist; we do this here to be able to throw a correct error later on

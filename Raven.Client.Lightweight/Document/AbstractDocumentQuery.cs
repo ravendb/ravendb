@@ -132,7 +132,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Holds the query stats
 		/// </summary>
-		protected readonly RavenQueryStatistics queryStats = new RavenQueryStatistics();
+		protected RavenQueryStatistics queryStats = new RavenQueryStatistics();
 
 		/// <summary>
 		///   Get the name of the index being queried
@@ -188,7 +188,7 @@ namespace Raven.Client.Document
 			get { return theQueryText; }
 		}
 
-		private Action<QueryResult> afterQueryExecuted;
+		protected Action<QueryResult> afterQueryExecutedCallback;
 		private Guid? cutoffEtag;
 
 		private TimeSpan DefaultTimeout
@@ -279,6 +279,9 @@ namespace Raven.Client.Document
 			theWaitForNonStaleResults = other.theWaitForNonStaleResults;
 			includes = other.includes;
 			queryListeners = other.queryListeners;
+			queryStats = other.queryStats;
+
+			AfterQueryExecuted(queryStats.UpdateQueryStats);
 		}
 
 		#region TSelf Members
@@ -469,7 +472,7 @@ namespace Raven.Client.Document
 				queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecuted);
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
 
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
@@ -839,7 +842,10 @@ If you really want to do in memory filtering on the data returned from the query
 		public void WhereContains(string fieldName, params object [] values)
 		{
 			if (values == null || values.Length == 0)
+			{
+				WhereEquals(fieldName, "Empty_Contains_" + Guid.NewGuid());
 				return;
+			}
 
 			OpenSubclause();
 
@@ -1283,7 +1289,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void AfterQueryExecuted(Action<QueryResult> afterQueryExecutedCallback)
 		{
-			this.afterQueryExecuted += afterQueryExecutedCallback;
+			this.afterQueryExecutedCallback += afterQueryExecutedCallback;
 		}
 
 		/// <summary>
@@ -1291,7 +1297,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void InvokeAfterQueryExecuted(QueryResult result)
 		{
-			var queryExecuted = afterQueryExecuted;
+			var queryExecuted = afterQueryExecutedCallback;
 			if (queryExecuted != null)
 				queryExecuted(result);
 		}
@@ -1347,7 +1353,8 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void Search(string fieldName, string searchTerms)
 		{
-			theQueryText.Append(' ').Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">> ");
+			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
+			theQueryText.Append(' ').Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">>");
 		}
 
 		private string TransformToEqualValue(WhereParams whereParams)
@@ -1368,12 +1375,12 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if (whereParams.Value is DateTime)
 			{
-				return DateTools.DateToString((DateTime)whereParams.Value, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTime)whereParams.Value), DateTools.Resolution.MILLISECOND);
 			}
 			
 			if (whereParams.Value is DateTimeOffset)
 			{
-				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).DateTime, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
 			}
 
 			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
@@ -1398,9 +1405,9 @@ If you really want to do in memory filtering on the data returned from the query
 				return Constants.EmptyStringNotAnalyzed;
 
 			if (whereParams.Value is DateTime)
-				return DateTools.DateToString((DateTime)whereParams.Value, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTime)whereParams.Value), DateTools.Resolution.MILLISECOND);
 			if (whereParams.Value is DateTimeOffset)
-				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).DateTime, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
 
 			if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
@@ -1435,7 +1442,7 @@ If you really want to do in memory filtering on the data returned from the query
 					string.Format("A clause was not closed correctly within this query, current clause depth = {0}",
 								  currentClauseDepth));
 			}
-			return theQueryText.ToString();
+			return theQueryText.ToString().Trim();
 		}
 
 		/// <summary>

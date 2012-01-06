@@ -13,6 +13,7 @@ using System.Linq;
 using System.Runtime.Caching;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Web;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -21,7 +22,7 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Config
 {
-	public class InMemoryRavenConfiguration 
+	public class InMemoryRavenConfiguration
 	{
 		private CompositionContainer container;
 		private bool containerExternallySet;
@@ -61,9 +62,9 @@ namespace Raven.Database.Config
 			var cacheMemoryLimitMegabytes = Settings["Raven/MemoryCacheLimitMegabytes"];
 			MemoryCacheLimitMegabytes = cacheMemoryLimitMegabytes == null
 											? GetDefaultMemoryCacheLimitMegabytes()
-			                            	: int.Parse(cacheMemoryLimitMegabytes);
+											: int.Parse(cacheMemoryLimitMegabytes);
 
-			
+
 
 			var memoryCacheLimitPercentage = Settings["Raven/MemoryCacheLimitPercentage"];
 			MemoryCacheLimitPercentage = memoryCacheLimitPercentage == null
@@ -96,8 +97,8 @@ namespace Raven.Database.Config
 			TempIndexCleanupThreshold = cleanupThreshold != null ? TimeSpan.FromSeconds(int.Parse(cleanupThreshold)) : TimeSpan.FromMinutes(20);
 
 			var tempMemoryMaxMb = Settings["Raven/TempIndexInMemoryMaxMB"];
-			TempIndexInMemoryMaxBytes = tempMemoryMaxMb != null ? int.Parse(tempMemoryMaxMb) * 1024000 : 26214400;
-			TempIndexInMemoryMaxBytes = Math.Max(1024000, TempIndexInMemoryMaxBytes);
+			TempIndexInMemoryMaxBytes = tempMemoryMaxMb != null ? int.Parse(tempMemoryMaxMb) * 1024 * 1024 : 26214400;
+			TempIndexInMemoryMaxBytes = Math.Max(1024*1024, TempIndexInMemoryMaxBytes);
 
 			// Data settings
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
@@ -118,12 +119,7 @@ namespace Raven.Database.Config
 			// HTTP settings
 			HostName = Settings["Raven/HostName"];
 			Port = PortUtil.GetPort(Settings["Raven/Port"]);
-			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? "/";
-
-			if (VirtualDirectory.EndsWith("/"))
-				VirtualDirectory = VirtualDirectory.Substring(0, VirtualDirectory.Length - 1);
-			if (VirtualDirectory.StartsWith("/") == false)
-				VirtualDirectory = "/" + VirtualDirectory;
+			SetVirtualDirectory();
 
 			bool httpCompressionTemp;
 			if (bool.TryParse(Settings["Raven/HttpCompression"], out httpCompressionTemp) == false)
@@ -140,19 +136,42 @@ namespace Raven.Database.Config
 			// Misc settings
 			WebDir = Settings["Raven/WebDir"] ?? GetDefaultWebDir();
 
-			PluginsDirectory = Settings["Raven/PluginsDirectory"] ?? @"~\Plugins";
-			if (PluginsDirectory.StartsWith(@"~\"))
-				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
+			PluginsDirectory = (Settings["Raven/PluginsDirectory"] ?? @"~\Plugins").ToFullPath();
 
 			// OAuth
-			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? "windows";
+			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";
+			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
+				SetupOAuth();
 
+		}
+
+		private void SetVirtualDirectory()
+		{
+			var defaultVirtualDirectory = "/";
+			try
+			{
+				if (HttpContext.Current != null)
+					defaultVirtualDirectory = HttpContext.Current.Request.ApplicationPath;
+			}
+			catch (HttpException)
+			{
+				// explicitly ignoring this because we might be running in embedded mode
+				// inside IIS during init stages, in which case we can't access the HttpContext
+				// nor do we actually care
+			}
+
+			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
+
+			if (VirtualDirectory.EndsWith("/"))
+				VirtualDirectory = VirtualDirectory.Substring(0, VirtualDirectory.Length - 1);
+			if (VirtualDirectory.StartsWith("/") == false)
+				VirtualDirectory = "/" + VirtualDirectory;
 		}
 
 		private void SetupOAuth()
 		{
 			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
-			                   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/AccessToken" : ServerUrl + "/OAuth/AccessToken");
+							   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/AccessToken" : ServerUrl + "/OAuth/AccessToken");
 			OAuthTokenCertificate = GetCertificate();
 		}
 
@@ -161,6 +180,7 @@ namespace Raven.Database.Config
 			var path = Settings["Raven/OAuthTokenCertificatePath"];
 			if (string.IsNullOrEmpty(path) == false)
 			{
+				path = path.ToFullPath();
 				var pwd = Settings["Raven/OAuthTokenCertificatePassword"];
 				if (string.IsNullOrEmpty(pwd) == false)
 				{
@@ -178,8 +198,8 @@ namespace Raven.Database.Config
 			int totalPhysicalMemoryMegabytes;
 			if (Type.GetType("Mono.Runtime") != null)
 			{
-				var pc = new System.Diagnostics.PerformanceCounter ("Mono Memory", "Total Physical Memory");
-				totalPhysicalMemoryMegabytes = (int)(pc.RawValue/1024/1024);
+				var pc = new System.Diagnostics.PerformanceCounter("Mono Memory", "Total Physical Memory");
+				totalPhysicalMemoryMegabytes = (int)(pc.RawValue / 1024 / 1024);
 				if (totalPhysicalMemoryMegabytes == 0)
 					totalPhysicalMemoryMegabytes = 128; // 128MB, the Mono runtime default
 			}
@@ -189,14 +209,14 @@ namespace Raven.Database.Config
 				throw new PlatformNotSupportedException("This build can only run on Mono");
 #else
 				totalPhysicalMemoryMegabytes =
-					(int)(new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory/1024/1024);
+					(int)(new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory / 1024 / 1024);
 #endif
 			}
 
 			// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
 
-			var val = (totalPhysicalMemoryMegabytes / 2)  - 
-						// reduce the unmanaged cache size from the default limit
+			var val = (totalPhysicalMemoryMegabytes / 2) -
+				// reduce the unmanaged cache size from the default limit
 						(GetConfigurationValue<int>("Raven/Esent/CacheSizeMax") ?? 1024);
 
 			if (val < 0)
@@ -211,11 +231,19 @@ namespace Raven.Database.Config
 		{
 			get
 			{
+				if (HttpContext.Current != null)// running in IIS, let us figure out how
+				{
+					var url = HttpContext.Current.Request.Url;
+					return new UriBuilder(url)
+					{
+						Path = HttpContext.Current.Request.ApplicationPath
+					}.Uri.ToString();
+				}
 				return new UriBuilder("http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
 			}
 		}
 
-#region Core settings
+		#region Core settings
 
 		/// <summary>
 		/// What thread priority to give the various background tasks RavenDB uses (mostly for indexing)
@@ -249,9 +277,9 @@ namespace Raven.Database.Config
 		/// Default: 00:02:00 (or value provided by system.runtime.caching app config)
 		/// </summary>
 		public TimeSpan MemoryCacheLimitCheckInterval { get; set; }
-#endregion
+		#endregion
 
-#region Index settings
+		#region Index settings
 
 		/// <summary>
 		/// Max number of items to take for indexing in a batch
@@ -300,9 +328,9 @@ namespace Raven.Database.Config
 		/// </summary>
 		public int TempIndexInMemoryMaxBytes { get; set; }
 
-#endregion
+		#endregion
 
-#region HTTP settings
+		#region HTTP settings
 
 		/// <summary>
 		/// The hostname to use when creating the http listener (null to accept any hostname or address)
@@ -312,7 +340,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// The port to use when creating the http listener. 
-		/// Default: 8080
+		/// Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.
 		/// </summary>
 		public int Port { get; set; }
 
@@ -367,32 +395,21 @@ namespace Raven.Database.Config
 		/// </summary>
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
-		private string authenticationMode;
-
 		/// <summary>
 		/// Defines which mode to use to authenticate requests
 		/// Allowed values: Windows, OAuth
 		/// Default: Windows
 		/// </summary>
-		public string AuthenticationMode
-		{
-			get { return authenticationMode; }
-			set
-			{
-				authenticationMode = value;
-				if(string.Equals(authenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
-					SetupOAuth();
-			}
-		}
+		public string AuthenticationMode { get; set; }
 
 		/// <summary>
 		/// The certificate to use when verifying access token signatures for OAuth
 		/// </summary>
 		public X509Certificate2 OAuthTokenCertificate { get; set; }
 
-#endregion
+		#endregion
 
-#region Data settings
+		#region Data settings
 
 		/// <summary>
 		/// The directory for the RavenDB database. 
@@ -439,9 +456,9 @@ namespace Raven.Database.Config
 		/// </summary>
 		public TransactionMode TransactionMode { get; set; }
 
-#endregion
+		#endregion
 
-#region Misc settings
+		#region Misc settings
 
 		/// <summary>
 		/// The directory to search for RavenDB's WebUI. 
@@ -473,7 +490,11 @@ namespace Raven.Database.Config
 				// add new one
 				if (Directory.Exists(pluginsDirectory))
 				{
-					Catalog.Catalogs.Add(new DirectoryCatalog(pluginsDirectory));
+					var patterns = Settings["Raven/BundlesSearchPattern"] ?? "*.dll";
+					foreach (var pattern in patterns.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
+					{
+						Catalog.Catalogs.Add(new DirectoryCatalog(pluginsDirectory, pattern));
+					}
 				}
 			}
 		}
@@ -511,7 +532,7 @@ namespace Raven.Database.Config
 			{
 				if (string.IsNullOrEmpty(indexStoragePath))
 					return Path.Combine(DataDirectory, "Indexes");
-				
+
 				return indexStoragePath;
 			}
 			set
@@ -534,7 +555,7 @@ namespace Raven.Database.Config
 			if (string.IsNullOrEmpty(Settings["Raven/AnonymousAccess"]) == false)
 			{
 				var val = Enum.Parse(typeof(AnonymousUserAccessMode), Settings["Raven/AnonymousAccess"]);
-				return (AnonymousUserAccessMode) val;
+				return (AnonymousUserAccessMode)val;
 			}
 			return AnonymousUserAccessMode.Get;
 		}
@@ -580,15 +601,15 @@ namespace Raven.Database.Config
 
 			Catalog.Catalogs.Add(new AssemblyCatalog(type.Assembly));
 
-			return (ITransactionalStorage) Activator.CreateInstance(type, this, notifyAboutWork);
+			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
 		}
 
 		private string SelectStorageEngine()
 		{
-			if(RunInMemory)
+			if (RunInMemory)
 				return "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
 
-			if(String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
+			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
 				if (File.Exists(Path.Combine(DataDirectory, "Raven.ravendb")))
 				{
@@ -600,28 +621,15 @@ namespace Raven.Database.Config
 			return DefaultStorageTypeName;
 		}
 
-	    public void Dispose()
-	    {
+		public void Dispose()
+		{
 			if (containerExternallySet)
 				return;
 			if (container == null)
 				return;
 
 			container.Dispose();
-	        container = null;
-	    }
-
-
-		public class ExtensionsLog
-		{
-			public string Name { get; set; }
-			public ExtensionsLogDetail[] Installed { get; set; }
-		}
-
-		public class ExtensionsLogDetail
-		{
-			public string Name { get; set; }
-			public string Assembly { get; set; }
+			container = null;
 		}
 
 		private ExtensionsLog GetExtensionsFor(Type type)
@@ -634,7 +642,7 @@ namespace Raven.Database.Config
 			return new ExtensionsLog
 			{
 				Name = type.Name,
-				Installed = enumerable.Select(export => new	ExtensionsLogDetail
+				Installed = enumerable.Select(export => new ExtensionsLogDetail
 				{
 					Assembly = export.Value.GetType().Assembly.GetName().Name,
 					Name = export.Value.GetType().Name
@@ -644,7 +652,16 @@ namespace Raven.Database.Config
 
 		public IEnumerable<ExtensionsLog> ReportExtensions(params Type[] types)
 		{
-			return types.Select(GetExtensionsFor).Where(extensionsLog => extensionsLog!=null);
+			return types.Select(GetExtensionsFor).Where(extensionsLog => extensionsLog != null);
+		}
+
+		public void CustomizeValuesForTenant(string tenantId)
+		{
+			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
+				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
+
+			if (string.IsNullOrEmpty(Settings["Esent/LogsPath"]) == false)
+				Settings["Esent/LogsPath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
 		}
 	}
 }

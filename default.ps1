@@ -9,27 +9,27 @@ properties {
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", `
-    "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???", `
+    "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
-  $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json.???", "Lucene.Net.???", `
+  $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", "Lucene.Net.???", `
                      "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", `
                     "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Storage.Esent.???", `
                     "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
-  $client_dlls_3_5 = @( "nlog.???","Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???");
+  $client_dlls_3_5 = @( "nlog.???", "Newtonsoft.Json\Net35\Newtonsoft.Json.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???");
      
-  $client_dlls = @( "nlog.???","Raven.Client.MvcIntegration.???", "Newtonsoft.Json.???","Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", `
+  $client_dlls = @( "nlog.???","Raven.Client.MvcIntegration.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???","Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", `
 			"AsyncCtpLibrary.???" );
   
-  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json.Silverlight.???");   
+  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json\Silverlight\Newtonsoft.Json.???");   
   
   $silverlight_dlls_libs = @( "NLog.???");   
  
   $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", `
-      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "nlog.???", "Newtonsoft.Json.???", `
+      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", `
       "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  );
       
   $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  );
@@ -85,7 +85,7 @@ task Init -depends Verify40, Clean {
 			-company "Hibernating Rhinos" `
 			-product "RavenDB $version.0.0" `
 			-version "$version.0" `
-			-fileversion "1.0.$env:buildlabel.0" `
+			-fileversion "$version.$env:buildlabel.0" `
 			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
 			-clsCompliant $clsComliant
 	}
@@ -106,16 +106,18 @@ task Init -depends Verify40, Clean {
 }
 
 task BeforeCompile {
+  echo "$base_dir\..\BuildsInfo\RavenDB\Settings.dat" 
 	if (Test-Path "$base_dir\..\BuildsInfo\RavenDB\Settings.dat") {
 		cp "$base_dir\..\BuildsInfo\RavenDB\Settings.dat" "$base_dir\Raven.Studio\Settings.dat" -force
 	}
 	else {
-		new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
+	  new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
 	}
+	
 }
 
 task AfterCompile {
-	new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
+	#new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
 }
 
 
@@ -150,7 +152,7 @@ task Test -depends Compile{
 task TestSilverlight {
 	
 	try{
-    start "$build_dir\Raven.Server.exe" "/ram"
+    start "$build_dir\Raven.Server.exe" "--ram --set=Raven/Port==8079"
     exec { 
       & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
     }
@@ -208,6 +210,7 @@ task CopySamples {
 	}
 	
 	cp "$base_dir\Samples\Raven.Samples.sln" "$build_dir\Output\Samples" -force
+	cp "$base_dir\Samples\Samples.ps1" "$build_dir\Output\Samples" -force
       
 	exec { .\Utilities\Binaries\Raven.Samples.PrepareForRelease.exe "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
 }
@@ -229,6 +232,10 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 
 task CleanOutputDirectory { 
 	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
+}
+
+task CopyJsonLibraries {
+	cp -r "$lib_dir\Newtonsoft.Json" $build_dir
 }
 
 task CopyEmbeddedClient { 
@@ -253,13 +260,13 @@ task CopySilverlight{
 
 task CopySmuggler {
 	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
-	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Smuggler
+	cp $build_dir\Newtonsoft.Json\Net\NewtonSoft.Json.??? $build_dir\Output\Smuggler
 	cp $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
 task CopyBackup {
 	cp $build_dir\Raven.Backup.??? $build_dir\Output\Backup
-	cp $build_dir\NewtonSoft.Json.??? $build_dir\Output\Backup
+	cp $build_dir\Newtonsoft.Json\Net\NewtonSoft.Json.??? $build_dir\Output\Backup
 }
 
 task CopyClient {
@@ -361,6 +368,7 @@ task ResetBuildArtifcats {
 task DoRelease -depends Compile, `
 	CleanOutputDirectory,`
 	CreateOutpuDirectories, `
+	CopyJsonLibraries, `
 	CopyEmbeddedClient, `
 	CopySmuggler, `
 	CopyBackup, `
@@ -387,8 +395,10 @@ task Upload -depends DoRelease {
 		  $log = git log -n 1 --oneline		
 		}
 		
+		$log = $log.Replace('"','''') # avoid problems because of " escaping the output
+		
 		$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
-		write-host "Executing: $uploader '$global:uploadCategory' $file '$log'"
+		write-host "Executing: $uploader '$global:uploadCategory' $file ""$log"""
 		&$uploader "$uploadCategory" $file "$log"
 			
 		if ($lastExitCode -ne 0) {
@@ -417,12 +427,6 @@ task UploadUnstable -depends Unstable, DoRelease, Upload {
 
 task CreateNugetPackage {
   $accessPath = "$base_dir\..\Nuget-Access-Key.txt"
-  
-  if( $global:uploadCategory -ne "RavenDB") # we only publish the stable version out
-  {
-    Write-Host "Not a stable build, skipping nuget package creation"
-    return
-  }
   
   if ( (Test-Path $accessPath) -eq $false )
   {
@@ -500,8 +504,12 @@ task CreateNugetPackage {
 ########### First pass - RavenDB.nupkg
 
   $nupack = [xml](get-content $base_dir\RavenDB.nuspec)
-	
+  $label = "$version.$env:buildlabel"
   $nupack.package.metadata.version = "$version.$env:buildlabel"
+  if ($global:uploadCategory.EndsWith("-Unstable")){
+    $nupack.package.metadata.version += "-Unstable"
+    $label += "-Unstable"
+  }
 
   $writerSettings = new-object System.Xml.XmlWriterSettings
   $writerSettings.OmitXmlDeclaration = $true
@@ -522,7 +530,9 @@ task CreateNugetPackage {
   $nupack = [xml](get-content $base_dir\RavenDB-Embedded.nuspec)
 	
   $nupack.package.metadata.version = "$version.$env:buildlabel"
-
+  if ($global:uploadCategory.EndsWith("-Unstable")){
+    $nupack.package.metadata.version += "-Unstable"
+  }
   $writerSettings = new-object System.Xml.XmlWriterSettings
   $writerSettings.OmitXmlDeclaration = $true
   $writerSettings.NewLineOnAttributes = $true
@@ -537,8 +547,8 @@ task CreateNugetPackage {
   & "$tools_dir\nuget.exe" pack $build_dir\NuPack-Embedded\RavenDB-Embedded.nuspec
   
   # Push to nuget repository
-  & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB.$version.$env:buildlabel.nupkg" $accessKey
-  & "$tools_dir\nuget.exe" push -source http://packages.nuget.org/v1/ "RavenDB-Embedded.$version.$env:buildlabel.nupkg" $accessKey
+  & "$tools_dir\nuget.exe" push "RavenDB.$label.nupkg" $accessKey
+  & "$tools_dir\nuget.exe" push "RavenDB-Embedded.$label.nupkg" $accessKey
   
   
   # This is prune to failure since the previous package may not exists

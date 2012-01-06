@@ -30,8 +30,9 @@ namespace Raven.Abstractions.Extensions
 		{
 			// Raven internal headers
 			"Raven-Server-Build",
-			"Non-Authoritive-Information",
+			"Non-Authoritative-Information",
 			"Raven-Timer-Request",
+			"Raven-Authenticated-User",
 
 			//proxy
 			"Reverse-Via",

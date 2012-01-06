@@ -109,6 +109,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		protected override void SetConnectionStringSettings(RavenConnectionStringOptions options)
 		{
+			base.SetConnectionStringSettings(options);
 			var embeddedRavenConnectionStringOptions = options as EmbeddedRavenConnectionStringOptions;
 
 			if (embeddedRavenConnectionStringOptions == null)
@@ -138,7 +139,7 @@ namespace Raven.Client.Embedded
 				if (UseEmbeddedHttpServer)
 				{
 					httpServer = new HttpServer(configuration, DocumentDatabase);
-					httpServer.Start();
+					httpServer.StartListening();
 				}
 				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId);
 			}

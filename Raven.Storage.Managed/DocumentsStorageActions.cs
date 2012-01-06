@@ -105,7 +105,7 @@ namespace Raven.Storage.Managed
 				Etag = metadata.Etag,
 				Key = metadata.Key,
 				LastModified = metadata.LastModified,
-				NonAuthoritiveInformation = metadata.NonAuthoritiveInformation,
+				NonAuthoritativeInformation = metadata.NonAuthoritativeInformation,
 				DataAsJson = ReadDocument(stream, metadata)
 			});
 		}
@@ -156,7 +156,7 @@ namespace Raven.Storage.Managed
 						Key = key,
 						Etag = Guid.Empty,
 						Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
-						NonAuthoritiveInformation = true,
+						NonAuthoritativeInformation = true,
 						LastModified = DateTime.MinValue
 					});
 				}
@@ -171,7 +171,7 @@ namespace Raven.Storage.Managed
 				Etag = etag,
 				Metadata = metadata,
 				LastModified = readResult.Key.Value<DateTime>("modified"),
-				NonAuthoritiveInformation = resultInTx != null
+				NonAuthoritativeInformation = resultInTx != null
 			});
 		}
 
@@ -197,19 +197,18 @@ namespace Raven.Storage.Managed
 			if (stream.Item2 != null)
 				return stream.Item2;
 
-			var memoryStream = stream.Item1;
+			RavenJObject result;
+			Stream docDataStream = stream.Item1;
 			if (documentCodecs.Count() > 0)
 			{
-				byte[] buffer = memoryStream.GetBuffer();
 				var metadataCopy = (RavenJObject)metadata.Metadata.CloneToken() ;
-				var dataBuffer = new byte[memoryStream.Length - memoryStream.Position];
-				Buffer.BlockCopy(buffer, (int)memoryStream.Position, dataBuffer, 0,
-				                 dataBuffer.Length);
-				documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Value.Decode(metadata.Key, metadataCopy, bytes));
-				memoryStream = new MemoryStream(dataBuffer);
+				using (docDataStream = documentCodecs.Aggregate(docDataStream, (dataStream, codec) => codec.Value.Decode(metadata.Key, metadataCopy, dataStream)))
+					result = docDataStream.ToJObject();
 			}
-
-			var result = memoryStream.ToJObject();
+			else
+			{
+				result = docDataStream.ToJObject();
+			}
 
 			Debug.Assert(metadata.Etag != null);
 			documentCacher.SetCachedDocument(metadata.Key, metadata.Etag.Value, result, metadata.Metadata);
@@ -243,9 +242,11 @@ namespace Raven.Storage.Managed
 
 			metadata.WriteTo(ms);
 
-			var bytes = documentCodecs.Aggregate(data.ToBytes(), (current, codec) => codec.Value.Encode(key, data, metadata, current));
-
-			ms.Write(bytes, 0, bytes.Length);
+			using (var stream = documentCodecs.Aggregate<Lazy<AbstractDocumentCodec>, Stream>(ms, (dataStream, codec) => codec.Value.Encode(key, data, metadata, dataStream)))
+			{
+				data.WriteTo(stream);
+				stream.Flush();
+			}
 
 			var newEtag = generator.CreateSequentialUuid();
 			storage.Documents.Put(new RavenJObject

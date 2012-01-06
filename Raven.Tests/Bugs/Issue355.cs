@@ -6,7 +6,7 @@ namespace Raven.Tests.Bugs
 {
 	public class Issue355 : RemoteClientTest
 	{
-		private string _ravenUrl = "http://localhost:8080";
+		private string _ravenUrl = "http://localhost:8079";
 		private string _ravenDatabaseName = "Northwind";
 
 		[Fact]

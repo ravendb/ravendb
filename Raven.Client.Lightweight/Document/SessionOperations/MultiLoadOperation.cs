@@ -21,6 +21,12 @@ namespace Raven.Client.Document.SessionOperations
 		private Stopwatch sp;
 
 		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, 
+			Func<IDisposable> disableAllCaching) : this(sessionOperations, disableAllCaching, null)
+		{
+			
+		}
+
+		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, 
 			Func<IDisposable> disableAllCaching,
 			string[] ids)
 		{
@@ -31,6 +37,9 @@ namespace Raven.Client.Document.SessionOperations
 
 		public void LogOperation()
 		{
+			if (ids == null)
+				return;
+
 			log.Debug("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
 		}
 
@@ -49,9 +58,9 @@ namespace Raven.Client.Document.SessionOperations
 			includeResults = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
 			results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
 
-			return	sessionOperations.AllowNonAuthoritiveInformation == false &&
-					results.Any(x => x.NonAuthoritiveInformation ?? false) &&
-					sp.Elapsed < sessionOperations.NonAuthoritiveInformationTimeout
+			return	sessionOperations.AllowNonAuthoritativeInformation == false &&
+					results.Any(x => x.NonAuthoritativeInformation ?? false) &&
+					sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout
 				;
 		}
 

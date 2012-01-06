@@ -15,7 +15,7 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Perform the actual generation
 		/// </summary>
-		public static string PruneToFailureLinqQueryAsStringToWorkableCode<TQueryRoot>(
+		public static string PruneToFailureLinqQueryAsStringToWorkableCode<TQueryRoot, TReduceResult>(
 			LambdaExpression expr,
 			DocumentConvention convention,
 			string querySource, bool translateIdentityProperty)
@@ -59,13 +59,16 @@ namespace Raven.Client.Indexes
 
 			if (linqQuery.StartsWith(querySourceName))
 				linqQuery = querySource + linqQuery.Substring(querySourceName.Length);
-			else if (linqQuery.StartsWith("(" + querySourceName + ")"))
+			else if (linqQuery.StartsWith("(" + querySourceName +")"))
 				linqQuery = querySource + linqQuery.Substring(querySourceName.Length + 2);
+			else if (linqQuery.StartsWith("(" + querySourceName))
+				linqQuery = "(" + querySource + linqQuery.Substring(querySourceName.Length + 1);
 			else
 				throw new InvalidOperationException("Canot understand how to parse the query");
 
 			linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
 			linqQuery = Regex.Replace(linqQuery, @"new ((VB\$)|(<>))[\w_]+(`\d+)?", "new ");// remove anonymous types
+			linqQuery = Regex.Replace(linqQuery, @"new " + typeof(TReduceResult).Name, "new ");// remove reduce result type
 			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transperant identifiers
 			const string pattern = @"(\.Where\(|\.Select\(|\.GroupBy\(|\.SelectMany)";
 			linqQuery = Regex.Replace(linqQuery, pattern, "\r\n\t$1"); // formatting

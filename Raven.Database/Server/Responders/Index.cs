@@ -161,7 +161,7 @@ namespace Raven.Database.Server.Responders
 		{
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 
-			return index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
+			return index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
 				PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag) : 
 				PerformQueryAgainstExistingIndex(context, index, indexQuery, out indexEtag);
 		}
