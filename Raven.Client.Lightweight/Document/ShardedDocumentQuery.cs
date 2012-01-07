@@ -7,11 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Text;
-#if !NET_3_5
 using Raven.Abstractions.Data;
-using Raven.Client.Connection.Async;
+using System.Text;
 using System.Threading;
+#if !NET_3_5
+using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Batches;
 #endif

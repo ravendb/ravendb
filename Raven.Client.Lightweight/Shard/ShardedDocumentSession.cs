@@ -9,11 +9,11 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
 #if !NET_3_5
+using Raven.Client.Connection.Async;
+using Raven.Client.Document.Batches;
 #endif
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Document;
-using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -135,6 +135,7 @@ namespace Raven.Client.Shard
 			get { return this; }
 		}
 
+#if !NET_3_5
 		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
 		{
 			throw new NotImplementedException();
@@ -162,7 +163,7 @@ namespace Raven.Client.Shard
 		{
 			throw new NotImplementedException();
 		}
-
+#endif
 		public T Load<T>(string id)
 		{
 			object existingEntity;
@@ -200,15 +201,16 @@ namespace Raven.Client.Shard
 			return default(T);
 		}
 
+#if !NET_3_5
 		ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, object>> path)
 		{
 			throw new NotImplementedException();
 		}
-
 		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(params string[] ids)
 		{
 			throw new NotImplementedException();
 		}
+#endif
 
 		public T[] Load<T>(params string[] ids)
 		{
@@ -245,12 +247,12 @@ namespace Raven.Client.Shard
 		{
 			return new MultiLoaderWithInclude<object>(this).Include(path);
 		}
-
+#if !NET_3_5
 		ILazyLoaderWithInclude<object> ILazySessionOperations.Include(string path)
 		{
 			throw new NotImplementedException();
 		}
-
+#endif
 		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
 		{
 			return new MultiLoaderWithInclude<T>(this).Include(path);
@@ -280,11 +282,12 @@ namespace Raven.Client.Shard
 				//UpdateBatchResults(batchResults, data.Entities);
 			}
 		}
-
+#if !NET_3_5
 		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
 		{
 			throw new NotSupportedException("Shared document store doesn't support async operations");
 		}
+#endif
 
 		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
 		{

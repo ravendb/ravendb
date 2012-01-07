@@ -510,6 +510,7 @@ namespace Raven.Client.Document
 			theSession.IncrementRequestCount();
 			return ExecuteActualQueryAsync();
 		}
+#endif
 
 		protected void ExecuteBeforeQueryListeners()
 		{
@@ -518,7 +519,6 @@ namespace Raven.Client.Document
 				documentQueryListener.BeforeQueryExecuted(this);
 			}
 		}
-#endif
 
 		/// <summary>
 		///   Gets the fields for projection

@@ -8,13 +8,13 @@ using System.Net;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Listeners;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 #endif
 #if !NET_3_5
 using Raven.Client.Connection.Async;
-using Raven.Client.Listeners;
 #endif
 
 namespace Raven.Client
@@ -52,9 +52,11 @@ namespace Raven.Client
 		public abstract HttpJsonRequestFactory JsonRequestFactory { get; }
 		public abstract string Identifier { get; set; }
 		public abstract IDocumentStore Initialize();
+#if !NET_3_5
 		public abstract IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
 		public abstract IAsyncDocumentSession OpenAsyncSession();
 		public abstract IAsyncDocumentSession OpenAsyncSession(string database);
+#endif
 #if !SILVERLIGHT
 		public abstract IDocumentSession OpenSession();
 		public abstract IDocumentSession OpenSession(string database);
