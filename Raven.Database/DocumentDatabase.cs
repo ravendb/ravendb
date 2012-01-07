@@ -8,6 +8,7 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -703,6 +704,10 @@ namespace Raven.Database
 			}
 		}
 
+		// only one index can be created at any given time
+		// the method already handle attempts to create the same index, so we don't have to 
+		// worry about this.
+		[MethodImpl(MethodImplOptions.Synchronized)]
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 			definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
