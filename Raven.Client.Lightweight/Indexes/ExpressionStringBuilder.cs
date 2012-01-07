@@ -1135,7 +1135,7 @@ namespace Raven.Client.Indexes
 		{
 			var num = 0;
 			var expression = node.Object;
-			if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) != null)
+			if (IsExtensionMethod(node))
 			{
 				num = 1;
 				expression = node.Arguments[0];
@@ -1173,8 +1173,7 @@ namespace Raven.Client.Indexes
 					Out(".");
 				}
 			}
-			if (node.Method.IsStatic &&
-				Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
+			if (node.Method.IsStatic && IsExtensionMethod(node) == false)
 			{
 				Out(node.Method.DeclaringType.Name);
 				Out(".");
@@ -1203,6 +1202,37 @@ namespace Raven.Client.Indexes
 			}
 			Out(node.Method.Name != "get_Item" ? ")" : "]");
 			return node;
+		}
+
+		private static bool IsExtensionMethod(MethodCallExpression node)
+		{
+			if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
+				return false;
+			
+			if(node.Method.DeclaringType.Name == "Enumerable")
+			{
+				switch (node.Method.Name)
+				{
+					case "Select":
+					case "SelectMany":
+					case "Where":
+					case "GroupBy":
+					case "OrderBy":
+					case "OrderByDescending":
+					case "DefaultIfEmpty":
+					case "Count":
+					case "First":
+					case "FirstOrDefault":
+					case "Single":
+					case "SingleOrDefault":
+					case "Last":
+					case "LastOrDefault":
+					case "Sum":
+						return true;
+				}
+				return false;
+			}
+			return true;
 		}
 
 		private void MaybeCloseCastingForLambdaExpression(MethodCallExpression node, int argPos)
