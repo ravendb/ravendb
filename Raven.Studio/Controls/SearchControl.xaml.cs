@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -38,9 +39,42 @@ namespace Raven.Studio
 			IsActive = false;
 		}
 
+		public List<int> SearchReasoltsLocations { get; set; }
+
+		public string SearchIn
+		{
+			get { return (string)GetValue(SearchInProperty); }
+			set { SetValue(SearchInProperty, value); }
+		}
+
+		public static readonly DependencyProperty SearchInProperty =
+			DependencyProperty.Register("SearchIn", typeof(string), typeof(SearchControl), new PropertyMetadata(null));
+
 		private void searchField_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			//TODO: will it get the string of text to search in ?
+			SearchReasoltsLocations = new List<int>();
+			if (!string.IsNullOrEmpty(SearchIn) && !string.IsNullOrEmpty(Text))
+			{
+				bool toContinue = true;
+				int lastIndex = 0;
+
+				string searchValue = Text.ToLower();
+				var data = SearchIn.ToLower();
+
+				while (toContinue)
+				{
+					var index = data.IndexOf(searchValue, System.StringComparison.Ordinal);
+
+					if (index == -1)
+						toContinue = false;
+					else
+					{
+						SearchReasoltsLocations.Add(index + lastIndex);
+						lastIndex += index;
+						data = data.Substring(index + 1);
+					}
+				}
+			}
 		}
 	}
 }

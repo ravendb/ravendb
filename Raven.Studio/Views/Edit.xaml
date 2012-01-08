@@ -51,7 +51,7 @@
                     <HyperlinkButton Content="{Binding CollectionId}"
                                      Style="{StaticResource Style_Link_Breadcrumb_Initial}"
                                      Command="{StaticResource NavigateToCommand}"
-                                     CommandParameter="{Binding CollectionNavigate}"/>
+                                     CommandParameter="{Binding CollectionNavigate}" />
                     <TextBlock Text="{Binding Seperator}"
                                VerticalAlignment="Center"
                                Margin="4,0" />
@@ -168,6 +168,13 @@
                            Grid.Row="3"
                            Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
+                <Raven_Studio:SearchControl  x:Name="SearchTool"
+                                             IsActive="False"
+                                             VerticalAlignment="Bottom"
+                                             d:LayoutOverrides="Height"
+                                             SearchIn="{Binding JsonData, Mode=TwoWay}"
+                                             HorizontalAlignment="Right"/>
+
                 <Border Background="{StaticResource Brush_SubtleBackground2}"
                         Grid.Row="4"
                         Visibility="{Binding References.Count, Converter={StaticResource HiddenWhenEmpty}}">
@@ -219,10 +226,5 @@
                 </Border>
             </Grid>
         </ScrollViewer>
-        <Raven_Studio:SearchControl Margin="0"
-                                    x:Name="SearchTool"
-                                    IsActive="False"
-                                    VerticalAlignment="Bottom"
-                                    d:LayoutOverrides="Height" />
     </Grid>
 </Infrastructure:View>
