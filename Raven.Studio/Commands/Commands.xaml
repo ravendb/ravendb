@@ -3,7 +3,8 @@
 					xmlns:Commands="clr-namespace:Raven.Studio.Commands">
 
 	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
-	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />
+    <Commands:CopyLogsInstructionsCommand x:Name="CopyLogsInstructionsCommand" />
+    <Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />
 	<Commands:DeleteAllDocumentsOfCollectionCommand
 	x:Name="DeleteAllDocumentsOfCollectionCommand" />
 	<Commands:NavigateToCommand x:Name="NavigateToCommand" />

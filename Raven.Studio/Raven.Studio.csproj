@@ -62,13 +62,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.1.113.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.2.120.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Shared.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.1.113.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.2.120.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.1.113.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.2.120.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight, Version=1.0.4107.18177, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -126,6 +129,7 @@
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ChangeFieldValueCommand.cs" />
+    <Compile Include="Commands\CopyLogsInstructionsCommand.cs" />
     <Compile Include="Commands\DeleteAllDocumentsOfCollectionCommand.cs" />
     <Compile Include="Commands\DeleteIndexCommand.cs" />
     <Compile Include="Commands\ExportDatabaseCommand.cs" />
@@ -140,6 +144,9 @@
     <Compile Include="Commands\ShowLicensingStatusCommand.cs" />
     <Compile Include="Controls\Editors\EditorBase.cs" />
     <Compile Include="Controls\ListBoxMenu.cs" />
+    <Compile Include="Controls\SearchControl.xaml.cs">
+      <DependentUpon>SearchControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\ViewSizeControl.xaml.cs">
       <DependentUpon>ViewSizeControl.xaml</DependentUpon>
     </Compile>
@@ -403,6 +410,10 @@
     <Page Include="Controls\NotificationArea.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\SearchControl.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Controls\ViewSizeControl.xaml">
       <SubType>Designer</SubType>

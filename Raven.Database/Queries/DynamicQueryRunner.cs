@@ -167,6 +167,9 @@ namespace Raven.Database.Queries
 
 		private void TempIndexToPermanentIndex(string temporaryIndexName, string permanentIndexName, Func<IndexDefinition> createDefinition)
 		{
+			if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)
+				return;
+
 			lock (createIndexLock)
 			{
 				if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)

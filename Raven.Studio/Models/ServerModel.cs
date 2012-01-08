@@ -45,6 +45,11 @@ namespace Raven.Studio.Models
 				Url = url
 			};
 
+			var urlParser = new UrlParser(UrlUtil.Url);
+			var apiKey = urlParser.GetQueryParam("api-key");
+			if (string.IsNullOrEmpty(apiKey) == false)
+				documentStore.ApiKey = apiKey;
+
 			documentStore.Initialize();
 
 			// We explicitly enable this for the Studio, we rely on SL to actually get us the credentials, and that 

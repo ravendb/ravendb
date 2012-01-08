@@ -1,4 +1,5 @@
 ﻿using System.Windows.Input;
+using Raven.Studio.Features.Util;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -18,7 +19,7 @@ namespace Raven.Studio.Views
 			saveCommand = model.Save;
 			refreshCommand = model.Refresh;
 
-			KeyDown +=OnKeyDown;
+			KeyDown += OnKeyDown;
 			KeyUp += OnKeyUp;
 		}
 
@@ -43,6 +44,16 @@ namespace Raven.Studio.Views
 				case Key.R:
 					if (isCtrlHold)
 						Command.ExecuteCommand(refreshCommand);
+					break;
+				case Key.F:
+					if (isCtrlHold)
+					{
+						SearchTool.IsActive = true;
+					}
+					break;
+				case Key.Escape:
+					if (SearchTool.IsActive)
+						SearchTool.IsActive = false;
 					break;
 				case Key.Ctrl:
 					isCtrlHold = true;

@@ -143,6 +143,29 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		public string Seperator { get; private set; }
+		public string CollectionNavigate
+		{
+			get { return "/collections?name=" + CollectionId; }
+		}
+
+		public string CollectionId
+		{
+			get
+			{
+				var collection = metadata.FirstOrDefault(x => x.Key == "Raven-Entity-Name");
+
+				if (collection.Key == null)
+				{
+					Seperator = "";
+					return "";
+				}
+
+				Seperator = ">";
+				return collection.Value ;
+			}
+		}
+
 		private string jsonMetadata;
 		public string JsonMetadata
 		{
