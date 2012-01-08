@@ -22,7 +22,12 @@ namespace Raven.Studio
 		public bool IsActive
 		{
 			get { return this.Visibility == Visibility.Visible; }
-			set {Visibility = value ? Visibility.Visible : Visibility.Collapsed;}
+			set
+			{
+				Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+				if (value)
+					searchField.Focus();
+			}
 		}
 
 		public string Text

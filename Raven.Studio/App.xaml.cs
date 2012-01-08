@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using Raven.Studio.Controls.Editors;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -16,6 +17,8 @@ namespace Raven.Studio
 
 		private void Application_Startup(object sender, StartupEventArgs e)
 		{
+			SettingsRegister.Register();
+
 			var rootVisual = new MainPage();
 			ApplicationModel.Current.Setup(rootVisual);
 			this.RootVisual = rootVisual;

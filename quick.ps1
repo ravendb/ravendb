@@ -1,0 +1,1 @@
+.\psake.ps1 -task ReleaseNoTests 

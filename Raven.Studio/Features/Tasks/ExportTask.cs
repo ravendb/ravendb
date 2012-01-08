@@ -10,7 +10,7 @@ namespace Raven.Studio.Features.Tasks
 		public ExportTask()
 		{
 			Name = "Export Database";
-			Description = "Export your database to a dump file. By default, both indexes and documents are exported.\nYou can optionally choose to export just indexes.";
+			Description = "Export your database to a dump file. Both indexes and documents are exported.";
 		}
 
 		public override ICommand Action

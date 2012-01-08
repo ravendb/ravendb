@@ -537,6 +537,7 @@
     <Compile Include="Faceted\Camera.cs" />
     <Compile Include="Faceted\FacetedIndex.cs" />
     <Compile Include="Faceted\FacetedIndexTestHelper.cs" />
+    <Compile Include="Indexes\BoostingDuringIndexing.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
     <Compile Include="Indexes\CreateIndexesWithCasting.cs" />
@@ -589,6 +590,8 @@
     <Compile Include="MailingList\RobStats\StatisticsBug.cs" />
     <Compile Include="MailingList\RobStats\Summary.cs" />
     <Compile Include="MailingList\RobStats\TheIndex.cs" />
+    <Compile Include="MailingList\ronne.cs" />
+    <Compile Include="MailingList\Samina.cs" />
     <Compile Include="MailingList\SetBased.cs" />
     <Compile Include="MailingList\SkippedResults.cs" />
     <Compile Include="MailingList\spokeypokey\Spokey.cs" />

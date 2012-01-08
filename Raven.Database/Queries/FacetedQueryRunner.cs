@@ -20,6 +20,9 @@ namespace Raven.Database.Queries
 		public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc)
 		{
 			var facetSetup = database.Get(facetSetupDoc, null);
+			if (facetSetup == null)
+				throw new InvalidOperationException("Could not find facets document: " + facetSetupDoc);
+
 			var facets = facetSetup.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
 
 			var results = new Dictionary<string, IEnumerable<FacetValue>>();

@@ -8,6 +8,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Client.Linq.Indexing;
 using Raven.Tests.Indexes;
 using Xunit;
 
