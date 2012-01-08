@@ -31,7 +31,7 @@ namespace Raven.Studio.Commands
 						.ContinueOnSuccess(() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
 						.ContinueOnSuccessInTheUIThread(() =>
 											{
-												ApplicationModel.Current.Server.Value.Databases.Add(new DatabaseModel(databaseName, DatabaseCommands.ForDatabase(databaseName)));
+												((DatabasesListModel)parameter).ForceTimerTicked();
 												ApplicationModel.Current.AddNotification(new Notification("Database " + databaseName + " created"));
 											})
 						.Catch();
