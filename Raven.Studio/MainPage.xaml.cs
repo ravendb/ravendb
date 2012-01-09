@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Windows;
+using System.Windows.Browser;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Navigation;
@@ -71,7 +72,7 @@ namespace Raven.Studio
 
 		private static bool HyperlinkMatchesUri(string uri, HyperlinkButton link)
 		{
-			if (link.CommandParameter != null && 
+			if (link.CommandParameter != null &&
 				uri.StartsWith(link.CommandParameter.ToString(), StringComparison.InvariantCultureIgnoreCase))
 			{
 				return true;
@@ -91,6 +92,22 @@ namespace Raven.Studio
 		{
 			e.Handled = true;
 			ErrorPresenter.Show(e.Exception);
+		}
+
+		private void ContentFrame_Navigating(object sender, NavigatingCancelEventArgs e)
+		{
+			var url = e.Uri.OriginalString;
+			if (string.IsNullOrEmpty(url) || url.StartsWith("http://"))
+				return;
+
+			if (Keyboard.Modifiers == ModifierKeys.Control)
+			{
+				var hostUrl = HtmlPage.Document.DocumentUri.OriginalString;
+				var fregmentIndex = hostUrl.IndexOf('#');
+				string host = fregmentIndex != -1 ? hostUrl.Substring(0, fregmentIndex + 1) : hostUrl;
+
+				HtmlPage.Window.Navigate(new Uri(host + url, UriKind.Absolute), "_blank");
+			}
 		}
 	}
 }
