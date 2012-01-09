@@ -7,7 +7,6 @@
                      xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
                      xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
                      xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-                     xmlns:Raven_Studio="clr-namespace:Raven.Studio"
                      xmlns:syntaxeditor="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor"
                      x:Class="Raven.Studio.Views.Edit"
                      mc:Ignorable="d"
@@ -64,12 +63,6 @@
                             toolkit:DockPanel.Dock="Right"
                             VerticalAlignment="Center">
 
-                    <!--<Button Command="{Binding Save}"
-                            Style="{StaticResource Style_Button_MouseOverChrome}"
-                            ToolTipService.ToolTip="Search">
-                        <Image Source="{StaticResource Image_Search_Small}"
-                               Stretch="None" />
-                    </Button>-->
                     <Button Click="Search_Click"
                             Style="{StaticResource Style_Button_MouseOverChrome}"
                             Margin="4,0"
