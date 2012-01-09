@@ -149,6 +149,11 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		//public string MapUrl
+		//{
+		//    get{return }
+		//}
+
 		private string viewTitle;
 		public string ViewTitle
 		{
