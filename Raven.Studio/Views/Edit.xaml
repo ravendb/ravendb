@@ -8,6 +8,7 @@
                      xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
                      xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                      xmlns:Raven_Studio="clr-namespace:Raven.Studio"
+                     xmlns:syntaxeditor="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor"
                      x:Class="Raven.Studio.Views.Edit"
                      mc:Ignorable="d"
                      Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel">
@@ -63,8 +64,23 @@
                             toolkit:DockPanel.Dock="Right"
                             VerticalAlignment="Center">
 
+                    <!--<Button Command="{Binding Save}"
+                            Style="{StaticResource Style_Button_MouseOverChrome}"
+                            ToolTipService.ToolTip="Search">
+                        <Image Source="{StaticResource Image_Search_Small}"
+                               Stretch="None" />
+                    </Button>-->
+                    <Button Click="Search_Click"
+                            Style="{StaticResource Style_Button_MouseOverChrome}"
+                            Margin="4,0"
+                            ToolTipService.ToolTip="Search">
+                        <Image Source="{StaticResource Image_Search_Small}"
+                               Stretch="None" />
+                    </Button>
+                    
                     <Button Command="{Binding Save}"
                             Style="{StaticResource Style_Button_MouseOverChrome}"
+                            Margin="4,0"
                             ToolTipService.ToolTip="Save Document">
                         <Image Source="{StaticResource Image_Save_Small}"
                                Stretch="None" />
@@ -88,6 +104,7 @@
 
                     <Button Command="{Binding Refresh}"
                             Style="{StaticResource Style_Button_MouseOverChrome}"
+                            Margin="4,0"
                             ToolTipService.ToolTip="Refresh Document">
                         <Image Source="{StaticResource Image_Refresh_Small}"
                                Stretch="None" />
@@ -114,9 +131,11 @@
                      Margin="5,10,10,0" />
 
             <sdk:TabControl Grid.Row="1"
-                            Margin="5,8,10,10">
+                            Margin="5,8,10,10"
+                            x:Name="TabControl">
                 <sdk:TabItem Header="Data">
-                    <Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}" x:Name="EditorCtrl" />
+                    <Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}"
+                                        x:Name="EditorCtrl" />
                 </sdk:TabItem>
                 <sdk:TabItem Header="Metadata">
                     <Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay}" />
@@ -136,17 +155,23 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <Border Background="{StaticResource Brush_SubtleBackground2}"
                         Grid.RowSpan="3" />
 
+                <syntaxeditor:EditorSearchView x:Name="SearchTool"
+                                               Visibility="Collapsed"
+                                               VerticalAlignment="Bottom"
+                                               HorizontalAlignment="Left" />
+
                 <TextBlock Text="Metadata"
                            Margin="10,10,5,6"
-                           Style="{StaticResource Style_TextBlock_PagePartHeader}" />
-
+                           Style="{StaticResource Style_TextBlock_PagePartHeader}" 
+                           Grid.Row="1"/>
                 <sdk:DataGrid x:Name="Metadata"
-                              Grid.Row="1"
+                              Grid.Row="2"
                               ItemsSource="{Binding Metadata}"
                               Margin="10,0,5,12"
                               Style="{StaticResource Style_DataGrid_NoChrome_NoHeader}"
@@ -160,23 +185,16 @@
                 </sdk:DataGrid>
 
                 <Border Background="{StaticResource Brush_SubtleBackground2}"
-                        Grid.Row="3"
+                        Grid.Row="4"
                         Grid.RowSpan="2" />
 
                 <TextBlock Text="{Binding DocumentSize}"
                            Margin="10,6,5,6"
-                           Grid.Row="3"
+                           Grid.Row="4"
                            Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
-                <Raven_Studio:SearchControl  x:Name="SearchTool"
-                                             IsActive="False"
-                                             VerticalAlignment="Bottom"
-                                             d:LayoutOverrides="Height"
-                                             SearchIn="{Binding JsonData, Mode=TwoWay}"
-                                             HorizontalAlignment="Right"/>
-
                 <Border Background="{StaticResource Brush_SubtleBackground2}"
-                        Grid.Row="4"
+                        Grid.Row="5"
                         Visibility="{Binding References.Count, Converter={StaticResource HiddenWhenEmpty}}">
                     <StackPanel>
                         <TextBlock Text="References"
@@ -201,7 +219,7 @@
                 </Border>
 
                 <Border Background="{StaticResource Brush_SubtleBackground2}"
-                        Grid.Row="5"
+                        Grid.Row="6"
                         Visibility="{Binding Related.Count, Converter={StaticResource HiddenWhenEmpty}}">
                     <StackPanel>
                         <TextBlock Text="Related"

@@ -1,4 +1,5 @@
-﻿using ActiproSoftware.Text;
+﻿using System.Windows.Media;
+using ActiproSoftware.Text;
 
 namespace Raven.Studio.Controls.Editors
 {
@@ -14,6 +15,7 @@ namespace Raven.Studio.Controls.Editors
 		public JsonEditor()
 		{
 			Document.Language = DefaultLanguage;
+			this.SelectionBackgroundInactive = new SolidColorBrush(Colors.Yellow);
 		}
 	}
 }

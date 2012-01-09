@@ -609,6 +609,7 @@
     <Resource Include="Assets\Images\edit_pencil_write_icon.png" />
     <Resource Include="Assets\Images\ExecuteQuery.png" />
     <Resource Include="Assets\Images\ChangeView.png" />
+    <Resource Include="Assets\Images\Search.png" />
     <Content Include="Impl\PopupPlacement\Credit.txt" />
   </ItemGroup>
   <ItemGroup>
