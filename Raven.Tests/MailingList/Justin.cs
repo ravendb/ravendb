@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,10 +17,8 @@ namespace Raven.Tests.MailingList
 			// Arrange.
 			using (var documentStore = NewDocumentStore())
 			{
-				Console.WriteLine("Document Store initialized - running in memory.");
 
 				new Users_NameAndPassportSearching().Execute(documentStore);
-				Console.WriteLine("Indexes defined.");
 
 				var users = CreateFakeUsers();
 				var usersCount = users.Count();
@@ -31,7 +30,6 @@ namespace Raven.Tests.MailingList
 					}
 					documentSession.SaveChanges();
 				}
-				Console.WriteLine("Seed data stored.");
 
 
 				// If we want to search for *Krome .. this means the index will contain
@@ -44,16 +42,7 @@ namespace Raven.Tests.MailingList
 
 				// Lets check if there are any errors.
 				var errors = documentStore.DatabaseCommands.GetStatistics().Errors;
-				if (errors != null && errors.Length > 0)
-				{
-					foreach (var error in errors)
-					{
-						Console.WriteLine("Index: {0}; Error: {1}", error.Index, error.Error);
-					}
-
-					return;
-				}
-				Console.WriteLine("No Document Store errors.");
+				Assert.Empty(errors);
 
 				using (var documentSession = documentStore.OpenSession())
 				{
@@ -64,15 +53,11 @@ namespace Raven.Tests.MailingList
 
 					Assert.Equal(usersCount, allData.Count);
 
-					foreach (var user in allData)
-					{
-						Console.WriteLine("User: {0}; Passport: {1}", user.Name, user.PassportNumber);
-					}
-
 					var specificUsers = documentSession
 						.Query<Users_NameAndPassportSearching.ReduceResult, Users_NameAndPassportSearching>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.Where(x => x.ReversedName.StartsWith(userSearchQuery))
+						.As<User>()
 						.ToList();
 
 					var passports = documentSession
@@ -81,18 +66,7 @@ namespace Raven.Tests.MailingList
 						.Where(x => x.ReversedName.StartsWith(passportSearchQuery))
 						.ToList();
 
-					foreach (var user in specificUsers)
-					{
-						Console.WriteLine("User: {0}; Passport: {1}", user.Name, user.PassportNumber);
-					}
-
-					foreach (var passport in passports)
-					{
-						Console.WriteLine("User: {0}; Passport: {1}", passport.Name, passport.PassportNumber);
-					}
 				}
-
-				// Assert.
 			}
 		}
 

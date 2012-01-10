@@ -1228,6 +1228,7 @@ namespace Raven.Client.Indexes
 					case "Last":
 					case "LastOrDefault":
 					case "Sum":
+					case "Reverse":
 						return true;
 				}
 				return false;
