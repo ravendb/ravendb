@@ -28,7 +28,7 @@ namespace Raven.Storage.Esent.Backup
 			if((Directory.Exists(Path.Combine(backupLocation,"Indexes")) == false) ||
 				(Directory.Exists(Path.Combine(backupLocation,"IndexDefinitions")) == false))
 			{
-				throw new InvalidOperationException(backupLocation +" doesn't look like a valid backup");
+				throw new InvalidOperationException(backupLocation + " doesn't look like a valid backup");
 			}
 
 			if(Directory.Exists(databaseLocation) && Directory.GetFileSystemEntries(databaseLocation).Length > 0)
