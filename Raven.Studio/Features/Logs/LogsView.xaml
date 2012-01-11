@@ -10,8 +10,9 @@
 					 xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:Controls="clr-namespace:System.Windows.Controls"
-                     mc:Ignorable="d"
+					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
+					 xmlns:Controls="clr-namespace:System.Windows.Controls"
+					 mc:Ignorable="d"
 					 d:DataContext="{d:DesignInstance Logs:LogsModel}">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}">
@@ -219,19 +220,19 @@
 					<LineBreak />
 					<Run Text="To enable it, add a file called 'NLog.config' in the same directory as the server, with the following content:" />
 				</TextBlock>
-                <TextBox Text="{Binding EnablingLogsInstructions}"
-                         x:Name="LogInstructions"
-                         IsReadOnly="True"
-                         Margin="0,10,0,0">
-                    <Controls:ContextMenuService.ContextMenu>
-                        <Controls:ContextMenu x:Name="NoLogsContextMenu">
-                            <Controls:MenuItem Header="Copy"
-                                               Command="{Binding Source={StaticResource CopyLogsInstructionsCommand}}"
-                                               CommandParameter="{Binding EnablingLogsInstructions}" />
-                        </Controls:ContextMenu>
-                    </Controls:ContextMenuService.ContextMenu>
-                </TextBox>
-            </StackPanel>
+				<TextBox Text="{Binding EnablingLogsInstructions}"
+						 x:Name="LogInstructions"
+						 IsReadOnly="True"
+						 Margin="0,10,0,0">
+					<Controls:ContextMenuService.ContextMenu>
+						<Controls:ContextMenu x:Name="NoLogsContextMenu">
+							<Controls:MenuItem Header="Copy"
+											   Command="{Binding Source={StaticResource CopyToClipboardCommand}}"
+											   CommandParameter="{Binding EnablingLogsInstructions}" />
+						</Controls:ContextMenu>
+					</Controls:ContextMenuService.ContextMenu>
+				</TextBox>
+			</StackPanel>
 		</Grid>
 	</Grid>
 </Infrastructure:View>
