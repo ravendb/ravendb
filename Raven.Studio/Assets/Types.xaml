@@ -4,6 +4,7 @@
 					xmlns:Models="clr-namespace:Raven.Studio.Models">
 
 	<Converters:NullToVisibilityConverter x:Key="HiddenWhenNull" />
+	<Converters:HiddenWhenStringEmptyOrNull x:Key="HiddenWhenStringEmptyOrNull" />
 	<Converters:NotNullToVisibilityConverter x:Key="HiddenWhenNotNull" />
 	<Converters:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
 	<Converters:HiddenWhenLessOrEqualToConverter x:Name="HiddenWhenLessOrEqualTo" />

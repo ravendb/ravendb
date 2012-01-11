@@ -15,7 +15,6 @@ namespace Raven.Studio.Views
 	{
 		private readonly ICommand saveCommand;
 		private readonly ICommand refreshCommand;
-		private readonly ICommand searchCommand;
 
 		private bool isCtrlHold;
 		
