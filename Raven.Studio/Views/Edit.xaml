@@ -45,16 +45,20 @@
 									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 									 Command="{StaticResource NavigateToCommand}"
 									 CommandParameter="/documents" />
-					<TextBlock Text="&gt;"
+					<TextBlock Text=">"
 							   VerticalAlignment="Center"
 							   Margin="4,0" />
-					<HyperlinkButton Content="{Binding CollectionId}"
+					
+					<HyperlinkButton Content="{Binding Collection}"
 									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="{Binding CollectionNavigate}" />
-					<TextBlock Text="{Binding Seperator}"
+									 CommandParameter="{Binding Collection, StringFormat='/collections?name=\{0\}'}"
+									 Visibility="{Binding Collection, Converter={StaticResource HiddenWhenStringEmptyOrNull}}" />
+					<TextBlock Text=">"
 							   VerticalAlignment="Center"
-							   Margin="4,0" />
+							   Margin="4,0"
+							   Visibility="{Binding Collection, Converter={StaticResource HiddenWhenStringEmptyOrNull}}" />
+					
 					<TextBlock Text="{Binding DisplayId}"
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
