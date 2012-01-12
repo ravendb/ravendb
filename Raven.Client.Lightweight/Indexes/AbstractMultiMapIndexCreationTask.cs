@@ -10,7 +10,7 @@ namespace Raven.Client.Indexes
 	/// <summary>
 	/// Allow to create indexes with multiple maps
 	/// </summary>
-	public class AbstractMultiMapIndexCreationTask<TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
+	public abstract class AbstractMultiMapIndexCreationTask<TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
 	{
 		private readonly List<Func<string>> maps = new List<Func<string>>();
 
@@ -49,7 +49,7 @@ namespace Raven.Client.Indexes
 	/// <summary>
 	/// Allow to create indexes with multiple maps
 	/// </summary>
-	public class AbstractMultiMapIndexCreationTask : AbstractMultiMapIndexCreationTask<object>
+	public abstract class AbstractMultiMapIndexCreationTask : AbstractMultiMapIndexCreationTask<object>
 	{
 	}
 }
