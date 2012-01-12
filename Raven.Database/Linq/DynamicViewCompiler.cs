@@ -245,7 +245,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 					invocation = (InvocationExpression) target.TargetObject;
 					target = (MemberReferenceExpression)invocation.TargetObject;
 				}
-				var lambdaExpression = ((LambdaExpression)invocation.Arguments[0]);
+				var lambdaExpression = GetLambdaExpression(invocation);
 				groupByParamter = lambdaExpression.Parameters[0].ParameterName;
 				groupBySource = lambdaExpression.ExpressionBody;
 			}
@@ -286,6 +286,22 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			                   				},
 			                   			ExpressionBody = groupBySource
 			                   		})));
+		}
+
+		private static LambdaExpression GetLambdaExpression(InvocationExpression invocation)
+		{
+			var expression = invocation.Arguments[0];
+			var castExpression = expression as CastExpression;
+			if(castExpression != null)
+			{
+				expression = castExpression.Expression;
+			}
+			var parenthesizedExpression = expression as ParenthesizedExpression;
+			if(parenthesizedExpression != null)
+			{
+				expression = parenthesizedExpression.Expression;
+			}
+			return ((LambdaExpression)expression);
 		}
 
 		private void ValidateMapReduceFields(List<string> mapFields)
