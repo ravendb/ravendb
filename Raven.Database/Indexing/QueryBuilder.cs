@@ -15,8 +15,8 @@ namespace Raven.Database.Indexing
 {
 	public static class QueryBuilder
 	{
-		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):(\[\[.+?\]\])", RegexOptions.Compiled);
-		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled);
+		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):\s*(\[\[.+?\]\])", RegexOptions.Compiled);
+		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled);
 
 		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
 		{
