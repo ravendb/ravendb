@@ -21,20 +21,30 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public JsonDocument()
 		{
-			DataAsJson = new RavenJObject();
-			Metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase);
 		}
+
+		private RavenJObject dataAsJson;
+		private RavenJObject metadata;
+
 		/// <summary>
 		/// 	Gets or sets the document data as json.
 		/// </summary>
 		/// <value>The data as json.</value>
-		public RavenJObject DataAsJson { get; set; }
+		public RavenJObject DataAsJson
+		{
+			get { return dataAsJson ?? (dataAsJson = new RavenJObject()); }
+			set { dataAsJson = value; }
+		}
 
 		/// <summary>
 		/// 	Gets or sets the metadata for the document
 		/// </summary>
 		/// <value>The metadata.</value>
-		public RavenJObject Metadata { get; set; }
+		public RavenJObject Metadata
+		{
+			get { return metadata ?? (metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase)); }
+			set { metadata = value; }
+		}
 
 		/// <summary>
 		/// 	Gets or sets the key for the document
@@ -65,7 +75,6 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		public RavenJObject ToJson()
 		{
-
 			var doc = (RavenJObject)DataAsJson.CloneToken();
 			var metadata = (RavenJObject)Metadata.CloneToken();
 

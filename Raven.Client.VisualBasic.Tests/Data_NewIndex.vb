@@ -11,12 +11,12 @@ Imports Raven.Client.Linq.LinqExtensions
 ''' </summary>
 ''' <remarks></remarks>
 Public Class Data_NewIndex
-    Inherits AbstractIndexCreationTask
+	Inherits AbstractIndexCreationTask
 
-    Public Overrides Function CreateIndexDefinition() As IndexDefinition
+	Public Overrides Function CreateIndexDefinition() As IndexDefinition
 		Return (New IndexDefinitionBuilder(Of TestClass)() With { _
-				.Map = Function(items) From item In items.WhereEntityIs(Of TestClass)("TestClass", "TestClass2") _
-									   Select New With {item.ResourceKey}
+		  .Map = Function(items) From item In items.WhereEntityIs(Of TestClass)("TestClass", "TestClass2") _
+				  Select New With {item.ResourceKey}
 		}.ToIndexDefinition(Conventions))
-    End Function
+	End Function
 End Class

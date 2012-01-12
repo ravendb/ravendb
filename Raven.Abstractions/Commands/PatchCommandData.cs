@@ -48,11 +48,19 @@ namespace Raven.Abstractions.Commands
 			get; set;
 		}
 
+		/// <summary>
+		/// Gets the transaction information.
+		/// </summary>
+		/// <value>The transaction information.</value>
 		public TransactionInformation TransactionInformation
 		{
 			get; set;
 		}
 
+		/// <summary>
+		/// Gets or sets the metadata.
+		/// </summary>
+		/// <value>The metadata.</value>
 		public RavenJObject Metadata
 		{
 			get; set;
