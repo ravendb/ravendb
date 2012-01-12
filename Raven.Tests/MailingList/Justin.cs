@@ -136,44 +136,44 @@ namespace Raven.Tests.MailingList
 		private static IEnumerable<User> CreateFakeUsers()
 		{
 			return new List<User>
-                       {
-                           new User
-                               {
-                                   Name = "Pure Krome",
-                                   Age = 36,
-                                   PassportNumber = "QWERTY-12345"
-                               },
-                           new User
-                               {
-                                   Name = "Ayende Rayen",
-                                   Age = 35,
-                                   PassportNumber = "ABC-12345"
-                               },
-                           new User
-                               {
-                                   Name = "Itamar Syn-Hershko",
-                                   Age = 34,
-                                   PassportNumber = "DEF-12345"
-                               },
-                           new User
-                               {
-                                   Name = "aaa bbb",
-                                   Age = 33,
-                                   PassportNumber = "GHI-12345"
-                               },
-                           new User
-                               {
-                                   Name = "ccc ddd",
-                                   Age = 32,
-                                   PassportNumber = "JKL-12345"
-                               },
-                           new User
-                               {
-                                   Name = "eee fff",
-                                   Age = 31,
-                                   PassportNumber = "MNO-12345"
-                               }
-                       };
+					   {
+						   new User
+							   {
+								   Name = "Pure Krome",
+								   Age = 36,
+								   PassportNumber = "QWERTY-12345"
+							   },
+						   new User
+							   {
+								   Name = "Ayende Rayen",
+								   Age = 35,
+								   PassportNumber = "ABC-12345"
+							   },
+						   new User
+							   {
+								   Name = "Itamar Syn-Hershko",
+								   Age = 34,
+								   PassportNumber = "DEF-12345"
+							   },
+						   new User
+							   {
+								   Name = "aaa bbb",
+								   Age = 33,
+								   PassportNumber = "GHI-12345"
+							   },
+						   new User
+							   {
+								   Name = "ccc ddd",
+								   Age = 32,
+								   PassportNumber = "JKL-12345"
+							   },
+						   new User
+							   {
+								   Name = "eee fff",
+								   Age = 31,
+								   PassportNumber = "MNO-12345"
+							   }
+					   };
 		}
 
 		public class User
