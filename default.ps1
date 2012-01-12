@@ -52,10 +52,9 @@ task Clean {
 
 task Init -depends Verify40, Clean {
 
-  if($env:BUILD_NUMBER -ne $null) {
-    $env:buildlabel  = $env:BUILD_NUMBER
+	if($env:BUILD_NUMBER -ne $null) {
+		$env:buildlabel  = $env:BUILD_NUMBER
 	}
-	
 	if($env:buildlabel -eq $null) {
 		$env:buildlabel = "13"
 	}
