@@ -28,7 +28,22 @@ namespace Raven.Database.Linq.Ast
 					node = new CastExpression(new TypeReference("Func<dynamic, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);
 					break;
 				case "SelectMany":
-					node = new CastExpression(new TypeReference("Func<dynamic, IEnumerable<dynamic>>"), parenthesizedlambdaExpression, CastType.Cast);
+					var argPos = invocationExpression.Arguments.IndexOf(lambdaExpression);
+					switch (argPos)
+					{
+						case 0: // first one, select the collection
+							// need to enter a cast for (IEnumerable<dynamic>) on the end of the lambda body
+							var expression = new LambdaExpression
+							{
+								ExpressionBody = new CastExpression(new TypeReference("IEnumerable<dynamic>"), new ParenthesizedExpression(lambdaExpression.ExpressionBody), CastType.Cast),
+								Parameters = lambdaExpression.Parameters,
+							};
+							node = new CastExpression(new TypeReference("Func<dynamic, IEnumerable<dynamic>>"), new ParenthesizedExpression(expression), CastType.Cast);
+							break;
+						case 1: // the transformation func
+							node = new CastExpression(new TypeReference("Func<dynamic, dynamic, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);
+							break;
+					}
 					break;
 				case "GroupBy":
 					node = new CastExpression(new TypeReference("Func<dynamic, IGrouping<dynamic,dynamic>>"), parenthesizedlambdaExpression, CastType.Cast);

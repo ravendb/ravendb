@@ -455,6 +455,7 @@
     <Compile Include="Bugs\Stacey\InServerDatabase.cs" />
     <Compile Include="Bugs\Stacey\Models.cs" />
     <Compile Include="Bugs\Stacey\Aspects.cs" />
+    <Compile Include="Bugs\tmp.cs" />
     <Compile Include="Bugs\TransformResults\SortHintTester.cs" />
     <Compile Include="Bugs\SortingById.cs" />
     <Compile Include="Bugs\SortingOnLong.cs" />

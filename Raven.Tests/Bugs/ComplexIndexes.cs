@@ -50,15 +50,13 @@ namespace Raven.Tests.Bugs
 					  });
 
 				AddMap<User>(users =>
-							 from user in users
-							 from day in Enumerable.Range(0, 6)
-							 select new
-							 {
-								 UserId = user.Id,
-								 CountsPerDay = new object[0],
-								 user.Name,
-							 }
-				);
+				             users.SelectMany(user => Enumerable.Range(0, 6), (user, day) => new
+				             {
+				             	UserId = user.Id,
+				             	CountsPerDay = new object[0],
+				             	user.Name,
+				             })
+					);
 
 				Reduce = results =>
 						 from result in results
