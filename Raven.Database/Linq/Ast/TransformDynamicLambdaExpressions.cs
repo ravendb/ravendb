@@ -24,6 +24,8 @@ namespace Raven.Database.Linq.Ast
 					break;
 				case "OrderBy":
 				case "OrderByDescending":
+				case "GroupBy":
+				case "Recurse":
 				case "Select":
 					node = new CastExpression(new TypeReference("Func<dynamic, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);
 					break;
@@ -44,9 +46,6 @@ namespace Raven.Database.Linq.Ast
 							node = new CastExpression(new TypeReference("Func<dynamic, dynamic, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);
 							break;
 					}
-					break;
-				case "GroupBy":
-					node = new CastExpression(new TypeReference("Func<dynamic, IGrouping<dynamic,dynamic>>"), parenthesizedlambdaExpression, CastType.Cast);
 					break;
 				case "Any":
 				case "all":
