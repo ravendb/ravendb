@@ -74,7 +74,7 @@ task Init -depends Verify40, Clean {
 		$clsComliant = "true"
 		
 		if([System.Array]::IndexOf($notclsCompliant, $projectName) -ne -1) {
-      $clsComliant = "false"
+			$clsComliant = "false"
 		}
 		
 		Generate-Assembly-Info `
