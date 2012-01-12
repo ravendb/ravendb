@@ -96,7 +96,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Fors the each query.
+		/// For the each query.
 		/// </summary>
 		/// <param name="action">The action.</param>
 		public void ForEachQuery(Action<IDocumentSession, IDocumentQuery<T>> action)
