@@ -915,7 +915,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
-			fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
+			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
 			theQueryText.Append(fieldName).Append(":{");
 			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
@@ -942,19 +942,28 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
-			fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
-
-			var val = (start ?? end);
-			var isNumeric = val is int || val is long || val is decimal || val is double || val is float;
-
-			if (isNumeric && fieldName.EndsWith("_Range") == false)
-				fieldName = fieldName + "_Range";
+			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
 			theQueryText.Append(fieldName).Append(":[");
 			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
 			theQueryText.Append(" TO ");
 			theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
 			theQueryText.Append("]");
+		}
+
+		private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
+		{
+			fieldName = EnsureValidFieldName(new WhereParams {FieldName = fieldName});
+
+			if(fieldName == Constants.DocumentIdFieldName)
+				return fieldName;
+
+			var val = (start ?? end);
+			var isNumeric = val is int || val is long || val is decimal || val is double || val is float;
+
+			if (isNumeric && fieldName.EndsWith("_Range") == false)
+				fieldName = fieldName + "_Range";
+			return fieldName;
 		}
 
 		/// <summary>
