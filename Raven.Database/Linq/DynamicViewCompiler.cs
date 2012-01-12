@@ -363,24 +363,24 @@ Reduce only fields: {2}
 		{
 			public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
 			{
-				AddDocumentIdFieldToLambdaIfCreatingNewObject(lambdaExpression);
+				if (AddDocumentIdFieldToLambdaIfCreatingNewObject(lambdaExpression))
+					return null;
 				return base.VisitLambdaExpression(lambdaExpression, data);
 			}
 
-			private void AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
+			private bool AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
 			{
-
 				var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(lambdaExpression.ExpressionBody) as ObjectCreateExpression;
 
 				if (objectCreateExpression == null || objectCreateExpression.IsAnonymousType == false)
-					return;
+					return false;
 
 				var objectInitializer = objectCreateExpression.ObjectInitializer;
 
 				var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
 
 				if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
-					return;
+					return false;
 
 				objectInitializer.CreateExpressions.Add(
 					new NamedArgumentExpression
@@ -388,6 +388,8 @@ Reduce only fields: {2}
 						Name = Constants.DocumentIdFieldName,
 						Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 					});
+
+				return true;
 			}
 
 		}
