@@ -19,7 +19,12 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="SpatialDocumentQuery{T}"/> class.
 		/// </summary>
 		/// <param name="session">The session.</param>
+#if !SILVERLIGHT
 		/// <param name="databaseCommands">The database commands.</param>
+#endif
+#if !NET_3_5
+		/// <param name="asyncDatabaseCommands">The async database commands.</param>
+#endif
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="projectionFields">The projection fields.</param>
 		public AsyncSpatialDocumentQuery(
