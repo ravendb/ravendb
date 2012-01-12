@@ -59,6 +59,16 @@ namespace Raven.Database.Linq.Ast
 		private static INode ModifyLambdaForSelect(ParenthesizedExpression parenthesizedlambdaExpression,
 		                                           MemberReferenceExpression target)
 		{
+			var parentInvocation = target.TargetObject as InvocationExpression;
+			if(parentInvocation != null)
+			{
+				var parentTarget = parentInvocation.TargetObject as MemberReferenceExpression;
+				if(parentTarget != null && parentTarget.MemberName == "GroupBy")
+				{
+					return new CastExpression(new TypeReference("Func<IGrouping<dynamic,dynamic>, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);
+		
+				}
+			}
 			return new CastExpression(new TypeReference("Func<dynamic, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);
 		}
 
