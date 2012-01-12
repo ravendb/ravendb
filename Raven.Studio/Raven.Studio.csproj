@@ -129,7 +129,7 @@
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ChangeFieldValueCommand.cs" />
-    <Compile Include="Commands\CopyLogsInstructionsCommand.cs" />
+    <Compile Include="Commands\CopyToClipboardCommand.cs" />
     <Compile Include="Commands\DeleteAllDocumentsOfCollectionCommand.cs" />
     <Compile Include="Commands\DeleteIndexCommand.cs" />
     <Compile Include="Commands\ExportDatabaseCommand.cs" />
@@ -197,6 +197,7 @@
     <Compile Include="Impl\PopupPlacement\PopupVerticalAlignment.cs" />
     <Compile Include="Infrastructure\Converters\CollectionCountToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThen.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenStringEmptyOrNull.cs" />
     <Compile Include="Infrastructure\ErrorHandler.cs" />
     <Compile Include="Infrastructure\ErrorPresenter.cs" />
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">

@@ -44,7 +44,7 @@ namespace Raven.Studio
 			IsActive = false;
 		}
 
-		public List<int> SearchReasoltsLocations { get; set; }
+		public List<int> SearchResultsLocations { get; set; }
 
 		public string SearchIn
 		{
@@ -57,7 +57,7 @@ namespace Raven.Studio
 
 		private void searchField_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			SearchReasoltsLocations = new List<int>();
+			SearchResultsLocations = new List<int>();
 			if (!string.IsNullOrEmpty(SearchIn) && !string.IsNullOrEmpty(Text))
 			{
 				bool toContinue = true;
@@ -74,7 +74,7 @@ namespace Raven.Studio
 						toContinue = false;
 					else
 					{
-						SearchReasoltsLocations.Add(index + lastIndex);
+						SearchResultsLocations.Add(index + lastIndex);
 						lastIndex += index;
 						data = data.Substring(index + 1);
 					}

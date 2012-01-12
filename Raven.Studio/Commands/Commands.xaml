@@ -3,13 +3,13 @@
 					xmlns:Commands="clr-namespace:Raven.Studio.Commands">
 
 	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
-    <Commands:CopyLogsInstructionsCommand x:Name="CopyLogsInstructionsCommand" />
-    <Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />
+	<Commands:CopyToClipboardCommand x:Name="CopyToClipboardCommand" />
+	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />
 	<Commands:DeleteAllDocumentsOfCollectionCommand	x:Name="DeleteAllDocumentsOfCollectionCommand" />
 	<Commands:NavigateToCommand x:Name="NavigateToCommand" />
 	<Commands:ChangeDatabaseCommand x:Name="ChangeDatabaseCommand" />
-    <Commands:NavigateToExternalUrlCommand x:Name="NavigateToExternalUrlCommand" />
-    <Commands:NavigateToDocumentByIdCommand x:Name="NavigateToDocumentByIdCommand" />
+	<Commands:NavigateToExternalUrlCommand x:Name="NavigateToExternalUrlCommand" />
+	<Commands:NavigateToDocumentByIdCommand x:Name="NavigateToDocumentByIdCommand" />
 	<Commands:ShowLicensingStatusCommand x:Name="ShowLicensingStatusCommand" />
 	<Commands:CreateDatabaseCommand x:Name="CreateDatabaseCommand" />
 	<Commands:DeleteIndexCommand x:Name="DeleteIndexCommand" />
