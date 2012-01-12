@@ -24,17 +24,29 @@ namespace Raven.Abstractions.Data
 			DataAsJson = new RavenJObject();
 			Metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase);
 		}
+
+		private RavenJObject dataAsJson;
+		private RavenJObject metadata;
+
 		/// <summary>
 		/// 	Gets or sets the document data as json.
 		/// </summary>
 		/// <value>The data as json.</value>
-		public RavenJObject DataAsJson { get; set; }
+		public RavenJObject DataAsJson
+		{
+			get { return dataAsJson; }
+			set { dataAsJson = value ?? new RavenJObject(); }
+		}
 
 		/// <summary>
 		/// 	Gets or sets the metadata for the document
 		/// </summary>
 		/// <value>The metadata.</value>
-		public RavenJObject Metadata { get; set; }
+		public RavenJObject Metadata
+		{
+			get { return metadata; }
+			set { metadata = value ?? new RavenJObject(StringComparer.InvariantCultureIgnoreCase); }
+		}
 
 		/// <summary>
 		/// 	Gets or sets the key for the document
