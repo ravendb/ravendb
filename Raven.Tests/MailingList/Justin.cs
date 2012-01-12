@@ -3,6 +3,7 @@ using Raven.Client.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
@@ -70,6 +71,68 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
+		[Fact]
+		public void ActualTest_IgnoreErrors()
+		{
+			// Arrange.
+			using (var server = GetNewServer())
+			using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+			{
+				Console.WriteLine("Document Store initialized - running in memory.");
+
+				try
+				{
+					new Users_NameAndPassportSearching_WithError().Execute(documentStore);
+					Console.WriteLine("Indexes defined.");
+				}
+				catch { }
+
+				var users = CreateFakeUsers();
+				var usersCount = users.Count();
+				using (var documentSession = documentStore.OpenSession())
+				{
+					foreach (var user in users)
+					{
+						documentSession.Store(user);
+					}
+					documentSession.SaveChanges();
+				}
+				Console.WriteLine("Seed data stored.");
+
+				// Act.
+
+				// Lets check if there are any errors.
+				var errors = documentStore.DatabaseCommands.GetStatistics().Errors;
+				if (errors != null && errors.Length > 0)
+				{
+					foreach (var error in errors)
+					{
+						Console.WriteLine("Index: {0}; Error: {1}", error.Index, error.Error);
+					}
+
+					return;
+				}
+				Console.WriteLine("No Document Store errors.");
+
+				using (var documentSession = documentStore.OpenSession())
+				{
+					var allData = documentSession
+						.Query<User>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.ToList();
+
+					Assert.Equal(usersCount, allData.Count);
+
+					foreach (var user in allData)
+					{
+						Console.WriteLine("User: {0}; Passport: {1}", user.Name, user.PassportNumber);
+					}
+				}
+
+				// Assert.
+			}
+		}
+
 		private static IEnumerable<User> CreateFakeUsers()
 		{
 			return new List<User>
@@ -118,6 +181,30 @@ namespace Raven.Tests.MailingList
 			public string Name { get; set; }
 			public int Age { get; set; }
 			public string PassportNumber { get; set; }
+		}
+
+		internal class Users_NameAndPassportSearching_WithError : AbstractIndexCreationTask<User, Users_NameAndPassportSearching.ReduceResult>
+		{
+			public Users_NameAndPassportSearching_WithError()
+			{
+				Map = users => from user in users
+							   select new
+							   {
+								   user.Name,
+								   user.PassportNumber,
+								   ReversedName = user.Name,
+								   ReversedPassportNumber = user.PassportNumber,
+							   };
+
+				// This result function will cause RavenDB to throw an error
+				Reduce = results => from r in results
+									select new
+									{
+										r.Name,
+										r.PassportNumber,
+										ReversedName = r.Name,
+									};
+			}
 		}
 
 		internal class Users_NameAndPassportSearching : AbstractIndexCreationTask<User, Users_NameAndPassportSearching.ReduceResult>
