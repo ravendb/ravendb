@@ -145,21 +145,22 @@ namespace Raven.Tests.Linq
 			},  ".").GenerateInstance();
 
 
-			var results = viewGenerator.ReduceDefinition(viewGenerator.MapDefinitions[0](new[]
+			var source = viewGenerator.MapDefinitions[0](new[]
 			{
 				GetDocumentFromString(
-				@"
+					@"
 				{
 					'@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
 					'Location': 'Tel Aviv'
 				}"),
-				  GetDocumentFromString(
-				@"
+				GetDocumentFromString(
+					@"
 				{
 					'@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
 					'Location': 'Tel Aviv'
 				}")
-			})).Cast<object>().ToArray();
+			}).ToArray();
+			var results = viewGenerator.ReduceDefinition(source).Cast<object>().ToArray();
 
 			var expected = new[]
 			{
