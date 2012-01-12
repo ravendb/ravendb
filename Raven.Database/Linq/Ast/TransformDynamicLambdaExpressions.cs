@@ -1,4 +1,5 @@
-﻿using ICSharpCode.NRefactory.Ast;
+﻿using System.Collections.Generic;
+using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.Visitors;
 
 namespace Raven.Database.Linq.Ast
@@ -21,6 +22,19 @@ namespace Raven.Database.Linq.Ast
 			{
 				case "Sum":
 					node = new CastExpression(new TypeReference("Func<dynamic, decimal>"), parenthesizedlambdaExpression, CastType.Cast);
+					break;
+				case "Max":
+				case "Min":
+					node = new CastExpression(new TypeReference("Func<dynamic, int>"), parenthesizedlambdaExpression, CastType.Cast);
+					var castExpression = lambdaExpression.ExpressionBody as CastExpression;
+					if(castExpression != null)
+					{
+						node = new CastExpression(new TypeReference("Func", new List<TypeReference>
+						{
+							new TypeReference("dynamic"),
+							castExpression.CastTo
+						}), parenthesizedlambdaExpression, CastType.Cast);
+					}
 					break;
 				case "OrderBy":
 				case "OrderByDescending":
