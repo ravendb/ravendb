@@ -574,6 +574,7 @@
     <Compile Include="MailingList\HierarchicalInheritanceIndexing.cs" />
     <Compile Include="MailingList\IisQueryLengthIssues.cs" />
     <Compile Include="MailingList\IndexMetadata.cs" />
+    <Compile Include="MailingList\IndexWithWhere.cs" />
     <Compile Include="MailingList\JBA.cs" />
     <Compile Include="MailingList\JohanNilsson.cs" />
     <Compile Include="MailingList\Justin.cs" />
