@@ -943,6 +943,13 @@ If you really want to do in memory filtering on the data returned from the query
 			NegateIfNeeded();
 
 			fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
+
+			var val = (start ?? end);
+			var isNumeric = val is int || val is long || val is decimal || val is double || val is float;
+
+			if (isNumeric && fieldName.EndsWith("_Range") == false)
+				fieldName = fieldName + "_Range";
+
 			theQueryText.Append(fieldName).Append(":[");
 			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
 			theQueryText.Append(" TO ");
