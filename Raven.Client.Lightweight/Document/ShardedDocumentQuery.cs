@@ -29,7 +29,7 @@ namespace Raven.Client.Document
 		private QueryResult queryResult;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="ShardedDocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="shardSessions">The shard sessions.</param>
@@ -44,7 +44,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="ShardedDocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
 		/// </summary>
 		/// <param name="queries">The queries.</param>
 		/// <param name="shardSessions">The shard sessions.</param>

@@ -203,7 +203,7 @@ namespace Raven.Client.Document
 
 #if !SILVERLIGHT && !NET_3_5
 		/// <summary>
-		///   Initializes a new instance of the <see cref = "DocumentQuery&lt;T&gt;" /> class.
+		///   Initializes a new instance of the <see cref = "DocumentQuery{T}" /> class.
 		/// </summary>
 		protected AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
 									 IDatabaseCommands databaseCommands,
@@ -216,7 +216,7 @@ namespace Raven.Client.Document
 #endif
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		/// <param name="databaseCommands">The database commands.</param>
 #if !NET_3_5
@@ -255,7 +255,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		///   Initializes a new instance of the <see cref = "IDocumentQuery&lt;T&gt;" /> class.
+		///   Initializes a new instance of the <see cref = "IDocumentQuery{T}" /> class.
 		/// </summary>
 		/// <param name = "other">The other.</param>
 		protected AbstractDocumentQuery(AbstractDocumentQuery<T, TSelf> other)

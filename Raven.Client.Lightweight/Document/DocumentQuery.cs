@@ -22,7 +22,7 @@ namespace Raven.Client.Document
 	public class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(InMemoryDocumentSessionOperations session
 #if !SILVERLIGHT
@@ -44,7 +44,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(DocumentQuery<T> other)
 			: base(other)

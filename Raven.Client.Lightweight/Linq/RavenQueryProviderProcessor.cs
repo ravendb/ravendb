@@ -46,7 +46,7 @@ namespace Raven.Client.Linq
 		public string CurrentPath { get { return currentPath; } }
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor{T}"/> class.
 		/// </summary>
 		/// <param name="queryGenerator">The document query generator.</param>
 		/// <param name="customizeQuery">The customize query.</param>
