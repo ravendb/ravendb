@@ -21,8 +21,6 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public JsonDocument()
 		{
-			DataAsJson = new RavenJObject();
-			Metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase);
 		}
 
 		private RavenJObject dataAsJson;
@@ -34,8 +32,8 @@ namespace Raven.Abstractions.Data
 		/// <value>The data as json.</value>
 		public RavenJObject DataAsJson
 		{
-			get { return dataAsJson; }
-			set { dataAsJson = value ?? new RavenJObject(); }
+			get { return dataAsJson ?? (dataAsJson = new RavenJObject()); }
+			set { dataAsJson = value; }
 		}
 
 		/// <summary>
@@ -44,8 +42,8 @@ namespace Raven.Abstractions.Data
 		/// <value>The metadata.</value>
 		public RavenJObject Metadata
 		{
-			get { return metadata; }
-			set { metadata = value ?? new RavenJObject(StringComparer.InvariantCultureIgnoreCase); }
+			get { return metadata ?? (metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase)); }
+			set { metadata = value; }
 		}
 
 		/// <summary>
@@ -77,7 +75,6 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		public RavenJObject ToJson()
 		{
-
 			var doc = (RavenJObject)DataAsJson.CloneToken();
 			var metadata = (RavenJObject)Metadata.CloneToken();
 
