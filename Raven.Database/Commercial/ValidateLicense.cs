@@ -17,7 +17,7 @@ namespace Raven.Database.Commercial
 	public class ValidateLicense : IStartupTask
 	{
 		public static LicensingStatus CurrentLicense { get; set; }
-
+		private static bool alreadyRun;
 		private AbstractLicenseValidator licenseValidator;
 		private readonly Logger logger = LogManager.GetCurrentClassLogger();
 
@@ -34,6 +34,11 @@ namespace Raven.Database.Commercial
 
 		public void Execute(DocumentDatabase database)
 		{
+			if (alreadyRun)
+				return;
+
+			alreadyRun = true;
+
 			string publicKey;
 			using(var stream = typeof(ValidateLicense).Assembly.GetManifestResourceStream("Raven.Database.Commercial.RavenDB.public"))
 			{
