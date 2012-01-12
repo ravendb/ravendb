@@ -21,45 +21,22 @@ namespace Raven.Database.Linq.Ast
 			switch (target.MemberName)
 			{
 				case "Sum":
-					node = new CastExpression(new TypeReference("Func<dynamic, decimal>"), parenthesizedlambdaExpression, CastType.Cast);
+				case "Average":
+					node = ModifyLambdaForNumerics(lambdaExpression, parenthesizedlambdaExpression);
 					break;
 				case "Max":
 				case "Min":
-					node = new CastExpression(new TypeReference("Func<dynamic, int>"), parenthesizedlambdaExpression, CastType.Cast);
-					var castExpression = lambdaExpression.ExpressionBody as CastExpression;
-					if(castExpression != null)
-					{
-						node = new CastExpression(new TypeReference("Func", new List<TypeReference>
-						{
-							new TypeReference("dynamic"),
-							castExpression.CastTo
-						}), parenthesizedlambdaExpression, CastType.Cast);
-					}
+					node = ModifyLambdaForMinMax(lambdaExpression, parenthesizedlambdaExpression);
 					break;
 				case "OrderBy":
 				case "OrderByDescending":
 				case "GroupBy":
 				case "Recurse":
 				case "Select":
-					node = new CastExpression(new TypeReference("Func<dynamic, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);
+					node = ModifyLambdaForSelect(parenthesizedlambdaExpression, target);
 					break;
 				case "SelectMany":
-					var argPos = invocationExpression.Arguments.IndexOf(lambdaExpression);
-					switch (argPos)
-					{
-						case 0: // first one, select the collection
-							// need to enter a cast for (IEnumerable<dynamic>) on the end of the lambda body
-							var expression = new LambdaExpression
-							{
-								ExpressionBody = new CastExpression(new TypeReference("IEnumerable<dynamic>"), new ParenthesizedExpression(lambdaExpression.ExpressionBody), CastType.Cast),
-								Parameters = lambdaExpression.Parameters,
-							};
-							node = new CastExpression(new TypeReference("Func<dynamic, IEnumerable<dynamic>>"), new ParenthesizedExpression(expression), CastType.Cast);
-							break;
-						case 1: // the transformation func
-							node = new CastExpression(new TypeReference("Func<dynamic, dynamic, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);
-							break;
-					}
+					node = ModifyLambdaForSelectMany(lambdaExpression, parenthesizedlambdaExpression, invocationExpression);
 					break;
 				case "Any":
 				case "all":
@@ -77,6 +54,78 @@ namespace Raven.Database.Linq.Ast
 			ReplaceCurrentNode(node);
 
 			return base.VisitLambdaExpression(lambdaExpression, data);
+		}
+
+		private static INode ModifyLambdaForSelect(ParenthesizedExpression parenthesizedlambdaExpression,
+		                                           MemberReferenceExpression target)
+		{
+			return new CastExpression(new TypeReference("Func<dynamic, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);
+		}
+
+		private static INode ModifyLambdaForSelectMany(LambdaExpression lambdaExpression,
+		                                               ParenthesizedExpression parenthesizedlambdaExpression,
+		                                               InvocationExpression invocationExpression)
+		{
+			INode node = lambdaExpression;
+			var argPos = invocationExpression.Arguments.IndexOf(lambdaExpression);
+			switch (argPos)
+			{
+				case 0: // first one, select the collection
+					// need to enter a cast for (IEnumerable<dynamic>) on the end of the lambda body
+					var selectManyExpression = new LambdaExpression
+					{
+						ExpressionBody =
+							new CastExpression(new TypeReference("IEnumerable<dynamic>"),
+							                   new ParenthesizedExpression(lambdaExpression.ExpressionBody), CastType.Cast),
+						Parameters = lambdaExpression.Parameters,
+					};
+					node = new CastExpression(new TypeReference("Func<dynamic, IEnumerable<dynamic>>"),
+					                          new ParenthesizedExpression(selectManyExpression), CastType.Cast);
+					break;
+				case 1: // the transformation func
+					node = new CastExpression(new TypeReference("Func<dynamic, dynamic, dynamic>"), parenthesizedlambdaExpression,
+					                          CastType.Cast);
+					break;
+			}
+			return node;
+		}
+
+		private static INode ModifyLambdaForMinMax(LambdaExpression lambdaExpression,
+		                                           ParenthesizedExpression parenthesizedlambdaExpression)
+		{
+			var node = new CastExpression(new TypeReference("Func<dynamic, int>"), parenthesizedlambdaExpression, CastType.Cast);
+			var castExpression = lambdaExpression.ExpressionBody as CastExpression;
+			if (castExpression != null)
+			{
+				node = new CastExpression(new TypeReference("Func", new List<TypeReference>
+				{
+					new TypeReference("dynamic"),
+					castExpression.CastTo
+				}), parenthesizedlambdaExpression, CastType.Cast);
+			}
+			return node;
+		}
+
+		private static INode ModifyLambdaForNumerics(LambdaExpression lambdaExpression,
+		                                        ParenthesizedExpression parenthesizedlambdaExpression)
+		{
+			var castExpression = lambdaExpression.ExpressionBody as CastExpression;
+			if (castExpression != null)
+			{
+				return new CastExpression(new TypeReference("Func", new List<TypeReference>
+				{
+					new TypeReference("dynamic"),
+					castExpression.CastTo
+				}), parenthesizedlambdaExpression, CastType.Cast);
+			}
+			var expression = new LambdaExpression
+			{
+				ExpressionBody = new CastExpression(new TypeReference("decimal",isKeyword:true), new ParenthesizedExpression(lambdaExpression.ExpressionBody), CastType.Cast),
+				Parameters = lambdaExpression.Parameters
+			};
+			return new CastExpression(new TypeReference("Func<dynamic, decimal>"),
+			                          new ParenthesizedExpression(expression), CastType.Cast);
+
 		}
 	}
 }
