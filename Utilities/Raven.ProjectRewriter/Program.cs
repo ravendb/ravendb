@@ -56,7 +56,9 @@ namespace Raven.ProjectRewriter
 					element.Remove();
 				if (element.Attribute("Include").Value == "System.ComponentModel.Composition")
 					element.Remove();
-				if (element.Attribute("Include").Value.StartsWith("Newtonsoft.Json"))
+
+				var nugetPakcages = new[] {"Newtonsoft.Json", "NLog"};
+				if (nugetPakcages.Any(x => element.Attribute("Include").Value.StartsWith(x)))
 				{
 					element.Element(xmlns + "HintPath").Value = element.Element(xmlns + "HintPath").Value.Replace("net40", "net35");
 				}
