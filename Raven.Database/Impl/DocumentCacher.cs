@@ -10,6 +10,7 @@ namespace Raven.Database.Impl
 {
 	public class DocumentCacher : IDocumentCacher
 	{
+		private readonly InMemoryRavenConfiguration configuration;
 		private readonly MemoryCache cachedSerializedDocuments;
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		
@@ -18,6 +19,7 @@ namespace Raven.Database.Impl
 
 		public DocumentCacher(InMemoryRavenConfiguration configuration)
 		{
+			this.configuration = configuration;
 			cachedSerializedDocuments = new MemoryCache(typeof(DocumentCacher).FullName + ".Cache", new NameValueCollection
 			{
 				{"physicalMemoryLimitPercentage", configuration.MemoryCacheLimitPercentage.ToString()},
@@ -66,7 +68,7 @@ namespace Raven.Database.Impl
 				Metadata = metadataClone
 			}, new CacheItemPolicy
 			{
-				SlidingExpiration = TimeSpan.FromMinutes(5),
+				SlidingExpiration = configuration.MemoryCacheExpiration,
 			});
 
 		}
