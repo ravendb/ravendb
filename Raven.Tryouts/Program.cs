@@ -1,28 +1,65 @@
 ﻿using System;
+using System.Diagnostics;
 using Raven.Client.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
+using Raven.Tests.Bugs.QueryOptimizer;
+using Raven.Tests.MailingList;
 
 namespace ConsoleApplication1
 {
 	internal class Program
 	{
+
+		
+
+		       public class SearchIndex :
+AbstractMultiMapIndexCreationTask<SearchIndex.Result>
+       {
+           public override string IndexName
+           {
+               get
+               {
+                   return "SearchableItems/ByContent";
+               }
+           }
+
+           public SearchIndex()
+           {
+
+
+               AddMap<Ronne.Sermon>(items => from x in items
+                                       select new Result { Content =
+new[] { x.Description, x.Series, x.Speaker, x.Title } });
+
+
+               Index(x => x.Content, FieldIndexing.Analyzed);
+           }
+
+           public class Result
+           {
+               public IEnumerable<string> Content { get; set; }
+           }
+       }
+   
 		private static void Main()
 		{
 			// Arrange.
 			var documentStore = new EmbeddableDocumentStore
 			{
-				RunInMemory = true
+				RunInMemory = true,
+				UseEmbeddedHttpServer = true
 			};
 			documentStore.Initialize();
 			Console.WriteLine("Document Store initialized - running in memory.");
 
 			IndexCreation.CreateIndexes(typeof(Users_NameAndPassportSearching).Assembly, documentStore);
 			Console.WriteLine("Indexes defined.");
-
+			Process.Start(documentStore.Configuration.ServerUrl);
+			Console.ReadKey();
 			var users = CreateFakeUsers(); 
 			using (var documentSession = documentStore.OpenSession())
 			{

@@ -132,7 +132,14 @@ namespace Raven.Studio.Models
 				var field = Fields.FirstOrDefault(f => f.Name == localItem.Key);
 				if (field == null)
 				{
-					field = new FieldProperties { Name = localItem.Key };
+					field = new FieldProperties
+					{
+						Name = localItem.Key,
+						Analyzer = null,
+						Indexing = FieldIndexing.Default,
+						Sort = SortOptions.None,
+						Storage = FieldStorage.No
+					};
 					Fields.Add(field);
 				}
 				setter(field, localItem.Value);
