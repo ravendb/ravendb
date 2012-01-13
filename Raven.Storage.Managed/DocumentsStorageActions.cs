@@ -132,10 +132,7 @@ namespace Raven.Storage.Managed
 
 					var txEtag = new Guid(resultInTx.Key.Value<byte[]>("etag"));
 					Tuple<MemoryStream, RavenJObject> resultTx = null;
-					if (resultInTx.Position != -1)
-					{
-						resultTx = ReadMetadata(key, txEtag, resultInTx.Data, out metadata);
-					}
+					resultTx = ReadMetadata(key, txEtag, resultInTx.Data, out metadata);
 					return createResult(resultTx, new JsonDocumentMetadata
 					{
 						Key = key,
