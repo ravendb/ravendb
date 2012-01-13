@@ -689,6 +689,8 @@ namespace Raven.Database.Indexing
 					{
 						f = f.Substring(0, f.Length - "_Range".Length);
 					}
+					if (f.StartsWith(Constants.RandomFieldName))
+						continue;
 					if (parent.viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName)
 						throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
 				}

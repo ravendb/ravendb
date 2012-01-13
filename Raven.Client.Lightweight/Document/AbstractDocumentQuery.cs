@@ -518,6 +518,23 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		public void RandomOrdering()
+		{
+			AddOrder(Constants.RandomFieldName + ";" + Guid.NewGuid(), false);
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		public void RandomOrdering(string seed)
+		{
+			AddOrder(Constants.RandomFieldName + ";" + seed, false);
+		}
+
+		/// <summary>
 		///   Adds an ordering for a specific field to the query
 		/// </summary>
 		/// <param name = "fieldName">Name of the field.</param>
@@ -1456,6 +1473,26 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			return lastEquality;
 		}
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering()
+		{
+			RandomOrdering();
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering(string seed)
+		{
+			RandomOrdering(seed);
+			return this;
+		}
+
 #if !NET_3_5
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 

@@ -92,6 +92,9 @@ namespace Raven.Database.Queries
 
 							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
 							{
+								if(sortedField.Field.StartsWith(Constants.RandomFieldName))
+									continue;
+
 								// if the field is not in the output, then we can't sort on it. 
 								if (abstractViewGenerator.ContainsField(sortedField.Field) == false)
 									return false;

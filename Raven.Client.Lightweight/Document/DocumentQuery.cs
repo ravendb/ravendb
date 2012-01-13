@@ -118,6 +118,25 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.RandomOrdering()
+		{
+			RandomOrdering();
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.RandomOrdering(string seed)
+		{
+			RandomOrdering(seed);
+			return this;
+		}
+
+		/// <summary>
 		/// Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>

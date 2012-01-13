@@ -34,6 +34,17 @@ namespace Raven.Client.Document
 		IEnumerable<string> GetProjectionFields();
 
 		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		void RandomOrdering();
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		void RandomOrdering(string seed);
+
+		/// <summary>
 		///   Adds an ordering for a specific field to the query
 		/// </summary>
 		/// <param name = "fieldName">Name of the field.</param>
