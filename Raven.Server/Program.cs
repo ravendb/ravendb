@@ -120,7 +120,7 @@ namespace Raven.Server
 				}},
 				{"config-help", "Help about configuration options", key=>
 				{
-					actionToTake = () => PrintConfig();
+					actionToTake = PrintConfig;
 				}},
 				{"restore", 
 					"Restores a RavenDB database from backup",
