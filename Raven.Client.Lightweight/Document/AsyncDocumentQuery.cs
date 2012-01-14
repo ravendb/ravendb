@@ -18,7 +18,7 @@ namespace Raven.Client.Document
 	public class AsyncDocumentQuery<T> : AbstractDocumentQuery<T, AsyncDocumentQuery<T>>, IAsyncDocumentQuery<T>
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public AsyncDocumentQuery(InMemoryDocumentSessionOperations session,
 #if !SILVERLIGHT
@@ -34,7 +34,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public AsyncDocumentQuery(AsyncDocumentQuery<T> other)
 			: base(other)
@@ -485,6 +485,25 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder(string fieldName, bool descending)
 		{
 			AddOrder(fieldName, descending);
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RandomOrdering()
+		{
+			RandomOrdering();
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RandomOrdering(string seed)
+		{
+			RandomOrdering(seed);
 			return this;
 		}
 

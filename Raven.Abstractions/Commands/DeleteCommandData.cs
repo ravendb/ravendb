@@ -28,17 +28,23 @@ namespace Raven.Abstractions.Commands
 		{
 			get { return "DELETE"; }
 		}
+
 		/// <summary>
 		/// Gets or sets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
 		public virtual Guid? Etag { get; set; }
 
-		public TransactionInformation TransactionInformation
-		{
-			get; set;
-		}
+		/// <summary>
+		/// Gets or sets the transaction information.
+		/// </summary>
+		/// <value>The transaction information.</value>
+		public TransactionInformation TransactionInformation { get; set; }
 
+		/// <summary>
+		/// Gets or sets the metadata.
+		/// </summary>
+		/// <value>The metadata.</value>
 		public RavenJObject Metadata
 		{
 			get { return null; }

@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,10 +18,8 @@ namespace Raven.Tests.MailingList
 			// Arrange.
 			using (var documentStore = NewDocumentStore())
 			{
-				Console.WriteLine("Document Store initialized - running in memory.");
 
 				new Users_NameAndPassportSearching().Execute(documentStore);
-				Console.WriteLine("Indexes defined.");
 
 				var users = CreateFakeUsers();
 				var usersCount = users.Count();
@@ -32,7 +31,6 @@ namespace Raven.Tests.MailingList
 					}
 					documentSession.SaveChanges();
 				}
-				Console.WriteLine("Seed data stored.");
 
 
 				// If we want to search for *Krome .. this means the index will contain
@@ -45,16 +43,7 @@ namespace Raven.Tests.MailingList
 
 				// Lets check if there are any errors.
 				var errors = documentStore.DatabaseCommands.GetStatistics().Errors;
-				if (errors != null && errors.Length > 0)
-				{
-					foreach (var error in errors)
-					{
-						Console.WriteLine("Index: {0}; Error: {1}", error.Index, error.Error);
-					}
-
-					return;
-				}
-				Console.WriteLine("No Document Store errors.");
+				Assert.Empty(errors);
 
 				using (var documentSession = documentStore.OpenSession())
 				{
@@ -65,15 +54,11 @@ namespace Raven.Tests.MailingList
 
 					Assert.Equal(usersCount, allData.Count);
 
-					foreach (var user in allData)
-					{
-						Console.WriteLine("User: {0}; Passport: {1}", user.Name, user.PassportNumber);
-					}
-
 					var specificUsers = documentSession
 						.Query<Users_NameAndPassportSearching.ReduceResult, Users_NameAndPassportSearching>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.Where(x => x.ReversedName.StartsWith(userSearchQuery))
+						.As<User>()
 						.ToList();
 
 					var passports = documentSession
@@ -82,18 +67,7 @@ namespace Raven.Tests.MailingList
 						.Where(x => x.ReversedName.StartsWith(passportSearchQuery))
 						.ToList();
 
-					foreach (var user in specificUsers)
-					{
-						Console.WriteLine("User: {0}; Passport: {1}", user.Name, user.PassportNumber);
-					}
-
-					foreach (var passport in passports)
-					{
-						Console.WriteLine("User: {0}; Passport: {1}", passport.Name, passport.PassportNumber);
-					}
 				}
-
-				// Assert.
 			}
 		}
 
@@ -107,7 +81,6 @@ namespace Raven.Tests.MailingList
 				Console.WriteLine("Document Store initialized - running in memory.");
 
 				Assert.Throws<InvalidOperationException>(() => new Users_NameAndPassportSearching_WithError().Execute(documentStore));
-				Console.WriteLine("Indexes defined.");
 
 				var users = CreateFakeUsers();
 				var usersCount = users.Count();
@@ -158,44 +131,44 @@ namespace Raven.Tests.MailingList
 		private static IEnumerable<User> CreateFakeUsers()
 		{
 			return new List<User>
-                       {
-                           new User
-                               {
-                                   Name = "Pure Krome",
-                                   Age = 36,
-                                   PassportNumber = "QWERTY-12345"
-                               },
-                           new User
-                               {
-                                   Name = "Ayende Rayen",
-                                   Age = 35,
-                                   PassportNumber = "ABC-12345"
-                               },
-                           new User
-                               {
-                                   Name = "Itamar Syn-Hershko",
-                                   Age = 34,
-                                   PassportNumber = "DEF-12345"
-                               },
-                           new User
-                               {
-                                   Name = "aaa bbb",
-                                   Age = 33,
-                                   PassportNumber = "GHI-12345"
-                               },
-                           new User
-                               {
-                                   Name = "ccc ddd",
-                                   Age = 32,
-                                   PassportNumber = "JKL-12345"
-                               },
-                           new User
-                               {
-                                   Name = "eee fff",
-                                   Age = 31,
-                                   PassportNumber = "MNO-12345"
-                               }
-                       };
+					   {
+						   new User
+							   {
+								   Name = "Pure Krome",
+								   Age = 36,
+								   PassportNumber = "QWERTY-12345"
+							   },
+						   new User
+							   {
+								   Name = "Ayende Rayen",
+								   Age = 35,
+								   PassportNumber = "ABC-12345"
+							   },
+						   new User
+							   {
+								   Name = "Itamar Syn-Hershko",
+								   Age = 34,
+								   PassportNumber = "DEF-12345"
+							   },
+						   new User
+							   {
+								   Name = "aaa bbb",
+								   Age = 33,
+								   PassportNumber = "GHI-12345"
+							   },
+						   new User
+							   {
+								   Name = "ccc ddd",
+								   Age = 32,
+								   PassportNumber = "JKL-12345"
+							   },
+						   new User
+							   {
+								   Name = "eee fff",
+								   Age = 31,
+								   PassportNumber = "MNO-12345"
+							   }
+					   };
 		}
 
 		public class User

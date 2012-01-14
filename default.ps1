@@ -9,27 +9,27 @@ properties {
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???", `
+  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", "Newtonsoft.Json\Net40\Newtonsoft.Json.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???", `
     "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
     
-  $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", "Lucene.Net.???", `
+  $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", "nlog.???", "Newtonsoft.Json\Net40\Newtonsoft.Json.???", "Lucene.Net.???", `
                      "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", `
                     "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Storage.Esent.???", `
                     "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
   $client_dlls_3_5 = @( "nlog.???", "Newtonsoft.Json\Net35\Newtonsoft.Json.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???");
      
-  $client_dlls = @( "nlog.???","Raven.Client.MvcIntegration.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???","Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", `
+  $client_dlls = @( "nlog.???","Raven.Client.MvcIntegration.???", "Newtonsoft.Json\Net40\Newtonsoft.Json.???","Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", `
 			"AsyncCtpLibrary.???" );
   
-  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json\Silverlight\Newtonsoft.Json.???");   
+  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", "Newtonsoft.Json\sl4\Newtonsoft.Json.???");   
   
   $silverlight_dlls_libs = @( "NLog.???");   
  
-  $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", `
-      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "nlog.???", "Newtonsoft.Json\Net\Newtonsoft.Json.???", `
+  $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",`
+      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "nlog.???", "Newtonsoft.Json\Net40\Newtonsoft.Json.???", `
       "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  );
       
   $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  );
@@ -52,10 +52,9 @@ task Clean {
 
 task Init -depends Verify40, Clean {
 
-  if($env:BUILD_NUMBER -ne $null) {
-    $env:buildlabel  = $env:BUILD_NUMBER
+	if($env:BUILD_NUMBER -ne $null) {
+		$env:buildlabel  = $env:BUILD_NUMBER
 	}
-	
 	if($env:buildlabel -eq $null) {
 		$env:buildlabel = "13"
 	}
@@ -75,7 +74,7 @@ task Init -depends Verify40, Clean {
 		$clsComliant = "true"
 		
 		if([System.Array]::IndexOf($notclsCompliant, $projectName) -ne -1) {
-      $clsComliant = "false"
+			$clsComliant = "false"
 		}
 		
 		Generate-Assembly-Info `
@@ -86,8 +85,10 @@ task Init -depends Verify40, Clean {
 			-product "RavenDB $version.0.0" `
 			-version "$version.0" `
 			-fileversion "$version.$env:buildlabel.0" `
-			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
+			-copyright "Copyright © Hibernating Rhinos 2004 - $((Get-Date).Year)" `
 			-clsCompliant $clsComliant
+		
+		git update-index --assume-unchanged $asmInfo
 	}
 	
 	new-item $release_dir -itemType directory -ErrorAction SilentlyContinue
@@ -235,7 +236,8 @@ task CleanOutputDirectory {
 }
 
 task CopyJsonLibraries {
-	cp -r "$lib_dir\Newtonsoft.Json" $build_dir
+  $json_nuget_lib = (ls .\packages\Newtonsoft.Json.*).Name
+	cp -r "$base_dir\packages\$json_nuget_lib\lib" $build_dir\Newtonsoft.Json\
 }
 
 task CopyEmbeddedClient { 
@@ -260,13 +262,13 @@ task CopySilverlight{
 
 task CopySmuggler {
 	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
-	cp $build_dir\Newtonsoft.Json\Net\NewtonSoft.Json.??? $build_dir\Output\Smuggler
+	cp $build_dir\Newtonsoft.Json\Net40\NewtonSoft.Json.??? $build_dir\Output\Smuggler
 	cp $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
 task CopyBackup {
 	cp $build_dir\Raven.Backup.??? $build_dir\Output\Backup
-	cp $build_dir\Newtonsoft.Json\Net\NewtonSoft.Json.??? $build_dir\Output\Backup
+	cp $build_dir\Newtonsoft.Json\Net40\NewtonSoft.Json.??? $build_dir\Output\Backup
 }
 
 task CopyClient {

@@ -31,8 +31,9 @@ namespace Raven.Studio.Controls.Editors
 					using (var cryptoStream = new CryptoStream(manifestResourceStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
 					using (var cryptoReader = new BinaryReader(cryptoStream))
 					{
-						
-						ActiproSoftware.Products.ActiproLicenseManager.RegisterLicense(cryptoReader.ReadString(), cryptoReader.ReadString());
+						var licensee = cryptoReader.ReadString();
+						var licenseKey = cryptoReader.ReadString();
+						ActiproSoftware.Products.ActiproLicenseManager.RegisterLicense(licensee, licenseKey);
 					}
 				}
 			}

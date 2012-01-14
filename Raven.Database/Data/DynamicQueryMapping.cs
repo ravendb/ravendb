@@ -230,6 +230,8 @@ namespace Raven.Database.Data
 			{
 				foreach (var sortedField in query.SortedFields)
 				{
+					if(sortedField.Field.StartsWith(Constants.RandomFieldName))
+						continue;
 					fields.Add(Tuple.Create(sortedField.Field, sortedField.Field));
 				}
 			}

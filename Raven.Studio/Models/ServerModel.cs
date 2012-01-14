@@ -11,7 +11,7 @@ namespace Raven.Studio.Models
 {
 	public class ServerModel : Model, IDisposable
 	{
-		private readonly string url;
+		public readonly string Url;
 		public const string DefaultDatabaseName = "Default";
 		private DocumentStore documentStore;
 		private DatabaseModel[] defaultDatabase;
@@ -31,7 +31,7 @@ namespace Raven.Studio.Models
 
 		private ServerModel(string url)
 		{
-			this.url = url;
+			Url = url;
 			Databases = new BindableCollection<DatabaseModel>(model => model.Name);
 			SelectedDatabase = new Observable<DatabaseModel>();
 			License = new Observable<LicensingStatus>();
@@ -42,7 +42,7 @@ namespace Raven.Studio.Models
 		{
 			documentStore = new DocumentStore
 			{
-				Url = url
+				Url = Url
 			};
 
 			var urlParser = new UrlParser(UrlUtil.Url);

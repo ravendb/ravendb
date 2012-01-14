@@ -12,6 +12,11 @@ namespace Raven.Studio.Features.Documents
 			this.viewableDocument = viewableDocument;
 		}
 
+		public override bool CanExecute(object parameter)
+		{
+			return viewableDocument != null;
+		}
+
 		public override void Execute(object parameter)
 		{
 			var urlParser = new UrlParser("/edit");

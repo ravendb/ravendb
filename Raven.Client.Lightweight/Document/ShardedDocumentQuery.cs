@@ -29,7 +29,7 @@ namespace Raven.Client.Document
 		private QueryResult queryResult;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="ShardedDocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="shardSessions">The shard sessions.</param>
@@ -44,7 +44,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="ShardedDocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
 		/// </summary>
 		/// <param name="queries">The queries.</param>
 		/// <param name="shardSessions">The shard sessions.</param>
@@ -96,7 +96,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Fors the each query.
+		/// For the each query.
 		/// </summary>
 		/// <param name="action">The action.</param>
 		public void ForEachQuery(Action<IDocumentSession, IDocumentQuery<T>> action)
@@ -590,6 +590,25 @@ namespace Raven.Client.Document
 			throw new NotImplementedException();
 		}
 #endif
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		public IDocumentQuery<T> RandomOrdering()
+		{
+			ApplyForAll(ts => ts.RandomOrdering(Guid.NewGuid().ToString()));
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		public IDocumentQuery<T> RandomOrdering(string seed)
+		{
+			ApplyForAll(ts => ts.RandomOrdering(seed));
+			return this;
+		}
 
 		/// <summary>
 		/// Adds an ordering for a specific field to the query

@@ -1,4 +1,10 @@
-﻿using System.Windows.Input;
+﻿using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using ActiproSoftware.Windows.Controls.SyntaxEditor;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.Implementation;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Studio.Features.Util;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -9,8 +15,9 @@ namespace Raven.Studio.Views
 	{
 		private readonly ICommand saveCommand;
 		private readonly ICommand refreshCommand;
-		private bool isCtrlHold;
 
+		private bool isCtrlHold;
+		
 		public Edit()
 		{
 			InitializeComponent();
@@ -21,6 +28,15 @@ namespace Raven.Studio.Views
 
 			KeyDown += OnKeyDown;
 			KeyUp += OnKeyUp;
+			TabControl.SelectionChanged += TabChanged;
+
+			SearchTool.SearchOptions = new EditorSearchOptions();
+			SearchTool.SyntaxEditor = (SyntaxEditor)TabControl.SelectedContent;
+		}
+
+		private void TabChanged(object sender, SelectionChangedEventArgs e)
+		{
+			SearchTool.SyntaxEditor = (SyntaxEditor)TabControl.SelectedContent;			
 		}
 
 		private void OnKeyUp(object sender, KeyEventArgs args)
@@ -48,16 +64,40 @@ namespace Raven.Studio.Views
 				case Key.F:
 					if (isCtrlHold)
 					{
-						SearchTool.IsActive = true;
+						EnableSearch();
 					}
 					break;
 				case Key.Escape:
-					if (SearchTool.IsActive)
-						SearchTool.IsActive = false;
+					if (SearchTool.Visibility == Visibility.Visible)
+					{
+						DisableSearch();
+					}
 					break;
 				case Key.Ctrl:
 					isCtrlHold = true;
 					break;
+			}
+		}
+
+		private void DisableSearch()
+		{
+			SearchTool.Visibility = Visibility.Collapsed;
+			SearchTool.IsEnabled = false;
+		}
+
+		private void EnableSearch()
+		{
+			SearchTool.Visibility = Visibility.Visible;
+			SearchTool.IsEnabled = true;
+		}
+
+		private void Search_Click(object sender, RoutedEventArgs e)
+		{
+			if(SearchTool.Visibility == Visibility.Visible)
+				DisableSearch();
+			else
+			{
+				EnableSearch();
 			}
 		}
 	}

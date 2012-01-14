@@ -77,7 +77,8 @@
 				<HyperlinkButton Grid.Column="1"
 								 HorizontalAlignment="Left"
 								 Margin="0,5,5,1"
-								 NavigateUri="http://beta.ravendb.net/"
+								 Command="{StaticResource NavigateToExternalUrlCommand}"
+								 CommandParameter="http://beta.ravendb.net/"
 								 TargetName="_blank">
 					<Image Source="{StaticResource Image_RavenDBLogo}"
 						   Stretch="Uniform"
@@ -196,7 +197,8 @@
 							  Source=""
 							  Navigated="ContentFrame_Navigated"
 							  NavigationFailed="ContentFrame_NavigationFailed"
-							  Margin="15,0">
+							  Margin="15,0"
+							  Navigating="ContentFrame_Navigating">
 				<navigation:Frame.UriMapper>
 					<uriMapper:UriMapper>
 						<uriMapper:UriMapping Uri=""

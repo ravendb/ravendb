@@ -82,8 +82,8 @@
       <HintPath>..\SharedLibs\Silverlight\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SharedLibs\Newtonsoft.Json\Silverlight\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\sl4\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System.Reactive">
       <HintPath>..\packages\Rx-Main.1.0.10621\lib\SL4\System.Reactive.dll</HintPath>
@@ -129,13 +129,14 @@
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ChangeFieldValueCommand.cs" />
-    <Compile Include="Commands\CopyLogsInstructionsCommand.cs" />
+    <Compile Include="Commands\CopyToClipboardCommand.cs" />
     <Compile Include="Commands\DeleteAllDocumentsOfCollectionCommand.cs" />
     <Compile Include="Commands\DeleteIndexCommand.cs" />
     <Compile Include="Commands\ExportDatabaseCommand.cs" />
     <Compile Include="Commands\ImportDatabaseCommand.cs" />
     <Compile Include="Commands\NavigateToDocumentByIdCommand.cs" />
     <Compile Include="Commands\ListBoxCommand.cs" />
+    <Compile Include="Commands\NavigateToExternalUrlCommand.cs" />
     <Compile Include="Commands\NavigateToNextPageCommand.cs" />
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
@@ -196,6 +197,7 @@
     <Compile Include="Impl\PopupPlacement\PopupVerticalAlignment.cs" />
     <Compile Include="Infrastructure\Converters\CollectionCountToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThen.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenStringEmptyOrNull.cs" />
     <Compile Include="Infrastructure\ErrorHandler.cs" />
     <Compile Include="Infrastructure\ErrorPresenter.cs" />
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
@@ -609,6 +611,7 @@
     <Resource Include="Assets\Images\edit_pencil_write_icon.png" />
     <Resource Include="Assets\Images\ExecuteQuery.png" />
     <Resource Include="Assets\Images\ChangeView.png" />
+    <Resource Include="Assets\Images\Search.png" />
     <Content Include="Impl\PopupPlacement\Credit.txt" />
   </ItemGroup>
   <ItemGroup>
