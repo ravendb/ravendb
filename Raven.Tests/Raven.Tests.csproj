@@ -202,9 +202,11 @@
     <Compile Include="Bugs\MapReduceWithDifferentFieldNames.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNamesFromTheStronglyTypedType.cs" />
     <Compile Include="Bugs\MapRedue\Chris.cs" />
+    <Compile Include="Bugs\MapRedue\LetInReduceFunction.cs" />
     <Compile Include="Bugs\MapRedue\Document.cs" />
     <Compile Include="Bugs\MapRedue\DocumentView.cs" />
     <Compile Include="Bugs\MapRedue\MapReduceIndex.cs" />
+    <Compile Include="Bugs\MapRedue\TreeWithChildrenCount.cs" />
     <Compile Include="Bugs\Marcus.cs" />
     <Compile Include="Bugs\Matthew.cs" />
     <Compile Include="Bugs\MetadataBugs.cs" />
