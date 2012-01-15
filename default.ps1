@@ -242,18 +242,18 @@ task CopySamples {
 }
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
-	mkdir $build_dir\Output
-	mkdir $build_dir\Output\Web
-	mkdir $build_dir\Output\Web\bin
-	mkdir $build_dir\Output\Server
-	mkdir $build_dir\Output\EmbeddedClient
-	mkdir $build_dir\Output\Silverlight
-	mkdir $build_dir\Output\Client-3.5
-	mkdir $build_dir\Output\Client
-	mkdir $build_dir\Output\Bundles
-	mkdir $build_dir\Output\Samples
-	mkdir $build_dir\Output\Smuggler
-	mkdir $build_dir\Output\Backup
+	New-Item $build_dir\Output -Type directory | Out-Null
+	New-Item $build_dir\Output\Web -Type directory | Out-Null
+	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
+	New-Item $build_dir\Output\Server -Type directory | Out-Null
+	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
+	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
+	New-Item $build_dir\Output\Client -Type directory | Out-Null
+	New-Item $build_dir\Output\Client-3.5 -Type directory | Out-Null
+	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
+	New-Item $build_dir\Output\Samples -Type directory | Out-Null
+	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
+	New-Item $build_dir\Output\Backup -Type directory | Out-Null
 }
 
 task CleanOutputDirectory { 
@@ -426,22 +426,22 @@ task CreateNugetPackage {
   
 	Remove-Item $base_dir\RavenDB*.nupkg
 	Remove-Item $build_dir\NuPack -force -recurse -erroraction silentlycontinue
-	mkdir $build_dir\NuPack
-	mkdir $build_dir\NuPack\content
-	mkdir $build_dir\NuPack\lib
-	mkdir $build_dir\NuPack\lib\net35
-	mkdir $build_dir\NuPack\lib\net40
-	mkdir $build_dir\NuPack\lib\sl40
-	mkdir $build_dir\NuPack\tools
-	mkdir $build_dir\NuPack\server
+	New-Item $build_dir\NuPack -Type directory | Out-Null
+	New-Item $build_dir\NuPack\content -Type directory | Out-Null
+	New-Item $build_dir\NuPack\lib -Type directory | Out-Null
+	New-Item $build_dir\NuPack\lib\net35 -Type directory | Out-Null
+	New-Item $build_dir\NuPack\lib\net40 -Type directory | Out-Null
+	New-Item $build_dir\NuPack\lib\sl40 -Type directory | Out-Null
+	New-Item $build_dir\NuPack\tools -Type directory | Out-Null
+	New-Item $build_dir\NuPack\server -Type directory | Out-Null
 
 	# package for RavenDB embedded is separate and requires .NET 4.0
 	Remove-Item $build_dir\NuPack-Embedded -force -recurse -erroraction silentlycontinue
-	mkdir $build_dir\NuPack-Embedded
-	mkdir $build_dir\NuPack-Embedded\content
-	mkdir $build_dir\NuPack-Embedded\lib\
-	mkdir $build_dir\NuPack-Embedded\lib\net40
-	mkdir $build_dir\NuPack-Embedded\tools
+	New-Item $build_dir\NuPack-Embedded -Type directory | Out-Null
+	New-Item $build_dir\NuPack-Embedded\content -Type directory | Out-Null
+	New-Item $build_dir\NuPack-Embedded\lib -Type directory | Out-Null
+	New-Item $build_dir\NuPack-Embedded\lib\net40 -Type directory | Out-Null
+	New-Item $build_dir\NuPack-Embedded\tools -Type directory | Out-Null
 	
 	$client_dlls_3_5 | ForEach-Object { Copy-Item "$_" $build_dir\NuPack\lib\net35 }
 	$client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\NuPack\lib\net40 }
