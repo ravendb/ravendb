@@ -423,16 +423,6 @@ task UploadUnstable -depends Unstable, DoRelease, Upload {
 }	
 
 task CreateNugetPackage {
-	
-	$accessKey = "no-key";
-	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
-	if ( (Test-Path $accessPath) ) {
-		$accessKey = Get-Content $accessPath
-		$accessKey = $accessKey.Trim()
-	}
-	else {
-		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
-	}
   
 	Remove-Item $base_dir\RavenDB*.nupkg
 	Remove-Item $build_dir\NuPack -force -recurse -erroraction silentlycontinue
@@ -521,13 +511,21 @@ task CreateNugetPackage {
   
   & "$tools_dir\nuget.exe" pack $build_dir\NuPack-Embedded\RavenDB-Embedded.nuspec
   
-  # Push to nuget repository
-  & "$tools_dir\nuget.exe" push "RavenDB.$label.nupkg" $accessKey
-  & "$tools_dir\nuget.exe" push "RavenDB-Embedded.$label.nupkg" $accessKey
+	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
+	if ( (Test-Path $accessPath) ) {
+		$accessKey = Get-Content $accessPath
+		$accessKey = $accessKey.Trim()
+		
+		# Push to nuget repository
+		& "$tools_dir\nuget.exe" push "RavenDB.$label.nupkg" $accessKey
+		& "$tools_dir\nuget.exe" push "RavenDB-Embedded.$label.nupkg" $accessKey
+		
+		# This is prune to failure since the previous package may not exists
   
-  
-  # This is prune to failure since the previous package may not exists
-  
-  #$prevVersion = ($env:buildlabel - 1)
-  # & "$tools_dir\nuget.exe" delete RavenDB "$version.$prevVersion" $accessKey -source http://packages.nuget.org/v1/ -NoPrompt
+		#$prevVersion = ($env:buildlabel - 1)
+		# & "$tools_dir\nuget.exe" delete RavenDB "$version.$prevVersion" $accessKey -source http://packages.nuget.org/v1/ -NoPrompt
+	}
+	else {
+		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
+	}
 }
