@@ -1303,9 +1303,12 @@ namespace Raven.Client.Indexes
 			switch (node.NodeType)
 			{
 				case ExpressionType.NewArrayInit:
-					Out("new ");
-					Out(node.Type.GetElementType().FullName);
-					Out(" []");
+			        Out("new ");
+                    if (!CheckIfAnonymousType(node.Type.GetElementType()))
+                    {
+                        Out(node.Type.GetElementType().FullName + " ");
+                    }
+			        Out("[]");
 					VisitExpressions('{', node.Expressions, '}');
 					return node;
 
@@ -1317,6 +1320,14 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
+        private static bool CheckIfAnonymousType(Type type)
+        {
+            // hack: the only way to detect anonymous types right now
+            return Attribute.IsDefined(type, typeof(CompilerGeneratedAttribute), false)
+                && type.IsGenericType && type.Name.Contains("AnonymousType")
+                && (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
+                && (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+        }
 
 		private static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
 		{
