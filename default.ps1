@@ -35,7 +35,7 @@ properties {
 			return "$build_dir\$_"
 		};
      
-  $client_dlls = @( "nlog.???","Raven.Client.MvcIntegration.???", (Get-DependencyPackageFiles Newtonsoft.Json),
+  $client_dlls = @( "nlog.???", "Raven.Client.MvcIntegration.???", (Get-DependencyPackageFiles Newtonsoft.Json),
 					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", "AsyncCtpLibrary.???" ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
@@ -49,7 +49,7 @@ properties {
 			return "$build_dir\$_"
 		};
  
-  $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
+  $all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 						  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
 						  "Lucene.Net.Contrib.SpellChecker.???", "nlog.???", (Get-DependencyPackageFiles Newtonsoft.Json),
 						  "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  ) |
