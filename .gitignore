@@ -16,7 +16,6 @@ _ReSharper.*/
 /Data/system/
 /Data/temp/
 *.InstallLog
-/Raven.Database/Raven.Database.g.csproj
 /test/storage.raven
 /Raven.Web/Data/
 VERSION
@@ -29,15 +28,12 @@ VERSION
 /Samples/*/Servers/Shard*/Raven.Server.log
 /Samples/*/Servers/Shard*/Raven.Server.log.*
 *.nupkg
-/Raven.Abstractions/Raven.Abstractions.g.3.5.csproj
-/Raven.Client.Lightweight/Raven.Client.Lightweight.g.3.5.csproj
 /Samples/Raven.Samples.IndexReplication/Server/*
 /Samples/Raven.Sample.Replication/Servers/*
 ClientBin/
 /Raven.Tests.Silverlight.Results.xml
-/Raven.Json/Raven.Json.g.3.5.csproj
-/Modules/Json/Raven.Json/Raven.Json.g.3.5.csproj
+*.g.3.5.csproj
+*.g.csproj
 *.docstates
 StyleCop.Cache
-
 *.dotCover
